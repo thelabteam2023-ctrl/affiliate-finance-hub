@@ -326,19 +326,29 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       setSaving(true);
 
       const updateData: any = { ...data };
-      
+
+      const existingBonus = bonuses.find((b) => b.id === id);
+
       // If status changed to credited and no credited_at, set it
       if (data.status === "credited" && !data.credited_at) {
         updateData.credited_at = new Date().toISOString();
       }
-      
-      // If status changed to credited, also update saldo_atual to bonus_amount
-      if (data.status === "credited" && data.bonus_amount) {
-        // Check if saldo_atual was not explicitly provided - update it to bonus_amount
-        const existingBonus = bonuses.find(b => b.id === id);
-        if (existingBonus && existingBonus.status !== "credited") {
-          // Status is changing to credited, set saldo_atual = bonus_amount
-          updateData.saldo_atual = data.bonus_amount;
+
+      // Handle saldo_atual when status changes
+      if (existingBonus && data.status && data.status !== existingBonus.status) {
+        if (data.status === "credited") {
+          // When crediting: initialize saldo_atual with bonus amount (prefer incoming, fallback to existing)
+          updateData.saldo_atual =
+            updateData.saldo_atual ??
+            data.bonus_amount ??
+            existingBonus.bonus_amount;
+        } else {
+          // When un-crediting (pending/failed/expired/reversed/finalized): reset saldo
+          updateData.saldo_atual = 0;
+          // If caller didn't explicitly provide credited_at, clear it
+          if (typeof data.credited_at === "undefined") {
+            updateData.credited_at = null;
+          }
         }
       }
 

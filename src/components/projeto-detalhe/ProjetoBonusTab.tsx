@@ -126,6 +126,14 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     deleteBonus,
   } = useProjectBonuses({ projectId: projetoId });
 
+  const activeBonusBookmakerIds = useMemo(() => {
+    return new Set(
+      bonuses
+        .filter((b) => b.status === "credited" && b.saldo_atual > 0)
+        .map((b) => b.bookmaker_id)
+    );
+  }, [bonuses]);
+
   const [bookmakers, setBookmakers] = useState<BookmakerOption[]>([]);
   const [loadingBookmakers, setLoadingBookmakers] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -526,7 +534,11 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         projectId={projetoId}
-        bookmakers={bookmakers}
+        bookmakers={
+          editingBonus
+            ? bookmakers
+            : bookmakers.filter((b) => !activeBonusBookmakerIds.has(b.id))
+        }
         bonus={editingBonus}
         saving={saving}
         onSubmit={handleSubmit}

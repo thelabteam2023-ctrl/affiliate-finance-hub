@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -88,7 +88,15 @@ export function GlobalActionsBar({
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
 
   // Bonus hook
-  const { createBonus, saving: bonusSaving } = useProjectBonuses({ projectId: projetoId });
+  const { bonuses, createBonus, saving: bonusSaving } = useProjectBonuses({ projectId: projetoId });
+
+  const activeBonusBookmakerIds = useMemo(() => {
+    return new Set(
+      bonuses
+        .filter((b) => b.status === "credited" && b.saldo_atual > 0)
+        .map((b) => b.bookmaker_id)
+    );
+  }, [bonuses]);
 
   useEffect(() => {
     fetchBookmakers();
@@ -172,19 +180,21 @@ export function GlobalActionsBar({
     return success;
   };
 
-  // Transform bookmakers for BonusDialog format
-  const bookmarkersForBonus = bookmakers.map(b => ({
-    id: b.id,
-    nome: b.nome,
-    login_username: b.login_username || "",
-    login_password_encrypted: b.login_password_encrypted,
-    logo_url: b.bookmakers_catalogo?.logo_url,
-    bookmaker_catalogo_id: b.bookmaker_catalogo_id,
-    saldo_atual: b.saldo_atual ?? 0,
-    saldo_usd: b.saldo_usd ?? 0,
-    moeda: b.moeda || "BRL",
-    parceiro_nome: b.parceiro?.nome,
-  }));
+  // Transform bookmakers for BonusDialog format (hide bookmakers that already have an active bonus)
+  const bookmarkersForBonus = bookmakers
+    .filter((b) => !activeBonusBookmakerIds.has(b.id))
+    .map((b) => ({
+      id: b.id,
+      nome: b.nome,
+      login_username: b.login_username || "",
+      login_password_encrypted: b.login_password_encrypted,
+      logo_url: b.bookmakers_catalogo?.logo_url,
+      bookmaker_catalogo_id: b.bookmaker_catalogo_id,
+      saldo_atual: b.saldo_atual ?? 0,
+      saldo_usd: b.saldo_usd ?? 0,
+      moeda: b.moeda || "BRL",
+      parceiro_nome: b.parceiro?.nome,
+    }));
 
   return (
     <>
