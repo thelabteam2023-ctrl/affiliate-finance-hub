@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
@@ -16,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { 
   Building2, 
   Coins, 
@@ -23,7 +26,16 @@ import {
   Plus,
   Eye,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  LayoutGrid,
+  List,
+  User,
+  Wallet,
+  TrendingUp,
+  Clock,
+  Gift,
+  CheckCircle2,
+  Target
 } from "lucide-react";
 import { differenceInDays, parseISO } from "date-fns";
 import {
@@ -58,15 +70,16 @@ interface BookmakerInBonusMode {
 }
 
 export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
-  const { bonuses, fetchBonuses, finalizeBonus, saving, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
+  const { bonuses, fetchBonuses, finalizeBonus, saving, getBookmakersWithActiveBonus, getRolloverPercentage } = useProjectBonuses({ projectId: projetoId });
   const [bookmakers, setBookmakers] = useState<BookmakerInBonusMode[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<"list" | "cards">("list");
   
   // Drawer state
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
-  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null } | null>(null);
+  const [selectedBookmaker, setSelectedBookmaker] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmaker_catalogo_id?: string | null; moeda?: string } | null>(null);
   
   // Finalize dialog state
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
@@ -174,6 +187,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
       password: bk.login_password_encrypted,
       logo: bk.logo_url,
       bookmaker_catalogo_id: bk.bookmaker_catalogo_id,
+      moeda: bk.moeda,
     });
     setBonusDrawerOpen(true);
   };
@@ -229,18 +243,28 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome, login ou parceiro..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search and View Toggle */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, login ou parceiro..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "list" | "cards")}>
+          <ToggleGroupItem value="list" aria-label="Visualização em lista">
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="cards" aria-label="Visualização em cards">
+            <LayoutGrid className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
-      {/* Table of bookmakers */}
+      {/* Empty State */}
       {filteredBookmakers.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
@@ -253,7 +277,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
             </div>
           </CardContent>
         </Card>
-      ) : (
+      ) : viewMode === "list" ? (
         <Card>
           <div className="overflow-x-auto">
             <Table>
@@ -413,6 +437,186 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
             </Table>
           </div>
         </Card>
+      ) : (
+        /* CARDS VIEW */
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredBookmakers.map((bk) => {
+            const activeBonuses = bk.bonuses.filter(b => b.status === 'credited');
+            
+            return (
+              <Card key={bk.id} className="border-amber-500/30 hover:border-amber-500/50 transition-colors">
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      {bk.logo_url ? (
+                        <img
+                          src={bk.logo_url}
+                          alt={bk.nome}
+                          className="h-10 w-10 rounded-lg object-contain bg-white p-1"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Building2 className="h-5 w-5 text-primary" />
+                        </div>
+                      )}
+                      <div>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          {bk.nome}
+                          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
+                            <Coins className="h-3 w-3 mr-1" />
+                            Bônus
+                          </Badge>
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">{bk.login_username}</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {/* Partner */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">{bk.parceiro_nome || "Sem parceiro"}</span>
+                    </div>
+
+                    {/* Balances */}
+                    <div className="pt-2 border-t space-y-2">
+                      {/* Operational Balance - Highlight */}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-between p-2 rounded bg-primary/10 border border-primary/20">
+                              <span className="text-xs font-medium text-primary flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" />
+                                Saldo Operável
+                              </span>
+                              <span className="text-sm font-bold text-primary">
+                                {formatCurrency(bk.saldo_real + bk.bonus_ativo, bk.moeda)}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Real + Bônus Ativo</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Wallet className="h-3 w-3" />
+                          Saldo Real
+                        </span>
+                        <span className="text-sm font-semibold">{formatCurrency(bk.saldo_real, bk.moeda)}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Gift className="h-3 w-3 text-amber-400" />
+                          Bônus Ativo
+                        </span>
+                        <span className="text-sm font-semibold text-amber-400">{formatCurrency(bk.bonus_ativo, bk.moeda)}</span>
+                      </div>
+                    </div>
+
+                    {/* Expiry */}
+                    {bk.nearest_expiry && (
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Expiração
+                        </span>
+                        {getExpiryBadge(bk.nearest_expiry)}
+                      </div>
+                    )}
+
+                    {/* Active Bonuses List with Rollover */}
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">Bônus Ativos ({activeBonuses.length}):</p>
+                      <ScrollArea className="h-32">
+                        <div className="space-y-2">
+                          {activeBonuses.map(bonus => {
+                            const rolloverPercent = getRolloverPercentage(bonus);
+                            const hasRollover = bonus.rollover_target_amount && bonus.rollover_target_amount > 0;
+                            
+                            return (
+                              <div key={bonus.id} className="text-xs p-2 rounded bg-card border space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <span className="truncate">{bonus.title || 'Bônus'}</span>
+                                    <span className="font-semibold text-amber-400">{formatCurrency(bonus.bonus_amount, bonus.currency)}</span>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs hover:bg-emerald-500/20 hover:text-emerald-400"
+                                    onClick={() => handleFinalizeClick(bonus)}
+                                  >
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Finalizar
+                                  </Button>
+                                </div>
+                                
+                                {/* Rollover Progress Bar */}
+                                {hasRollover && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="space-y-1">
+                                          <div className="flex items-center justify-between text-[10px]">
+                                            <span className="text-muted-foreground flex items-center gap-1">
+                                              <Target className="h-3 w-3" />
+                                              Rollover
+                                            </span>
+                                            <span className={rolloverPercent >= 100 ? "text-emerald-400 font-medium" : "text-muted-foreground"}>
+                                              {formatCurrency(bonus.rollover_progress || 0, bonus.currency)} / {formatCurrency(bonus.rollover_target_amount!, bonus.currency)}
+                                            </span>
+                                          </div>
+                                          <Progress 
+                                            value={rolloverPercent} 
+                                            className="h-1.5"
+                                          />
+                                          <div className="text-right text-[10px] text-muted-foreground">
+                                            {rolloverPercent.toFixed(0)}% concluído
+                                          </div>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <div className="text-xs space-y-1">
+                                          <p>Meta de rollover: {formatCurrency(bonus.rollover_target_amount!, bonus.currency)}</p>
+                                          <p>Apostado: {formatCurrency(bonus.rollover_progress || 0, bonus.currency)}</p>
+                                          {bonus.rollover_multiplier && <p>Multiplicador: {bonus.rollover_multiplier}x</p>}
+                                          {bonus.min_odds && <p>Odd mínima: {bonus.min_odds}</p>}
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-amber-500/30 hover:bg-amber-500/10"
+                        onClick={() => handleOpenBonusDrawer(bk)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Ver / Adicionar Bônus
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       {/* Bonus Drawer */}
@@ -427,6 +631,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           bookmakerPassword={selectedBookmaker.password}
           bookmakerLogo={selectedBookmaker.logo}
           bookmakerCatalogoId={selectedBookmaker.bookmaker_catalogo_id}
+          currency={selectedBookmaker.moeda}
           onBonusChange={fetchBonuses}
         />
       )}
