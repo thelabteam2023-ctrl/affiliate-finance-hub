@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProjectBonuses, ProjectBonus, BonusFormData, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { BonusHistoryDrawer } from "./BonusHistoryDrawer";
 import { BonusDialog } from "./BonusDialog";
@@ -16,6 +16,8 @@ interface VinculoBonusDrawerProps {
   bookmakerCatalogoId?: string | null;
   currency?: string;
   onBonusChange?: () => void;
+  /** If provided, opens the edit dialog for this bonus immediately when drawer opens */
+  initialBonusToEdit?: ProjectBonus | null;
 }
 
 export function VinculoBonusDrawer({
@@ -30,6 +32,7 @@ export function VinculoBonusDrawer({
   bookmakerCatalogoId,
   currency = "BRL",
   onBonusChange,
+  initialBonusToEdit,
 }: VinculoBonusDrawerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
@@ -47,6 +50,14 @@ export function VinculoBonusDrawer({
     getBonusesByBookmaker,
     getSummary,
   } = useProjectBonuses({ projectId, bookmakerId });
+
+  // If initialBonusToEdit is provided, open the dialog for editing when drawer opens
+  useEffect(() => {
+    if (open && initialBonusToEdit) {
+      setEditingBonus(initialBonusToEdit);
+      setDialogOpen(true);
+    }
+  }, [open, initialBonusToEdit]);
 
   const bookmakerBonuses = getBonusesByBookmaker(bookmakerId);
   const summary = getSummary();
