@@ -62,33 +62,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPublicId(profileData.public_id || null);
       }
 
-      // Get user's workspace
-      const { data: workspaceId, error: workspaceError } = await supabase
-        .rpc('get_user_workspace', { _user_id: userId });
+      // CRITICAL: Use get_current_workspace() which respects the user's selected workspace
+      // This ensures role is fetched from the ACTIVE workspace, not just any workspace
+      const { data: currentWorkspaceId, error: workspaceError } = await supabase
+        .rpc('get_current_workspace');
 
       if (workspaceError) {
-        console.error("Error fetching workspace:", workspaceError);
+        console.error("Error fetching current workspace:", workspaceError);
         return;
       }
 
-      if (workspaceId) {
+      if (currentWorkspaceId) {
         // Fetch workspace details
         const { data: workspaceData, error: wsError } = await supabase
           .from('workspaces')
           .select('id, name, slug, plan')
-          .eq('id', workspaceId)
+          .eq('id', currentWorkspaceId)
           .single();
 
         if (!wsError && workspaceData) {
           setWorkspace(workspaceData);
         }
 
-        // Get user's role in this workspace
+        // Get user's role in THIS specific workspace
         const { data: userRole, error: roleError } = await supabase
-          .rpc('get_user_role', { _user_id: userId, _workspace_id: workspaceId });
+          .rpc('get_user_role', { _user_id: userId, _workspace_id: currentWorkspaceId });
 
         if (!roleError && userRole) {
           setRole(userRole as AppRole);
+          console.log('[Auth] Role fetched for workspace:', currentWorkspaceId, '- Role:', userRole);
         }
       }
     } catch (error) {
