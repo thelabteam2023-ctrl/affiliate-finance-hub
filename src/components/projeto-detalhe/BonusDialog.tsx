@@ -148,7 +148,6 @@ export function BonusDialog({
         setSelectedTemplateId(null);
       } else {
         // Create mode - default to credited (most bookmakers credit immediately)
-        // but show confirmation dialog to make user aware
         setBookmakerId(preselectedBookmakerId || "");
         setTitle("");
         setAmount("");
@@ -166,8 +165,7 @@ export function BonusDialog({
         setSelectedTemplateId(null);
         setTemplatePercent(null);
         setTemplateMaxValue(null);
-        // Show confirmation dialog after a short delay to let the form render
-        setTimeout(() => setShowCreditConfirmation(true), 300);
+        setShowCreditConfirmation(false);
       }
     }
   }, [open, bonus, preselectedBookmakerId]);
@@ -264,6 +262,17 @@ export function BonusDialog({
       return;
     }
 
+    // If creating new bonus with credited status, show confirmation first
+    if (!isEditMode && status === "credited" && !showCreditConfirmation) {
+      setShowCreditConfirmation(true);
+      return;
+    }
+
+    await executeSubmit();
+  };
+
+  const executeSubmit = async () => {
+    const parsedAmount = parseFloat(amount);
     const parsedRollover = rolloverMultiplier ? parseFloat(rolloverMultiplier) : null;
     const parsedDeposit = depositAmount ? parseFloat(depositAmount) : null;
     const parsedMinOdds = minOdds ? parseFloat(minOdds) : null;
@@ -796,19 +805,67 @@ export function BonusDialog({
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:space-x-2">
             <AlertDialogCancel 
-              onClick={() => {
+              onClick={async () => {
                 setStatus("pending");
                 setCreditedAt("");
+                setShowCreditConfirmation(false);
+                // Submit with pending status
+                const parsedAmount = parseFloat(amount);
+                const parsedRollover = rolloverMultiplier ? parseFloat(rolloverMultiplier) : null;
+                const parsedDeposit = depositAmount ? parseFloat(depositAmount) : null;
+                const parsedMinOdds = minOdds ? parseFloat(minOdds) : null;
+                const parsedDeadline = deadlineDays ? parseInt(deadlineDays) : null;
+
+                let rolloverTarget: number | null = null;
+                if (parsedRollover && parsedRollover > 0) {
+                  rolloverTarget = calculateRolloverTarget({
+                    bonusValue: parsedAmount,
+                    depositAmount: parsedDeposit,
+                    multiplier: parsedRollover,
+                    baseType: rolloverBase,
+                  });
+                }
+
+                let templateSnapshot: Record<string, unknown> | null = null;
+                if (filledFromTemplate && selectedTemplateId) {
+                  const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+                  if (selectedTemplate) {
+                    templateSnapshot = { ...selectedTemplate };
+                  }
+                }
+
+                const data: BonusFormData = {
+                  bookmaker_id: bookmakerId,
+                  title: title.trim(),
+                  bonus_amount: parsedAmount,
+                  currency,
+                  status: "pending",
+                  credited_at: null,
+                  expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+                  notes: null,
+                  source: filledFromTemplate ? "template" : "manual",
+                  template_snapshot: templateSnapshot,
+                  rollover_multiplier: parsedRollover,
+                  rollover_base: rolloverBase,
+                  rollover_target_amount: rolloverTarget,
+                  deposit_amount: parsedDeposit,
+                  min_odds: parsedMinOdds,
+                  deadline_days: parsedDeadline,
+                };
+
+                const success = await onSubmit(data);
+                if (success) {
+                  onOpenChange(false);
+                }
               }}
               className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
             >
               Ainda não foi creditado
             </AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => {
-                setStatus("credited");
-                setCreditedAt(format(new Date(), "yyyy-MM-dd"));
+              onClick={async () => {
                 setShowCreditConfirmation(false);
+                await executeSubmit();
               }}
               className="bg-emerald-600 hover:bg-emerald-700"
             >
