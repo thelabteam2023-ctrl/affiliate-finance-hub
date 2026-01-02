@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus } from "@/hooks/useProjectBonuses";
+import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { Building2, Coins, Wallet, TrendingUp, AlertTriangle, Timer } from "lucide-react";
 import { differenceInDays, parseISO, format, startOfDay, startOfWeek, eachDayOfInterval, eachWeekOfInterval, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -11,7 +12,8 @@ import {
 } from "@/components/ui/chart";
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, ResponsiveContainer, ReferenceLine, CartesianGrid, Tooltip } from "recharts";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
-
+import { BonusContaminationAlert } from "./BonusContaminationAlert";
+import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 interface DateRangeResult {
   start: Date;
   end: Date;
@@ -64,6 +66,10 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   
   // Memoize to prevent infinite loops
   const bookmakersInBonusMode = useMemo(() => getBookmakersWithActiveBonus(), [bonuses]);
+
+  // Check for cross-strategy contamination
+  const { isContaminated, contaminatedBookmakers, totalNonBonusBets, loading: contaminationLoading } = 
+    useBonusContamination({ projetoId, bookmakersInBonusMode });
 
   // Get bonuses expiring soon
   const getExpiringSoon = (days: number): ProjectBonus[] => {
@@ -320,62 +326,101 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   return (
     <div className="space-y-6">
 
+      {/* Contamination Alert */}
+      {!contaminationLoading && isContaminated && (
+        <BonusContaminationAlert 
+          contaminatedBookmakers={contaminatedBookmakers} 
+          totalNonBonusBets={totalNonBonusBets} 
+        />
+      )}
+
       {/* KPIs with hierarchy - Saldo Operável is primary */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-primary/30 bg-primary/5 lg:col-span-1">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Operável</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
-            <p className="text-xs text-muted-foreground">Real + Bônus Ativo</p>
-          </CardContent>
-        </Card>
+        <TooltipProvider>
+          <Card className={`border-primary/30 bg-primary/5 lg:col-span-1 ${isContaminated ? 'ring-1 ring-amber-500/30' : ''}`}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+                Saldo Operável
+                {isContaminated && (
+                  <TooltipUI>
+                    <TooltipTrigger asChild>
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[200px]">
+                      <p className="text-xs">Este valor pode incluir resultados de outras estratégias além de bônus</p>
+                    </TooltipContent>
+                  </TooltipUI>
+                )}
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
+              <p className="text-xs text-muted-foreground">Real + Bônus Ativo</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Casas com Bônus</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.bookmakers_with_active_bonus}</div>
-            <p className="text-xs text-muted-foreground">Em modo bônus ativo</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Casas com Bônus</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{summary.bookmakers_with_active_bonus}</div>
+              <p className="text-xs text-muted-foreground">Em modo bônus ativo</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bônus Ativo</CardTitle>
-            <Coins className="h-4 w-4 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.active_bonus_total)}</div>
-            <p className="text-xs text-muted-foreground">{summary.count_credited} bônus creditados</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Bônus Ativo</CardTitle>
+              <Coins className="h-4 w-4 text-warning" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(summary.active_bonus_total)}</div>
+              <p className="text-xs text-muted-foreground">{summary.count_credited} bônus creditados</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Real (Casas)</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalSaldoReal)}</div>
-            <p className="text-xs text-muted-foreground">Apenas casas em modo bônus</p>
-          </CardContent>
-        </Card>
+          <Card className={isContaminated ? 'ring-1 ring-amber-500/30' : ''}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+                Saldo Real (Casas)
+                {isContaminated && (
+                  <TooltipUI>
+                    <TooltipTrigger asChild>
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[200px]">
+                      <p className="text-xs">Este valor pode incluir resultados de outras estratégias além de bônus</p>
+                    </TooltipContent>
+                  </TooltipUI>
+                )}
+              </CardTitle>
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(totalSaldoReal)}</div>
+              <p className="text-xs text-muted-foreground">Apenas casas em modo bônus</p>
+            </CardContent>
+          </Card>
+        </TooltipProvider>
       </div>
 
       {/* Dashboard Charts */}
       {hasData ? (
         <div className="grid gap-4 lg:grid-cols-2">
           {/* Chart C - Adjusted Balance (Most Important) */}
-          <Card className="lg:col-span-2">
+          <Card className={`lg:col-span-2 ${isContaminated ? 'ring-1 ring-amber-500/30' : ''}`}>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-primary" />
                 Saldo Ajustado Acumulado
+                {isContaminated && (
+                  <Badge variant="outline" className="border-amber-500/50 text-amber-500 text-[10px] ml-2">
+                    Inclui outras estratégias
+                  </Badge>
+                )}
               </CardTitle>
               <p className="text-xs text-muted-foreground">
                 Depósito Referência + Bônus Creditado + Resultado das Apostas em Modo Bônus
