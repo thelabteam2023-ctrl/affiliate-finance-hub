@@ -81,7 +81,7 @@ const AnimatedLabel = (props: any) => {
         opacity,
         transform: `translateY(${translateY}px)`,
         transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-        fontSize: "10px",
+        fontSize: "11px",
       }}
     >
       {displayValue}
