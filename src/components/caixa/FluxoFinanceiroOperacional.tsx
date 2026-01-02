@@ -548,10 +548,8 @@ export function FluxoFinanceiroOperacional({
                     currency: "BRL",
                   },
                   { 
-                    // Usa valor normalizado para altura da barra
                     dataKey: "aportes_usd_normalizado", 
                     label: "Aportes USD",
-                    // Usa valor original em USD para o label
                     labelValueKey: "aportes_usd",
                     gradientStart: "#06B6D4", 
                     gradientEnd: "#0891B2",
@@ -565,10 +563,8 @@ export function FluxoFinanceiroOperacional({
                     currency: "BRL",
                   },
                   { 
-                    // Usa valor normalizado para altura da barra
                     dataKey: "liquidacoes_usd_normalizado", 
                     label: "Liquidações USD",
-                    // Usa valor original em USD para o label
                     labelValueKey: "liquidacoes_usd",
                     gradientStart: "#EC4899", 
                     gradientEnd: "#DB2777",
@@ -580,7 +576,6 @@ export function FluxoFinanceiroOperacional({
                 showLabels={true}
                 formatLabel={(value, ctx) => {
                   if (value === 0) return "";
-                  // Use explicit currency from bar config
                   const currency = ctx?.currency;
                   const prefix = currency === "USD" ? "US$ " : "R$ ";
                   return prefix + Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
@@ -592,24 +587,69 @@ export function FluxoFinanceiroOperacional({
                   return (
                     <>
                       <p className="font-medium text-sm mb-2">{label}</p>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between gap-4">
-                          <span className="text-emerald-500">Aportes BRL:</span>
-                          <span className="font-mono">{formatCurrency(data?.aportes || 0)}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-amber-500">Liquidações BRL:</span>
-                          <span className="font-mono">{formatCurrency(Math.abs(data?.liquidacoes || 0))}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-cyan-500">Aportes USD:</span>
-                          <span className="font-mono">{formatUSD(data?.aportes_usd || 0)}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-pink-500">Liquidações USD:</span>
-                          <span className="font-mono">{formatUSD(Math.abs(data?.liquidacoes_usd || 0))}</span>
-                        </div>
-                        <div className="border-t border-white/10 pt-1 mt-1 space-y-1">
+                      <div className="space-y-2 text-sm">
+                        {/* Aportes BRL */}
+                        {(data?.aportes || 0) > 0 && (
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-emerald-500 font-medium">Aportes BRL</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Valor real:</span>
+                              <span className="font-mono">{formatCurrency(data?.aportes || 0)}</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Aportes USD - com transparência de escala */}
+                        {(data?.aportes_usd || 0) > 0 && (
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-cyan-500 font-medium">Aportes USD</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Valor real:</span>
+                              <span className="font-mono">{formatUSD(data?.aportes_usd || 0)}</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Escala visual:</span>
+                              <span className="font-mono text-muted-foreground">≈ {formatCurrency(data?.aportes_usd_normalizado || 0)}</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Liquidações BRL */}
+                        {Math.abs(data?.liquidacoes || 0) > 0 && (
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-amber-500 font-medium">Liquidações BRL</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Valor real:</span>
+                              <span className="font-mono">{formatCurrency(Math.abs(data?.liquidacoes || 0))}</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Liquidações USD - com transparência de escala */}
+                        {Math.abs(data?.liquidacoes_usd || 0) > 0 && (
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-pink-500 font-medium">Liquidações USD</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Valor real:</span>
+                              <span className="font-mono">{formatUSD(Math.abs(data?.liquidacoes_usd || 0))}</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Escala visual:</span>
+                              <span className="font-mono text-muted-foreground">≈ {formatCurrency(Math.abs(data?.liquidacoes_usd_normalizado || 0))}</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Saldos */}
+                        <div className="border-t border-white/10 pt-2 mt-2 space-y-1">
                           <div className="flex justify-between gap-4 font-medium">
                             <span className={data?.liquido >= 0 ? "text-emerald-500" : "text-destructive"}>
                               Saldo BRL:
@@ -636,10 +676,15 @@ export function FluxoFinanceiroOperacional({
               </div>
             )}
 
-            <p className="text-xs text-muted-foreground text-center">
-              Quanto capital novo entrou (aportes) vs quanto foi devolvido (liquidações).
-              {dadosCapitalExterno.hasUSD && " Barras em escala proporcional para comparação visual entre moedas."}
-            </p>
+            {dadosCapitalExterno.hasUSD ? (
+              <p className="text-xs text-muted-foreground text-center italic">
+                Escala proporcional normalizada para comparação visual entre moedas. Os valores exibidos são reais; a altura das barras reflete equivalência.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center">
+                Capital novo (aportes) vs devolvido (liquidações).
+              </p>
+            )}
           </TabsContent>
 
           {/* Aba 2: Fluxo de Caixa (Capital em Operação - Bookmakers) */}
@@ -697,10 +742,8 @@ export function FluxoFinanceiroOperacional({
                     currency: "BRL",
                   },
                   { 
-                    // Usa valor normalizado para altura da barra
                     dataKey: "depositos_usd_normalizado", 
                     label: "Depósitos USD",
-                    // Usa valor original em USD para o label
                     labelValueKey: "depositos_usd",
                     gradientStart: "#06B6D4", 
                     gradientEnd: "#0891B2",
@@ -714,10 +757,8 @@ export function FluxoFinanceiroOperacional({
                     currency: "BRL",
                   },
                   { 
-                    // Usa valor normalizado para altura da barra
                     dataKey: "saques_usd_normalizado", 
                     label: "Saques USD",
-                    // Usa valor original em USD para o label
                     labelValueKey: "saques_usd",
                     gradientStart: "#EC4899", 
                     gradientEnd: "#DB2777",
@@ -729,7 +770,6 @@ export function FluxoFinanceiroOperacional({
                 showLabels={true}
                 formatLabel={(value, ctx) => {
                   if (value === 0) return "";
-                  // Use explicit currency from bar config
                   const currency = ctx?.currency;
                   const prefix = currency === "USD" ? "US$ " : "R$ ";
                   return prefix + Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
@@ -741,24 +781,69 @@ export function FluxoFinanceiroOperacional({
                   return (
                     <>
                       <p className="font-medium text-sm mb-2">{label}</p>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between gap-4">
-                          <span className="text-blue-500">Depósitos BRL:</span>
-                          <span className="font-mono">{formatCurrency(data?.depositos || 0)}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-purple-500">Saques BRL:</span>
-                          <span className="font-mono">{formatCurrency(data?.saques || 0)}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-cyan-500">Depósitos USD:</span>
-                          <span className="font-mono">{formatUSD(data?.depositos_usd || 0)}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-pink-500">Saques USD:</span>
-                          <span className="font-mono">{formatUSD(data?.saques_usd || 0)}</span>
-                        </div>
-                        <div className="border-t border-white/10 pt-1 mt-1 space-y-1">
+                      <div className="space-y-2 text-sm">
+                        {/* Depósitos BRL */}
+                        {(data?.depositos || 0) > 0 && (
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-blue-500 font-medium">Depósitos BRL</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Valor real:</span>
+                              <span className="font-mono">{formatCurrency(data?.depositos || 0)}</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Depósitos USD - com transparência de escala */}
+                        {(data?.depositos_usd || 0) > 0 && (
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-cyan-500 font-medium">Depósitos USD</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Valor real:</span>
+                              <span className="font-mono">{formatUSD(data?.depositos_usd || 0)}</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Escala visual:</span>
+                              <span className="font-mono text-muted-foreground">≈ {formatCurrency(data?.depositos_usd_normalizado || 0)}</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Saques BRL */}
+                        {(data?.saques || 0) > 0 && (
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-purple-500 font-medium">Saques BRL</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Valor real:</span>
+                              <span className="font-mono">{formatCurrency(data?.saques || 0)}</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Saques USD - com transparência de escala */}
+                        {(data?.saques_usd || 0) > 0 && (
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-pink-500 font-medium">Saques USD</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Valor real:</span>
+                              <span className="font-mono">{formatUSD(data?.saques_usd || 0)}</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pl-2">
+                              <span className="text-muted-foreground text-xs">Escala visual:</span>
+                              <span className="font-mono text-muted-foreground">≈ {formatCurrency(data?.saques_usd_normalizado || 0)}</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Saldos */}
+                        <div className="border-t border-white/10 pt-2 mt-2 space-y-1">
                           <div className="flex justify-between gap-4 font-medium">
                             <span className={data?.alocacaoLiquida >= 0 ? "text-blue-500" : "text-purple-500"}>
                               Alocação Líquida BRL:
@@ -785,10 +870,15 @@ export function FluxoFinanceiroOperacional({
               </div>
             )}
 
-            <p className="text-xs text-muted-foreground text-center">
-              Fluxo financeiro efetivo.
-              {dadosCapitalOperacao.hasUSD && " Barras em escala proporcional para comparação visual entre moedas."}
-            </p>
+            {dadosCapitalOperacao.hasUSD ? (
+              <p className="text-xs text-muted-foreground text-center italic">
+                Escala proporcional normalizada para comparação visual entre moedas. Os valores exibidos são reais; a altura das barras reflete equivalência.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center">
+                Fluxo financeiro efetivo: depósitos enviados e saques recebidos.
+              </p>
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>
