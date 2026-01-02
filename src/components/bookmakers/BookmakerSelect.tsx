@@ -504,22 +504,32 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                         </span>
                         {(item.saldo_atual !== undefined || item.saldo_usd !== undefined) && (
                           <span className="text-xs text-muted-foreground flex-shrink-0 flex items-center gap-1">
-                            {/* Exibir BRL se existir */}
-                            {(item.saldo_atual ?? 0) > 0 && (
-                              <span className="bg-muted/50 px-1.5 py-0.5 rounded">
-                                R$ {item.saldo_atual?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                            )}
-                            {/* Exibir USD se existir */}
-                            {(item.saldo_usd ?? 0) > 0 && (
-                              <span className="bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded">
-                                $ {item.saldo_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} USD
-                              </span>
-                            )}
-                            {/* Exibir zero apenas se ambos são zero */}
-                            {(item.saldo_atual ?? 0) === 0 && (item.saldo_usd ?? 0) === 0 && (
-                              <span className="opacity-50">R$ 0,00</span>
-                            )}
+                            {/* Exibir saldo baseado na moeda da bookmaker */}
+                            {(() => {
+                              const moeda = item.moeda || "BRL";
+                              const isUsdMoeda = moeda === "USD" || moeda === "USDT";
+                              const saldo = isUsdMoeda ? (item.saldo_usd ?? 0) : (item.saldo_atual ?? 0);
+                              const symbol = isUsdMoeda ? "$" : "R$";
+                              const suffix = isUsdMoeda ? " USD" : "";
+                              
+                              if (saldo > 0) {
+                                return (
+                                  <span className={isUsdMoeda 
+                                    ? "bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded" 
+                                    : "bg-muted/50 px-1.5 py-0.5 rounded"
+                                  }>
+                                    {symbol} {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}{suffix}
+                                  </span>
+                                );
+                              }
+                              
+                              // Saldo zero - exibir na moeda correta
+                              return (
+                                <span className="opacity-50">
+                                  {symbol} 0,00{suffix}
+                                </span>
+                              );
+                            })()}
                             {/* Freebet */}
                             {(item.saldo_freebet ?? 0) > 0 && (
                               <span className="bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded">
