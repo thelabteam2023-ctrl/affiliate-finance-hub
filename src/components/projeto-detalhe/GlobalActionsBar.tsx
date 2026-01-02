@@ -184,6 +184,7 @@ export function GlobalActionsBar({
     saldo_atual: b.saldo_atual ?? 0,
     saldo_usd: b.saldo_usd ?? 0,
     moeda: b.moeda || "BRL",
+    parceiro_nome: b.parceiro?.nome,
   }));
 
   return (
