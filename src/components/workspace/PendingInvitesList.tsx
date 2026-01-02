@@ -53,9 +53,10 @@ interface Invite {
 
 interface PendingInvitesListProps {
   workspaceId: string;
+  refreshKey?: number; // Increment to force refresh
 }
 
-export function PendingInvitesList({ workspaceId }: PendingInvitesListProps) {
+export function PendingInvitesList({ workspaceId, refreshKey = 0 }: PendingInvitesListProps) {
   const { toast } = useToast();
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +113,7 @@ export function PendingInvitesList({ workspaceId }: PendingInvitesListProps) {
 
   useEffect(() => {
     fetchInvites();
-  }, [workspaceId]);
+  }, [workspaceId, refreshKey]);
 
   const handleResend = async (inviteId: string) => {
     try {

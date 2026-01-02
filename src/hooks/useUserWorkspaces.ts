@@ -70,11 +70,13 @@ export function useUserWorkspaces() {
   // Buscar convites pendentes
   const fetchPendingInvites = useCallback(async () => {
     if (!user) {
+      console.log("[useUserWorkspaces] Sem user, limpando convites");
       setPendingInvites([]);
       return;
     }
 
     try {
+      console.log("[useUserWorkspaces] Buscando convites pendentes para user:", user.id);
       const { data, error } = await supabase.rpc('get_my_pending_invites');
 
       if (error) {
@@ -82,22 +84,32 @@ export function useUserWorkspaces() {
         return;
       }
 
+      console.log("[useUserWorkspaces] Convites encontrados:", data);
       setPendingInvites((data as PendingWorkspaceInvite[]) || []);
     } catch (error) {
       console.error("[useUserWorkspaces] Erro:", error);
     }
   }, [user]);
 
-  // Carregar dados iniciais
+  // Carregar dados iniciais quando o usuário está disponível
   useEffect(() => {
+    if (!user?.id) {
+      setWorkspaces([]);
+      setPendingInvites([]);
+      setLoading(false);
+      return;
+    }
+
     const loadData = async () => {
       setLoading(true);
+      console.log("[useUserWorkspaces] Carregando dados para user:", user.id);
       await Promise.all([fetchWorkspaces(), fetchPendingInvites()]);
       setLoading(false);
+      console.log("[useUserWorkspaces] Dados carregados");
     };
 
     loadData();
-  }, [fetchWorkspaces, fetchPendingInvites]);
+  }, [user?.id]); // Only re-run when user.id changes, not callback refs
 
   // Trocar para outro workspace
   const switchWorkspace = useCallback(async (workspaceId: string) => {

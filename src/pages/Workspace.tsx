@@ -110,6 +110,7 @@ export default function Workspace() {
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [workspaceName, setWorkspaceName] = useState("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [pendingInvitesRefreshKey, setPendingInvitesRefreshKey] = useState(0);
 
   useEffect(() => {
     if (workspace) {
@@ -212,8 +213,10 @@ export default function Workspace() {
     }
   };
 
-  const handleMemberInvited = () => {
-    fetchMembers();
+  const handleMemberInvited = async () => {
+    // Refresh both members list and pending invites list
+    await fetchMembers();
+    setPendingInvitesRefreshKey(prev => prev + 1); // Force refresh PendingInvitesList
     setInviteDialogOpen(false);
   };
 
@@ -380,7 +383,7 @@ export default function Workspace() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <PendingInvitesList workspaceId={workspaceId || ''} />
+          <PendingInvitesList workspaceId={workspaceId || ''} refreshKey={pendingInvitesRefreshKey} />
         </CardContent>
       </Card>
 
