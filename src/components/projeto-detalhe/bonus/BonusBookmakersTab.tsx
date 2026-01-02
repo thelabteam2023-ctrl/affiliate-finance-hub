@@ -115,6 +115,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           login_username,
           login_password_encrypted,
           saldo_atual,
+          saldo_usd,
           moeda,
           bookmaker_catalogo_id,
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
@@ -150,6 +151,10 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           }
         });
 
+        // Use saldo_usd for USD/USDT currencies, saldo_atual for others
+        const isUsdCurrency = bk.moeda === 'USD' || bk.moeda === 'USDT';
+        const saldoReal = isUsdCurrency ? (bk.saldo_usd ?? 0) : (bk.saldo_atual ?? 0);
+
         return {
           id: bk.id,
           nome: bk.nome,
@@ -158,7 +163,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           logo_url: bk.bookmakers_catalogo?.logo_url || null,
           bookmaker_catalogo_id: bk.bookmaker_catalogo_id || null,
           parceiro_nome: bk.parceiros?.nome || null,
-          saldo_real: bk.saldo_atual,
+          saldo_real: saldoReal,
           moeda: bk.moeda || 'BRL',
           bonus_ativo: bonusTotal,
           bonuses: bkBonuses,
