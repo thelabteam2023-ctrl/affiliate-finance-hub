@@ -429,9 +429,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       // 1. Calcular delta financeiro (PENDENTE → novo resultado)
       const delta = calcularImpactoResultado(stake, odd, resultado);
 
-      // 2. Atualizar saldo da bookmaker via helper canônico
+      // 2. Atualizar saldo da bookmaker via helper canônico (passa projetoId para verificar bônus ativo)
       if (operacao.bookmaker_id && delta !== 0) {
-        const balanceUpdated = await updateBookmakerBalance(operacao.bookmaker_id, delta);
+        const balanceUpdated = await updateBookmakerBalance(operacao.bookmaker_id, delta, projetoId);
         if (!balanceUpdated) {
           toast.error("Erro ao atualizar saldo da bookmaker. Liquidação cancelada.");
           return;

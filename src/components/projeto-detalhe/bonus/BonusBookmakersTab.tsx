@@ -137,7 +137,10 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
       const mapped: BookmakerInBonusMode[] = (data || []).map((bk: any) => {
         const bkBonuses = bonusesByBookmaker[bk.id] || [];
         const activeBonuses = bkBonuses.filter(b => b.status === 'credited');
-        // Use saldo_atual (current bonus balance) instead of bonus_amount (original value)
+        
+        // UNIFICAÇÃO DE SALDOS:
+        // Quando há bônus ativo, o saldo operável é o bonus.saldo_atual
+        // O saldo_real da bookmaker fica "congelado" durante o período de bônus
         const bonusTotal = activeBonuses.reduce((acc, b) => acc + (b.saldo_atual ?? b.bonus_amount), 0);
         
         // Find nearest expiry
@@ -151,7 +154,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           }
         });
 
-        // Use saldo_usd for USD/USDT currencies, saldo_atual for others
+        // Saldo da bookmaker (não muda durante o período de bônus)
         const isUsdCurrency = bk.moeda === 'USD' || bk.moeda === 'USDT';
         const saldoReal = isUsdCurrency ? (bk.saldo_usd ?? 0) : (bk.saldo_atual ?? 0);
 
@@ -163,8 +166,10 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           logo_url: bk.bookmakers_catalogo?.logo_url || null,
           bookmaker_catalogo_id: bk.bookmaker_catalogo_id || null,
           parceiro_nome: bk.parceiros?.nome || null,
+          // SALDO REAL: saldo da bookmaker (congelado durante bônus)
           saldo_real: saldoReal,
           moeda: bk.moeda || 'BRL',
+          // BÔNUS ATIVO: Agora representa o saldo unificado (tudo junto)
           bonus_ativo: bonusTotal,
           bonuses: bkBonuses,
           nearest_expiry: nearestExpiry,
@@ -478,12 +483,13 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="font-semibold text-primary">
-                                    {formatCurrency(bk.saldo_real + bk.bonus_ativo, bk.moeda)}
+                                  <span className="font-semibold text-primary flex items-center justify-end gap-1">
+                                    <Gift className="h-3.5 w-3.5 text-amber-400" />
+                                    {formatCurrency(bk.bonus_ativo, bk.moeda)}
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Real + Bônus Ativo</p>
+                                  <p>Saldo unificado (em modo bônus)</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>

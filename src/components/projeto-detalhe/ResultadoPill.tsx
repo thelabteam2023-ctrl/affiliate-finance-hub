@@ -476,9 +476,9 @@ export function ResultadoPill({
       // Aplicar efeito do novo resultado
       saldoAjuste += calcularAjusteSaldo(resultadoNovo);
 
-      // CORREÇÃO: Usar helper que respeita moeda do bookmaker
+      // CORREÇÃO: Usar helper que respeita moeda do bookmaker e bônus ativo
       if (saldoAjuste !== 0) {
-        await updateBookmakerBalance(bookmarkerId, saldoAjuste);
+        await updateBookmakerBalance(bookmarkerId, saldoAjuste, projetoId);
       }
 
       // Para Cobertura, também atualizar o saldo da Exchange
@@ -493,9 +493,9 @@ export function ResultadoPill({
         // Aplicar efeito do novo resultado na exchange
         saldoAjusteExchange += calcularAjusteSaldoExchange(resultadoNovo);
 
-        // CORREÇÃO: Usar helper que respeita moeda da exchange
+        // CORREÇÃO: Usar helper que respeita moeda da exchange e bônus ativo
         if (saldoAjusteExchange !== 0) {
-          await updateBookmakerBalance(layExchangeBookmakerId, saldoAjusteExchange);
+          await updateBookmakerBalance(layExchangeBookmakerId, saldoAjusteExchange, projetoId);
         }
       }
     } catch (error) {

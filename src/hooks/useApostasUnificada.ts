@@ -228,16 +228,16 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
       // Buscar a operação para verificar se precisa reverter saldos
       const { data: operacao } = await supabase
         .from("apostas_unificada")
-        .select("pernas, status")
+        .select("pernas, status, projeto_id")
         .eq("id", id)
         .single();
 
       if (operacao && operacao.status === "LIQUIDADA" && operacao.pernas) {
-        // Reverter saldos das bookmakers
+        // Reverter saldos das bookmakers - passa projetoId para verificar bônus ativo
         const pernas = parsePernaFromJson(operacao.pernas);
         for (const perna of pernas) {
           if (perna.resultado && perna.resultado !== "PENDENTE") {
-            await reverterSaldoBookmaker(perna.bookmaker_id, perna);
+            await reverterSaldoBookmaker(perna.bookmaker_id, perna, operacao.projeto_id);
           }
         }
       }
@@ -314,9 +314,10 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
       if (updateError) throw updateError;
 
       // Atualizar saldos das bookmakers se liquidado
+      // Passa projetoId para verificar se há bônus ativo
       if (todasLiquidadas) {
         for (const perna of pernasAtuais) {
-          await atualizarSaldoBookmaker(perna.bookmaker_id, perna);
+          await atualizarSaldoBookmaker(perna.bookmaker_id, perna, operacao.projeto_id);
         }
       }
 
@@ -347,10 +348,10 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
 
       const pernas = parsePernaFromJson(operacao.pernas);
       
-      // Reverter saldos
+      // Reverter saldos - passa projetoId para verificar bônus ativo
       for (const perna of pernas) {
         if (perna.resultado && perna.resultado !== "PENDENTE") {
-          await reverterSaldoBookmaker(perna.bookmaker_id, perna);
+          await reverterSaldoBookmaker(perna.bookmaker_id, perna, operacao.projeto_id);
         }
       }
 
@@ -398,27 +399,35 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
   };
 }
 
-// Helpers internos para manipulação de saldos - CORRIGIDO PARA MULTI-MOEDA
-async function atualizarSaldoBookmaker(bookmakerId: string, perna: PernaArbitragem): Promise<void> {
+// Helpers internos para manipulação de saldos - CORRIGIDO PARA MULTI-MOEDA E BÔNUS ATIVO
+async function atualizarSaldoBookmaker(
+  bookmakerId: string,
+  perna: PernaArbitragem,
+  projetoId?: string
+): Promise<void> {
   if (!perna.resultado || perna.resultado === "PENDENTE") return;
 
   // Calcular delta usando helper canônico
   const delta = calcularImpactoResultado(perna.stake, perna.odd, perna.resultado);
   
   if (delta !== 0) {
-    // Usar helper que respeita moeda do bookmaker (USD vs BRL)
-    await updateBookmakerBalance(bookmakerId, delta);
+    // Usar helper que respeita moeda do bookmaker (USD vs BRL) e bônus ativo
+    await updateBookmakerBalance(bookmakerId, delta, projetoId);
   }
 }
 
-async function reverterSaldoBookmaker(bookmakerId: string, perna: PernaArbitragem): Promise<void> {
+async function reverterSaldoBookmaker(
+  bookmakerId: string,
+  perna: PernaArbitragem,
+  projetoId?: string
+): Promise<void> {
   if (!perna.resultado || perna.resultado === "PENDENTE") return;
 
   // Calcular delta negativo (reversão) usando helper canônico
   const delta = -calcularImpactoResultado(perna.stake, perna.odd, perna.resultado);
   
   if (delta !== 0) {
-    // Usar helper que respeita moeda do bookmaker (USD vs BRL)
-    await updateBookmakerBalance(bookmakerId, delta);
+    // Usar helper que respeita moeda do bookmaker (USD vs BRL) e bônus ativo
+    await updateBookmakerBalance(bookmakerId, delta, projetoId);
   }
 }
