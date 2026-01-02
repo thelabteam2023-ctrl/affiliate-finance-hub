@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
 
@@ -92,94 +93,113 @@ interface UseProjectBonusesProps {
   bookmakerId?: string; // Optional: filter by specific bookmaker
 }
 
+// Query keys for bonus-related queries
+export const bonusQueryKeys = {
+  all: ["bonus"] as const,
+  project: (projectId: string) => ["bonus", "project", projectId] as const,
+  bookmaker: (projectId: string, bookmakerId: string) => ["bonus", "project", projectId, "bookmaker", bookmakerId] as const,
+  // Related queries that depend on bonus data
+  related: (projectId: string) => [
+    ["bonus", "project", projectId],
+    ["apostas", projectId], // Bets may have bonus_id
+    ["bookmaker-saldos", projectId], // Balance includes bonus info
+  ] as const,
+};
+
+// Function to invalidate all bonus-related queries
+export function useInvalidateBonusQueries() {
+  const queryClient = useQueryClient();
+  
+  return useCallback((projectId: string) => {
+    // Invalidate all bonus queries for this project
+    queryClient.invalidateQueries({ queryKey: ["bonus", "project", projectId] });
+    // Also invalidate related queries
+    queryClient.invalidateQueries({ queryKey: ["apostas", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+    queryClient.invalidateQueries({ queryKey: ["bookmakers"] });
+  }, [queryClient]);
+}
+
+async function fetchBonusesFromDb(projectId: string, bookmakerId?: string): Promise<ProjectBonus[]> {
+  let query = supabase
+    .from("project_bookmaker_link_bonuses")
+    .select(`
+      *,
+      bookmakers!project_bookmaker_link_bonuses_bookmaker_id_fkey (
+        nome,
+        login_username,
+        parceiro_id,
+        bookmaker_catalogo_id,
+        bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
+        parceiros!bookmakers_parceiro_id_fkey (nome)
+      )
+    `)
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+
+  if (bookmakerId) {
+    query = query.eq("bookmaker_id", bookmakerId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  return (data || []).map((b: any) => ({
+    id: b.id,
+    workspace_id: b.workspace_id,
+    project_id: b.project_id,
+    bookmaker_id: b.bookmaker_id,
+    title: b.title,
+    bonus_amount: Number(b.bonus_amount),
+    saldo_atual: Number(b.saldo_atual || 0),
+    currency: b.currency,
+    status: b.status as BonusStatus,
+    credited_at: b.credited_at,
+    expires_at: b.expires_at,
+    notes: b.notes,
+    created_by: b.created_by,
+    created_at: b.created_at,
+    updated_at: b.updated_at,
+    finalized_at: b.finalized_at,
+    finalized_by: b.finalized_by,
+    finalize_reason: b.finalize_reason as FinalizeReason | null,
+    source: (b.source || "manual") as BonusSource,
+    template_snapshot: b.template_snapshot as Record<string, unknown> | null,
+    rollover_multiplier: b.rollover_multiplier ? Number(b.rollover_multiplier) : null,
+    rollover_base: b.rollover_base,
+    rollover_target_amount: b.rollover_target_amount ? Number(b.rollover_target_amount) : null,
+    rollover_progress: Number(b.rollover_progress || 0),
+    deposit_amount: b.deposit_amount ? Number(b.deposit_amount) : null,
+    min_odds: b.min_odds ? Number(b.min_odds) : null,
+    deadline_days: b.deadline_days ? Number(b.deadline_days) : null,
+    bookmaker_nome: b.bookmakers?.nome,
+    bookmaker_login: b.bookmakers?.login_username,
+    bookmaker_logo_url: b.bookmakers?.bookmakers_catalogo?.logo_url,
+    parceiro_nome: b.bookmakers?.parceiros?.nome,
+    bookmaker_catalogo_id: b.bookmakers?.bookmaker_catalogo_id,
+    cotacao_credito_snapshot: b.cotacao_credito_snapshot ? Number(b.cotacao_credito_snapshot) : null,
+    cotacao_credito_at: b.cotacao_credito_at,
+    valor_brl_referencia: b.valor_brl_referencia ? Number(b.valor_brl_referencia) : null,
+  }));
+}
+
 export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesProps) {
-  const [bonuses, setBonuses] = useState<ProjectBonus[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+  const invalidateBonusQueries = useInvalidateBonusQueries();
 
-  const fetchBonuses = useCallback(async () => {
-    try {
-      setLoading(true);
+  const queryKey = bookmakerId 
+    ? bonusQueryKeys.bookmaker(projectId, bookmakerId)
+    : bonusQueryKeys.project(projectId);
 
-      let query = supabase
-        .from("project_bookmaker_link_bonuses")
-        .select(`
-          *,
-          bookmakers!project_bookmaker_link_bonuses_bookmaker_id_fkey (
-            nome,
-            login_username,
-            parceiro_id,
-            bookmaker_catalogo_id,
-            bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
-            parceiros!bookmakers_parceiro_id_fkey (nome)
-          )
-        `)
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false });
-
-      if (bookmakerId) {
-        query = query.eq("bookmaker_id", bookmakerId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      const mapped: ProjectBonus[] = (data || []).map((b: any) => ({
-        id: b.id,
-        workspace_id: b.workspace_id,
-        project_id: b.project_id,
-        bookmaker_id: b.bookmaker_id,
-        title: b.title,
-        bonus_amount: Number(b.bonus_amount),
-        saldo_atual: Number(b.saldo_atual || 0), // Saldo atual do bônus
-        currency: b.currency,
-        status: b.status as BonusStatus,
-        credited_at: b.credited_at,
-        expires_at: b.expires_at,
-        notes: b.notes,
-        created_by: b.created_by,
-        created_at: b.created_at,
-        updated_at: b.updated_at,
-        finalized_at: b.finalized_at,
-        finalized_by: b.finalized_by,
-        finalize_reason: b.finalize_reason as FinalizeReason | null,
-        // New fields
-        source: (b.source || "manual") as BonusSource,
-        template_snapshot: b.template_snapshot as Record<string, unknown> | null,
-        rollover_multiplier: b.rollover_multiplier ? Number(b.rollover_multiplier) : null,
-        rollover_base: b.rollover_base,
-        rollover_target_amount: b.rollover_target_amount ? Number(b.rollover_target_amount) : null,
-        rollover_progress: Number(b.rollover_progress || 0),
-        deposit_amount: b.deposit_amount ? Number(b.deposit_amount) : null,
-        min_odds: b.min_odds ? Number(b.min_odds) : null,
-        deadline_days: b.deadline_days ? Number(b.deadline_days) : null,
-        // Joined data
-        bookmaker_nome: b.bookmakers?.nome,
-        bookmaker_login: b.bookmakers?.login_username,
-        bookmaker_logo_url: b.bookmakers?.bookmakers_catalogo?.logo_url,
-        parceiro_nome: b.bookmakers?.parceiros?.nome,
-        bookmaker_catalogo_id: b.bookmakers?.bookmaker_catalogo_id,
-        // Campos de snapshot multi-moeda
-        cotacao_credito_snapshot: b.cotacao_credito_snapshot ? Number(b.cotacao_credito_snapshot) : null,
-        cotacao_credito_at: b.cotacao_credito_at,
-        valor_brl_referencia: b.valor_brl_referencia ? Number(b.valor_brl_referencia) : null,
-      }));
-
-      setBonuses(mapped);
-    } catch (error: any) {
-      console.error("Erro ao carregar bônus:", error.message);
-      toast.error("Erro ao carregar bônus");
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId, bookmakerId]);
-
-  useEffect(() => {
-    if (projectId) {
-      fetchBonuses();
-    }
-  }, [fetchBonuses, projectId]);
+  const { data: bonuses = [], isLoading: loading, refetch } = useQuery({
+    queryKey,
+    queryFn: () => fetchBonusesFromDb(projectId, bookmakerId),
+    enabled: !!projectId,
+    staleTime: 1000 * 30, // 30 seconds
+  });
+  
+  const fetchBonuses = refetch;
 
   const getSummary = useCallback((): BonusSummary => {
     const summary: BonusSummary = {
@@ -206,7 +226,6 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         case "credited":
           summary.total_credited += b.bonus_amount;
           summary.count_credited++;
-          // Credited = active bonus: use saldo_atual (pode ter sido consumido parcialmente)
           summary.active_bonus_total += b.saldo_atual;
           if (b.saldo_atual > 0) {
             bookmakersWithBonus.add(b.bookmaker_id);
@@ -240,14 +259,12 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     return summary;
   }, [bonuses]);
 
-  // Get active (credited) bonus saldo_atual for a specific bookmaker
   const getActiveBonusByBookmaker = useCallback((bkId: string): number => {
     return bonuses
       .filter((b) => b.bookmaker_id === bkId && b.status === "credited")
-      .reduce((acc, b) => acc + b.saldo_atual, 0); // Usar saldo_atual, não bonus_amount
+      .reduce((acc, b) => acc + b.saldo_atual, 0);
   }, [bonuses]);
 
-  // Get all bookmaker IDs that have active bonuses with saldo > 0
   const getBookmakersWithActiveBonus = useCallback((): string[] => {
     const ids = new Set<string>();
     bonuses.forEach((b) => {
@@ -258,20 +275,17 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     return Array.from(ids);
   }, [bonuses]);
 
-  // Get active bonus ID for a bookmaker (para uso na decomposição de stake)
   const getActiveBonusId = useCallback((bkId: string): string | null => {
     const bonus = bonuses.find((b) => b.bookmaker_id === bkId && b.status === "credited" && b.saldo_atual > 0);
     return bonus?.id || null;
   }, [bonuses]);
 
-  const createBonus = async (data: BonusFormData): Promise<boolean> => {
-    try {
-      setSaving(true);
-
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: BonusFormData) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
-      // Get workspace_id from project
       const { data: projectData } = await supabase
         .from("projetos")
         .select("workspace_id")
@@ -283,7 +297,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         bookmaker_id: data.bookmaker_id,
         title: data.title || "",
         bonus_amount: data.bonus_amount,
-        saldo_atual: data.status === "credited" ? data.bonus_amount : 0, // Inicializar saldo_atual
+        saldo_atual: data.status === "credited" ? data.bonus_amount : 0,
         currency: data.currency,
         status: data.status,
         credited_at: data.status === "credited" ? (data.credited_at || new Date().toISOString()) : null,
@@ -292,7 +306,6 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         created_by: userData.user.id,
         user_id: userData.user.id,
         workspace_id: projectData?.workspace_id || null,
-        // New fields
         source: data.source || "manual",
         template_snapshot: data.template_snapshot || null,
         rollover_multiplier: data.rollover_multiplier || null,
@@ -308,44 +321,35 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         .insert(bonusData as any);
 
       if (error) throw error;
-
+    },
+    onSuccess: () => {
       toast.success("Bônus registrado com sucesso");
-      await fetchBonuses();
-      return true;
-    } catch (error: any) {
+      invalidateBonusQueries(projectId);
+    },
+    onError: (error: Error) => {
       console.error("Erro ao criar bônus:", error.message);
       toast.error("Erro ao registrar bônus: " + error.message);
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+  });
 
-  const updateBonus = async (id: string, data: Partial<BonusFormData>): Promise<boolean> => {
-    try {
-      setSaving(true);
-
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<BonusFormData> }) => {
+      const existingBonus = bonuses.find((b) => b.id === id);
       const updateData: any = { ...data };
 
-      const existingBonus = bonuses.find((b) => b.id === id);
-
-      // If status changed to credited and no credited_at, set it
       if (data.status === "credited" && !data.credited_at) {
         updateData.credited_at = new Date().toISOString();
       }
 
-      // Handle saldo_atual when status changes
       if (existingBonus && data.status && data.status !== existingBonus.status) {
         if (data.status === "credited") {
-          // When crediting: initialize saldo_atual with bonus amount (prefer incoming, fallback to existing)
           updateData.saldo_atual =
             updateData.saldo_atual ??
             data.bonus_amount ??
             existingBonus.bonus_amount;
         } else {
-          // When un-crediting (pending/failed/expired/reversed/finalized): reset saldo
           updateData.saldo_atual = 0;
-          // If caller didn't explicitly provide credited_at, clear it
           if (typeof data.credited_at === "undefined") {
             updateData.credited_at = null;
           }
@@ -358,23 +362,20 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         .eq("id", id);
 
       if (error) throw error;
-
+    },
+    onSuccess: () => {
       toast.success("Bônus atualizado com sucesso");
-      await fetchBonuses();
-      return true;
-    } catch (error: any) {
+      invalidateBonusQueries(projectId);
+    },
+    onError: (error: Error) => {
       console.error("Erro ao atualizar bônus:", error.message);
       toast.error("Erro ao atualizar bônus: " + error.message);
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+  });
 
-  const finalizeBonus = async (id: string, reason: FinalizeReason): Promise<boolean> => {
-    try {
-      setSaving(true);
-
+  // Finalize mutation
+  const finalizeMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: FinalizeReason }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
@@ -391,46 +392,106 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         .eq("id", id);
 
       if (error) throw error;
-
+      return reason;
+    },
+    onSuccess: (reason) => {
       const reasonLabels: Record<FinalizeReason, string> = {
         rollover_completed: "Rollover concluído",
         bonus_consumed: "Bônus consumido/zerado",
         expired: "Expirou",
         cancelled_reversed: "Cancelado/Revertido",
       };
-
       toast.success(`Bônus finalizado: ${reasonLabels[reason]}`);
-      await fetchBonuses();
-      return true;
-    } catch (error: any) {
+      invalidateBonusQueries(projectId);
+    },
+    onError: (error: Error) => {
       console.error("Erro ao finalizar bônus:", error.message);
       toast.error("Erro ao finalizar bônus: " + error.message);
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+  });
 
-  const deleteBonus = async (id: string): Promise<boolean> => {
-    try {
-      setSaving(true);
-
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("project_bookmaker_link_bonuses")
         .delete()
         .eq("id", id);
 
       if (error) throw error;
-
+    },
+    onSuccess: () => {
       toast.success("Bônus excluído com sucesso");
-      await fetchBonuses();
-      return true;
-    } catch (error: any) {
+      invalidateBonusQueries(projectId);
+    },
+    onError: (error: Error) => {
       console.error("Erro ao excluir bônus:", error.message);
       toast.error("Erro ao excluir bônus: " + error.message);
+    },
+  });
+
+  // Update rollover progress mutation
+  const updateRolloverMutation = useMutation({
+    mutationFn: async ({ id, progress }: { id: string; progress: number }) => {
+      const { error } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .update({ rollover_progress: progress })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Progresso de rollover atualizado");
+      invalidateBonusQueries(projectId);
+    },
+    onError: (error: Error) => {
+      console.error("Erro ao atualizar progresso:", error.message);
+      toast.error("Erro ao atualizar progresso: " + error.message);
+    },
+  });
+
+  const createBonus = async (data: BonusFormData): Promise<boolean> => {
+    try {
+      await createMutation.mutateAsync(data);
+      return true;
+    } catch {
       return false;
-    } finally {
-      setSaving(false);
+    }
+  };
+
+  const updateBonus = async (id: string, data: Partial<BonusFormData>): Promise<boolean> => {
+    try {
+      await updateMutation.mutateAsync({ id, data });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const finalizeBonus = async (id: string, reason: FinalizeReason): Promise<boolean> => {
+    try {
+      await finalizeMutation.mutateAsync({ id, reason });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const deleteBonus = async (id: string): Promise<boolean> => {
+    try {
+      await deleteMutation.mutateAsync(id);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const updateRolloverProgress = async (id: string, progress: number): Promise<boolean> => {
+    try {
+      await updateRolloverMutation.mutateAsync({ id, progress });
+      return true;
+    } catch {
+      return false;
     }
   };
 
@@ -444,35 +505,13 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       .reduce((acc, b) => acc + b.bonus_amount, 0);
   }, [bonuses]);
 
-  const updateRolloverProgress = async (id: string, progress: number): Promise<boolean> => {
-    try {
-      setSaving(true);
-
-      const { error } = await supabase
-        .from("project_bookmaker_link_bonuses")
-        .update({ rollover_progress: progress })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      toast.success("Progresso de rollover atualizado");
-      await fetchBonuses();
-      return true;
-    } catch (error: any) {
-      console.error("Erro ao atualizar progresso:", error.message);
-      toast.error("Erro ao atualizar progresso: " + error.message);
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Calculate rollover percentage for a bonus
   const getRolloverPercentage = useCallback((bonus: ProjectBonus): number => {
     if (!bonus.rollover_target_amount || bonus.rollover_target_amount <= 0) return 0;
     const progress = bonus.rollover_progress || 0;
     return Math.min(100, (progress / bonus.rollover_target_amount) * 100);
   }, []);
+
+  const saving = createMutation.isPending || updateMutation.isPending || finalizeMutation.isPending || deleteMutation.isPending || updateRolloverMutation.isPending;
 
   return {
     bonuses,
