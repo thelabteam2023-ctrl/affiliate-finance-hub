@@ -54,6 +54,7 @@ import {
   getCurrencySymbol 
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
+import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 
 interface Aposta {
   id: string;
@@ -329,6 +330,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     currentBookmakerId: aposta?.bookmaker_id || null
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  
+  // Hook para gerenciamento de bônus (rollover)
+  const { atualizarProgressoRollover } = useBonusBalanceManager();
   
   // Mapear saldos canônicos para formato local (retrocompatibilidade)
   const bookmakers = useMemo((): Bookmaker[] => {
@@ -1734,6 +1738,31 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           const backStakeNum = parseFloat(coberturaBackStake);
           if (backStakeNum > 0 && coberturaBackBookmakerId) {
             await debitarFreebetUsada(coberturaBackBookmakerId, backStakeNum);
+          }
+        }
+
+        // Atualizar progresso do rollover se for aposta de bônus
+        if (registroValues.contexto_operacional === "BONUS" || registroValues.estrategia === "EXTRACAO_BONUS") {
+          const bookmakerParaRollover = tipoAposta === "bookmaker" 
+            ? bookmakerId 
+            : tipoOperacaoExchange === "cobertura" 
+              ? coberturaBackBookmakerId 
+              : exchangeBookmakerId;
+          
+          const stakeParaRollover = tipoAposta === "bookmaker" 
+            ? parseFloat(stake) 
+            : tipoOperacaoExchange === "cobertura"
+              ? parseFloat(coberturaBackStake)
+              : parseFloat(exchangeStake);
+          
+          const oddParaRollover = tipoAposta === "bookmaker"
+            ? parseFloat(odd)
+            : tipoOperacaoExchange === "cobertura"
+              ? parseFloat(coberturaBackOdd)
+              : parseFloat(exchangeOdd);
+              
+          if (bookmakerParaRollover && stakeParaRollover > 0) {
+            await atualizarProgressoRollover(projetoId, bookmakerParaRollover, stakeParaRollover, oddParaRollover);
           }
         }
       }

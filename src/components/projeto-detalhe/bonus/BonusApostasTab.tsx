@@ -95,6 +95,7 @@ interface Aposta {
   bookmaker?: {
     nome: string;
     parceiro_id: string;
+    moeda?: string;
     bookmaker_catalogo_id?: string | null;
     parceiro?: {
       nome: string;
@@ -126,6 +127,7 @@ interface ApostaMultipla {
   bookmaker?: {
     nome: string;
     parceiro_id: string;
+    moeda?: string;
     bookmaker_catalogo_id?: string | null;
     parceiro?: {
       nome: string;
@@ -256,6 +258,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           bookmaker:bookmakers (
             nome,
             parceiro_id,
+            moeda,
             bookmaker_catalogo_id,
             parceiro:parceiros (nome),
             bookmakers_catalogo (logo_url)
@@ -299,6 +302,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           bookmaker:bookmakers (
             nome,
             parceiro_id,
+            moeda,
             bookmaker_catalogo_id,
             parceiro:parceiros (nome),
             bookmakers_catalogo (logo_url)
@@ -664,7 +668,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Stake:</span>
-                    <span className="font-medium">{formatCurrency(aposta.stake)}</span>
+                    <span className="font-medium">{formatCurrencyWithMoeda(aposta.stake, aposta.bookmaker?.moeda || 'BRL')}</span>
                   </div>
                   
                   {aposta.lucro_prejuizo !== null && (
@@ -672,7 +676,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                       <span className="text-muted-foreground">P/L:</span>
                       <span className={`font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                         {aposta.lucro_prejuizo >= 0 ? <TrendingUp className="inline h-3 w-3 mr-0.5" /> : <TrendingDown className="inline h-3 w-3 mr-0.5" />}
-                        {formatCurrency(aposta.lucro_prejuizo)}
+                        {formatCurrencyWithMoeda(aposta.lucro_prejuizo, aposta.bookmaker?.moeda || 'BRL')}
                       </span>
                     </div>
                   )}
@@ -748,7 +752,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Stake:</span>
-                  <span className="font-medium">{formatCurrency(multipla.stake)}</span>
+                  <span className="font-medium">{formatCurrencyWithMoeda(multipla.stake, multipla.bookmaker?.moeda || 'BRL')}</span>
                 </div>
                 
                 {multipla.lucro_prejuizo !== null && (
@@ -756,7 +760,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                     <span className="text-muted-foreground">P/L:</span>
                     <span className={`font-medium ${multipla.lucro_prejuizo >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                       {multipla.lucro_prejuizo >= 0 ? <TrendingUp className="inline h-3 w-3 mr-0.5" /> : <TrendingDown className="inline h-3 w-3 mr-0.5" />}
-                      {formatCurrency(multipla.lucro_prejuizo)}
+                      {formatCurrencyWithMoeda(multipla.lucro_prejuizo, multipla.bookmaker?.moeda || 'BRL')}
                     </span>
                   </div>
                 )}
