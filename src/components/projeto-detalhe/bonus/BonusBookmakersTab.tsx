@@ -350,20 +350,23 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <div className="mt-1.5 space-y-0.5 max-w-[180px]">
+                                        <div className="mt-1.5 space-y-0.5 max-w-[200px]">
                                           <div className="flex items-center justify-between text-[10px]">
                                             <span className="text-muted-foreground flex items-center gap-1">
                                               <Target className="h-2.5 w-2.5" />
                                               Rollover
                                             </span>
                                             <span className={rolloverPercent >= 100 ? "text-emerald-400 font-medium" : "text-muted-foreground"}>
-                                              {rolloverPercent.toFixed(0)}%
+                                              {formatCurrency(totalRolloverProgress, bk.moeda)} / {formatCurrency(totalRolloverTarget, bk.moeda)}
                                             </span>
                                           </div>
                                           <Progress 
                                             value={rolloverPercent} 
                                             className="h-1"
                                           />
+                                          <div className="text-right text-[10px] text-muted-foreground">
+                                            {rolloverPercent.toFixed(0)}% concluído
+                                          </div>
                                         </div>
                                       </TooltipTrigger>
                                       <TooltipContent>

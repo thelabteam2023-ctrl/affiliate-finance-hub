@@ -319,12 +319,81 @@ export function useBonusBalanceManager() {
     return bonus?.saldo_atual || 0;
   }, [getActiveBonus]);
 
+  /**
+   * Atualiza o progresso do rollover quando uma aposta é registrada.
+   * 
+   * @param projectId - ID do projeto
+   * @param bookmakerId - ID da bookmaker
+   * @param stakeApostada - Valor apostado que conta para o rollover
+   * @param oddAposta - Odd da aposta (para validar odd mínima)
+   */
+  const atualizarProgressoRollover = useCallback(async (
+    projectId: string,
+    bookmakerId: string,
+    stakeApostada: number,
+    oddAposta?: number
+  ): Promise<boolean> => {
+    try {
+      // Buscar todos os bônus ativos para esta bookmaker
+      const { data: bonusesAtivos, error: fetchError } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .select("id, rollover_progress, rollover_target_amount, min_odds")
+        .eq("project_id", projectId)
+        .eq("bookmaker_id", bookmakerId)
+        .eq("status", "credited");
+
+      if (fetchError) {
+        console.error("Erro ao buscar bônus para rollover:", fetchError);
+        return false;
+      }
+
+      if (!bonusesAtivos || bonusesAtivos.length === 0) {
+        return true; // Sem bônus ativo, nada a atualizar
+      }
+
+      // Atualizar o progresso de cada bônus ativo
+      for (const bonus of bonusesAtivos) {
+        // Verificar se a aposta atende a odd mínima (se configurada)
+        if (bonus.min_odds && oddAposta && oddAposta < bonus.min_odds) {
+          console.log(`Aposta com odd ${oddAposta} não atende min_odds ${bonus.min_odds} do bônus ${bonus.id}`);
+          continue; // Não conta para este bônus
+        }
+
+        // Calcular novo progresso
+        const currentProgress = Number(bonus.rollover_progress || 0);
+        const newProgress = currentProgress + stakeApostada;
+
+        // Atualizar no banco
+        const { error: updateError } = await supabase
+          .from("project_bookmaker_link_bonuses")
+          .update({ 
+            rollover_progress: newProgress,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", bonus.id);
+
+        if (updateError) {
+          console.error("Erro ao atualizar rollover_progress:", updateError);
+          return false;
+        }
+
+        console.log(`Rollover atualizado: bônus ${bonus.id}, progresso ${currentProgress} -> ${newProgress}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Erro ao atualizar progresso do rollover:", error);
+      return false;
+    }
+  }, []);
+
   return {
     getActiveBonus,
     calcularDecomposicaoStake,
     atualizarSaldoBonus,
     processarLiquidacaoBonus,
     reverterLiquidacaoBonus,
-    getSaldoBonusDisponivel
+    getSaldoBonusDisponivel,
+    atualizarProgressoRollover
   };
 }
