@@ -1,17 +1,74 @@
-import { useState, useEffect } from "react";
+/**
+ * REGRA DE VISIBILIDADE (NÃO MODIFICAR SEM REVISÃO DE SEGURANÇA):
+ * 
+ * Operadores enxergam somente eventos operacionais de projetos vinculados.
+ * Financeiro, parceiros e administração NÃO fazem parte do escopo operacional.
+ */
+
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRole } from "@/hooks/useRole";
+import { useAuth } from "@/hooks/useAuth";
+
+// Classificação de domínio dos eventos
+type EventDomain = 'project_event' | 'financial_event' | 'partner_event' | 'admin_event';
+
+// Mapa de visibilidade por role
+const ROLE_VISIBILITY: Record<string, EventDomain[]> = {
+  owner: ['project_event', 'financial_event', 'partner_event', 'admin_event'],
+  admin: ['project_event', 'financial_event', 'partner_event', 'admin_event'],
+  finance: ['project_event', 'financial_event', 'partner_event'],
+  operator: ['project_event'], // Operadores veem apenas eventos de projeto
+  viewer: [], // Viewer não vê ações pendentes
+};
 
 export function useCentralAlertsCount() {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { role, isOperator } = useRole();
+  const { user } = useAuth();
+
+  // Domínios permitidos para o role atual
+  const allowedDomains = useMemo(() => {
+    return ROLE_VISIBILITY[role || 'viewer'] || [];
+  }, [role]);
 
   useEffect(() => {
+    if (!user) return;
+
     const fetchCount = async () => {
       try {
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
 
-        // Fetch all alert sources in parallel
+        // Para operadores, primeiro buscar os projetos vinculados
+        let operatorProjectIds: string[] = [];
+        let operadorId: string | null = null;
+
+        if (isOperator && user) {
+          const { data: operadorData } = await supabase
+            .from("operadores")
+            .select("id")
+            .eq("auth_user_id", user.id)
+            .single();
+
+          if (operadorData) {
+            operadorId = operadorData.id;
+            const { data: vinculos } = await supabase
+              .from("operador_projetos")
+              .select("projeto_id")
+              .eq("operador_id", operadorData.id)
+              .eq("status", "ATIVO");
+            operatorProjectIds = (vinculos || []).map((v: any) => v.projeto_id);
+          }
+        }
+
+        const canSeeAdminData = allowedDomains.includes('admin_event');
+        const canSeeFinancialData = allowedDomains.includes('financial_event');
+        const canSeePartnerData = allowedDomains.includes('partner_event');
+        const canSeeProjectData = allowedDomains.includes('project_event');
+
+        // Fetch all alert sources in parallel, respecting role restrictions
         const [
           alertasResult,
           entregasResult,
@@ -29,75 +86,121 @@ export function useCentralAlertsCount() {
           comissoesResult,
           indicacoesResult,
         ] = await Promise.all([
-          // Alertas do painel operacional
-          supabase.from("v_painel_operacional").select("entidade_id", { count: "exact", head: true }),
-          // Entregas pendentes
-          supabase.from("v_entregas_pendentes").select("id", { count: "exact", head: true }).in("status_conciliacao", ["PRONTA"]),
-          // Saques pendentes
-          supabase.from("cash_ledger").select("id", { count: "exact", head: true }).eq("tipo_transacao", "SAQUE").eq("status", "PENDENTE"),
-          // Parcerias para pagamentos
-          supabase
-            .from("parcerias")
-            .select("id")
-            .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-            .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
-            .gt("valor_parceiro", 0),
+          // Alertas do painel operacional - apenas admin
+          canSeeAdminData
+            ? supabase.from("v_painel_operacional").select("entidade_id", { count: "exact", head: true })
+            : Promise.resolve({ count: 0, error: null }),
+          // Entregas pendentes - project_event
+          canSeeProjectData
+            ? supabase.from("v_entregas_pendentes").select("id, projeto_id").in("status_conciliacao", ["PRONTA"])
+            : Promise.resolve({ data: [], error: null }),
+          // Saques pendentes - financial_event
+          canSeeFinancialData
+            ? supabase.from("cash_ledger").select("id", { count: "exact", head: true }).eq("tipo_transacao", "SAQUE").eq("status", "PENDENTE")
+            : Promise.resolve({ count: 0, error: null }),
+          // Parcerias para pagamentos - partner_event
+          canSeePartnerData
+            ? supabase
+                .from("parcerias")
+                .select("id")
+                .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+                .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
+                .gt("valor_parceiro", 0)
+            : Promise.resolve({ data: [], error: null }),
           // Movimentações para filtrar pagamentos já feitos
-          supabase
-            .from("movimentacoes_indicacao")
-            .select("parceria_id, tipo, status, indicador_id"),
-          // Alertas de lucro
-          supabase.from("parceiro_lucro_alertas").select("id", { count: "exact", head: true }).eq("notificado", false),
-          // Pagamentos de operador pendentes
-          supabase.from("pagamentos_operador").select("id", { count: "exact", head: true }).eq("status", "PENDENTE"),
-          // Participações pendentes
-          supabase.from("participacao_ciclos").select("id", { count: "exact", head: true }).eq("status", "A_PAGAR"),
-          // Parcerias próximas do encerramento
-          supabase
-            .from("parcerias")
-            .select("id, data_fim_prevista")
-            .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-            .not("data_fim_prevista", "is", null),
-          // Parceiros sem parceria
-          supabase.from("parceiros").select("id").eq("status", "ativo"),
+          canSeePartnerData
+            ? supabase
+                .from("movimentacoes_indicacao")
+                .select("parceria_id, tipo, status, indicador_id")
+            : Promise.resolve({ data: [], error: null }),
+          // Alertas de lucro - partner_event
+          canSeePartnerData
+            ? supabase.from("parceiro_lucro_alertas").select("id", { count: "exact", head: true }).eq("notificado", false)
+            : Promise.resolve({ count: 0, error: null }),
+          // Pagamentos de operador pendentes - project_event
+          canSeeProjectData
+            ? supabase.from("pagamentos_operador").select("id, operador_id").eq("status", "PENDENTE")
+            : Promise.resolve({ data: [], error: null }),
+          // Participações pendentes - financial_event
+          canSeeFinancialData
+            ? supabase.from("participacao_ciclos").select("id", { count: "exact", head: true }).eq("status", "A_PAGAR")
+            : Promise.resolve({ count: 0, error: null }),
+          // Parcerias próximas do encerramento - partner_event
+          canSeePartnerData
+            ? supabase
+                .from("parcerias")
+                .select("id, data_fim_prevista")
+                .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+                .not("data_fim_prevista", "is", null)
+            : Promise.resolve({ data: [], error: null }),
+          // Parceiros sem parceria - partner_event
+          canSeePartnerData
+            ? supabase.from("parceiros").select("id").eq("status", "ativo")
+            : Promise.resolve({ data: [], error: null }),
           // Todas as parcerias ativas (para filtrar parceiros sem parceria)
-          supabase.from("parcerias").select("parceiro_id").in("status", ["ATIVA", "EM_ENCERRAMENTO"]),
-          // Custos para bonus
-          supabase.from("v_custos_aquisicao").select("indicador_id"),
+          canSeePartnerData
+            ? supabase.from("parcerias").select("parceiro_id").in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+            : Promise.resolve({ data: [], error: null }),
+          // Custos para bonus - partner_event
+          canSeePartnerData
+            ? supabase.from("v_custos_aquisicao").select("indicador_id")
+            : Promise.resolve({ data: [], error: null }),
           // Acordos ativos
-          supabase.from("indicador_acordos").select("indicador_id, meta_parceiros, valor_bonus").eq("ativo", true),
-          // Comissões pendentes
-          supabase
-            .from("parcerias")
-            .select("id, parceiro_id")
-            .eq("comissao_paga", false)
-            .not("valor_comissao_indicador", "is", null)
-            .gt("valor_comissao_indicador", 0),
+          canSeePartnerData
+            ? supabase.from("indicador_acordos").select("indicador_id, meta_parceiros, valor_bonus").eq("ativo", true)
+            : Promise.resolve({ data: [], error: null }),
+          // Comissões pendentes - partner_event
+          canSeePartnerData
+            ? supabase
+                .from("parcerias")
+                .select("id, parceiro_id")
+                .eq("comissao_paga", false)
+                .not("valor_comissao_indicador", "is", null)
+                .gt("valor_comissao_indicador", 0)
+            : Promise.resolve({ data: [], error: null }),
           // Indicações para mapping
-          supabase.from("indicacoes").select("parceiro_id, indicador_id"),
+          canSeePartnerData
+            ? supabase.from("indicacoes").select("parceiro_id, indicador_id")
+            : Promise.resolve({ data: [], error: null }),
         ]);
 
         let totalCount = 0;
 
-        // Count from v_painel_operacional
+        // Count from v_painel_operacional (admin_event)
         if (alertasResult.count) totalCount += alertasResult.count;
 
-        // Count entregas pendentes
-        if (entregasResult.count) totalCount += entregasResult.count;
+        // Count entregas pendentes (project_event)
+        if (entregasResult.data) {
+          let entregasData = entregasResult.data || [];
+          // Operador: filtrar por projetos vinculados
+          if (isOperator && operatorProjectIds.length > 0) {
+            entregasData = entregasData.filter((e: any) => operatorProjectIds.includes(e.projeto_id));
+          } else if (isOperator) {
+            entregasData = [];
+          }
+          totalCount += entregasData.length;
+        }
 
-        // Count saques pendentes
+        // Count saques pendentes (financial_event)
         if (saquesPendentesResult.count) totalCount += saquesPendentesResult.count;
 
-        // Count alertas de lucro
+        // Count alertas de lucro (partner_event)
         if (alertasLucroResult.count) totalCount += alertasLucroResult.count;
 
-        // Count pagamentos operador pendentes
-        if (pagamentosOperadorResult.count) totalCount += pagamentosOperadorResult.count;
+        // Count pagamentos operador pendentes (project_event)
+        if (pagamentosOperadorResult.data) {
+          let pagamentosData = pagamentosOperadorResult.data || [];
+          // Operador: filtrar por seus próprios pagamentos
+          if (isOperator && operadorId) {
+            pagamentosData = pagamentosData.filter((p: any) => p.operador_id === operadorId);
+          }
+          totalCount += pagamentosData.length;
+        }
 
-        // Count participações pendentes
+        // Count participações pendentes (financial_event)
         if (participacoesResult.count) totalCount += participacoesResult.count;
 
-        // Count pagamentos pendentes a parceiros (excluding already paid)
+        // Count pagamentos pendentes a parceiros (partner_event)
         if (parceriasResult.data && movimentacoesResult.data) {
           const parceriasPagas = (movimentacoesResult.data || [])
             .filter((m: any) => m.tipo === "PAGTO_PARCEIRO" && m.status === "CONFIRMADO")
@@ -108,7 +211,7 @@ export function useCentralAlertsCount() {
           totalCount += pagamentosPendentes;
         }
 
-        // Count parcerias próximas do encerramento (≤ 7 dias)
+        // Count parcerias próximas do encerramento (≤ 7 dias) - partner_event
         if (encerResult.data) {
           const alertasEncer = (encerResult.data || []).filter((p: any) => {
             const dataFim = new Date(p.data_fim_prevista);
@@ -119,7 +222,7 @@ export function useCentralAlertsCount() {
           totalCount += alertasEncer;
         }
 
-        // Count parceiros sem parceria
+        // Count parceiros sem parceria (partner_event)
         if (todosParceirosResult.data && todasParceriasResult.data) {
           const parceirosComParceria = new Set((todasParceriasResult.data || []).map((p: any) => p.parceiro_id));
           const parceirosSemParceria = (todosParceirosResult.data || [])
@@ -127,7 +230,7 @@ export function useCentralAlertsCount() {
           totalCount += parceirosSemParceria;
         }
 
-        // Count bonus pendentes
+        // Count bonus pendentes (partner_event)
         if (custosResult.data && acordosResult.data && movimentacoesResult.data) {
           const indicadorQtd: Record<string, number> = {};
           custosResult.data.forEach((c: any) => {
@@ -156,7 +259,7 @@ export function useCentralAlertsCount() {
           });
         }
 
-        // Count comissões pendentes
+        // Count comissões pendentes (partner_event)
         if (comissoesResult.data && indicacoesResult.data) {
           const parceiroIndicadorMap: Record<string, boolean> = {};
           indicacoesResult.data.forEach((ind: any) => {
@@ -183,7 +286,7 @@ export function useCentralAlertsCount() {
     // Refresh every 60 seconds
     const interval = setInterval(fetchCount, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user, role, isOperator, allowedDomains]);
 
   return { count, loading };
 }
