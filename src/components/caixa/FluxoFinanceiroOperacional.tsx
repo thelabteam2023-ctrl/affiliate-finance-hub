@@ -548,7 +548,9 @@ export function FluxoFinanceiroOperacional({
                   { 
                     // Usa valor normalizado para altura da barra
                     dataKey: "aportes_usd_normalizado", 
-                    label: "Aportes USD", 
+                    label: "Aportes USD",
+                    // Usa valor original em USD para o label
+                    labelValueKey: "aportes_usd",
                     gradientStart: "#06B6D4", 
                     gradientEnd: "#0891B2" 
                   },
@@ -561,7 +563,9 @@ export function FluxoFinanceiroOperacional({
                   { 
                     // Usa valor normalizado para altura da barra
                     dataKey: "liquidacoes_usd_normalizado", 
-                    label: "Liquidações USD", 
+                    label: "Liquidações USD",
+                    // Usa valor original em USD para o label
+                    labelValueKey: "liquidacoes_usd",
                     gradientStart: "#EC4899", 
                     gradientEnd: "#DB2777" 
                   },
@@ -570,25 +574,12 @@ export function FluxoFinanceiroOperacional({
                 barSize={24}
                 showLabels={true}
                 formatLabel={(value, ctx) => {
-                  if (value === 0) return '';
-                  
-                  const dataKey = ctx?.dataKey?.toString() || '';
-                  
-                  // Verifica se é barra USD (contém _usd no dataKey)
-                  if (dataKey.includes('_usd') && ctx?.payload) {
-                    // Para USD, mostrar o valor original em dólar
-                    // dataKey: aportes_usd_normalizado -> originalKey: aportes_usd
-                    const originalKey = dataKey.replace('_normalizado', '');
-                    const payload = ctx.payload as Record<string, number>;
-                    const originalValue = payload[originalKey];
-                    if (originalValue && originalValue !== 0) {
-                      return 'US$ ' + Math.abs(originalValue).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
-                    }
-                    return '';
-                  }
-                  
-                  // Para BRL
-                  return 'R$ ' + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                  if (value === 0) return "";
+                  const dataKey = ctx?.dataKey?.toString() || "";
+                  const isUSD = dataKey.includes("_usd");
+
+                  return (isUSD ? "US$ " : "R$ ") +
+                    Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
                 }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
@@ -701,7 +692,9 @@ export function FluxoFinanceiroOperacional({
                   { 
                     // Usa valor normalizado para altura da barra
                     dataKey: "depositos_usd_normalizado", 
-                    label: "Depósitos USD", 
+                    label: "Depósitos USD",
+                    // Usa valor original em USD para o label
+                    labelValueKey: "depositos_usd",
                     gradientStart: "#06B6D4", 
                     gradientEnd: "#0891B2" 
                   },
@@ -714,7 +707,9 @@ export function FluxoFinanceiroOperacional({
                   { 
                     // Usa valor normalizado para altura da barra
                     dataKey: "saques_usd_normalizado", 
-                    label: "Saques USD", 
+                    label: "Saques USD",
+                    // Usa valor original em USD para o label
+                    labelValueKey: "saques_usd",
                     gradientStart: "#EC4899", 
                     gradientEnd: "#DB2777" 
                   },
@@ -723,25 +718,12 @@ export function FluxoFinanceiroOperacional({
                 barSize={24}
                 showLabels={true}
                 formatLabel={(value, ctx) => {
-                  if (value === 0) return '';
-                  
-                  const dataKey = ctx?.dataKey?.toString() || '';
-                  
-                  // Verifica se é barra USD (contém _usd no dataKey)
-                  if (dataKey.includes('_usd') && ctx?.payload) {
-                    // Para USD, mostrar o valor original em dólar
-                    // dataKey: depositos_usd_normalizado -> originalKey: depositos_usd
-                    const originalKey = dataKey.replace('_normalizado', '');
-                    const payload = ctx.payload as Record<string, number>;
-                    const originalValue = payload[originalKey];
-                    if (originalValue && originalValue !== 0) {
-                      return 'US$ ' + Math.abs(originalValue).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
-                    }
-                    return '';
-                  }
-                  
-                  // Para BRL
-                  return 'R$ ' + Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                  if (value === 0) return "";
+                  const dataKey = ctx?.dataKey?.toString() || "";
+                  const isUSD = dataKey.includes("_usd");
+
+                  return (isUSD ? "US$ " : "R$ ") +
+                    Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
                 }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
