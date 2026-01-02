@@ -20,7 +20,6 @@ interface Transacao {
   moeda: string;
   valor: number;
   valor_usd: number | null;
-  cotacao: number | null;
   origem_tipo: string | null;
   destino_tipo: string | null;
 }
@@ -127,10 +126,8 @@ export function FluxoFinanceiroOperacional({
     const agrupamentos: Map<string, { 
       aportes_brl: number; 
       aportes_usd: number;
-      aportes_usd_normalizado: number;
       liquidacoes_brl: number; 
       liquidacoes_usd: number;
-      liquidacoes_usd_normalizado: number;
       transacoes: Transacao[] 
     }> = new Map();
 
@@ -155,15 +152,7 @@ export function FluxoFinanceiroOperacional({
       }
 
       if (!agrupamentos.has(chave)) {
-        agrupamentos.set(chave, { 
-          aportes_brl: 0, 
-          aportes_usd: 0, 
-          aportes_usd_normalizado: 0,
-          liquidacoes_brl: 0, 
-          liquidacoes_usd: 0, 
-          liquidacoes_usd_normalizado: 0,
-          transacoes: [] 
-        });
+        agrupamentos.set(chave, { aportes_brl: 0, aportes_usd: 0, liquidacoes_brl: 0, liquidacoes_usd: 0, transacoes: [] });
       }
 
       const grupo = agrupamentos.get(chave)!;
@@ -172,14 +161,11 @@ export function FluxoFinanceiroOperacional({
       const isCrypto = t.tipo_moeda === "CRYPTO";
       const isUSD = t.moeda === "USD" || isCrypto;
       const valor = isCrypto ? (t.valor_usd || 0) : t.valor;
-      // Usar cotação do momento da transação (fallback para cotação atual se não existir)
-      const cotacaoTransacao = t.cotacao || cotacaoUSD;
 
       // Aporte: Investidor → Caixa
       if (t.destino_tipo === "CAIXA_OPERACIONAL") {
         if (isUSD) {
           grupo.aportes_usd += valor;
-          grupo.aportes_usd_normalizado += valor * cotacaoTransacao;
         } else {
           grupo.aportes_brl += valor;
         }
@@ -188,7 +174,6 @@ export function FluxoFinanceiroOperacional({
       if (t.origem_tipo === "CAIXA_OPERACIONAL") {
         if (isUSD) {
           grupo.liquidacoes_usd += valor;
-          grupo.liquidacoes_usd_normalizado += valor * cotacaoTransacao;
         } else {
           grupo.liquidacoes_brl += valor;
         }
@@ -200,11 +185,11 @@ export function FluxoFinanceiroOperacional({
         periodo: chave,
         aportes: dados.aportes_brl,
         aportes_usd: dados.aportes_usd,
-        // Valores normalizados usando cotação do momento de cada transação
-        aportes_usd_normalizado: dados.aportes_usd_normalizado,
+        // Valores normalizados em BRL para altura das barras (USD * cotação)
+        aportes_usd_normalizado: dados.aportes_usd * cotacaoUSD,
         liquidacoes: -dados.liquidacoes_brl,
         liquidacoes_usd: -dados.liquidacoes_usd,
-        liquidacoes_usd_normalizado: -dados.liquidacoes_usd_normalizado,
+        liquidacoes_usd_normalizado: -dados.liquidacoes_usd * cotacaoUSD,
         liquido: dados.aportes_brl - dados.liquidacoes_brl,
         liquido_usd: dados.aportes_usd - dados.liquidacoes_usd,
         transacoes: dados.transacoes,
@@ -234,10 +219,8 @@ export function FluxoFinanceiroOperacional({
     const agrupamentos: Map<string, { 
       depositos_brl: number; 
       depositos_usd: number;
-      depositos_usd_normalizado: number;
       saques_brl: number; 
       saques_usd: number;
-      saques_usd_normalizado: number;
       transacoes: Transacao[] 
     }> = new Map();
 
@@ -262,15 +245,7 @@ export function FluxoFinanceiroOperacional({
       }
 
       if (!agrupamentos.has(chave)) {
-        agrupamentos.set(chave, { 
-          depositos_brl: 0, 
-          depositos_usd: 0, 
-          depositos_usd_normalizado: 0,
-          saques_brl: 0, 
-          saques_usd: 0, 
-          saques_usd_normalizado: 0,
-          transacoes: [] 
-        });
+        agrupamentos.set(chave, { depositos_brl: 0, depositos_usd: 0, saques_brl: 0, saques_usd: 0, transacoes: [] });
       }
 
       const grupo = agrupamentos.get(chave)!;
@@ -279,20 +254,16 @@ export function FluxoFinanceiroOperacional({
       const isCrypto = t.tipo_moeda === "CRYPTO";
       const isUSD = t.moeda === "USD" || isCrypto;
       const valor = isCrypto ? (t.valor_usd || 0) : t.valor;
-      // Usar cotação do momento da transação (fallback para cotação atual se não existir)
-      const cotacaoTransacao = t.cotacao || cotacaoUSD;
 
       if (t.tipo_transacao === "DEPOSITO") {
         if (isUSD) {
           grupo.depositos_usd += valor;
-          grupo.depositos_usd_normalizado += valor * cotacaoTransacao;
         } else {
           grupo.depositos_brl += valor;
         }
       } else if (t.tipo_transacao === "SAQUE") {
         if (isUSD) {
           grupo.saques_usd += valor;
-          grupo.saques_usd_normalizado += valor * cotacaoTransacao;
         } else {
           grupo.saques_brl += valor;
         }
@@ -304,11 +275,11 @@ export function FluxoFinanceiroOperacional({
         periodo: chave,
         depositos: dados.depositos_brl,
         depositos_usd: dados.depositos_usd,
-        // Valores normalizados usando cotação do momento de cada transação
-        depositos_usd_normalizado: dados.depositos_usd_normalizado,
+        // Valores normalizados em BRL para altura das barras (USD * cotação)
+        depositos_usd_normalizado: dados.depositos_usd * cotacaoUSD,
         saques: dados.saques_brl,
         saques_usd: dados.saques_usd,
-        saques_usd_normalizado: dados.saques_usd_normalizado,
+        saques_usd_normalizado: dados.saques_usd * cotacaoUSD,
         alocacaoLiquida: dados.depositos_brl - dados.saques_brl,
         alocacaoLiquidaUSD: dados.depositos_usd - dados.saques_usd,
         transacoes: dados.transacoes,
