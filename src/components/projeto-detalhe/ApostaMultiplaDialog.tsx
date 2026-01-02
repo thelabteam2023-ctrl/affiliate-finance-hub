@@ -88,6 +88,7 @@ interface Bookmaker {
   saldo_operavel: number;
   moeda: string;
   logo_url: string | null;
+  bonus_rollover_started?: boolean;
 }
 
 interface ApostaMultiplaDialogProps {
@@ -139,7 +140,8 @@ export function ApostaMultiplaDialog({
       saldo_bonus: bk.saldo_bonus,
       saldo_operavel: bk.saldo_operavel,
       moeda: bk.moeda,
-      logo_url: bk.logo_url
+      logo_url: bk.logo_url,
+      bonus_rollover_started: bk.bonus_rollover_started
     }));
   }, [bookmakerSaldos]);
 
@@ -1036,6 +1038,7 @@ export function ApostaMultiplaDialog({
                           saldo_freebet: bk.saldo_freebet,
                           saldo_bonus: bk.saldo_bonus,
                           logo_url: bk.logo_url,
+                          bonus_rollover_started: bk.bonus_rollover_started,
                         }}
                       />
                     </SelectItem>

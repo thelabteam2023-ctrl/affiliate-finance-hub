@@ -1787,6 +1787,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                               saldo_freebet: bk.saldo_freebet,
                                               saldo_bonus: bk.saldo_bonus,
                                               logo_url: bk.logo_url,
+                                              bonus_rollover_started: bk.bonus_rollover_started,
                                             }}
                                             disabled={isIndisponivel}
                                             showBreakdown={!isIndisponivel}

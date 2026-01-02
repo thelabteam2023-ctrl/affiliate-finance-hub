@@ -14,6 +14,8 @@ export interface BookmakerOptionData {
   saldo_freebet?: number;
   saldo_bonus?: number;
   logo_url?: string | null;
+  /** Se true, o rollover já foi iniciado (rollover_progress > 0) - mostra saldo unificado */
+  bonus_rollover_started?: boolean;
 }
 
 interface BookmakerSelectOptionProps {
@@ -42,7 +44,7 @@ export function BookmakerSelectOption({
   showBreakdown = true,
   className,
 }: BookmakerSelectOptionProps) {
-  const { nome, parceiro_nome, moeda, saldo_operavel, saldo_freebet = 0, saldo_bonus = 0, logo_url } = bookmaker;
+  const { nome, parceiro_nome, moeda, saldo_operavel, saldo_freebet = 0, saldo_bonus = 0, logo_url, bonus_rollover_started = false } = bookmaker;
   
   const parceiroShortName = getFirstLastName(parceiro_nome || "");
   
@@ -81,17 +83,29 @@ export function BookmakerSelectOption({
           disabled ? "text-destructive" : getCurrencyTextColor(moeda)
         )}>
           {disabled ? "Indisponível" : formatCurrency(saldo_operavel, moeda)}
-          {/* Indicador de bônus ativo (em rollover) */}
-          {!disabled && saldo_bonus > 0 && (
-            <span className="text-purple-400" title="Bônus ativo">🎁</span>
+          {/* Indicador de bônus ativo (em rollover) - só mostra após 1ª aposta */}
+          {!disabled && saldo_bonus > 0 && bonus_rollover_started && (
+            <span className="text-purple-400" title="Bônus ativo em rollover">🎁</span>
           )}
         </span>
         
-        {/* Breakdown - só mostra freebet separado, bônus está unificado */}
-        {showBreakdown && !disabled && saldo_freebet > 0 && saldo_bonus === 0 && (
-          <span className="text-[9px] text-muted-foreground/70">
-            {formatBreakdown(bookmaker.saldo_disponivel || saldo_operavel, saldo_freebet, 0, moeda)}
-          </span>
+        {/* Breakdown: 
+            - Se bônus existe MAS rollover NÃO iniciou: mostra separado (antes da 1ª aposta)
+            - Se bônus existe E rollover iniciou: saldo unificado com 🎁 (acima)
+            - Se só tem freebet: mostra breakdown normal
+        */}
+        {showBreakdown && !disabled && (
+          (saldo_bonus > 0 && !bonus_rollover_started) ? (
+            // Antes da 1ª aposta: mostra real + bônus separados
+            <span className="text-[9px] text-muted-foreground/70">
+              {formatBreakdown(bookmaker.saldo_disponivel || (saldo_operavel - saldo_bonus - saldo_freebet), saldo_freebet, saldo_bonus, moeda)}
+            </span>
+          ) : (saldo_freebet > 0 && saldo_bonus === 0) ? (
+            // Só freebet, sem bônus
+            <span className="text-[9px] text-muted-foreground/70">
+              {formatBreakdown(bookmaker.saldo_disponivel || saldo_operavel, saldo_freebet, 0, moeda)}
+            </span>
+          ) : null
         )}
       </div>
     </div>
@@ -218,6 +232,8 @@ interface SaldoBreakdownDisplayProps {
   saldoBonus: number;
   saldoOperavel: number;
   moeda: string;
+  /** Se true, o rollover já foi iniciado - mostra saldo unificado com 🎁 */
+  bonusRolloverStarted?: boolean;
 }
 
 export function SaldoBreakdownDisplay({
@@ -226,9 +242,12 @@ export function SaldoBreakdownDisplay({
   saldoBonus,
   saldoOperavel,
   moeda,
+  bonusRolloverStarted = false,
 }: SaldoBreakdownDisplayProps) {
-  // Se tem bônus ativo, mostrar saldo unificado com indicador
-  const hasActiveBonus = saldoBonus > 0;
+  // Se tem bônus ativo E rollover iniciado, mostrar saldo unificado
+  const showUnifiedBonus = saldoBonus > 0 && bonusRolloverStarted;
+  // Se tem bônus mas rollover NÃO iniciou, mostra separado
+  const showSeparatedBonus = saldoBonus > 0 && !bonusRolloverStarted;
   
   return (
     <div className="text-xs text-center space-y-0.5">
@@ -237,13 +256,16 @@ export function SaldoBreakdownDisplay({
         <span className={cn("font-medium", getCurrencyTextColor(moeda))}>
           {formatCurrency(saldoOperavel, moeda)}
         </span>
-        {hasActiveBonus && (
+        {showUnifiedBonus && (
           <span className="text-purple-400" title="Bônus ativo em rollover">🎁</span>
         )}
       </p>
       
-      {/* Só mostra breakdown se NÃO tem bônus ativo */}
-      {!hasActiveBonus && (saldoFreebet > 0) && (
+      {/* Mostra breakdown se:
+          1. Bônus existe MAS rollover NÃO iniciou (antes da 1ª aposta)
+          2. Só tem freebet
+      */}
+      {(showSeparatedBonus || (!showUnifiedBonus && saldoFreebet > 0)) && (
         <p className="text-muted-foreground/70 text-[10px] flex items-center justify-center gap-3 flex-wrap">
           {/* Saldo Real */}
           <span className="text-emerald-400 flex items-center gap-1">
@@ -266,6 +288,20 @@ export function SaldoBreakdownDisplay({
                 <path d="M6 14h2M16 14h2" className="stroke-amber-400/60" strokeWidth="1" strokeLinecap="round"/>
               </svg>
               {formatCurrency(saldoFreebet, moeda)}
+            </span>
+          )}
+          
+          {/* Bônus - só mostra se rollover NÃO iniciou */}
+          {showSeparatedBonus && (
+            <span className="text-purple-400 flex items-center gap-1">
+              <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="20" height="16" rx="3" className="fill-purple-500/20 stroke-purple-400" strokeWidth="1.5"/>
+                <circle cx="12" cy="12" r="4" className="stroke-purple-400" strokeWidth="1.5"/>
+                <path d="M12 10v4M10.5 11.5l1.5-1.5 1.5 1.5" className="stroke-purple-400" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="5.5" cy="8" r="1" className="fill-purple-400/60"/>
+                <circle cx="18.5" cy="16" r="1" className="fill-purple-400/60"/>
+              </svg>
+              {formatCurrency(saldoBonus, moeda)}
             </span>
           )}
         </p>

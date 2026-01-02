@@ -101,6 +101,7 @@ interface Bookmaker {
   saldo_operavel: number;
   moeda: string;
   logo_url: string | null;
+  bonus_rollover_started?: boolean;
 }
 
 interface ApostaDialogProps {
@@ -348,7 +349,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       saldo_bonus: bk.saldo_bonus,
       saldo_operavel: bk.saldo_operavel,
       moeda: bk.moeda,
-      logo_url: bk.logo_url
+      logo_url: bk.logo_url,
+      bonus_rollover_started: bk.bonus_rollover_started
     }));
   }, [bookmakerSaldos]);
 
@@ -499,10 +501,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [tipoApostaExchangeBack, setTipoApostaExchangeBack] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
   
   // Saldos das casas selecionadas (incluindo saldo de freebet e bônus)
-  const [bookmakerSaldo, setBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string } | null>(null);
-  const [coberturaBackSaldo, setCoberturaBackSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string } | null>(null);
-  const [coberturaLaySaldo, setCoberturaLaySaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string } | null>(null);
-  const [exchangeBookmakerSaldo, setExchangeBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string } | null>(null);
+  const [bookmakerSaldo, setBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string; bonusRolloverStarted: boolean } | null>(null);
+  const [coberturaBackSaldo, setCoberturaBackSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string; bonusRolloverStarted: boolean } | null>(null);
+  const [coberturaLaySaldo, setCoberturaLaySaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string; bonusRolloverStarted: boolean } | null>(null);
+  const [exchangeBookmakerSaldo, setExchangeBookmakerSaldo] = useState<{ saldo: number; saldoDisponivel: number; saldoFreebet: number; saldoBonus: number; saldoOperavel: number; moeda: string; bonusRolloverStarted: boolean } | null>(null);
   
   // Valores calculados para Cobertura
   const [coberturaLayStake, setCoberturaLayStake] = useState<number | null>(null);
@@ -734,7 +736,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           saldoFreebet: selectedBk.saldo_freebet, 
           saldoBonus: selectedBk.saldo_bonus,
           saldoOperavel: selectedBk.saldo_operavel,
-          moeda: selectedBk.moeda 
+          moeda: selectedBk.moeda,
+          bonusRolloverStarted: selectedBk.bonus_rollover_started || false
         });
       }
     }
@@ -751,13 +754,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           saldoFreebet: selectedBk.saldo_freebet, 
           saldoBonus: selectedBk.saldo_bonus,
           saldoOperavel: selectedBk.saldo_operavel,
-          moeda: selectedBk.moeda 
+          moeda: selectedBk.moeda,
+          bonusRolloverStarted: selectedBk.bonus_rollover_started || false
         });
       } else {
         setExchangeBookmakerSaldo(null);
       }
-    } else {
-      setExchangeBookmakerSaldo(null);
     }
   }, [exchangeBookmakerId, bookmakers]);
 
@@ -2432,7 +2434,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             saldoFreebet: selectedBk.saldo_freebet, 
                             saldoBonus: selectedBk.saldo_bonus,
                             saldoOperavel: selectedBk.saldo_operavel,
-                            moeda: selectedBk.moeda 
+                            moeda: selectedBk.moeda,
+                            bonusRolloverStarted: selectedBk.bonus_rollover_started || false
                           });
                         } else {
                           setBookmakerSaldo(null);
@@ -2477,6 +2480,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     saldo_freebet: bk.saldo_freebet,
                                     saldo_bonus: bk.saldo_bonus,
                                     logo_url: bk.logo_url,
+                                    bonus_rollover_started: bk.bonus_rollover_started,
                                   }}
                                 />
                               </SelectItem>
@@ -2491,6 +2495,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         saldoBonus={bookmakerSaldo.saldoBonus}
                         saldoOperavel={bookmakerSaldo.saldoOperavel}
                         moeda={bookmakerSaldo.moeda}
+                        bonusRolloverStarted={bookmakerSaldo.bonusRolloverStarted}
                       />
                     )}
                   </div>
@@ -3041,7 +3046,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     saldoFreebet: bk.saldo_freebet, 
                                     saldoBonus: bk.saldo_bonus,
                                     saldoOperavel: bk.saldo_operavel,
-                                    moeda: bk.moeda 
+                                    moeda: bk.moeda,
+                                    bonusRolloverStarted: bk.bonus_rollover_started || false
                                   });
                                 } else {
                                   setCoberturaBackSaldo(null);
@@ -3214,7 +3220,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     saldoFreebet: bk.saldo_freebet, 
                                     saldoBonus: bk.saldo_bonus,
                                     saldoOperavel: bk.saldo_operavel,
-                                    moeda: bk.moeda 
+                                    moeda: bk.moeda,
+                                    bonusRolloverStarted: bk.bonus_rollover_started || false
                                   });
                                 } else {
                                   setCoberturaLaySaldo(null);
