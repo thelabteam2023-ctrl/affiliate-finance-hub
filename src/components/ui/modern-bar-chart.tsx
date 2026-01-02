@@ -20,6 +20,8 @@ interface BarConfig {
   label: string;
   gradientStart: string;
   gradientEnd: string;
+  /** Optional: key to use for label value (useful when bar uses a normalized value) */
+  labelValueKey?: string;
 }
 
 interface ModernBarChartProps {
@@ -280,14 +282,16 @@ export function ModernBarChart({
                   position="top"
                   content={(props: any) => {
                     const entry = props.payload;
-                    // If labelDataKey is provided, use that value instead of bar count
-                    const rawValue = labelDataKey && entry ? entry[labelDataKey] : props.value;
+                    // If a label key is provided (global or per-bar), use that value instead of the bar value
+                    const effectiveLabelKey = bar.labelValueKey ?? labelDataKey;
+                    const rawValue = effectiveLabelKey && entry ? entry[effectiveLabelKey] : props.value;
 
                     const ctx = { dataKey: bar.dataKey, payload: entry };
-                    const formattedValue = formatLabel && rawValue !== undefined ? formatLabel(rawValue, ctx) : rawValue;
+                    const formattedValue =
+                      formatLabel && rawValue !== undefined ? formatLabel(rawValue, ctx) : rawValue;
 
-                    // When labeling lucro (group label), color should follow lucro sign (from payload)
-                    const signValue = labelDataKey && entry ? entry[labelDataKey] : rawValue;
+                    // Color labels based on sign of the displayed label value (keeps behavior consistent)
+                    const signValue = rawValue;
 
                     return (
                       <AnimatedLabel
