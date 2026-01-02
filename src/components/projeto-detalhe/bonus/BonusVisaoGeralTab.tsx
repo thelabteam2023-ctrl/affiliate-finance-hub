@@ -105,7 +105,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         // Fetch bets from bookmakers in bonus mode - using .in() filter properly
         let query = supabase
           .from("apostas_unificada")
-          .select("id, data_aposta, stake, lucro_prejuizo, bookmaker_id, is_bonus_bet, bonus_id")
+          .select("id, data_aposta, stake, lucro_prejuizo, pl_consolidado, bookmaker_id, is_bonus_bet, bonus_id")
           .eq("projeto_id", projetoId)
           .gte("data_aposta", startDate.split('T')[0])
           .in("bookmaker_id", bookmakersInBonusMode);
@@ -153,6 +153,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
           nome,
           login_username,
           saldo_atual,
+          saldo_usd,
           moeda,
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
           parceiros!bookmakers_parceiro_id_fkey (nome)
@@ -161,24 +162,32 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
       if (error) throw error;
 
-      // Calculate bonus total per bookmaker
+      // Calculate active bonus total per bookmaker (saldo_atual, não o valor inicial)
       const bonusByBookmaker: Record<string, number> = {};
-      bonuses.forEach(b => {
-        if (b.status === 'credited') {
-          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + b.bonus_amount;
+      bonuses.forEach((b) => {
+        if (b.status === "credited" && (b.saldo_atual || 0) > 0) {
+          bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.saldo_atual || 0);
         }
       });
 
-      const mapped: BookmakerWithBonus[] = (data || []).map((bk: any) => ({
-        id: bk.id,
-        nome: bk.nome,
-        login_username: bk.login_username,
-        logo_url: bk.bookmakers_catalogo?.logo_url || null,
-        parceiro_nome: bk.parceiros?.nome || null,
-        saldo_real: bk.saldo_atual,
-        bonus_ativo: bonusByBookmaker[bk.id] || 0,
-        moeda: bk.moeda || 'BRL',
-      }));
+      const mapped: BookmakerWithBonus[] = (data || []).map((bk: any) => {
+        const moeda = bk.moeda || "BRL";
+        const isUsdCurrency = moeda === "USD" || moeda === "USDT";
+        const saldoReal = isUsdCurrency
+          ? Number(bk.saldo_usd ?? bk.saldo_atual ?? 0)
+          : Number(bk.saldo_atual ?? 0);
+
+        return {
+          id: bk.id,
+          nome: bk.nome,
+          login_username: bk.login_username,
+          logo_url: bk.bookmakers_catalogo?.logo_url || null,
+          parceiro_nome: bk.parceiros?.nome || null,
+          saldo_real: saldoReal,
+          bonus_ativo: bonusByBookmaker[bk.id] || 0,
+          moeda,
+        };
+      });
 
       // Sort by bonus amount descending
       mapped.sort((a, b) => b.bonus_ativo - a.bonus_ativo);
@@ -212,7 +221,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         if (!depositsByDate[dateKey]) {
           depositsByDate[dateKey] = 0;
         }
-        depositsByDate[dateKey] += b.deposit_amount;
+        depositsByDate[dateKey] += convertToConsolidation(b.deposit_amount, b.currency);
       }
     });
 
@@ -224,7 +233,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         if (!bonusByDate[dateKey]) {
           bonusByDate[dateKey] = 0;
         }
-        bonusByDate[dateKey] += b.bonus_amount;
+        bonusByDate[dateKey] += convertToConsolidation(b.bonus_amount, b.currency);
       }
     });
 
@@ -238,7 +247,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       if (!juiceByDate[betDate]) {
         juiceByDate[betDate] = 0;
       }
-      juiceByDate[betDate] += bet.lucro_prejuizo || 0;
+      juiceByDate[betDate] += (bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0);
     });
 
     // Calculate cumulative adjusted balance
@@ -318,9 +327,21 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     });
   }, [bonuses, dateRange]);
 
-  // Calculate totals
-  const totalSaldoReal = bookmakersWithBonus.reduce((acc, bk) => acc + bk.saldo_real, 0);
-  const totalSaldoOperavel = totalSaldoReal + summary.active_bonus_total;
+  // Totais (sempre na moeda de consolidação do projeto)
+  const activeBonusTotalConsolidated = useMemo(() => {
+    return bonuses
+      .filter((b) => b.status === "credited" && (b.saldo_atual || 0) > 0)
+      .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
+  }, [bonuses, convertToConsolidation]);
+
+  const totalSaldoRealConsolidated = useMemo(() => {
+    return bookmakersWithBonus.reduce(
+      (acc, bk) => acc + convertToConsolidation(bk.saldo_real || 0, bk.moeda),
+      0
+    );
+  }, [bookmakersWithBonus, convertToConsolidation]);
+
+  const totalSaldoOperavel = totalSaldoRealConsolidated + activeBonusTotalConsolidated;
 
   const chartConfig = {
     deposits: { label: "Depósitos", color: "hsl(var(--chart-2))" },
@@ -385,7 +406,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               <Coins className="h-4 w-4 text-warning" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(summary.active_bonus_total)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(activeBonusTotalConsolidated)}</div>
               <p className="text-xs text-muted-foreground">{summary.count_credited} bônus creditados</p>
             </CardContent>
           </Card>
@@ -408,7 +429,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(totalSaldoReal)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(totalSaldoRealConsolidated)}</div>
               <p className="text-xs text-muted-foreground">Apenas casas em modo bônus</p>
             </CardContent>
           </Card>
