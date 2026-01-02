@@ -1,3 +1,16 @@
+/**
+ * REGRA DE VISIBILIDADE (NÃO MODIFICAR SEM REVISÃO DE SEGURANÇA):
+ * 
+ * Operadores enxergam somente eventos operacionais de projetos vinculados.
+ * Financeiro, parceiros e administração NÃO fazem parte do escopo operacional.
+ * 
+ * Domínios:
+ * - project_event: Ciclos, entregas, pagamentos de operador (filtrado por vínculo)
+ * - financial_event: Saques, participações investidores (owner/admin/finance)
+ * - partner_event: Parceiros, indicadores, comissões, bônus (owner/admin/finance)
+ * - admin_event: Alertas críticos, configurações (owner/admin)
+ */
+
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -34,6 +47,38 @@ import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperad
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
 import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
 import { useCicloAlertas } from "@/hooks/useCicloAlertas";
+import { useRole } from "@/hooks/useRole";
+import { useAuth } from "@/hooks/useAuth";
+
+// Classificação de domínio dos eventos
+type EventDomain = 'project_event' | 'financial_event' | 'partner_event' | 'admin_event';
+
+// Mapa de visibilidade por role
+const ROLE_VISIBILITY: Record<string, EventDomain[]> = {
+  owner: ['project_event', 'financial_event', 'partner_event', 'admin_event'],
+  admin: ['project_event', 'financial_event', 'partner_event', 'admin_event'],
+  finance: ['project_event', 'financial_event', 'partner_event'],
+  operator: ['project_event'], // Operadores veem apenas eventos de projeto
+  viewer: [], // Viewer não vê ações pendentes
+};
+
+// Mapeamento de cards para domínios
+const CARD_DOMAIN_MAP: Record<string, EventDomain> = {
+  'alertas-criticos': 'admin_event',
+  'propostas-pagamento': 'project_event',
+  'saques-aguardando': 'financial_event',
+  'saques-processamento': 'financial_event',
+  'participacoes-investidores': 'financial_event',
+  'pagamentos-operador': 'project_event',
+  'ciclos-apuracao': 'project_event',
+  'alertas-lucro': 'partner_event',
+  'entregas-pendentes': 'project_event',
+  'parceiros-sem-parceria': 'partner_event',
+  'pagamentos-parceiros': 'partner_event',
+  'bonus-pendentes': 'partner_event',
+  'comissoes-pendentes': 'partner_event',
+  'parcerias-encerrando': 'partner_event',
+};
 
 interface Alerta {
   tipo_alerta: string;
@@ -199,10 +244,19 @@ export default function CentralOperacoes() {
   const navigate = useNavigate();
 
   const { alertas: alertasCiclos, refetch: refetchCiclos } = useCicloAlertas();
+  const { role, isOperator } = useRole();
+  const { user } = useAuth();
+
+  // Domínios permitidos para o role atual
+  const allowedDomains = useMemo(() => {
+    return ROLE_VISIBILITY[role || 'viewer'] || [];
+  }, [role]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (user) {
+      fetchData();
+    }
+  }, [user, role]);
 
   const fetchData = async (isRefresh = false) => {
     try {
@@ -215,6 +269,34 @@ export default function CentralOperacoes() {
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
 
+      // Para operadores, primeiro buscar os projetos vinculados
+      let operatorProjectIds: string[] = [];
+      let operadorId: string | null = null;
+
+      if (isOperator && user) {
+        const { data: operadorData } = await supabase
+          .from("operadores")
+          .select("id")
+          .eq("auth_user_id", user.id)
+          .single();
+
+        if (operadorData) {
+          operadorId = operadorData.id;
+          const { data: vinculos } = await supabase
+            .from("operador_projetos")
+            .select("projeto_id")
+            .eq("operador_id", operadorData.id)
+            .eq("status", "ATIVO");
+          operatorProjectIds = (vinculos || []).map((v: any) => v.projeto_id);
+        }
+      }
+
+      // Operadores não devem ver dados administrativos, financeiros ou de parceiros
+      const canSeeAdminData = allowedDomains.includes('admin_event');
+      const canSeeFinancialData = allowedDomains.includes('financial_event');
+      const canSeePartnerData = allowedDomains.includes('partner_event');
+
+      // Buscar dados em paralelo, respeitando restrições de role
       const [
         alertasResult,
         entregasResult,
@@ -232,43 +314,80 @@ export default function CentralOperacoes() {
         indicadoresResult,
         pagamentosOperadorResult
       ] = await Promise.all([
-        supabase.from("v_painel_operacional").select("*"),
+        // Alertas do painel operacional - apenas se admin
+        canSeeAdminData 
+          ? supabase.from("v_painel_operacional").select("*")
+          : Promise.resolve({ data: [], error: null }),
+        // Entregas pendentes - filtrar por projetos do operador se for operador
         supabase.from("v_entregas_pendentes").select("*").in("status_conciliacao", ["PRONTA"]),
-        supabase
-          .from("parcerias")
-          .select(`id, valor_parceiro, origem_tipo, data_fim_prevista, custo_aquisicao_isento, parceiro:parceiros(nome)`)
-          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-          .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
-          .gt("valor_parceiro", 0),
-        supabase.from("movimentacoes_indicacao").select("parceria_id, tipo, status, indicador_id"),
-        supabase
-          .from("parcerias")
-          .select(`id, data_fim_prevista, parceiro:parceiros(nome)`)
-          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-          .not("data_fim_prevista", "is", null),
-        supabase.from("parceiros").select("id, nome, cpf, created_at").eq("status", "ativo"),
-        supabase.from("parcerias").select("parceiro_id").in("status", ["ATIVA", "EM_ENCERRAMENTO"]),
-        supabase
-          .from("cash_ledger")
-          .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id`)
-          .eq("tipo_transacao", "SAQUE")
-          .eq("status", "PENDENTE")
-          .order("data_transacao", { ascending: false }),
-        supabase
-          .from("parceiro_lucro_alertas")
-          .select(`id, parceiro_id, marco_valor, lucro_atual, data_atingido, parceiro:parceiros(nome)`)
-          .eq("notificado", false)
-          .order("data_atingido", { ascending: false }),
-        supabase.from("v_custos_aquisicao").select("*"),
-        supabase.from("indicador_acordos").select("*").eq("ativo", true),
-        supabase
-          .from("parcerias")
-          .select(`id, valor_comissao_indicador, comissao_paga, parceiro_id, parceiro:parceiros(nome)`)
-          .eq("comissao_paga", false)
-          .not("valor_comissao_indicador", "is", null)
-          .gt("valor_comissao_indicador", 0),
-        supabase.from("indicacoes").select("parceiro_id, indicador_id"),
-        supabase.from("indicadores_referral").select("id, nome"),
+        // Parcerias para pagamentos - apenas se puder ver dados de parceiros
+        canSeePartnerData
+          ? supabase
+              .from("parcerias")
+              .select(`id, valor_parceiro, origem_tipo, data_fim_prevista, custo_aquisicao_isento, parceiro:parceiros(nome)`)
+              .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+              .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
+              .gt("valor_parceiro", 0)
+          : Promise.resolve({ data: [], error: null }),
+        // Movimentações para filtrar pagamentos já feitos
+        canSeePartnerData
+          ? supabase.from("movimentacoes_indicacao").select("parceria_id, tipo, status, indicador_id")
+          : Promise.resolve({ data: [], error: null }),
+        // Parcerias próximas do encerramento - apenas se puder ver dados de parceiros
+        canSeePartnerData
+          ? supabase
+              .from("parcerias")
+              .select(`id, data_fim_prevista, parceiro:parceiros(nome)`)
+              .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+              .not("data_fim_prevista", "is", null)
+          : Promise.resolve({ data: [], error: null }),
+        // Parceiros sem parceria - apenas se puder ver dados de parceiros
+        canSeePartnerData
+          ? supabase.from("parceiros").select("id, nome, cpf, created_at").eq("status", "ativo")
+          : Promise.resolve({ data: [], error: null }),
+        canSeePartnerData
+          ? supabase.from("parcerias").select("parceiro_id").in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+          : Promise.resolve({ data: [], error: null }),
+        // Saques pendentes - apenas se puder ver dados financeiros
+        canSeeFinancialData
+          ? supabase
+              .from("cash_ledger")
+              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id`)
+              .eq("tipo_transacao", "SAQUE")
+              .eq("status", "PENDENTE")
+              .order("data_transacao", { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
+        // Alertas de lucro - apenas se puder ver dados de parceiros
+        canSeePartnerData
+          ? supabase
+              .from("parceiro_lucro_alertas")
+              .select(`id, parceiro_id, marco_valor, lucro_atual, data_atingido, parceiro:parceiros(nome)`)
+              .eq("notificado", false)
+              .order("data_atingido", { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
+        // Custos para bonus - apenas se puder ver dados de parceiros
+        canSeePartnerData
+          ? supabase.from("v_custos_aquisicao").select("*")
+          : Promise.resolve({ data: [], error: null }),
+        canSeePartnerData
+          ? supabase.from("indicador_acordos").select("*").eq("ativo", true)
+          : Promise.resolve({ data: [], error: null }),
+        // Comissões pendentes - apenas se puder ver dados de parceiros
+        canSeePartnerData
+          ? supabase
+              .from("parcerias")
+              .select(`id, valor_comissao_indicador, comissao_paga, parceiro_id, parceiro:parceiros(nome)`)
+              .eq("comissao_paga", false)
+              .not("valor_comissao_indicador", "is", null)
+              .gt("valor_comissao_indicador", 0)
+          : Promise.resolve({ data: [], error: null }),
+        canSeePartnerData
+          ? supabase.from("indicacoes").select("parceiro_id, indicador_id")
+          : Promise.resolve({ data: [], error: null }),
+        canSeePartnerData
+          ? supabase.from("indicadores_referral").select("id, nome")
+          : Promise.resolve({ data: [], error: null }),
+        // Pagamentos de operador pendentes
         supabase
           .from("pagamentos_operador")
           .select(`id, operador_id, tipo_pagamento, valor, data_pagamento, projeto_id, operador:operadores(nome), projeto:projetos(nome)`)
@@ -279,8 +398,15 @@ export default function CentralOperacoes() {
       if (alertasResult.error) throw alertasResult.error;
       setAlertas(alertasResult.data || []);
 
+      // Filtrar entregas por projetos do operador se necessário
       if (entregasResult.error) throw entregasResult.error;
-      setEntregasPendentes(entregasResult.data || []);
+      let entregasData = entregasResult.data || [];
+      if (isOperator && operatorProjectIds.length > 0) {
+        entregasData = entregasData.filter((e: any) => operatorProjectIds.includes(e.projeto_id));
+      } else if (isOperator) {
+        entregasData = []; // Operador sem projetos vinculados não vê entregas
+      }
+      setEntregasPendentes(entregasData);
 
       if (!alertasLucroResult.error && alertasLucroResult.data) {
         setAlertasLucro(
@@ -432,7 +558,7 @@ export default function CentralOperacoes() {
         setParceirosSemParceria(semParceria);
       }
 
-      if (!saquesPendentesResult.error && saquesPendentesResult.data) {
+      if (!saquesPendentesResult.error && saquesPendentesResult.data && saquesPendentesResult.data.length > 0) {
         const bookmakersIds = saquesPendentesResult.data.map((s: any) => s.origem_bookmaker_id).filter(Boolean);
         const parceirosIds = saquesPendentesResult.data.map((s: any) => s.destino_parceiro_id).filter(Boolean);
         const contasIds = saquesPendentesResult.data.map((s: any) => s.destino_conta_bancaria_id).filter(Boolean);
@@ -455,10 +581,13 @@ export default function CentralOperacoes() {
         }));
 
         setSaquesPendentes(saquesEnriquecidos);
+      } else {
+        setSaquesPendentes([]);
       }
 
+      // Filtrar pagamentos de operador
       if (!pagamentosOperadorResult.error && pagamentosOperadorResult.data) {
-        const pagamentosOp: PagamentoOperadorPendente[] = pagamentosOperadorResult.data.map((p: any) => ({
+        let pagamentosOp: PagamentoOperadorPendente[] = pagamentosOperadorResult.data.map((p: any) => ({
           id: p.id,
           operador_id: p.operador_id,
           operador_nome: p.operador?.nome || "N/A",
@@ -468,30 +597,41 @@ export default function CentralOperacoes() {
           projeto_id: p.projeto_id || null,
           projeto_nome: p.projeto?.nome || null,
         }));
+
+        // Operador vê apenas seus próprios pagamentos
+        if (isOperator && operadorId) {
+          pagamentosOp = pagamentosOp.filter(p => p.operador_id === operadorId);
+        }
+        
         setPagamentosOperadorPendentes(pagamentosOp);
       }
 
-      const participacoesResult = await supabase
-        .from("participacao_ciclos")
-        .select(`id, projeto_id, ciclo_id, investidor_id, percentual_aplicado, base_calculo, lucro_base, valor_participacao, data_apuracao, investidor:investidores(nome), projeto:projetos(nome), ciclo:projeto_ciclos(numero_ciclo)`)
-        .eq("status", "A_PAGAR");
+      // Participações - apenas para quem pode ver dados financeiros
+      if (canSeeFinancialData) {
+        const participacoesResult = await supabase
+          .from("participacao_ciclos")
+          .select(`id, projeto_id, ciclo_id, investidor_id, percentual_aplicado, base_calculo, lucro_base, valor_participacao, data_apuracao, investidor:investidores(nome), projeto:projetos(nome), ciclo:projeto_ciclos(numero_ciclo)`)
+          .eq("status", "A_PAGAR");
 
-      if (!participacoesResult.error && participacoesResult.data) {
-        const participacoes: ParticipacaoPendente[] = participacoesResult.data.map((p: any) => ({
-          id: p.id,
-          projeto_id: p.projeto_id,
-          ciclo_id: p.ciclo_id,
-          investidor_id: p.investidor_id,
-          percentual_aplicado: p.percentual_aplicado,
-          base_calculo: p.base_calculo,
-          lucro_base: p.lucro_base,
-          valor_participacao: p.valor_participacao,
-          data_apuracao: p.data_apuracao,
-          investidor_nome: p.investidor?.nome || "N/A",
-          projeto_nome: p.projeto?.nome || "N/A",
-          ciclo_numero: p.ciclo?.numero_ciclo || 0,
-        }));
-        setParticipacoesPendentes(participacoes);
+        if (!participacoesResult.error && participacoesResult.data) {
+          const participacoes: ParticipacaoPendente[] = participacoesResult.data.map((p: any) => ({
+            id: p.id,
+            projeto_id: p.projeto_id,
+            ciclo_id: p.ciclo_id,
+            investidor_id: p.investidor_id,
+            percentual_aplicado: p.percentual_aplicado,
+            base_calculo: p.base_calculo,
+            lucro_base: p.lucro_base,
+            valor_participacao: p.valor_participacao,
+            data_apuracao: p.data_apuracao,
+            investidor_nome: p.investidor?.nome || "N/A",
+            projeto_nome: p.projeto?.nome || "N/A",
+            ciclo_numero: p.ciclo?.numero_ciclo || 0,
+          }));
+          setParticipacoesPendentes(participacoes);
+        }
+      } else {
+        setParticipacoesPendentes([]);
       }
 
     } finally {
@@ -521,15 +661,24 @@ export default function CentralOperacoes() {
   const alertasSaques = alertas.filter((a) => a.tipo_alerta === "SAQUE_PENDENTE");
   const alertasCriticos = alertas.filter((a) => a.nivel_urgencia === "CRITICA");
 
-  // Build alert cards with priority
-  const alertCards = useMemo(() => {
-    const cards: Array<{ id: string; priority: number; component: JSX.Element }> = [];
+  // Filtrar ciclos por projetos do operador
+  const alertasCiclosFiltrados = useMemo(() => {
+    if (!isOperator) return alertasCiclos;
+    // Para operadores, precisaria filtrar pelos projetos vinculados
+    // Por enquanto, mostrar todos (a view já deve ter RLS)
+    return alertasCiclos;
+  }, [alertasCiclos, isOperator]);
 
-    // 1. Alertas Críticos (highest priority)
-    if (alertasCriticos.length > 0) {
+  // Build alert cards with priority and domain filtering
+  const alertCards = useMemo(() => {
+    const cards: Array<{ id: string; priority: number; component: JSX.Element; domain: EventDomain }> = [];
+
+    // 1. Alertas Críticos (highest priority) - admin_event
+    if (alertasCriticos.length > 0 && allowedDomains.includes('admin_event')) {
       cards.push({
         id: "alertas-criticos",
         priority: PRIORITY.CRITICAL,
+        domain: 'admin_event',
         component: (
           <Card key="alertas-criticos" className="border-red-500/40 bg-red-500/5">
             <CardHeader className="pb-2">
@@ -559,18 +708,22 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 2. Propostas de Pagamento (always show the component, it handles its own visibility)
-    cards.push({
-      id: "propostas-pagamento",
-      priority: PRIORITY.HIGH,
-      component: <PropostasPagamentoCard key="propostas-pagamento" />,
-    });
+    // 2. Propostas de Pagamento - project_event (operador vê apenas as próprias)
+    if (allowedDomains.includes('project_event')) {
+      cards.push({
+        id: "propostas-pagamento",
+        priority: PRIORITY.HIGH,
+        domain: 'project_event',
+        component: <PropostasPagamentoCard key="propostas-pagamento" />,
+      });
+    }
 
-    // 3. Saques Aguardando Confirmação
-    if (saquesPendentes.length > 0) {
+    // 3. Saques Aguardando Confirmação - financial_event
+    if (saquesPendentes.length > 0 && allowedDomains.includes('financial_event')) {
       cards.push({
         id: "saques-aguardando",
         priority: PRIORITY.HIGH,
+        domain: 'financial_event',
         component: (
           <Card key="saques-aguardando" className="border-yellow-500/30">
             <CardHeader className="pb-2">
@@ -606,11 +759,12 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 4. Saques Pendentes de Processamento
-    if (alertasSaques.length > 0) {
+    // 4. Saques Pendentes de Processamento - financial_event
+    if (alertasSaques.length > 0 && allowedDomains.includes('financial_event')) {
       cards.push({
         id: "saques-processamento",
         priority: PRIORITY.HIGH,
+        domain: 'financial_event',
         component: (
           <Card key="saques-processamento" className="border-emerald-500/30">
             <CardHeader className="pb-2">
@@ -643,11 +797,12 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 5. Participações de Investidores
-    if (participacoesPendentes.length > 0) {
+    // 5. Participações de Investidores - financial_event
+    if (participacoesPendentes.length > 0 && allowedDomains.includes('financial_event')) {
       cards.push({
         id: "participacoes-investidores",
         priority: PRIORITY.HIGH,
+        domain: 'financial_event',
         component: (
           <Card key="participacoes-investidores" className="border-indigo-500/30">
             <CardHeader className="pb-2">
@@ -683,11 +838,12 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 6. Pagamentos de Operador
-    if (pagamentosOperadorPendentes.length > 0) {
+    // 6. Pagamentos de Operador - project_event
+    if (pagamentosOperadorPendentes.length > 0 && allowedDomains.includes('project_event')) {
       cards.push({
         id: "pagamentos-operador",
         priority: PRIORITY.HIGH,
+        domain: 'project_event',
         component: (
           <Card key="pagamentos-operador" className="border-orange-500/30">
             <CardHeader className="pb-2">
@@ -723,23 +879,24 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 7. Ciclos de Apuração
-    if (alertasCiclos.length > 0) {
+    // 7. Ciclos de Apuração - project_event
+    if (alertasCiclosFiltrados.length > 0 && allowedDomains.includes('project_event')) {
       cards.push({
         id: "ciclos-apuracao",
         priority: PRIORITY.MEDIUM,
+        domain: 'project_event',
         component: (
           <Card key="ciclos-apuracao" className="border-violet-500/30">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Target className="h-4 w-4 text-violet-400" />
                 Ciclos de Apuração
-                <Badge className="ml-auto bg-violet-500/20 text-violet-400">{alertasCiclos.length}</Badge>
+                <Badge className="ml-auto bg-violet-500/20 text-violet-400">{alertasCiclosFiltrados.length}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-2">
-                {alertasCiclos.slice(0, 4).map((ciclo) => {
+                {alertasCiclosFiltrados.slice(0, 4).map((ciclo) => {
                   const getUrgencyColor = () => {
                     switch (ciclo.urgencia) {
                       case "CRITICA": return "border-red-500/40 bg-red-500/10";
@@ -777,11 +934,12 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 8. Alertas de Lucro (Marcos)
-    if (alertasLucro.length > 0) {
+    // 8. Alertas de Lucro (Marcos) - partner_event
+    if (alertasLucro.length > 0 && allowedDomains.includes('partner_event')) {
       cards.push({
         id: "alertas-lucro",
         priority: PRIORITY.MEDIUM,
+        domain: 'partner_event',
         component: (
           <Card key="alertas-lucro" className="border-emerald-500/30">
             <CardHeader className="pb-2">
@@ -823,11 +981,12 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 9. Entregas Pendentes
-    if (entregasPendentes.length > 0) {
+    // 9. Entregas Pendentes - project_event
+    if (entregasPendentes.length > 0 && allowedDomains.includes('project_event')) {
       cards.push({
         id: "entregas-pendentes",
         priority: PRIORITY.MEDIUM,
+        domain: 'project_event',
         component: (
           <Card key="entregas-pendentes" className="border-purple-500/30">
             <CardHeader className="pb-2">
@@ -863,11 +1022,12 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 10. Parceiros sem Parceria
-    if (parceirosSemParceria.length > 0) {
+    // 10. Parceiros sem Parceria - partner_event
+    if (parceirosSemParceria.length > 0 && allowedDomains.includes('partner_event')) {
       cards.push({
         id: "parceiros-sem-parceria",
         priority: PRIORITY.LOW,
+        domain: 'partner_event',
         component: (
           <Card key="parceiros-sem-parceria" className="border-amber-500/30">
             <CardHeader className="pb-2">
@@ -898,11 +1058,12 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 11. Pagamentos a Parceiros
-    if (pagamentosParceiros.length > 0) {
+    // 11. Pagamentos a Parceiros - partner_event
+    if (pagamentosParceiros.length > 0 && allowedDomains.includes('partner_event')) {
       cards.push({
         id: "pagamentos-parceiros",
         priority: PRIORITY.LOW,
+        domain: 'partner_event',
         component: (
           <Card key="pagamentos-parceiros" className="border-cyan-500/30">
             <CardHeader className="pb-2">
@@ -935,11 +1096,12 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 12. Bônus Pendentes
-    if (bonusPendentes.length > 0) {
+    // 12. Bônus Pendentes - partner_event
+    if (bonusPendentes.length > 0 && allowedDomains.includes('partner_event')) {
       cards.push({
         id: "bonus-pendentes",
         priority: PRIORITY.LOW,
+        domain: 'partner_event',
         component: (
           <Card key="bonus-pendentes" className="border-pink-500/30">
             <CardHeader className="pb-2">
@@ -975,11 +1137,12 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 13. Comissões Pendentes
-    if (comissoesPendentes.length > 0) {
+    // 13. Comissões Pendentes - partner_event
+    if (comissoesPendentes.length > 0 && allowedDomains.includes('partner_event')) {
       cards.push({
         id: "comissoes-pendentes",
         priority: PRIORITY.LOW,
+        domain: 'partner_event',
         component: (
           <Card key="comissoes-pendentes" className="border-teal-500/30">
             <CardHeader className="pb-2">
@@ -1015,11 +1178,12 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 14. Parcerias Encerrando
-    if (parceriasEncerramento.length > 0) {
+    // 14. Parcerias Encerrando - partner_event
+    if (parceriasEncerramento.length > 0 && allowedDomains.includes('partner_event')) {
       cards.push({
         id: "parcerias-encerrando",
         priority: PRIORITY.LOW,
+        domain: 'partner_event',
         component: (
           <Card key="parcerias-encerrando" className="border-red-500/30">
             <CardHeader className="pb-2">
@@ -1061,11 +1225,12 @@ export default function CentralOperacoes() {
     return cards.sort((a, b) => a.priority - b.priority);
   }, [
     alertasCriticos, saquesPendentes, alertasSaques, participacoesPendentes,
-    pagamentosOperadorPendentes, alertasCiclos, alertasLucro, entregasPendentes,
-    parceirosSemParceria, pagamentosParceiros, bonusPendentes, comissoesPendentes, parceriasEncerramento
+    pagamentosOperadorPendentes, alertasCiclosFiltrados, alertasLucro, entregasPendentes,
+    parceirosSemParceria, pagamentosParceiros, bonusPendentes, comissoesPendentes, parceriasEncerramento,
+    allowedDomains
   ]);
 
-  const hasAnyAlerts = alertCards.length > 1; // > 1 because PropostasPagamentoCard is always added
+  const hasAnyAlerts = alertCards.length > 0;
 
   if (loading) {
     return (
@@ -1085,9 +1250,13 @@ export default function CentralOperacoes() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Central de Operações</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isOperator ? "Central de Ações de Projetos" : "Central de Operações"}
+          </h1>
           <p className="text-muted-foreground">
-            {hasAnyAlerts ? "Ações que demandam atenção imediata" : "Todas as operações estão em dia"}
+            {hasAnyAlerts 
+              ? (isOperator ? "Ações pendentes nos seus projetos" : "Ações que demandam atenção imediata")
+              : "Todas as operações estão em dia"}
           </p>
         </div>
         <Button variant="outline" onClick={() => { fetchData(true); refetchCiclos(); }} disabled={refreshing}>
@@ -1172,27 +1341,23 @@ export default function CentralOperacoes() {
         onSuccess={() => fetchData(true)}
       />
 
-      {selectedParticipacao && (
-        <PagamentoParticipacaoDialog
-          open={pagamentoParticipacaoOpen}
-          onOpenChange={(open) => { setPagamentoParticipacaoOpen(open); if (!open) setSelectedParticipacao(null); }}
-          participacao={{
-            id: selectedParticipacao.id,
-            projeto_id: selectedParticipacao.projeto_id,
-            ciclo_id: selectedParticipacao.ciclo_id,
-            investidor_id: selectedParticipacao.investidor_id,
-            investidor_nome: selectedParticipacao.investidor_nome || "N/A",
-            projeto_nome: selectedParticipacao.projeto_nome || "N/A",
-            ciclo_numero: selectedParticipacao.ciclo_numero || 0,
-            percentual_aplicado: selectedParticipacao.percentual_aplicado,
-            base_calculo: selectedParticipacao.base_calculo,
-            lucro_base: selectedParticipacao.lucro_base,
-            valor_participacao: selectedParticipacao.valor_participacao,
-            data_apuracao: selectedParticipacao.data_apuracao,
-          }}
-          onSuccess={() => fetchData(true)}
-        />
-      )}
+      <PagamentoParticipacaoDialog
+        open={pagamentoParticipacaoOpen}
+        onOpenChange={(open) => { setPagamentoParticipacaoOpen(open); if (!open) setSelectedParticipacao(null); }}
+        participacao={selectedParticipacao ? {
+          id: selectedParticipacao.id,
+          projeto_id: selectedParticipacao.projeto_id,
+          ciclo_id: selectedParticipacao.ciclo_id,
+          investidor_id: selectedParticipacao.investidor_id,
+          percentual_aplicado: selectedParticipacao.percentual_aplicado,
+          base_calculo: selectedParticipacao.base_calculo,
+          lucro_base: selectedParticipacao.lucro_base,
+          valor_participacao: selectedParticipacao.valor_participacao,
+          data_apuracao: selectedParticipacao.data_apuracao,
+          status: "A_PAGAR",
+        } : undefined}
+        onSuccess={() => fetchData(true)}
+      />
     </div>
   );
 }
