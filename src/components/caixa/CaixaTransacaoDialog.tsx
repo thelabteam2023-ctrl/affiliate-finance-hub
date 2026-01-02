@@ -1190,11 +1190,12 @@ export function CaixaTransacaoDialog({
   };
 
   // Retorna o saldo bruto da bookmaker (sem descontar pendentes) para exibição
-  const getSaldoBrutoBookmaker = (id: string): { brl: number; usd: number } => {
+  const getSaldoBrutoBookmaker = (id: string): { brl: number; usd: number; moeda: string } => {
     const bm = bookmakers.find(b => b.id === id);
     return { 
       brl: bm?.saldo_atual || 0,
-      usd: bm?.saldo_usd || 0 
+      usd: bm?.saldo_usd || 0,
+      moeda: bm?.moeda || "BRL"
     };
   };
 
@@ -2791,6 +2792,7 @@ export function CaixaTransacaoDialog({
     const saldos = getSaldoBrutoBookmaker(bookmarkerId);
     const hasBrl = saldos.brl > 0;
     const hasUsd = saldos.usd > 0;
+    const isUsdMoeda = saldos.moeda === "USD" || saldos.moeda === "USDT";
     
     if (hasBrl && hasUsd) {
       return (
@@ -2803,7 +2805,14 @@ export function CaixaTransacaoDialog({
     if (hasUsd) {
       return <span className="text-cyan-400">{formatCurrency(saldos.usd, "USD")}</span>;
     }
-    return formatCurrency(saldos.brl, "BRL");
+    if (hasBrl) {
+      return formatCurrency(saldos.brl, "BRL");
+    }
+    // Quando ambos são zero, usar a moeda da bookmaker
+    if (isUsdMoeda) {
+      return <span className="text-cyan-400">{formatCurrency(0, "USD")}</span>;
+    }
+    return formatCurrency(0, "BRL");
   };
 
   // Função para determinar moedas disponíveis baseado no tipo de transação
