@@ -43,54 +43,6 @@ export function useUserWorkspaces() {
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
 
-  // Buscar todos os workspaces do usuário
-  const fetchWorkspaces = useCallback(async () => {
-    if (!user?.id) {
-      setWorkspaces([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase.rpc('get_user_workspaces', {
-        _user_id: user.id
-      });
-
-      if (error) {
-        console.error("[useUserWorkspaces] Erro ao buscar workspaces:", error);
-        return;
-      }
-
-      setWorkspaces((data as UserWorkspace[]) || []);
-    } catch (error) {
-      console.error("[useUserWorkspaces] Erro:", error);
-    }
-  }, [user?.id]);
-
-  // Buscar convites pendentes
-  const fetchPendingInvites = useCallback(async () => {
-    if (!user) {
-      console.log("[useUserWorkspaces] Sem user, limpando convites");
-      setPendingInvites([]);
-      return;
-    }
-
-    try {
-      console.log("[useUserWorkspaces] Buscando convites pendentes para user:", user.id);
-      const { data, error } = await supabase.rpc('get_my_pending_invites');
-
-      if (error) {
-        console.error("[useUserWorkspaces] Erro ao buscar convites:", error);
-        return;
-      }
-
-      console.log("[useUserWorkspaces] Convites encontrados:", data);
-      setPendingInvites((data as PendingWorkspaceInvite[]) || []);
-    } catch (error) {
-      console.error("[useUserWorkspaces] Erro:", error);
-    }
-  }, [user]);
-
   // Carregar dados iniciais quando o usuário está disponível
   useEffect(() => {
     if (!user?.id) {
@@ -103,13 +55,72 @@ export function useUserWorkspaces() {
     const loadData = async () => {
       setLoading(true);
       console.log("[useUserWorkspaces] Carregando dados para user:", user.id);
-      await Promise.all([fetchWorkspaces(), fetchPendingInvites()]);
+      
+      // Buscar workspaces
+      try {
+        const { data: wsData, error: wsError } = await supabase.rpc('get_user_workspaces', {
+          _user_id: user.id
+        });
+
+        if (wsError) {
+          console.error("[useUserWorkspaces] Erro ao buscar workspaces:", wsError);
+        } else {
+          console.log("[useUserWorkspaces] Workspaces encontrados:", wsData);
+          setWorkspaces((wsData as UserWorkspace[]) || []);
+        }
+      } catch (error) {
+        console.error("[useUserWorkspaces] Erro ao buscar workspaces:", error);
+      }
+
+      // Buscar convites pendentes
+      try {
+        const { data: invitesData, error: invitesError } = await supabase.rpc('get_my_pending_invites');
+
+        if (invitesError) {
+          console.error("[useUserWorkspaces] Erro ao buscar convites:", invitesError);
+        } else {
+          console.log("[useUserWorkspaces] Convites encontrados:", invitesData);
+          setPendingInvites((invitesData as PendingWorkspaceInvite[]) || []);
+        }
+      } catch (error) {
+        console.error("[useUserWorkspaces] Erro ao buscar convites:", error);
+      }
+
       setLoading(false);
       console.log("[useUserWorkspaces] Dados carregados");
     };
 
     loadData();
-  }, [user?.id]); // Only re-run when user.id changes, not callback refs
+  }, [user?.id]); // Only re-run when user.id changes
+
+  // Função para recarregar dados
+  const reloadData = useCallback(async () => {
+    if (!user?.id) return;
+
+    // Buscar workspaces
+    try {
+      const { data: wsData, error: wsError } = await supabase.rpc('get_user_workspaces', {
+        _user_id: user.id
+      });
+
+      if (!wsError && wsData) {
+        setWorkspaces((wsData as UserWorkspace[]) || []);
+      }
+    } catch (error) {
+      console.error("[useUserWorkspaces] Erro ao buscar workspaces:", error);
+    }
+
+    // Buscar convites pendentes
+    try {
+      const { data: invitesData, error: invitesError } = await supabase.rpc('get_my_pending_invites');
+
+      if (!invitesError && invitesData) {
+        setPendingInvites((invitesData as PendingWorkspaceInvite[]) || []);
+      }
+    } catch (error) {
+      console.error("[useUserWorkspaces] Erro ao buscar convites:", error);
+    }
+  }, [user?.id]);
 
   // Trocar para outro workspace
   const switchWorkspace = useCallback(async (workspaceId: string) => {
@@ -135,7 +146,7 @@ export function useUserWorkspaces() {
       await refreshWorkspace();
 
       // Recarregar lista de workspaces
-      await fetchWorkspaces();
+      await reloadData();
 
       return { success: true };
     } catch (error: any) {
@@ -144,7 +155,7 @@ export function useUserWorkspaces() {
     } finally {
       setSwitching(false);
     }
-  }, [user?.id, queryClient, refreshWorkspace, fetchWorkspaces]);
+  }, [user?.id, queryClient, refreshWorkspace, reloadData]);
 
   // Aceitar convite de workspace
   const acceptInvite = useCallback(async (token: string) => {
@@ -170,7 +181,7 @@ export function useUserWorkspaces() {
 
       // Atualizar contexto e lista
       await refreshWorkspace();
-      await Promise.all([fetchWorkspaces(), fetchPendingInvites()]);
+      await reloadData();
 
       return { success: true, workspaceId: result.workspace_id };
     } catch (error: any) {
@@ -179,7 +190,7 @@ export function useUserWorkspaces() {
     } finally {
       setSwitching(false);
     }
-  }, [queryClient, refreshWorkspace, fetchWorkspaces, fetchPendingInvites]);
+  }, [queryClient, refreshWorkspace, reloadData]);
 
   // Recusar/ignorar convite
   const declineInvite = useCallback(async (inviteId: string) => {
@@ -196,12 +207,12 @@ export function useUserWorkspaces() {
       }
 
       // Atualizar lista de convites
-      await fetchPendingInvites();
+      await reloadData();
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
-  }, [fetchPendingInvites]);
+  }, [reloadData]);
 
   return {
     workspaces,
@@ -211,7 +222,7 @@ export function useUserWorkspaces() {
     switchWorkspace,
     acceptInvite,
     declineInvite,
-    refresh: () => Promise.all([fetchWorkspaces(), fetchPendingInvites()]),
+    refresh: reloadData,
     hasMultipleWorkspaces: workspaces.length > 1,
     hasPendingInvites: pendingInvites.length > 0,
   };
