@@ -331,6 +331,16 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       if (data.status === "credited" && !data.credited_at) {
         updateData.credited_at = new Date().toISOString();
       }
+      
+      // If status changed to credited, also update saldo_atual to bonus_amount
+      if (data.status === "credited" && data.bonus_amount) {
+        // Check if saldo_atual was not explicitly provided - update it to bonus_amount
+        const existingBonus = bonuses.find(b => b.id === id);
+        if (existingBonus && existingBonus.status !== "credited") {
+          // Status is changing to credited, set saldo_atual = bonus_amount
+          updateData.saldo_atual = data.bonus_amount;
+        }
+      }
 
       const { error } = await supabase
         .from("project_bookmaker_link_bonuses")
