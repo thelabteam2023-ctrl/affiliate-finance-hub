@@ -344,33 +344,37 @@ export function BonusDialog({
                     : (bk.saldo_atual ?? 0);
 
                   return (
-                    <SelectItem key={bk.id} value={bk.id}>
-                      <div className="flex items-center justify-between gap-4 w-full">
-                        <div className="flex items-center gap-2">
+                    <SelectItem key={bk.id} value={bk.id} className="py-2">
+                      <div className="flex items-center justify-between w-full gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           {bk.logo_url ? (
                             <img
                               src={bk.logo_url}
                               alt={bk.nome}
-                              className="h-5 w-5 rounded object-contain bg-white"
+                              className="h-6 w-6 rounded object-contain bg-white shrink-0"
                             />
                           ) : (
-                            <Building2 className="h-4 w-4" />
+                            <Building2 className="h-6 w-6 shrink-0" />
                           )}
-                          <span className="font-medium">{bk.nome}</span>
+                          <div className="flex flex-col min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-foreground truncate">{bk.nome}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${usaUsd ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                                {bk.moeda || "BRL"}
+                              </span>
+                            </div>
+                            {bk.parceiro_nome && (
+                              <span className="text-xs text-muted-foreground truncate">{bk.parceiro_nome}</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          {bk.parceiro_nome && (
-                            <span className="truncate max-w-[80px]">{bk.parceiro_nome}</span>
-                          )}
-                          <span className="truncate max-w-[100px]">{bk.login_username}</span>
-                          <span className="text-success font-medium whitespace-nowrap">
-                            {currencySymbol}{" "}
-                            {saldo.toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </span>
-                        </div>
+                        <span className="text-success font-semibold whitespace-nowrap shrink-0">
+                          {currencySymbol}{" "}
+                          {saldo.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
                       </div>
                     </SelectItem>
                   );
