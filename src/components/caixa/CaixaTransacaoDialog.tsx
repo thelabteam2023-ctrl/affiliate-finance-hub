@@ -1497,8 +1497,12 @@ export function CaixaTransacaoDialog({
       // Find investor name if APORTE_FINANCEIRO
       const investidor = investidores.find(inv => inv.id === investidorId);
       
-      // SAQUE inicia como PENDENTE, outros como CONFIRMADO
-      const statusInicial = tipoTransacao === "SAQUE" ? "PENDENTE" : "CONFIRMADO";
+      // SAQUE e DEPOSITO crypto iniciam como PENDENTE para conciliação
+      // Outros tipos iniciam como CONFIRMADO
+      const statusInicial = 
+        tipoTransacao === "SAQUE" ? "PENDENTE" :
+        (tipoTransacao === "DEPOSITO" && tipoMoeda === "CRYPTO") ? "PENDENTE" :
+        "CONFIRMADO";
 
       // Determinar moeda de destino baseado no bookmaker de destino (para DEPOSITO)
       let moedaDestino = tipoMoeda === "FIAT" ? moeda : "USD";

@@ -57,9 +57,10 @@ export function CaixaTabsContainer({
   onRefresh,
 }: CaixaTabsContainerProps) {
   // Conta transações pendentes de conciliação
+  // Suporta tanto "pendente" (minúsculo) quanto "PENDENTE" (maiúsculo)
   const pendingCount = transacoes.filter(
     (t) => 
-      t.status === "pendente" && 
+      (t.status === "pendente" || t.status === "PENDENTE") && 
       t.tipo_moeda === "CRYPTO" &&
       (t.tipo_transacao === "DEPOSITO" || t.tipo_transacao === "SAQUE")
   ).length;

@@ -125,10 +125,11 @@ export function ConciliacaoSaldos({
   }, [workspace?.id, transacoes]);
 
   // Filtrar transações crypto pendentes de confirmação
+  // Suporta tanto "pendente" (minúsculo) quanto "PENDENTE" (maiúsculo)
   const pendingTransactions = useMemo(() => {
     return transacoes.filter(
       (t) =>
-        t.status === "pendente" &&
+        (t.status === "pendente" || t.status === "PENDENTE") &&
         t.tipo_moeda === "CRYPTO" &&
         (t.tipo_transacao === "DEPOSITO" || t.tipo_transacao === "SAQUE")
     );
@@ -169,7 +170,8 @@ export function ConciliacaoSaldos({
       const { error: updateError } = await supabase
         .from("cash_ledger")
         .update({
-          status: "confirmado",
+          status: "CONFIRMADO",
+          status_valor: hasDiferenca ? "AJUSTADO" : "CONFIRMADO",
           valor_confirmado: valorReal, // Novo campo: valor REAL para fins operacionais
           cotacao_implicita: hasDiferenca ? (selectedTransaction.qtd_coin / valorReal) : null,
           descricao: observacoes 
@@ -296,8 +298,8 @@ export function ConciliacaoSaldos({
         )}
       </div>
 
-      {/* Resumo de Ajustes Cambiais */}
-      {!loadingSummary && adjustmentSummary.totalConciliacoes > 0 && (
+      {/* Resumo de Ajustes Cambiais - mostra sempre que há histórico OU pendências */}
+      {!loadingSummary && (adjustmentSummary.totalConciliacoes > 0 || pendingTransactions.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <Card className="bg-emerald-500/5 border-emerald-500/20">
             <CardContent className="p-4">
@@ -335,14 +337,20 @@ export function ConciliacaoSaldos({
             </CardContent>
           </Card>
           
-          <Card className="bg-muted/30 border-muted/50">
+          <Card className={pendingTransactions.length > 0 ? "bg-amber-500/10 border-amber-500/30" : "bg-muted/30 border-muted/50"}>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <History className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Total Conciliações</span>
+                {pendingTransactions.length > 0 ? (
+                  <Clock className="h-4 w-4 text-amber-400" />
+                ) : (
+                  <History className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {pendingTransactions.length > 0 ? "Pendentes" : "Total Conciliações"}
+                </span>
               </div>
-              <p className="text-lg font-semibold mt-1">
-                {adjustmentSummary.totalConciliacoes}
+              <p className={`text-lg font-semibold mt-1 ${pendingTransactions.length > 0 ? 'text-amber-400' : ''}`}>
+                {pendingTransactions.length > 0 ? pendingTransactions.length : adjustmentSummary.totalConciliacoes}
               </p>
             </CardContent>
           </Card>
