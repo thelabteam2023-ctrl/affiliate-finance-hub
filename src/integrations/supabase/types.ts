@@ -877,6 +877,7 @@ export type Database = {
           updated_at: string
           user_id: string
           valor: number
+          valor_confirmado: number | null
           valor_destino: number | null
           valor_origem: number | null
           valor_usd: number | null
@@ -914,6 +915,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           valor: number
+          valor_confirmado?: number | null
           valor_destino?: number | null
           valor_origem?: number | null
           valor_usd?: number | null
@@ -951,6 +953,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor?: number
+          valor_confirmado?: number | null
           valor_destino?: number | null
           valor_origem?: number | null
           valor_usd?: number | null
@@ -1794,6 +1797,117 @@ export type Database = {
           },
           {
             foreignKeyName: "entregas_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exchange_adjustments: {
+        Row: {
+          bookmaker_id: string | null
+          cash_ledger_id: string
+          coin: string | null
+          created_at: string | null
+          diferenca: number
+          id: string
+          observacoes: string | null
+          qtd_coin: number | null
+          tipo: string
+          tipo_ajuste: string
+          user_id: string
+          valor_confirmado: number
+          valor_nominal: number
+          wallet_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          bookmaker_id?: string | null
+          cash_ledger_id: string
+          coin?: string | null
+          created_at?: string | null
+          diferenca: number
+          id?: string
+          observacoes?: string | null
+          qtd_coin?: number | null
+          tipo: string
+          tipo_ajuste: string
+          user_id: string
+          valor_confirmado: number
+          valor_nominal: number
+          wallet_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          bookmaker_id?: string | null
+          cash_ledger_id?: string
+          coin?: string | null
+          created_at?: string | null
+          diferenca?: number
+          id?: string
+          observacoes?: string | null
+          qtd_coin?: number | null
+          tipo?: string
+          tipo_ajuste?: string
+          user_id?: string
+          valor_confirmado?: number
+          valor_nominal?: number
+          wallet_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exchange_adjustments_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_painel_operacional"
+            referencedColumns: ["entidade_id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets_crypto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
