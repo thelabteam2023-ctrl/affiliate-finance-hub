@@ -299,6 +299,12 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                   const activeBonuses = bk.bonuses.filter(b => b.status === 'credited');
                   const isExpanded = expandedRows.has(bk.id);
                   
+                  // Calculate combined rollover for all active bonuses
+                  const totalRolloverTarget = activeBonuses.reduce((acc, b) => acc + (b.rollover_target_amount || 0), 0);
+                  const totalRolloverProgress = activeBonuses.reduce((acc, b) => acc + (b.rollover_progress || 0), 0);
+                  const hasRollover = totalRolloverTarget > 0;
+                  const rolloverPercent = hasRollover ? Math.min(100, (totalRolloverProgress / totalRolloverTarget) * 100) : 0;
+                  
                   return (
                     <Collapsible key={bk.id} asChild open={isExpanded} onOpenChange={() => toggleRow(bk.id)}>
                       <>
@@ -330,7 +336,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                                   <Building2 className="h-4 w-4 text-primary" />
                                 </div>
                               )}
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <div className="font-medium truncate flex items-center gap-1.5">
                                   {bk.nome}
                                   <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1 py-0">
@@ -338,6 +344,38 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                                   </Badge>
                                 </div>
                                 <div className="text-xs text-muted-foreground truncate">{bk.login_username}</div>
+                                
+                                {/* Rollover Progress Bar */}
+                                {hasRollover && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="mt-1.5 space-y-0.5 max-w-[180px]">
+                                          <div className="flex items-center justify-between text-[10px]">
+                                            <span className="text-muted-foreground flex items-center gap-1">
+                                              <Target className="h-2.5 w-2.5" />
+                                              Rollover
+                                            </span>
+                                            <span className={rolloverPercent >= 100 ? "text-emerald-400 font-medium" : "text-muted-foreground"}>
+                                              {rolloverPercent.toFixed(0)}%
+                                            </span>
+                                          </div>
+                                          <Progress 
+                                            value={rolloverPercent} 
+                                            className="h-1"
+                                          />
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <div className="text-xs space-y-1">
+                                          <p>Meta total: {formatCurrency(totalRolloverTarget, bk.moeda)}</p>
+                                          <p>Apostado: {formatCurrency(totalRolloverProgress, bk.moeda)}</p>
+                                          <p>Progresso: {rolloverPercent.toFixed(1)}%</p>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
                               </div>
                             </div>
                           </TableCell>
