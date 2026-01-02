@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ResponsiveTabsList, TabItem } from "@/components/ui/responsive-tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -456,81 +457,61 @@ export default function ProjetoDetalhe() {
 
       {/* Tabs */}
       <Tabs defaultValue="apostas" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="flex-wrap">
-          {/* Camada 1 - Operação (sempre visível) */}
-          <TabsTrigger value="visao-geral" className="flex items-center gap-2">
-            <LayoutDashboard className="h-4 w-4" />
-            Visão Geral
-          </TabsTrigger>
-          <TabsTrigger value="apostas" className="flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            Apostas Livres
-          </TabsTrigger>
-          <TabsTrigger value="freebets" className="flex items-center gap-2">
-            <Gift className="h-4 w-4" />
-            Freebets
-          </TabsTrigger>
-          <TabsTrigger value="bonus" className="flex items-center gap-2">
-            <Coins className="h-4 w-4" />
-            Bônus
-          </TabsTrigger>
-          <TabsTrigger value="surebet" className="flex items-center gap-2">
-            <ArrowLeftRight className="h-4 w-4" />
-            Surebet
-          </TabsTrigger>
-          <TabsTrigger value="valuebet" className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            ValueBet
-          </TabsTrigger>
-          <TabsTrigger value="duplogreen" className="flex items-center gap-2">
-            <Zap className="h-4 w-4" />
-            Duplo Green
-          </TabsTrigger>
-          <TabsTrigger value="vinculos" className="flex items-center gap-2">
-            <Link2 className="h-4 w-4" />
-            Vínculos
-          </TabsTrigger>
-          
-          {/* Camada 2 - Gestão (dropdown) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className={cn(
-                  "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-                  ["ciclos", "perdas"].includes(activeTab)
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Settings2 className="h-4 w-4 mr-2" />
-                Gestão
-                <ChevronDown className="h-3 w-3 ml-1" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[140px]">
-              <DropdownMenuItem 
-                onClick={() => setActiveTab("ciclos")}
-                className={cn(
-                  "flex items-center gap-2 cursor-pointer",
-                  activeTab === "ciclos" && "bg-accent"
-                )}
-              >
-                <Clock className="h-4 w-4" />
-                Ciclos
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => setActiveTab("perdas")}
-                className={cn(
-                  "flex items-center gap-2 cursor-pointer",
-                  activeTab === "perdas" && "bg-accent"
-                )}
-              >
-                <AlertTriangle className="h-4 w-4" />
-                Perdas
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </TabsList>
+        <ResponsiveTabsList
+          tabs={[
+            { value: "visao-geral", label: "Visão Geral", icon: <LayoutDashboard className="h-4 w-4" /> },
+            { value: "apostas", label: "Apostas Livres", icon: <Target className="h-4 w-4" /> },
+            { value: "freebets", label: "Freebets", icon: <Gift className="h-4 w-4" /> },
+            { value: "bonus", label: "Bônus", icon: <Coins className="h-4 w-4" /> },
+            { value: "surebet", label: "Surebet", icon: <ArrowLeftRight className="h-4 w-4" /> },
+            { value: "valuebet", label: "ValueBet", icon: <Sparkles className="h-4 w-4" /> },
+            { value: "duplogreen", label: "Duplo Green", icon: <Zap className="h-4 w-4" /> },
+            { value: "vinculos", label: "Vínculos", icon: <Link2 className="h-4 w-4" /> },
+          ]}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          minVisibleTabs={3}
+          extraContent={
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={cn(
+                    "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shrink-0",
+                    ["ciclos", "perdas"].includes(activeTab)
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Gestão
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[140px]">
+                <DropdownMenuItem 
+                  onClick={() => setActiveTab("ciclos")}
+                  className={cn(
+                    "flex items-center gap-2 cursor-pointer",
+                    activeTab === "ciclos" && "bg-accent"
+                  )}
+                >
+                  <Clock className="h-4 w-4" />
+                  Ciclos
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setActiveTab("perdas")}
+                  className={cn(
+                    "flex items-center gap-2 cursor-pointer",
+                    activeTab === "perdas" && "bg-accent"
+                  )}
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Perdas
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          }
+        />
 
         {/* Action Bar - Logo abaixo das abas */}
         <div className="flex items-center gap-3 pt-2 pb-1 border-b border-border/50">
