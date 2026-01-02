@@ -2121,15 +2121,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         }
       }
 
-      // CORREÇÃO MULTI-MOEDA: Usar helper centralizado que respeita moeda do bookmaker
+      // CORREÇÃO MULTI-MOEDA E BÔNUS ATIVO: Usar helper centralizado que respeita moeda do bookmaker e bônus ativo
       if (saldoAjuste !== 0) {
-        await updateBookmakerBalance(bookmakerIdToUpdate, saldoAjuste);
+        await updateBookmakerBalance(bookmakerIdToUpdate, saldoAjuste, projetoId);
       }
 
       // Atualizar saldo do LAY bookmaker (para cobertura)
-      // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
+      // CORREÇÃO MULTI-MOEDA E BÔNUS ATIVO: Usar helper centralizado
       if (tipoOperacao === "cobertura" && layExchangeId && saldoAjusteLay !== 0) {
-        await updateBookmakerBalance(layExchangeId, saldoAjusteLay);
+        await updateBookmakerBalance(layExchangeId, saldoAjusteLay, projetoId);
       }
     } catch (error) {
       console.error("Erro ao atualizar saldo do bookmaker:", error);

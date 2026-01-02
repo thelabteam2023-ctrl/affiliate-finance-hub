@@ -5,6 +5,11 @@
  * - Bookmakers com moeda USD/USDT: usar saldo_usd
  * - Bookmakers com outras moedas (BRL): usar saldo_atual
  * 
+ * REGRA CRÍTICA BÔNUS ATIVO:
+ * - Quando há bônus ativo (status=credited, saldo_atual > 0), o delta é aplicado
+ *   no bonus.saldo_atual em vez do bookmaker.saldo_atual/saldo_usd
+ * - Isso unifica os saldos durante o período de bônus
+ * 
  * A RPC get_bookmaker_saldos lê saldo_usd para USD/USDT e saldo_atual para outras.
  * Este helper garante consistência ao gravar.
  */
@@ -14,6 +19,13 @@ import { supabase } from "@/integrations/supabase/client";
 export interface BookmakerBalanceUpdate {
   bookmakerId: string;
   delta: number; // Valor a somar (positivo = crédito, negativo = débito)
+  projetoId?: string; // Necessário para verificar bônus ativo
+}
+
+export interface ActiveBonusInfo {
+  id: string;
+  saldo_atual: number;
+  project_id: string;
 }
 
 /**
@@ -37,20 +49,103 @@ export function isUsdCurrency(moeda: string): boolean {
 }
 
 /**
+ * Busca o bônus ativo de uma bookmaker em um projeto
+ * Bônus ativo = status 'credited' e saldo_atual > 0
+ */
+export async function getActiveBonus(
+  bookmakerId: string,
+  projetoId?: string
+): Promise<ActiveBonusInfo | null> {
+  if (!projetoId) return null;
+  
+  const { data, error } = await supabase
+    .from("project_bookmaker_link_bonuses")
+    .select("id, saldo_atual, project_id")
+    .eq("bookmaker_id", bookmakerId)
+    .eq("project_id", projetoId)
+    .eq("status", "credited")
+    .gt("saldo_atual", 0)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  
+  if (error || !data) return null;
+  
+  return {
+    id: data.id,
+    saldo_atual: data.saldo_atual,
+    project_id: data.project_id,
+  };
+}
+
+/**
+ * Atualiza o saldo do bônus ativo
+ */
+export async function updateBonusBalance(
+  bonusId: string,
+  delta: number
+): Promise<boolean> {
+  try {
+    const { data: bonus, error: fetchError } = await supabase
+      .from("project_bookmaker_link_bonuses")
+      .select("saldo_atual")
+      .eq("id", bonusId)
+      .single();
+    
+    if (fetchError || !bonus) {
+      console.error("[updateBonusBalance] Erro ao buscar bônus:", fetchError);
+      return false;
+    }
+    
+    const novoSaldo = Math.max(0, (bonus.saldo_atual || 0) + delta);
+    
+    const { error: updateError } = await supabase
+      .from("project_bookmaker_link_bonuses")
+      .update({ saldo_atual: novoSaldo, updated_at: new Date().toISOString() })
+      .eq("id", bonusId);
+    
+    if (updateError) {
+      console.error("[updateBonusBalance] Erro ao atualizar:", updateError);
+      return false;
+    }
+    
+    console.log(`[updateBonusBalance] Bônus ${bonusId}: saldo ${bonus.saldo_atual} → ${novoSaldo} (delta: ${delta})`);
+    return true;
+  } catch (error) {
+    console.error("[updateBonusBalance] Exceção:", error);
+    return false;
+  }
+}
+
+/**
  * Atualiza o saldo de um bookmaker aplicando o delta correto
  * baseado na moeda do bookmaker
  * 
+ * IMPORTANTE: Se houver bônus ativo, o delta é aplicado no bônus, não no bookmaker
+ * 
  * @param bookmakerId - ID do bookmaker
  * @param delta - Valor a somar (positivo = crédito, negativo = débito)
+ * @param projetoId - ID do projeto (necessário para verificar bônus ativo)
  * @returns Promise<boolean> - true se sucesso
  */
 export async function updateBookmakerBalance(
   bookmakerId: string,
-  delta: number
+  delta: number,
+  projetoId?: string
 ): Promise<boolean> {
   if (delta === 0) return true;
   
   try {
+    // Verificar se há bônus ativo para esta bookmaker/projeto
+    const activeBonus = await getActiveBonus(bookmakerId, projetoId);
+    
+    if (activeBonus) {
+      // Bônus ativo: aplicar delta no saldo do bônus
+      console.log(`[updateBookmakerBalance] Bônus ativo detectado para bookmaker ${bookmakerId}, aplicando delta no bônus ${activeBonus.id}`);
+      return await updateBonusBalance(activeBonus.id, delta);
+    }
+    
+    // Sem bônus ativo: aplicar delta no saldo da bookmaker
     // Buscar moeda e saldo atual
     const { data: bookmaker, error: fetchError } = await supabase
       .from("bookmakers")
@@ -106,7 +201,7 @@ export async function updateMultipleBookmakerBalances(
   updates: BookmakerBalanceUpdate[]
 ): Promise<boolean> {
   const results = await Promise.all(
-    updates.map(u => updateBookmakerBalance(u.bookmakerId, u.delta))
+    updates.map(u => updateBookmakerBalance(u.bookmakerId, u.delta, u.projetoId))
   );
   return results.every(r => r === true);
 }
