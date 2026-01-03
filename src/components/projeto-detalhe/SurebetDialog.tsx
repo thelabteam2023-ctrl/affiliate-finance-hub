@@ -1907,20 +1907,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
-      <DialogContent className="max-w-[1400px] max-h-[90vh] overflow-y-auto p-6">
+      <DialogContent className="max-w-[1400px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader className="pb-2">
-          <DialogTitle className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-amber-500" />
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Calculator className="h-4 w-4 text-amber-500" />
             {isEditing ? "Editar Arbitragem" : "Arbitragem"}
           </DialogTitle>
         </DialogHeader>
 
         {/* Container principal - scroll único da página */}
-        <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex flex-col lg:flex-row gap-3">
           {/* Formulário - Lado Esquerdo */}
-          <div className="flex-1 space-y-3">
-            {/* BLOCO COMPACTO: Registro + Config em uma linha */}
-            <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 space-y-2 min-w-0">
+            {/* LINHA 1: Estratégia + Contexto + Modelo (todos inline) */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pb-1 border-b border-border/50">
               {/* Campos de Registro Compactos */}
               <RegistroApostaFields
                 values={registroValues}
@@ -1930,35 +1930,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 lockedEstrategia={!isEditing && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : undefined}
                 compact
               />
-            </div>
-
-            {/* BLOCO COMPACTO: Esporte + Modelo + Evento + Mercado em linha única */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-              {/* Esporte */}
-              <div className="space-y-1">
-                <Label className="text-xs">Esporte</Label>
-                <Select 
-                  value={esporte} 
-                  onValueChange={(newEsporte) => {
-                    setEsporte(newEsporte);
-                    setMercado("");
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ESPORTES.map(e => (
-                      <SelectItem key={e} value={e}>{e}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               
-              {/* Modelo - Toggle compacto */}
-              <div className="space-y-1">
-                <Label className="text-xs">Modelo {isEditing && <span className="text-[10px] text-muted-foreground">(travado)</span>}</Label>
-                <div className={`relative flex p-0.5 bg-muted/50 rounded-md h-8 ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
+              {/* Modelo - Toggle inline */}
+              <div className="flex items-center gap-2">
+                <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Modelo:</Label>
+                <div className={`relative flex p-0.5 bg-muted/50 rounded h-6 w-[100px] ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
                   <div 
                     className="absolute h-[calc(100%-4px)] bg-primary rounded transition-all duration-200 ease-out"
                     style={{
@@ -1971,7 +1947,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     type="button"
                     onClick={() => !isEditing && setModelo("1-2")}
                     disabled={isEditing}
-                    className={`relative z-10 flex-1 text-xs font-medium rounded transition-colors ${
+                    className={`relative z-10 flex-1 text-[10px] font-medium rounded transition-colors ${
                       modelo === "1-2" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -1981,7 +1957,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     type="button"
                     onClick={() => !isEditing && setModelo("1-X-2")}
                     disabled={isEditing}
-                    className={`relative z-10 flex-1 text-xs font-medium rounded transition-colors ${
+                    className={`relative z-10 flex-1 text-[10px] font-medium rounded transition-colors ${
                       modelo === "1-X-2" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -1989,23 +1965,47 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* LINHA 2: Esporte + Evento + Mercado */}
+            <div className="grid grid-cols-3 gap-2">
+              {/* Esporte */}
+              <div className="space-y-0.5">
+                <Label className="text-[10px] text-muted-foreground">Esporte</Label>
+                <Select 
+                  value={esporte} 
+                  onValueChange={(newEsporte) => {
+                    setEsporte(newEsporte);
+                    setMercado("");
+                  }}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ESPORTES.map(e => (
+                      <SelectItem key={e} value={e}>{e}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Evento */}
-              <div className="space-y-1">
-                <Label className="text-xs">Evento</Label>
+              <div className="space-y-0.5">
+                <Label className="text-[10px] text-muted-foreground">Evento</Label>
                 <Input 
                   placeholder="Ex: Brasil x Argentina" 
                   value={evento}
                   onChange={(e) => setEvento(e.target.value)}
-                  className="h-8 text-xs uppercase"
+                  className="h-7 text-xs uppercase"
                 />
               </div>
               
               {/* Mercado */}
-              <div className="space-y-1">
-                <Label className="text-xs">Mercado</Label>
+              <div className="space-y-0.5">
+                <Label className="text-[10px] text-muted-foreground">Mercado</Label>
                 <Select value={mercado} onValueChange={setMercado}>
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger className="h-7 text-xs">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -2022,14 +2022,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               </div>
             </div>
 
-            <Separator className="my-2" />
-
-            {/* Tabela de Odds - Layout em Colunas (usado tanto na criação quanto na edição) */}
+            {/* Tabela de Odds - Layout em Colunas */}
             {odds.length > 0 && (
-              <div className="space-y-4">
+              <div className="space-y-2 pt-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">Posições da Operação</Label>
-                  <span className="text-xs text-muted-foreground">
+                  <Label className="text-sm font-medium">Posições da Operação</Label>
+                  <span className="text-[10px] text-muted-foreground">
                     Selecione a referência e ajuste as stakes
                   </span>
                 </div>
@@ -2750,8 +2748,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             )}
           </div>
 
-          {/* Análise - Sidebar Direita (sem scroll interno) */}
-          <div className="w-full lg:w-48 xl:w-52 flex-shrink-0 space-y-2">
+          {/* Análise - Sidebar Direita Compacta */}
+          <div className="w-full lg:w-44 flex-shrink-0 space-y-1.5">
             {/* INDICADOR DE CONSOLIDAÇÃO MULTI-MOEDA */}
             {analysis.isMultiCurrency && (
               <MultiCurrencyIndicator
