@@ -88,6 +88,164 @@ const MARKET_EQUIVALENCES: Record<string, string[]> = {
   "Outro": []
 };
 
+// ========== MATRIZ DE COMPATIBILIDADE MODELO × MERCADO ==========
+// Define quais mercados são compatíveis com cada modelo de aposta
+
+// Mercados que SEMPRE exigem 3 posições (1-X-2)
+export const MERCADOS_3WAY: string[] = [
+  "1X2",
+  "Resultado Final",
+  "Dupla Chance",
+  "Resultado do 1º Tempo",
+  "Resultado por Período", // quando há empate possível
+];
+
+// Mercados que SEMPRE são binários (1-2)
+export const MERCADOS_BINARIOS: string[] = [
+  // Over/Under
+  "Over/Under Gols",
+  "Over/Under Pontos",
+  "Over/Under Games",
+  "Over/Under Escanteios",
+  "Over/Under 1º Tempo",
+  "Over/Under Períodos",
+  "Over/Under Rounds",
+  "Over/Under Sets",
+  "Over/Under Pontos Set",
+  "Over/Under Score",
+  "Over/Under Kills",
+  "Total de Runs",
+  "Total de Gols",
+  "Total de Pontos",
+  "Total por Equipe",
+  "Total de Mapas",
+  "Total de Sets",
+  "Total de Torres",
+  "Total de Kills",
+  "Total de Escanteios",
+  "Hits Totais",
+  
+  // Handicap / Spread
+  "Handicap Asiático",
+  "Handicap de Gols",
+  "Handicap / Spread",
+  "Handicap 1º Tempo",
+  "Handicap de Games",
+  "Handicap de Sets",
+  "Handicap de Rounds",
+  "Handicap de Pontos",
+  "Handicap de Mapas",
+  "Handicap de Kills",
+  "Handicap",
+  "Spread",
+  "Run Line",
+  "Puck Line",
+  
+  // Moneyline 2-way (sem empate)
+  "Moneyline",
+  "Vencedor da Partida",
+  "Vencedor do Set",
+  "Vencedor do 1º Set",
+  "Vencedor da Luta",
+  "Vencedor do Mapa",
+  "Vencedor da Série",
+  "Vencedor do Torneio",
+  "Vencedor",
+  "Head-to-Head",
+  "Melhor Round",
+  "Primeiro Líder",
+  "Round 1 – Vencedor",
+  "Primeiro a 10 Rounds",
+  "Primeiro Objetivo",
+  "Primeiro Set",
+  "Resultado por Quarto",
+  "Resultado 1º Tempo",
+  "1º Período",
+  "1ª Metade",
+  "Resultado por Set",
+  "Resultado por Inning",
+  
+  // Mercados Sim/Não
+  "Ambas Marcam",
+  "Tie-break (Sim/Não)",
+  "Luta Completa (Sim/Não)",
+  "Vitória por KO",
+  "Vitória por Decisão",
+  "Top 5/10/20",
+  "Fazer Cut (Sim/Não)",
+  "Hole-in-One no Torneio",
+  "Same Game Parlay",
+  
+  // Props
+  "Props de Jogadores",
+  "Props de Arremessadores",
+  "Props Especiais",
+  "Prop Especial",
+  
+  // Outros binários
+  "Placar Exato",
+  "Placar Exato (Sets)",
+  "Placar Correto",
+  "Sets Ímpares/Pares",
+  "Odd/Even Runs",
+  "Gols Ímpares/Pares",
+  "Método de Vitória",
+  "Round da Finalização",
+  "Margem de Vitória",
+  "Resultado Final + Gols",
+  "Touchdowns",
+  "Nacionalidade do Vencedor",
+  "Outro",
+];
+
+// Tipo para modelo de aposta
+export type ModeloAposta = "1-2" | "1-X-2";
+
+/**
+ * Verifica se um mercado é compatível com o modelo selecionado
+ */
+export function isMercadoCompativelComModelo(mercado: string, modelo: ModeloAposta): boolean {
+  if (!mercado) return true; // Mercado vazio é sempre compatível
+  
+  if (modelo === "1-X-2") {
+    // Modelo 3-way: apenas mercados que fazem sentido com 3 posições
+    return MERCADOS_3WAY.includes(mercado);
+  }
+  
+  // Modelo binário: todos os mercados que NÃO são exclusivamente 3-way
+  return !MERCADOS_3WAY.includes(mercado) || MERCADOS_BINARIOS.includes(mercado);
+}
+
+/**
+ * Filtra mercados compatíveis com o modelo selecionado para um esporte
+ */
+export function getMarketsForSportAndModel(esporte: string, modelo: ModeloAposta): string[] {
+  const mercadosEsporte = getMarketsForSport(esporte);
+  
+  return mercadosEsporte.filter(mercado => {
+    if (modelo === "1-X-2") {
+      // Para 1-X-2, mostrar apenas mercados 3-way
+      return MERCADOS_3WAY.includes(mercado);
+    }
+    // Para 1-2, mostrar mercados binários (excluir os exclusivamente 3-way)
+    return !MERCADOS_3WAY.includes(mercado);
+  });
+}
+
+/**
+ * Determina o modelo apropriado para um mercado
+ * Retorna null se o mercado for compatível com ambos
+ */
+export function getModeloParaMercado(mercado: string): ModeloAposta | null {
+  if (MERCADOS_3WAY.includes(mercado)) {
+    return "1-X-2";
+  }
+  if (MERCADOS_BINARIOS.includes(mercado)) {
+    return "1-2";
+  }
+  return null; // Compatível com ambos
+}
+
 // Mercados por esporte - TOP 10 mais populares por modalidade
 export const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   "Futebol": [

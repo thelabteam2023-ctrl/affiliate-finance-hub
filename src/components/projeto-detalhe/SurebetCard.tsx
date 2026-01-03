@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 export interface SurebetPerna {
   id: string;
   selecao: string;
+  selecao_livre?: string; // Campo livre para linha específica (ex: "Over 2.5")
   odd: number;
   stake: number;
   resultado: string | null;
@@ -137,7 +138,7 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
             {surebet.pernas.map((perna) => (
               <div key={perna.id} className="flex items-center gap-2 text-xs">
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10">
-                  {perna.selecao}
+                  {perna.selecao_livre || perna.selecao}
                 </Badge>
                 <span className="text-muted-foreground truncate flex-1 uppercase">
                   {perna.bookmaker_nome}

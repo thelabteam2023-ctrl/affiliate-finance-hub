@@ -33,7 +33,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
-import { MERCADOS_POR_ESPORTE, getMarketsForSport } from "@/lib/marketNormalizer";
+import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
   CurrencyBadge, 
@@ -97,7 +97,8 @@ export interface SurebetPerna {
   bookmaker_id: string;
   bookmaker_nome: string;
   moeda: SupportedCurrency; // OBRIGATÓRIO - moeda da bookmaker
-  selecao: string;
+  selecao: string; // Label da posição (ex: "Over", "Casa")
+  selecao_livre: string; // Campo livre para linha específica (ex: "Over 2.5", "Handicap -1.5")
   odd: number;
   stake: number;
   // Campos de snapshot para referência BRL
@@ -119,7 +120,8 @@ interface OddEntry {
   moeda: SupportedCurrency; // NOVO - moeda da bookmaker selecionada
   odd: string;
   stake: string;
-  selecao: string;
+  selecao: string; // Label da posição (ex: "Over", "Casa")
+  selecaoLivre: string; // Campo livre para linha específica (ex: "Over 2.5", "Handicap -1.5")
   isReference: boolean;
   isManuallyEdited: boolean;
   resultado?: string | null;
@@ -330,8 +332,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   
   // Odds entries (2 for binary, 3 for 1X2)
   const [odds, setOdds] = useState<OddEntry[]>([
-    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Sim", isReference: true, isManuallyEdited: false },
-    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Não", isReference: false, isManuallyEdited: false }
+    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Sim", selecaoLivre: "", isReference: true, isManuallyEdited: false },
+    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Não", selecaoLivre: "", isReference: false, isManuallyEdited: false }
   ]);
   
   // Apostas vinculadas para edição
@@ -378,10 +380,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }
   }, [open]);
 
-  // Atualizar array de odds quando modelo muda (mercado NÃO afeta modelo)
+  // Atualizar array de odds quando modelo muda
+  // TAMBÉM resetar mercado se incompatível com novo modelo
   useEffect(() => {
     if (!isEditing) {
-      // Modelo é livre, mercado é apenas uma etiqueta
+      // Verificar se mercado atual é compatível com novo modelo
+      if (mercado && !isMercadoCompativelComModelo(mercado, modelo)) {
+        setMercado(""); // Resetar mercado incompatível
+      }
+      
       const selecoes = getSelecoesPorMercado(mercado, modelo);
       // Ajustar número de odds baseado APENAS no modelo escolhido
       const numSlots = modelo === "1-X-2" ? 3 : 2;
@@ -400,6 +407,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           odd: "",
           stake: "",
           selecao: sel,
+          selecaoLivre: "",
           isReference: i === 0,
           isManuallyEdited: false
         })));
@@ -443,7 +451,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     setArredondarValor("1");
     const defaultSelecoes = getSelecoesPorMercado("", "1-2");
     setOdds(defaultSelecoes.map((sel, i) => ({
-      bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, isReference: i === 0, isManuallyEdited: false
+      bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, selecaoLivre: "", isReference: i === 0, isManuallyEdited: false
     })));
     setLinkedApostas([]);
     setExpandedResultados({}); // Reset expansão de resultados avançados
@@ -519,6 +527,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       odd: perna.odd?.toString() || "",
       stake: perna.stake?.toString() || "",
       selecao: perna.selecao,
+      selecaoLivre: perna.selecao_livre || "", // Carregar campo livre se existir
       isReference: index === 0,
       isManuallyEdited: true,
       resultado: perna.resultado,
@@ -1094,6 +1103,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
             moeda,
             selecao: entry.selecao,
+            selecao_livre: entry.selecaoLivre || "", // Campo livre para linha específica
             odd: parseFloat(entry.odd),
             stake,
             // Campos de snapshot (BRL terá valor_brl_referencia = stake, sem cotação)
@@ -1613,9 +1623,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     <SelectValue placeholder="Selecione o mercado" />
                   </SelectTrigger>
                   <SelectContent>
-                    {getMarketsForSport(esporte).map(m => (
+                    {getMarketsForSportAndModel(esporte, modelo).map(m => (
                       <SelectItem key={m} value={m}>{m}</SelectItem>
                     ))}
+                    {getMarketsForSportAndModel(esporte, modelo).length === 0 && (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        Nenhum mercado compatível com modelo {modelo}
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -1701,10 +1716,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               }
                             </div>
                             
-                            {/* Seleção dinâmica */}
+                            {/* Seleção dinâmica (label da posição) */}
                             <span className="text-sm font-medium text-foreground">
                               {entry.selecao}
                             </span>
+                            
+                            {/* Campo Seleção Livre (linha específica do mercado) */}
+                            <div className="w-full px-1">
+                              <Input
+                                placeholder="Ex: Over 2.5"
+                                value={entry.selecaoLivre}
+                                onChange={(e) => updateOdd(index, "selecaoLivre" as keyof OddEntry, e.target.value)}
+                                className="h-7 text-xs text-center bg-background/50 border-dashed"
+                                disabled={isEditing}
+                              />
+                            </div>
                             
                             {/* Resultado (apenas em modo edição) */}
                             {isEditing && (
