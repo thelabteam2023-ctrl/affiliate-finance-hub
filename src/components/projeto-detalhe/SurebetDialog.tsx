@@ -136,44 +136,143 @@ const ESPORTES = [
   "League of Legends", "Counter-Strike", "Dota 2", "eFootball"
 ];
 
-// Mapeamento de mercado → seleções dinâmicas
+// Mapeamento semântico: mercado → seleções (posições da operação)
+// Cada mercado define as labels corretas das posições
 const SELECOES_POR_MERCADO: Record<string, string[]> = {
-  "ML": ["Casa", "Fora"],
-  "Over/Under": ["Over", "Under"],
-  "Ambos Marcam": ["Sim", "Não"],
-  "Handicap Asiático": ["Casa", "Fora"],
-  "Handicap Europeu": ["Casa", "Empate", "Fora"],
-  "Empate Anula": ["Casa", "Fora"],
-  "Correct Score": ["Casa", "Fora"],
+  // ========== FUTEBOL ==========
+  "1X2": ["Casa", "Empate", "Fora"],
   "Dupla Chance": ["Casa/Empate", "Casa/Fora", "Empate/Fora"],
-  "Draw No Bet": ["Casa", "Fora"],
-  "Primeiro a Marcar": ["Casa", "Fora", "Sem Gols"],
-  "Intervalo/Final": ["Casa/Casa", "Casa/Empate", "Casa/Fora", "Empate/Casa", "Empate/Empate", "Empate/Fora", "Fora/Casa", "Fora/Empate", "Fora/Fora"],
+  "Ambas Marcam": ["Sim", "Não"],
+  "Over/Under Gols": ["Over", "Under"],
+  "Handicap Asiático": ["+ Handicap", "- Handicap"],
+  "Resultado do 1º Tempo": ["Casa", "Empate", "Fora"],
+  "Over/Under Escanteios": ["Over", "Under"],
+  "Handicap de Gols": ["+ Handicap", "- Handicap"],
+  "Resultado Final + Gols": ["Casa + Over", "Fora + Under"],
+  "Placar Correto": ["Casa", "Fora"],
+  
+  // ========== BASQUETE ==========
+  "Moneyline": ["Casa", "Fora"],
+  "Handicap / Spread": ["+ Spread", "- Spread"],
+  "Over/Under Pontos": ["Over", "Under"],
+  "Total por Equipe": ["Over", "Under"],
+  "Resultado 1º Tempo": ["Casa", "Fora"],
+  "Handicap 1º Tempo": ["+ Spread", "- Spread"],
+  "Over/Under 1º Tempo": ["Over", "Under"],
+  "Resultado por Quarto": ["Casa", "Fora"],
+  "Props de Jogadores": ["Over", "Under"],
+  "Same Game Parlay": ["Sim", "Não"],
+  
+  // ========== TÊNIS ==========
+  "Vencedor da Partida": ["Jogador 1", "Jogador 2"],
+  "Handicap de Games": ["+ Games", "- Games"],
+  "Over/Under Games": ["Over", "Under"],
+  "Vencedor do Set": ["Jogador 1", "Jogador 2"],
+  "Placar Exato": ["Jogador 1", "Jogador 2"],
+  "Total de Sets": ["Over", "Under"],
+  "Handicap de Sets": ["+ Sets", "- Sets"],
+  "Vencedor do 1º Set": ["Jogador 1", "Jogador 2"],
+  "Tie-break (Sim/Não)": ["Sim", "Não"],
+  "Sets Ímpares/Pares": ["Ímpar", "Par"],
+  
+  // ========== BASEBALL ==========
+  "Run Line": ["+ Runs", "- Runs"],
+  "Total de Runs": ["Over", "Under"],
+  "1ª Metade": ["Casa", "Fora"],
+  "Handicap": ["+ Handicap", "- Handicap"],
+  "Props de Arremessadores": ["Over", "Under"],
+  "Resultado por Inning": ["Casa", "Fora"],
+  "Odd/Even Runs": ["Ímpar", "Par"],
+  "Hits Totais": ["Over", "Under"],
+  
+  // ========== HOCKEY ==========
+  "Puck Line": ["+ Puck", "- Puck"],
   "Total de Gols": ["Over", "Under"],
-  "Total de Cantos": ["Over", "Under"],
-  "Total de Cartões": ["Over", "Under"],
-  "Spread": ["Casa", "Fora"],
+  "Resultado por Período": ["Casa", "Fora"],
+  "1º Período": ["Casa", "Fora"],
+  "Margem de Vitória": ["Casa", "Fora"],
+  "Over/Under Períodos": ["Over", "Under"],
+  "Gols Ímpares/Pares": ["Ímpar", "Par"],
+  
+  // ========== FUTEBOL AMERICANO ==========
+  "Spread": ["+ Spread", "- Spread"],
   "Total de Pontos": ["Over", "Under"],
+  "Touchdowns": ["Over", "Under"],
+  
+  // ========== VÔLEI ==========
+  "Over/Under Sets": ["Over", "Under"],
+  "Resultado por Set": ["Time 1", "Time 2"],
+  "Placar Exato (Sets)": ["Time 1", "Time 2"],
+  "Handicap de Pontos": ["+ Pontos", "- Pontos"],
+  "Primeiro Set": ["Time 1", "Time 2"],
+  "Over/Under Pontos Set": ["Over", "Under"],
+  
+  // ========== MMA / BOXE ==========
+  "Vencedor da Luta": ["Lutador 1", "Lutador 2"],
+  "Método de Vitória": ["KO/TKO", "Decisão"],
+  "Round da Finalização": ["Round 1-2", "Round 3+"],
+  "Over/Under Rounds": ["Over", "Under"],
+  "Luta Completa (Sim/Não)": ["Sim", "Não"],
+  "Vitória por KO": ["Sim", "Não"],
+  "Vitória por Decisão": ["Sim", "Não"],
+  "Handicap de Rounds": ["+ Rounds", "- Rounds"],
+  "Round 1 – Vencedor": ["Lutador 1", "Lutador 2"],
+  "Prop Especial": ["Sim", "Não"],
+  
+  // ========== GOLFE ==========
+  "Vencedor do Torneio": ["Jogador 1", "Jogador 2"],
+  "Top 5/10/20": ["Sim", "Não"],
+  "Head-to-Head": ["Jogador 1", "Jogador 2"],
+  "Melhor Round": ["Jogador 1", "Jogador 2"],
+  "Nacionalidade do Vencedor": ["Opção 1", "Opção 2"],
+  "Primeiro Líder": ["Jogador 1", "Jogador 2"],
+  "Fazer Cut (Sim/Não)": ["Sim", "Não"],
+  "Over/Under Score": ["Over", "Under"],
+  "Hole-in-One no Torneio": ["Sim", "Não"],
+  
+  // ========== ESPORTS (LoL, CS, Dota, eFootball) ==========
+  "Vencedor do Mapa": ["Time 1", "Time 2"],
+  "Handicap de Mapas": ["+ Mapas", "- Mapas"],
+  "Total de Mapas": ["Over", "Under"],
+  "Vencedor da Série": ["Time 1", "Time 2"],
+  "Over/Under Kills": ["Over", "Under"],
+  "Primeiro Objetivo": ["Time 1", "Time 2"],
+  "Total de Torres": ["Over", "Under"],
+  "Handicap de Kills": ["+ Kills", "- Kills"],
+  "Props Especiais": ["Sim", "Não"],
+  "Primeiro a 10 Rounds": ["Time 1", "Time 2"],
+  "Total de Kills": ["Over", "Under"],
+  "Total de Escanteios": ["Over", "Under"],
+  
+  // ========== GENÉRICOS ==========
+  "Vencedor": ["Time 1", "Time 2"],
+  "Over": ["Over", "Under"],
+  "Under": ["Over", "Under"],
   "Outro": ["Opção 1", "Opção 2"]
 };
 
 const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2"): string[] => {
-  // 1-X-2 sempre é Casa, Empate, Fora - fixo
+  // 1-X-2 sempre é Casa, Empate, Fora - fixo para 3 posições
   if (modelo === "1-X-2") {
-    return ["Casa", "Empate", "Fora"];
+    // Alguns mercados têm seleções específicas para 3-way
+    const mercados3Way: Record<string, string[]> = {
+      "1X2": ["Casa", "Empate", "Fora"],
+      "Resultado do 1º Tempo": ["Casa", "Empate", "Fora"],
+      "Dupla Chance": ["Casa/Empate", "Casa/Fora", "Empate/Fora"],
+    };
+    return mercados3Way[mercado] || ["Casa", "Empate", "Fora"];
   }
+  
   // Para modelo binário, usar mapeamento do mercado
   if (mercado && SELECOES_POR_MERCADO[mercado]) {
     const selecoes = SELECOES_POR_MERCADO[mercado];
     // Retornar apenas 2 seleções para modelo binário
     return selecoes.slice(0, 2);
   }
+  
   // Fallback para binário
   return ["Sim", "Não"];
 };
-
-const SELECOES_1X2 = ["Casa", "Empate", "Fora"];
-const SELECOES_BINARIO = ["Sim", "Não"];
 
 export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, surebet, onSuccess, activeTab = 'surebet' }: SurebetDialogProps) {
   const isEditing = !!surebet;
