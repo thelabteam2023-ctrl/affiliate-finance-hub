@@ -3122,14 +3122,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       <>
                         {modelo !== "1-X-2" && modelo !== "1-2" && <Separator className="my-1" />}
                         <div className={modelo === "1-X-2" || modelo === "1-2" ? "mt-2" : ""}>
-                          <p className="text-xs font-medium mb-1 text-muted-foreground">Probabilidades</p>
-                          <div className="space-y-0.5">
+                          <p className="text-xs font-medium mb-1.5 text-muted-foreground">Probabilidades</p>
+                          <div className="space-y-1">
                             {odds.map((entry, index) => {
                               const impliedProb = analysis.impliedProbs[index];
                               return (
-                                <div key={index} className="flex items-center justify-between text-[10px]">
+                                <div key={index} className="flex items-center justify-between text-xs">
                                   <span className="text-muted-foreground">{entry.selecao}</span>
-                                  <span className={impliedProb > 0 ? "text-blue-400" : "text-muted-foreground"}>
+                                  <span className={`font-medium ${impliedProb > 0 ? "text-blue-400" : "text-muted-foreground"}`}>
                                     {impliedProb > 0 ? `${(impliedProb * 100).toFixed(0)}%` : "—"}
                                   </span>
                                 </div>
