@@ -2957,30 +2957,30 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               </CardHeader>
               <CardContent className={`px-3 pb-3 ${
                 modelo === "1-X-2" 
-                  ? "flex flex-wrap gap-4 items-start" 
+                  ? "flex flex-wrap gap-4 items-center justify-center" 
                   : "space-y-1.5"
               }`}>
                 {/* Stake Total */}
-                <div className={`p-2 rounded-lg bg-primary/10 border border-primary/30 ${modelo === "1-X-2" ? "min-w-[140px]" : ""}`}>
+                <div className={`p-3 rounded-lg bg-primary/10 border border-primary/30 ${modelo === "1-X-2" ? "min-w-[160px]" : ""}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground">Stake Total</p>
+                    <p className="text-sm text-muted-foreground">Stake Total</p>
                     {!isEditing && arredondarAtivado && (
-                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 h-5">
                         ≈{arredondarValor}
                       </Badge>
                     )}
                   </div>
                   {analysis.isMultiCurrency ? (
                     <div className="flex flex-col gap-0.5">
-                      <p className="text-sm font-bold text-amber-400">Multi-Moeda</p>
+                      <p className="text-base font-bold text-amber-400">Multi-Moeda</p>
                       {analysis.stakeTotal > 0 && (
-                        <p className="text-xs font-semibold text-primary">
+                        <p className="text-sm font-semibold text-primary">
                           {formatCurrency(analysis.stakeTotal, moedaConsolidacao)}
                         </p>
                       )}
                     </div>
                   ) : (
-                    <p className="text-base font-bold text-primary">
+                    <p className="text-lg font-bold text-primary">
                       {analysis.stakeTotal > 0 ? formatCurrency(analysis.stakeTotal, analysis.moedaDominante) : "—"}
                     </p>
                   )}
@@ -3028,19 +3028,19 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 ) : (
                   <>
                     {/* ROI Compacto: Max (verde) / Min (vermelho) */}
-                    <div className={`p-2 rounded-lg bg-muted/50 border border-border ${modelo === "1-X-2" ? "min-w-[120px]" : "space-y-1"}`}>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-emerald-400">Máx</span>
-                        <span className="text-xs font-bold text-emerald-500">
+                    <div className={`p-3 rounded-lg bg-muted/50 border border-border ${modelo === "1-X-2" ? "min-w-[130px]" : "space-y-1"}`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm text-emerald-400">Máx</span>
+                        <span className="text-sm font-bold text-emerald-500">
                           {analysis.stakeTotal > 0 
                             ? `${analysis.maxRoi >= 0 ? "+" : ""}${analysis.maxRoi.toFixed(1)}%`
                             : "—"
                           }
                         </span>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-red-400">Mín</span>
-                        <span className="text-xs font-bold text-red-500">
+                      <div className="flex items-center justify-between gap-3 mt-1">
+                        <span className="text-sm text-red-400">Mín</span>
+                        <span className="text-sm font-bold text-red-500">
                           {analysis.stakeTotal > 0 
                             ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(1)}%`
                             : "—"
@@ -3051,20 +3051,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
                     {/* Cenários de Resultado - layout adaptativo */}
                     {analysis.scenarios.length > 0 && analysis.stakeTotal > 0 && (
-                      <div className={modelo === "1-X-2" ? "flex gap-2 flex-wrap" : ""}>
+                      <div className={modelo === "1-X-2" ? "flex gap-3 flex-wrap" : ""}>
                         {!modelo.includes("1-X-2") && <Separator className="my-1" />}
                         {analysis.scenarios.map((scenario, index) => (
                           <div 
                             key={index} 
-                            className={`p-1.5 rounded-lg border ${
+                            className={`p-2.5 rounded-lg border ${
                               scenario.isPositive 
                                 ? "bg-emerald-500/5 border-emerald-500/20" 
                                 : "bg-red-500/5 border-red-500/20"
-                            } ${modelo === "1-X-2" ? "min-w-[100px]" : ""}`}
+                            } ${modelo === "1-X-2" ? "min-w-[110px]" : ""}`}
                           >
-                            <div className="flex items-center justify-between gap-1.5 min-w-0">
-                              <span className="text-[10px] font-medium truncate">{scenario.selecao}</span>
-                              <span className={`text-[10px] font-bold whitespace-nowrap ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                            <div className="flex items-center justify-between gap-2 min-w-0">
+                              <span className="text-xs font-medium truncate">{scenario.selecao}</span>
+                              <span className={`text-xs font-bold whitespace-nowrap ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
                                 {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro, analysis.moedaDominante)}
                               </span>
                             </div>
