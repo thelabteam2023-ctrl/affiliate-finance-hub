@@ -203,6 +203,149 @@ function calcularStakeTotal(mainEntry: { stake: string }, additionalEntries?: Od
   return mainStake + additionalStakes;
 }
 
+/**
+ * ============================================================
+ * CÁLCULO DE STAKES PARA MODELO 1x2 (TRÊS VIAS - MATRICIAL)
+ * ============================================================
+ * 
+ * Para arbitragem 3-way, precisamos resolver um sistema onde:
+ * - Existem 3 desfechos mutuamente exclusivos (1, X, 2)
+ * - Queremos lucro igual em todos os cenários
+ * 
+ * Fórmula para equalização de lucro:
+ * Para cada cenário i: lucro_i = stake_i * odd_i - stake_total
+ * 
+ * Para igualar todos os lucros (lucro_1 = lucro_X = lucro_2 = L):
+ * stake_i * odd_i - stake_total = L
+ * stake_i = (stake_total + L) / odd_i
+ * 
+ * Como stake_total = stake_1 + stake_X + stake_2:
+ * stake_total = (stake_total + L) * (1/odd_1 + 1/odd_X + 1/odd_2)
+ * stake_total = (stake_total + L) * sum_prob
+ * 
+ * Onde sum_prob = 1/odd_1 + 1/odd_X + 1/odd_2 (soma das probabilidades implícitas)
+ * 
+ * Resolvendo:
+ * stake_total = stake_total * sum_prob + L * sum_prob
+ * stake_total * (1 - sum_prob) = L * sum_prob
+ * L = stake_total * (1 - sum_prob) / sum_prob
+ * 
+ * Para calcular stakes individuais a partir da stake de referência:
+ * Se temos stake_ref na perna de referência com odd_ref:
+ * stake_total + L = stake_ref * odd_ref (retorno da referência)
+ * 
+ * Portanto: stake_i = (stake_ref * odd_ref) / odd_i
+ * 
+ * PORÉM, isso só funciona se sum_prob < 1 (arbitragem real).
+ * Se sum_prob >= 1, não há arbitragem garantida, mas ainda calculamos
+ * as stakes para equalizar o lucro/prejuízo em todos os cenários.
+ */
+function calcularStakes1X2(
+  odds: { oddMedia: number; stakeAtual: number; isReference: boolean }[],
+  arredondarFn: (value: number) => number
+): { stakes: number[]; isValid: boolean; lucroIgualado: number } {
+  // Validar que temos exatamente 3 pernas
+  if (odds.length !== 3) {
+    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
+  }
+  
+  // Verificar se todas as odds são válidas
+  const todasOddsValidas = odds.every(o => o.oddMedia > 1);
+  if (!todasOddsValidas) {
+    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
+  }
+  
+  // Encontrar a perna de referência
+  const refIndex = odds.findIndex(o => o.isReference);
+  if (refIndex === -1) {
+    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
+  }
+  
+  const refOdd = odds[refIndex].oddMedia;
+  const refStake = odds[refIndex].stakeAtual;
+  
+  if (refStake <= 0 || refOdd <= 1) {
+    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
+  }
+  
+  // Retorno alvo = stake_ref × odd_ref (igual para todos os cenários)
+  const targetReturn = refStake * refOdd;
+  
+  // Calcular stakes para cada perna
+  // stake_i = targetReturn / odd_i
+  const calculatedStakes = odds.map((o, i) => {
+    if (i === refIndex) return refStake;
+    return arredondarFn(targetReturn / o.oddMedia);
+  });
+  
+  // Calcular stake total e lucro igualado
+  const stakeTotal = calculatedStakes.reduce((a, b) => a + b, 0);
+  const lucroIgualado = targetReturn - stakeTotal;
+  
+  return { 
+    stakes: calculatedStakes, 
+    isValid: true,
+    lucroIgualado
+  };
+}
+
+/**
+ * ============================================================
+ * CÁLCULO DE STAKES PARA MODELO 1-2 (DUAS VIAS - BINÁRIO)
+ * ============================================================
+ * 
+ * Para arbitragem 2-way, a fórmula é mais simples:
+ * stake_1 * odd_1 = stake_2 * odd_2 (igualar retornos)
+ * 
+ * Dado stake_ref e odd_ref na perna de referência:
+ * stake_outro = (stake_ref * odd_ref) / odd_outro
+ */
+function calcularStakes12(
+  odds: { oddMedia: number; stakeAtual: number; isReference: boolean }[],
+  arredondarFn: (value: number) => number
+): { stakes: number[]; isValid: boolean; lucroIgualado: number } {
+  // Validar que temos exatamente 2 pernas
+  if (odds.length !== 2) {
+    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
+  }
+  
+  const refIndex = odds.findIndex(o => o.isReference);
+  if (refIndex === -1) {
+    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
+  }
+  
+  const refOdd = odds[refIndex].oddMedia;
+  const refStake = odds[refIndex].stakeAtual;
+  
+  if (refStake <= 0 || refOdd <= 1) {
+    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
+  }
+  
+  const otherIndex = refIndex === 0 ? 1 : 0;
+  const otherOdd = odds[otherIndex].oddMedia;
+  
+  if (otherOdd <= 1) {
+    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
+  }
+  
+  const targetReturn = refStake * refOdd;
+  const otherStake = arredondarFn(targetReturn / otherOdd);
+  
+  const calculatedStakes = odds.map((_, i) => {
+    if (i === refIndex) return refStake;
+    return otherStake;
+  });
+  
+  const stakeTotal = calculatedStakes.reduce((a, b) => a + b, 0);
+  const lucroIgualado = targetReturn - stakeTotal;
+  
+  return { 
+    stakes: calculatedStakes, 
+    isValid: true,
+    lucroIgualado
+  };
+}
+
 const ESPORTES = [
   "Futebol", "Basquete", "Tênis", "Baseball", "Hockey", 
   "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe",
@@ -764,54 +907,62 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   };
 
   // Auto-preencher stakes baseado na posição de referência
-  // COMPORTAMENTO CORRIGIDO: Usa ODD MÉDIA PONDERADA e STAKE TOTAL CONSOLIDADO 
-  // quando há múltiplas entradas (coberturas) na perna de referência
+  // COMPORTAMENTO CORRIGIDO: Usa lógica DIFERENTE para modelos 1-2 e 1x2
+  // - Modelo 1-2: Cálculo binário sequencial
+  // - Modelo 1x2: Cálculo matricial global (3 pernas simultâneas)
   useEffect(() => {
     // Não recalcular em modo edição
     if (isEditing) return;
     
-    const refIndex = odds.findIndex(o => o.isReference);
+    // Preparar dados consolidados de cada perna
+    const pernaData = odds.map(perna => ({
+      oddMedia: getOddMediaPerna(perna),
+      stakeAtual: getStakeTotalPerna(perna),
+      isReference: perna.isReference
+    }));
+    
+    // Verificar se temos referência
+    const refIndex = pernaData.findIndex(p => p.isReference);
     if (refIndex === -1) return;
     
-    const refEntry = odds[refIndex];
+    // Verificar se temos stake de referência válida
+    const refStake = pernaData[refIndex].stakeAtual;
+    const refOdd = pernaData[refIndex].oddMedia;
+    if (refStake <= 0 || refOdd <= 1) return;
     
-    // CORREÇÃO CRÍTICA: Usar stake total e odd média consolidados da perna de referência
-    const refStakeTotal = getStakeTotalPerna(refEntry);
-    const refOddMedia = getOddMediaPerna(refEntry);
+    // Contar pernas com odd válida
+    const validOddsCount = pernaData.filter(p => p.oddMedia > 1).length;
     
-    // Contar pernas com odd válida (usando odd média se houver coberturas)
-    const validOddsCount = odds.filter(o => {
-      const oddMedia = getOddMediaPerna(o);
-      return oddMedia > 1;
-    }).length;
+    // Modelo 1x2: Precisa de exatamente 3 pernas válidas para calcular
+    // Modelo 1-2: Precisa de exatamente 2 pernas válidas
+    const numPernasEsperadas = modelo === "1-X-2" ? 3 : 2;
     
-    // Só calcular se temos stake de referência, odd válida e pelo menos 2 odds válidas
-    if (refStakeTotal <= 0 || refOddMedia <= 1 || validOddsCount < 2) return;
+    // Para modelo 1x2, só recalcular quando TODAS as odds estiverem preenchidas
+    if (modelo === "1-X-2" && validOddsCount < 3) return;
     
-    // FÓRMULA CORRIGIDA: Retorno alvo usa valores consolidados da perna de referência
-    // targetReturn = stakeTotal_perna_ref × oddMedia_perna_ref
-    const targetReturn = refStakeTotal * refOddMedia;
+    // Para modelo 1-2, precisa de pelo menos 2 odds válidas
+    if (modelo === "1-2" && validOddsCount < 2) return;
     
-    // Recalcular TODAS as stakes não-referência sempre que referência ou odds mudam
+    // Usar a função de cálculo correta conforme o modelo
+    const resultado = modelo === "1-X-2" 
+      ? calcularStakes1X2(pernaData, arredondarStake)
+      : calcularStakes12(pernaData, arredondarStake);
+    
+    if (!resultado.isValid) return;
+    
+    // Verificar se precisa atualizar alguma stake
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
       // Nunca modificar a referência
       if (i === refIndex) return o;
       
-      // CORREÇÃO: Usar odd média ponderada da perna (não a odd simples)
-      const oddMedia = getOddMediaPerna(o);
+      const calculatedStake = resultado.stakes[i];
+      const currentStake = parseFloat(o.stake) || 0;
       
-      if (oddMedia > 1) {
-        // stakeOutro = targetReturn / oddMedia_perna
-        const rawStake = targetReturn / oddMedia;
-        const calculatedStake = arredondarStake(rawStake);
-        const currentStake = parseFloat(o.stake) || 0;
-        
-        // Só atualizar se o valor calculado for diferente do atual
-        if (Math.abs(calculatedStake - currentStake) > 0.01) {
-          needsUpdate = true;
-          return { ...o, stake: calculatedStake.toFixed(2) };
-        }
+      // Só atualizar se o valor calculado for diferente do atual
+      if (Math.abs(calculatedStake - currentStake) > 0.01) {
+        needsUpdate = true;
+        return { ...o, stake: calculatedStake.toFixed(2) };
       }
       return o;
     });
@@ -824,6 +975,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     odds.map(o => `${o.odd}-${o.stake}-${(o.additionalEntries || []).map(ae => `${ae.odd}-${ae.stake}`).join('|')}`).join(','),
     // Quando a referência mudar
     odds.map(o => o.isReference).join(','),
+    // NOVO: Quando o modelo mudar
+    modelo,
     // Configurações de arredondamento
     arredondarAtivado,
     arredondarValor,
@@ -1001,19 +1154,37 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     const refOdd = parsedOdds[refIndex] || 0;
     const refStakeValue = actualStakes[refIndex] || 0;
     
-    // Calcular stakes sugeridas baseado na referência
-    // Fórmula: stakeOutro = (stakeRef * oddRef) / oddOutro
+    // REFATORADO: Calcular stakes sugeridas usando a lógica correta por modelo
     let suggestedStakes: number[] = [];
-    if (refStakeValue > 0 && refOdd > 1 && validOddsCount >= 2) {
-      const targetReturn = refStakeValue * refOdd;
-      suggestedStakes = parsedOdds.map((odd, i) => {
-        if (i === refIndex) return refStakeValue;
-        if (odd > 1) {
-          const rawStake = targetReturn / odd;
-          return arredondarStake(rawStake);
-        }
-        return 0;
-      });
+    const numPernas = modelo === "1-X-2" ? 3 : 2;
+    const minOddsRequired = modelo === "1-X-2" ? 3 : 2;
+    
+    if (refStakeValue > 0 && refOdd > 1 && validOddsCount >= minOddsRequired) {
+      // Preparar dados para as funções de cálculo
+      const pernaData = parsedOdds.map((oddMedia, i) => ({
+        oddMedia,
+        stakeAtual: actualStakes[i],
+        isReference: i === refIndex
+      }));
+      
+      // Usar a função de cálculo correta conforme o modelo
+      const resultado = modelo === "1-X-2" && numPernas === 3
+        ? calcularStakes1X2(pernaData, arredondarStake)
+        : calcularStakes12(pernaData.slice(0, 2), arredondarStake);
+      
+      if (resultado.isValid) {
+        suggestedStakes = resultado.stakes;
+      } else {
+        // Fallback: fórmula básica
+        const targetReturn = refStakeValue * refOdd;
+        suggestedStakes = parsedOdds.map((odd, i) => {
+          if (i === refIndex) return refStakeValue;
+          if (odd > 1) {
+            return arredondarStake(targetReturn / odd);
+          }
+          return 0;
+        });
+      }
     }
     
     // StakeTotal = soma de todas as stakes consolidadas de cada perna
@@ -1205,7 +1376,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     bookmakerSaldos.map(b => `${b.id}|${b.saldo_operavel}`).join(','),
     arredondarAtivado,
     arredondarValor,
-    registroValues.contexto_operacional
+    registroValues.contexto_operacional,
+    // NOVO: Modelo afeta cálculo de stakes sugeridas
+    modelo
   ]);
 
   // Análise de resultado REAL (quando resolvida - posições marcadas como GREEN/RED/VOID/MEIO_GREEN/MEIO_RED)
