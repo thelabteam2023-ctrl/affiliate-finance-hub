@@ -3027,27 +3027,29 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   </>
                 ) : (
                   <>
-                    {/* ROI Compacto: Max (verde) / Min (vermelho) */}
-                    <div className={`p-3 rounded-lg bg-muted/50 border border-border ${modelo === "1-X-2" ? "min-w-[130px]" : "space-y-1"}`}>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm text-emerald-400">Máx</span>
-                        <span className="text-sm font-bold text-emerald-500">
-                          {analysis.stakeTotal > 0 
-                            ? `${analysis.maxRoi >= 0 ? "+" : ""}${analysis.maxRoi.toFixed(1)}%`
-                            : "—"
-                          }
-                        </span>
+                    {/* ROI Compacto: Max (verde) / Min (vermelho) - OCULTO no 1-X-2 */}
+                    {modelo !== "1-X-2" && (
+                      <div className="p-3 rounded-lg bg-muted/50 border border-border space-y-1">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm text-emerald-400">Máx</span>
+                          <span className="text-sm font-bold text-emerald-500">
+                            {analysis.stakeTotal > 0 
+                              ? `${analysis.maxRoi >= 0 ? "+" : ""}${analysis.maxRoi.toFixed(1)}%`
+                              : "—"
+                            }
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 mt-1">
+                          <span className="text-sm text-red-400">Mín</span>
+                          <span className="text-sm font-bold text-red-500">
+                            {analysis.stakeTotal > 0 
+                              ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(1)}%`
+                              : "—"
+                            }
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between gap-3 mt-1">
-                        <span className="text-sm text-red-400">Mín</span>
-                        <span className="text-sm font-bold text-red-500">
-                          {analysis.stakeTotal > 0 
-                            ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(1)}%`
-                            : "—"
-                          }
-                        </span>
-                      </div>
-                    </div>
+                    )}
 
                     {/* Cenários de Resultado - layout adaptativo */}
                     {analysis.scenarios.length > 0 && analysis.stakeTotal > 0 && (
@@ -3060,13 +3062,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               scenario.isPositive 
                                 ? "bg-emerald-500/5 border-emerald-500/20" 
                                 : "bg-red-500/5 border-red-500/20"
-                            } ${modelo === "1-X-2" ? "min-w-[110px]" : ""}`}
+                            } ${modelo === "1-X-2" ? "min-w-[120px]" : ""}`}
                           >
                             <div className="flex items-center justify-between gap-2 min-w-0">
                               <span className="text-xs font-medium truncate">{scenario.selecao}</span>
-                              <span className={`text-xs font-bold whitespace-nowrap ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
-                                {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro, analysis.moedaDominante)}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-xs font-bold whitespace-nowrap ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                                  {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro, analysis.moedaDominante)}
+                                </span>
+                                {/* Mostrar ROI % junto ao valor no modelo 1-X-2 */}
+                                {modelo === "1-X-2" && (
+                                  <span className={`text-[10px] font-medium whitespace-nowrap ${scenario.roi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                    {scenario.roi >= 0 ? "+" : ""}{scenario.roi.toFixed(1)}%
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
