@@ -33,7 +33,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
-import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, type ModeloAposta } from "@/lib/marketNormalizer";
+import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
   CurrencyBadge, 
@@ -158,10 +158,11 @@ const SELECOES_POR_MERCADO: Record<string, string[]> = {
   "Handicap / Spread": ["+ Spread", "- Spread"],
   "Over/Under Pontos": ["Over", "Under"],
   "Total por Equipe": ["Over", "Under"],
-  "Resultado 1º Tempo": ["Casa", "Fora"],
+  "Resultado 1º Tempo": ["Casa", "Empate", "Fora"], // Atualizado para suportar 3-way
+  "Resultado Tempo Regulamentar": ["Casa", "Empate", "Fora"], // NOVO: 3-way
+  "Resultado por Quarto": ["Casa", "Empate", "Fora"], // Atualizado para suportar 3-way
   "Handicap 1º Tempo": ["+ Spread", "- Spread"],
   "Over/Under 1º Tempo": ["Over", "Under"],
-  "Resultado por Quarto": ["Casa", "Fora"],
   "Props de Jogadores": ["Over", "Under"],
   "Same Game Parlay": ["Sim", "Não"],
   
@@ -180,17 +181,19 @@ const SELECOES_POR_MERCADO: Record<string, string[]> = {
   // ========== BASEBALL ==========
   "Run Line": ["+ Runs", "- Runs"],
   "Total de Runs": ["Over", "Under"],
+  "Resultado após 9 Innings": ["Casa", "Empate", "Fora"], // NOVO: 3-way
+  "Resultado 5 Innings": ["Casa", "Empate", "Fora"], // NOVO: 3-way
+  "Resultado por Inning": ["Casa", "Empate", "Fora"], // Atualizado para suportar 3-way
   "1ª Metade": ["Casa", "Fora"],
   "Handicap": ["+ Handicap", "- Handicap"],
   "Props de Arremessadores": ["Over", "Under"],
-  "Resultado por Inning": ["Casa", "Fora"],
   "Odd/Even Runs": ["Ímpar", "Par"],
   "Hits Totais": ["Over", "Under"],
   
   // ========== HOCKEY ==========
   "Puck Line": ["+ Puck", "- Puck"],
   "Total de Gols": ["Over", "Under"],
-  "Resultado por Período": ["Casa", "Fora"],
+  "Resultado por Período": ["Casa", "Empate", "Fora"], // Atualizado para suportar 3-way
   "1º Período": ["Casa", "Fora"],
   "Margem de Vitória": ["Casa", "Fora"],
   "Over/Under Períodos": ["Over", "Under"],
@@ -384,8 +387,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   // TAMBÉM resetar mercado se incompatível com novo modelo
   useEffect(() => {
     if (!isEditing) {
-      // Verificar se mercado atual é compatível com novo modelo
-      if (mercado && !isMercadoCompativelComModelo(mercado, modelo)) {
+      // Verificar se mercado atual é compatível com novo modelo PARA O ESPORTE SELECIONADO
+      if (mercado && !isMercadoCompativelComModelo(mercado, modelo, esporte)) {
         setMercado(""); // Resetar mercado incompatível
       }
       
@@ -423,7 +426,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         })));
       }
     }
-  }, [modelo, isEditing]);
+  }, [modelo, esporte, isEditing]); // Adicionado esporte como dependência
   
   // Atualizar seleções quando mercado muda (sem afetar modelo)
   useEffect(() => {
