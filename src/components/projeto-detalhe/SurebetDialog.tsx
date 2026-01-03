@@ -2128,7 +2128,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           </div>
                           
                           {/* Casa | Linha | Odd | Stake na mesma linha */}
-                          <div className="grid gap-1.5" style={{ gridTemplateColumns: '1fr 80px 60px 80px' }}>
+                          <div className="grid gap-1.5" style={{ gridTemplateColumns: '1fr 70px 60px 80px' }}>
                             {/* Casa */}
                             <div className="space-y-1">
                               <Label className="text-[10px] text-muted-foreground">Casa</Label>
@@ -2298,90 +2298,93 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                 
                                 return (
                                   <div key={addIdx} className="space-y-1 animate-in fade-in slide-in-from-top-1">
-                                    {/* Grid alinhado com entrada principal: 1fr 80px 60px 80px + botão pequeno */}
-                                    <div className="grid gap-1.5 items-end" style={{ gridTemplateColumns: '1fr 80px 60px 80px 20px' }}>
-                                      <Select 
-                                        value={addEntry.bookmaker_id}
-                                        onValueChange={(v) => updateAdditionalEntry(index, addIdx, "bookmaker_id", v)}
-                                      >
-                                        <SelectTrigger className={`h-7 text-[10px] w-full px-1.5 bg-muted/30 ${addSaldoInsuficiente ? "border-destructive" : ""}`}>
-                                          <SelectValue placeholder="+ Casa">
-                                            {addBk?.nome && (
-                                              <span className="truncate uppercase">{addBk.nome}</span>
-                                            )}
-                                          </SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent className="max-w-[320px]">
-                                          {bookmakersDisponiveis.map(bk => {
-                                            // Calcular saldo disponível para esta entrada adicional específica
-                                            const saldoBaseParaEssa = getSaldoDisponivelParaAdditionalEntry(bk.id, index, addIdx);
-                                            const isIndisponivel = saldoBaseParaEssa !== null && saldoBaseParaEssa < 0.50;
-                                            
-                                            return (
-                                              <SelectItem 
-                                                key={bk.id} 
-                                                value={bk.id}
-                                                disabled={isIndisponivel}
-                                                className={isIndisponivel ? "opacity-50" : ""}
-                                              >
-                                                <BookmakerSelectOption
-                                                  bookmaker={{
-                                                    id: bk.id,
-                                                    nome: bk.nome,
-                                                    parceiro_nome: bk.parceiro_nome,
-                                                    moeda: bk.moeda,
-                                                    saldo_operavel: saldoBaseParaEssa ?? bk.saldo_operavel,
-                                                    saldo_disponivel: bk.saldo_disponivel,
-                                                    saldo_freebet: bk.saldo_freebet,
-                                                    saldo_bonus: bk.saldo_bonus,
-                                                    logo_url: bk.logo_url,
-                                                  }}
+                                    {/* Wrapper com posicionamento relativo para o botão de excluir */}
+                                    <div className="relative">
+                                      {/* Grid alinhado EXATAMENTE com entrada principal: 1fr 70px 60px 80px */}
+                                      <div className="grid gap-1.5 items-end pr-5" style={{ gridTemplateColumns: '1fr 70px 60px 80px' }}>
+                                        <Select 
+                                          value={addEntry.bookmaker_id}
+                                          onValueChange={(v) => updateAdditionalEntry(index, addIdx, "bookmaker_id", v)}
+                                        >
+                                          <SelectTrigger className={`h-7 text-[10px] w-full px-1.5 bg-muted/30 ${addSaldoInsuficiente ? "border-destructive" : ""}`}>
+                                            <SelectValue placeholder="+ Casa">
+                                              {addBk?.nome && (
+                                                <span className="truncate uppercase">{addBk.nome}</span>
+                                              )}
+                                            </SelectValue>
+                                          </SelectTrigger>
+                                          <SelectContent className="max-w-[320px]">
+                                            {bookmakersDisponiveis.map(bk => {
+                                              // Calcular saldo disponível para esta entrada adicional específica
+                                              const saldoBaseParaEssa = getSaldoDisponivelParaAdditionalEntry(bk.id, index, addIdx);
+                                              const isIndisponivel = saldoBaseParaEssa !== null && saldoBaseParaEssa < 0.50;
+                                              
+                                              return (
+                                                <SelectItem 
+                                                  key={bk.id} 
+                                                  value={bk.id}
                                                   disabled={isIndisponivel}
-                                                  showBreakdown={!isIndisponivel}
-                                                />
-                                              </SelectItem>
-                                            );
-                                          })}
-                                        </SelectContent>
-                                      </Select>
+                                                  className={isIndisponivel ? "opacity-50" : ""}
+                                                >
+                                                  <BookmakerSelectOption
+                                                    bookmaker={{
+                                                      id: bk.id,
+                                                      nome: bk.nome,
+                                                      parceiro_nome: bk.parceiro_nome,
+                                                      moeda: bk.moeda,
+                                                      saldo_operavel: saldoBaseParaEssa ?? bk.saldo_operavel,
+                                                      saldo_disponivel: bk.saldo_disponivel,
+                                                      saldo_freebet: bk.saldo_freebet,
+                                                      saldo_bonus: bk.saldo_bonus,
+                                                      logo_url: bk.logo_url,
+                                                    }}
+                                                    disabled={isIndisponivel}
+                                                    showBreakdown={!isIndisponivel}
+                                                  />
+                                                </SelectItem>
+                                              );
+                                            })}
+                                          </SelectContent>
+                                        </Select>
+                                        
+                                        {/* Linha - mesma largura da entrada principal */}
+                                        <Input
+                                          placeholder="Linha"
+                                          value={addEntry.selecaoLivre}
+                                          onChange={(e) => updateAdditionalEntry(index, addIdx, "selecaoLivre", e.target.value)}
+                                          className="h-7 text-[10px] px-1.5 bg-muted/30 border-dashed"
+                                        />
+                                        
+                                        {/* Odd - mesma largura da entrada principal */}
+                                        <Input 
+                                          type="number"
+                                          step="0.01"
+                                          placeholder="Odd"
+                                          value={addEntry.odd}
+                                          onChange={(e) => updateAdditionalEntry(index, addIdx, "odd", e.target.value)}
+                                          className="h-7 text-[10px] px-1.5 bg-muted/30"
+                                          onWheel={(e) => e.currentTarget.blur()}
+                                        />
+                                        
+                                        {/* Stake - mesma largura da entrada principal */}
+                                        <Input 
+                                          type="number"
+                                          step="0.01"
+                                          placeholder="Stake"
+                                          value={addEntry.stake}
+                                          onChange={(e) => updateAdditionalEntry(index, addIdx, "stake", e.target.value)}
+                                          className={`h-7 text-[10px] px-1.5 bg-muted/30 ${addSaldoInsuficiente ? "border-destructive ring-1 ring-destructive/50" : ""}`}
+                                          onWheel={(e) => e.currentTarget.blur()}
+                                        />
+                                      </div>
                                       
-                                      {/* Linha (selecaoLivre) para entrada adicional - mesma largura da entrada principal */}
-                                      <Input
-                                        placeholder="Linha"
-                                        value={addEntry.selecaoLivre}
-                                        onChange={(e) => updateAdditionalEntry(index, addIdx, "selecaoLivre", e.target.value)}
-                                        className="h-7 text-[10px] px-1.5 bg-muted/30 border-dashed"
-                                      />
-                                      
-                                      {/* Odd - mesma largura da entrada principal */}
-                                      <Input 
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="Odd"
-                                        value={addEntry.odd}
-                                        onChange={(e) => updateAdditionalEntry(index, addIdx, "odd", e.target.value)}
-                                        className="h-7 text-[10px] px-1.5 bg-muted/30"
-                                        onWheel={(e) => e.currentTarget.blur()}
-                                      />
-                                      
-                                      {/* Stake - mesma largura da entrada principal */}
-                                      <Input 
-                                        type="number"
-                                        step="0.01"
-                                        placeholder="Stake"
-                                        value={addEntry.stake}
-                                        onChange={(e) => updateAdditionalEntry(index, addIdx, "stake", e.target.value)}
-                                        className={`h-7 text-[10px] px-1.5 bg-muted/30 ${addSaldoInsuficiente ? "border-destructive ring-1 ring-destructive/50" : ""}`}
-                                        onWheel={(e) => e.currentTarget.blur()}
-                                      />
-                                      
-                                      {/* Botão excluir - menor e discreto, fora do fluxo de Tab */}
+                                      {/* Botão excluir - posicionado absolutamente fora do grid */}
                                       <Button
                                         type="button"
                                         variant="ghost"
                                         size="sm"
                                         tabIndex={-1}
-                                        className="h-7 w-5 p-0 text-muted-foreground/50 hover:text-destructive transition-colors"
+                                        className="absolute right-0 top-0 h-7 w-4 p-0 text-muted-foreground/40 hover:text-destructive transition-colors"
                                         onClick={() => removeAdditionalEntry(index, addIdx)}
                                         title="Remover cobertura"
                                       >
