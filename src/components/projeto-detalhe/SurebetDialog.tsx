@@ -2449,7 +2449,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           </div>
                           
                           {/* Casa | Odd | Stake | Linha na mesma linha - centralizado */}
-                          <div className="grid gap-2 justify-center" style={{ gridTemplateColumns: '130px 70px 70px 80px' }}>
+                          {/* Stake com min-width para 5 dígitos + separadores (99.999,00) */}
+                          <div className="grid gap-2 justify-center" style={{ gridTemplateColumns: '130px 60px minmax(90px, 100px) 70px' }}>
                             {/* Casa */}
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground">Casa</Label>
@@ -2564,11 +2565,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                     placeholder={entry.isReference ? "Ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
                                     value={entry.stake}
                                     onChange={(e) => updateOdd(index, "stake", e.target.value)}
-                                    className={`h-8 text-[10px] px-1.5 pr-6 ${
+                                    className={`h-8 text-xs px-2 pr-7 text-right font-medium min-w-[90px] ${
                                       isDifferentFromCalculated 
                                         ? "border-amber-500 ring-1 ring-amber-500/50" 
                                         : ""
                                     }`}
+                                    style={{ minWidth: '90px' }}
                                     tabIndex={index * 4 + 3}
                                     onWheel={(e) => e.currentTarget.blur()}
                                   />
@@ -2668,8 +2670,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   <div key={addIdx} className="space-y-1 animate-in fade-in slide-in-from-top-1">
                                     {/* Wrapper com posicionamento relativo para o botão de excluir */}
                                     <div className="relative">
-                                      {/* Grid alinhado EXATAMENTE com entrada principal: 140px 80px 50px 80px */}
-                                      <div className="grid gap-1.5 items-end pr-5" style={{ gridTemplateColumns: '140px 80px 50px 80px' }}>
+                                      {/* Grid alinhado com entrada principal: Casa | Linha | Odd | Stake */}
+                                      <div className="grid gap-1.5 items-end pr-5" style={{ gridTemplateColumns: '130px 60px minmax(90px, 100px) 70px' }}>
                                         <Select 
                                           value={addEntry.bookmaker_id}
                                           onValueChange={(v) => updateAdditionalEntry(index, addIdx, "bookmaker_id", v)}
@@ -2715,34 +2717,35 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                           </SelectContent>
                                         </Select>
                                         
-                                        {/* Linha - mesma largura da entrada principal */}
-                                        <Input
-                                          placeholder="Ov.2,5"
-                                          value={addEntry.selecaoLivre}
-                                          onChange={(e) => updateAdditionalEntry(index, addIdx, "selecaoLivre", e.target.value)}
-                                          className="h-7 text-[10px] px-1.5 bg-background"
-                                        />
-                                        
-                                        {/* Odd - mesma largura da entrada principal */}
+                                        {/* Odd - alinhado com entrada principal */}
                                         <Input 
                                           type="number"
                                           step="0.01"
                                           placeholder="Odd"
                                           value={addEntry.odd}
                                           onChange={(e) => updateAdditionalEntry(index, addIdx, "odd", e.target.value)}
-                                          className="h-7 text-[10px] px-1.5 bg-background"
+                                          className="h-7 text-xs px-1.5 bg-background"
                                           onWheel={(e) => e.currentTarget.blur()}
                                         />
                                         
-                                        {/* Stake - mesma largura da entrada principal */}
+                                        {/* Stake - campo financeiro com largura mínima */}
                                         <Input 
                                           type="number"
                                           step="0.01"
                                           placeholder="Stake"
                                           value={addEntry.stake}
                                           onChange={(e) => updateAdditionalEntry(index, addIdx, "stake", e.target.value)}
-                                          className={`h-7 text-[10px] px-1.5 bg-background ${addSaldoInsuficiente ? "border-destructive ring-1 ring-destructive/50" : ""}`}
+                                          className={`h-7 text-xs px-2 text-right font-medium bg-background min-w-[90px] ${addSaldoInsuficiente ? "border-destructive ring-1 ring-destructive/50" : ""}`}
+                                          style={{ minWidth: '90px' }}
                                           onWheel={(e) => e.currentTarget.blur()}
+                                        />
+                                        
+                                        {/* Linha - alinhado com entrada principal */}
+                                        <Input
+                                          placeholder="Ov.2,5"
+                                          value={addEntry.selecaoLivre}
+                                          onChange={(e) => updateAdditionalEntry(index, addIdx, "selecaoLivre", e.target.value)}
+                                          className="h-7 text-[10px] px-1.5 bg-background"
                                         />
                                       </div>
                                       
