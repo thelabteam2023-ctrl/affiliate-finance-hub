@@ -2306,7 +2306,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                           value={addEntry.bookmaker_id}
                                           onValueChange={(v) => updateAdditionalEntry(index, addIdx, "bookmaker_id", v)}
                                         >
-                                          <SelectTrigger className={`h-7 text-[10px] w-full px-1.5 bg-muted/30 ${addSaldoInsuficiente ? "border-destructive" : ""}`}>
+                                          <SelectTrigger className={`h-7 text-[10px] w-full px-1.5 bg-background ${addSaldoInsuficiente ? "border-destructive" : ""}`}>
                                             <SelectValue placeholder="+ Casa">
                                               {addBk?.nome && (
                                                 <span className="truncate uppercase">{addBk.nome}</span>
@@ -2352,7 +2352,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                           placeholder="Linha"
                                           value={addEntry.selecaoLivre}
                                           onChange={(e) => updateAdditionalEntry(index, addIdx, "selecaoLivre", e.target.value)}
-                                          className="h-7 text-[10px] px-1.5 bg-muted/30 border-dashed"
+                                          className="h-7 text-[10px] px-1.5 bg-background"
                                         />
                                         
                                         {/* Odd - mesma largura da entrada principal */}
@@ -2362,7 +2362,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                           placeholder="Odd"
                                           value={addEntry.odd}
                                           onChange={(e) => updateAdditionalEntry(index, addIdx, "odd", e.target.value)}
-                                          className="h-7 text-[10px] px-1.5 bg-muted/30"
+                                          className="h-7 text-[10px] px-1.5 bg-background"
                                           onWheel={(e) => e.currentTarget.blur()}
                                         />
                                         
@@ -2373,7 +2373,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                           placeholder="Stake"
                                           value={addEntry.stake}
                                           onChange={(e) => updateAdditionalEntry(index, addIdx, "stake", e.target.value)}
-                                          className={`h-7 text-[10px] px-1.5 bg-muted/30 ${addSaldoInsuficiente ? "border-destructive ring-1 ring-destructive/50" : ""}`}
+                                          className={`h-7 text-[10px] px-1.5 bg-background ${addSaldoInsuficiente ? "border-destructive ring-1 ring-destructive/50" : ""}`}
                                           onWheel={(e) => e.currentTarget.blur()}
                                         />
                                       </div>
