@@ -2068,8 +2068,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       // Calcular totais
       const todasLiquidadas = novasPernas.every(p => p.resultado && p.resultado !== "PENDENTE" && p.resultado !== null);
       const lucroTotal = novasPernas.reduce((acc, p) => acc + (p.lucro_prejuizo || 0), 0);
+      // EMPATE quando lucro = 0 (diferente de VOID que é aposta cancelada)
       const resultadoFinal = todasLiquidadas 
-        ? (lucroTotal > 0 ? "GREEN" : lucroTotal < 0 ? "RED" : "VOID")
+        ? (lucroTotal > 0 ? "GREEN" : lucroTotal < 0 ? "RED" : "EMPATE")
         : null;
 
       // Atualizar operação na tabela unificada com pernas e status
