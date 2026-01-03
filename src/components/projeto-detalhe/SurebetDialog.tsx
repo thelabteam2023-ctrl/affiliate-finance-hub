@@ -168,30 +168,33 @@ interface OddEntry {
 }
 
 // Função para calcular odd média ponderada de uma perna
+// - Quando há stakes (principal ou coberturas), usa média ponderada por stake.
+// - Quando ainda não há stakes preenchidas (ex.: pernas não-referência antes do auto-cálculo),
+//   usa a odd informada (prioriza a principal) para permitir o cálculo automático no 1X2.
 function calcularOddMedia(mainEntry: { odd: string; stake: string }, additionalEntries?: OddFormEntry[]): number {
   const allEntries = [
-    { odd: mainEntry.odd, stake: mainEntry.stake },
-    ...(additionalEntries || [])
+    { odd: mainEntry.odd, stake: mainEntry.stake, isMain: true },
+    ...(additionalEntries || []).map(e => ({ odd: e.odd, stake: e.stake, isMain: false }))
   ];
-  
-  const entriesValidas = allEntries.filter(e => {
-    const odd = parseFloat(e.odd);
-    const stake = parseFloat(e.stake);
-    return !isNaN(odd) && odd > 1 && !isNaN(stake) && stake > 0;
-  });
-  
-  if (entriesValidas.length === 0) return 0;
-  if (entriesValidas.length === 1) return parseFloat(entriesValidas[0].odd);
-  
-  const somaStakeOdd = entriesValidas.reduce((acc, e) => {
-    return acc + (parseFloat(e.stake) * parseFloat(e.odd));
-  }, 0);
-  
-  const somaStake = entriesValidas.reduce((acc, e) => {
-    return acc + parseFloat(e.stake);
-  }, 0);
-  
-  return somaStake > 0 ? somaStakeOdd / somaStake : 0;
+
+  const oddsValidas = allEntries
+    .map(e => ({ ...e, oddNum: parseFloat(e.odd), stakeNum: parseFloat(e.stake) }))
+    .filter(e => !isNaN(e.oddNum) && e.oddNum > 1);
+
+  if (oddsValidas.length === 0) return 0;
+
+  // 1) Se existe stake total > 0, usar média ponderada (somente entries com stake > 0)
+  const entriesComStake = oddsValidas.filter(e => !isNaN(e.stakeNum) && e.stakeNum > 0);
+  const somaStake = entriesComStake.reduce((acc, e) => acc + e.stakeNum, 0);
+
+  if (somaStake > 0) {
+    const somaStakeOdd = entriesComStake.reduce((acc, e) => acc + e.stakeNum * e.oddNum, 0);
+    return somaStakeOdd / somaStake;
+  }
+
+  // 2) Sem stakes ainda: usar a odd principal (se válida) para viabilizar auto-cálculo
+  const mainOdd = oddsValidas.find(e => e.isMain)?.oddNum;
+  return mainOdd ?? oddsValidas[0].oddNum;
 }
 
 // Função para calcular stake total de uma perna
