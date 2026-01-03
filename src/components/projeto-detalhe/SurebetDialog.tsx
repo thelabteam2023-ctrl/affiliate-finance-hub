@@ -2313,24 +2313,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               )}
                             </div>
                             
-                            {/* Linha (Seleção Livre) - POR ENTRADA */}
-                            <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Linha <span className="text-muted-foreground/60">(opc)</span></Label>
-                              {isEditing ? (
-                                <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium truncate">
-                                  {entry.selecaoLivre || "—"}
-                                </div>
-                              ) : (
-                                <Input
-                                  placeholder="Ex: 2.5"
-                                  value={entry.selecaoLivre}
-                                  onChange={(e) => updateOdd(index, "selecaoLivre" as keyof OddEntry, e.target.value)}
-                                  className="h-8 text-[10px] px-1.5 border-dashed"
-                                  tabIndex={index * 4 + 2}
-                                />
-                              )}
-                            </div>
-                            
                             {/* Odd */}
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground">Odd</Label>
@@ -2346,7 +2328,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   value={entry.odd}
                                   onChange={(e) => updateOdd(index, "odd", e.target.value)}
                                   className="h-8 text-[10px] px-1.5"
-                                  tabIndex={index * 4 + 3}
+                                  tabIndex={index * 4 + 2}
                                   onWheel={(e) => e.currentTarget.blur()}
                                 />
                               )}
@@ -2374,7 +2356,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         ? "border-amber-500 ring-1 ring-amber-500/50" 
                                         : ""
                                     }`}
-                                    tabIndex={index * 4 + 4}
+                                    tabIndex={index * 4 + 3}
                                     onWheel={(e) => e.currentTarget.blur()}
                                   />
                                   {isDifferentFromCalculated && stakeCalculada > 0 && (
@@ -2390,6 +2372,24 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                     </Button>
                                   )}
                                 </div>
+                              )}
+                            </div>
+                            
+                            {/* Linha (Seleção Livre) - POR ENTRADA */}
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Linha <span className="text-muted-foreground/60">(opc)</span></Label>
+                              {isEditing ? (
+                                <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium truncate">
+                                  {entry.selecaoLivre || "—"}
+                                </div>
+                              ) : (
+                                <Input
+                                  placeholder="Ex: 2.5"
+                                  value={entry.selecaoLivre}
+                                  onChange={(e) => updateOdd(index, "selecaoLivre" as keyof OddEntry, e.target.value)}
+                                  className="h-8 text-[10px] px-1.5 border-dashed"
+                                  tabIndex={index * 4 + 4}
+                                />
                               )}
                             </div>
                           </div>
