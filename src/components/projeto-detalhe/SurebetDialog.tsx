@@ -2141,7 +2141,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   value={entry.bookmaker_id}
                                   onValueChange={(v) => updateOdd(index, "bookmaker_id", v)}
                                 >
-                                  <SelectTrigger className="h-8 text-[10px] w-full px-1.5">
+                                  <SelectTrigger 
+                                    className="h-8 text-[10px] w-full px-1.5"
+                                    tabIndex={index * 4 + 1}
+                                  >
                                     <SelectValue placeholder="Casa">
                                       {selectedBookmaker?.nome && (
                                         <span className="truncate uppercase">{selectedBookmaker.nome}</span>
@@ -2215,6 +2218,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   value={entry.selecaoLivre}
                                   onChange={(e) => updateOdd(index, "selecaoLivre" as keyof OddEntry, e.target.value)}
                                   className="h-8 text-[10px] px-1.5 border-dashed"
+                                  tabIndex={index * 4 + 2}
                                 />
                               )}
                             </div>
@@ -2234,7 +2238,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   value={entry.odd}
                                   onChange={(e) => updateOdd(index, "odd", e.target.value)}
                                   className="h-8 text-[10px] px-1.5"
-                                  tabIndex={index + 1}
+                                  tabIndex={index * 4 + 3}
                                   onWheel={(e) => e.currentTarget.blur()}
                                 />
                               )}
@@ -2262,7 +2266,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         ? "border-amber-500 ring-1 ring-amber-500/50" 
                                         : ""
                                     }`}
-                                    tabIndex={odds.length + index + 1}
+                                    tabIndex={index * 4 + 4}
                                     onWheel={(e) => e.currentTarget.blur()}
                                   />
                                   {isDifferentFromCalculated && stakeCalculada > 0 && (
