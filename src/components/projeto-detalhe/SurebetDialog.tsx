@@ -692,8 +692,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     return Math.round(valor / fator) * fator;
   };
 
-  // Ordem fixa para cada modelo - nunca muda
-  const getOrdemFixa = (modelo: "1-X-2" | "1-2"): string[] => {
+  // Ordem fixa para cada modelo - agora considera mercado para labels corretos
+  const getOrdemFixa = (modelo: "1-X-2" | "1-2", mercadoParam?: string): string[] => {
+    // Se temos mercado, usar as seleções corretas do mercado
+    if (mercadoParam) {
+      return getSelecoesPorMercado(mercadoParam, modelo);
+    }
+    // Fallback genérico (para ordenação básica)
     return modelo === "1-X-2" 
       ? ["Casa", "Empate", "Fora"] 
       : ["Sim", "Não"];
@@ -703,7 +708,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const fetchLinkedPernas = async (surebetId: string, surebetModelo: string) => {
     const { data: operacaoData } = await supabase
       .from("apostas_unificada")
-      .select("pernas")
+      .select("pernas, mercado")
       .eq("id", surebetId)
       .single();
     
@@ -713,9 +718,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }
 
     const pernas = operacaoData.pernas as unknown as SurebetPerna[];
+    const operacaoMercado = operacaoData.mercado || "";
     
-    // Ordenar pela ordem fixa do modelo
-    const ordemFixa = getOrdemFixa(surebetModelo as "1-X-2" | "1-2");
+    // Ordenar pela ordem fixa do modelo E mercado (para labels corretos)
+    const ordemFixa = getOrdemFixa(surebetModelo as "1-X-2" | "1-2", operacaoMercado);
     const sortedPernas = [...pernas].sort((a, b) => {
       const indexA = ordemFixa.indexOf(a.selecao);
       const indexB = ordemFixa.indexOf(b.selecao);
