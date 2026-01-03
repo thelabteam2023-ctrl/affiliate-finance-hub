@@ -102,6 +102,8 @@ export interface SurebetPernaEntry {
   stake_brl_referencia: number | null;
   cotacao_snapshot: number | null;
   cotacao_snapshot_at: string | null;
+  // NOVO: Seleção/linha do mercado POR ENTRADA (cada entrada pode ter linha diferente)
+  selecao_livre?: string;
 }
 
 // Estrutura de perna armazenada no JSONB da surebet (COM SUPORTE MULTI-ENTRADA)
@@ -141,6 +143,8 @@ interface OddFormEntry {
   moeda: SupportedCurrency;
   odd: string;
   stake: string;
+  // NOVO: Seleção/linha do mercado por entrada
+  selecaoLivre: string;
 }
 
 // Estrutura interna do formulário - mantendo compatibilidade
@@ -606,12 +610,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       gerouFreebet: perna.gerou_freebet || false,
       valorFreebetGerada: perna.valor_freebet_gerada?.toString() || "",
       index,
-      // Carregar entradas adicionais se existirem
+      // Carregar entradas adicionais se existirem (com selecaoLivre por entrada)
       additionalEntries: perna.entries?.slice(1).map(e => ({
         bookmaker_id: e.bookmaker_id,
         moeda: e.moeda,
         odd: e.odd.toString(),
-        stake: e.stake.toString()
+        stake: e.stake.toString(),
+        selecaoLivre: e.selecao_livre || ""
       })) || []
     }));
     
@@ -695,13 +700,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
   // ========== FUNÇÕES PARA MÚLTIPLAS ENTRADAS ==========
   
-  // Adicionar entrada adicional a uma perna
+  // Adicionar entrada adicional a uma perna (com replicação inteligente de selecaoLivre)
   const addAdditionalEntry = (pernaIndex: number) => {
     const newOdds = [...odds];
     const currentEntries = newOdds[pernaIndex].additionalEntries || [];
+    // Replicar selecaoLivre da entrada principal como sugestão
+    const mainSelecaoLivre = newOdds[pernaIndex].selecaoLivre || "";
     newOdds[pernaIndex].additionalEntries = [
       ...currentEntries,
-      { bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "" }
+      { bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecaoLivre: mainSelecaoLivre }
     ];
     setOdds(newOdds);
   };
@@ -1319,7 +1326,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           let stakeTotal: number | undefined = undefined;
           
           if (hasAdditional) {
-            // Entrada principal
+            // Entrada principal (com selecao_livre da entrada principal)
             const mainEntry: SurebetPernaEntry = {
               bookmaker_id: entry.bookmaker_id,
               bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
@@ -1328,10 +1335,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               stake: mainStake,
               stake_brl_referencia: mainSnapshotFields.valor_brl_referencia,
               cotacao_snapshot: mainSnapshotFields.cotacao_snapshot,
-              cotacao_snapshot_at: mainSnapshotFields.cotacao_snapshot_at
+              cotacao_snapshot_at: mainSnapshotFields.cotacao_snapshot_at,
+              selecao_livre: entry.selecaoLivre || ""
             };
             
-            // Entradas adicionais
+            // Entradas adicionais (cada uma com sua própria selecao_livre)
             const additionalEntries: SurebetPernaEntry[] = (entry.additionalEntries || []).map(ae => {
               const aeMoeda = getBookmakerMoeda(ae.bookmaker_id);
               const aeStake = parseFloat(ae.stake) || 0;
@@ -1345,7 +1353,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 stake: aeStake,
                 stake_brl_referencia: aeSnapshotFields.valor_brl_referencia,
                 cotacao_snapshot: aeSnapshotFields.cotacao_snapshot,
-                cotacao_snapshot_at: aeSnapshotFields.cotacao_snapshot_at
+                cotacao_snapshot_at: aeSnapshotFields.cotacao_snapshot_at,
+                selecao_livre: ae.selecaoLivre || ""
               };
             });
             
@@ -1988,16 +1997,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               {entry.selecao}
                             </span>
                             
-                            {/* Campo Seleção Livre (linha específica do mercado) */}
-                            <div className="w-full px-1">
-                              <Input
-                                placeholder="Ex: Over 2.5"
-                                value={entry.selecaoLivre}
-                                onChange={(e) => updateOdd(index, "selecaoLivre" as keyof OddEntry, e.target.value)}
-                                className="h-7 text-xs text-center bg-background/50 border-dashed"
-                                disabled={isEditing}
-                              />
-                            </div>
+                            {/* Campo Seleção Livre foi movido para o nível de entrada */}
                             
                             {/* Resultado (apenas em modo edição) */}
                             {isEditing && (
@@ -2127,8 +2127,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             )}
                           </div>
                           
-                          {/* Casa | Odd | Stake na mesma linha */}
-                          <div className="grid gap-1.5" style={{ gridTemplateColumns: '1fr 60px 80px' }}>
+                          {/* Casa | Linha | Odd | Stake na mesma linha */}
+                          <div className="grid gap-1.5" style={{ gridTemplateColumns: '1fr 80px 60px 80px' }}>
                             {/* Casa */}
                             <div className="space-y-1">
                               <Label className="text-[10px] text-muted-foreground">Casa</Label>
@@ -2199,6 +2199,23 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                     })}
                                   </SelectContent>
                                 </Select>
+                              )}
+                            </div>
+                            
+                            {/* Linha (Seleção Livre) - POR ENTRADA */}
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">Linha</Label>
+                              {isEditing ? (
+                                <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium truncate">
+                                  {entry.selecaoLivre || "—"}
+                                </div>
+                              ) : (
+                                <Input
+                                  placeholder="Ex: 2.5"
+                                  value={entry.selecaoLivre}
+                                  onChange={(e) => updateOdd(index, "selecaoLivre" as keyof OddEntry, e.target.value)}
+                                  className="h-8 text-[10px] px-1.5 border-dashed"
+                                />
                               )}
                             </div>
                             
@@ -2277,7 +2294,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                 
                                 return (
                                   <div key={addIdx} className="space-y-1 animate-in fade-in slide-in-from-top-1">
-                                    <div className="grid gap-1.5 items-end" style={{ gridTemplateColumns: '1fr 60px 60px 24px' }}>
+                                    <div className="grid gap-1.5 items-end" style={{ gridTemplateColumns: '1fr 70px 50px 50px 24px' }}>
                                       <Select 
                                         value={addEntry.bookmaker_id}
                                         onValueChange={(v) => updateAdditionalEntry(index, addIdx, "bookmaker_id", v)}
@@ -2322,6 +2339,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                           })}
                                         </SelectContent>
                                       </Select>
+                                      
+                                      {/* Linha (selecaoLivre) para entrada adicional */}
+                                      <Input
+                                        placeholder="Linha"
+                                        value={addEntry.selecaoLivre}
+                                        onChange={(e) => updateAdditionalEntry(index, addIdx, "selecaoLivre", e.target.value)}
+                                        className="h-7 text-[10px] px-1.5 bg-muted/30 border-dashed"
+                                      />
                                       
                                       <Input 
                                         type="number"
