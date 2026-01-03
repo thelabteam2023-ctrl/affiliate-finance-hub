@@ -3030,6 +3030,30 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   )}
                 </div>
 
+                {/* Resultado Pendente (Pior Cenário) - Exibido quando pendente para TODOS os modelos */}
+                {/* Translúcido para indicar que é estimativa, não resultado final */}
+                {analysis.stakeTotal > 0 && !analysisReal.isResolved && analysis.scenarios.length >= 2 && (
+                  <div className={`p-2.5 rounded-lg border border-dashed ${modelo === "1-X-2" ? "min-w-[140px]" : ""} ${
+                    analysis.minLucro >= 0 
+                      ? "border-emerald-500/30 bg-emerald-500/5" 
+                      : "border-red-500/30 bg-red-500/5"
+                  }`}>
+                    <p className="text-[10px] text-muted-foreground/70 mb-0.5">Pior Cenário</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-semibold ${
+                        analysis.minLucro >= 0 ? "text-emerald-500/60" : "text-red-500/60"
+                      }`}>
+                        {analysis.minLucro >= 0 ? "+" : ""}{formatCurrency(analysis.minLucro, analysis.moedaDominante)}
+                      </span>
+                      <span className={`text-xs ${
+                        analysis.minRoi >= 0 ? "text-emerald-400/50" : "text-red-400/50"
+                      }`}>
+                        {analysis.minRoi >= 0 ? "+" : ""}{analysis.minRoi.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Modo Resultado Real (quando resolvida) */}
                 {isEditing && analysisReal.isResolved ? (
                   <>
