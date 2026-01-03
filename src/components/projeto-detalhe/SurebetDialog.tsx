@@ -1907,17 +1907,18 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
-      <DialogContent className="max-w-[1400px] max-h-[90vh] overflow-y-auto p-8">
-        <DialogHeader>
+      <DialogContent className="max-w-[1400px] max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-0 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-amber-500" />
             {isEditing ? "Editar Arbitragem" : "Arbitragem"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Formulário - Lado Esquerdo (mais largo) */}
-          <div className="flex-1 space-y-4">
+        {/* Container principal com scroll apenas no formulário */}
+        <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 p-6 pt-4">
+          {/* Formulário - Lado Esquerdo (com scroll próprio) */}
+          <div className="flex-1 space-y-4 overflow-y-auto pr-2 min-h-0">
             {/* Campos de Registro Obrigatórios */}
             <RegistroApostaFields
               values={registroValues}
@@ -2751,8 +2752,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             )}
           </div>
 
-          {/* Análise - Sidebar Direita Compacta */}
-          <div className="w-full lg:w-48 xl:w-52 flex-shrink-0 space-y-2">
+          {/* Análise - Sidebar Direita STICKY (sempre visível) */}
+          <div className="w-full lg:w-52 xl:w-56 flex-shrink-0 lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(90vh-180px)] lg:overflow-y-auto space-y-2">
             {/* INDICADOR DE CONSOLIDAÇÃO MULTI-MOEDA */}
             {analysis.isMultiCurrency && (
               <MultiCurrencyIndicator
@@ -2959,7 +2960,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           </div>
         </div>
 
-        <DialogFooter className="flex justify-between">
+        <DialogFooter className="flex justify-between flex-shrink-0 p-6 pt-4 border-t">
           <div>
             {isEditing && (
               <AlertDialog>
