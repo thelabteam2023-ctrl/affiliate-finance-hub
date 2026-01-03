@@ -49,6 +49,7 @@ import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { OperationalFiltersBar } from "./OperationalFiltersBar";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -707,89 +708,101 @@ export function ProjetoValueBetTab({
   // Render Apostas
   const renderApostas = () => (
     <div className="space-y-4">
-      {/* Sub-abas Abertas / Histórico */}
-      <div className="flex items-center justify-between border-b pb-2">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setApostasSubTab("abertas")}
-            className={cn(
-              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
-              apostasSubTab === "abertas"
-                ? "border-purple-500 text-purple-400"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Clock className="h-4 w-4" />
-            Abertas
-            <Badge variant="secondary" className="ml-1 text-xs">{apostasAbertas.length}</Badge>
-          </button>
-          <button
-            onClick={() => setApostasSubTab("historico")}
-            className={cn(
-              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
-              apostasSubTab === "historico"
-                ? "border-purple-500 text-purple-400"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <History className="h-4 w-4" />
-            Histórico
-            <Badge variant="secondary" className="ml-1 text-xs">{apostasHistorico.length}</Badge>
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Target className="h-5 w-5 text-purple-400" />
-          {apostasSubTab === "abertas" ? "Apostas Abertas" : "Histórico de Apostas"}
-          <Badge variant="secondary">{apostasFiltradas.length}</Badge>
-        </h3>
-        <div className="flex flex-wrap gap-2 items-center">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 w-[180px]"
-            />
+      {/* Card de Histórico com Filtros Internos */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Target className="h-4 w-4 text-purple-400" />
+              Histórico de Operações
+            </CardTitle>
+            {/* Sub-abas Abertas / Histórico */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setApostasSubTab("abertas")}
+                className={cn(
+                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                  apostasSubTab === "abertas"
+                    ? "bg-purple-500/10 text-purple-400"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                Abertas
+                <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAbertas.length}</Badge>
+              </button>
+              <button
+                onClick={() => setApostasSubTab("historico")}
+                className={cn(
+                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                  apostasSubTab === "historico"
+                    ? "bg-purple-500/10 text-purple-400"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <History className="h-3.5 w-3.5" />
+                Histórico
+                <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasHistorico.length}</Badge>
+              </button>
+            </div>
           </div>
-          {apostasSubTab === "historico" && (
-            <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
-              <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder="Resultado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
-                <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
-                <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
-                <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
-                <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-          <div className="flex border rounded-md">
-            <Button
-              variant={viewMode === "cards" ? "secondary" : "ghost"}
-              size="icon"
-              onClick={() => setViewMode("cards")}
-              className="rounded-r-none"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "secondary" : "ghost"}
-              size="icon"
-              onClick={() => setViewMode("list")}
-              className="rounded-l-none"
-            >
-              <List className="h-4 w-4" />
-            </Button>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-3">
+          {/* Filtros Transversais (Período, Casa, Parceiro) */}
+          <OperationalFiltersBar
+            projetoId={projetoId}
+            showEstrategiaFilter={false}
+            preselectedEstrategia="VALUEBET"
+            className="pb-3 border-b border-border/50"
+          />
+          
+          {/* Filtros de Busca e Visualização */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar evento, seleção..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            {apostasSubTab === "historico" && (
+              <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Resultado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
+                  <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
+                  <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
+                  <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
+                  <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            <div className="flex border rounded-md">
+              <Button
+                variant={viewMode === "cards" ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => setViewMode("cards")}
+                className="rounded-r-none"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => setViewMode("list")}
+                className="rounded-l-none"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {apostasFiltradas.length === 0 ? (
         <Card>
