@@ -2399,65 +2399,52 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               </div>
                             )}
                             
-                            {/* RadioButton Referência - apenas em criação - REFINADO */}
+                            {/* RadioButton Referência - Glass/Subtle Effect */}
                             {!isEditing && (
-                              <div 
-                                className="group relative"
+                              <button
+                                type="button"
+                                role="radio"
+                                aria-checked={entry.isReference}
+                                onClick={() => setReferenceIndex(index)}
                                 title="Perna usada como base para cálculo das stakes"
+                                className={`
+                                  group flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer
+                                  transition-all duration-150 ease-out
+                                  ${entry.isReference 
+                                    ? 'bg-white/[0.04] border border-white/[0.12]' 
+                                    : 'bg-transparent border border-transparent hover:border-white/[0.08]'
+                                  }
+                                `}
                               >
-                                <button
-                                  type="button"
-                                  role="radio"
-                                  aria-checked={entry.isReference}
-                                  onClick={() => setReferenceIndex(index)}
-                                  className={`
-                                    flex items-center gap-2.5 px-3 py-1.5 rounded-full cursor-pointer
-                                    transition-all duration-300 ease-out
-                                    ${entry.isReference 
-                                      ? `${colors.badge} shadow-lg ring-2 ring-offset-2 ring-offset-background ${
-                                          index === 0 ? 'ring-blue-400/60' : 
-                                          index === 1 ? 'ring-amber-400/60' : 
-                                          'ring-emerald-400/60'
-                                        }` 
-                                      : 'bg-muted/40 border border-border/50 text-muted-foreground hover:bg-muted/80 hover:border-border'
-                                    }
-                                  `}
-                                >
-                                  {/* Indicador visual do radio */}
+                                {/* Círculo do radio */}
+                                <div className={`
+                                  relative w-3.5 h-3.5 rounded-full transition-all duration-150
+                                  ${entry.isReference 
+                                    ? 'border border-white/30' 
+                                    : 'border border-muted-foreground/30 group-hover:border-muted-foreground/50'
+                                  }
+                                `}>
+                                  {/* Dot interno quando ativo */}
                                   <div className={`
-                                    relative w-4 h-4 rounded-full border-2 transition-all duration-300
+                                    absolute inset-0 m-auto w-1.5 h-1.5 rounded-full transition-all duration-150
                                     ${entry.isReference 
-                                      ? 'border-white/80 bg-white/20' 
-                                      : 'border-muted-foreground/50 group-hover:border-muted-foreground'
+                                      ? 'bg-white/70 scale-100' 
+                                      : 'bg-transparent scale-0'
                                     }
-                                  `}>
-                                    {/* Ponto interno quando ativo */}
-                                    <div className={`
-                                      absolute inset-0 m-auto w-2 h-2 rounded-full transition-all duration-300
-                                      ${entry.isReference 
-                                        ? 'bg-white scale-100 shadow-[0_0_8px_rgba(255,255,255,0.6)]' 
-                                        : 'bg-transparent scale-0'
-                                      }
-                                    `} />
-                                  </div>
-                                  
-                                  {/* Label */}
-                                  <span className={`
-                                    text-xs font-medium transition-colors duration-200
-                                    ${entry.isReference ? 'text-white' : 'text-muted-foreground group-hover:text-foreground'}
-                                  `}>
-                                    Referência
-                                  </span>
-                                </button>
-                                
-                                {/* Glow sutil quando ativo */}
-                                {entry.isReference && (
-                                  <div className={`
-                                    absolute inset-0 rounded-full -z-10 blur-md opacity-40
-                                    ${index === 0 ? 'bg-blue-500' : index === 1 ? 'bg-amber-500' : 'bg-emerald-500'}
                                   `} />
-                                )}
-                              </div>
+                                </div>
+                                
+                                {/* Label */}
+                                <span className={`
+                                  text-[11px] font-normal transition-colors duration-150
+                                  ${entry.isReference 
+                                    ? 'text-white/60' 
+                                    : 'text-muted-foreground/50 group-hover:text-muted-foreground/70'
+                                  }
+                                `}>
+                                  Referência
+                                </span>
+                              </button>
                             )}
                           </div>
                           
