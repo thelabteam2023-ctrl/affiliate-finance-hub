@@ -530,8 +530,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const invalidateSaldos = useInvalidateBookmakerSaldos();
   
   // ========== HOOK DE GERENCIAMENTO DE BÔNUS/ROLLOVER ==========
-  const { atualizarProgressoRollover, reverterProgressoRollover } = useBonusBalanceManager();
-  
+  const { atualizarProgressoRollover, reverterProgressoRollover, hasActiveRolloverBonus } = useBonusBalanceManager();
   // Form state
   const [evento, setEvento] = useState("");
   const [mercado, setMercado] = useState("");
@@ -1959,10 +1958,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     if (!surebet) return;
     
     try {
-      // Buscar pernas atuais da operação na tabela unificada (incluindo estratégia/contexto para rollover)
+      // Buscar pernas atuais da operação na tabela unificada
       const { data: operacaoData } = await supabase
         .from("apostas_unificada")
-        .select("pernas, estrategia, contexto_operacional")
+        .select("pernas")
         .eq("id", surebet.id)
         .single();
       
@@ -1972,9 +1971,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       const perna = pernas[pernaIndex];
       if (!perna) return;
 
-      // Detectar se é aposta de bônus (para rollover)
-      const isApostaBonus = operacaoData.contexto_operacional === "BONUS" || 
-                            operacaoData.estrategia === "EXTRACAO_BONUS";
+      // Rollover: a contabilização deve depender de bônus ativo na casa (não da aba/contexto)
 
       const stake = perna.stake || 0;
       const odd = perna.odd || 0;
@@ -2034,8 +2031,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       }
 
       // ====== LÓGICA DE ROLLOVER ======
-      // Se é aposta de bônus, atualizar o progresso do rollover
-      if (isApostaBonus) {
+      // Regra: se a casa tem bônus ativo (rollover em andamento), qualquer aposta liquidada conta para o rollover,
+      // independente da aba/contexto em que foi registrada.
+      const temBonusAtivoParaRollover = await hasActiveRolloverBonus(projetoId, bookmakerId);
+      if (temBonusAtivoParaRollover) {
         const resultadoContaRollover = resultado !== "VOID" && resultado !== null;
         const resultadoAnteriorContava = resultadoAnterior && resultadoAnterior !== "VOID" && resultadoAnterior !== "PENDENTE";
         
@@ -2055,7 +2054,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           console.log(`Rollover revertido: perna ${pernaIndex}, bookmaker ${bookmakerId}, stake ${stakeTotalPerna}`);
         }
       }
-
       // Invalidar cache de saldos para atualizar todas as UIs
       invalidateSaldos(projetoId);
 
@@ -2110,7 +2108,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     } catch (error: any) {
       toast.error("Erro: " + error.message);
     }
-  }, [surebet, projetoId, atualizarProgressoRollover, reverterProgressoRollover, invalidateSaldos]);
+  }, [surebet, projetoId, atualizarProgressoRollover, reverterProgressoRollover, hasActiveRolloverBonus, invalidateSaldos]);
 
   // Handler para fechamento do modal - chama onSuccess apenas aqui
   const handleDialogClose = useCallback((newOpen: boolean) => {

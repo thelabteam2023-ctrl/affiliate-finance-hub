@@ -98,8 +98,13 @@ export function ResultadoPill({
   const [loading, setLoading] = useState(false);
   
   // Hook para gerenciar consumo de bônus
-  const { processarLiquidacaoBonus, reverterLiquidacaoBonus, atualizarProgressoRollover, reverterProgressoRollover } = useBonusBalanceManager();
-
+  const { 
+    processarLiquidacaoBonus,
+    reverterLiquidacaoBonus,
+    atualizarProgressoRollover,
+    reverterProgressoRollover,
+    hasActiveRolloverBonus,
+  } = useBonusBalanceManager();
   
   // Hook para invalidar cache de saldos após atualização
   const invalidateSaldos = useInvalidateBookmakerSaldos();
@@ -549,12 +554,13 @@ export function ResultadoPill({
       }
 
       // ====== LÓGICA DE ROLLOVER ======
-      // Se é uma aposta de bônus e foi liquidada (exceto VOID), atualizar rollover
-      const isApostaBonus = contextoOperacional === "BONUS" || estrategia === "EXTRACAO_BONUS";
+      // Regra: se a casa tem bônus ativo (rollover em andamento), qualquer aposta liquidada conta para o rollover,
+      // independente da aba/contexto em que foi registrada.
+      const temBonusAtivoParaRollover = await hasActiveRolloverBonus(projetoId, bookmarkerId);
       const resultadoContaRollover = novoResultado !== "VOID" && novoResultado !== "PENDENTE";
       const resultadoAnteriorContava = resultado && resultado !== "VOID" && resultado !== "PENDENTE";
       
-      if (isApostaBonus) {
+      if (temBonusAtivoParaRollover) {
         if (resultadoContaRollover && !resultadoAnteriorContava) {
           // Primeira vez liquidando (não VOID) - adicionar ao rollover
           await atualizarProgressoRollover(projetoId, bookmarkerId, stake, odd);
@@ -563,7 +569,6 @@ export function ResultadoPill({
           await reverterProgressoRollover(projetoId, bookmarkerId, stake);
         }
       }
-
       // ====== LÓGICA DE FREEBET ======
       // Se a aposta gerou freebet, precisamos atualizar o status da freebet
       if (gerouFreebet) {
