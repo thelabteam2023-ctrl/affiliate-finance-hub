@@ -2557,7 +2557,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                 </div>
                               ) : (
                                 <Input
-                                  placeholder="Ex: 2.5"
+                                  placeholder="Ov.2,5"
                                   value={entry.selecaoLivre}
                                   onChange={(e) => updateOdd(index, "selecaoLivre" as keyof OddEntry, e.target.value)}
                                   className="h-8 text-[10px] px-1.5 border-dashed"
@@ -2677,7 +2677,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         
                                         {/* Linha - mesma largura da entrada principal */}
                                         <Input
-                                          placeholder="Ex: 2.5"
+                                          placeholder="Ov.2,5"
                                           value={addEntry.selecaoLivre}
                                           onChange={(e) => updateAdditionalEntry(index, addIdx, "selecaoLivre", e.target.value)}
                                           className="h-7 text-[10px] px-1.5 bg-background"
