@@ -132,17 +132,17 @@ export function RegistroApostaFields({
     });
   };
 
-  // Modo ultra-compacto: inline com labels reduzidos
+  // Modo compacto: inline com hierarquia visual clara
   if (compact) {
     return (
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* Estratégia Compacta */}
-        <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-4 flex-wrap">
+        {/* Estratégia - DESTAQUE PRINCIPAL */}
+        <div className="flex items-center gap-2">
           <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Estratégia:</Label>
           {lockedEstrategia ? (
             <Badge 
               variant="secondary" 
-              className="text-[10px] font-medium bg-primary/10 text-primary border-primary/20 h-6"
+              className="text-sm font-semibold bg-primary/15 text-primary border-primary/30 h-7 px-3"
             >
               {ESTRATEGIA_LABELS[lockedEstrategia]}
             </Badge>
@@ -152,12 +152,12 @@ export function RegistroApostaFields({
               onValueChange={(v) => handleChange('estrategia', v)}
               disabled={disabled?.estrategia}
             >
-              <SelectTrigger className="h-6 text-[10px] w-[120px] px-2">
+              <SelectTrigger className="h-7 text-sm font-medium w-[140px] px-2 border-primary/30 bg-primary/5">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
                 {ESTRATEGIAS_LIST.map((item) => (
-                  <SelectItem key={item.value} value={item.value} className="text-xs">
+                  <SelectItem key={item.value} value={item.value} className="text-sm">
                     {item.label}
                   </SelectItem>
                 ))}
@@ -166,21 +166,21 @@ export function RegistroApostaFields({
           )}
         </div>
 
-        {/* Contexto Compacto */}
-        <div className="flex items-center gap-1.5">
+        {/* Contexto */}
+        <div className="flex items-center gap-2">
           <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Contexto:</Label>
           <Select
             value={values.contexto_operacional || ""}
             onValueChange={(v) => handleChange('contexto_operacional', v)}
             disabled={disabled?.contexto_operacional}
           >
-            <SelectTrigger className="h-6 text-[10px] w-[110px] px-2">
+            <SelectTrigger className="h-7 text-xs w-[120px] px-2">
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
               {CONTEXTOS_LIST.map((item) => (
-                <SelectItem key={item.value} value={item.value} className="text-xs">
-                  <div className="flex items-center gap-1">
+                <SelectItem key={item.value} value={item.value} className="text-sm">
+                  <div className="flex items-center gap-1.5">
                     <ContextoIcon contexto={item.value} />
                     {item.label}
                   </div>
