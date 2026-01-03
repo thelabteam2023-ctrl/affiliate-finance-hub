@@ -3117,11 +3117,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       </div>
                     )}
 
-                    {/* Probabilidades - ocultar no modo 1-X-2 para economizar espaço */}
-                    {analysis.hasPartialData && modelo !== "1-X-2" && (
+                    {/* Probabilidades - exibir para todos os modelos */}
+                    {analysis.hasPartialData && (
                       <>
-                        <Separator className="my-1" />
-                        <div>
+                        {modelo !== "1-X-2" && modelo !== "1-2" && <Separator className="my-1" />}
+                        <div className={modelo === "1-X-2" || modelo === "1-2" ? "mt-2" : ""}>
                           <p className="text-xs font-medium mb-1 text-muted-foreground">Probabilidades</p>
                           <div className="space-y-0.5">
                             {odds.map((entry, index) => {
