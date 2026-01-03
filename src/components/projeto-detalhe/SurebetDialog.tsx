@@ -33,6 +33,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
+import { MERCADOS_POR_ESPORTE, getMarketsForSport } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
   CurrencyBadge, 
@@ -133,11 +134,6 @@ const ESPORTES = [
   "Futebol", "Basquete", "Tênis", "Baseball", "Hockey", 
   "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe",
   "League of Legends", "Counter-Strike", "Dota 2", "eFootball"
-];
-const MERCADOS = [
-  "Money Line", "Total de Gols", "Ambos Marcam", "Total de Cantos", 
-  "Total de Cartões", "Handicap Asiático", "Handicap Europeu", 
-  "Empate Anula", "Correct Score"
 ];
 
 // Mapeamento de mercado → seleções dinâmicas
@@ -1439,7 +1435,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Esporte</Label>
-                <Select value={esporte} onValueChange={setEsporte}>
+                <Select 
+                  value={esporte} 
+                  onValueChange={(newEsporte) => {
+                    setEsporte(newEsporte);
+                    // Resetar mercado quando esporte muda (evita mercado inválido)
+                    setMercado("");
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -1511,7 +1514,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     <SelectValue placeholder="Selecione o mercado" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MERCADOS.map(m => (
+                    {getMarketsForSport(esporte).map(m => (
                       <SelectItem key={m} value={m}>{m}</SelectItem>
                     ))}
                   </SelectContent>

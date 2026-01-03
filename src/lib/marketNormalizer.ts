@@ -88,21 +88,197 @@ const MARKET_EQUIVALENCES: Record<string, string[]> = {
   "Outro": []
 };
 
-// Mercados por esporte (para fallback)
-const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
+// Mercados por esporte - TOP 10 mais populares por modalidade
+export const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   "Futebol": [
-    "Moneyline / 1X2", "Over (Gols)", "Under (Gols)", "Handicap Asiático",
-    "Handicap Europeu", "Ambas Marcam (BTTS)", "Resultado Exato",
-    "Dupla Chance", "Draw No Bet", "Primeiro/Último Gol", "Total de Cantos", "Outro"
+    "1X2",
+    "Dupla Chance",
+    "Ambas Marcam",
+    "Over/Under Gols",
+    "Handicap Asiático",
+    "Resultado do 1º Tempo",
+    "Over/Under Escanteios",
+    "Handicap de Gols",
+    "Resultado Final + Gols",
+    "Placar Correto",
+    "Outro"
   ],
   "Basquete": [
-    "Moneyline", "Over (Pontos)", "Under (Pontos)", "Handicap", "1º/2º Tempo", "Margem de Vitória", "Outro"
+    "Moneyline",
+    "Handicap / Spread",
+    "Over/Under Pontos",
+    "Total por Equipe",
+    "Resultado 1º Tempo",
+    "Handicap 1º Tempo",
+    "Over/Under 1º Tempo",
+    "Resultado por Quarto",
+    "Props de Jogadores",
+    "Same Game Parlay",
+    "Outro"
   ],
   "Tênis": [
-    "Vencedor do Jogo", "Handicap de Games", "Over (Games)", "Under (Games)",
-    "Vencedor do Set", "Resultado Exato (Sets)", "Outro"
+    "Vencedor da Partida",
+    "Handicap de Games",
+    "Over/Under Games",
+    "Vencedor do Set",
+    "Placar Exato",
+    "Total de Sets",
+    "Handicap de Sets",
+    "Vencedor do 1º Set",
+    "Tie-break (Sim/Não)",
+    "Sets Ímpares/Pares",
+    "Outro"
   ],
-  "Outro": ["Vencedor", "Over", "Under", "Handicap", "Outro"]
+  "Baseball": [
+    "Moneyline",
+    "Run Line",
+    "Total de Runs",
+    "Total por Equipe",
+    "1ª Metade",
+    "Handicap",
+    "Props de Arremessadores",
+    "Resultado por Inning",
+    "Odd/Even Runs",
+    "Hits Totais",
+    "Outro"
+  ],
+  "Hockey": [
+    "Moneyline",
+    "Puck Line",
+    "Total de Gols",
+    "Resultado por Período",
+    "Handicap",
+    "Total por Equipe",
+    "1º Período",
+    "Margem de Vitória",
+    "Over/Under Períodos",
+    "Gols Ímpares/Pares",
+    "Outro"
+  ],
+  "Futebol Americano": [
+    "Moneyline",
+    "Spread",
+    "Total de Pontos",
+    "Resultado 1º Tempo",
+    "Handicap 1º Tempo",
+    "Props de Jogadores",
+    "Total por Equipe",
+    "Touchdowns",
+    "Margem de Vitória",
+    "Same Game Parlay",
+    "Outro"
+  ],
+  "Vôlei": [
+    "Vencedor da Partida",
+    "Handicap de Sets",
+    "Over/Under Sets",
+    "Total de Pontos",
+    "Resultado por Set",
+    "Placar Exato (Sets)",
+    "Handicap de Pontos",
+    "Primeiro Set",
+    "Over/Under Pontos Set",
+    "Sets Ímpares/Pares",
+    "Outro"
+  ],
+  "MMA/UFC": [
+    "Vencedor da Luta",
+    "Método de Vitória",
+    "Round da Finalização",
+    "Over/Under Rounds",
+    "Luta Completa (Sim/Não)",
+    "Vitória por KO",
+    "Vitória por Decisão",
+    "Handicap de Rounds",
+    "Round 1 – Vencedor",
+    "Prop Especial",
+    "Outro"
+  ],
+  "Boxe": [
+    "Vencedor da Luta",
+    "Método de Vitória",
+    "Round da Finalização",
+    "Over/Under Rounds",
+    "Luta Completa (Sim/Não)",
+    "Vitória por KO",
+    "Vitória por Decisão",
+    "Handicap de Rounds",
+    "Round 1 – Vencedor",
+    "Prop Especial",
+    "Outro"
+  ],
+  "Golfe": [
+    "Vencedor do Torneio",
+    "Top 5/10/20",
+    "Head-to-Head",
+    "Melhor Round",
+    "Nacionalidade do Vencedor",
+    "Primeiro Líder",
+    "Fazer Cut (Sim/Não)",
+    "Over/Under Score",
+    "Hole-in-One no Torneio",
+    "Prop Especial",
+    "Outro"
+  ],
+  "League of Legends": [
+    "Vencedor do Mapa",
+    "Handicap de Mapas",
+    "Total de Mapas",
+    "Vencedor da Série",
+    "Placar Exato",
+    "Over/Under Kills",
+    "Primeiro Objetivo",
+    "Total de Torres",
+    "Handicap de Kills",
+    "Props Especiais",
+    "Outro"
+  ],
+  "Counter-Strike": [
+    "Vencedor do Mapa",
+    "Handicap de Mapas",
+    "Total de Mapas",
+    "Vencedor da Série",
+    "Placar Exato",
+    "Over/Under Rounds",
+    "Primeiro a 10 Rounds",
+    "Total de Kills",
+    "Handicap de Rounds",
+    "Props Especiais",
+    "Outro"
+  ],
+  "Dota 2": [
+    "Vencedor do Mapa",
+    "Handicap de Mapas",
+    "Total de Mapas",
+    "Vencedor da Série",
+    "Placar Exato",
+    "Over/Under Kills",
+    "Primeiro Objetivo",
+    "Total de Torres",
+    "Handicap de Kills",
+    "Props Especiais",
+    "Outro"
+  ],
+  "eFootball": [
+    "Vencedor da Partida",
+    "Handicap de Gols",
+    "Over/Under Gols",
+    "Ambas Marcam",
+    "Resultado do 1º Tempo",
+    "Placar Correto",
+    "Dupla Chance",
+    "Total de Escanteios",
+    "Margem de Vitória",
+    "Props Especiais",
+    "Outro"
+  ],
+  "Outro": [
+    "Vencedor",
+    "Over",
+    "Under",
+    "Handicap",
+    "Outro"
+  ]
 };
 
 /**
