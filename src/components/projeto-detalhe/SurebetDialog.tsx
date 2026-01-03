@@ -764,26 +764,33 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   };
 
   // Auto-preencher stakes baseado na posição de referência
-  // NOVO COMPORTAMENTO: A referência SEMPRE é o driver dos cálculos
-  // Alterar stake manualmente NÃO desativa o cálculo automático
+  // COMPORTAMENTO CORRIGIDO: Usa ODD MÉDIA PONDERADA e STAKE TOTAL CONSOLIDADO 
+  // quando há múltiplas entradas (coberturas) na perna de referência
   useEffect(() => {
     // Não recalcular em modo edição
     if (isEditing) return;
     
-    const parsedOdds = odds.map(o => parseFloat(o.odd) || 0);
-    const validOddsCount = parsedOdds.filter(o => o > 1).length;
-    
     const refIndex = odds.findIndex(o => o.isReference);
     if (refIndex === -1) return;
     
-    const refStakeValue = parseFloat(odds[refIndex]?.stake) || 0;
-    const refOdd = parsedOdds[refIndex] || 0;
+    const refEntry = odds[refIndex];
+    
+    // CORREÇÃO CRÍTICA: Usar stake total e odd média consolidados da perna de referência
+    const refStakeTotal = getStakeTotalPerna(refEntry);
+    const refOddMedia = getOddMediaPerna(refEntry);
+    
+    // Contar pernas com odd válida (usando odd média se houver coberturas)
+    const validOddsCount = odds.filter(o => {
+      const oddMedia = getOddMediaPerna(o);
+      return oddMedia > 1;
+    }).length;
     
     // Só calcular se temos stake de referência, odd válida e pelo menos 2 odds válidas
-    if (refStakeValue <= 0 || refOdd <= 1 || validOddsCount < 2) return;
+    if (refStakeTotal <= 0 || refOddMedia <= 1 || validOddsCount < 2) return;
     
-    // Fórmula: stakeOutro = (stakeRef * oddRef) / oddOutro
-    const targetReturn = refStakeValue * refOdd;
+    // FÓRMULA CORRIGIDA: Retorno alvo usa valores consolidados da perna de referência
+    // targetReturn = stakeTotal_perna_ref × oddMedia_perna_ref
+    const targetReturn = refStakeTotal * refOddMedia;
     
     // Recalcular TODAS as stakes não-referência sempre que referência ou odds mudam
     let needsUpdate = false;
@@ -791,9 +798,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       // Nunca modificar a referência
       if (i === refIndex) return o;
       
-      const odd = parsedOdds[i];
-      if (odd > 1) {
-        const rawStake = targetReturn / odd;
+      // CORREÇÃO: Usar odd média ponderada da perna (não a odd simples)
+      const oddMedia = getOddMediaPerna(o);
+      
+      if (oddMedia > 1) {
+        // stakeOutro = targetReturn / oddMedia_perna
+        const rawStake = targetReturn / oddMedia;
         const calculatedStake = arredondarStake(rawStake);
         const currentStake = parseFloat(o.stake) || 0;
         
@@ -810,12 +820,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       setOdds(newOdds);
     }
   }, [
-    // Dependências: sempre recalcular quando qualquer odd mudar
-    odds.map(o => o.odd).join(','),
+    // Dependências: recalcular quando qualquer odd ou stake mudar (incluindo additionalEntries)
+    odds.map(o => `${o.odd}-${o.stake}-${(o.additionalEntries || []).map(ae => `${ae.odd}-${ae.stake}`).join('|')}`).join(','),
     // Quando a referência mudar
     odds.map(o => o.isReference).join(','),
-    // Quando a stake da referência mudar
-    odds.find(o => o.isReference)?.stake,
     // Configurações de arredondamento
     arredondarAtivado,
     arredondarValor,
