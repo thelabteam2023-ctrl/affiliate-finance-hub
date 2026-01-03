@@ -1155,9 +1155,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     const refStakeValue = actualStakes[refIndex] || 0;
     
     // REFATORADO: Calcular stakes sugeridas usando a lógica correta por modelo
+    // O modelo 1X2 usa cálculo matricial global; o modelo 1-2 usa binário
     let suggestedStakes: number[] = [];
-    const numPernas = modelo === "1-X-2" ? 3 : 2;
-    const minOddsRequired = modelo === "1-X-2" ? 3 : 2;
+    const is1X2Model = modelo === "1-X-2";
+    const minOddsRequired = is1X2Model ? 3 : 2;
     
     if (refStakeValue > 0 && refOdd > 1 && validOddsCount >= minOddsRequired) {
       // Preparar dados para as funções de cálculo
@@ -1168,14 +1169,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       }));
       
       // Usar a função de cálculo correta conforme o modelo
-      const resultado = modelo === "1-X-2" && numPernas === 3
+      // CRÍTICO: Modelo 1X2 SEMPRE usa calcularStakes1X2 com as 3 pernas
+      // Modelo 1-2 usa calcularStakes12 com apenas 2 pernas
+      const resultado = is1X2Model
         ? calcularStakes1X2(pernaData, arredondarStake)
         : calcularStakes12(pernaData.slice(0, 2), arredondarStake);
       
       if (resultado.isValid) {
         suggestedStakes = resultado.stakes;
       } else {
-        // Fallback: fórmula básica
+        // Fallback: fórmula básica (targetReturn / odd para cada perna)
         const targetReturn = refStakeValue * refOdd;
         suggestedStakes = parsedOdds.map((odd, i) => {
           if (i === refIndex) return refStakeValue;
