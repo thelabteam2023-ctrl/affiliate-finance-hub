@@ -187,12 +187,16 @@ export function isMercadoCompativelComModelo(
 
 /**
  * Filtra mercados compatíveis com o modelo selecionado para um esporte
+ * SEMPRE inclui "Outro" como opção para mercados não mapeados
  */
 export function getMarketsForSportAndModel(esporte: string, modelo: ModeloAposta): string[] {
   const mercadosEsporte = getMarketsForSport(esporte);
   const mercadosComEmpate = MERCADOS_COM_EMPATE_POR_ESPORTE[esporte] || [];
   
-  return mercadosEsporte.filter(mercado => {
+  const mercadosFiltrados = mercadosEsporte.filter(mercado => {
+    // "Outro" sempre passa - é compatível com qualquer modelo
+    if (mercado === "Outro") return true;
+    
     const admiteEmpate = mercadosComEmpate.includes(mercado);
     
     if (modelo === "1-X-2") {
@@ -202,6 +206,13 @@ export function getMarketsForSportAndModel(esporte: string, modelo: ModeloAposta
     // Para 1-2, mostrar mercados que NÃO admitem empate
     return !admiteEmpate;
   });
+  
+  // Garantir que "Outro" esteja sempre presente
+  if (!mercadosFiltrados.includes("Outro")) {
+    mercadosFiltrados.push("Outro");
+  }
+  
+  return mercadosFiltrados;
 }
 
 /**
