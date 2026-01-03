@@ -1933,7 +1933,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               
               {/* Modelo - Toggle inline */}
               <div className="flex items-center gap-2">
-                <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Modelo:</Label>
+                <Label className="text-xs text-muted-foreground whitespace-nowrap">Modelo:</Label>
                 <div className={`relative flex p-0.5 bg-muted/50 rounded h-7 w-[110px] ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
                   <div 
                     className="absolute h-[calc(100%-4px)] bg-primary rounded transition-all duration-200 ease-out"
@@ -1971,7 +1971,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             <div className="grid grid-cols-3 gap-3">
               {/* Esporte */}
               <div className="space-y-1">
-                <Label className="text-[10px] text-muted-foreground">Esporte</Label>
+                <Label className="text-xs text-muted-foreground">Esporte</Label>
                 <Select 
                   value={esporte} 
                   onValueChange={(newEsporte) => {
@@ -1992,7 +1992,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
               {/* Evento */}
               <div className="space-y-1">
-                <Label className="text-[10px] text-muted-foreground">Evento</Label>
+                <Label className="text-xs text-muted-foreground">Evento</Label>
                 <Input 
                   placeholder="Ex: Brasil x Argentina" 
                   value={evento}
@@ -2003,7 +2003,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               
               {/* Mercado */}
               <div className="space-y-1">
-                <Label className="text-[10px] text-muted-foreground">Mercado</Label>
+                <Label className="text-xs text-muted-foreground">Mercado</Label>
                 <Select value={mercado} onValueChange={setMercado}>
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="Selecione" />
@@ -2239,7 +2239,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           <div className="grid gap-1.5" style={{ gridTemplateColumns: '140px 80px 50px 80px' }}>
                             {/* Casa */}
                             <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground">Casa</Label>
+                              <Label className="text-xs text-muted-foreground">Casa</Label>
                               {isEditing ? (
                                 <div className="h-8 px-1.5 text-[10px] flex items-center bg-muted/50 rounded-md border truncate font-medium uppercase">
                                   {selectedBookmaker?.nome || "—"}
@@ -2315,7 +2315,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             {/* Linha (Seleção Livre) - POR ENTRADA */}
                             <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground">Linha <span className="text-muted-foreground/60">(opcional)</span></Label>
+                              <Label className="text-xs text-muted-foreground">Linha <span className="text-muted-foreground/60">(opcional)</span></Label>
                               {isEditing ? (
                                 <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium truncate">
                                   {entry.selecaoLivre || "—"}
@@ -2333,7 +2333,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             {/* Odd */}
                             <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground">Odd</Label>
+                              <Label className="text-xs text-muted-foreground">Odd</Label>
                               {isEditing ? (
                                 <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium">
                                   {parseFloat(entry.odd).toFixed(2)}
@@ -2354,7 +2354,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             {/* Stake */}
                             <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground">
+                              <Label className="text-xs text-muted-foreground">
                                 Stake {!isEditing && entry.isReference && <span className="text-primary">(Ref)</span>}
                               </Label>
                               {isEditing ? (
@@ -2784,7 +2784,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 {/* Stake Total */}
                 <div className={`p-2 rounded-lg bg-primary/10 border border-primary/30 ${modelo === "1-X-2" ? "min-w-[140px]" : ""}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[10px] text-muted-foreground">Stake Total</p>
+                    <p className="text-xs text-muted-foreground">Stake Total</p>
                     {!isEditing && arredondarAtivado && (
                       <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
                         ≈{arredondarValor}
@@ -2816,7 +2816,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                         ? "bg-emerald-500/10 border-emerald-500/30" 
                         : "bg-red-500/10 border-red-500/30"
                     }`}>
-                      <p className="text-[10px] text-muted-foreground mb-1">Resultado Final</p>
+                      <p className="text-xs text-muted-foreground mb-1">Resultado Final</p>
                       <p className={`text-xl font-bold ${
                         analysisReal.lucroReal >= 0 ? "text-emerald-500" : "text-red-500"
                       }`}>
@@ -2851,7 +2851,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     {/* ROI Compacto: Max (verde) / Min (vermelho) */}
                     <div className={`p-2 rounded-lg bg-muted/50 border border-border ${modelo === "1-X-2" ? "min-w-[120px]" : "space-y-1"}`}>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] text-emerald-400">Máx</span>
+                        <span className="text-xs text-emerald-400">Máx</span>
                         <span className="text-xs font-bold text-emerald-500">
                           {analysis.stakeTotal > 0 
                             ? `${analysis.maxRoi >= 0 ? "+" : ""}${analysis.maxRoi.toFixed(1)}%`
@@ -2860,7 +2860,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] text-red-400">Mín</span>
+                        <span className="text-xs text-red-400">Mín</span>
                         <span className="text-xs font-bold text-red-500">
                           {analysis.stakeTotal > 0 
                             ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(1)}%`
@@ -2899,7 +2899,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       <>
                         <Separator className="my-1" />
                         <div>
-                          <p className="text-[10px] font-medium mb-1 text-muted-foreground">Probabilidades</p>
+                          <p className="text-xs font-medium mb-1 text-muted-foreground">Probabilidades</p>
                           <div className="space-y-0.5">
                             {odds.map((entry, index) => {
                               const impliedProb = analysis.impliedProbs[index];
