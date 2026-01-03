@@ -48,6 +48,7 @@ import {
   MultiCurrencyWarning 
 } from "@/components/projeto-detalhe/MultiCurrencyIndicator";
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
+import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 
 // Interface local DEPRECATED - agora usamos BookmakerSaldo do hook canônico diretamente
 interface LegacyBookmaker {
@@ -527,6 +528,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     includeZeroBalance: isEditing, // Em edição, mostrar todos
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  
+  // ========== HOOK DE GERENCIAMENTO DE BÔNUS/ROLLOVER ==========
+  const { atualizarProgressoRollover, reverterProgressoRollover } = useBonusBalanceManager();
   
   // Form state
   const [evento, setEvento] = useState("");
@@ -1955,10 +1959,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     if (!surebet) return;
     
     try {
-      // Buscar pernas atuais da operação na tabela unificada
+      // Buscar pernas atuais da operação na tabela unificada (incluindo estratégia/contexto para rollover)
       const { data: operacaoData } = await supabase
         .from("apostas_unificada")
-        .select("pernas")
+        .select("pernas, estrategia, contexto_operacional")
         .eq("id", surebet.id)
         .single();
       
@@ -1967,6 +1971,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       const pernas = operacaoData.pernas as unknown as SurebetPerna[];
       const perna = pernas[pernaIndex];
       if (!perna) return;
+
+      // Detectar se é aposta de bônus (para rollover)
+      const isApostaBonus = operacaoData.contexto_operacional === "BONUS" || 
+                            operacaoData.estrategia === "EXTRACAO_BONUS";
 
       const stake = perna.stake || 0;
       const odd = perna.odd || 0;
@@ -2025,6 +2033,29 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         await updateBookmakerBalance(bookmakerId, delta);
       }
 
+      // ====== LÓGICA DE ROLLOVER ======
+      // Se é aposta de bônus, atualizar o progresso do rollover
+      if (isApostaBonus) {
+        const resultadoContaRollover = resultado !== "VOID" && resultado !== null;
+        const resultadoAnteriorContava = resultadoAnterior && resultadoAnterior !== "VOID" && resultadoAnterior !== "PENDENTE";
+        
+        // Calcular stake total da perna (incluindo entradas adicionais se houver)
+        let stakeTotalPerna = stake;
+        if (perna.entries && Array.isArray(perna.entries)) {
+          stakeTotalPerna = perna.entries.reduce((acc, e) => acc + (e.stake || 0), 0);
+        }
+        
+        if (resultadoContaRollover && !resultadoAnteriorContava) {
+          // Primeira vez liquidando (não VOID/PENDENTE) - adicionar ao rollover
+          await atualizarProgressoRollover(projetoId, bookmakerId, stakeTotalPerna, odd);
+          console.log(`Rollover atualizado: perna ${pernaIndex}, bookmaker ${bookmakerId}, stake ${stakeTotalPerna}`);
+        } else if (!resultadoContaRollover && resultadoAnteriorContava) {
+          // Resultado válido → VOID/PENDENTE/null - reverter rollover
+          await reverterProgressoRollover(projetoId, bookmakerId, stakeTotalPerna);
+          console.log(`Rollover revertido: perna ${pernaIndex}, bookmaker ${bookmakerId}, stake ${stakeTotalPerna}`);
+        }
+      }
+
       // Invalidar cache de saldos para atualizar todas as UIs
       invalidateSaldos(projetoId);
 
@@ -2079,7 +2110,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     } catch (error: any) {
       toast.error("Erro: " + error.message);
     }
-  }, [surebet]);
+  }, [surebet, projetoId, atualizarProgressoRollover, reverterProgressoRollover, invalidateSaldos]);
 
   // Handler para fechamento do modal - chama onSuccess apenas aqui
   const handleDialogClose = useCallback((newOpen: boolean) => {

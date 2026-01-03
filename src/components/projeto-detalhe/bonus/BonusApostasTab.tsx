@@ -1033,6 +1033,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
         bookmakers={bookmakers}
         surebet={selectedSurebet}
         onSuccess={handleApostaUpdated}
+        activeTab="bonus"
       />
     </div>
   );
