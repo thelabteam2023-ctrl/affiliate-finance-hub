@@ -6,6 +6,7 @@ import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrency
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -2566,20 +2567,18 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                 </div>
                               ) : (
                                 <div className="relative">
-                                  <Input 
-                                    type="number"
-                                    step="0.01"
+                                  <MoneyInput 
                                     placeholder={entry.isReference ? "Ref." : (stakeCalculada > 0 ? stakeCalculada.toFixed(2) : "Stake")}
                                     value={entry.stake}
-                                    onChange={(e) => updateOdd(index, "stake", e.target.value)}
-                                    className={`h-8 text-xs px-2 pr-7 text-right font-medium min-w-[90px] ${
+                                    onChange={(val) => updateOdd(index, "stake", val)}
+                                    currency={entry.moeda}
+                                    minDigits={5}
+                                    className={`h-8 text-xs px-2 pr-7 ${
                                       isDifferentFromCalculated 
                                         ? "border-amber-500 ring-1 ring-amber-500/50" 
                                         : ""
                                     }`}
-                                    style={{ minWidth: '90px' }}
                                     tabIndex={index * 4 + 3}
-                                    onWheel={(e) => e.currentTarget.blur()}
                                   />
                                   {isDifferentFromCalculated && stakeCalculada > 0 && (
                                     <Button
@@ -2736,15 +2735,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         />
                                         
                                         {/* Stake - campo financeiro com largura mínima */}
-                                        <Input 
-                                          type="number"
-                                          step="0.01"
+                                        <MoneyInput 
                                           placeholder="Stake"
                                           value={addEntry.stake}
-                                          onChange={(e) => updateAdditionalEntry(index, addIdx, "stake", e.target.value)}
-                                          className={`h-7 text-xs px-2 text-right font-medium bg-background min-w-[90px] ${addSaldoInsuficiente ? "border-destructive ring-1 ring-destructive/50" : ""}`}
-                                          style={{ minWidth: '90px' }}
-                                          onWheel={(e) => e.currentTarget.blur()}
+                                          onChange={(val) => updateAdditionalEntry(index, addIdx, "stake", val)}
+                                          currency={addEntry.moeda}
+                                          minDigits={5}
+                                          className={`h-7 text-xs px-2 bg-background ${addSaldoInsuficiente ? "border-destructive ring-1 ring-destructive/50" : ""}`}
                                         />
                                         
                                         {/* Linha - alinhado com entrada principal */}
