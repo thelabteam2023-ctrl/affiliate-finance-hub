@@ -320,6 +320,36 @@ export function useBonusBalanceManager() {
   }, [getActiveBonus]);
 
   /**
+   * Verifica se existe bônus ativo com rollover em andamento nesta casa.
+   *
+   * Regra: status=credited, saldo_atual > 0 e rollover_target_amount > 0.
+   * (Assim, qualquer aposta liquidada nessa casa deve contar para o rollover,
+   * independente da aba/contexto em que foi registrada.)
+   */
+  const hasActiveRolloverBonus = useCallback(async (
+    projectId: string,
+    bookmakerId: string
+  ): Promise<boolean> => {
+    const { data, error } = await supabase
+      .from("project_bookmaker_link_bonuses")
+      .select("saldo_atual, rollover_target_amount")
+      .eq("project_id", projectId)
+      .eq("bookmaker_id", bookmakerId)
+      .eq("status", "credited");
+
+    if (error) {
+      console.error("Erro ao verificar bônus ativo para rollover:", error);
+      return false;
+    }
+
+    return (data || []).some((b) => {
+      const saldoAtual = Number((b as any).saldo_atual || 0);
+      const target = Number((b as any).rollover_target_amount || 0);
+      return saldoAtual > 0 && target > 0;
+    });
+  }, []);
+
+  /**
    * Atualiza o progresso do rollover quando uma aposta é registrada.
    * 
    * @param projectId - ID do projeto
@@ -453,6 +483,7 @@ export function useBonusBalanceManager() {
     processarLiquidacaoBonus,
     reverterLiquidacaoBonus,
     getSaldoBonusDisponivel,
+    hasActiveRolloverBonus,
     atualizarProgressoRollover,
     reverterProgressoRollover
   };
