@@ -2294,7 +2294,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                 
                                 return (
                                   <div key={addIdx} className="space-y-1 animate-in fade-in slide-in-from-top-1">
-                                    <div className="grid gap-1.5 items-end" style={{ gridTemplateColumns: '1fr 70px 50px 50px 24px' }}>
+                                    {/* Grid alinhado com entrada principal: 1fr 80px 60px 80px + botão pequeno */}
+                                    <div className="grid gap-1.5 items-end" style={{ gridTemplateColumns: '1fr 80px 60px 80px 20px' }}>
                                       <Select 
                                         value={addEntry.bookmaker_id}
                                         onValueChange={(v) => updateAdditionalEntry(index, addIdx, "bookmaker_id", v)}
@@ -2340,7 +2341,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         </SelectContent>
                                       </Select>
                                       
-                                      {/* Linha (selecaoLivre) para entrada adicional */}
+                                      {/* Linha (selecaoLivre) para entrada adicional - mesma largura da entrada principal */}
                                       <Input
                                         placeholder="Linha"
                                         value={addEntry.selecaoLivre}
@@ -2348,6 +2349,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         className="h-7 text-[10px] px-1.5 bg-muted/30 border-dashed"
                                       />
                                       
+                                      {/* Odd - mesma largura da entrada principal */}
                                       <Input 
                                         type="number"
                                         step="0.01"
@@ -2358,6 +2360,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         onWheel={(e) => e.currentTarget.blur()}
                                       />
                                       
+                                      {/* Stake - mesma largura da entrada principal */}
                                       <Input 
                                         type="number"
                                         step="0.01"
@@ -2368,47 +2371,49 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         onWheel={(e) => e.currentTarget.blur()}
                                       />
                                       
+                                      {/* Botão excluir - menor e discreto, fora do fluxo de Tab */}
                                       <Button
                                         type="button"
                                         variant="ghost"
                                         size="sm"
-                                        className="h-7 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                        tabIndex={-1}
+                                        className="h-7 w-5 p-0 text-muted-foreground/50 hover:text-destructive transition-colors"
                                         onClick={() => removeAdditionalEntry(index, addIdx)}
+                                        title="Remover cobertura"
                                       >
-                                        <XCircle className="h-3.5 w-3.5" />
+                                        <XCircle className="h-3 w-3" />
                                       </Button>
                                     </div>
                                     
-                                    {/* Feedback de saldo para entrada adicional */}
+                                    {/* Feedback de saldo para entrada adicional - linha única compacta */}
                                     {addEntry.bookmaker_id && (
                                       <div className="flex items-center justify-between px-1 text-[9px]">
                                         <span className="text-muted-foreground truncate">
                                           {addBk?.parceiro_nome?.split(" ")[0] || "—"}
                                         </span>
-                                        {addSaldoDisponivel !== null && (
-                                          <span className={`flex items-center gap-0.5 ${addSaldoInsuficiente ? "text-destructive" : "text-muted-foreground"}`}>
-                                            <Wallet className="h-2 w-2" />
-                                            {formatCurrency(addSaldoDisponivel, addBk?.moeda || "BRL")}
-                                          </span>
-                                        )}
+                                        <div className="flex items-center gap-2">
+                                          {addSaldoDisponivel !== null && (
+                                            <span className={`flex items-center gap-0.5 ${addSaldoInsuficiente ? "text-destructive" : "text-muted-foreground"}`}>
+                                              <Wallet className="h-2 w-2" />
+                                              {formatCurrency(addSaldoDisponivel, addBk?.moeda || "BRL")}
+                                            </span>
+                                          )}
+                                          {addSaldoInsuficiente && (
+                                            <span className="text-destructive font-medium">Insuficiente</span>
+                                          )}
+                                        </div>
                                       </div>
-                                    )}
-                                    
-                                    {/* Badge de saldo insuficiente */}
-                                    {addSaldoInsuficiente && (
-                                      <Badge variant="destructive" className="text-[9px] h-3.5 px-1 w-fit">
-                                        Saldo Insuficiente
-                                      </Badge>
                                     )}
                                   </div>
                                 );
                               })}
                               
-                              {/* Botão para adicionar entrada */}
+                              {/* Botão para adicionar entrada - fora do fluxo de Tab */}
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
+                                tabIndex={-1}
                                 className="w-full h-6 text-[10px] text-muted-foreground hover:text-primary border border-dashed border-border/50 hover:border-primary/50"
                                 onClick={() => addAdditionalEntry(index)}
                               >
