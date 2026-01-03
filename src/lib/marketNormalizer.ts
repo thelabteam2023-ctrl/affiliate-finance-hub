@@ -88,132 +88,101 @@ const MARKET_EQUIVALENCES: Record<string, string[]> = {
   "Outro": []
 };
 
-// ========== MATRIZ DE COMPATIBILIDADE MODELO × MERCADO ==========
-// Define quais mercados são compatíveis com cada modelo de aposta
+// ========== MATRIZ DE COMPATIBILIDADE MODELO × MERCADO POR ESPORTE ==========
+// Define quais mercados ADMITEM EMPATE em cada esporte
+// Isso determina se o mercado é compatível com modelo 1-X-2 (3 pernas)
 
-// Mercados que SEMPRE exigem 3 posições (1-X-2)
-export const MERCADOS_3WAY: string[] = [
-  "1X2",
-  "Resultado Final",
-  "Dupla Chance",
-  "Resultado do 1º Tempo",
-  "Resultado por Período", // quando há empate possível
-];
-
-// Mercados que SEMPRE são binários (1-2)
-export const MERCADOS_BINARIOS: string[] = [
-  // Over/Under
-  "Over/Under Gols",
-  "Over/Under Pontos",
-  "Over/Under Games",
-  "Over/Under Escanteios",
-  "Over/Under 1º Tempo",
-  "Over/Under Períodos",
-  "Over/Under Rounds",
-  "Over/Under Sets",
-  "Over/Under Pontos Set",
-  "Over/Under Score",
-  "Over/Under Kills",
-  "Total de Runs",
-  "Total de Gols",
-  "Total de Pontos",
-  "Total por Equipe",
-  "Total de Mapas",
-  "Total de Sets",
-  "Total de Torres",
-  "Total de Kills",
-  "Total de Escanteios",
-  "Hits Totais",
+// Mercados que admitem empate, POR ESPORTE
+// Estes mercados são compatíveis com modelo 1-X-2
+export const MERCADOS_COM_EMPATE_POR_ESPORTE: Record<string, string[]> = {
+  // Futebol: praticamente todos os mercados de resultado admitem empate
+  "Futebol": [
+    "1X2",
+    "Resultado Final",
+    "Dupla Chance",
+    "Resultado do 1º Tempo",
+  ],
   
-  // Handicap / Spread
-  "Handicap Asiático",
-  "Handicap de Gols",
-  "Handicap / Spread",
-  "Handicap 1º Tempo",
-  "Handicap de Games",
-  "Handicap de Sets",
-  "Handicap de Rounds",
-  "Handicap de Pontos",
-  "Handicap de Mapas",
-  "Handicap de Kills",
-  "Handicap",
-  "Spread",
-  "Run Line",
-  "Puck Line",
+  // Basquete: apenas tempo regulamentar e parciais admitem empate
+  // Resultado final com prorrogação NÃO admite empate
+  "Basquete": [
+    "Resultado Tempo Regulamentar",
+    "Resultado 1º Tempo",
+    "Resultado por Quarto",
+  ],
   
-  // Moneyline 2-way (sem empate)
-  "Moneyline",
-  "Vencedor da Partida",
-  "Vencedor do Set",
-  "Vencedor do 1º Set",
-  "Vencedor da Luta",
-  "Vencedor do Mapa",
-  "Vencedor da Série",
-  "Vencedor do Torneio",
-  "Vencedor",
-  "Head-to-Head",
-  "Melhor Round",
-  "Primeiro Líder",
-  "Round 1 – Vencedor",
-  "Primeiro a 10 Rounds",
-  "Primeiro Objetivo",
-  "Primeiro Set",
-  "Resultado por Quarto",
-  "Resultado 1º Tempo",
-  "1º Período",
-  "1ª Metade",
-  "Resultado por Set",
-  "Resultado por Inning",
+  // Hockey: tempo regulamentar pode ter empate (OT/shootout depois)
+  "Hockey": [
+    "Resultado Tempo Regulamentar",
+    "Resultado por Período",
+  ],
   
-  // Mercados Sim/Não
-  "Ambas Marcam",
-  "Tie-break (Sim/Não)",
-  "Luta Completa (Sim/Não)",
-  "Vitória por KO",
-  "Vitória por Decisão",
-  "Top 5/10/20",
-  "Fazer Cut (Sim/Não)",
-  "Hole-in-One no Torneio",
-  "Same Game Parlay",
+  // Baseball: apenas parciais admitem empate
+  // Após 9 innings pode haver extra innings
+  "Baseball": [
+    "Resultado após 9 Innings",
+    "Resultado 5 Innings",
+    "Resultado por Inning",
+  ],
   
-  // Props
-  "Props de Jogadores",
-  "Props de Arremessadores",
-  "Props Especiais",
-  "Prop Especial",
+  // Futebol Americano: parciais podem empatar
+  "Futebol Americano": [
+    "Resultado Tempo Regulamentar",
+    "Resultado 1º Tempo",
+  ],
   
-  // Outros binários
-  "Placar Exato",
-  "Placar Exato (Sets)",
-  "Placar Correto",
-  "Sets Ímpares/Pares",
-  "Odd/Even Runs",
-  "Gols Ímpares/Pares",
-  "Método de Vitória",
-  "Round da Finalização",
-  "Margem de Vitória",
-  "Resultado Final + Gols",
-  "Touchdowns",
-  "Nacionalidade do Vencedor",
-  "Outro",
-];
+  // eFootball: segue regras do futebol tradicional
+  "eFootball": [
+    "1X2",
+    "Resultado do 1º Tempo",
+    "Dupla Chance",
+  ],
+  
+  // Esportes que NUNCA têm empate em resultado final
+  "Tênis": [], // Sets decidem sempre
+  "Vôlei": [], // Sets decidem sempre
+  "MMA/UFC": [], // Empate técnico é raríssimo, não consideramos
+  "Boxe": [], // Empate técnico é raríssimo, não consideramos
+  "Golfe": [], // Playoffs decidem
+  "League of Legends": [], // BO decidem sempre
+  "Counter-Strike": [], // BO decidem sempre
+  "Dota 2": [], // BO decidem sempre
+  "Outro": [],
+};
 
 // Tipo para modelo de aposta
 export type ModeloAposta = "1-2" | "1-X-2";
 
 /**
- * Verifica se um mercado é compatível com o modelo selecionado
+ * Verifica se um mercado admite empate para um esporte específico
  */
-export function isMercadoCompativelComModelo(mercado: string, modelo: ModeloAposta): boolean {
+export function mercadoAdmiteEmpate(mercado: string, esporte: string): boolean {
+  const mercadosComEmpate = MERCADOS_COM_EMPATE_POR_ESPORTE[esporte] || [];
+  return mercadosComEmpate.includes(mercado);
+}
+
+/**
+ * Verifica se um mercado é compatível com o modelo selecionado para um esporte
+ * @param mercado - Nome do mercado
+ * @param modelo - "1-2" (binário) ou "1-X-2" (3 pernas)
+ * @param esporte - Nome do esporte (usado para determinar se mercado admite empate)
+ */
+export function isMercadoCompativelComModelo(
+  mercado: string, 
+  modelo: ModeloAposta, 
+  esporte: string = "Futebol"
+): boolean {
   if (!mercado) return true; // Mercado vazio é sempre compatível
   
+  const admiteEmpate = mercadoAdmiteEmpate(mercado, esporte);
+  
   if (modelo === "1-X-2") {
-    // Modelo 3-way: apenas mercados que fazem sentido com 3 posições
-    return MERCADOS_3WAY.includes(mercado);
+    // Modelo 3-way: apenas mercados que admitem empate nesse esporte
+    return admiteEmpate;
   }
   
-  // Modelo binário: todos os mercados que NÃO são exclusivamente 3-way
-  return !MERCADOS_3WAY.includes(mercado) || MERCADOS_BINARIOS.includes(mercado);
+  // Modelo binário: apenas mercados que NÃO admitem empate nesse esporte
+  return !admiteEmpate;
 }
 
 /**
@@ -221,29 +190,32 @@ export function isMercadoCompativelComModelo(mercado: string, modelo: ModeloApos
  */
 export function getMarketsForSportAndModel(esporte: string, modelo: ModeloAposta): string[] {
   const mercadosEsporte = getMarketsForSport(esporte);
+  const mercadosComEmpate = MERCADOS_COM_EMPATE_POR_ESPORTE[esporte] || [];
   
   return mercadosEsporte.filter(mercado => {
+    const admiteEmpate = mercadosComEmpate.includes(mercado);
+    
     if (modelo === "1-X-2") {
-      // Para 1-X-2, mostrar apenas mercados 3-way
-      return MERCADOS_3WAY.includes(mercado);
+      // Para 1-X-2, mostrar apenas mercados que admitem empate
+      return admiteEmpate;
     }
-    // Para 1-2, mostrar mercados binários (excluir os exclusivamente 3-way)
-    return !MERCADOS_3WAY.includes(mercado);
+    // Para 1-2, mostrar mercados que NÃO admitem empate
+    return !admiteEmpate;
   });
 }
 
 /**
- * Determina o modelo apropriado para um mercado
- * Retorna null se o mercado for compatível com ambos
+ * Determina o modelo apropriado para um mercado em um esporte
+ * Retorna null se o mercado for compatível com ambos (raro)
  */
-export function getModeloParaMercado(mercado: string): ModeloAposta | null {
-  if (MERCADOS_3WAY.includes(mercado)) {
+export function getModeloParaMercado(mercado: string, esporte: string = "Futebol"): ModeloAposta | null {
+  const admiteEmpate = mercadoAdmiteEmpate(mercado, esporte);
+  
+  if (admiteEmpate) {
     return "1-X-2";
   }
-  if (MERCADOS_BINARIOS.includes(mercado)) {
-    return "1-2";
-  }
-  return null; // Compatível com ambos
+  // Se não admite empate, é binário
+  return "1-2";
 }
 
 // Mercados por esporte - TOP 10 mais populares por modalidade
@@ -267,9 +239,10 @@ export const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Over/Under Pontos",
     "Total por Equipe",
     "Resultado 1º Tempo",
+    "Resultado Tempo Regulamentar", // NOVO: admite empate (1-X-2)
+    "Resultado por Quarto", // Pode admitir empate em parciais
     "Handicap 1º Tempo",
     "Over/Under 1º Tempo",
-    "Resultado por Quarto",
     "Props de Jogadores",
     "Same Game Parlay",
     "Outro"
@@ -292,10 +265,12 @@ export const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Run Line",
     "Total de Runs",
     "Total por Equipe",
+    "Resultado após 9 Innings", // NOVO: admite empate (1-X-2)
+    "Resultado 5 Innings", // NOVO: admite empate (1-X-2)
+    "Resultado por Inning", // Pode admitir empate
     "1ª Metade",
     "Handicap",
     "Props de Arremessadores",
-    "Resultado por Inning",
     "Odd/Even Runs",
     "Hits Totais",
     "Outro"
@@ -304,7 +279,8 @@ export const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Moneyline",
     "Puck Line",
     "Total de Gols",
-    "Resultado por Período",
+    "Resultado Tempo Regulamentar", // NOVO: admite empate (1-X-2)
+    "Resultado por Período", // Pode admitir empate
     "Handicap",
     "Total por Equipe",
     "1º Período",
@@ -317,7 +293,8 @@ export const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Moneyline",
     "Spread",
     "Total de Pontos",
-    "Resultado 1º Tempo",
+    "Resultado Tempo Regulamentar", // NOVO: admite empate (1-X-2)
+    "Resultado 1º Tempo", // Pode admitir empate
     "Handicap 1º Tempo",
     "Props de Jogadores",
     "Total por Equipe",
