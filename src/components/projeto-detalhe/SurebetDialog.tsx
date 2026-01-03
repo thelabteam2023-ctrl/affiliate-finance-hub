@@ -928,21 +928,51 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   // Cálculos em tempo real - TOTALMENTE reativo aos inputs atuais
   // NOVO COMPORTAMENTO: Calcular todos os cenários com ROI máximo/mínimo e risco
   // DEPENDÊNCIAS EXPLÍCITAS: odds (valores), bookmakers (saldos), saldosEmAposta, contexto
+  // REFATORADO: Agora considera TODAS as entradas de cada perna (principal + coberturas)
   const analysis = useMemo(() => {
-    const parsedOdds = odds.map(o => parseFloat(o.odd) || 0);
+    // ============ CONSOLIDAÇÃO POR PERNA ============
+    // Para cada perna, calcular odd média ponderada e stake total
+    // considerando entrada principal + entradas adicionais (coberturas)
+    const consolidatedPerPerna = odds.map(perna => {
+      const oddMedia = calcularOddMedia(
+        { odd: perna.odd, stake: perna.stake },
+        perna.additionalEntries
+      );
+      const stakeTotal = calcularStakeTotal(
+        { stake: perna.stake },
+        perna.additionalEntries
+      );
+      return { oddMedia, stakeTotal };
+    });
+    
+    // Odds e stakes consolidadas por perna (para cálculos)
+    const parsedOdds = consolidatedPerPerna.map(c => c.oddMedia);
+    const actualStakes = consolidatedPerPerna.map(c => c.stakeTotal);
+    
     const validOddsCount = parsedOdds.filter(o => o > 1).length;
     
     // ============ MULTI-MOEDA: Detectar moedas da operação ============
-    const moedasSelecionadas = odds
-      .filter(o => o.bookmaker_id)
-      .map(o => o.moeda)
-      .filter((m): m is SupportedCurrency => !!m);
+    // Coletar moedas de TODAS as entradas (principal + coberturas)
+    const moedasSelecionadas: SupportedCurrency[] = [];
+    odds.forEach(perna => {
+      if (perna.bookmaker_id) {
+        moedasSelecionadas.push(perna.moeda);
+      }
+      (perna.additionalEntries || []).forEach(entry => {
+        if (entry.bookmaker_id) {
+          const bk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
+          if (bk) {
+            moedasSelecionadas.push(bk.moeda as SupportedCurrency);
+          }
+        }
+      });
+    });
     
-    const moedasUnicas = [...new Set(moedasSelecionadas)];
+    const moedasUnicas = [...new Set(moedasSelecionadas.filter(Boolean))];
     const isMultiCurrency = moedasUnicas.length > 1;
     const moedaDominante: SupportedCurrency = moedasUnicas.length === 1 ? moedasUnicas[0] : "BRL";
     
-    // Probabilidades implícitas (mesmo com dados parciais)
+    // Probabilidades implícitas (baseadas em odds consolidadas)
     const impliedProbs = parsedOdds.map(odd => odd > 1 ? 1 / odd : 0);
     const totalImpliedProb = impliedProbs.reduce((a, b) => a + b, 0);
     
@@ -961,7 +991,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     // Stakes calculadas para sugestão (quando há referência)
     const refIndex = odds.findIndex(o => o.isReference);
     const refOdd = parsedOdds[refIndex] || 0;
-    const refStakeValue = parseFloat(odds[refIndex]?.stake) || 0;
+    const refStakeValue = actualStakes[refIndex] || 0;
     
     // Calcular stakes sugeridas baseado na referência
     // Fórmula: stakeOutro = (stakeRef * oddRef) / oddOutro
@@ -978,40 +1008,61 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       });
     }
     
-    // SEMPRE usar os valores ATUAIS dos inputs de stake para análise
-    const actualStakes = odds.map((o, i) => {
-      const inputValue = parseFloat(o.stake);
-      if (!isNaN(inputValue)) {
-        return inputValue;
-      }
-      if (suggestedStakes[i] !== undefined) {
-        return suggestedStakes[i];
-      }
-      return 0;
-    });
-    
-    // StakeTotal = soma de todas as stakes atuais
+    // StakeTotal = soma de todas as stakes consolidadas de cada perna
     // NOTA: Só somamos se todas são da mesma moeda; caso contrário a soma não tem significado
     const stakeTotal = isMultiCurrency ? 0 : actualStakes.reduce((a, b) => a + b, 0);
     
     // Calcular saldos disponíveis por posição para validação
+    // REFATORADO: Considerar stakes de TODAS as entradas de cada perna
     const saldosPorPosicao = odds.map((entry, idx) => {
-      if (!entry.bookmaker_id) return null;
-      const bk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
-      if (!bk) return null;
+      // Para pernas com múltiplas entradas, precisamos calcular saldo por entrada
+      // Aqui retornamos o saldo mais limitante
+      const allEntriesInPerna = [
+        { bookmaker_id: entry.bookmaker_id, stake: parseFloat(entry.stake) || 0 },
+        ...((entry.additionalEntries || []).map(e => ({
+          bookmaker_id: e.bookmaker_id,
+          stake: parseFloat(e.stake) || 0
+        })))
+      ].filter(e => e.bookmaker_id);
       
-      // saldo_operavel já vem calculado corretamente da RPC canônica
-      const saldoLivreBase = bk.saldo_operavel;
+      if (allEntriesInPerna.length === 0) return null;
       
-      // Descontar stakes usadas em outras posições da mesma casa
-      let stakesOutrasPosicoes = 0;
-      odds.forEach((o, i) => {
-        if (i !== idx && o.bookmaker_id === entry.bookmaker_id) {
-          stakesOutrasPosicoes += parseFloat(o.stake) || 0;
+      // Para cada bookmaker usado nesta perna, calcular saldo disponível
+      const saldosPorBk: Record<string, number> = {};
+      allEntriesInPerna.forEach(e => {
+        if (!saldosPorBk[e.bookmaker_id]) {
+          const bk = bookmakerSaldos.find(b => b.id === e.bookmaker_id);
+          if (bk) {
+            let saldoLivre = bk.saldo_operavel;
+            // Descontar stakes usadas em OUTRAS pernas pelo mesmo bookmaker
+            odds.forEach((outraPerna, outroIdx) => {
+              if (outroIdx !== idx) {
+                if (outraPerna.bookmaker_id === e.bookmaker_id) {
+                  saldoLivre -= parseFloat(outraPerna.stake) || 0;
+                }
+                (outraPerna.additionalEntries || []).forEach(ae => {
+                  if (ae.bookmaker_id === e.bookmaker_id) {
+                    saldoLivre -= parseFloat(ae.stake) || 0;
+                  }
+                });
+              }
+            });
+            saldosPorBk[e.bookmaker_id] = saldoLivre;
+          }
         }
       });
       
-      return saldoLivreBase - stakesOutrasPosicoes;
+      // Verificar se cada entrada tem saldo suficiente
+      let menorSaldoDisponivel = Infinity;
+      allEntriesInPerna.forEach(e => {
+        const saldoDisp = saldosPorBk[e.bookmaker_id] ?? 0;
+        const sobra = saldoDisp - e.stake;
+        if (sobra < menorSaldoDisponivel) {
+          menorSaldoDisponivel = sobra;
+        }
+      });
+      
+      return menorSaldoDisponivel === Infinity ? null : menorSaldoDisponivel;
     });
     
     // Saldo total operável das casas selecionadas
@@ -1020,7 +1071,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     );
     
     // Calcular cenários de retorno/lucro para CADA resultado possível
-    // LucroCenário = stake * odd - stakeTotal
+    // REFATORADO: Usar odd média e stake total consolidados por perna
     const scenarios = parsedOdds.map((odd, i) => {
       const stakeNesseLado = actualStakes[i];
       const retorno = odd > 1 ? stakeNesseLado * odd : 0;
@@ -1029,6 +1080,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       return {
         selecao: odds[i].selecao,
         stake: stakeNesseLado,
+        oddMedia: odd,
         retorno,
         lucro,
         roi,
@@ -1065,7 +1117,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     // Verificar saldo insuficiente em alguma posição
     const hasSaldoInsuficiente = scenarios.some((s, i) => {
       const saldo = saldosPorPosicao[i];
-      return saldo !== null && s.stake > saldo + 0.01;
+      return saldo !== null && saldo < -0.01; // Saldo negativo = insuficiente
     });
     
     // Recomendação baseada nos cenários
@@ -1134,11 +1186,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       // MULTI-MOEDA
       isMultiCurrency,
       moedaDominante,
-      moedasUnicas
+      moedasUnicas,
+      // NOVO: Dados consolidados por perna (para debug/exibição)
+      consolidatedPerPerna
     };
   }, [
     // Dependências explícitas para garantir reatividade total
-    odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}|${o.isReference}`).join(','),
+    // REFATORADO: Incluir additionalEntries na chave de dependência
+    odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}|${o.isReference}|${JSON.stringify(o.additionalEntries || [])}`).join(','),
     bookmakerSaldos.map(b => `${b.id}|${b.saldo_operavel}`).join(','),
     arredondarAtivado,
     arredondarValor,
@@ -1146,6 +1201,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   ]);
 
   // Análise de resultado REAL (quando resolvida - posições marcadas como GREEN/RED/VOID/MEIO_GREEN/MEIO_RED)
+  // REFATORADO: Considera TODAS as entradas de cada perna (principal + coberturas)
   const analysisReal = useMemo(() => {
     // Verificar se todas as posições têm resultado
     const resultadosValidos = ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"];
@@ -1155,30 +1211,50 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       return { isResolved: false, lucroReal: 0, roiReal: 0 };
     }
 
-    // Calcular lucro real baseado nos resultados
-    let lucroReal = 0;
-    const stakeTotal = odds.reduce((acc, o) => acc + (parseFloat(o.stake) || 0), 0);
+    // Calcular stake total consolidado (todas as entradas de todas as pernas)
+    let stakeTotal = 0;
+    odds.forEach(perna => {
+      stakeTotal += parseFloat(perna.stake) || 0;
+      (perna.additionalEntries || []).forEach(entry => {
+        stakeTotal += parseFloat(entry.stake) || 0;
+      });
+    });
 
-    odds.forEach(o => {
-      const stake = parseFloat(o.stake) || 0;
-      const odd = parseFloat(o.odd) || 0;
+    // Calcular lucro real baseado nos resultados
+    // NOTA: O resultado da perna afeta TODAS as entradas dessa perna
+    let lucroReal = 0;
+    
+    odds.forEach(perna => {
+      // Coletar todas as entradas desta perna
+      const allEntries = [
+        { stake: parseFloat(perna.stake) || 0, odd: parseFloat(perna.odd) || 0 },
+        ...((perna.additionalEntries || []).map(e => ({
+          stake: parseFloat(e.stake) || 0,
+          odd: parseFloat(e.odd) || 0
+        })))
+      ];
       
-      if (o.resultado === "GREEN") {
-        // GREEN = ganha (retorno - stakes de todas as pernas)
-        lucroReal += stake * odd;
-      } else if (o.resultado === "MEIO_GREEN") {
-        // MEIO_GREEN = ganha metade do lucro potencial + devolve metade da stake
-        lucroReal += stake + (stake * (odd - 1)) / 2;
-      } else if (o.resultado === "RED") {
-        // RED = perde a stake
-        // Não adiciona nada ao retorno
-      } else if (o.resultado === "MEIO_RED") {
-        // MEIO_RED = perde metade da stake
-        lucroReal += stake / 2;
-      } else if (o.resultado === "VOID") {
-        // VOID = devolve a stake
-        lucroReal += stake;
-      }
+      // Aplicar resultado para cada entrada da perna
+      allEntries.forEach(({ stake, odd }) => {
+        if (stake <= 0) return;
+        
+        if (perna.resultado === "GREEN") {
+          // GREEN = ganha (retorno)
+          lucroReal += stake * odd;
+        } else if (perna.resultado === "MEIO_GREEN") {
+          // MEIO_GREEN = ganha metade do lucro potencial + devolve metade da stake
+          lucroReal += stake + (stake * (odd - 1)) / 2;
+        } else if (perna.resultado === "RED") {
+          // RED = perde a stake
+          // Não adiciona nada ao retorno
+        } else if (perna.resultado === "MEIO_RED") {
+          // MEIO_RED = perde metade da stake
+          lucroReal += stake / 2;
+        } else if (perna.resultado === "VOID") {
+          // VOID = devolve a stake
+          lucroReal += stake;
+        }
+      });
     });
 
     // Lucro real = retorno total - stake total
@@ -1188,7 +1264,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     return {
       isResolved: true,
       lucroReal,
-      roiReal
+      roiReal,
+      stakeTotal // Expor para debug
     };
   }, [odds]);
 
@@ -1304,9 +1381,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         if (error) throw error;
         toast.success("Operação atualizada!");
       } else {
-        // Calcular stakes diretamente dos campos
-        const stakes = odds.map(o => parseFloat(o.stake) || 0);
-        
         // Obter moeda de cada bookmaker selecionada
         const getBookmakerMoeda = (bookmakerId: string): SupportedCurrency => {
           const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
@@ -1398,19 +1472,48 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           };
         });
         
-        // Detectar moeda de operação (única ou MULTI)
-        const moedasPernas = pernasToSave.map(p => p.moeda);
-        const moedasUnicas = [...new Set(moedasPernas)];
+        // Detectar moeda de operação - REFATORADO: Considerar TODAS as entradas
+        const moedasTodasEntradas: SupportedCurrency[] = [];
+        pernasToSave.forEach(perna => {
+          moedasTodasEntradas.push(perna.moeda);
+          if (perna.entries) {
+            perna.entries.forEach(e => moedasTodasEntradas.push(e.moeda));
+          }
+        });
+        const moedasUnicas = [...new Set(moedasTodasEntradas)];
         const moedaOperacao: MoedaOperacao = moedasUnicas.length === 1 ? moedasUnicas[0] : "MULTI";
         
-        // Calcular valor BRL de referência (soma dos snapshots)
-        const valorBRLReferencia = pernasToSave.reduce(
-          (acc, p) => acc + (p.stake_brl_referencia || 0), 0
-        );
+        // Calcular valor BRL de referência - REFATORADO: Considerar TODAS as entradas
+        let valorBRLReferencia = 0;
+        pernasToSave.forEach(perna => {
+          if (perna.entries && perna.entries.length > 0) {
+            // Tem múltiplas entradas: somar valor BRL de cada entrada
+            perna.entries.forEach(e => {
+              valorBRLReferencia += e.stake_brl_referencia || 0;
+            });
+          } else {
+            // Entrada única: usar valor da perna
+            valorBRLReferencia += perna.stake_brl_referencia || 0;
+          }
+        });
         
-        // stake_total só é válido para operações de moeda única
+        // stake_total - REFATORADO: Considerar TODAS as entradas (principal + adicionais)
         // Para MULTI, stake_total = null (proibido somar moedas diferentes!)
-        const stakeTotal = moedaOperacao === "MULTI" ? null : stakes.reduce((a, b) => a + b, 0);
+        let stakeTotal: number | null = null;
+        if (moedaOperacao !== "MULTI") {
+          stakeTotal = 0;
+          pernasToSave.forEach(perna => {
+            if (perna.entries && perna.entries.length > 0) {
+              // Tem múltiplas entradas: somar todas
+              perna.entries.forEach(e => {
+                stakeTotal! += e.stake;
+              });
+            } else {
+              // Entrada única
+              stakeTotal! += perna.stake;
+            }
+          });
+        }
         
         // Inserir na tabela unificada
         if (!workspaceId) {
