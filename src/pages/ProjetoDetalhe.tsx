@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -55,6 +55,21 @@ import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
 import { useActionAccess } from "@/hooks/useModuleAccess";
+import { OperationalFiltersProvider } from "@/contexts/OperationalFiltersContext";
+import { OperationalFiltersBar } from "@/components/projeto-detalhe/OperationalFiltersBar";
+
+// Mapeamento de abas para estratégias pré-selecionadas
+const TAB_ESTRATEGIA_MAP: Record<string, string | undefined> = {
+  "apostas": undefined, // Mostra todas
+  "surebet": "SUREBET",
+  "valuebet": "VALUEBET",
+  "duplogreen": "DUPLO_GREEN",
+  "freebets": "EXTRACAO_FREEBET",
+  "bonus": "EXTRACAO_BONUS",
+};
+
+// Abas que mostram a barra de filtros
+const TABS_WITH_FILTERS = ["apostas", "surebet", "valuebet", "duplogreen", "freebets", "bonus"];
 
 interface Projeto {
   id: string;
@@ -296,8 +311,13 @@ export default function ProjetoDetalhe() {
     return null;
   }
 
+  // Determinar se a aba atual deve mostrar filtros
+  const showFiltersBar = TABS_WITH_FILTERS.includes(activeTab);
+  const preselectedEstrategia = TAB_ESTRATEGIA_MAP[activeTab];
+
   return (
-    <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8 space-y-4">
+    <OperationalFiltersProvider projetoId={id!}>
+      <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-shrink-0">
         <div className="flex items-center gap-3 md:gap-4 min-w-0">
@@ -484,14 +504,25 @@ export default function ProjetoDetalhe() {
         </div>
 
         {/* Action Bar - Logo abaixo das abas */}
-        <div className="flex items-center gap-2 md:gap-3 pt-1 md:pt-2 pb-1 border-b border-border/50 flex-shrink-0 overflow-x-auto">
-          <GlobalActionsBar 
-            projetoId={id!}
-            activeTab={activeTab}
-            onApostaCreated={triggerGlobalRefresh}
-            onBonusCreated={triggerGlobalRefresh}
-            onNavigateToTab={setActiveTab}
-          />
+        <div className="flex flex-col gap-2 md:gap-3 pt-1 md:pt-2 pb-2 border-b border-border/50 flex-shrink-0">
+          <div className="flex items-center gap-2 md:gap-3 overflow-x-auto">
+            <GlobalActionsBar 
+              projetoId={id!}
+              activeTab={activeTab}
+              onApostaCreated={triggerGlobalRefresh}
+              onBonusCreated={triggerGlobalRefresh}
+              onNavigateToTab={setActiveTab}
+            />
+          </div>
+          
+          {/* Barra de Filtros Transversais */}
+          {showFiltersBar && (
+            <OperationalFiltersBar
+              projetoId={id!}
+              showEstrategiaFilter={!preselectedEstrategia}
+              preselectedEstrategia={preselectedEstrategia as any}
+            />
+          )}
         </div>
 
         {/* Conteúdo das abas com contenção */}
@@ -585,6 +616,7 @@ export default function ProjetoDetalhe() {
         mode="edit"
         onSuccess={fetchProjeto}
       />
-    </div>
+      </div>
+    </OperationalFiltersProvider>
   );
 }
