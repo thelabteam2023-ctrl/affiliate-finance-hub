@@ -1907,40 +1907,44 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
-      <DialogContent className="max-w-[1400px] max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-0 flex-shrink-0">
+      <DialogContent className="max-w-[1400px] max-h-[90vh] overflow-y-auto p-6">
+        <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-amber-500" />
             {isEditing ? "Editar Arbitragem" : "Arbitragem"}
           </DialogTitle>
         </DialogHeader>
 
-        {/* Container principal com scroll apenas no formulário */}
-        <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 p-6 pt-4">
-          {/* Formulário - Lado Esquerdo (com scroll próprio) */}
-          <div className="flex-1 space-y-4 overflow-y-auto pr-2 min-h-0">
-            {/* Campos de Registro Obrigatórios */}
-            <RegistroApostaFields
-              values={registroValues}
-              onChange={setRegistroValues}
-              suggestions={!isEditing ? getSuggestionsForTab(activeTab) : undefined}
-              disabled={isEditing ? { forma_registro: true, estrategia: true, contexto_operacional: true } : undefined}
-              lockedEstrategia={!isEditing && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : undefined}
-            />
+        {/* Container principal - scroll único da página */}
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Formulário - Lado Esquerdo */}
+          <div className="flex-1 space-y-3">
+            {/* BLOCO COMPACTO: Registro + Config em uma linha */}
+            <div className="flex flex-wrap items-end gap-3">
+              {/* Campos de Registro Compactos */}
+              <RegistroApostaFields
+                values={registroValues}
+                onChange={setRegistroValues}
+                suggestions={!isEditing ? getSuggestionsForTab(activeTab) : undefined}
+                disabled={isEditing ? { forma_registro: true, estrategia: true, contexto_operacional: true } : undefined}
+                lockedEstrategia={!isEditing && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : undefined}
+                compact
+              />
+            </div>
 
-            {/* Cabeçalho */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Esporte</Label>
+            {/* BLOCO COMPACTO: Esporte + Modelo + Evento + Mercado em linha única */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              {/* Esporte */}
+              <div className="space-y-1">
+                <Label className="text-xs">Esporte</Label>
                 <Select 
                   value={esporte} 
                   onValueChange={(newEsporte) => {
                     setEsporte(newEsporte);
-                    // Resetar mercado quando esporte muda (evita mercado inválido)
                     setMercado("");
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1951,64 +1955,58 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 </Select>
               </div>
               
-              {/* Abas de Modelo com linha animada */}
-              <div className="space-y-2">
-                <Label>Modelo {isEditing && <span className="text-xs text-muted-foreground">(travado)</span>}</Label>
-                <div className={`relative flex p-1 bg-muted/50 rounded-lg ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
-                  {/* Indicador animado */}
+              {/* Modelo - Toggle compacto */}
+              <div className="space-y-1">
+                <Label className="text-xs">Modelo {isEditing && <span className="text-[10px] text-muted-foreground">(travado)</span>}</Label>
+                <div className={`relative flex p-0.5 bg-muted/50 rounded-md h-8 ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
                   <div 
-                    className="absolute h-[calc(100%-8px)] bg-primary rounded-md transition-all duration-300 ease-out"
+                    className="absolute h-[calc(100%-4px)] bg-primary rounded transition-all duration-200 ease-out"
                     style={{
-                      width: 'calc(50% - 4px)',
-                      left: modelo === "1-X-2" ? 'calc(50% + 2px)' : '4px',
-                      top: '4px'
+                      width: 'calc(50% - 2px)',
+                      left: modelo === "1-X-2" ? 'calc(50% + 1px)' : '2px',
+                      top: '2px'
                     }}
                   />
-                  
                   <button
                     type="button"
                     onClick={() => !isEditing && setModelo("1-2")}
                     disabled={isEditing}
-                    className={`relative z-10 flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors duration-200 ${
-                      modelo === "1-2" 
-                        ? "text-primary-foreground" 
-                        : "text-muted-foreground hover:text-foreground"
-                    } ${isEditing ? 'cursor-not-allowed' : ''}`}
+                    className={`relative z-10 flex-1 text-xs font-medium rounded transition-colors ${
+                      modelo === "1-2" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
                     1–2
                   </button>
-                  
                   <button
                     type="button"
                     onClick={() => !isEditing && setModelo("1-X-2")}
                     disabled={isEditing}
-                    className={`relative z-10 flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors duration-200 ${
-                      modelo === "1-X-2" 
-                        ? "text-primary-foreground" 
-                        : "text-muted-foreground hover:text-foreground"
-                    } ${isEditing ? 'cursor-not-allowed' : ''}`}
+                    className={`relative z-10 flex-1 text-xs font-medium rounded transition-colors ${
+                      modelo === "1-X-2" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
                     1–X–2
                   </button>
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Evento</Label>
+              {/* Evento */}
+              <div className="space-y-1">
+                <Label className="text-xs">Evento</Label>
                 <Input 
                   placeholder="Ex: Brasil x Argentina" 
                   value={evento}
                   onChange={(e) => setEvento(e.target.value)}
-                  className="uppercase"
+                  className="h-8 text-xs uppercase"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Mercado</Label>
+              
+              {/* Mercado */}
+              <div className="space-y-1">
+                <Label className="text-xs">Mercado</Label>
                 <Select value={mercado} onValueChange={setMercado}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o mercado" />
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
                     {getMarketsForSportAndModel(esporte, modelo).map(m => (
@@ -2016,7 +2014,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     ))}
                     {getMarketsForSportAndModel(esporte, modelo).length === 0 && (
                       <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                        Nenhum mercado compatível com modelo {modelo}
+                        Nenhum mercado compatível
                       </div>
                     )}
                   </SelectContent>
@@ -2024,7 +2022,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               </div>
             </div>
 
-            <Separator />
+            <Separator className="my-2" />
 
             {/* Tabela de Odds - Layout em Colunas (usado tanto na criação quanto na edição) */}
             {odds.length > 0 && (
@@ -2752,8 +2750,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             )}
           </div>
 
-          {/* Análise - Sidebar Direita STICKY (sempre visível) */}
-          <div className="w-full lg:w-52 xl:w-56 flex-shrink-0 lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(90vh-180px)] lg:overflow-y-auto space-y-2">
+          {/* Análise - Sidebar Direita (sem scroll interno) */}
+          <div className="w-full lg:w-48 xl:w-52 flex-shrink-0 space-y-2">
             {/* INDICADOR DE CONSOLIDAÇÃO MULTI-MOEDA */}
             {analysis.isMultiCurrency && (
               <MultiCurrencyIndicator
@@ -2767,14 +2765,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               />
             )}
             
-            <Card>
-              <CardHeader className="pb-2 pt-3 px-3">
-                <CardTitle className="text-xs flex items-center gap-1.5">
-                  <Calculator className="h-3.5 w-3.5" />
+            <Card className="border-primary/20">
+              <CardHeader className="pb-1 pt-2 px-2">
+                <CardTitle className="text-[11px] flex items-center gap-1">
+                  <Calculator className="h-3 w-3" />
                   {isEditing && analysisReal.isResolved ? "Resultado" : "Análise"}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 px-3 pb-3">
+              <CardContent className="space-y-1.5 px-2 pb-2">
                 {/* Stake Total */}
                 <div className="p-2 rounded-lg bg-primary/10 border border-primary/30">
                   <div className="flex items-center justify-between">
@@ -2960,7 +2958,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           </div>
         </div>
 
-        <DialogFooter className="flex justify-between flex-shrink-0 p-6 pt-4 border-t">
+        <DialogFooter className="flex justify-between mt-4">
           <div>
             {isEditing && (
               <AlertDialog>
