@@ -39,7 +39,6 @@ import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { ApostaDialog } from "./ApostaDialog";
 import { ApostaCard, ApostaCardData } from "./ApostaCard";
-import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { SurebetStatisticsCard } from "./SurebetStatisticsCard";
 
@@ -50,6 +49,8 @@ import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { useOperationalFiltersOptional, type EstrategiaFilter } from "@/contexts/OperationalFiltersContext";
+import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -176,6 +177,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   // Hook de formatação de moeda do projeto
   const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol } = useProjetoCurrency(projetoId);
   const currencySymbol = getSymbol();
+  
   // Sub-abas Abertas/Histórico
   const [operacoesSubTab, setOperacoesSubTab] = useState<"abertas" | "historico">("abertas");
   
@@ -190,11 +192,20 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const [activeNavTab, setActiveNavTab] = useState<NavTabValue>("visao-geral");
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Filtro de tempo interno
+  // Contexto de filtros globais (opcional - funciona com ou sem provider)
+  const globalFilters = useOperationalFiltersOptional();
+
+  // Filtro de tempo interno (fallback quando não há contexto global)
   const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
   const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
 
-  const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
+  // Usar período do contexto global quando disponível
+  const effectivePeriod = globalFilters?.period ?? internalPeriod;
+  const effectiveDateRange = globalFilters?.customDateRange ?? internalDateRange;
+  const dateRange = useMemo(
+    () => globalFilters?.dateRange ?? getDateRangeFromPeriod(effectivePeriod, effectiveDateRange),
+    [globalFilters?.dateRange, effectivePeriod, effectiveDateRange]
+  );
 
   // Count of open operations for badge - uses the canonical hook
   const { count: openOperationsCount } = useOpenOperationsCount({
@@ -215,9 +226,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     localStorage.setItem(NAV_STORAGE_KEY, navMode);
   }, [navMode]);
 
+  // Refetch quando filtros globais ou locais mudarem
   useEffect(() => {
     fetchData();
-  }, [projetoId, internalPeriod, internalDateRange, refreshTrigger]);
+  }, [projetoId, dateRange, refreshTrigger, globalFilters?.bookmakerIds, globalFilters?.parceiroIds]);
 
   const fetchData = async () => {
     try {
@@ -485,18 +497,55 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   };
 
   // KPIs calculados
+  // Filtrar surebets pelos filtros globais (bookmaker/parceiro)
+  const filteredSurebets = useMemo(() => {
+    if (!globalFilters) return surebets;
+    
+    const { bookmakerIds, parceiroIds } = globalFilters;
+    
+    return surebets.filter(surebet => {
+      // Filtro por bookmaker
+      if (bookmakerIds.length > 0) {
+        const surebetBookmakerIds = (surebet.pernas || []).map(p => p.bookmaker_id).filter(Boolean);
+        // Também verificar bookmaker_id para apostas simples
+        if (surebet.bookmaker_id) surebetBookmakerIds.push(surebet.bookmaker_id);
+        
+        const hasMatchingBookmaker = surebetBookmakerIds.some(id => bookmakerIds.includes(id!));
+        if (!hasMatchingBookmaker) return false;
+      }
+      
+      // Filtro por parceiro (verificar via bookmakers)
+      if (parceiroIds.length > 0) {
+        // Para filtrar por parceiro, precisamos verificar as pernas
+        // Como não temos parceiro_id direto, verificamos os bookmakers correspondentes
+        const surebetBookmakerIds = (surebet.pernas || []).map(p => p.bookmaker_id).filter(Boolean);
+        if (surebet.bookmaker_id) surebetBookmakerIds.push(surebet.bookmaker_id);
+        
+        const matchingBookmakers = bookmakers.filter(bk => 
+          surebetBookmakerIds.includes(bk.id) && 
+          bk.parceiro && 
+          parceiroIds.includes((bk.parceiro as any).id || '')
+        );
+        
+        if (matchingBookmakers.length === 0) return false;
+      }
+      
+      return true;
+    });
+  }, [surebets, globalFilters?.bookmakerIds, globalFilters?.parceiroIds, bookmakers]);
+
   const kpis = useMemo(() => {
-    const total = surebets.length;
-    const pendentes = surebets.filter(s => s.status === "PENDENTE").length;
-    const liquidadas = surebets.filter(s => s.status === "LIQUIDADA").length;
-    const greens = surebets.filter(s => s.resultado === "GREEN").length;
-    const reds = surebets.filter(s => s.resultado === "RED").length;
-    const lucroTotal = surebets.reduce((acc, s) => acc + (s.lucro_real || 0), 0);
-    const stakeTotal = surebets.reduce((acc, s) => acc + s.stake_total, 0);
+    const total = filteredSurebets.length;
+    const pendentes = filteredSurebets.filter(s => s.status === "PENDENTE").length;
+    const liquidadas = filteredSurebets.filter(s => s.status === "LIQUIDADA").length;
+    const greens = filteredSurebets.filter(s => s.resultado === "GREEN").length;
+    const reds = filteredSurebets.filter(s => s.resultado === "RED").length;
+    const lucroTotal = filteredSurebets.reduce((acc, s) => acc + (s.lucro_real || 0), 0);
+    const stakeTotal = filteredSurebets.reduce((acc, s) => acc + s.stake_total, 0);
     const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
-  }, [surebets]);
+  }, [filteredSurebets]);
 
   // casaData agregado por CASA (não por vínculo) - Padrão unificado
   const casaData = useMemo((): CasaAgregada[] => {
@@ -539,7 +588,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       vinculoEntry.lucro += lucro;
     };
 
-    surebets.forEach((surebet) => {
+    filteredSurebets.forEach((surebet) => {
       // Apostas simples (sem pernas) - usar bookmaker_nome direto
       if (surebet.forma_registro === "SIMPLES" || !surebet.pernas?.length) {
         const nomeCompleto = surebet.bookmaker_nome || "Desconhecida";
@@ -578,7 +627,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       })
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 8);
-  }, [surebets]);
+  }, [filteredSurebets]);
 
   // Mapa de logos por nome do catálogo (case-insensitive)
   const logoMap = useMemo(() => {
@@ -616,9 +665,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     });
   }, [casaData, porCasaSort]);
 
-  // Separar surebets em abertas e histórico
-  const surebetsAbertas = useMemo(() => surebets.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE"), [surebets]);
-  const surebetsHistorico = useMemo(() => surebets.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE"), [surebets]);
+  // Separar surebets em abertas e histórico (usando filteredSurebets)
+  const surebetsAbertas = useMemo(() => filteredSurebets.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE"), [filteredSurebets]);
+  const surebetsHistorico = useMemo(() => filteredSurebets.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE"), [filteredSurebets]);
   
   // Lista baseada na sub-aba selecionada
   const surebetsListaAtual = operacoesSubTab === "abertas" ? surebetsAbertas : surebetsHistorico;
@@ -663,8 +712,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     </Tooltip>
   );
 
-  // Period filter component
-  const periodFilterComponent = (
+  // Period filter component - só exibe se não houver contexto global
+  const periodFilterComponent = globalFilters ? null : (
     <StandardTimeFilter
       period={internalPeriod}
       onPeriodChange={setInternalPeriod}
@@ -736,12 +785,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       </div>
 
       {/* Gráficos - layout igual ao ValueBet */}
-      {surebets.length > 0 && (
+      {filteredSurebets.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Coluna esquerda: Gráfico + Estatísticas */}
           <div className="lg:col-span-2 space-y-4">
             <VisaoGeralCharts 
-              apostas={surebets.map(s => {
+              apostas={filteredSurebets.map(s => {
                 const isSimples = s.forma_registro === "SIMPLES" || !s.pernas?.length;
                 return {
                   data_aposta: s.data_operacao,
@@ -769,22 +818,21 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showCasasCard={false}
-              isSingleDayPeriod={internalPeriod === "1dia"}
+              isSingleDayPeriod={effectivePeriod === "1dia"}
               formatCurrency={formatCurrency}
             />
-            <SurebetStatisticsCard surebets={surebets} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
+            <SurebetStatisticsCard surebets={filteredSurebets} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
           </div>
           {/* Coluna direita: Casas Mais Utilizadas */}
           <div className="lg:col-span-1">
             <VisaoGeralCharts 
-              apostas={surebets.map(s => {
+              apostas={filteredSurebets.map(s => {
                 const isSimples = s.forma_registro === "SIMPLES" || !s.pernas?.length;
                 return {
                   data_aposta: s.data_operacao,
                   lucro_prejuizo: s.lucro_real,
                   stake: isSimples ? (s.stake || s.stake_total) : s.stake_total,
                   bookmaker_nome: isSimples ? (s.bookmaker_nome || "—") : (s.pernas?.[0]?.bookmaker_nome || "—"),
-                  // Para apostas simples, criar uma "perna virtual" para o cálculo de casas
                   pernas: isSimples 
                     ? [{
                         bookmaker_nome: s.bookmaker_nome || "—",
@@ -805,7 +853,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showEvolucaoChart={false}
-              isSingleDayPeriod={internalPeriod === "1dia"}
+              isSingleDayPeriod={effectivePeriod === "1dia"}
               formatCurrency={formatCurrency}
             />
           </div>
