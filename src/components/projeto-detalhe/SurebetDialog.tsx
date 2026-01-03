@@ -1933,8 +1933,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               
               {/* Modelo - Toggle inline */}
               <div className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground whitespace-nowrap">Modelo:</Label>
-                <div className={`relative flex p-0.5 bg-muted/50 rounded h-7 w-[110px] ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
+                <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Modelo:</Label>
+                <div className={`relative flex p-0.5 bg-muted/50 rounded h-8 w-[120px] ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
                   <div 
                     className="absolute h-[calc(100%-4px)] bg-primary rounded transition-all duration-200 ease-out"
                     style={{
@@ -1947,7 +1947,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     type="button"
                     onClick={() => !isEditing && setModelo("1-2")}
                     disabled={isEditing}
-                    className={`relative z-10 flex-1 text-xs font-medium rounded transition-colors ${
+                    className={`relative z-10 flex-1 text-sm font-medium rounded transition-colors ${
                       modelo === "1-2" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -1957,7 +1957,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     type="button"
                     onClick={() => !isEditing && setModelo("1-X-2")}
                     disabled={isEditing}
-                    className={`relative z-10 flex-1 text-xs font-medium rounded transition-colors ${
+                    className={`relative z-10 flex-1 text-sm font-medium rounded transition-colors ${
                       modelo === "1-X-2" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
