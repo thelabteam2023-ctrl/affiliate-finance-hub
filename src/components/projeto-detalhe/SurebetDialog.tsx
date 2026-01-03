@@ -2128,7 +2128,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           </div>
                           
                           {/* Casa | Linha | Odd | Stake na mesma linha */}
-                          <div className="grid gap-1.5" style={{ gridTemplateColumns: '1fr 80px 50px 80px' }}>
+                          <div className="grid gap-1.5" style={{ gridTemplateColumns: '140px 80px 50px 80px' }}>
                             {/* Casa */}
                             <div className="space-y-1">
                               <Label className="text-[10px] text-muted-foreground">Casa</Label>
@@ -2300,8 +2300,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                   <div key={addIdx} className="space-y-1 animate-in fade-in slide-in-from-top-1">
                                     {/* Wrapper com posicionamento relativo para o botão de excluir */}
                                     <div className="relative">
-                                      {/* Grid alinhado EXATAMENTE com entrada principal: 1fr 80px 50px 80px */}
-                                      <div className="grid gap-1.5 items-end pr-5" style={{ gridTemplateColumns: '1fr 80px 50px 80px' }}>
+                                      {/* Grid alinhado EXATAMENTE com entrada principal: 140px 80px 50px 80px */}
+                                      <div className="grid gap-1.5 items-end pr-5" style={{ gridTemplateColumns: '140px 80px 50px 80px' }}>
                                         <Select 
                                           value={addEntry.bookmaker_id}
                                           onValueChange={(v) => updateAdditionalEntry(index, addIdx, "bookmaker_id", v)}
