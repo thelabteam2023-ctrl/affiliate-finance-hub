@@ -647,8 +647,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   }, [modelo, esporte, isEditing]); // Adicionado esporte como dependência
   
   // Atualizar seleções quando mercado muda (sem afetar modelo)
+  // Atualizar seleções quando mercado muda (TANTO em criação QUANTO em edição)
   useEffect(() => {
-    if (!isEditing && mercado) {
+    if (mercado) {
       const selecoes = getSelecoesPorMercado(mercado, modelo);
       const numSlots = modelo === "1-X-2" ? 3 : 2;
       const newSelecoes = selecoes.slice(0, numSlots);
