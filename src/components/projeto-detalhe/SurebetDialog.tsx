@@ -3096,13 +3096,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                       </>
                     )}
 
-                    {/* Mensagem quando não há dados */}
-                    {!analysis.hasPartialData && (
-                      <div className="text-center py-4 text-muted-foreground">
-                        <Calculator className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-xs">Preencha as odds para ver a análise</p>
-                      </div>
-                    )}
                   </>
                 )}
               </CardContent>
