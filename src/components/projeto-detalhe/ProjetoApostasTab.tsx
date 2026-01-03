@@ -892,23 +892,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       )}
 
 
-      {/* Filtros e Ações - Dentro do container de histórico */}
+      {/* Card de Histórico com Filtros */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <History className="h-4 w-4" />
-              Histórico de Operações
-            </CardTitle>
-            {/* Sub-abas Abertas / Histórico */}
-            <div className="flex items-center gap-3">
+          {/* Sub-abas Abertas / Histórico - ACIMA do título */}
+          <div className="flex items-center justify-end mb-3">
+            <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
               <button
                 onClick={() => setApostasSubTab("abertas")}
                 className={cn(
                   "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
                   apostasSubTab === "abertas"
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    ? "bg-background text-primary shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <Clock className="h-3.5 w-3.5" />
@@ -920,8 +916,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 className={cn(
                   "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
                   apostasSubTab === "historico"
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    ? "bg-background text-primary shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <History className="h-3.5 w-3.5" />
@@ -930,85 +926,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               </button>
             </div>
           </div>
+          
+          {/* Título do Card */}
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Histórico de Operações
+          </CardTitle>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
-          {/* Filtros Transversais (Período, Casa, Parceiro) */}
+          {/* Filtros Transversais (Período, Casa, Parceiro, Estratégia) */}
           <OperationalFiltersBar
             projetoId={projetoId}
             showEstrategiaFilter={true}
-            className="pb-3 border-b border-border/50"
           />
-          
-          {/* Filtros de Busca e Visualização */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
-            >
-              {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-            </Button>
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar evento, seleção..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-9"
-              />
-            </div>
-            
-            {/* Filtro de Contexto */}
-            <Select value={contextoFilter} onValueChange={(v) => setContextoFilter(v as ApostaContexto | "all")}>
-              <SelectTrigger className="w-[150px] h-9">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Contexto" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  Todos ({contadores.total})
-                </SelectItem>
-                <SelectItem value="NORMAL">
-                  <span className="flex items-center gap-2">
-                    🟢 Normal ({contadores.normal})
-                  </span>
-                </SelectItem>
-                <SelectItem value="FREEBET">
-                  <span className="flex items-center gap-2">
-                    🟣 Freebet ({contadores.freebet})
-                  </span>
-                </SelectItem>
-                <SelectItem value="BONUS">
-                  <span className="flex items-center gap-2">
-                    🟡 Bônus ({contadores.bonus})
-                  </span>
-                </SelectItem>
-                <SelectItem value="SUREBET">
-                  <span className="flex items-center gap-2">
-                    🔵 Surebet ({contadores.surebet})
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Filtro de Resultado - só no histórico */}
-            {apostasSubTab === "historico" && (
-              <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
-                <SelectTrigger className="w-[140px] h-9">
-                  <SelectValue placeholder="Resultado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
-                  <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
-                  <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">Meio Green</SelectItem>
-                  <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">Meio Red</SelectItem>
-                  <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          </div>
         </CardContent>
       </Card>
 
