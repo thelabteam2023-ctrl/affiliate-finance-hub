@@ -92,36 +92,65 @@ interface SurebetDialogProps {
   activeTab?: string;
 }
 
-// Estrutura de perna armazenada no JSONB da surebet (COM SUPORTE MULTI-MOEDA)
-export interface SurebetPerna {
+// Estrutura de entrada individual (fill) dentro de uma perna
+export interface SurebetPernaEntry {
   bookmaker_id: string;
   bookmaker_nome: string;
-  moeda: SupportedCurrency; // OBRIGATÓRIO - moeda da bookmaker
-  selecao: string; // Label da posição (ex: "Over", "Casa")
-  selecao_livre: string; // Campo livre para linha específica (ex: "Over 2.5", "Handicap -1.5")
+  moeda: SupportedCurrency;
   odd: number;
   stake: number;
-  // Campos de snapshot para referência BRL
   stake_brl_referencia: number | null;
   cotacao_snapshot: number | null;
   cotacao_snapshot_at: string | null;
+}
+
+// Estrutura de perna armazenada no JSONB da surebet (COM SUPORTE MULTI-ENTRADA)
+export interface SurebetPerna {
+  // Campos de identificação da posição
+  selecao: string;
+  selecao_livre: string;
+  
+  // NOVO: Array de entradas (múltiplas casas/odds na mesma posição)
+  entries?: SurebetPernaEntry[];
+  
+  // Campos consolidados (calculados para múltiplas entradas)
+  odd_media?: number;
+  stake_total?: number;
+  
+  // Campos legados (usados quando entries está vazio/undefined)
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  moeda: SupportedCurrency;
+  odd: number;
+  stake: number;
+  stake_brl_referencia: number | null;
+  cotacao_snapshot: number | null;
+  cotacao_snapshot_at: string | null;
+  
   // Campos de resultado
   resultado: string | null;
   lucro_prejuizo: number | null;
   lucro_prejuizo_brl_referencia: number | null;
-  // Campos de freebet
   gerou_freebet: boolean;
   valor_freebet_gerada: number | null;
 }
 
-// Estrutura interna do formulário (para edição)
-interface OddEntry {
+// Estrutura de entrada individual no formulário (um fill)
+interface OddFormEntry {
   bookmaker_id: string;
-  moeda: SupportedCurrency; // NOVO - moeda da bookmaker selecionada
+  moeda: SupportedCurrency;
   odd: string;
   stake: string;
-  selecao: string; // Label da posição (ex: "Over", "Casa")
-  selecaoLivre: string; // Campo livre para linha específica (ex: "Over 2.5", "Handicap -1.5")
+}
+
+// Estrutura interna do formulário - mantendo compatibilidade
+interface OddEntry {
+  bookmaker_id: string;
+  moeda: SupportedCurrency;
+  odd: string;
+  stake: string;
+  selecao: string;
+  selecaoLivre: string;
   isReference: boolean;
   isManuallyEdited: boolean;
   resultado?: string | null;
@@ -129,7 +158,45 @@ interface OddEntry {
   gerouFreebet?: boolean;
   valorFreebetGerada?: string;
   freebetStatus?: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA" | null;
-  index?: number; // índice da perna para identificação
+  index?: number;
+  // NOVO: Entradas adicionais para esta perna (além da principal acima)
+  additionalEntries?: OddFormEntry[];
+}
+
+// Função para calcular odd média ponderada de uma perna
+function calcularOddMedia(mainEntry: { odd: string; stake: string }, additionalEntries?: OddFormEntry[]): number {
+  const allEntries = [
+    { odd: mainEntry.odd, stake: mainEntry.stake },
+    ...(additionalEntries || [])
+  ];
+  
+  const entriesValidas = allEntries.filter(e => {
+    const odd = parseFloat(e.odd);
+    const stake = parseFloat(e.stake);
+    return !isNaN(odd) && odd > 1 && !isNaN(stake) && stake > 0;
+  });
+  
+  if (entriesValidas.length === 0) return 0;
+  if (entriesValidas.length === 1) return parseFloat(entriesValidas[0].odd);
+  
+  const somaStakeOdd = entriesValidas.reduce((acc, e) => {
+    return acc + (parseFloat(e.stake) * parseFloat(e.odd));
+  }, 0);
+  
+  const somaStake = entriesValidas.reduce((acc, e) => {
+    return acc + parseFloat(e.stake);
+  }, 0);
+  
+  return somaStake > 0 ? somaStakeOdd / somaStake : 0;
+}
+
+// Função para calcular stake total de uma perna
+function calcularStakeTotal(mainEntry: { stake: string }, additionalEntries?: OddFormEntry[]): number {
+  const mainStake = parseFloat(mainEntry.stake) || 0;
+  const additionalStakes = (additionalEntries || []).reduce((acc, e) => {
+    return acc + (parseFloat(e.stake) || 0);
+  }, 0);
+  return mainStake + additionalStakes;
 }
 
 const ESPORTES = [
@@ -335,8 +402,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   
   // Odds entries (2 for binary, 3 for 1X2)
   const [odds, setOdds] = useState<OddEntry[]>([
-    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Sim", selecaoLivre: "", isReference: true, isManuallyEdited: false },
-    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Não", selecaoLivre: "", isReference: false, isManuallyEdited: false }
+    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Sim", selecaoLivre: "", isReference: true, isManuallyEdited: false, additionalEntries: [] },
+    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Não", selecaoLivre: "", isReference: false, isManuallyEdited: false, additionalEntries: [] }
   ]);
   
   // Apostas vinculadas para edição
@@ -412,7 +479,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           selecao: sel,
           selecaoLivre: "",
           isReference: i === 0,
-          isManuallyEdited: false
+          isManuallyEdited: false,
+          additionalEntries: []
         })));
       } else {
         // Apenas atualizar as seleções mantendo dados existentes
@@ -454,7 +522,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     setArredondarValor("1");
     const defaultSelecoes = getSelecoesPorMercado("", "1-2");
     setOdds(defaultSelecoes.map((sel, i) => ({
-      bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, selecaoLivre: "", isReference: i === 0, isManuallyEdited: false
+      bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, selecaoLivre: "", isReference: i === 0, isManuallyEdited: false, additionalEntries: []
     })));
     setLinkedApostas([]);
     setExpandedResultados({}); // Reset expansão de resultados avançados
@@ -530,14 +598,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       odd: perna.odd?.toString() || "",
       stake: perna.stake?.toString() || "",
       selecao: perna.selecao,
-      selecaoLivre: perna.selecao_livre || "", // Carregar campo livre se existir
+      selecaoLivre: perna.selecao_livre || "",
       isReference: index === 0,
       isManuallyEdited: true,
       resultado: perna.resultado,
       lucro_prejuizo: perna.lucro_prejuizo,
       gerouFreebet: perna.gerou_freebet || false,
       valorFreebetGerada: perna.valor_freebet_gerada?.toString() || "",
-      index // índice para identificação
+      index,
+      // Carregar entradas adicionais se existirem
+      additionalEntries: perna.entries?.slice(1).map(e => ({
+        bookmaker_id: e.bookmaker_id,
+        moeda: e.moeda,
+        odd: e.odd.toString(),
+        stake: e.stake.toString()
+      })) || []
     }));
     
     setOdds(newOdds);
@@ -616,6 +691,69 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     newOdds[indexA].selecao = newOdds[indexB].selecao;
     newOdds[indexB].selecao = selecaoA;
     setOdds(newOdds);
+  };
+
+  // ========== FUNÇÕES PARA MÚLTIPLAS ENTRADAS ==========
+  
+  // Adicionar entrada adicional a uma perna
+  const addAdditionalEntry = (pernaIndex: number) => {
+    const newOdds = [...odds];
+    const currentEntries = newOdds[pernaIndex].additionalEntries || [];
+    newOdds[pernaIndex].additionalEntries = [
+      ...currentEntries,
+      { bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "" }
+    ];
+    setOdds(newOdds);
+  };
+
+  // Remover entrada adicional de uma perna
+  const removeAdditionalEntry = (pernaIndex: number, entryIndex: number) => {
+    const newOdds = [...odds];
+    const currentEntries = newOdds[pernaIndex].additionalEntries || [];
+    newOdds[pernaIndex].additionalEntries = currentEntries.filter((_, i) => i !== entryIndex);
+    setOdds(newOdds);
+  };
+
+  // Atualizar campo de uma entrada adicional
+  const updateAdditionalEntry = (
+    pernaIndex: number, 
+    entryIndex: number, 
+    field: keyof OddFormEntry, 
+    value: string
+  ) => {
+    const newOdds = [...odds];
+    const currentEntries = [...(newOdds[pernaIndex].additionalEntries || [])];
+    currentEntries[entryIndex] = { ...currentEntries[entryIndex], [field]: value };
+    
+    // Atualizar moeda quando bookmaker muda
+    if (field === "bookmaker_id") {
+      const selectedBk = bookmakerSaldos.find(b => b.id === value);
+      currentEntries[entryIndex].moeda = (selectedBk?.moeda as SupportedCurrency) || "BRL";
+    }
+    
+    newOdds[pernaIndex].additionalEntries = currentEntries;
+    setOdds(newOdds);
+  };
+
+  // Verificar se perna tem múltiplas entradas
+  const hasMultipleEntries = (entry: OddEntry): boolean => {
+    return (entry.additionalEntries?.length || 0) > 0;
+  };
+
+  // Obter odd média de uma perna (considerando entradas adicionais)
+  const getOddMediaPerna = (entry: OddEntry): number => {
+    return calcularOddMedia(
+      { odd: entry.odd, stake: entry.stake },
+      entry.additionalEntries
+    );
+  };
+
+  // Obter stake total de uma perna (considerando entradas adicionais)
+  const getStakeTotalPerna = (entry: OddEntry): number => {
+    return calcularStakeTotal(
+      { stake: entry.stake },
+      entry.additionalEntries
+    );
   };
 
   // Auto-preencher stakes baseado na posição de referência
@@ -1093,30 +1231,81 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           return (bk?.moeda as SupportedCurrency) || "BRL";
         };
         
-        // Criar pernas COM SNAPSHOT por moeda estrangeira
+        // Criar pernas COM SNAPSHOT e suporte a múltiplas entradas
         const pernasToSave: SurebetPerna[] = odds.map((entry, idx) => {
-          const stake = stakes[idx];
-          const moeda = getBookmakerMoeda(entry.bookmaker_id);
+          const mainStake = parseFloat(entry.stake) || 0;
+          const mainMoeda = getBookmakerMoeda(entry.bookmaker_id);
+          const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda);
           
-          // Criar snapshot para moeda estrangeira
-          const snapshotFields = getSnapshotFields(stake, moeda);
+          // Construir array de entradas se houver entradas adicionais
+          const hasAdditional = (entry.additionalEntries?.length || 0) > 0;
+          let entries: SurebetPernaEntry[] | undefined = undefined;
+          let oddMedia: number | undefined = undefined;
+          let stakeTotal: number | undefined = undefined;
+          
+          if (hasAdditional) {
+            // Entrada principal
+            const mainEntry: SurebetPernaEntry = {
+              bookmaker_id: entry.bookmaker_id,
+              bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
+              moeda: mainMoeda,
+              odd: parseFloat(entry.odd),
+              stake: mainStake,
+              stake_brl_referencia: mainSnapshotFields.valor_brl_referencia,
+              cotacao_snapshot: mainSnapshotFields.cotacao_snapshot,
+              cotacao_snapshot_at: mainSnapshotFields.cotacao_snapshot_at
+            };
+            
+            // Entradas adicionais
+            const additionalEntries: SurebetPernaEntry[] = (entry.additionalEntries || []).map(ae => {
+              const aeMoeda = getBookmakerMoeda(ae.bookmaker_id);
+              const aeStake = parseFloat(ae.stake) || 0;
+              const aeSnapshotFields = getSnapshotFields(aeStake, aeMoeda);
+              
+              return {
+                bookmaker_id: ae.bookmaker_id,
+                bookmaker_nome: getBookmakerNome(ae.bookmaker_id),
+                moeda: aeMoeda,
+                odd: parseFloat(ae.odd),
+                stake: aeStake,
+                stake_brl_referencia: aeSnapshotFields.valor_brl_referencia,
+                cotacao_snapshot: aeSnapshotFields.cotacao_snapshot,
+                cotacao_snapshot_at: aeSnapshotFields.cotacao_snapshot_at
+              };
+            });
+            
+            entries = [mainEntry, ...additionalEntries];
+            oddMedia = calcularOddMedia({ odd: entry.odd, stake: entry.stake }, entry.additionalEntries);
+            stakeTotal = calcularStakeTotal({ stake: entry.stake }, entry.additionalEntries);
+          }
           
           return {
+            // Campos de identificação da posição
+            selecao: entry.selecao,
+            selecao_livre: entry.selecaoLivre || "",
+            
+            // Array de entradas (se múltiplas)
+            entries,
+            
+            // Campos consolidados (se múltiplas entradas)
+            odd_media: oddMedia,
+            stake_total: stakeTotal,
+            
+            // Campos legados (sempre preenchidos para compatibilidade)
             bookmaker_id: entry.bookmaker_id,
             bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
-            moeda,
-            selecao: entry.selecao,
-            selecao_livre: entry.selecaoLivre || "", // Campo livre para linha específica
+            moeda: mainMoeda,
             odd: parseFloat(entry.odd),
-            stake,
-            // Campos de snapshot (BRL terá valor_brl_referencia = stake, sem cotação)
-            stake_brl_referencia: snapshotFields.valor_brl_referencia,
-            cotacao_snapshot: snapshotFields.cotacao_snapshot,
-            cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
+            stake: mainStake,
+            stake_brl_referencia: mainSnapshotFields.valor_brl_referencia,
+            cotacao_snapshot: mainSnapshotFields.cotacao_snapshot,
+            cotacao_snapshot_at: mainSnapshotFields.cotacao_snapshot_at,
+            
             // Campos de resultado (null ao criar)
             resultado: null,
             lucro_prejuizo: null,
             lucro_prejuizo_brl_referencia: null,
+            
             // Campos de freebet
             gerou_freebet: entry.gerouFreebet || false,
             valor_freebet_gerada: entry.gerouFreebet && entry.valorFreebetGerada 
@@ -1993,6 +2182,100 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               )}
                             </div>
                           </div>
+                          
+                          {/* ========== ENTRADAS ADICIONAIS (MÚLTIPLAS ENTRADAS) ========== */}
+                          {!isEditing && (
+                            <div className="space-y-2 pt-2 border-t border-dashed border-border/30">
+                              {/* Lista de entradas adicionais existentes */}
+                              {entry.additionalEntries?.map((addEntry, addIdx) => {
+                                const addBk = bookmakerSaldos.find(b => b.id === addEntry.bookmaker_id);
+                                return (
+                                  <div key={addIdx} className="grid gap-1.5 items-end animate-in fade-in slide-in-from-top-1" style={{ gridTemplateColumns: '1fr 60px 60px 24px' }}>
+                                    <Select 
+                                      value={addEntry.bookmaker_id}
+                                      onValueChange={(v) => updateAdditionalEntry(index, addIdx, "bookmaker_id", v)}
+                                    >
+                                      <SelectTrigger className="h-7 text-[10px] w-full px-1.5 bg-muted/30">
+                                        <SelectValue placeholder="+ Casa">
+                                          {addBk?.nome && (
+                                            <span className="truncate uppercase">{addBk.nome}</span>
+                                          )}
+                                        </SelectValue>
+                                      </SelectTrigger>
+                                      <SelectContent className="max-w-[280px]">
+                                        {bookmakersDisponiveis.map(bk => (
+                                          <SelectItem key={bk.id} value={bk.id}>
+                                            <span className="truncate uppercase text-[10px]">{bk.nome}</span>
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    
+                                    <Input 
+                                      type="number"
+                                      step="0.01"
+                                      placeholder="Odd"
+                                      value={addEntry.odd}
+                                      onChange={(e) => updateAdditionalEntry(index, addIdx, "odd", e.target.value)}
+                                      className="h-7 text-[10px] px-1.5 bg-muted/30"
+                                      onWheel={(e) => e.currentTarget.blur()}
+                                    />
+                                    
+                                    <Input 
+                                      type="number"
+                                      step="0.01"
+                                      placeholder="Stake"
+                                      value={addEntry.stake}
+                                      onChange={(e) => updateAdditionalEntry(index, addIdx, "stake", e.target.value)}
+                                      className="h-7 text-[10px] px-1.5 bg-muted/30"
+                                      onWheel={(e) => e.currentTarget.blur()}
+                                    />
+                                    
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                      onClick={() => removeAdditionalEntry(index, addIdx)}
+                                    >
+                                      <XCircle className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                );
+                              })}
+                              
+                              {/* Botão para adicionar entrada */}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="w-full h-6 text-[10px] text-muted-foreground hover:text-primary border border-dashed border-border/50 hover:border-primary/50"
+                                onClick={() => addAdditionalEntry(index)}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Adicionar cobertura
+                              </Button>
+                              
+                              {/* Resumo consolidado se houver múltiplas entradas */}
+                              {hasMultipleEntries(entry) && (
+                                <div className="flex items-center justify-between px-2 py-1.5 rounded-md bg-primary/10 border border-primary/20 text-[10px]">
+                                  <div className="flex items-center gap-1">
+                                    <Badge variant="outline" className="h-4 px-1 text-[9px] border-primary/30 text-primary">
+                                      {(entry.additionalEntries?.length || 0) + 1} entradas
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-muted-foreground">
+                                      Odd média: <span className="font-medium text-foreground">{getOddMediaPerna(entry).toFixed(2)}</span>
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      Stake total: <span className="font-medium text-foreground">{formatCurrency(getStakeTotalPerna(entry), entry.moeda)}</span>
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                           
                           {/* Parceiro + Saldo com breakdown (saldo apenas para criação) */}
                           {entry.bookmaker_id && (
