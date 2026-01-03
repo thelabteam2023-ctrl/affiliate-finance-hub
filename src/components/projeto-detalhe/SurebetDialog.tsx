@@ -1915,12 +1915,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           </DialogTitle>
         </DialogHeader>
 
-        {/* Container principal - scroll único da página */}
-        <div className="flex flex-col lg:flex-row gap-3">
-          {/* Formulário - Lado Esquerdo */}
+        {/* Container principal - Layout dinâmico baseado no modelo */}
+        <div className={`flex gap-3 ${modelo === "1-X-2" ? "flex-col" : "flex-col lg:flex-row"}`}>
+          {/* Formulário - Principal */}
           <div className="flex-1 space-y-2 min-w-0">
             {/* LINHA 1: Estratégia + Contexto + Modelo (todos inline) */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pb-1 border-b border-border/50">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pb-2 border-b border-border/50">
               {/* Campos de Registro Compactos */}
               <RegistroApostaFields
                 values={registroValues}
@@ -1934,7 +1934,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               {/* Modelo - Toggle inline */}
               <div className="flex items-center gap-2">
                 <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Modelo:</Label>
-                <div className={`relative flex p-0.5 bg-muted/50 rounded h-6 w-[100px] ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
+                <div className={`relative flex p-0.5 bg-muted/50 rounded h-7 w-[110px] ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
                   <div 
                     className="absolute h-[calc(100%-4px)] bg-primary rounded transition-all duration-200 ease-out"
                     style={{
@@ -1947,7 +1947,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     type="button"
                     onClick={() => !isEditing && setModelo("1-2")}
                     disabled={isEditing}
-                    className={`relative z-10 flex-1 text-[10px] font-medium rounded transition-colors ${
+                    className={`relative z-10 flex-1 text-xs font-medium rounded transition-colors ${
                       modelo === "1-2" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -1957,7 +1957,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     type="button"
                     onClick={() => !isEditing && setModelo("1-X-2")}
                     disabled={isEditing}
-                    className={`relative z-10 flex-1 text-[10px] font-medium rounded transition-colors ${
+                    className={`relative z-10 flex-1 text-xs font-medium rounded transition-colors ${
                       modelo === "1-X-2" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -1968,9 +1968,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             </div>
 
             {/* LINHA 2: Esporte + Evento + Mercado */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-3">
               {/* Esporte */}
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 <Label className="text-[10px] text-muted-foreground">Esporte</Label>
                 <Select 
                   value={esporte} 
@@ -1979,7 +1979,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     setMercado("");
                   }}
                 >
-                  <SelectTrigger className="h-7 text-xs">
+                  <SelectTrigger className="h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1991,21 +1991,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
               </div>
 
               {/* Evento */}
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 <Label className="text-[10px] text-muted-foreground">Evento</Label>
                 <Input 
                   placeholder="Ex: Brasil x Argentina" 
                   value={evento}
                   onChange={(e) => setEvento(e.target.value)}
-                  className="h-7 text-xs uppercase"
+                  className="h-8 text-sm uppercase"
                 />
               </div>
               
               {/* Mercado */}
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 <Label className="text-[10px] text-muted-foreground">Mercado</Label>
                 <Select value={mercado} onValueChange={setMercado}>
-                  <SelectTrigger className="h-7 text-xs">
+                  <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -2748,8 +2748,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             )}
           </div>
 
-          {/* Análise - Sidebar Direita Compacta */}
-          <div className="w-full lg:w-44 flex-shrink-0 space-y-1.5">
+          {/* Análise - Posicionamento dinâmico: 
+               1-2: sidebar direita
+               1-X-2: abaixo das pernas (layout horizontal compacto) */}
+          <div className={`flex-shrink-0 space-y-1.5 ${
+            modelo === "1-X-2" 
+              ? "w-full" 
+              : "w-full lg:w-48"
+          }`}>
             {/* INDICADOR DE CONSOLIDAÇÃO MULTI-MOEDA */}
             {analysis.isMultiCurrency && (
               <MultiCurrencyIndicator
@@ -2764,47 +2770,38 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             )}
             
             <Card className="border-primary/20">
-              <CardHeader className="pb-1 pt-2 px-2">
-                <CardTitle className="text-[11px] flex items-center gap-1">
-                  <Calculator className="h-3 w-3" />
+              <CardHeader className="pb-1 pt-2 px-3">
+                <CardTitle className="text-xs flex items-center gap-1.5">
+                  <Calculator className="h-3.5 w-3.5" />
                   {isEditing && analysisReal.isResolved ? "Resultado" : "Análise"}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-1.5 px-2 pb-2">
+              <CardContent className={`px-3 pb-3 ${
+                modelo === "1-X-2" 
+                  ? "flex flex-wrap gap-4 items-start" 
+                  : "space-y-1.5"
+              }`}>
                 {/* Stake Total */}
-                <div className="p-2 rounded-lg bg-primary/10 border border-primary/30">
-                  <div className="flex items-center justify-between">
+                <div className={`p-2 rounded-lg bg-primary/10 border border-primary/30 ${modelo === "1-X-2" ? "min-w-[140px]" : ""}`}>
+                  <div className="flex items-center justify-between gap-2">
                     <p className="text-[10px] text-muted-foreground">Stake Total</p>
                     {!isEditing && arredondarAtivado && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
-                        ≈ {getCurrencySymbol(analysis.moedaDominante)} {arredondarValor}
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+                        ≈{arredondarValor}
                       </Badge>
                     )}
                   </div>
-                  {/* MULTI-MOEDA: Exibir valores consolidados com transparência */}
                   {analysis.isMultiCurrency ? (
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-0.5">
                       <p className="text-sm font-bold text-amber-400">Multi-Moeda</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        Moedas: {analysis.moedasUnicas.join(" + ")}
-                      </p>
-                      {/* Exibir consolidação quando há stakes válidas */}
                       {analysis.stakeTotal > 0 && (
-                        <div className="pt-1 border-t border-border/50 mt-1">
-                          <p className="text-[9px] text-muted-foreground">
-                            Consolidado em {moedaConsolidacao}:
-                          </p>
-                          <p className="text-sm font-semibold text-primary">
-                            {formatCurrency(analysis.stakeTotal, moedaConsolidacao)}
-                          </p>
-                          <p className="text-[8px] text-muted-foreground/70">
-                            Cotação: {cotacaoAtual.toFixed(2)} ({fonteCotacao})
-                          </p>
-                        </div>
+                        <p className="text-xs font-semibold text-primary">
+                          {formatCurrency(analysis.stakeTotal, moedaConsolidacao)}
+                        </p>
                       )}
                     </div>
                   ) : (
-                    <p className="text-lg font-bold text-primary">
+                    <p className="text-base font-bold text-primary">
                       {analysis.stakeTotal > 0 ? formatCurrency(analysis.stakeTotal, analysis.moedaDominante) : "—"}
                     </p>
                   )}
@@ -2852,91 +2849,69 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 ) : (
                   <>
                     {/* ROI Compacto: Max (verde) / Min (vermelho) */}
-                    <div className="p-2 rounded-lg bg-muted/50 border border-border space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-emerald-400">ROI Máx</span>
+                    <div className={`p-2 rounded-lg bg-muted/50 border border-border ${modelo === "1-X-2" ? "min-w-[120px]" : "space-y-1"}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-emerald-400">Máx</span>
                         <span className="text-xs font-bold text-emerald-500">
                           {analysis.stakeTotal > 0 
-                            ? `${analysis.maxRoi >= 0 ? "+" : ""}${analysis.maxRoi.toFixed(2)}%`
+                            ? `${analysis.maxRoi >= 0 ? "+" : ""}${analysis.maxRoi.toFixed(1)}%`
                             : "—"
                           }
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-red-400">ROI Mín</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-red-400">Mín</span>
                         <span className="text-xs font-bold text-red-500">
                           {analysis.stakeTotal > 0 
-                            ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(2)}%`
+                            ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(1)}%`
                             : "—"
                           }
                         </span>
                       </div>
                     </div>
 
-                    {/* Cenários de Resultado - sempre mostrando lucro e ROI */}
+                    {/* Cenários de Resultado - layout adaptativo */}
                     {analysis.scenarios.length > 0 && analysis.stakeTotal > 0 && (
-                      <>
-                        <Separator />
-                        <div>
-                          <p className="text-xs font-medium mb-2">Cenários</p>
-                          <div className="space-y-1.5">
-                            {analysis.scenarios.map((scenario, index) => (
-                              <div 
-                                key={index} 
-                                className={`p-2 rounded-lg border ${
-                                  scenario.isPositive 
-                                    ? "bg-emerald-500/5 border-emerald-500/20" 
-                                    : "bg-red-500/5 border-red-500/20"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between gap-2 min-w-0">
-                                  <span className="text-xs font-medium truncate min-w-0 flex-shrink">{scenario.selecao}</span>
-                                  <div className="text-right flex-shrink-0 whitespace-nowrap">
-                                    <span className={`text-xs font-bold ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
-                                      {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro, analysis.moedaDominante)}
-                                    </span>
-                                    <span className={`text-[10px] ml-1 ${scenario.isPositive ? "text-emerald-400" : "text-red-400"}`}>
-                                      ({scenario.roi >= 0 ? "+" : ""}{scenario.roi.toFixed(1)}%)
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                      <div className={modelo === "1-X-2" ? "flex gap-2 flex-wrap" : ""}>
+                        {!modelo.includes("1-X-2") && <Separator className="my-1" />}
+                        {analysis.scenarios.map((scenario, index) => (
+                          <div 
+                            key={index} 
+                            className={`p-1.5 rounded-lg border ${
+                              scenario.isPositive 
+                                ? "bg-emerald-500/5 border-emerald-500/20" 
+                                : "bg-red-500/5 border-red-500/20"
+                            } ${modelo === "1-X-2" ? "min-w-[100px]" : ""}`}
+                          >
+                            <div className="flex items-center justify-between gap-1.5 min-w-0">
+                              <span className="text-[10px] font-medium truncate">{scenario.selecao}</span>
+                              <span className={`text-[10px] font-bold whitespace-nowrap ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                                {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro, analysis.moedaDominante)}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </>
+                        ))}
+                      </div>
                     )}
 
-                    {/* Probabilidades - sempre visível quando há odds */}
-                    {analysis.hasPartialData && (
+                    {/* Probabilidades - ocultar no modo 1-X-2 para economizar espaço */}
+                    {analysis.hasPartialData && modelo !== "1-X-2" && (
                       <>
-                        <Separator />
+                        <Separator className="my-1" />
                         <div>
-                          <p className="text-xs font-medium mb-2">Probabilidades Implícitas</p>
-                          <div className="space-y-1">
+                          <p className="text-[10px] font-medium mb-1 text-muted-foreground">Probabilidades</p>
+                          <div className="space-y-0.5">
                             {odds.map((entry, index) => {
                               const impliedProb = analysis.impliedProbs[index];
                               return (
                                 <div key={index} className="flex items-center justify-between text-[10px]">
                                   <span className="text-muted-foreground">{entry.selecao}</span>
                                   <span className={impliedProb > 0 ? "text-blue-400" : "text-muted-foreground"}>
-                                    {impliedProb > 0 ? `${(impliedProb * 100).toFixed(1)}%` : "—"}
+                                    {impliedProb > 0 ? `${(impliedProb * 100).toFixed(0)}%` : "—"}
                                   </span>
                                 </div>
                               );
                             })}
-                            {analysis.validOddsCount >= 2 && (
-                              <div className="flex items-center justify-between text-[10px] pt-1 border-t mt-1">
-                                <span className="text-muted-foreground font-medium">Total</span>
-                                <span className={`font-medium ${
-                                  analysis.impliedProbs.reduce((a, b) => a + b, 0) < 1 
-                                    ? "text-emerald-400" 
-                                    : "text-amber-400"
-                                }`}>
-                                  {(analysis.impliedProbs.reduce((a, b) => a + b, 0) * 100).toFixed(1)}%
-                                </span>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </>
