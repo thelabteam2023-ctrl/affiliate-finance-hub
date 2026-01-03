@@ -1,19 +1,34 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins } from "lucide-react";
+import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+// Estrutura de entrada individual (para múltiplas entradas)
+export interface SurebetPernaEntry {
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  moeda: string;
+  odd: number;
+  stake: number;
+}
 
 export interface SurebetPerna {
   id: string;
   selecao: string;
-  selecao_livre?: string; // Campo livre para linha específica (ex: "Over 2.5")
+  selecao_livre?: string;
   odd: number;
   stake: number;
   resultado: string | null;
   bookmaker_nome: string;
   bookmaker_id?: string;
+  // Campos para múltiplas entradas
+  entries?: SurebetPernaEntry[];
+  odd_media?: number;
+  stake_total?: number;
 }
 
 export interface SurebetData {
@@ -76,6 +91,79 @@ function ResultadoBadge({ resultado }: { resultado: string | null | undefined })
   );
 }
 
+// Componente para exibir uma perna com suporte a múltiplas entradas
+function PernaItem({ 
+  perna, 
+  formatValue 
+}: { 
+  perna: SurebetPerna; 
+  formatValue: (value: number) => string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const hasMultipleEntries = perna.entries && perna.entries.length > 1;
+  
+  // Usar odd_media e stake_total se disponíveis, senão usar valores legados
+  const displayOdd = perna.odd_media || perna.odd;
+  const displayStake = perna.stake_total || perna.stake;
+  
+  if (!hasMultipleEntries) {
+    // Exibição simples para entrada única
+    return (
+      <div className="flex items-center gap-2 text-xs">
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10">
+          {perna.selecao_livre || perna.selecao}
+        </Badge>
+        <span className="text-muted-foreground truncate flex-1 uppercase">
+          {perna.bookmaker_nome}
+        </span>
+        <span className="font-medium shrink-0">@{perna.odd.toFixed(2)}</span>
+        <span className="text-muted-foreground shrink-0">• {formatValue(perna.stake)}</span>
+      </div>
+    );
+  }
+  
+  // Exibição expandível para múltiplas entradas
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger asChild>
+        <button 
+          className="w-full flex items-center gap-2 text-xs hover:bg-muted/30 rounded-md p-1 -mx-1 transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10">
+            {perna.selecao_livre || perna.selecao}
+          </Badge>
+          <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/30 text-amber-400 bg-amber-500/10 flex items-center gap-0.5">
+            <Layers className="h-2.5 w-2.5" />
+            {perna.entries?.length}
+          </Badge>
+          <span className="text-muted-foreground flex-1 text-left">
+            <span className="text-[9px]">média:</span>
+          </span>
+          <span className="font-medium shrink-0">@{displayOdd.toFixed(2)}</span>
+          <span className="text-muted-foreground shrink-0">• {formatValue(displayStake)}</span>
+          {isOpen ? (
+            <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+          )}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="animate-in slide-in-from-top-1 duration-200">
+        <div className="pl-4 border-l-2 border-primary/20 ml-2 mt-1 space-y-1">
+          {perna.entries?.map((entry, idx) => (
+            <div key={idx} className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <span className="truncate flex-1 uppercase">{entry.bookmaker_nome}</span>
+              <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
+              <span>• {formatValue(entry.stake)}</span>
+            </div>
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonusContext }: SurebetCardProps) {
   // Usa formatCurrency do projeto ou fallback para BRL
   const formatValue = formatCurrency || defaultFormatCurrency;
@@ -132,20 +220,15 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
           </p>
         </div>
         
-        {/* Detalhamento: Pernas */}
+        {/* Detalhamento: Pernas com suporte a múltiplas entradas */}
         {surebet.pernas && surebet.pernas.length > 0 && (
           <div className="space-y-1.5 mb-2">
             {surebet.pernas.map((perna) => (
-              <div key={perna.id} className="flex items-center gap-2 text-xs">
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10">
-                  {perna.selecao_livre || perna.selecao}
-                </Badge>
-                <span className="text-muted-foreground truncate flex-1 uppercase">
-                  {perna.bookmaker_nome}
-                </span>
-                <span className="font-medium shrink-0">@{perna.odd.toFixed(2)}</span>
-                <span className="text-muted-foreground shrink-0">• {formatValue(perna.stake)}</span>
-              </div>
+              <PernaItem 
+                key={perna.id} 
+                perna={perna} 
+                formatValue={formatValue} 
+              />
             ))}
           </div>
         )}
