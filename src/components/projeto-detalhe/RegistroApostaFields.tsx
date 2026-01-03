@@ -146,6 +146,14 @@ export function RegistroApostaFields({
             >
               {ESTRATEGIA_LABELS[lockedEstrategia]}
             </Badge>
+          ) : disabled?.estrategia && values.estrategia ? (
+            // Modo edição: exibir como Badge read-only (igual ao locked)
+            <Badge 
+              variant="secondary" 
+              className="text-sm font-semibold bg-muted/50 text-muted-foreground border-muted h-7 px-3"
+            >
+              {ESTRATEGIA_LABELS[values.estrategia as keyof typeof ESTRATEGIA_LABELS] || values.estrategia}
+            </Badge>
           ) : (
             <Select
               value={values.estrategia || ""}
