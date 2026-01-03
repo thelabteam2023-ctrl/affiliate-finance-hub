@@ -825,44 +825,83 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   };
 
   // Calcular saldo disponível para uma posição específica (considerando stakes usadas em outras posições da mesma operação)
-  const getSaldoDisponivelParaPosicao = (bookmakerId: string, currentIndex: number): number | null => {
+  // ESTENDIDO: Agora considera também additionalEntries de todas as pernas
+  const getSaldoDisponivelParaPosicao = (bookmakerId: string, currentIndex: number, currentAdditionalIndex?: number): number | null => {
     if (!bookmakerId) return null;
     
     const saldoLivreBase = getBookmakerSaldoLivre(bookmakerId);
     if (saldoLivreBase === null) return null;
     
-    // Somar stakes usadas em OUTRAS posições da operação atual que usam a mesma casa
-    let stakesUsadasOutrasPosicoes = 0;
-    odds.forEach((entry, idx) => {
-      if (idx !== currentIndex && entry.bookmaker_id === bookmakerId) {
-        stakesUsadasOutrasPosicoes += parseFloat(entry.stake) || 0;
+    // Somar todas as stakes usadas em outras posições da operação atual que usam a mesma casa
+    let stakesUsadas = 0;
+    
+    odds.forEach((entry, pernaIdx) => {
+      // Entrada principal da perna
+      if (entry.bookmaker_id === bookmakerId) {
+        // Se não é a posição atual (ou se estamos em uma additionalEntry)
+        if (pernaIdx !== currentIndex || currentAdditionalIndex !== undefined) {
+          stakesUsadas += parseFloat(entry.stake) || 0;
+        }
       }
+      
+      // Entradas adicionais da perna
+      (entry.additionalEntries || []).forEach((ae, aeIdx) => {
+        if (ae.bookmaker_id === bookmakerId) {
+          // Se não é a entrada adicional atual
+          if (!(pernaIdx === currentIndex && currentAdditionalIndex === aeIdx)) {
+            stakesUsadas += parseFloat(ae.stake) || 0;
+          }
+        }
+      });
     });
     
-    return saldoLivreBase - stakesUsadasOutrasPosicoes;
+    return saldoLivreBase - stakesUsadas;
+  };
+
+  // Calcular saldo disponível para uma entrada adicional específica
+  const getSaldoDisponivelParaAdditionalEntry = (bookmakerId: string, pernaIndex: number, additionalIndex: number): number | null => {
+    return getSaldoDisponivelParaPosicao(bookmakerId, pernaIndex, additionalIndex);
   };
 
   // Verificar se há inconsistência de saldo em alguma posição (APENAS para criação, não edição)
+  // ESTENDIDO: Agora verifica também additionalEntries
   const hasBalanceInconsistency = useMemo(() => {
     // No modo edição, não verificar inconsistências de saldo
     if (isEditing) return false;
     
     for (let i = 0; i < odds.length; i++) {
       const entry = odds[i];
-      if (!entry.bookmaker_id) continue;
       
-      const stake = parseFloat(entry.stake) || 0;
-      if (stake <= 0) continue;
+      // Verificar entrada principal
+      if (entry.bookmaker_id) {
+        const stake = parseFloat(entry.stake) || 0;
+        if (stake > 0) {
+          const saldoDisponivel = getSaldoDisponivelParaPosicao(entry.bookmaker_id, i);
+          if (saldoDisponivel !== null && stake > saldoDisponivel + 0.01) {
+            return true;
+          }
+        }
+      }
       
-      const saldoDisponivel = getSaldoDisponivelParaPosicao(entry.bookmaker_id, i);
-      if (saldoDisponivel !== null && stake > saldoDisponivel + 0.01) {
-        return true;
+      // Verificar entradas adicionais
+      const additionalEntries = entry.additionalEntries || [];
+      for (let j = 0; j < additionalEntries.length; j++) {
+        const ae = additionalEntries[j];
+        if (ae.bookmaker_id) {
+          const stake = parseFloat(ae.stake) || 0;
+          if (stake > 0) {
+            const saldoDisponivel = getSaldoDisponivelParaAdditionalEntry(ae.bookmaker_id, i, j);
+            if (saldoDisponivel !== null && stake > saldoDisponivel + 0.01) {
+              return true;
+            }
+          }
+        }
       }
     }
     return false;
   }, [
-    // Dependências explícitas para garantir reatividade
-    odds.map(o => `${o.bookmaker_id}|${o.stake}`).join(','),
+    // Dependências explícitas para garantir reatividade (incluindo additionalEntries)
+    odds.map(o => `${o.bookmaker_id}|${o.stake}|${(o.additionalEntries || []).map(ae => `${ae.bookmaker_id}|${ae.stake}`).join(';')}`).join(','),
     bookmakerSaldos.map(b => `${b.id}|${b.saldo_operavel}`).join(','),
     isEditing
   ]);
@@ -1191,6 +1230,42 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         if (saldoDisponivel !== null && stake > saldoDisponivel + 0.01) {
           toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)} para "${selecaoLabel}": ${formatCurrency(saldoDisponivel, bkMoeda)} disponível nesta operação, ${formatCurrency(stake, bkMoeda)} necessário`);
           return;
+        }
+      }
+      
+      // 5. Validar entradas adicionais (coberturas) - APENAS para criação
+      if (!isEditing && entry.additionalEntries && entry.additionalEntries.length > 0) {
+        for (let j = 0; j < entry.additionalEntries.length; j++) {
+          const ae = entry.additionalEntries[j];
+          const aeLabel = `cobertura ${j + 1} de "${selecaoLabel}"`;
+          
+          // Casa obrigatória
+          if (!ae.bookmaker_id || ae.bookmaker_id.trim() === "") {
+            toast.error(`Selecione a casa para ${aeLabel}`);
+            return;
+          }
+          
+          // Odd obrigatória e válida
+          const aeOdd = parseFloat(ae.odd);
+          if (!ae.odd || isNaN(aeOdd) || aeOdd <= 1) {
+            toast.error(`Odd inválida para ${aeLabel} (deve ser > 1.00)`);
+            return;
+          }
+          
+          // Stake obrigatória
+          const aeStake = parseFloat(ae.stake);
+          if (!ae.stake || isNaN(aeStake) || aeStake <= 0) {
+            toast.error(`Stake obrigatória para ${aeLabel}`);
+            return;
+          }
+          
+          // Verificar saldo
+          const aeSaldoDisponivel = getSaldoDisponivelParaAdditionalEntry(ae.bookmaker_id, i, j);
+          const aeBkMoeda = bookmakerSaldos.find(b => b.id === ae.bookmaker_id)?.moeda || "BRL";
+          if (aeSaldoDisponivel !== null && aeStake > aeSaldoDisponivel + 0.01) {
+            toast.error(`Saldo insuficiente em ${getBookmakerNome(ae.bookmaker_id)} para ${aeLabel}: ${formatCurrency(aeSaldoDisponivel, aeBkMoeda)} disponível, ${formatCurrency(aeStake, aeBkMoeda)} necessário`);
+            return;
+          }
         }
       }
     }
@@ -2078,15 +2153,22 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       // saldo_operavel já vem calculado corretamente da RPC canônica
                                       const saldoLivreBase = bk.saldo_operavel;
                                       
-                                      // Descontar stakes usadas em OUTRAS posições desta operação
-                                      let stakesOutrasPosicoes = 0;
+                                      // Descontar stakes usadas em OUTRAS posições desta operação (incluindo additionalEntries)
+                                      let stakesUsadas = 0;
                                       odds.forEach((o, idx) => {
+                                        // Entrada principal de outras pernas
                                         if (idx !== index && o.bookmaker_id === bk.id) {
-                                          stakesOutrasPosicoes += parseFloat(o.stake) || 0;
+                                          stakesUsadas += parseFloat(o.stake) || 0;
                                         }
+                                        // Additional entries de TODAS as pernas (incluindo a atual)
+                                        (o.additionalEntries || []).forEach((ae) => {
+                                          if (ae.bookmaker_id === bk.id) {
+                                            stakesUsadas += parseFloat(ae.stake) || 0;
+                                          }
+                                        });
                                       });
                                       
-                                      const saldoDisponivelParaEssaPosicao = saldoLivreBase - stakesOutrasPosicoes;
+                                      const saldoDisponivelParaEssaPosicao = saldoLivreBase - stakesUsadas;
                                       const isIndisponivel = saldoDisponivelParaEssaPosicao < 0.50;
                                       
                                       return (
@@ -2189,57 +2271,110 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               {/* Lista de entradas adicionais existentes */}
                               {entry.additionalEntries?.map((addEntry, addIdx) => {
                                 const addBk = bookmakerSaldos.find(b => b.id === addEntry.bookmaker_id);
+                                const addStake = parseFloat(addEntry.stake) || 0;
+                                const addSaldoDisponivel = getSaldoDisponivelParaAdditionalEntry(addEntry.bookmaker_id, index, addIdx);
+                                const addSaldoInsuficiente = addEntry.bookmaker_id && addStake > 0 && addSaldoDisponivel !== null && addStake > addSaldoDisponivel + 0.01;
+                                
                                 return (
-                                  <div key={addIdx} className="grid gap-1.5 items-end animate-in fade-in slide-in-from-top-1" style={{ gridTemplateColumns: '1fr 60px 60px 24px' }}>
-                                    <Select 
-                                      value={addEntry.bookmaker_id}
-                                      onValueChange={(v) => updateAdditionalEntry(index, addIdx, "bookmaker_id", v)}
-                                    >
-                                      <SelectTrigger className="h-7 text-[10px] w-full px-1.5 bg-muted/30">
-                                        <SelectValue placeholder="+ Casa">
-                                          {addBk?.nome && (
-                                            <span className="truncate uppercase">{addBk.nome}</span>
-                                          )}
-                                        </SelectValue>
-                                      </SelectTrigger>
-                                      <SelectContent className="max-w-[280px]">
-                                        {bookmakersDisponiveis.map(bk => (
-                                          <SelectItem key={bk.id} value={bk.id}>
-                                            <span className="truncate uppercase text-[10px]">{bk.nome}</span>
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                  <div key={addIdx} className="space-y-1 animate-in fade-in slide-in-from-top-1">
+                                    <div className="grid gap-1.5 items-end" style={{ gridTemplateColumns: '1fr 60px 60px 24px' }}>
+                                      <Select 
+                                        value={addEntry.bookmaker_id}
+                                        onValueChange={(v) => updateAdditionalEntry(index, addIdx, "bookmaker_id", v)}
+                                      >
+                                        <SelectTrigger className={`h-7 text-[10px] w-full px-1.5 bg-muted/30 ${addSaldoInsuficiente ? "border-destructive" : ""}`}>
+                                          <SelectValue placeholder="+ Casa">
+                                            {addBk?.nome && (
+                                              <span className="truncate uppercase">{addBk.nome}</span>
+                                            )}
+                                          </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent className="max-w-[320px]">
+                                          {bookmakersDisponiveis.map(bk => {
+                                            // Calcular saldo disponível para esta entrada adicional específica
+                                            const saldoBaseParaEssa = getSaldoDisponivelParaAdditionalEntry(bk.id, index, addIdx);
+                                            const isIndisponivel = saldoBaseParaEssa !== null && saldoBaseParaEssa < 0.50;
+                                            
+                                            return (
+                                              <SelectItem 
+                                                key={bk.id} 
+                                                value={bk.id}
+                                                disabled={isIndisponivel}
+                                                className={isIndisponivel ? "opacity-50" : ""}
+                                              >
+                                                <BookmakerSelectOption
+                                                  bookmaker={{
+                                                    id: bk.id,
+                                                    nome: bk.nome,
+                                                    parceiro_nome: bk.parceiro_nome,
+                                                    moeda: bk.moeda,
+                                                    saldo_operavel: saldoBaseParaEssa ?? bk.saldo_operavel,
+                                                    saldo_disponivel: bk.saldo_disponivel,
+                                                    saldo_freebet: bk.saldo_freebet,
+                                                    saldo_bonus: bk.saldo_bonus,
+                                                    logo_url: bk.logo_url,
+                                                  }}
+                                                  disabled={isIndisponivel}
+                                                  showBreakdown={!isIndisponivel}
+                                                />
+                                              </SelectItem>
+                                            );
+                                          })}
+                                        </SelectContent>
+                                      </Select>
+                                      
+                                      <Input 
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="Odd"
+                                        value={addEntry.odd}
+                                        onChange={(e) => updateAdditionalEntry(index, addIdx, "odd", e.target.value)}
+                                        className="h-7 text-[10px] px-1.5 bg-muted/30"
+                                        onWheel={(e) => e.currentTarget.blur()}
+                                      />
+                                      
+                                      <Input 
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="Stake"
+                                        value={addEntry.stake}
+                                        onChange={(e) => updateAdditionalEntry(index, addIdx, "stake", e.target.value)}
+                                        className={`h-7 text-[10px] px-1.5 bg-muted/30 ${addSaldoInsuficiente ? "border-destructive ring-1 ring-destructive/50" : ""}`}
+                                        onWheel={(e) => e.currentTarget.blur()}
+                                      />
+                                      
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                        onClick={() => removeAdditionalEntry(index, addIdx)}
+                                      >
+                                        <XCircle className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
                                     
-                                    <Input 
-                                      type="number"
-                                      step="0.01"
-                                      placeholder="Odd"
-                                      value={addEntry.odd}
-                                      onChange={(e) => updateAdditionalEntry(index, addIdx, "odd", e.target.value)}
-                                      className="h-7 text-[10px] px-1.5 bg-muted/30"
-                                      onWheel={(e) => e.currentTarget.blur()}
-                                    />
+                                    {/* Feedback de saldo para entrada adicional */}
+                                    {addEntry.bookmaker_id && (
+                                      <div className="flex items-center justify-between px-1 text-[9px]">
+                                        <span className="text-muted-foreground truncate">
+                                          {addBk?.parceiro_nome?.split(" ")[0] || "—"}
+                                        </span>
+                                        {addSaldoDisponivel !== null && (
+                                          <span className={`flex items-center gap-0.5 ${addSaldoInsuficiente ? "text-destructive" : "text-muted-foreground"}`}>
+                                            <Wallet className="h-2 w-2" />
+                                            {formatCurrency(addSaldoDisponivel, addBk?.moeda || "BRL")}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
                                     
-                                    <Input 
-                                      type="number"
-                                      step="0.01"
-                                      placeholder="Stake"
-                                      value={addEntry.stake}
-                                      onChange={(e) => updateAdditionalEntry(index, addIdx, "stake", e.target.value)}
-                                      className="h-7 text-[10px] px-1.5 bg-muted/30"
-                                      onWheel={(e) => e.currentTarget.blur()}
-                                    />
-                                    
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7 w-6 p-0 text-muted-foreground hover:text-destructive"
-                                      onClick={() => removeAdditionalEntry(index, addIdx)}
-                                    >
-                                      <XCircle className="h-3.5 w-3.5" />
-                                    </Button>
+                                    {/* Badge de saldo insuficiente */}
+                                    {addSaldoInsuficiente && (
+                                      <Badge variant="destructive" className="text-[9px] h-3.5 px-1 w-fit">
+                                        Saldo Insuficiente
+                                      </Badge>
+                                    )}
                                   </div>
                                 );
                               })}
