@@ -467,8 +467,16 @@ export default function ProjetoDetalhe() {
             { value: "valuebet", label: "ValueBet", icon: <Sparkles className="h-4 w-4" /> },
             { value: "duplogreen", label: "Duplo Green", icon: <Zap className="h-4 w-4" /> },
             { value: "vinculos", label: "Vínculos", icon: <Link2 className="h-4 w-4" /> },
-            { value: "ciclos", label: "Ciclos", icon: <Clock className="h-4 w-4" /> },
-            { value: "perdas", label: "Perdas", icon: <AlertTriangle className="h-4 w-4" /> },
+          ]}
+          tabGroups={[
+            {
+              label: "Gestão",
+              icon: <Settings2 className="h-4 w-4" />,
+              items: [
+                { value: "ciclos", label: "Ciclos", icon: <Clock className="h-4 w-4" /> },
+                { value: "perdas", label: "Perdas", icon: <AlertTriangle className="h-4 w-4" /> },
+              ],
+            },
           ]}
           activeTab={activeTab}
           onTabChange={setActiveTab}
