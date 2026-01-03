@@ -2377,7 +2377,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             {/* Linha (Seleção Livre) - POR ENTRADA */}
                             <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Linha <span className="text-muted-foreground/60">(opc)</span></Label>
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Linha <span className="text-[10px] text-muted-foreground/60">(opcional)</span></Label>
                               {isEditing ? (
                                 <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium truncate">
                                   {entry.selecaoLivre || "—"}
