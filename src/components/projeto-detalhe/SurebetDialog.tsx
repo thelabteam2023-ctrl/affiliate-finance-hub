@@ -3061,8 +3061,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                   </>
                 ) : (
                   <>
-                    {/* ROI Compacto: Max (verde) / Min (vermelho) - OCULTO no 1-X-2 */}
-                    {modelo !== "1-X-2" && (
+                    {/* ROI Compacto: Max (verde) / Min (vermelho) - OCULTO no 1-X-2 e 1-2 */}
+                    {modelo !== "1-X-2" && modelo !== "1-2" && (
                       <div className="p-3 rounded-lg bg-muted/50 border border-border space-y-1">
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-sm text-emerald-400">Máx</span>
@@ -3087,8 +3087,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
 
                     {/* Cenários de Resultado - layout adaptativo */}
                     {analysis.scenarios.length > 0 && analysis.stakeTotal > 0 && (
-                      <div className={modelo === "1-X-2" ? "flex gap-3 flex-wrap" : ""}>
-                        {!modelo.includes("1-X-2") && <Separator className="my-1" />}
+                      <div className={(modelo === "1-X-2" || modelo === "1-2") ? "flex gap-3 flex-wrap" : ""}>
+                        {modelo !== "1-X-2" && modelo !== "1-2" && <Separator className="my-1" />}
                         {analysis.scenarios.map((scenario, index) => (
                           <div 
                             key={index} 
@@ -3096,7 +3096,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               scenario.isPositive 
                                 ? "bg-emerald-500/5 border-emerald-500/20" 
                                 : "bg-red-500/5 border-red-500/20"
-                            } ${modelo === "1-X-2" ? "min-w-[120px]" : ""}`}
+                            } ${(modelo === "1-X-2" || modelo === "1-2") ? "min-w-[120px]" : ""}`}
                           >
                             <div className="flex items-center justify-between gap-2 min-w-0">
                               <span className="text-xs font-medium truncate">{scenario.selecao}</span>
@@ -3104,8 +3104,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                 <span className={`text-xs font-bold whitespace-nowrap ${scenario.isPositive ? "text-emerald-500" : "text-red-500"}`}>
                                   {scenario.lucro >= 0 ? "+" : ""}{formatCurrency(scenario.lucro, analysis.moedaDominante)}
                                 </span>
-                                {/* Mostrar ROI % junto ao valor no modelo 1-X-2 */}
-                                {modelo === "1-X-2" && (
+                                {/* Mostrar ROI % junto ao valor no modelo 1-X-2 e 1-2 */}
+                                {(modelo === "1-X-2" || modelo === "1-2") && (
                                   <span className={`text-[10px] font-medium whitespace-nowrap ${scenario.roi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                                     {scenario.roi >= 0 ? "+" : ""}{scenario.roi.toFixed(1)}%
                                   </span>
