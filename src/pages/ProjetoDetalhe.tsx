@@ -467,50 +467,12 @@ export default function ProjetoDetalhe() {
             { value: "valuebet", label: "ValueBet", icon: <Sparkles className="h-4 w-4" /> },
             { value: "duplogreen", label: "Duplo Green", icon: <Zap className="h-4 w-4" /> },
             { value: "vinculos", label: "Vínculos", icon: <Link2 className="h-4 w-4" /> },
+            { value: "ciclos", label: "Ciclos", icon: <Clock className="h-4 w-4" /> },
+            { value: "perdas", label: "Perdas", icon: <AlertTriangle className="h-4 w-4" /> },
           ]}
           activeTab={activeTab}
           onTabChange={setActiveTab}
           minVisibleTabs={3}
-          extraContent={
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className={cn(
-                    "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shrink-0",
-                    ["ciclos", "perdas"].includes(activeTab)
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Gestão
-                  <ChevronDown className="h-3 w-3 ml-1" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-[140px]">
-                <DropdownMenuItem 
-                  onClick={() => setActiveTab("ciclos")}
-                  className={cn(
-                    "flex items-center gap-2 cursor-pointer",
-                    activeTab === "ciclos" && "bg-accent"
-                  )}
-                >
-                  <Clock className="h-4 w-4" />
-                  Ciclos
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => setActiveTab("perdas")}
-                  className={cn(
-                    "flex items-center gap-2 cursor-pointer",
-                    activeTab === "perdas" && "bg-accent"
-                  )}
-                >
-                  <AlertTriangle className="h-4 w-4" />
-                  Perdas
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          }
         />
 
         {/* Action Bar - Logo abaixo das abas */}
