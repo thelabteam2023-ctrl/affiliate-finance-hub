@@ -2235,8 +2235,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             )}
                           </div>
                           
-                          {/* Casa | Linha | Odd | Stake na mesma linha */}
-                          <div className="grid gap-1.5" style={{ gridTemplateColumns: '140px 80px 50px 80px' }}>
+                          {/* Casa | Odd | Stake | Linha na mesma linha - centralizado */}
+                          <div className="grid gap-2 justify-center" style={{ gridTemplateColumns: '130px 70px 70px 80px' }}>
                             {/* Casa */}
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground">Casa</Label>
@@ -2336,8 +2336,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             {/* Stake */}
                             <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">
-                                Stake {!isEditing && entry.isReference && <span className="text-primary">(Ref)</span>}
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                                Stake{!isEditing && entry.isReference && <span className="text-primary ml-0.5">(Ref)</span>}
                               </Label>
                               {isEditing ? (
                                 <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium">
