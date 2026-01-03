@@ -138,7 +138,7 @@ export function RegistroApostaFields({
       <div className="flex items-center gap-4 flex-wrap">
         {/* Estratégia - DESTAQUE PRINCIPAL */}
         <div className="flex items-center gap-2">
-          <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Estratégia:</Label>
+          <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Estratégia:</Label>
           {lockedEstrategia ? (
             <Badge 
               variant="secondary" 
@@ -168,7 +168,7 @@ export function RegistroApostaFields({
 
         {/* Contexto */}
         <div className="flex items-center gap-2">
-          <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Contexto:</Label>
+          <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Contexto:</Label>
           <Select
             value={values.contexto_operacional || ""}
             onValueChange={(v) => handleChange('contexto_operacional', v)}
