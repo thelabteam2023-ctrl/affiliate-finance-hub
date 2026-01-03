@@ -2310,7 +2310,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             {/* Linha (Seleção Livre) - POR ENTRADA */}
                             <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground">Linha</Label>
+                              <Label className="text-[10px] text-muted-foreground">Linha <span className="text-muted-foreground/60">(opcional)</span></Label>
                               {isEditing ? (
                                 <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium truncate">
                                   {entry.selecaoLivre || "—"}
@@ -2391,33 +2391,33 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           
                           {/* Parceiro + Saldo IMEDIATAMENTE após entrada principal - DENTRO DO BLOCO */}
                           {entry.bookmaker_id && (
-                            <div className="px-1 text-[10px] text-muted-foreground space-y-0.5">
+                            <div className="px-1 text-[11px] text-muted-foreground space-y-0.5">
                               <div className="flex items-center justify-between gap-1">
                                 <span className="truncate max-w-[60%]">
                                   {parceiroShortName || "—"}
                                 </span>
                                 {!isEditing && saldoDisponivelPosicao !== null && (
                                   <div className="flex items-center gap-1 flex-shrink-0">
-                                    <Wallet className={`h-2.5 w-2.5 ${saldoInsuficiente ? "text-destructive" : getCurrencyTextColor(selectedBookmaker?.moeda || "BRL")}`} />
+                                    <Wallet className={`h-3 w-3 ${saldoInsuficiente ? "text-destructive" : getCurrencyTextColor(selectedBookmaker?.moeda || "BRL")}`} />
                                     <span className={`font-medium ${saldoInsuficiente ? "text-destructive" : getCurrencyTextColor(selectedBookmaker?.moeda || "BRL")}`}>
                                       {formatCurrency(saldoDisponivelPosicao, selectedBookmaker?.moeda || "BRL")}
                                     </span>
                                   </div>
                                 )}
                               </div>
-                              {/* Breakdown do saldo operável - MULTI-MOEDA */}
+                              {/* Breakdown do saldo operável - MULTI-MOEDA - TAMANHO MAIOR */}
                               {!isEditing && selectedBookmaker && (
-                                <div className="flex items-center justify-center gap-2 text-[9px] text-muted-foreground/70 flex-wrap">
-                                  <span className="text-emerald-400/80">
+                                <div className="flex items-center justify-center gap-2 text-[10px] flex-wrap">
+                                  <span className="text-emerald-400">
                                     {getCurrencySymbol(selectedBookmaker.moeda)} {(Number(selectedBookmaker.saldo_real) || 0).toFixed(0)}
                                   </span>
                                   {(Number(selectedBookmaker.saldo_freebet) || 0) > 0 && (
-                                    <span className="text-amber-400/80">
+                                    <span className="text-amber-400">
                                       FB: {(Number(selectedBookmaker.saldo_freebet) || 0).toFixed(0)}
                                     </span>
                                   )}
                                   {(Number(selectedBookmaker.saldo_bonus) || 0) > 0 && (
-                                    <span className="text-purple-400/80">
+                                    <span className="text-purple-400">
                                       🎁: {(Number(selectedBookmaker.saldo_bonus) || 0).toFixed(0)}
                                     </span>
                                   )}
@@ -2499,7 +2499,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         
                                         {/* Linha - mesma largura da entrada principal */}
                                         <Input
-                                          placeholder="Linha (opcional)"
+                                          placeholder="Ex: 2.5"
                                           value={addEntry.selecaoLivre}
                                           onChange={(e) => updateAdditionalEntry(index, addIdx, "selecaoLivre", e.target.value)}
                                           className="h-7 text-[10px] px-1.5 bg-background"
@@ -2542,9 +2542,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                       </Button>
                                     </div>
                                     
-                                    {/* Parceiro + Saldo IMEDIATAMENTE após entrada adicional - DENTRO DO BLOCO */}
+                                    {/* Parceiro + Saldo + Breakdown IMEDIATAMENTE após entrada adicional - MESMO LAYOUT DA PRINCIPAL */}
                                     {addEntry.bookmaker_id && (
-                                      <div className="px-1 text-[10px] text-muted-foreground">
+                                      <div className="px-1 text-[11px] text-muted-foreground space-y-0.5">
                                         <div className="flex items-center justify-between gap-1">
                                           <span className="truncate max-w-[60%]">
                                             {addParceiroShortName || "—"}
@@ -2552,7 +2552,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                           <div className="flex items-center gap-1 flex-shrink-0">
                                             {addSaldoDisponivel !== null && (
                                               <span className={`flex items-center gap-0.5 ${addSaldoInsuficiente ? "text-destructive" : getCurrencyTextColor(addBk?.moeda || "BRL")}`}>
-                                                <Wallet className="h-2 w-2" />
+                                                <Wallet className="h-2.5 w-2.5" />
                                                 <span className="font-medium">
                                                   {formatCurrency(addSaldoDisponivel, addBk?.moeda || "BRL")}
                                                 </span>
@@ -2565,6 +2565,24 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                             )}
                                           </div>
                                         </div>
+                                        {/* Breakdown do saldo operável - IGUAL À ENTRADA PRINCIPAL */}
+                                        {addBk && (
+                                          <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground/70 flex-wrap">
+                                            <span className="text-emerald-400/80">
+                                              {getCurrencySymbol(addBk.moeda)} {(Number(addBk.saldo_real) || 0).toFixed(0)}
+                                            </span>
+                                            {(Number(addBk.saldo_freebet) || 0) > 0 && (
+                                              <span className="text-amber-400/80">
+                                                FB: {(Number(addBk.saldo_freebet) || 0).toFixed(0)}
+                                              </span>
+                                            )}
+                                            {(Number(addBk.saldo_bonus) || 0) > 0 && (
+                                              <span className="text-purple-400/80">
+                                                🎁: {(Number(addBk.saldo_bonus) || 0).toFixed(0)}
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
                                     )}
                                   </div>
