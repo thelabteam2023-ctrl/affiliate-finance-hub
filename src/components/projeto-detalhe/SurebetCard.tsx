@@ -14,6 +14,8 @@ export interface SurebetPernaEntry {
   moeda: string;
   odd: number;
   stake: number;
+  // NOVO: Seleção/linha por entrada
+  selecao_livre?: string;
 }
 
 export interface SurebetPerna {
@@ -154,6 +156,10 @@ function PernaItem({
           {perna.entries?.map((entry, idx) => (
             <div key={idx} className="flex items-center gap-2 text-[10px] text-muted-foreground">
               <span className="truncate flex-1 uppercase">{entry.bookmaker_nome}</span>
+              {/* Mostrar linha se diferente entre entradas */}
+              {entry.selecao_livre && (
+                <span className="text-primary/70 text-[9px] shrink-0">({entry.selecao_livre})</span>
+              )}
               <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
               <span>• {formatValue(entry.stake)}</span>
             </div>
