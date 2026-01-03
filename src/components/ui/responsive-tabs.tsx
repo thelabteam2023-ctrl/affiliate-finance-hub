@@ -198,19 +198,20 @@ const ResponsiveTabsList = React.forwardRef<
             else if (ref) ref.current = node;
           }}
           className={cn(
-            "flex h-12 w-full min-w-0 items-center justify-start gap-8 border-b border-border relative flex-nowrap",
+            "flex h-12 w-full min-w-0 max-w-full items-center justify-start gap-4 md:gap-6 lg:gap-8 border-b border-border relative flex-nowrap overflow-hidden",
             className,
           )}
+          style={{ contain: "layout" }}
           {...props}
         >
           {visibleTabs.map((tab) => (
             <TabsPrimitive.Trigger
               key={tab.value}
               value={tab.value}
-              className="inline-flex items-center justify-center gap-2 whitespace-nowrap px-4 py-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground relative data-[state=active]:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap px-2 md:px-3 lg:px-4 py-3 text-xs md:text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground relative data-[state=active]:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shrink-0 min-w-0"
             >
               {tab.icon}
-              {tab.label}
+              <span className="hidden sm:inline truncate max-w-[80px] md:max-w-none">{tab.label}</span>
             </TabsPrimitive.Trigger>
           ))}
 

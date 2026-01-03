@@ -362,7 +362,7 @@ export default function GestaoProjetos() {
   };
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+    <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8 space-y-4">
       <PageHeader
         title="Projetos"
         description="Gerencie seus projetos e acompanhe o progresso"
@@ -372,150 +372,155 @@ export default function GestaoProjetos() {
           canCreate('projetos', 'projetos.create') && (
             <Button onClick={() => handleOpenDialog(null, "create")}>
               <Plus className="mr-2 h-4 w-4" />
-              Novo Projeto
+              <span className="hidden sm:inline">Novo Projeto</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           )
         }
       />
 
-      {/* Filtros */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
+      {/* Filtros - Card com contenção */}
+      <Card className="flex-shrink-0 overflow-hidden">
+        <CardContent className="p-4 md:pt-6 md:p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:gap-4">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full"
               />
             </div>
             
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Status</SelectItem>
-                <SelectItem value="PLANEJADO">Planejado</SelectItem>
-                <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
-                <SelectItem value="PAUSADO">Pausado</SelectItem>
-                <SelectItem value="FINALIZADO">Finalizado</SelectItem>
-                <SelectItem value="ARQUIVADO">Arquivado</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex gap-1">
-              <Button
-                variant={viewMode === "cards" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("cards")}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("list")}
-              >
-                <List className="h-4 w-4" />
-              </Button>
+            <div className="flex gap-2 flex-shrink-0">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[140px] md:w-[180px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Status</SelectItem>
+                  <SelectItem value="PLANEJADO">Planejado</SelectItem>
+                  <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
+                  <SelectItem value="PAUSADO">Pausado</SelectItem>
+                  <SelectItem value="FINALIZADO">Finalizado</SelectItem>
+                  <SelectItem value="ARQUIVADO">Arquivado</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex gap-1 flex-shrink-0">
+                <Button
+                  variant={viewMode === "cards" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setViewMode("cards")}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Lista de Projetos */}
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardContent className="pt-6">
-                <Skeleton className="h-24 w-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredProjetos.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-10">
-              <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-semibold">Nenhum projeto encontrado</h3>
-              <p className="text-muted-foreground">
-                {searchTerm || statusFilter !== "all"
-                  ? "Tente ajustar os filtros"
-                  : "Comece criando seu primeiro projeto"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : viewMode === "cards" ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredProjetos.map((projeto) => (
-            <Card 
-              key={projeto.id} 
-              className="cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => navigate(`/projeto/${projeto.id}`)}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <FolderKanban className="h-5 w-5 text-primary" />
+      {/* Lista de Projetos - Área flexível */}
+      <div className="flex-1 min-h-0">
+        {loading ? (
+          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="overflow-hidden">
+                <CardContent className="p-4 md:pt-6">
+                  <Skeleton className="h-24 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredProjetos.length === 0 ? (
+          <Card className="overflow-hidden">
+            <CardContent className="pt-6">
+              <div className="text-center py-10">
+                <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                <h3 className="mt-4 text-lg font-semibold">Nenhum projeto encontrado</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm || statusFilter !== "all"
+                    ? "Tente ajustar os filtros"
+                    : "Comece criando seu primeiro projeto"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : viewMode === "cards" ? (
+          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredProjetos.map((projeto) => (
+              <Card 
+                key={projeto.id} 
+                className="cursor-pointer hover:border-primary/50 transition-colors overflow-hidden flex flex-col"
+                style={{ contain: "layout paint" }}
+                onClick={() => navigate(`/projeto/${projeto.id}`)}
+              >
+                <CardHeader className="pb-2 flex-shrink-0">
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                      <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <FolderKanban className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-sm md:text-base truncate">{projeto.nome}</CardTitle>
+                        {projeto.descricao && (
+                          <p className="text-xs md:text-sm text-muted-foreground line-clamp-1">
+                            {projeto.descricao}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-base">{projeto.nome}</CardTitle>
-                      {projeto.descricao && (
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {projeto.descricao}
-                        </p>
-                      )}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(projeto.id);
+                            }}
+                            className="p-1 rounded hover:bg-muted transition-colors"
+                          >
+                            <Star
+                              className={`h-4 w-4 ${
+                                isFavorite(projeto.id)
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-muted-foreground hover:text-yellow-400"
+                              }`}
+                            />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isFavorite(projeto.id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}
+                        </TooltipContent>
+                      </Tooltip>
+                      <Badge className={`${getStatusColor(projeto.status)} text-xs`}>
+                        {getStatusLabel(projeto.status)}
+                      </Badge>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(projeto.id);
-                          }}
-                          className="p-1 rounded hover:bg-muted transition-colors"
-                        >
-                          <Star
-                            className={`h-4 w-4 ${
-                              isFavorite(projeto.id)
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-muted-foreground hover:text-yellow-400"
-                            }`}
-                          />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {isFavorite(projeto.id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}
-                      </TooltipContent>
-                    </Tooltip>
-                    <Badge className={getStatusColor(projeto.status)}>
-                      {getStatusLabel(projeto.status)}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {projeto.data_inicio && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        Início: {format(new Date(projeto.data_inicio), "dd/MM/yyyy", { locale: ptBR })}
-                      </span>
+                </CardHeader>
+                <CardContent className="flex-1 min-h-0">
+                  <div className="space-y-2 md:space-y-3">
+                    {projeto.data_inicio && (
+                      <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                        <span className="truncate">
+                          Início: {format(new Date(projeto.data_inicio), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                      <Users className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                      <span className="truncate">{projeto.operadores_ativos || 0} operador(es) • {projeto.total_bookmakers || 0} bookmaker(s)</span>
                     </div>
-                  )}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{projeto.operadores_ativos || 0} operador(es) • {projeto.total_bookmakers || 0} bookmaker(s)</span>
-                  </div>
                   
                   <div className="pt-2 border-t space-y-2">
                     {/* Saldo Bookmakers com breakdown por moeda */}
@@ -627,62 +632,63 @@ export default function GestaoProjetos() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2 mt-4 pt-4 border-t">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/projeto/${projeto.id}`);
-                    }}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-1" />
-                    Abrir
-                  </Button>
-                  {canEdit('projetos', 'projetos.edit') && (
+                  <div className="flex flex-wrap gap-1.5 md:gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t">
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="flex-1"
+                      className="flex-1 min-w-0 text-xs md:text-sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleOpenDialog(projeto, "edit");
+                        navigate(`/projeto/${projeto.id}`);
                       }}
                     >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
+                      <ExternalLink className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
+                      <span className="truncate">Abrir</span>
                     </Button>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    title="Ver Operadores"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setProjetoParaVisualizar(projeto);
-                      setVisualizarOperadoresOpen(true);
-                    }}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  {canDelete('projetos', 'projetos.delete') && (
+                    {canEdit('projetos', 'projetos.edit') && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 min-w-0 text-xs md:text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDialog(projeto, "edit");
+                        }}
+                      >
+                        <Edit className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
+                        <span className="truncate">Editar</span>
+                      </Button>
+                    )}
                     <Button 
                       variant="outline" 
                       size="icon"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="h-8 w-8 md:h-9 md:w-9 flex-shrink-0"
+                      title="Ver Operadores"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setProjetoToDelete(projeto);
-                        setDeleteDialogOpen(true);
+                        setProjetoParaVisualizar(projeto);
+                        setVisualizarOperadoresOpen(true);
                       }}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Eye className="h-3.5 w-3.5 md:h-4 md:w-4" />
                     </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    {canDelete('projetos', 'projetos.delete') && (
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        className="h-8 w-8 md:h-9 md:w-9 flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProjetoToDelete(projeto);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
           ))}
         </div>
       ) : (
@@ -810,7 +816,8 @@ export default function GestaoProjetos() {
             </div>
           </ScrollArea>
         </Card>
-      )}
+        )}
+      </div>
 
       <ProjetoDialog
         open={dialogOpen}
