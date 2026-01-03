@@ -50,6 +50,7 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useOperationalFiltersOptional, type EstrategiaFilter } from "@/contexts/OperationalFiltersContext";
+import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 
 interface ProjetoSurebetTabProps {
@@ -878,53 +879,67 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   // Render Operações
   const renderOperacoes = () => (
     <div className="space-y-4">
-      {/* Sub-abas Abertas / Histórico */}
-      <div className="flex items-center justify-between border-b pb-2">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setOperacoesSubTab("abertas")}
-            className={cn(
-              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
-              operacoesSubTab === "abertas"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Clock className="h-4 w-4" />
-            Abertas
-            <Badge variant="secondary" className="ml-1 text-xs">{surebetsAbertas.length}</Badge>
-          </button>
-          <button
-            onClick={() => setOperacoesSubTab("historico")}
-            className={cn(
-              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
-              operacoesSubTab === "historico"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <History className="h-4 w-4" />
-            Histórico
-            <Badge variant="secondary" className="ml-1 text-xs">{surebetsHistorico.length}</Badge>
-          </button>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Target className="h-5 w-5 text-primary" />
-          {operacoesSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
-          <Badge variant="secondary">{surebetsListaAtual.length}</Badge>
-        </h3>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-9 w-9"
-          onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
-        >
-          {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-        </Button>
-      </div>
+      {/* Card de Histórico com Filtros Internos */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" />
+              Histórico de Operações
+            </CardTitle>
+            {/* Sub-abas Abertas / Histórico */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setOperacoesSubTab("abertas")}
+                className={cn(
+                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                  operacoesSubTab === "abertas"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                Abertas
+                <Badge variant="secondary" className="ml-1 text-xs h-5">{surebetsAbertas.length}</Badge>
+              </button>
+              <button
+                onClick={() => setOperacoesSubTab("historico")}
+                className={cn(
+                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                  operacoesSubTab === "historico"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <History className="h-3.5 w-3.5" />
+                Histórico
+                <Badge variant="secondary" className="ml-1 text-xs h-5">{surebetsHistorico.length}</Badge>
+              </button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-3">
+          {/* Filtros Transversais (Período, Casa, Parceiro) */}
+          <OperationalFiltersBar
+            projetoId={projetoId}
+            showEstrategiaFilter={false}
+            preselectedEstrategia="SUREBET"
+            className="pb-3 border-b border-border/50"
+          />
+          
+          {/* Controle de visualização */}
+          <div className="flex items-center justify-end">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
+            >
+              {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {surebetsListaAtual.length === 0 ? (
         <Card>

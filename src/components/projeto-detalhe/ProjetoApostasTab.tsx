@@ -49,6 +49,7 @@ import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-f
 import { ESTRATEGIAS_LIST, inferEstrategiaLegado, type ApostaEstrategia } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
+import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { cn, getFirstLastName } from "@/lib/utils";
 
 // Contextos de aposta para filtro unificado
@@ -866,15 +867,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   return (
     <div className="space-y-4">
-      {/* Filtro de Tempo - Alinhado à direita */}
-      <div className="flex justify-end">
-        <StandardTimeFilter
-          period={internalPeriod}
-          onPeriodChange={setInternalPeriod}
-          customDateRange={internalDateRange}
-          onCustomDateRangeChange={setInternalDateRange}
-        />
-      </div>
 
       {/* Gráficos com calendário integrado */}
       {(apostas.length > 0 || apostasMultiplas.length > 0) && (
@@ -900,41 +892,54 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       )}
 
 
-      {/* Sub-abas Abertas / Histórico */}
-      <div className="flex items-center justify-between border-b pb-2">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setApostasSubTab("abertas")}
-            className={cn(
-              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
-              apostasSubTab === "abertas"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Clock className="h-4 w-4" />
-            Abertas
-            <Badge variant="secondary" className="ml-1 text-xs">{apostasAbertasList.length}</Badge>
-          </button>
-          <button
-            onClick={() => setApostasSubTab("historico")}
-            className={cn(
-              "flex items-center gap-1.5 text-sm font-medium pb-2 border-b-2 transition-colors -mb-[10px]",
-              apostasSubTab === "historico"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <History className="h-4 w-4" />
-            Histórico
-            <Badge variant="secondary" className="ml-1 text-xs">{apostasHistoricoList.length}</Badge>
-          </button>
-        </div>
-      </div>
-
-      {/* Filtros e Ações */}
+      {/* Filtros e Ações - Dentro do container de histórico */}
       <Card>
-        <CardContent className="pt-4">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Histórico de Operações
+            </CardTitle>
+            {/* Sub-abas Abertas / Histórico */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setApostasSubTab("abertas")}
+                className={cn(
+                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                  apostasSubTab === "abertas"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                Abertas
+                <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAbertasList.length}</Badge>
+              </button>
+              <button
+                onClick={() => setApostasSubTab("historico")}
+                className={cn(
+                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                  apostasSubTab === "historico"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <History className="h-3.5 w-3.5" />
+                Histórico
+                <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasHistoricoList.length}</Badge>
+              </button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-3">
+          {/* Filtros Transversais (Período, Casa, Parceiro) */}
+          <OperationalFiltersBar
+            projetoId={projetoId}
+            showEstrategiaFilter={true}
+            className="pb-3 border-b border-border/50"
+          />
+          
+          {/* Filtros de Busca e Visualização */}
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
@@ -947,7 +952,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar..."
+                placeholder="Buscar evento, seleção..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 h-9"
@@ -1003,20 +1008,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 </SelectContent>
               </Select>
             )}
-            
-            {/* Filtro de Estratégia */}
-            <Select value={estrategiaFilter} onValueChange={setEstrategiaFilter}>
-              <SelectTrigger className="w-[150px] h-9">
-                <Zap className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Estratégia" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas Estratégias</SelectItem>
-                {ESTRATEGIAS_LIST.map(e => (
-                  <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>
