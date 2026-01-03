@@ -179,8 +179,37 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
   // Detectar contexto de bônus pela estratégia ou prop
   const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
   
-  const lucroExibir = isLiquidada ? surebet.lucro_real : surebet.lucro_esperado;
-  const roiExibir = isLiquidada ? surebet.roi_real : surebet.roi_esperado;
+  // Calcular pior cenário a partir das pernas quando pendente
+  const calcularPiorCenario = (): { lucro: number; roi: number } | null => {
+    if (!surebet.pernas || surebet.pernas.length < 2) return null;
+    
+    const stakeTotal = surebet.stake_total || surebet.pernas.reduce((sum, p) => sum + (p.stake_total || p.stake || 0), 0);
+    if (stakeTotal <= 0) return null;
+    
+    // Para cada cenário (cada perna ganhando), calcular o lucro
+    const cenarios = surebet.pernas.map(perna => {
+      const oddEfetiva = perna.odd_media || perna.odd || 0;
+      const stakeNessaPerna = perna.stake_total || perna.stake || 0;
+      const retorno = stakeNessaPerna * oddEfetiva;
+      const lucro = retorno - stakeTotal;
+      return lucro;
+    });
+    
+    const piorLucro = Math.min(...cenarios);
+    const piorRoi = (piorLucro / stakeTotal) * 100;
+    
+    return { lucro: piorLucro, roi: piorRoi };
+  };
+  
+  // Usar lucro_esperado do banco ou calcular a partir das pernas
+  const piorCenarioCalculado = !isLiquidada ? calcularPiorCenario() : null;
+  
+  const lucroExibir = isLiquidada 
+    ? surebet.lucro_real 
+    : (surebet.lucro_esperado ?? piorCenarioCalculado?.lucro ?? null);
+  const roiExibir = isLiquidada 
+    ? surebet.roi_real 
+    : (surebet.roi_esperado ?? piorCenarioCalculado?.roi ?? null);
   
   // Configuração do badge principal
   const estrategiaConfig = showBonusBadge 
