@@ -132,8 +132,69 @@ export function RegistroApostaFields({
     });
   };
 
+  // Modo ultra-compacto: inline com labels reduzidos
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Estratégia Compacta */}
+        <div className="flex items-center gap-1.5">
+          <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Estratégia:</Label>
+          {lockedEstrategia ? (
+            <Badge 
+              variant="secondary" 
+              className="text-[10px] font-medium bg-primary/10 text-primary border-primary/20 h-6"
+            >
+              {ESTRATEGIA_LABELS[lockedEstrategia]}
+            </Badge>
+          ) : (
+            <Select
+              value={values.estrategia || ""}
+              onValueChange={(v) => handleChange('estrategia', v)}
+              disabled={disabled?.estrategia}
+            >
+              <SelectTrigger className="h-6 text-[10px] w-[120px] px-2">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTRATEGIAS_LIST.map((item) => (
+                  <SelectItem key={item.value} value={item.value} className="text-xs">
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        {/* Contexto Compacto */}
+        <div className="flex items-center gap-1.5">
+          <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Contexto:</Label>
+          <Select
+            value={values.contexto_operacional || ""}
+            onValueChange={(v) => handleChange('contexto_operacional', v)}
+            disabled={disabled?.contexto_operacional}
+          >
+            <SelectTrigger className="h-6 text-[10px] w-[110px] px-2">
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {CONTEXTOS_LIST.map((item) => (
+                <SelectItem key={item.value} value={item.value} className="text-xs">
+                  <div className="flex items-center gap-1">
+                    <ContextoIcon contexto={item.value} />
+                    {item.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={`grid gap-3 ${compact ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
+    <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
       {/* 
        * NOTA: Forma de Registro foi REMOVIDA da UI.
        * É apenas um metadado técnico definido automaticamente pelo tipo de formulário:
