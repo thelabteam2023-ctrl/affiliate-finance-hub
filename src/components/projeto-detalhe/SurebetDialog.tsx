@@ -2349,7 +2349,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                         
                                         {/* Linha - mesma largura da entrada principal */}
                                         <Input
-                                          placeholder="Linha"
+                                          placeholder="Linha (opcional)"
                                           value={addEntry.selecaoLivre}
                                           onChange={(e) => updateAdditionalEntry(index, addIdx, "selecaoLivre", e.target.value)}
                                           className="h-7 text-[10px] px-1.5 bg-background"
