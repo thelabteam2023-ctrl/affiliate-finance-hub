@@ -5,11 +5,9 @@ import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmake
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { 
-  Search, 
   Target,
   LayoutGrid,
   List,
@@ -18,14 +16,12 @@ import {
   Shield,
   Coins,
   Gift,
-  Filter,
   Zap,
   TrendingUp,
   CheckCircle2,
   BarChart3,
   Clock,
-  History,
-  Info
+  History
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { SurebetDialog } from "./SurebetDialog";
@@ -44,12 +40,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
-import { DateRange } from "react-day-picker";
-import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ESTRATEGIAS_LIST, inferEstrategiaLegado, type ApostaEstrategia } from "@/lib/apostaConstants";
-import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { OperationalFiltersBar } from "./OperationalFiltersBar";
+import { useOperationalFilters } from "@/contexts/OperationalFiltersContext";
 import { cn, getFirstLastName } from "@/lib/utils";
 
 // Contextos de aposta para filtro unificado
@@ -257,11 +251,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
   const [surebets, setSurebets] = useState<Surebet[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
   const [contextoFilter, setContextoFilter] = useState<ApostaContexto | "all">("all");
-  const [estrategiaFilter, setEstrategiaFilter] = useState<string>("all");
   const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas" | "surebets">("todas");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [apostasSubTab, setApostasSubTab] = useState<"abertas" | "historico">("abertas");
@@ -276,19 +268,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
 
-  // Filtro de tempo interno
-  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
-  const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
+  // Consumir filtros do contexto global
+  const globalFilters = useOperationalFilters();
 
   // Hook para pegar bookmakers com bônus ativo
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
   const bookmakersComBonusAtivo = useMemo(() => getBookmakersWithActiveBonus(), [bonuses]);
 
-  const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
+  // Usar dateRange do contexto global
+  const dateRange = globalFilters.dateRange;
 
   useEffect(() => {
     fetchAllApostas();
-  }, [projetoId, internalPeriod, internalDateRange, refreshTrigger]);
+  }, [projetoId, globalFilters.period, globalFilters.customDateRange, refreshTrigger]);
 
   const fetchAllApostas = async () => {
     try {
@@ -582,27 +574,39 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     }
   }, [apostas, onDataChange, projetoId, invalidateSaldos]);
 
-  // Filtrar e unificar apostas com contexto
+  // Filtrar e unificar apostas com contexto - usando filtros do contexto global
   const apostasUnificadasBase: ApostaUnificada[] = useMemo(() => {
     const result: ApostaUnificada[] = [];
+    
+    // Filtros do contexto global
+    const selectedBookmakerIds = globalFilters.bookmakerIds;
+    const selectedParceiroIds = globalFilters.parceiroIds;
+    const selectedEstrategias = globalFilters.estrategias;
     
     // Apostas simples
     apostas.forEach(aposta => {
       const contexto = getApostaContexto(aposta, bookmakersComBonusAtivo);
       const estrategia = inferEstrategiaLegado(aposta);
       
-      // Filtros de busca
-      const matchesSearch = 
-        aposta.evento.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        aposta.esporte.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        aposta.selecao.toLowerCase().includes(searchTerm.toLowerCase());
+      // Filtro de casa (bookmaker)
+      const matchesBookmaker = selectedBookmakerIds.length === 0 || 
+        selectedBookmakerIds.includes(aposta.bookmaker_id);
+      
+      // Filtro de parceiro
+      const matchesParceiro = selectedParceiroIds.length === 0 || 
+        (aposta.bookmaker?.parceiro_id && selectedParceiroIds.includes(aposta.bookmaker.parceiro_id));
+      
+      // Filtro de estratégia do contexto global
+      const matchesEstrategia = selectedEstrategias.includes("all") || 
+        selectedEstrategias.includes(estrategia as any);
+      
+      // Filtros internos restantes
       const matchesStatus = statusFilter === "all" || aposta.status === statusFilter;
       const matchesResultado = resultadoFilter === "all" || aposta.resultado === resultadoFilter;
       const matchesContexto = contextoFilter === "all" || contexto === contextoFilter;
-      const matchesEstrategia = estrategiaFilter === "all" || estrategia === estrategiaFilter;
       const matchesTipo = tipoFilter === "todas" || tipoFilter === "simples";
       
-      if (matchesSearch && matchesStatus && matchesResultado && matchesContexto && matchesEstrategia && matchesTipo) {
+      if (matchesBookmaker && matchesParceiro && matchesEstrategia && matchesStatus && matchesResultado && matchesContexto && matchesTipo) {
         result.push({
           tipo: "simples",
           data: aposta,
@@ -616,15 +620,20 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     apostasMultiplas.forEach(am => {
       const contexto = getApostaContexto(am, bookmakersComBonusAtivo);
       
-      const matchesSearch = am.selecoes.some(s => 
-        s.descricao.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      // Filtro de casa (bookmaker)
+      const matchesBookmaker = selectedBookmakerIds.length === 0 || 
+        selectedBookmakerIds.includes(am.bookmaker_id);
+      
+      // Filtro de parceiro
+      const matchesParceiro = selectedParceiroIds.length === 0 || 
+        (am.bookmaker?.parceiro_id && selectedParceiroIds.includes(am.bookmaker.parceiro_id));
+      
       const matchesStatus = statusFilter === "all" || am.status === statusFilter;
       const matchesResultado = resultadoFilter === "all" || am.resultado === resultadoFilter;
       const matchesContexto = contextoFilter === "all" || contexto === contextoFilter;
       const matchesTipo = tipoFilter === "todas" || tipoFilter === "multiplas";
       
-      if ((searchTerm === "" || matchesSearch) && matchesStatus && matchesResultado && matchesContexto && matchesTipo) {
+      if (matchesBookmaker && matchesParceiro && matchesStatus && matchesResultado && matchesContexto && matchesTipo) {
         result.push({
           tipo: "multipla",
           data: am,
@@ -638,16 +647,24 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     surebets.forEach(sb => {
       const contexto = getSurebetContexto(sb, bookmakersComBonusAtivo);
       
-      const matchesSearch = 
-        sb.evento.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sb.esporte.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sb.modelo.toLowerCase().includes(searchTerm.toLowerCase());
+      // Filtro de casa: verificar se alguma perna tem o bookmaker selecionado
+      const matchesBookmaker = selectedBookmakerIds.length === 0 || 
+        sb.pernas?.some(p => selectedBookmakerIds.includes(p.bookmaker_id));
+      
+      // Filtro de parceiro: verificar se alguma perna tem o parceiro selecionado
+      const matchesParceiro = selectedParceiroIds.length === 0 || 
+        sb.pernas?.some(p => p.bookmaker?.parceiro && selectedParceiroIds.includes((p.bookmaker.parceiro as any).id));
+      
+      // Filtro de estratégia
+      const matchesEstrategia = selectedEstrategias.includes("all") || 
+        selectedEstrategias.includes("SUREBET");
+      
       const matchesStatus = statusFilter === "all" || sb.status === statusFilter;
       const matchesResultado = resultadoFilter === "all" || sb.resultado === resultadoFilter;
       const matchesContexto = contextoFilter === "all" || contexto === contextoFilter;
       const matchesTipo = tipoFilter === "todas" || tipoFilter === "surebets";
       
-      if (matchesSearch && matchesStatus && matchesResultado && matchesContexto && matchesTipo) {
+      if (matchesBookmaker && matchesParceiro && matchesEstrategia && matchesStatus && matchesResultado && matchesContexto && matchesTipo) {
         result.push({
           tipo: "surebet",
           data: sb,
@@ -659,7 +676,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     
     // Ordenar por data
     return result.sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
-  }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo, searchTerm, statusFilter, resultadoFilter, contextoFilter, estrategiaFilter, tipoFilter]);
+  }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo, globalFilters.bookmakerIds, globalFilters.parceiroIds, globalFilters.estrategias, statusFilter, resultadoFilter, contextoFilter, tipoFilter]);
 
   // Helper para verificar se um item está pendente
   const isItemPendente = (item: ApostaUnificada): boolean => {
@@ -886,7 +903,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             }))
           ]} 
           accentColor="hsl(var(--primary))"
-          isSingleDayPeriod={internalPeriod === "1dia"}
+          isSingleDayPeriod={globalFilters.period === "1dia"}
           formatCurrency={formatCurrency}
         />
       )}
@@ -895,36 +912,34 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       {/* Card de Histórico com Filtros */}
       <Card>
         <CardHeader className="pb-3">
-          {/* Sub-abas Abertas / Histórico - ACIMA do título */}
-          <div className="flex items-center justify-end mb-3">
-            <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-              <button
-                onClick={() => setApostasSubTab("abertas")}
-                className={cn(
-                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                  apostasSubTab === "abertas"
-                    ? "bg-background text-primary shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Clock className="h-3.5 w-3.5" />
-                Abertas
-                <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAbertasList.length}</Badge>
-              </button>
-              <button
-                onClick={() => setApostasSubTab("historico")}
-                className={cn(
-                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                  apostasSubTab === "historico"
-                    ? "bg-background text-primary shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <History className="h-3.5 w-3.5" />
-                Histórico
-                <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasHistoricoList.length}</Badge>
-              </button>
-            </div>
+          {/* Sub-abas Abertas / Histórico - Alinhadas à ESQUERDA, ACIMA do título */}
+          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 w-fit mb-3">
+            <button
+              onClick={() => setApostasSubTab("abertas")}
+              className={cn(
+                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                apostasSubTab === "abertas"
+                  ? "bg-background text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              Abertas
+              <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAbertasList.length}</Badge>
+            </button>
+            <button
+              onClick={() => setApostasSubTab("historico")}
+              className={cn(
+                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                apostasSubTab === "historico"
+                  ? "bg-background text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <History className="h-3.5 w-3.5" />
+              Histórico
+              <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasHistoricoList.length}</Badge>
+            </button>
           </div>
           
           {/* Título do Card */}
@@ -952,7 +967,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 {apostasSubTab === "abertas" ? "Nenhuma aposta aberta" : "Nenhuma aposta no histórico"}
               </h3>
               <p className="text-muted-foreground">
-                {searchTerm || resultadoFilter !== "all" || contextoFilter !== "all"
+                {globalFilters.activeFiltersCount > 0 || resultadoFilter !== "all" || contextoFilter !== "all"
                   ? "Tente ajustar os filtros"
                   : apostasSubTab === "abertas" 
                     ? "Registre uma nova aposta" 
@@ -1288,18 +1303,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         </Card>
       )}
 
-      {/* Banner Info - No final da página */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardContent className="py-3">
-          <div className="flex items-start gap-2">
-            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium text-primary">Visão Especializada:</span> Registro completo de todas as apostas do projeto. 
-              Use os filtros de contexto para visualizar apostas normais, com freebet ou bônus.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Dialogs */}
       <ApostaDialog
