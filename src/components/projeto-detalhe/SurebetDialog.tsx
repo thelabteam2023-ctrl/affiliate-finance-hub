@@ -2453,7 +2453,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           <div className="grid gap-2 justify-center" style={{ gridTemplateColumns: '130px 60px minmax(90px, 100px) 70px' }}>
                             {/* Casa */}
                             <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Casa</Label>
+                              <Label className="text-xs text-muted-foreground text-center block">Casa</Label>
                               {isEditing ? (
                                 <div className="h-8 px-1.5 text-[10px] flex items-center bg-muted/50 rounded-md border truncate font-medium uppercase">
                                   {selectedBookmaker?.nome || "—"}
@@ -2529,7 +2529,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             {/* Odd */}
                             <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Odd</Label>
+                              <Label className="text-xs text-muted-foreground text-center block">Odd</Label>
                               {isEditing ? (
                                 <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium">
                                   {parseFloat(entry.odd).toFixed(2)}
@@ -2550,7 +2550,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             {/* Stake */}
                             <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap text-center block">
                                 Stake{!isEditing && entry.isReference && <span className="text-primary ml-0.5">(Ref)</span>}
                               </Label>
                               {isEditing ? (
@@ -2592,7 +2592,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             
                             {/* Linha (Seleção Livre) - POR ENTRADA */}
                             <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Linha <span className="text-[10px] text-muted-foreground/60">(opcional)</span></Label>
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap text-center block">Linha <span className="text-[10px] text-muted-foreground/60">(opcional)</span></Label>
                               {isEditing ? (
                                 <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium truncate">
                                   {entry.selecaoLivre || "—"}
