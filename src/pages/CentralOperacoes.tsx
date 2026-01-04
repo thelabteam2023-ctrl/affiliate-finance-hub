@@ -41,6 +41,7 @@ import {
   Zap,
   UserPlus,
   ShieldAlert,
+  Unlink,
 } from "lucide-react";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
@@ -70,6 +71,7 @@ const CARD_DOMAIN_MAP: Record<string, EventDomain> = {
   'saques-aguardando': 'financial_event',
   'saques-processamento': 'financial_event',
   'casas-limitadas': 'financial_event',
+  'casas-desvinculadas': 'financial_event',
   'participacoes-investidores': 'financial_event',
   'pagamentos-operador': 'project_event',
   'ciclos-apuracao': 'project_event',
@@ -213,6 +215,21 @@ interface ParticipacaoPendente {
   ciclo_numero?: number;
 }
 
+interface BookmakerDesvinculado {
+  id: string;
+  nome: string;
+  status: string;
+  saldo_atual: number;
+  saldo_usd: number;
+  saldo_freebet: number;
+  moeda: string;
+  workspace_id: string;
+  parceiro_id: string | null;
+  parceiro_nome: string | null;
+  saldo_efetivo: number;
+  saldo_total: number;
+}
+
 // Enum for card priority
 const PRIORITY = {
   CRITICAL: 1,
@@ -233,6 +250,7 @@ export default function CentralOperacoes() {
   const [alertasLucro, setAlertasLucro] = useState<AlertaLucroParceiro[]>([]);
   const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperadorPendente[]>([]);
   const [participacoesPendentes, setParticipacoesPendentes] = useState<ParticipacaoPendente[]>([]);
+  const [casasDesvinculadas, setCasasDesvinculadas] = useState<BookmakerDesvinculado[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
@@ -632,8 +650,18 @@ export default function CentralOperacoes() {
           }));
           setParticipacoesPendentes(participacoes);
         }
+
+        // Buscar casas desvinculadas
+        const casasResult = await supabase
+          .from("v_bookmakers_desvinculados")
+          .select("*");
+
+        if (!casasResult.error && casasResult.data) {
+          setCasasDesvinculadas(casasResult.data as BookmakerDesvinculado[]);
+        }
       } else {
         setParticipacoesPendentes([]);
+        setCasasDesvinculadas([]);
       }
 
     } finally {
@@ -658,6 +686,31 @@ export default function CentralOperacoes() {
   const handleConfirmarSaque = (saque: SaquePendenteConfirmacao) => {
     setSelectedSaque(saque);
     setConfirmarSaqueOpen(true);
+  };
+
+  const handleSolicitarSaqueCasaDesvinculada = (casa: BookmakerDesvinculado) => {
+    navigate("/caixa", { state: { openDialog: true, bookmakerId: casa.id, bookmakerNome: casa.nome } });
+  };
+
+  const handleAcknowledgeCasaDesvinculada = async (casa: BookmakerDesvinculado) => {
+    try {
+      const { error } = await supabase
+        .from("bookmaker_unlinked_acks")
+        .insert({
+          bookmaker_id: casa.id,
+          workspace_id: casa.workspace_id,
+          acknowledged_by: user?.id,
+          reason: "Usuário reconheceu a pendência",
+        });
+
+      if (error) throw error;
+      
+      toast.success(`Alerta de "${casa.nome}" removido`);
+      fetchData(true);
+    } catch (err) {
+      console.error("Erro ao registrar acknowledge:", err);
+      toast.error("Erro ao confirmar ciência");
+    }
   };
 
   const alertasSaques = alertas.filter((a) => a.tipo_alerta === "BOOKMAKER_SAQUE");
@@ -836,6 +889,66 @@ export default function CentralOperacoes() {
                       <Button size="sm" onClick={() => handleSaqueAction(alerta)} className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2">
                         Sacar
                       </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 4.6. Casas Desvinculadas - financial_event
+    if (casasDesvinculadas.length > 0 && allowedDomains.includes('financial_event')) {
+      cards.push({
+        id: "casas-desvinculadas",
+        priority: PRIORITY.HIGH,
+        domain: 'financial_event',
+        component: (
+          <Card key="casas-desvinculadas" className="border-purple-500/30 bg-purple-500/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Unlink className="h-4 w-4 text-purple-400" />
+                Casas Desvinculadas
+                <Badge className="ml-auto bg-purple-500/20 text-purple-400">{casasDesvinculadas.length}</Badge>
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground">
+                Casas sem projeto com saldo pendente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {casasDesvinculadas.slice(0, 4).map((casa) => (
+                  <div key={casa.id} className="flex items-center justify-between p-2 rounded-lg border border-purple-500/30 bg-purple-500/10">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Unlink className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{casa.nome}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {casa.parceiro_nome || "Sem parceiro"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-purple-400">{formatCurrency(casa.saldo_efetivo, casa.moeda)}</span>
+                      <div className="flex gap-1">
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleSolicitarSaqueCasaDesvinculada(casa)} 
+                          className="bg-purple-600 hover:bg-purple-700 h-6 text-xs px-2"
+                        >
+                          Sacar
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleAcknowledgeCasaDesvinculada(casa)} 
+                          className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10 h-6 text-xs px-2"
+                        >
+                          Ciente
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1273,10 +1386,10 @@ export default function CentralOperacoes() {
     // Sort by priority
     return cards.sort((a, b) => a.priority - b.priority);
   }, [
-    alertasCriticos, saquesPendentes, alertasSaques, participacoesPendentes,
-    pagamentosOperadorPendentes, alertasCiclosFiltrados, alertasLucro, entregasPendentes,
-    parceirosSemParceria, pagamentosParceiros, bonusPendentes, comissoesPendentes, parceriasEncerramento,
-    allowedDomains
+    alertasCriticos, saquesPendentes, alertasSaques, alertasLimitadas, casasDesvinculadas,
+    participacoesPendentes, pagamentosOperadorPendentes, alertasCiclosFiltrados, alertasLucro, 
+    entregasPendentes, parceirosSemParceria, pagamentosParceiros, bonusPendentes, comissoesPendentes, 
+    parceriasEncerramento, allowedDomains
   ]);
 
   const hasAnyAlerts = alertCards.length > 0;
