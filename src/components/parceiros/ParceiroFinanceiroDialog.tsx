@@ -416,44 +416,62 @@ export default function ParceiroFinanceiroDialog({
           <TabsContent value="financeiro" className="mt-4">
             {roiData ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardContent className="pt-6">
+                {/* KPIs Principais em linha: Depositado → Sacado → Saldo → Resultado */}
+                <div className="grid grid-cols-4 gap-3">
+                  {/* Depositado */}
+                  <Card className="border-red-500/20">
+                    <CardContent className="pt-4 pb-3">
                       <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Total Depositado
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Depositado
                         </p>
-                        <p className="text-2xl font-bold">
+                        <p className="text-lg font-bold text-red-500">
                           {formatCurrency(roiData.total_depositado)}
                         </p>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardContent className="pt-6">
+                  {/* Sacado */}
+                  <Card className="border-green-500/20">
+                    <CardContent className="pt-4 pb-3">
                       <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Total Sacado
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Sacado
                         </p>
-                        <p className="text-2xl font-bold">
+                        <p className="text-lg font-bold text-green-500">
                           {formatCurrency(roiData.total_sacado)}
                         </p>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardContent className="pt-6">
+                  {/* SALDO ATUAL - Destaque principal */}
+                  <Card className="border-primary/40 bg-primary/5 ring-1 ring-primary/20">
+                    <CardContent className="pt-4 pb-3">
                       <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Lucro/Prejuízo
+                        <p className="text-xs text-primary/80 font-medium mb-1">
+                          💰 Saldo Atual
+                        </p>
+                        <p className="text-xl font-bold text-primary">
+                          {formatCurrency(roiData.saldo_bookmakers)}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Resultado */}
+                  <Card>
+                    <CardContent className="pt-4 pb-3">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Resultado
                         </p>
                         <p
-                          className={`text-2xl font-bold ${
+                          className={`text-lg font-bold ${
                             roiData.lucro_prejuizo >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
+                              ? "text-emerald-500"
+                              : "text-red-500"
                           }`}
                         >
                           {formatCurrency(roiData.lucro_prejuizo)}
@@ -461,16 +479,19 @@ export default function ParceiroFinanceiroDialog({
                       </div>
                     </CardContent>
                   </Card>
+                </div>
 
+                {/* ROI e estatísticas de bookmakers */}
+                <div className="grid grid-cols-4 gap-3">
                   <Card>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-4 pb-3">
                       <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-2">ROI</p>
+                        <p className="text-xs text-muted-foreground mb-1">ROI</p>
                         <p
-                          className={`text-2xl font-bold ${
+                          className={`text-lg font-bold ${
                             roiData.roi_percentual >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
+                              ? "text-emerald-500"
+                              : "text-red-500"
                           }`}
                         >
                           {roiData.roi_percentual.toFixed(2)}%
@@ -478,46 +499,46 @@ export default function ParceiroFinanceiroDialog({
                       </div>
                     </CardContent>
                   </Card>
-                </div>
 
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="pt-4 pb-3">
                       <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Bookmakers Ativos
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Casas Ativas
                         </p>
-                        <p className="text-xl font-bold text-green-600">
+                        <p className="text-lg font-bold text-green-600">
                           {roiData.num_bookmakers}
                         </p>
                       </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="pt-4 pb-3">
                       <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Bookmakers Limitadas
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Casas Limitadas
                         </p>
-                        <p className="text-xl font-bold text-yellow-600">
+                        <p className="text-lg font-bold text-yellow-600">
                           {roiData.num_bookmakers_limitadas}
                         </p>
                       </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="pt-4 pb-3">
                       <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Total de Bookmakers
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Total Casas
                         </p>
-                        <p className="text-xl font-bold">
+                        <p className="text-lg font-bold">
                           {roiData.num_bookmakers + roiData.num_bookmakers_limitadas}
                         </p>
                       </div>
-                    </div>
-                    <div className="mt-4 pt-4 border-t text-center">
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Saldo Total em Bookmakers
-                      </p>
-                      <p className="text-2xl font-bold">
-                        {formatCurrency(roiData.saldo_bookmakers)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             ) : (
               <Card>
