@@ -69,6 +69,7 @@ const CARD_DOMAIN_MAP: Record<string, EventDomain> = {
   'propostas-pagamento': 'project_event',
   'saques-aguardando': 'financial_event',
   'saques-processamento': 'financial_event',
+  'casas-limitadas': 'financial_event',
   'participacoes-investidores': 'financial_event',
   'pagamentos-operador': 'project_event',
   'ciclos-apuracao': 'project_event',
@@ -315,8 +316,8 @@ export default function CentralOperacoes() {
         indicadoresResult,
         pagamentosOperadorResult
       ] = await Promise.all([
-        // Alertas do painel operacional - apenas se admin
-        canSeeAdminData 
+        // Alertas do painel operacional (saques e casas limitadas) - financial_event
+        canSeeFinancialData 
           ? supabase.from("v_painel_operacional").select("*")
           : Promise.resolve({ data: [], error: null }),
         // Entregas pendentes - filtrar por projetos do operador se for operador

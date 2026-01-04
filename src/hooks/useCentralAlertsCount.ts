@@ -86,8 +86,8 @@ export function useCentralAlertsCount() {
           comissoesResult,
           indicacoesResult,
         ] = await Promise.all([
-          // Alertas do painel operacional - apenas admin
-          canSeeAdminData
+          // Alertas do painel operacional (saques e casas limitadas) - financial_event
+          canSeeFinancialData
             ? supabase.from("v_painel_operacional").select("entidade_id", { count: "exact", head: true })
             : Promise.resolve({ count: 0, error: null }),
           // Entregas pendentes - project_event
