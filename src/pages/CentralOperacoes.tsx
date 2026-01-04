@@ -40,6 +40,7 @@ import {
   Gift,
   Zap,
   UserPlus,
+  ShieldAlert,
 } from "lucide-react";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
@@ -658,7 +659,8 @@ export default function CentralOperacoes() {
     setConfirmarSaqueOpen(true);
   };
 
-  const alertasSaques = alertas.filter((a) => a.tipo_alerta === "SAQUE_PENDENTE");
+  const alertasSaques = alertas.filter((a) => a.tipo_alerta === "BOOKMAKER_SAQUE");
+  const alertasLimitadas = alertas.filter((a) => a.tipo_alerta === "BOOKMAKER_LIMITADA");
   const alertasCriticos = alertas.filter((a) => a.nivel_urgencia === "CRITICA");
 
   // Filtrar ciclos por projetos do operador
@@ -786,6 +788,52 @@ export default function CentralOperacoes() {
                       {alerta.valor && <span className="text-xs font-bold text-emerald-400">{formatCurrency(alerta.valor, alerta.moeda)}</span>}
                       <Button size="sm" onClick={() => handleSaqueAction(alerta)} className="h-6 text-xs px-2">
                         Processar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // 4.5. Casas Limitadas - financial_event
+    if (alertasLimitadas.length > 0 && allowedDomains.includes('financial_event')) {
+      cards.push({
+        id: "casas-limitadas",
+        priority: PRIORITY.HIGH,
+        domain: 'financial_event',
+        component: (
+          <Card key="casas-limitadas" className="border-orange-500/30 bg-orange-500/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <ShieldAlert className="h-4 w-4 text-orange-400" />
+                Casas Limitadas
+                <Badge className="ml-auto bg-orange-500/20 text-orange-400">{alertasLimitadas.length}</Badge>
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground">
+                Casas devolvidas/limitadas com saldo pendente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {alertasLimitadas.slice(0, 4).map((alerta) => (
+                  <div key={alerta.entidade_id} className="flex items-center justify-between p-2 rounded-lg border border-orange-500/30 bg-orange-500/10">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Building2 className="h-3.5 w-3.5 text-orange-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{alerta.titulo}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {alerta.parceiro_nome && `${alerta.parceiro_nome} • `}Sacar ou realocar saldo
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {alerta.valor && <span className="text-xs font-bold text-orange-400">{formatCurrency(alerta.valor, alerta.moeda)}</span>}
+                      <Button size="sm" onClick={() => handleSaqueAction(alerta)} className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2">
+                        Sacar
                       </Button>
                     </div>
                   </div>
