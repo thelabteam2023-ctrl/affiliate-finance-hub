@@ -3,26 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 import { 
-  Search, 
   Target,
   Calendar,
   TrendingUp,
   TrendingDown,
-  LayoutGrid,
-  List,
-  ArrowLeftRight,
-  ArrowUp,
-  ArrowDown,
-  Shield,
   Coins,
-  Gift,
   Layers,
   Building2,
   Clock,
@@ -30,7 +20,9 @@ import {
   History,
   XCircle,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,20 +32,17 @@ import { SurebetCard, SurebetData } from "@/components/projeto-detalhe/SurebetCa
 import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
 import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import { useProjectBonuses, FinalizeReason } from "@/hooks/useProjectBonuses";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { 
+  OperationsSubTabHeader,
+  type HistorySubTab 
+} from "../operations";
 
 interface BonusApostasTabProps {
   projetoId: string;
 }
 
-type SubTabValue = "abertas" | "historico";
+// SubTabValue agora usa o tipo HistorySubTab exportado de operations
 
 const REASON_LABELS: Record<FinalizeReason, { label: string; icon: React.ElementType; color: string }> = {
   rollover_completed: { label: "Rollover Concluído", icon: CheckCircle2, color: "text-emerald-400 bg-emerald-500/20 border-emerald-500/30" },
@@ -205,7 +194,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
   const [bookmakers, setBookmakers] = useState<any[]>([]);
   
   // Sub-tab state (Abertas/Histórico pattern)
-  const [subTab, setSubTab] = useState<SubTabValue>("abertas");
+  const [subTab, setSubTab] = useState<HistorySubTab>("abertas");
   const [reasonFilter, setReasonFilter] = useState<string>("all");
 
   useEffect(() => {
@@ -798,51 +787,23 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
-          {/* Sub-abas Abertas / Histórico - acima do título, alinhadas à esquerda */}
-          <div className="flex items-center gap-3 w-fit mb-3">
-            <button
-              onClick={() => setSubTab("abertas")}
-              className={cn(
-                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                subTab === "abertas"
-                  ? "bg-amber-500/10 text-amber-400"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <Clock className="h-3.5 w-3.5" />
-              Abertas
-              {apostasAbertas.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAbertas.length}</Badge>
-              )}
-            </button>
-            <button
-              onClick={() => setSubTab("historico")}
-              className={cn(
-                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                subTab === "historico"
-                  ? "bg-amber-500/10 text-amber-400"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <History className="h-3.5 w-3.5" />
-              Histórico
-            </button>
+          {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
+          <div className="mb-3">
+            <OperationsSubTabHeader
+              subTab={subTab}
+              onSubTabChange={setSubTab}
+              openCount={apostasAbertas.length}
+              historyCount={apostasHistorico.length + filteredFinalizedBonuses.length}
+              viewMode={viewMode}
+              onViewModeChange={(mode) => setViewMode(mode)}
+              showViewToggle={true}
+            />
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <CardTitle className="text-base flex items-center gap-2">
               <Target className="h-4 w-4 text-amber-400" />
-              Apostas Bônus
+              {subTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
             </CardTitle>
-            
-            {/* View Mode Toggle */}
-            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
-              <ToggleGroupItem value="cards" aria-label="Cards" size="sm">
-                <LayoutGrid className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="list" aria-label="Lista" size="sm">
-                <List className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
           </div>
         </CardHeader>
         

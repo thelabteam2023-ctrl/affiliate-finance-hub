@@ -45,6 +45,7 @@ import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { useOperationalFilters } from "@/contexts/OperationalFiltersContext";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 
 // Contextos de aposta para filtro unificado
 type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
@@ -256,7 +257,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const [contextoFilter, setContextoFilter] = useState<ApostaContexto | "all">("all");
   const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas" | "surebets">("todas");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
-  const [apostasSubTab, setApostasSubTab] = useState<"abertas" | "historico">("abertas");
+  const [apostasSubTab, setApostasSubTab] = useState<HistorySubTab>("abertas");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
   const [dialogSurebetOpen, setDialogSurebetOpen] = useState(false);
@@ -912,40 +913,23 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       {/* Card de Histórico com Filtros */}
       <Card>
         <CardHeader className="pb-3">
-          {/* Sub-abas Abertas / Histórico - Alinhadas à ESQUERDA, ACIMA do título */}
-          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 w-fit mb-3">
-            <button
-              onClick={() => setApostasSubTab("abertas")}
-              className={cn(
-                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                apostasSubTab === "abertas"
-                  ? "bg-background text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Clock className="h-3.5 w-3.5" />
-              Abertas
-              <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAbertasList.length}</Badge>
-            </button>
-            <button
-              onClick={() => setApostasSubTab("historico")}
-              className={cn(
-                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                apostasSubTab === "historico"
-                  ? "bg-background text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <History className="h-3.5 w-3.5" />
-              Histórico
-              <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasHistoricoList.length}</Badge>
-            </button>
+          {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
+          <div className="mb-3">
+            <OperationsSubTabHeader
+              subTab={apostasSubTab}
+              onSubTabChange={setApostasSubTab}
+              openCount={apostasAbertasList.length}
+              historyCount={apostasHistoricoList.length}
+              viewMode={viewMode}
+              onViewModeChange={(mode) => setViewMode(mode)}
+              showViewToggle={true}
+            />
           </div>
           
           {/* Título do Card */}
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <History className="h-4 w-4" />
-            Histórico de Operações
+            {apostasSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">

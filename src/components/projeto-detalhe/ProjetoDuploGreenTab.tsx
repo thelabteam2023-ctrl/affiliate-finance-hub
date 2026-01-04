@@ -52,6 +52,7 @@ import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { OperationalFiltersBar } from "./OperationalFiltersBar";
+import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 
 interface ProjetoDuploGreenTabProps {
   projetoId: string;
@@ -160,8 +161,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
   
-  // Sub-abas Abertas/Histórico
-  const [apostasSubTab, setApostasSubTab] = useState<"abertas" | "historico">("abertas");
+  // Sub-abas Abertas/Histórico - usa tipo padronizado
+  const [apostasSubTab, setApostasSubTab] = useState<HistorySubTab>("abertas");
   
   // Ordenação Por Casa
   const [porCasaSort, setPorCasaSort] = useState<SortField>("volume");
@@ -647,48 +648,23 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       {/* Card de Histórico com Filtros Internos */}
       <Card>
         <CardHeader className="pb-3">
-          {/* Sub-abas Abertas / Histórico - acima do título, alinhadas à esquerda */}
-          <div className="flex items-center gap-3 w-fit mb-3">
-            <button
-              onClick={() => setApostasSubTab("abertas")}
-              className={cn(
-                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                apostasSubTab === "abertas"
-                  ? "bg-lime-500/10 text-lime-400"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <Clock className="h-3.5 w-3.5" />
-              Abertas
-              <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAbertas.length}</Badge>
-            </button>
-            <button
-              onClick={() => setApostasSubTab("historico")}
-              className={cn(
-                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                apostasSubTab === "historico"
-                  ? "bg-lime-500/10 text-lime-400"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <History className="h-3.5 w-3.5" />
-              Histórico
-              <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasHistorico.length}</Badge>
-            </button>
+          {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
+          <div className="mb-3">
+            <OperationsSubTabHeader
+              subTab={apostasSubTab}
+              onSubTabChange={setApostasSubTab}
+              openCount={apostasAbertas.length}
+              historyCount={apostasHistorico.length}
+              viewMode={viewMode}
+              onViewModeChange={(mode) => setViewMode(mode)}
+              showViewToggle={true}
+            />
           </div>
-          <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-4">
             <CardTitle className="text-base font-medium flex items-center gap-2">
               <Zap className="h-4 w-4 text-lime-400" />
-              Histórico de Operações
+              {apostasSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
             </CardTitle>
-            <div className="flex border rounded-md">
-              <Button variant={viewMode === "cards" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("cards")} className="rounded-r-none">
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("list")} className="rounded-l-none">
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
