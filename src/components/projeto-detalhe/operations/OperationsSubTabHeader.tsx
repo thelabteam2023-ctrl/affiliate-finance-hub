@@ -54,13 +54,13 @@ export function OperationsSubTabHeader({
       {/* Toggle Abertas/Histórico - alinhado à esquerda */}
       <div className="flex items-center gap-2 w-fit">
         <Button
-          variant={subTab === "abertas" ? "default" : "ghost"}
+          variant={subTab === "abertas" ? "outline" : "ghost"}
           size="sm"
           onClick={() => onSubTabChange("abertas")}
           className={cn(
-            "h-8 gap-2 text-sm font-medium",
+            "h-8 gap-2 text-sm font-medium rounded-full px-4",
             subTab === "abertas" 
-              ? "bg-primary text-primary-foreground" 
+              ? "border-primary text-primary bg-primary/10" 
               : "text-muted-foreground hover:text-foreground"
           )}
         >
@@ -68,7 +68,7 @@ export function OperationsSubTabHeader({
           Abertas
           {openCount > 0 && (
             <Badge 
-              variant={subTab === "abertas" ? "secondary" : "outline"} 
+              variant="secondary" 
               className="h-5 px-1.5 text-xs ml-1"
             >
               {openCount}
@@ -77,13 +77,13 @@ export function OperationsSubTabHeader({
         </Button>
         
         <Button
-          variant={subTab === "historico" ? "default" : "ghost"}
+          variant={subTab === "historico" ? "outline" : "ghost"}
           size="sm"
           onClick={() => onSubTabChange("historico")}
           className={cn(
-            "h-8 gap-2 text-sm font-medium",
+            "h-8 gap-2 text-sm font-medium rounded-full px-4",
             subTab === "historico" 
-              ? "bg-primary text-primary-foreground" 
+              ? "border-primary text-primary bg-primary/10" 
               : "text-muted-foreground hover:text-foreground"
           )}
         >
@@ -91,7 +91,7 @@ export function OperationsSubTabHeader({
           Histórico
           {historyCount !== undefined && historyCount > 0 && (
             <Badge 
-              variant={subTab === "historico" ? "secondary" : "outline"} 
+              variant="secondary" 
               className="h-5 px-1.5 text-xs ml-1"
             >
               {historyCount}

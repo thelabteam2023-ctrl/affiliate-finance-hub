@@ -852,52 +852,24 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   const renderApostas = () => (
     <Card>
       <CardHeader className="pb-3">
-        {/* Sub-abas Ativas / Histórico - acima do título, alinhadas à esquerda */}
-        <div className="flex items-center gap-3 w-fit mb-3">
-          <button
-            onClick={() => setSubTab("ativas")}
-            className={cn(
-              "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-              subTab === "ativas"
-                ? "bg-amber-500/10 text-amber-400"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            )}
-          >
-            <Clock className="h-3.5 w-3.5" />
-            Ativas
-            {apostasAtivas.length > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAtivas.length}</Badge>
-            )}
-          </button>
-          <button
-            onClick={() => setSubTab("historico")}
-            className={cn(
-              "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-              subTab === "historico"
-                ? "bg-amber-500/10 text-amber-400"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            )}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Histórico
-          </button>
+        {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
+        <div className="mb-3">
+          <OperationsSubTabHeader
+            subTab={subTab === "ativas" ? "abertas" : "historico"}
+            onSubTabChange={(tab) => setSubTab(tab === "abertas" ? "ativas" : "historico")}
+            openCount={apostasAtivas.length}
+            historyCount={apostasHistorico.length}
+            viewMode={viewMode === "card" ? "cards" : "list"}
+            onViewModeChange={(mode) => setViewMode(mode === "cards" ? "card" : "list")}
+            showViewToggle={true}
+          />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Target className="h-4 w-4 text-primary" />
-            Centro de Inteligência Freebet
-          </CardTitle>
-          
-          {/* Controles de Visualização */}
-          <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
-            <ToggleGroupItem value="card" aria-label="Cards" size="sm">
-              <LayoutGrid className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="list" aria-label="Lista" size="sm">
-              <List className="h-4 w-4" />
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
+        
+        {/* Título do Card */}
+        <CardTitle className="text-base flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
+          Centro de Inteligência Freebet
+        </CardTitle>
       </CardHeader>
       
       <CardContent className="space-y-4">
