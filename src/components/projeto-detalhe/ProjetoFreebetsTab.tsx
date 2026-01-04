@@ -851,6 +851,36 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   const renderApostas = () => (
     <Card>
       <CardHeader className="pb-3">
+        {/* Sub-abas Ativas / Histórico - acima do título, alinhadas à esquerda */}
+        <div className="flex items-center gap-3 w-fit mb-3">
+          <button
+            onClick={() => setSubTab("ativas")}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+              subTab === "ativas"
+                ? "bg-amber-500/10 text-amber-400"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            )}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            Ativas
+            {apostasAtivas.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAtivas.length}</Badge>
+            )}
+          </button>
+          <button
+            onClick={() => setSubTab("historico")}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+              subTab === "historico"
+                ? "bg-amber-500/10 text-amber-400"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            )}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Histórico
+          </button>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <CardTitle className="text-base flex items-center gap-2">
             <Target className="h-4 w-4 text-primary" />
@@ -858,63 +888,21 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           </CardTitle>
           
           {/* Controles de Visualização */}
-          <div className="flex items-center gap-4">
-            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
-              <ToggleGroupItem value="card" aria-label="Cards" size="sm">
-                <LayoutGrid className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="list" aria-label="Lista" size="sm">
-                <List className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
+          <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as any)}>
+            <ToggleGroupItem value="card" aria-label="Cards" size="sm">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="Lista" size="sm">
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
       </CardHeader>
       
-      <CardContent>
-        <Tabs value={subTab} onValueChange={(v) => setSubTab(v as FreebetSubTab)} className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <TabsList>
-              <TabsTrigger value="ativas" className="gap-1.5">
-                <Clock className="h-3.5 w-3.5" />
-                Ativas
-                {apostasAtivas.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">{apostasAtivas.length}</Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="historico" className="gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                Histórico
-              </TabsTrigger>
-            </TabsList>
-            
-            {/* Filtros */}
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 w-[200px] h-9"
-                />
-              </div>
-              <Select value={casaFilter} onValueChange={setCasaFilter}>
-                <SelectTrigger className="w-[150px] h-9">
-                  <SelectValue placeholder="Casa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas as Casas</SelectItem>
-                  {casasDisponiveis.map(casa => (
-                    <SelectItem key={casa} value={casa}>{casa}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Conteúdo: Apostas Ativas */}
-          <TabsContent value="ativas" className="mt-4">
+      <CardContent className="space-y-4">
+        {/* Conteúdo: Apostas Ativas */}
+        {subTab === "ativas" && (
+          <>
             {apostasAtivas.length === 0 ? (
               <div className="text-center py-12 border rounded-lg bg-muted/5">
                 <Clock className="mx-auto h-10 w-10 text-muted-foreground/30" />
@@ -943,10 +931,12 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
                 ))}
               </div>
             )}
-          </TabsContent>
+          </>
+        )}
 
-          {/* Conteúdo: Histórico */}
-          <TabsContent value="historico" className="mt-4">
+        {/* Conteúdo: Histórico */}
+        {subTab === "historico" && (
+          <>
             {apostasHistorico.length === 0 ? (
               <div className="text-center py-12 border rounded-lg bg-muted/5">
                 <CheckCircle2 className="mx-auto h-10 w-10 text-muted-foreground/30" />
@@ -975,8 +965,8 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
                 ))}
               </div>
             )}
-          </TabsContent>
-        </Tabs>
+          </>
+        )}
       </CardContent>
     </Card>
   );
