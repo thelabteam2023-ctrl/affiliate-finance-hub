@@ -52,6 +52,7 @@ import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useOperationalFiltersOptional, type EstrategiaFilter } from "@/contexts/OperationalFiltersContext";
 import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
+import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -179,8 +180,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol } = useProjetoCurrency(projetoId);
   const currencySymbol = getSymbol();
   
-  // Sub-abas Abertas/Histórico
-  const [operacoesSubTab, setOperacoesSubTab] = useState<"abertas" | "historico">("abertas");
+  // Sub-abas Abertas/Histórico - usa tipo padronizado
+  const [operacoesSubTab, setOperacoesSubTab] = useState<HistorySubTab>("abertas");
   
   // Ordenação Por Casa
   const [porCasaSort, setPorCasaSort] = useState<SortField>("volume");
@@ -882,48 +883,23 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       {/* Card de Histórico com Filtros Internos */}
       <Card>
         <CardHeader className="pb-3">
-          {/* Sub-abas Abertas / Histórico - acima do título, alinhadas à esquerda */}
-          <div className="flex items-center gap-3 w-fit mb-3">
-            <button
-              onClick={() => setOperacoesSubTab("abertas")}
-              className={cn(
-                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                operacoesSubTab === "abertas"
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <Clock className="h-3.5 w-3.5" />
-              Abertas
-              <Badge variant="secondary" className="ml-1 text-xs h-5">{surebetsAbertas.length}</Badge>
-            </button>
-            <button
-              onClick={() => setOperacoesSubTab("historico")}
-              className={cn(
-                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                operacoesSubTab === "historico"
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <History className="h-3.5 w-3.5" />
-              Histórico
-              <Badge variant="secondary" className="ml-1 text-xs h-5">{surebetsHistorico.length}</Badge>
-            </button>
+          {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
+          <div className="mb-3">
+            <OperationsSubTabHeader
+              subTab={operacoesSubTab}
+              onSubTabChange={setOperacoesSubTab}
+              openCount={surebetsAbertas.length}
+              historyCount={surebetsHistorico.length}
+              viewMode={viewMode}
+              onViewModeChange={(mode) => setViewMode(mode)}
+              showViewToggle={true}
+            />
           </div>
-          <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-4">
             <CardTitle className="text-base font-medium flex items-center gap-2">
               <Target className="h-4 w-4 text-primary" />
-              Histórico de Operações
+              {operacoesSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
             </CardTitle>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
-            >
-              {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">

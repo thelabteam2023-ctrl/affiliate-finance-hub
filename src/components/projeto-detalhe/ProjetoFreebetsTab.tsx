@@ -25,6 +25,7 @@ import {
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { useFreebetViewPreferences, FreebetSubTab } from "@/hooks/useFreebetViewPreferences";
 import { cn } from "@/lib/utils";
+import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { 
   FreebetApostaCard, 
   FreebetApostasList, 
