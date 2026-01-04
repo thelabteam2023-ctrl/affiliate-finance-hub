@@ -304,10 +304,11 @@ export function ParceiroDetalhesPanel({
             >
               {/* Conteúdo fixo: KPIs e Info */}
               <div className="shrink-0 space-y-3">
-                {/* KPIs compactos - 4 colunas */}
-                <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
+                {/* KPIs principais - 5 colunas: Depositado → Sacado → SALDO → Resultado → Apostas */}
+                <div className="grid gap-2 grid-cols-2 lg:grid-cols-5">
+                  {/* Depositado */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
-                    <ArrowDownToLine className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                    <ArrowDownToLine className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Depositado</p>
                       <MultiCurrencyDisplay
@@ -321,6 +322,7 @@ export function ParceiroDetalhesPanel({
                     </div>
                   </div>
 
+                  {/* Sacado */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
                     <ArrowUpFromLine className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
@@ -336,6 +338,24 @@ export function ParceiroDetalhesPanel({
                     </div>
                   </div>
 
+                  {/* SALDO ATUAL - Destaque principal */}
+                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-primary/10 border border-primary/30 ring-1 ring-primary/20">
+                    <Wallet className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-primary/80 font-medium uppercase tracking-wide">💰 Saldo Atual</p>
+                      <MultiCurrencyDisplay
+                        valueBRL={totalSaldoBRL}
+                        valueUSD={totalSaldoUSD}
+                        size="sm"
+                        masked={!showSensitiveData}
+                        showDashOnZero
+                        stacked
+                        className="font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Resultado */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
                     {showSensitiveData ? (
                       data.lucro_prejuizo >= 0 ? (
@@ -360,6 +380,7 @@ export function ParceiroDetalhesPanel({
                     </div>
                   </div>
 
+                  {/* Apostas */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
                     <Target className="h-4 w-4 text-purple-500 shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
@@ -369,21 +390,8 @@ export function ParceiroDetalhesPanel({
                   </div>
                 </div>
 
-                {/* Info secundária inline */}
+                {/* Info secundária: apenas casas ativas/limitadas */}
                 <div className="flex flex-wrap gap-3 text-xs">
-                  <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-muted/30">
-                    <Wallet className="h-3 w-3 text-primary mt-0.5 shrink-0" />
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-[10px]">Saldo</span>
-                      <MultiCurrencyDisplay
-                        valueBRL={totalSaldoBRL}
-                        valueUSD={totalSaldoUSD}
-                        size="xs"
-                        masked={!showSensitiveData}
-                        stacked
-                      />
-                    </div>
-                  </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
                     <Building2 className="h-3 w-3 text-success" />
                     <span className="text-muted-foreground">Ativas:</span>
