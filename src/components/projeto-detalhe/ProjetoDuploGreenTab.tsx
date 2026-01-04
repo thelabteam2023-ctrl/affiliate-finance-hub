@@ -647,39 +647,47 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       {/* Card de Histórico com Filtros Internos */}
       <Card>
         <CardHeader className="pb-3">
+          {/* Sub-abas Abertas / Histórico - acima do título, alinhadas à esquerda */}
+          <div className="flex items-center gap-3 w-fit mb-3">
+            <button
+              onClick={() => setApostasSubTab("abertas")}
+              className={cn(
+                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                apostasSubTab === "abertas"
+                  ? "bg-lime-500/10 text-lime-400"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              Abertas
+              <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAbertas.length}</Badge>
+            </button>
+            <button
+              onClick={() => setApostasSubTab("historico")}
+              className={cn(
+                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                apostasSubTab === "historico"
+                  ? "bg-lime-500/10 text-lime-400"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              <History className="h-3.5 w-3.5" />
+              Histórico
+              <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasHistorico.length}</Badge>
+            </button>
+          </div>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-base font-medium flex items-center gap-2">
               <Zap className="h-4 w-4 text-lime-400" />
               Histórico de Operações
             </CardTitle>
-            {/* Sub-abas Abertas / Histórico */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setApostasSubTab("abertas")}
-                className={cn(
-                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                  apostasSubTab === "abertas"
-                    ? "bg-lime-500/10 text-lime-400"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                <Clock className="h-3.5 w-3.5" />
-                Abertas
-                <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAbertas.length}</Badge>
-              </button>
-              <button
-                onClick={() => setApostasSubTab("historico")}
-                className={cn(
-                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                  apostasSubTab === "historico"
-                    ? "bg-lime-500/10 text-lime-400"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                <History className="h-3.5 w-3.5" />
-                Histórico
-                <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasHistorico.length}</Badge>
-              </button>
+            <div className="flex border rounded-md">
+              <Button variant={viewMode === "cards" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("cards")} className="rounded-r-none">
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("list")} className="rounded-l-none">
+                <List className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -691,37 +699,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
             preselectedEstrategia="DUPLO_GREEN"
             className="pb-3 border-b border-border/50"
           />
-          
-          {/* Filtros de Busca e Visualização */}
-          <div className="flex flex-wrap gap-2 items-center">
-            <div className="relative flex-1 min-w-[180px]">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar evento, seleção..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
-            </div>
-            {apostasSubTab === "historico" && (
-              <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Resultado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
-                  <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
-                  <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
-                  <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
-                  <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-            <div className="flex border rounded-md">
-              <Button variant={viewMode === "cards" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("cards")} className="rounded-r-none">
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("list")} className="rounded-l-none">
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
