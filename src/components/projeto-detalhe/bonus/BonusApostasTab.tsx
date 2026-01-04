@@ -832,62 +832,6 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                   Histórico
                 </TabsTrigger>
               </TabsList>
-              
-              {/* Filters */}
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 w-[200px] h-9"
-                  />
-                </div>
-                
-                {subTab === "abertas" && (
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[130px] h-9">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos Status</SelectItem>
-                      <SelectItem value="PENDENTE">Pendente</SelectItem>
-                      <SelectItem value="LIQUIDADA">Liquidada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-                
-                {subTab === "historico" && (
-                  <>
-                    <Select value={resultadoFilter} onValueChange={setResultadoFilter}>
-                      <SelectTrigger className="w-[140px] h-9">
-                        <SelectValue placeholder="Resultado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
-                        <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
-                        <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">Meio Green</SelectItem>
-                        <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">Meio Red</SelectItem>
-                        <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={reasonFilter} onValueChange={setReasonFilter}>
-                      <SelectTrigger className="w-[180px] h-9">
-                        <SelectValue placeholder="Motivo Finalização" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos motivos</SelectItem>
-                        <SelectItem value="rollover_completed">Rollover Concluído</SelectItem>
-                        <SelectItem value="bonus_consumed">Bônus Consumido</SelectItem>
-                        <SelectItem value="expired">Expirou</SelectItem>
-                        <SelectItem value="cancelled_reversed">Cancelado/Revertido</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </>
-                )}
-              </div>
             </div>
 
             {/* Abertas Tab Content */}

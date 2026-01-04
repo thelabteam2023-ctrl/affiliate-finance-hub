@@ -882,40 +882,48 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       {/* Card de Histórico com Filtros Internos */}
       <Card>
         <CardHeader className="pb-3">
+          {/* Sub-abas Abertas / Histórico - acima do título, alinhadas à esquerda */}
+          <div className="flex items-center gap-3 w-fit mb-3">
+            <button
+              onClick={() => setOperacoesSubTab("abertas")}
+              className={cn(
+                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                operacoesSubTab === "abertas"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              Abertas
+              <Badge variant="secondary" className="ml-1 text-xs h-5">{surebetsAbertas.length}</Badge>
+            </button>
+            <button
+              onClick={() => setOperacoesSubTab("historico")}
+              className={cn(
+                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                operacoesSubTab === "historico"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              <History className="h-3.5 w-3.5" />
+              Histórico
+              <Badge variant="secondary" className="ml-1 text-xs h-5">{surebetsHistorico.length}</Badge>
+            </button>
+          </div>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-base font-medium flex items-center gap-2">
               <Target className="h-4 w-4 text-primary" />
               Histórico de Operações
             </CardTitle>
-            {/* Sub-abas Abertas / Histórico */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setOperacoesSubTab("abertas")}
-                className={cn(
-                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                  operacoesSubTab === "abertas"
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                <Clock className="h-3.5 w-3.5" />
-                Abertas
-                <Badge variant="secondary" className="ml-1 text-xs h-5">{surebetsAbertas.length}</Badge>
-              </button>
-              <button
-                onClick={() => setOperacoesSubTab("historico")}
-                className={cn(
-                  "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
-                  operacoesSubTab === "historico"
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                <History className="h-3.5 w-3.5" />
-                Histórico
-                <Badge variant="secondary" className="ml-1 text-xs h-5">{surebetsHistorico.length}</Badge>
-              </button>
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
+            >
+              {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
@@ -926,18 +934,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             preselectedEstrategia="SUREBET"
             className="pb-3 border-b border-border/50"
           />
-          
-          {/* Controle de visualização */}
-          <div className="flex items-center justify-end">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => setViewMode(viewMode === "cards" ? "list" : "cards")}
-            >
-              {viewMode === "cards" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
