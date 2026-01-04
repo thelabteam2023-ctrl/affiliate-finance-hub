@@ -47,7 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getFirstLastName } from "@/lib/utils";
+import { cn, getFirstLastName } from "@/lib/utils";
 
 interface BonusApostasTabProps {
   projetoId: string;
@@ -798,6 +798,36 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
+          {/* Sub-abas Abertas / Histórico - acima do título, alinhadas à esquerda */}
+          <div className="flex items-center gap-3 w-fit mb-3">
+            <button
+              onClick={() => setSubTab("abertas")}
+              className={cn(
+                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                subTab === "abertas"
+                  ? "bg-amber-500/10 text-amber-400"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              Abertas
+              {apostasAbertas.length > 0 && (
+                <Badge variant="secondary" className="ml-1 text-xs h-5">{apostasAbertas.length}</Badge>
+              )}
+            </button>
+            <button
+              onClick={() => setSubTab("historico")}
+              className={cn(
+                "flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors",
+                subTab === "historico"
+                  ? "bg-amber-500/10 text-amber-400"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              <History className="h-3.5 w-3.5" />
+              Histórico
+            </button>
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <CardTitle className="text-base flex items-center gap-2">
               <Target className="h-4 w-4 text-amber-400" />
@@ -816,26 +846,10 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           </div>
         </CardHeader>
         
-        <CardContent>
-          <Tabs value={subTab} onValueChange={(v) => setSubTab(v as SubTabValue)} className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <TabsList>
-                <TabsTrigger value="abertas" className="gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
-                  Abertas
-                  {apostasAbertas.length > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5">{apostasAbertas.length}</Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="historico" className="gap-1.5">
-                  <History className="h-3.5 w-3.5" />
-                  Histórico
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            {/* Abertas Tab Content */}
-            <TabsContent value="abertas" className="mt-4">
+        <CardContent className="space-y-4">
+          {/* Abertas Content */}
+          {subTab === "abertas" && (
+            <>
               {bookmakersInBonusMode.length === 0 && apostasAbertas.length === 0 ? (
                 <div className="text-center py-10">
                   <Coins className="mx-auto h-12 w-12 text-muted-foreground/50" />
@@ -849,16 +863,18 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                   <Clock className="mx-auto h-12 w-12 text-muted-foreground/50" />
                   <h3 className="mt-4 text-lg font-semibold">Nenhuma aposta aberta</h3>
                   <p className="text-muted-foreground">
-                    {searchTerm ? "Tente ajustar os filtros" : "Todas as apostas foram liquidadas"}
+                    Todas as apostas foram liquidadas
                   </p>
                 </div>
               ) : (
                 renderBetCards(apostasAbertas)
               )}
-            </TabsContent>
+            </>
+          )}
 
-            {/* Histórico Tab Content */}
-            <TabsContent value="historico" className="mt-4 space-y-6">
+          {/* Histórico Content */}
+          {subTab === "historico" && (
+            <div className="space-y-6">
               {/* Apostas Liquidadas */}
               {apostasHistorico.length > 0 && (
                 <div className="space-y-3">
@@ -942,8 +958,8 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                   </p>
                 </div>
               )}
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
         </CardContent>
       </Card>
 
