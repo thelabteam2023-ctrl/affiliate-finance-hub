@@ -247,7 +247,7 @@ export default function CentralOperacoes() {
 
   const { alertas: alertasCiclos, refetch: refetchCiclos } = useCicloAlertas();
   const { role, isOperator } = useRole();
-  const { user } = useAuth();
+  const { user, workspaceId } = useAuth();
 
   // Domínios permitidos para o role atual
   const allowedDomains = useMemo(() => {
@@ -255,10 +255,10 @@ export default function CentralOperacoes() {
   }, [role]);
 
   useEffect(() => {
-    if (user) {
+    if (user && workspaceId) {
       fetchData();
     }
-  }, [user, role]);
+  }, [user, role, workspaceId]);
 
   const fetchData = async (isRefresh = false) => {
     try {

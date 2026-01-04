@@ -26,7 +26,7 @@ export function useCentralAlertsCount() {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { role, isOperator } = useRole();
-  const { user } = useAuth();
+  const { user, workspaceId } = useAuth();
 
   // Domínios permitidos para o role atual
   const allowedDomains = useMemo(() => {
@@ -34,7 +34,7 @@ export function useCentralAlertsCount() {
   }, [role]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !workspaceId) return;
 
     const fetchCount = async () => {
       try {
@@ -286,7 +286,7 @@ export function useCentralAlertsCount() {
     // Refresh every 60 seconds
     const interval = setInterval(fetchCount, 60000);
     return () => clearInterval(interval);
-  }, [user, role, isOperator, allowedDomains]);
+  }, [user, workspaceId, role, isOperator, allowedDomains]);
 
   return { count, loading };
 }
