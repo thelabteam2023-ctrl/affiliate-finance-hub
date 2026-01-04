@@ -85,6 +85,7 @@ export function useCentralAlertsCount() {
           acordosResult,
           comissoesResult,
           indicacoesResult,
+          casasDesvinculadasResult,
         ] = await Promise.all([
           // Alertas do painel operacional (saques e casas limitadas) - financial_event
           canSeeFinancialData
@@ -162,6 +163,10 @@ export function useCentralAlertsCount() {
           canSeePartnerData
             ? supabase.from("indicacoes").select("parceiro_id, indicador_id")
             : Promise.resolve({ data: [], error: null }),
+          // Casas desvinculadas - financial_event
+          canSeeFinancialData
+            ? supabase.from("v_bookmakers_desvinculados").select("id", { count: "exact", head: true })
+            : Promise.resolve({ count: 0, error: null }),
         ]);
 
         let totalCount = 0;
@@ -272,6 +277,9 @@ export function useCentralAlertsCount() {
             .filter((p: any) => p.parceiro_id && parceiroIndicadorMap[p.parceiro_id]).length;
           totalCount += comissoesPendentes;
         }
+
+        // Count casas desvinculadas (financial_event)
+        if (casasDesvinculadasResult.count) totalCount += casasDesvinculadasResult.count;
 
         setCount(totalCount);
       } catch (error) {
