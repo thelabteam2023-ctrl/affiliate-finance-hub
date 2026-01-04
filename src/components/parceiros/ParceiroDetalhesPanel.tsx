@@ -348,7 +348,6 @@ export function ParceiroDetalhesPanel({
                         valueUSD={totalSaldoUSD}
                         size="sm"
                         masked={!showSensitiveData}
-                        showDashOnZero
                         stacked
                         className="font-bold"
                       />
