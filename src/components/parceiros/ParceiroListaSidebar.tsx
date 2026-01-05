@@ -56,7 +56,7 @@ export function ParceiroListaSidebar({
   }, [parceiros, searchTerm, statusFilter]);
 
   return (
-    <div className="h-full flex flex-col border-r border-border">
+    <div className="h-full max-h-full flex flex-col border-r border-border overflow-hidden">
       {/* Header: altura fixa, nunca comprime */}
       <div className="shrink-0 p-3 border-b border-border space-y-2">
         <div className="relative">
