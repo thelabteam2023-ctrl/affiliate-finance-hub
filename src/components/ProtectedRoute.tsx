@@ -40,10 +40,13 @@ export function ProtectedRoute({
   const [denyCode, setDenyCode] = useState<string | null>(null);
 
   // CRÍTICO: Guard de auth_version para session versioning
-  // Força logout automático se a versão da sessão for inválida
+  // Bloqueia validação enquanto o auth ainda está carregando (evita loop)
+  const guardUserId = !loading && initialized ? (user?.id ?? null) : null;
+  const guardWorkspaceId = !loading && initialized ? (workspace?.id ?? null) : null;
+
   const { isValid: isSessionValid, isChecking: isCheckingVersion } = useAuthVersionGuard(
-    user?.id ?? null,
-    workspace?.id ?? null
+    guardUserId,
+    guardWorkspaceId
   );
 
   useEffect(() => {
@@ -160,8 +163,8 @@ export function ProtectedRoute({
     );
   }
 
-  // Se a sessão não é válida, o guard já está fazendo logout
-  // Mostrar loading enquanto processa
+  // Se a sessão não é válida, o guard já está fazendo logout (1x)
+  // Mostrar loading até o auth propagar o SIGNED_OUT (evita bounce /auth ↔ app)
   if (!isSessionValid) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

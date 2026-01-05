@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 const AUTH_VERSION_KEY = 'auth_version';
 const WORKSPACE_AUTH_VERSION_KEY = 'workspace_auth_version';
+const LOGOUT_TRIGGERED_KEY_PREFIX = 'auth_version_logout_triggered';
 
 interface AuthVersionGuardState {
   isValid: boolean;
@@ -23,6 +24,20 @@ export function useAuthVersionGuard(
   const [isChecking, setIsChecking] = useState(false);
   const lastCheckRef = useRef<number>(0);
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const logoutTriggeredRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
+
+  // Se o userId mudar (novo login), liberar o lock desta instância do hook
+  useEffect(() => {
+    if (userId && userId !== lastUserIdRef.current) {
+      logoutTriggeredRef.current = false;
+      lastUserIdRef.current = userId;
+    }
+
+    if (!userId) {
+      lastUserIdRef.current = null;
+    }
+  }, [userId]);
 
   /**
    * Armazena auth_version no sessionStorage (isolado por aba)
@@ -71,25 +86,60 @@ export function useAuthVersionGuard(
   }, []);
 
   /**
-   * Força logout do usuário
+   * Marca que o logout já foi disparado (edge-triggered)
+   */
+  const markLogoutTriggered = useCallback((uid: string | null) => {
+    if (!uid) {
+      logoutTriggeredRef.current = true;
+      return;
+    }
+
+    logoutTriggeredRef.current = true;
+
+    // Parar checagens periódicas imediatamente
+    if (checkIntervalRef.current) {
+      clearInterval(checkIntervalRef.current);
+      checkIntervalRef.current = null;
+    }
+
+    try {
+      sessionStorage.setItem(`${LOGOUT_TRIGGERED_KEY_PREFIX}_${uid}`, '1');
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  /**
+   * Verifica se já disparamos logout nesta aba (evita loop render → guard → logout)
+   */
+  const hasLogoutTriggered = useCallback((uid: string | null) => {
+    if (logoutTriggeredRef.current) return true;
+    if (!uid) return false;
+
+    try {
+      return sessionStorage.getItem(`${LOGOUT_TRIGGERED_KEY_PREFIX}_${uid}`) === '1';
+    } catch (e) {
+      return false;
+    }
+  }, []);
+
+  /**
+   * Força logout do usuário (uma única vez)
    */
   const forceLogout = useCallback(async () => {
-    console.log('[AuthVersionGuard] Forçando logout por version mismatch');
-    
-    // Limpar sessionStorage
-    sessionStorage.removeItem(AUTH_VERSION_KEY);
-    
-    // Mostrar toast antes do logout
+    if (hasLogoutTriggered(userId)) return;
+
+    console.warn('[AuthVersionGuard] Forçando logout por version mismatch');
+    markLogoutTriggered(userId);
+
+    // Toast 1x (não precisa esperar)
     toast.error('Sua sessão expirou. Por favor, faça login novamente.', {
       duration: 3000,
     });
-    
-    // Aguardar um pouco para o toast aparecer
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Fazer logout
+
+    // Fazer logout (propaga para outras abas via Auth)
     await supabase.auth.signOut();
-  }, []);
+  }, [userId, hasLogoutTriggered, markLogoutTriggered]);
 
   /**
    * Verifica auth_version do usuário no banco
@@ -172,6 +222,9 @@ export function useAuthVersionGuard(
    * Executa verificação completa
    */
   const performCheck = useCallback(async () => {
+    // Se já disparou logout, não checar mais (evita loop)
+    if (hasLogoutTriggered(userId)) return;
+
     // Throttle: não verificar mais de uma vez a cada 5 segundos
     const now = Date.now();
     if (now - lastCheckRef.current < 5000) {
@@ -188,18 +241,18 @@ export function useAuthVersionGuard(
 
     try {
       const userValid = await checkUserAuthVersion();
-      
+
       if (!userValid) {
         setIsValid(false);
-        await forceLogout();
+        void forceLogout();
         return;
       }
 
       const workspaceValid = await checkWorkspaceAuthVersion();
-      
+
       if (!workspaceValid) {
         setIsValid(false);
-        await forceLogout();
+        void forceLogout();
         return;
       }
 
@@ -207,7 +260,7 @@ export function useAuthVersionGuard(
     } finally {
       setIsChecking(false);
     }
-  }, [userId, checkUserAuthVersion, checkWorkspaceAuthVersion, forceLogout]);
+  }, [userId, checkUserAuthVersion, checkWorkspaceAuthVersion, forceLogout, hasLogoutTriggered]);
 
   // Verificar na montagem e quando userId/workspaceId mudar
   useEffect(() => {
@@ -219,6 +272,7 @@ export function useAuthVersionGuard(
   // Verificar periodicamente (a cada 30 segundos)
   useEffect(() => {
     if (!userId) return;
+    if (hasLogoutTriggered(userId)) return;
 
     checkIntervalRef.current = setInterval(() => {
       performCheck();
@@ -229,22 +283,23 @@ export function useAuthVersionGuard(
         clearInterval(checkIntervalRef.current);
       }
     };
-  }, [userId, performCheck]);
+  }, [userId, performCheck, hasLogoutTriggered]);
 
   // Verificar quando a aba volta a ter foco
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && userId) {
-        performCheck();
-      }
+      if (document.visibilityState !== 'visible') return;
+      if (!userId) return;
+      if (hasLogoutTriggered(userId)) return;
+      performCheck();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [userId, performCheck]);
+  }, [userId, performCheck, hasLogoutTriggered]);
 
   return {
     isValid,
@@ -259,11 +314,18 @@ export function useAuthVersionGuard(
  */
 export async function storeInitialAuthVersion(userId: string, workspaceId?: string) {
   try {
+    // Novo login real: liberar lock de logout desta aba
+    try {
+      sessionStorage.removeItem(`${LOGOUT_TRIGGERED_KEY_PREFIX}_${userId}`);
+    } catch (e) {
+      // ignore
+    }
+
     // Buscar e armazenar user auth_version
     const { data: userVersion } = await supabase.rpc('get_user_auth_version', {
       p_user_id: userId
     });
-    
+
     if (userVersion !== null) {
       sessionStorage.setItem(AUTH_VERSION_KEY, userVersion.toString());
       console.log('[AuthVersionGuard] Stored initial user auth_version:', userVersion);
@@ -275,7 +337,7 @@ export async function storeInitialAuthVersion(userId: string, workspaceId?: stri
         p_user_id: userId,
         p_workspace_id: workspaceId
       });
-      
+
       if (wsVersion !== null) {
         sessionStorage.setItem(`${WORKSPACE_AUTH_VERSION_KEY}_${workspaceId}`, wsVersion.toString());
         console.log('[AuthVersionGuard] Stored initial workspace auth_version:', wsVersion);
@@ -292,15 +354,19 @@ export async function storeInitialAuthVersion(userId: string, workspaceId?: stri
 export function clearStoredAuthVersions() {
   try {
     sessionStorage.removeItem(AUTH_VERSION_KEY);
-    // Limpar todas as workspace versions
+
+    // Limpar todas as workspace versions + locks de logout
     const keysToRemove: string[] = [];
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i);
-      if (key?.startsWith(WORKSPACE_AUTH_VERSION_KEY)) {
+      if (!key) continue;
+
+      if (key.startsWith(WORKSPACE_AUTH_VERSION_KEY) || key.startsWith(LOGOUT_TRIGGERED_KEY_PREFIX)) {
         keysToRemove.push(key);
       }
     }
-    keysToRemove.forEach(key => sessionStorage.removeItem(key));
+    keysToRemove.forEach((key) => sessionStorage.removeItem(key));
+
     console.log('[AuthVersionGuard] Cleared all stored auth versions');
   } catch (e) {
     console.warn('[AuthVersionGuard] Error clearing auth versions:', e);

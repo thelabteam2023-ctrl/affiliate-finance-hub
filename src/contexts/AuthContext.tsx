@@ -289,7 +289,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // CRITICAL: Limpar cache e sessionStorage ao deslogar
           queryClient.clear();
           clearTabWorkspaceId();
-          console.log(`[Auth][${tabId}] SIGNED_OUT event, cleared cache and tab workspace`);
+          clearStoredAuthVersions();
+          console.log(`[Auth][${tabId}] SIGNED_OUT event, cleared cache, tab workspace and auth_versions`);
           setWorkspace(null);
           setRole(null);
           setIsSystemOwner(false);
