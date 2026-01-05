@@ -11,7 +11,6 @@ import {
   markTabAsInitialized,
   getTabId
 } from "@/lib/tabWorkspace";
-import { storeInitialAuthVersion, clearStoredAuthVersions } from "@/hooks/useAuthVersionGuard";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -289,8 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // CRITICAL: Limpar cache e sessionStorage ao deslogar
           queryClient.clear();
           clearTabWorkspaceId();
-          clearStoredAuthVersions();
-          console.log(`[Auth][${tabId}] SIGNED_OUT event, cleared cache, tab workspace and auth_versions`);
+          console.log(`[Auth][${tabId}] SIGNED_OUT event, cleared cache and tab workspace`);
           setWorkspace(null);
           setRole(null);
           setIsSystemOwner(false);
@@ -316,11 +314,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data.user.email || email, 
           data.user.user_metadata?.full_name
         );
-        
-        // CRÍTICO: Armazenar auth_version no login real
-        // Isso define a baseline para verificação de sessão
-        const workspaceId = getTabWorkspaceId();
-        await storeInitialAuthVersion(data.user.id, workspaceId || undefined);
       }
       
       return { error: error ? new Error(error.message) : null };
@@ -370,9 +363,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
     // Limpar workspace da aba
     clearTabWorkspaceId();
-    // CRÍTICO: Limpar auth_versions armazenadas
-    clearStoredAuthVersions();
-    console.log(`[Auth][${tabId}] Cache React Query, workspace da aba e auth_versions limpos`);
+    console.log(`[Auth][${tabId}] Cache React Query e workspace da aba limpos`);
     
     // Executar logout do Supabase Auth (invalida token)
     await supabase.auth.signOut();

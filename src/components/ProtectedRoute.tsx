@@ -1,7 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useAuthVersionGuard } from "@/hooks/useAuthVersionGuard";
 import { Loader2 } from "lucide-react";
 import { NoWorkspaceScreen } from "@/components/NoWorkspaceScreen";
 import { BlockedUserScreen } from "@/components/BlockedUserScreen";
@@ -38,16 +37,6 @@ export function ProtectedRoute({
   const [hasAccess, setHasAccess] = useState(true);
   const [denyReason, setDenyReason] = useState<string | null>(null);
   const [denyCode, setDenyCode] = useState<string | null>(null);
-
-  // CRÍTICO: Guard de auth_version para session versioning
-  // Bloqueia validação enquanto o auth ainda está carregando (evita loop)
-  const guardUserId = !loading && initialized ? (user?.id ?? null) : null;
-  const guardWorkspaceId = !loading && initialized ? (workspace?.id ?? null) : null;
-
-  const { isValid: isSessionValid, isChecking: isCheckingVersion } = useAuthVersionGuard(
-    guardUserId,
-    guardWorkspaceId
-  );
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -151,26 +140,13 @@ export function ProtectedRoute({
     checkAccess();
   }, [user, initialized, role, requiredPermission, requiredRole, requireSystemOwner, hasPermission, isSystemOwner, workspace?.id, location.pathname]);
 
-  // Show loading while checking auth or auth_version
-  if (loading || !initialized || isCheckingVersion) {
+  // Show loading while checking auth
+  if (loading || !initialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Se a sessão não é válida, o guard já está fazendo logout (1x)
-  // Mostrar loading até o auth propagar o SIGNED_OUT (evita bounce /auth ↔ app)
-  if (!isSessionValid) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Sessão expirada, redirecionando...</p>
         </div>
       </div>
     );

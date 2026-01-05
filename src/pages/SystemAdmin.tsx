@@ -200,31 +200,35 @@ export default function SystemAdmin() {
     setViewMembersDialog({ open: true, workspaceId, workspaceName, members });
   };
 
-  // Forçar re-login global usando session versioning (SEGURO - não manipula auth.*)
+  // Forçar logout global de todos os usuários
   const handleForceGlobalLogout = async () => {
     setForceLogoutLoading(true);
     try {
-      // Usar RPC seguro que incrementa auth_version
-      const { data, error } = await supabase.rpc('force_relogin_global');
-
-      if (error) {
-        throw new Error(error.message);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Você precisa estar logado');
+        return;
       }
 
-      // Parse result as JSON object
-      const result = data as { success?: boolean; affected_users?: number; message?: string } | null;
+      const response = await supabase.functions.invoke('force-global-logout', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
 
-      if (result?.success) {
-        toast.success(
-          `Re-login forçado: ${result.affected_users ?? 0} usuários precisarão fazer login novamente`
-        );
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const result = response.data;
+      
+      if (result.success) {
+        toast.success(`Logout forçado: ${result.stats.logged_out} usuários deslogados`);
         // Recarregar dados
         await fetchUsers();
       } else {
-        toast.error('Erro ao forçar re-login');
+        toast.error(result.error || 'Erro ao forçar logout');
       }
     } catch (error: any) {
-      console.error('Erro no force relogin:', error);
+      console.error('Erro no force logout:', error);
       toast.error(`Erro: ${error.message}`);
     } finally {
       setForceLogoutLoading(false);
@@ -288,16 +292,12 @@ export default function SystemAdmin() {
             <DialogDescription className="space-y-2 pt-2">
               <p>Esta ação irá:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Incrementar a versão de autenticação de todos os usuários</li>
-                <li>Invalidar todas as sessões ativas na próxima verificação</li>
+                <li>Invalidar todas as sessões ativas</li>
                 <li>Forçar todos os usuários a fazer login novamente</li>
-                <li>Gerar novos eventos de login na auditoria</li>
+                <li>Registrar novos logins no histórico</li>
               </ul>
               <p className="text-amber-500 font-medium pt-2">
                 ⚠️ Você permanecerá logado, mas todos os outros serão desconectados.
-              </p>
-              <p className="text-xs text-muted-foreground pt-1">
-                Método seguro: não manipula tabelas do schema auth.*
               </p>
             </DialogDescription>
           </DialogHeader>
