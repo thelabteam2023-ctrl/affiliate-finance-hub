@@ -6948,6 +6948,21 @@ export type Database = {
           sales_count: number
         }[]
       }
+      admin_get_deleted_users: {
+        Args: never
+        Returns: {
+          blocked_at: string
+          blocked_reason: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_blocked: boolean
+          is_system_owner: boolean
+          last_login_global: string
+          public_id: string
+        }[]
+      }
       admin_get_group_workspaces: {
         Args: { p_group_id: string }
         Returns: {
@@ -7034,6 +7049,24 @@ export type Database = {
           status: string
           workspace_id: string
           workspace_name: string
+        }[]
+      }
+      admin_get_users_grouped: {
+        Args: never
+        Returns: {
+          blocked_at: string
+          blocked_reason: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_blocked: boolean
+          is_deleted: boolean
+          is_system_owner: boolean
+          last_login_global: string
+          public_id: string
+          workspaces: Json
+          workspaces_count: number
         }[]
       }
       admin_get_users_never_logged: {
@@ -7532,7 +7565,13 @@ export type Database = {
         | "grace_period"
     }
     CompositeTypes: {
-      [_ in never]: never
+      user_workspace_membership: {
+        workspace_id: string | null
+        workspace_name: string | null
+        role: string | null
+        is_active: boolean | null
+        joined_at: string | null
+      }
     }
   }
 }
