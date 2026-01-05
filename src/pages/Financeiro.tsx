@@ -69,6 +69,7 @@ import {
   CaixaDetalhe 
 } from "@/components/financeiro/MapaPatrimonioCard";
 import { ParticipacaoInvestidoresTab } from "@/components/financeiro/ParticipacaoInvestidoresTab";
+import { MultiCurrencyWarningBanner } from "@/components/financeiro/MultiCurrencyIndicator";
 
 interface CaixaFiat {
   moeda: string;
@@ -125,6 +126,9 @@ interface PagamentoOperador {
 
 interface ApostaLucro {
   lucro_prejuizo: number | null;
+  lucro_prejuizo_brl_referencia: number | null;
+  pl_consolidado: number | null;
+  moeda_operacao: string | null;
   data_aposta: string;
 }
 
@@ -317,7 +321,7 @@ export default function Financeiro() {
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)"),
         supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status, projeto_id, moeda").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
         supabase.from("bookmakers").select("saldo_atual, saldo_irrecuperavel, projeto_id, moeda, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "AGUARDANDO_SAQUE"]),
-        supabase.from("apostas_unificada").select("lucro_prejuizo, data_aposta").not("resultado", "is", null),
+        supabase.from("apostas_unificada").select("lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, moeda_operacao, data_aposta").not("resultado", "is", null),
         supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
         supabase
           .from("parcerias")
@@ -477,8 +481,41 @@ export default function Financeiro() {
   const filteredPagamentosOp = filterByPeriod(pagamentosOperador, "data_pagamento") as PagamentoOperador[];
   const filteredApostas = filterByPeriod(apostasLucro, "data_aposta");
   
-  // Lucro operacional filtrado por período
-  const lucroOperacionalApostas = filteredApostas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+  // Lucro operacional filtrado por período - COM CONSOLIDAÇÃO MULTIMOEDA
+  // Prioridade: pl_consolidado > lucro_prejuizo_brl_referencia > lucro_prejuizo (convertido se USD)
+  const { lucroConsolidado: lucroOperacionalApostas, hasMultiCurrencyApostas } = useMemo(() => {
+    let total = 0;
+    let hasMulti = false;
+    
+    filteredApostas.forEach(a => {
+      const moeda = a.moeda_operacao || "BRL";
+      
+      // Se tem pl_consolidado (já convertido no registro), usar
+      if (a.pl_consolidado != null) {
+        total += a.pl_consolidado;
+        if (moeda !== "BRL") hasMulti = true;
+        return;
+      }
+      
+      // Se tem referência BRL salva (snapshot), usar
+      if (a.lucro_prejuizo_brl_referencia != null) {
+        total += a.lucro_prejuizo_brl_referencia;
+        if (moeda !== "BRL") hasMulti = true;
+        return;
+      }
+      
+      // Fallback: converter on-the-fly se necessário
+      const lucro = a.lucro_prejuizo || 0;
+      if (moeda === "USD") {
+        total += lucro * cotacaoUSD;
+        hasMulti = true;
+      } else {
+        total += lucro;
+      }
+    });
+    
+    return { lucroConsolidado: total, hasMultiCurrencyApostas: hasMulti };
+  }, [filteredApostas, cotacaoUSD]);
 
   // ==================== CÁLCULOS CORRIGIDOS ====================
   
@@ -1026,6 +1063,13 @@ export default function Financeiro() {
         pageIcon="PieChart"
       />
 
+      {/* Banner de Consolidação Multimoeda */}
+      <MultiCurrencyWarningBanner
+        hasUSD={hasBookmakersUSD || saldoUSD > 0}
+        hasCrypto={totalCryptoUSD > 0}
+        cotacaoUSD={cotacaoUSD}
+      />
+
       {/* Filtros de Período - Compacto */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="inline-flex items-center rounded-lg border border-border/50 bg-muted/30 p-0.5">
@@ -1124,11 +1168,17 @@ export default function Financeiro() {
               lucroOperacional={lucroOperacionalApostas}
               custoSustentacao={custoSustentacao}
               formatCurrency={formatCurrency}
+              hasMultiCurrency={hasBookmakersUSD || totalCryptoUSD > 0}
+              cotacaoUSD={cotacaoUSD}
             />
             <EficienciaCapitalCard
               lucroOperacional={lucroOperacionalApostas}
               capitalEmBookmakers={saldoBookmakers}
               formatCurrency={formatCurrency}
+              hasMultiCurrency={hasBookmakersUSD}
+              capitalBRL={saldoBookmakersBRL}
+              capitalUSD={saldoBookmakersUSD}
+              cotacaoUSD={cotacaoUSD}
             />
             <MovimentacaoCapitalCard
               depositosBookmakers={depositosBookmakersPeriodo}

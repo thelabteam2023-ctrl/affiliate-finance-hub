@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Scale, TrendingUp, TrendingDown, Minus, HelpCircle } from "lucide-react";
+import { Scale, TrendingUp, TrendingDown, Minus, HelpCircle, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import {
   Tooltip as UITooltip,
   TooltipContent,
@@ -12,12 +13,17 @@ interface EquilibrioOperacionalCardProps {
   lucroOperacional: number;
   custoSustentacao: number;
   formatCurrency: (value: number) => string;
+  // Multimoeda
+  hasMultiCurrency?: boolean;
+  cotacaoUSD?: number;
 }
 
 export function EquilibrioOperacionalCard({
   lucroOperacional,
   custoSustentacao,
   formatCurrency,
+  hasMultiCurrency = false,
+  cotacaoUSD = 1,
 }: EquilibrioOperacionalCardProps) {
   const diferenca = lucroOperacional - custoSustentacao;
   
@@ -112,9 +118,25 @@ export function EquilibrioOperacionalCard({
               </UITooltip>
             </TooltipProvider>
           </CardTitle>
-          <div className={cn("flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full", status.bg, status.color)}>
-            <StatusIcon className="h-3.5 w-3.5" />
-            {status.label}
+          <div className="flex items-center gap-2">
+            {hasMultiCurrency && (
+              <TooltipProvider>
+                <UITooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-xs gap-1 border-green-500/50 text-green-600 dark:text-green-400">
+                      <Globe className="h-3 w-3" />
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Consolidado em BRL (USD @ R$ {cotacaoUSD.toFixed(2)})
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
+            )}
+            <div className={cn("flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full", status.bg, status.color)}>
+              <StatusIcon className="h-3.5 w-3.5" />
+              {status.label}
+            </div>
           </div>
         </div>
       </CardHeader>
