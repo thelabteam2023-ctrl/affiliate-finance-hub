@@ -3,6 +3,14 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { useQueryClient } from "@tanstack/react-query";
+import { 
+  getTabWorkspaceId, 
+  setTabWorkspaceId, 
+  clearTabWorkspaceId, 
+  isTabWorkspaceInitialized,
+  markTabAsInitialized,
+  getTabId
+} from "@/lib/tabWorkspace";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -24,10 +32,12 @@ interface AuthContextType {
   isSystemOwner: boolean;
   isBlocked: boolean;
   publicId: string | null;
+  tabId: string;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshWorkspace: () => Promise<void>;
+  setWorkspaceForTab: (workspaceId: string) => Promise<void>;
   hasPermission: (permissionCode: string) => Promise<boolean>;
   isOwnerOrAdmin: () => boolean;
   isMaster: () => boolean;
@@ -46,13 +56,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSystemOwner, setIsSystemOwner] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [publicId, setPublicId] = useState<string | null>(null);
+  
+  // Tab ID para identificação única desta aba
+  const tabId = getTabId();
 
-  const fetchWorkspaceAndRole = useCallback(async (userId: string) => {
+  /**
+   * Busca workspace e role para um workspace_id específico.
+   * IMPORTANTE: Usa o workspace da ABA, não do banco.
+   */
+  const fetchWorkspaceDetails = useCallback(async (userId: string, targetWorkspaceId: string) => {
+    try {
+      // Fetch workspace details
+      const { data: workspaceData, error: wsError } = await supabase
+        .from('workspaces')
+        .select('id, name, slug, plan')
+        .eq('id', targetWorkspaceId)
+        .single();
+
+      if (!wsError && workspaceData) {
+        setWorkspace(workspaceData);
+        // Garantir que sessionStorage está sincronizado
+        setTabWorkspaceId(workspaceData.id);
+      }
+
+      // Get user's role in THIS specific workspace
+      const { data: userRole, error: roleError } = await supabase
+        .rpc('get_user_role', { _user_id: userId, _workspace_id: targetWorkspaceId });
+
+      if (!roleError && userRole) {
+        setRole(userRole as AppRole);
+        console.log(`[Auth][${tabId}] Role fetched for workspace:`, targetWorkspaceId, '- Role:', userRole);
+      }
+    } catch (error) {
+      console.error(`[Auth][${tabId}] Error fetching workspace details:`, error);
+    }
+  }, [tabId]);
+
+  /**
+   * Inicializa o workspace para esta aba.
+   * Prioridade:
+   * 1. sessionStorage desta aba (se já inicializada)
+   * 2. default_workspace_id do perfil
+   * 3. Primeiro workspace do usuário
+   */
+  const initializeTabWorkspace = useCallback(async (userId: string) => {
     try {
       // Check if user is system owner or blocked, and get public_id
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('is_system_owner, is_blocked, public_id')
+        .select('is_system_owner, is_blocked, public_id, default_workspace_id')
         .eq('id', userId)
         .single();
       
@@ -62,41 +114,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPublicId(profileData.public_id || null);
       }
 
-      // CRITICAL: Use get_current_workspace() which respects the user's selected workspace
-      // This ensures role is fetched from the ACTIVE workspace, not just any workspace
-      const { data: currentWorkspaceId, error: workspaceError } = await supabase
-        .rpc('get_current_workspace');
-
-      if (workspaceError) {
-        console.error("Error fetching current workspace:", workspaceError);
+      // PRIORIDADE 1: Verificar se esta aba já tem um workspace definido
+      const tabWorkspaceId = getTabWorkspaceId();
+      if (tabWorkspaceId && isTabWorkspaceInitialized()) {
+        console.log(`[Auth][${tabId}] Usando workspace da aba:`, tabWorkspaceId);
+        await fetchWorkspaceDetails(userId, tabWorkspaceId);
         return;
       }
 
-      if (currentWorkspaceId) {
-        // Fetch workspace details
-        const { data: workspaceData, error: wsError } = await supabase
-          .from('workspaces')
-          .select('id, name, slug, plan')
-          .eq('id', currentWorkspaceId)
-          .single();
-
-        if (!wsError && workspaceData) {
-          setWorkspace(workspaceData);
-        }
-
-        // Get user's role in THIS specific workspace
-        const { data: userRole, error: roleError } = await supabase
-          .rpc('get_user_role', { _user_id: userId, _workspace_id: currentWorkspaceId });
-
-        if (!roleError && userRole) {
-          setRole(userRole as AppRole);
-          console.log('[Auth] Role fetched for workspace:', currentWorkspaceId, '- Role:', userRole);
-        }
+      // PRIORIDADE 2: Usar default_workspace_id do perfil
+      if (profileData?.default_workspace_id) {
+        console.log(`[Auth][${tabId}] Usando default_workspace_id do perfil:`, profileData.default_workspace_id);
+        setTabWorkspaceId(profileData.default_workspace_id);
+        await fetchWorkspaceDetails(userId, profileData.default_workspace_id);
+        markTabAsInitialized();
+        return;
       }
+
+      // PRIORIDADE 3: Buscar primeiro workspace do usuário
+      const { data: firstMembership } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (firstMembership?.workspace_id) {
+        console.log(`[Auth][${tabId}] Usando primeiro workspace do usuário:`, firstMembership.workspace_id);
+        setTabWorkspaceId(firstMembership.workspace_id);
+        await fetchWorkspaceDetails(userId, firstMembership.workspace_id);
+        markTabAsInitialized();
+        return;
+      }
+
+      // Usuário sem workspace
+      console.log(`[Auth][${tabId}] Usuário sem workspace`);
+      markTabAsInitialized();
     } catch (error) {
-      console.error("Error in fetchWorkspaceAndRole:", error);
+      console.error(`[Auth][${tabId}] Error initializing tab workspace:`, error);
     }
-  }, []);
+  }, [tabId, fetchWorkspaceDetails]);
 
   useEffect(() => {
     // Get initial session
@@ -107,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (initialSession?.user) {
           setSession(initialSession);
           setUser(initialSession.user);
-          await fetchWorkspaceAndRole(initialSession.user.id);
+          await initializeTabWorkspace(initialSession.user.id);
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -122,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log("Auth state changed:", event);
+        console.log(`[Auth][${tabId}] Auth state changed:`, event);
         
         setSession(newSession);
         setUser(newSession?.user ?? null);
@@ -130,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (newSession?.user) {
           // Use setTimeout to avoid blocking the auth state change
           setTimeout(() => {
-            fetchWorkspaceAndRole(newSession.user.id);
+            initializeTabWorkspace(newSession.user.id);
           }, 0);
         } else {
           setWorkspace(null);
@@ -138,9 +197,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (event === 'SIGNED_OUT') {
-          // CRITICAL: Limpar cache ao deslogar
+          // CRITICAL: Limpar cache e sessionStorage ao deslogar
           queryClient.clear();
-          console.log('[Auth] SIGNED_OUT event, cleared React Query cache');
+          clearTabWorkspaceId();
+          console.log(`[Auth][${tabId}] SIGNED_OUT event, cleared cache and tab workspace`);
           setWorkspace(null);
           setRole(null);
           setIsSystemOwner(false);
@@ -153,7 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchWorkspaceAndRole]);
+  }, [initializeTabWorkspace, tabId, queryClient]);
 
   // Função de login seguro - usa RPC que encerra sessões anteriores atomicamente
   const secureLoginRecord = useCallback(async (userId: string, email: string, userName?: string) => {
@@ -234,31 +294,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // CRÍTICO: Encerrar sessão na base ANTES de limpar estado local
     if (userId) {
-      console.log('[Auth] LOGOUT: Encerrar sessão para user:', userId);
+      console.log(`[Auth][${tabId}] LOGOUT: Encerrar sessão para user:`, userId);
       try {
         // Chamar RPC para encerrar todas as sessões ativas deste usuário
         const { data: closedCount, error } = await supabase.rpc('end_user_session', { p_user_id: userId });
         if (error) {
-          console.error('[Auth] LOGOUT FALHOU - RPC error:', error);
-          // Mesmo com erro, continuar com logout do Supabase Auth
+          console.error(`[Auth][${tabId}] LOGOUT FALHOU - RPC error:`, error);
         } else {
-          console.log('[Auth] LOGOUT: Sessões encerradas:', closedCount);
+          console.log(`[Auth][${tabId}] LOGOUT: Sessões encerradas:`, closedCount);
         }
       } catch (error) {
-        console.error('[Auth] LOGOUT exception:', error);
-        // Mesmo com exceção, continuar com logout
+        console.error(`[Auth][${tabId}] LOGOUT exception:`, error);
       }
     } else {
-      console.log('[Auth] LOGOUT: Sem user_id para encerrar sessão');
+      console.log(`[Auth][${tabId}] LOGOUT: Sem user_id para encerrar sessão`);
     }
 
     // Limpar cache do React Query
     queryClient.clear();
-    console.log('[Auth] Cache React Query limpo');
+    // Limpar workspace da aba
+    clearTabWorkspaceId();
+    console.log(`[Auth][${tabId}] Cache React Query e workspace da aba limpos`);
     
     // Executar logout do Supabase Auth (invalida token)
     await supabase.auth.signOut();
-    console.log('[Auth] Deslogado do Supabase Auth');
+    console.log(`[Auth][${tabId}] Deslogado do Supabase Auth`);
     
     // Limpar estado local
     setWorkspace(null);
@@ -268,9 +328,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPublicId(null);
   };
 
+  /**
+   * Atualiza o workspace para esta aba específica.
+   * Também atualiza o default_workspace_id no perfil para persistência.
+   */
+  const setWorkspaceForTab = async (workspaceId: string) => {
+    if (!user) return;
+    
+    console.log(`[Auth][${tabId}] Alterando workspace da aba para:`, workspaceId);
+    
+    // Atualizar sessionStorage desta aba
+    setTabWorkspaceId(workspaceId);
+    
+    // Carregar detalhes do novo workspace
+    await fetchWorkspaceDetails(user.id, workspaceId);
+    
+    // Atualizar default_workspace_id no banco para persistência
+    await supabase.rpc('set_current_workspace', { _workspace_id: workspaceId });
+    
+    // Limpar cache do React Query para forçar reload com novo workspace
+    queryClient.clear();
+  };
+
   const refreshWorkspace = async () => {
     if (user) {
-      await fetchWorkspaceAndRole(user.id);
+      const tabWorkspaceId = getTabWorkspaceId();
+      if (tabWorkspaceId) {
+        await fetchWorkspaceDetails(user.id, tabWorkspaceId);
+      } else {
+        await initializeTabWorkspace(user.id);
+      }
     }
   };
 
@@ -317,10 +404,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isSystemOwner,
     isBlocked,
     publicId,
+    tabId,
     signIn,
     signUp,
     signOut,
     refreshWorkspace,
+    setWorkspaceForTab,
     hasPermission,
     isOwnerOrAdmin,
     isMaster,

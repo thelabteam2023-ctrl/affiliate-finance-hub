@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { Database } from "@/integrations/supabase/types";
 import { useQueryClient } from "@tanstack/react-query";
+import { setTabWorkspaceId } from "@/lib/tabWorkspace";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -28,14 +29,17 @@ export interface PendingWorkspaceInvite {
 /**
  * Hook para gerenciar múltiplos workspaces do usuário.
  * 
+ * IMPORTANTE: Agora usa sessionStorage para isolamento por aba.
+ * Cada aba mantém seu próprio workspace independentemente.
+ * 
  * Funcionalidades:
  * - Lista todos os workspaces que o usuário pertence
  * - Lista convites pendentes para o usuário
- * - Permite trocar entre workspaces
+ * - Permite trocar entre workspaces (isolado por aba)
  * - Permite aceitar convites
  */
 export function useUserWorkspaces() {
-  const { user, refreshWorkspace } = useAuth();
+  const { user, refreshWorkspace, tabId } = useAuth();
   const queryClient = useQueryClient();
   
   const [workspaces, setWorkspaces] = useState<UserWorkspace[]>([]);
@@ -122,40 +126,45 @@ export function useUserWorkspaces() {
     }
   }, [user?.id]);
 
-  // Trocar para outro workspace
+  // Trocar para outro workspace (atualiza sessionStorage desta aba)
   const switchWorkspace = useCallback(async (workspaceId: string) => {
     if (!user?.id) return { success: false, error: "Usuário não autenticado" };
 
     setSwitching(true);
     try {
-      // Chamar RPC para definir workspace atual (usa auth.uid() internamente)
+      console.log(`[useUserWorkspaces][${tabId}] Trocando workspace para:`, workspaceId);
+      
+      // 1. Atualizar sessionStorage desta aba PRIMEIRO
+      setTabWorkspaceId(workspaceId);
+      
+      // 2. Chamar RPC para definir workspace atual (para persistência entre sessões)
       const { error } = await supabase.rpc('set_current_workspace', {
         _workspace_id: workspaceId
       });
 
       if (error) {
-        console.error("[useUserWorkspaces] Erro ao trocar workspace:", error);
+        console.error(`[useUserWorkspaces][${tabId}] Erro ao trocar workspace:`, error);
         return { success: false, error: error.message };
       }
 
-      // Limpar cache do React Query
+      // 3. Limpar cache do React Query
       queryClient.clear();
-      console.log("[useUserWorkspaces] Cache limpo após troca de workspace");
+      console.log(`[useUserWorkspaces][${tabId}] Cache limpo após troca de workspace`);
 
-      // Atualizar contexto de autenticação
+      // 4. Atualizar contexto de autenticação (vai ler do sessionStorage)
       await refreshWorkspace();
 
-      // Recarregar lista de workspaces
+      // 5. Recarregar lista de workspaces
       await reloadData();
 
       return { success: true };
     } catch (error: any) {
-      console.error("[useUserWorkspaces] Erro:", error);
+      console.error(`[useUserWorkspaces][${tabId}] Erro:`, error);
       return { success: false, error: error.message };
     } finally {
       setSwitching(false);
     }
-  }, [user?.id, queryClient, refreshWorkspace, reloadData]);
+  }, [user?.id, queryClient, refreshWorkspace, reloadData, tabId]);
 
   // Aceitar convite de workspace
   const acceptInvite = useCallback(async (token: string) => {

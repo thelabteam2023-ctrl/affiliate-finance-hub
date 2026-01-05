@@ -1,39 +1,35 @@
-import { useWorkspace } from "./useWorkspace";
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useTabWorkspace, useWorkspaceInjector } from "./useTabWorkspace";
 
 /**
  * Hook que garante isolamento de workspace em queries.
  * 
- * - Retorna workspaceId ou null se ainda carregando
+ * ATUALIZADO: Agora usa sessionStorage para isolamento por aba.
+ * Cada aba do navegador mantém seu próprio contexto de workspace.
+ * 
+ * - Retorna workspaceId da aba atual ou null se ainda carregando
  * - Invalida cache do React Query ao trocar de workspace
  * - Lança erro se usado sem workspace (após carregamento)
  */
 export function useWorkspaceGuard() {
-  const { workspaceId, hasWorkspace } = useWorkspace();
-  const queryClient = useQueryClient();
-  const previousWorkspaceId = useRef<string | null>(null);
-
-  // Invalidar cache quando workspace mudar
-  useEffect(() => {
-    if (previousWorkspaceId.current !== null && 
-        previousWorkspaceId.current !== workspaceId) {
-      // Workspace mudou - limpar todo o cache
-      console.log('[WorkspaceGuard] Workspace changed, clearing cache');
-      queryClient.clear();
-    }
-    previousWorkspaceId.current = workspaceId;
-  }, [workspaceId, queryClient]);
+  const { 
+    workspaceId, 
+    hasWorkspace, 
+    createQueryKey, 
+    canOperate,
+    tabId 
+  } = useTabWorkspace();
 
   return {
     workspaceId,
     hasWorkspace,
+    canOperate,
+    tabId,
     // Helper para criar query keys com workspace
-    createQueryKey: (baseKey: string[]) => [...baseKey, workspaceId],
+    createQueryKey,
     // Guard: só retorna workspaceId se válido
     getWorkspaceIdOrThrow: () => {
       if (!workspaceId) {
-        throw new Error('Workspace não disponível. Operação bloqueada.');
+        throw new Error('Workspace não disponível nesta aba. Operação bloqueada.');
       }
       return workspaceId;
     }
@@ -43,15 +39,20 @@ export function useWorkspaceGuard() {
 /**
  * Hook para filtrar queries por workspace.
  * Retorna um objeto de filtro pronto para uso com Supabase.
+ * 
+ * ATUALIZADO: Usa workspace da aba atual, não do banco.
  */
 export function useWorkspaceFilter() {
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, filter, canOperate } = useTabWorkspace();
   
   return {
     workspaceId,
     // Filtro para queries Supabase
-    filter: workspaceId ? { workspace_id: workspaceId } : null,
+    filter,
     // Verificar se pode fazer query
-    canQuery: !!workspaceId,
+    canQuery: canOperate,
   };
 }
+
+// Re-export para conveniência
+export { useWorkspaceInjector } from "./useTabWorkspace";
