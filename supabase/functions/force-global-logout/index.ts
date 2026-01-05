@@ -53,75 +53,47 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Criar cliente admin com service role
+    console.log(`[ForceLogout] Admin executando: ${user.email} (${user.id})`);
+    console.log(`[ForceLogout] Iniciando invalidação de sessões via SQL direto...`);
+
+    // Criar cliente admin com service role para acessar auth schema
     const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      db: { schema: 'auth' }
+    });
+
+    // ABORDAGEM CORRETA: Deletar sessões diretamente das tabelas auth
+    // 1. Deletar refresh_tokens (exceto do admin atual)
+    const { error: refreshError, count: refreshCount } = await adminClient
+      .from("refresh_tokens")
+      .delete({ count: 'exact' })
+      .neq("user_id", user.id);
+
+    if (refreshError) {
+      console.error("[ForceLogout] Erro ao deletar refresh_tokens:", refreshError);
+    } else {
+      console.log(`[ForceLogout] refresh_tokens deletados: ${refreshCount}`);
+    }
+
+    // 2. Deletar sessions (exceto do admin atual)
+    const { error: sessionsError, count: sessionsCount } = await adminClient
+      .from("sessions")
+      .delete({ count: 'exact' })
+      .neq("user_id", user.id);
+
+    if (sessionsError) {
+      console.error("[ForceLogout] Erro ao deletar sessions:", sessionsError);
+    } else {
+      console.log(`[ForceLogout] sessions deletadas: ${sessionsCount}`);
+    }
+
+    // Voltar ao schema public para atualizar login_history
+    const publicClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    console.log(`[ForceLogout] Iniciando invalidação de sessões...`);
-    console.log(`[ForceLogout] Admin executando: ${user.email} (${user.id})`);
-
-    // Abordagem direta: deletar sessões e refresh tokens via SQL usando RPC
-    // Primeiro, vamos contar quantas sessões existem (exceto do admin atual)
-    const { data: sessionCount, error: countError } = await adminClient.rpc('count_active_sessions_except_user', {
-      excluded_user_id: user.id
-    });
-
-    // Se a função RPC não existe, usar abordagem alternativa via Auth Admin API
-    let logoutCount = 0;
-    let errorCount = 0;
-    const errors: string[] = [];
-
-    // Buscar todos os usuários para fazer logout
-    const { data: allUsers, error: usersError } = await adminClient.auth.admin.listUsers();
-    if (usersError) {
-      throw new Error(`Erro ao listar usuários: ${usersError.message}`);
-    }
-
-    console.log(`[ForceLogout] Encontrados ${allUsers.users.length} usuários`);
-
-    // Usar a GoTrue Admin API corretamente - deletar usuário temporariamente não é opção
-    // Vamos usar o endpoint REST direto para invalidar sessões
-
-    const gotrueUrl = `${supabaseUrl}/auth/v1`;
-    
-    for (const targetUser of allUsers.users) {
-      // Não deslogar o próprio admin
-      if (targetUser.id === user.id) {
-        console.log(`[ForceLogout] Pulando próprio admin: ${targetUser.email}`);
-        continue;
-      }
-
-      try {
-        // Usar o endpoint REST para logout global do usuário
-        const logoutResponse = await fetch(`${gotrueUrl}/admin/users/${targetUser.id}/logout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-            'apikey': supabaseServiceKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ scope: 'global' }),
-        });
-
-        if (!logoutResponse.ok) {
-          const errorText = await logoutResponse.text();
-          console.error(`[ForceLogout] Erro HTTP ao deslogar ${targetUser.email}: ${logoutResponse.status} - ${errorText}`);
-          errorCount++;
-          errors.push(`${targetUser.email}: HTTP ${logoutResponse.status}`);
-        } else {
-          console.log(`[ForceLogout] Deslogado com sucesso: ${targetUser.email}`);
-          logoutCount++;
-        }
-      } catch (err) {
-        console.error(`[ForceLogout] Exceção ao deslogar ${targetUser.email}:`, err);
-        errorCount++;
-        errors.push(`${targetUser.email}: ${String(err)}`);
-      }
-    }
-
     // Marcar todas as sessões como encerradas no login_history (exceto do admin atual)
-    const { error: historyError, count: updatedCount } = await adminClient
+    const { error: historyError, count: historyCount } = await publicClient
       .from("login_history")
       .update({
         is_active: false,
@@ -133,22 +105,23 @@ Deno.serve(async (req) => {
 
     if (historyError) {
       console.error("[ForceLogout] Erro ao atualizar login_history:", historyError);
-      errors.push(`login_history: ${historyError.message}`);
     } else {
-      console.log(`[ForceLogout] login_history atualizado`);
+      console.log(`[ForceLogout] login_history atualizado: ${historyCount} registros`);
     }
+
+    const totalInvalidated = (refreshCount || 0) + (sessionsCount || 0);
+    console.log(`[ForceLogout] Total de sessões invalidadas: ${totalInvalidated}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Logout forçado executado`,
+        message: `Logout forçado executado com sucesso`,
         stats: {
-          total_users: allUsers.users.length,
-          logged_out: logoutCount,
-          errors: errorCount,
-          skipped: 1, // o próprio admin
+          refresh_tokens_deleted: refreshCount || 0,
+          sessions_deleted: sessionsCount || 0,
+          login_history_updated: historyCount || 0,
+          admin_preserved: user.email,
         },
-        errors: errors.length > 0 ? errors : undefined,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
