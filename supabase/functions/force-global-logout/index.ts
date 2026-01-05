@@ -54,72 +54,42 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[ForceLogout] Admin executando: ${user.email} (${user.id})`);
-    console.log(`[ForceLogout] Iniciando invalidação de sessões via SQL direto...`);
+    console.log(`[ForceLogout] Chamando RPC admin_force_global_logout...`);
 
-    // Criar cliente admin com service role para acessar auth schema
+    // Criar cliente admin com service role
     const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
-      db: { schema: 'auth' }
     });
 
-    // ABORDAGEM CORRETA: Deletar sessões diretamente das tabelas auth
-    // 1. Deletar refresh_tokens (exceto do admin atual)
-    const { error: refreshError, count: refreshCount } = await adminClient
-      .from("refresh_tokens")
-      .delete({ count: 'exact' })
-      .neq("user_id", user.id);
-
-    if (refreshError) {
-      console.error("[ForceLogout] Erro ao deletar refresh_tokens:", refreshError);
-    } else {
-      console.log(`[ForceLogout] refresh_tokens deletados: ${refreshCount}`);
-    }
-
-    // 2. Deletar sessions (exceto do admin atual)
-    const { error: sessionsError, count: sessionsCount } = await adminClient
-      .from("sessions")
-      .delete({ count: 'exact' })
-      .neq("user_id", user.id);
-
-    if (sessionsError) {
-      console.error("[ForceLogout] Erro ao deletar sessions:", sessionsError);
-    } else {
-      console.log(`[ForceLogout] sessions deletadas: ${sessionsCount}`);
-    }
-
-    // Voltar ao schema public para atualizar login_history
-    const publicClient = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
+    // Usar a função RPC que tem acesso ao schema auth via SECURITY DEFINER
+    const { data: result, error: rpcError } = await adminClient.rpc('admin_force_global_logout', {
+      p_admin_user_id: user.id
     });
 
-    // Marcar todas as sessões como encerradas no login_history (exceto do admin atual)
-    const { error: historyError, count: historyCount } = await publicClient
-      .from("login_history")
-      .update({
-        is_active: false,
-        logout_at: new Date().toISOString(),
-        session_status: "force_logout",
-      })
-      .eq("is_active", true)
-      .neq("user_id", user.id);
-
-    if (historyError) {
-      console.error("[ForceLogout] Erro ao atualizar login_history:", historyError);
-    } else {
-      console.log(`[ForceLogout] login_history atualizado: ${historyCount} registros`);
+    if (rpcError) {
+      console.error("[ForceLogout] Erro RPC:", rpcError);
+      return new Response(
+        JSON.stringify({ error: `Erro ao executar logout: ${rpcError.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const totalInvalidated = (refreshCount || 0) + (sessionsCount || 0);
-    console.log(`[ForceLogout] Total de sessões invalidadas: ${totalInvalidated}`);
+    console.log(`[ForceLogout] Resultado:`, result);
+    console.log(`[ForceLogout] Sessions deletadas: ${result?.sessions_deleted}`);
+    console.log(`[ForceLogout] Refresh tokens deletados: ${result?.refresh_tokens_deleted}`);
+    console.log(`[ForceLogout] Login history atualizado: ${result?.login_history_updated}`);
+
+    const totalInvalidated = (result?.sessions_deleted || 0) + (result?.refresh_tokens_deleted || 0);
 
     return new Response(
       JSON.stringify({
         success: true,
         message: `Logout forçado executado com sucesso`,
         stats: {
-          refresh_tokens_deleted: refreshCount || 0,
-          sessions_deleted: sessionsCount || 0,
-          login_history_updated: historyCount || 0,
+          sessions_deleted: result?.sessions_deleted || 0,
+          refresh_tokens_deleted: result?.refresh_tokens_deleted || 0,
+          login_history_updated: result?.login_history_updated || 0,
+          total_invalidated: totalInvalidated,
           admin_preserved: user.email,
         },
       }),

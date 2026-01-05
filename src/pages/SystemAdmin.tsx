@@ -221,7 +221,10 @@ export default function SystemAdmin() {
       const result = response.data;
       
       if (result.success) {
-        toast.success(`Logout forçado: ${result.stats.logged_out} usuários deslogados`);
+        const stats = result.stats;
+        toast.success(
+          `Logout forçado: ${stats.sessions_deleted} sessões deletadas, ${stats.login_history_updated} registros atualizados`
+        );
         // Recarregar dados
         await fetchUsers();
       } else {

@@ -6881,6 +6881,10 @@ export type Database = {
           workspace_name: string
         }[]
       }
+      admin_force_global_logout: {
+        Args: { p_admin_user_id: string }
+        Returns: Json
+      }
       admin_get_all_users: {
         Args: { _include_deleted?: boolean }
         Returns: {
