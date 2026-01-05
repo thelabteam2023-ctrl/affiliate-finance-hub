@@ -125,8 +125,22 @@ export default function SystemAdmin() {
     return 'normal';
   };
 
-  // Ordenar usuários ativos: online primeiro (se sortOnlineFirst ativo)
+  // Contador de usuários sem workspace (para indicador visual)
+  const usersWithoutWorkspaceCount = users.filter(u => u.workspaces_count === 0).length;
+
+  // Ordenar usuários ativos:
+  // PRIORIDADE 1: Sem workspace (aguardando ação)
+  // PRIORIDADE 2: Online (se sortOnlineFirst ativo)
+  // PRIORIDADE 3: Demais
   const sortedFilteredUsers = [...filteredUsers].sort((a, b) => {
+    // Prioridade absoluta: sem workspace sempre no topo
+    const aNoWs = a.workspaces_count === 0;
+    const bNoWs = b.workspaces_count === 0;
+    
+    if (aNoWs && !bNoWs) return -1;
+    if (!aNoWs && bNoWs) return 1;
+    
+    // Se ambos têm ou não têm workspace, aplicar ordenação online
     if (!sortOnlineFirst) return 0;
     
     const aOnline = isUserOnline(a.id);
@@ -319,6 +333,23 @@ export default function SystemAdmin() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  {/* Alerta de usuários aguardando workspace - só aparece se houver pendências */}
+                  {usersWithoutWorkspaceCount > 0 && !showArchivedUsers && (
+                    <div className="mb-4 flex items-center gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-amber-500/20">
+                        <AlertTriangle className="h-4 w-4 text-amber-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-amber-400">
+                          {usersWithoutWorkspaceCount} {usersWithoutWorkspaceCount === 1 ? 'usuário aguardando' : 'usuários aguardando'} workspace
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Aparecem no topo da lista para ação rápida
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Toggle Ativos / Arquivados + Filtro Online Primeiro */}
                   <div className="flex items-center gap-4 mb-4 flex-wrap">
                     <div className="flex rounded-lg border p-1 bg-muted/30">
@@ -342,12 +373,13 @@ export default function SystemAdmin() {
                       </Button>
                     </div>
                     
-                    {/* Toggle Online Primeiro */}
+                    {/* Toggle Online Primeiro - descreve que sem workspace tem prioridade */}
                     <Button
                       variant={sortOnlineFirst ? "secondary" : "outline"}
                       size="sm"
                       onClick={() => setSortOnlineFirst(!sortOnlineFirst)}
                       className="gap-1.5"
+                      title="Sem workspace sempre aparece primeiro. Este toggle ordena online após."
                     >
                       <ArrowUpDown className="h-3.5 w-3.5" />
                       Online primeiro
