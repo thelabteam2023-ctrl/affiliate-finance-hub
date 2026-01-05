@@ -3,7 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
-interface AdminUser {
+// Estrutura de vínculo workspace-role
+export interface UserWorkspaceMembership {
+  workspace_id: string;
+  workspace_name: string;
+  role: string;
+  is_active: boolean;
+  joined_at: string;
+}
+
+// Novo modelo: usuário com array de workspaces
+export interface AdminUserGrouped {
   id: string;
   email: string;
   full_name: string;
@@ -12,12 +22,25 @@ interface AdminUser {
   is_blocked: boolean;
   blocked_at: string | null;
   blocked_reason: string | null;
-  workspace_id: string | null;
-  workspace_name: string | null;
-  workspace_role: string | null;
   is_system_owner: boolean;
   is_deleted: boolean;
-  last_login: string | null;
+  last_login_global: string | null;
+  workspaces_count: number;
+  workspaces: UserWorkspaceMembership[];
+}
+
+// Modelo para usuários deletados
+export interface AdminDeletedUser {
+  id: string;
+  email: string;
+  full_name: string;
+  public_id: string | null;
+  created_at: string;
+  is_blocked: boolean;
+  blocked_at: string | null;
+  blocked_reason: string | null;
+  is_system_owner: boolean;
+  last_login_global: string | null;
 }
 
 // Helper para identificar usuário removido
@@ -52,28 +75,28 @@ interface WorkspaceMember {
 export function useSystemAdmin() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [deletedUsers, setDeletedUsers] = useState<AdminUser[]>([]);
+  const [users, setUsers] = useState<AdminUserGrouped[]>([]);
+  const [deletedUsers, setDeletedUsers] = useState<AdminDeletedUser[]>([]);
   const [workspaces, setWorkspaces] = useState<AdminWorkspace[]>([]);
 
-  const fetchUsers = useCallback(async (includeDeleted: boolean = false) => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      // Buscar usuários ativos
-      const { data: activeData, error: activeError } = await supabase.rpc('admin_get_all_users', {
-        _include_deleted: false
-      });
+      // Buscar usuários ativos agrupados (nova RPC)
+      const { data: activeData, error: activeError } = await supabase.rpc('admin_get_users_grouped');
       if (activeError) throw activeError;
-      setUsers(activeData || []);
-
-      // Buscar todos (incluindo deletados) para extrair apenas os deletados
-      const { data: allData, error: allError } = await supabase.rpc('admin_get_all_users', {
-        _include_deleted: true
-      });
-      if (allError) throw allError;
       
-      const deleted = (allData || []).filter((u: AdminUser) => u.is_deleted);
-      setDeletedUsers(deleted);
+      // Mapear workspaces de JSONB para array tipado
+      const mappedUsers: AdminUserGrouped[] = (activeData || []).map((u: any) => ({
+        ...u,
+        workspaces: Array.isArray(u.workspaces) ? u.workspaces : (u.workspaces || [])
+      }));
+      setUsers(mappedUsers);
+
+      // Buscar usuários deletados (nova RPC dedicada)
+      const { data: deletedData, error: deletedError } = await supabase.rpc('admin_get_deleted_users');
+      if (deletedError) throw deletedError;
+      setDeletedUsers(deletedData || []);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast.error(error.message || 'Erro ao carregar usuários');

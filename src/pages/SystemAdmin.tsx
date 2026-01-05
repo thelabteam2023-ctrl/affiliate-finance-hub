@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useSystemAdmin, isDeletedUser } from '@/hooks/useSystemAdmin';
+import { useSystemAdmin, isDeletedUser, AdminUserGrouped, AdminDeletedUser } from '@/hooks/useSystemAdmin';
 import { CleanupTab } from '@/components/system-admin/CleanupTab';
 import { CommunityResetTab } from '@/components/system-admin/CommunityResetTab';
 import { PlansTab } from '@/components/system-admin/PlansTab';
@@ -92,10 +92,15 @@ export default function SystemAdmin() {
     fetchWorkspaces();
   }, [fetchUsers, fetchWorkspaces]);
 
-  // Filtrar baseado na aba ativa (ativos vs arquivados)
-  const displayUsers = showArchivedUsers ? deletedUsers : users;
-  
-  const filteredUsers = displayUsers.filter(u => 
+  // Filtrar usuários ativos
+  const filteredUsers = users.filter(u => 
+    u.email?.toLowerCase().includes(searchUsers.toLowerCase()) ||
+    u.full_name?.toLowerCase().includes(searchUsers.toLowerCase()) ||
+    u.public_id?.toLowerCase().includes(searchUsers.toLowerCase())
+  );
+
+  // Filtrar usuários arquivados
+  const filteredDeletedUsers = deletedUsers.filter(u => 
     u.email?.toLowerCase().includes(searchUsers.toLowerCase()) ||
     u.full_name?.toLowerCase().includes(searchUsers.toLowerCase()) ||
     u.public_id?.toLowerCase().includes(searchUsers.toLowerCase())
@@ -108,18 +113,18 @@ export default function SystemAdmin() {
   };
 
   // Helper para determinar status de inatividade visual (somente para usuários OFFLINE)
-  const getInactivityLevel = (user: any): 'normal' | 'warning' | 'danger' => {
+  const getInactivityLevel = (user: AdminUserGrouped): 'normal' | 'warning' | 'danger' => {
     // Se usuário está online, não mostrar alerta de inatividade
     if (isUserOnline(user.id)) return 'normal';
     
-    const days = getDaysSinceLastLogin(user.last_login);
+    const days = getDaysSinceLastLogin(user.last_login_global);
     if (days === null) return 'normal';
     if (days > 5) return 'danger'; // Vermelho: mais de 5 dias
     if (days > 3) return 'warning'; // Amarelo: mais de 3 dias
     return 'normal';
   };
 
-  // Ordenar usuários: online primeiro (se sortOnlineFirst ativo)
+  // Ordenar usuários ativos: online primeiro (se sortOnlineFirst ativo)
   const sortedFilteredUsers = [...filteredUsers].sort((a, b) => {
     if (!sortOnlineFirst) return 0;
     
@@ -181,8 +186,8 @@ export default function SystemAdmin() {
     return <Badge className={planConfig.color}>{planConfig.label}</Badge>;
   };
 
-  const getUserStatus = (user: any) => {
-    if (user.is_deleted) {
+  const getUserStatus = (user: AdminUserGrouped | AdminDeletedUser, isDeleted: boolean = false) => {
+    if (isDeleted) {
       return <Badge variant="outline" className="gap-1 text-muted-foreground border-muted-foreground/30"><Archive className="h-3 w-3" /> Removido</Badge>;
     }
     if (user.is_system_owner) {
@@ -191,7 +196,8 @@ export default function SystemAdmin() {
     if (user.is_blocked) {
       return <Badge variant="destructive" className="gap-1"><Ban className="h-3 w-3" /> Bloqueado</Badge>;
     }
-    if (!user.workspace_id) {
+    // Para AdminUserGrouped, verificar workspaces_count
+    if ('workspaces_count' in user && user.workspaces_count === 0) {
       return <Badge variant="outline" className="gap-1 text-amber-400 border-amber-400/30"><AlertTriangle className="h-3 w-3" /> Sem Workspace</Badge>;
     }
     return <Badge variant="secondary" className="gap-1 bg-emerald-500/20 text-emerald-400"><Check className="h-3 w-3" /> Ativo</Badge>;
@@ -358,17 +364,18 @@ export default function SystemAdmin() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>ID</TableHead>
+                          <TableHead className="w-20">ID</TableHead>
                           <TableHead>Usuário</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead>Workspace</TableHead>
-                          <TableHead>Papel</TableHead>
+                          <TableHead>Workspaces & Papéis</TableHead>
+                          <TableHead>Último Login</TableHead>
                           <TableHead>Cadastro</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sortedFilteredUsers.map((u) => {
+                        {/* Renderizar usuários ativos */}
+                        {!showArchivedUsers && sortedFilteredUsers.map((u) => {
                           const inactivityLevel = getInactivityLevel(u);
                           const rowClasses = cn(
                             inactivityLevel === 'warning' && 'bg-amber-500/5 hover:bg-amber-500/10',
@@ -396,13 +403,28 @@ export default function SystemAdmin() {
                             </TableCell>
                             <TableCell>{getUserStatus(u)}</TableCell>
                             <TableCell>
-                              {u.workspace_name || <span className="text-muted-foreground">-</span>}
-                            </TableCell>
-                            <TableCell>
-                              {u.workspace_role ? (
-                                <Badge variant="outline">{getRoleLabel(u.workspace_role)}</Badge>
+                              {u.workspaces && u.workspaces.length > 0 ? (
+                                <div className="flex flex-col gap-1">
+                                  {u.workspaces.map((ws, idx) => (
+                                    <div key={ws.workspace_id || idx} className="flex items-center gap-1.5">
+                                      <span className="text-sm">{ws.workspace_name}</span>
+                                      <Badge variant="outline" className="text-xs px-1.5 py-0">
+                                        {getRoleLabel(ws.role)}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
                               ) : (
-                                <span className="text-muted-foreground">-</span>
+                                <span className="text-muted-foreground text-sm">Sem workspace</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {u.last_login_global ? (
+                                <span className="text-muted-foreground">
+                                  {format(new Date(u.last_login_global), "dd/MM/yy HH:mm", { locale: ptBR })}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/50 italic">Nunca</span>
                               )}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm">
@@ -410,8 +432,8 @@ export default function SystemAdmin() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                {/* Botões desabilitados para usuários removidos */}
-                                {!u.workspace_id && !u.is_deleted && (
+                                {/* Botões para usuários sem workspace */}
+                                {u.workspaces_count === 0 && (
                                   <>
                                     <Button
                                       variant="outline"
@@ -431,7 +453,7 @@ export default function SystemAdmin() {
                                     </Button>
                                   </>
                                 )}
-                                {!u.is_system_owner && !u.is_deleted && (
+                                {!u.is_system_owner && (
                                   <Button
                                     variant={u.is_blocked ? 'default' : 'destructive'}
                                     size="sm"
@@ -450,7 +472,46 @@ export default function SystemAdmin() {
                           </TableRow>
                           );
                         })}
-                        {sortedFilteredUsers.length === 0 && (
+
+                        {/* Renderizar usuários arquivados */}
+                        {showArchivedUsers && filteredDeletedUsers.map((u) => (
+                          <TableRow key={u.id} className="opacity-60">
+                            <TableCell>
+                              <span className="font-mono text-xs text-muted-foreground">
+                                {u.public_id || '-'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{u.full_name || 'Sem nome'}</div>
+                                <div className="text-sm text-muted-foreground">{u.email}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>{getUserStatus(u, true)}</TableCell>
+                            <TableCell>
+                              <span className="text-muted-foreground text-sm">-</span>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {u.last_login_global ? (
+                                <span className="text-muted-foreground">
+                                  {format(new Date(u.last_login_global), "dd/MM/yy HH:mm", { locale: ptBR })}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/50 italic">Nunca</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {format(new Date(u.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className="text-muted-foreground text-xs">Removido</span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {/* Mensagem de vazio */}
+                        {((!showArchivedUsers && sortedFilteredUsers.length === 0) || 
+                          (showArchivedUsers && filteredDeletedUsers.length === 0)) && (
                           <TableRow>
                             <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                               Nenhum usuário encontrado
