@@ -58,7 +58,21 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Buscar todos os usuários
+    console.log(`[ForceLogout] Iniciando invalidação de sessões...`);
+    console.log(`[ForceLogout] Admin executando: ${user.email} (${user.id})`);
+
+    // Abordagem direta: deletar sessões e refresh tokens via SQL usando RPC
+    // Primeiro, vamos contar quantas sessões existem (exceto do admin atual)
+    const { data: sessionCount, error: countError } = await adminClient.rpc('count_active_sessions_except_user', {
+      excluded_user_id: user.id
+    });
+
+    // Se a função RPC não existe, usar abordagem alternativa via Auth Admin API
+    let logoutCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+
+    // Buscar todos os usuários para fazer logout
     const { data: allUsers, error: usersError } = await adminClient.auth.admin.listUsers();
     if (usersError) {
       throw new Error(`Erro ao listar usuários: ${usersError.message}`);
@@ -66,32 +80,37 @@ Deno.serve(async (req) => {
 
     console.log(`[ForceLogout] Encontrados ${allUsers.users.length} usuários`);
 
-    // Contador de logouts
-    let logoutCount = 0;
-    let errorCount = 0;
-    const errors: string[] = [];
+    // Usar a GoTrue Admin API corretamente - deletar usuário temporariamente não é opção
+    // Vamos usar o endpoint REST direto para invalidar sessões
 
-    // Fazer logout de cada usuário (exceto o admin que está executando)
+    const gotrueUrl = `${supabaseUrl}/auth/v1`;
+    
     for (const targetUser of allUsers.users) {
-      // Não deslogar o próprio admin que está executando
+      // Não deslogar o próprio admin
       if (targetUser.id === user.id) {
         console.log(`[ForceLogout] Pulando próprio admin: ${targetUser.email}`);
         continue;
       }
 
       try {
-        // Invalidar todas as sessões do usuário
-        const { error: signOutError } = await adminClient.auth.admin.signOut(
-          targetUser.id,
-          "global" // Invalida TODAS as sessões
-        );
+        // Usar o endpoint REST para logout global do usuário
+        const logoutResponse = await fetch(`${gotrueUrl}/admin/users/${targetUser.id}/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+            'apikey': supabaseServiceKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ scope: 'global' }),
+        });
 
-        if (signOutError) {
-          console.error(`[ForceLogout] Erro ao deslogar ${targetUser.email}:`, signOutError);
+        if (!logoutResponse.ok) {
+          const errorText = await logoutResponse.text();
+          console.error(`[ForceLogout] Erro HTTP ao deslogar ${targetUser.email}: ${logoutResponse.status} - ${errorText}`);
           errorCount++;
-          errors.push(`${targetUser.email}: ${signOutError.message}`);
+          errors.push(`${targetUser.email}: HTTP ${logoutResponse.status}`);
         } else {
-          console.log(`[ForceLogout] Deslogado: ${targetUser.email}`);
+          console.log(`[ForceLogout] Deslogado com sucesso: ${targetUser.email}`);
           logoutCount++;
         }
       } catch (err) {
@@ -101,18 +120,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Marcar todas as sessões como encerradas no login_history
-    const { error: historyError } = await adminClient
+    // Marcar todas as sessões como encerradas no login_history (exceto do admin atual)
+    const { error: historyError, count: updatedCount } = await adminClient
       .from("login_history")
       .update({
         is_active: false,
         logout_at: new Date().toISOString(),
         session_status: "force_logout",
       })
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .neq("user_id", user.id);
 
     if (historyError) {
       console.error("[ForceLogout] Erro ao atualizar login_history:", historyError);
+      errors.push(`login_history: ${historyError.message}`);
+    } else {
+      console.log(`[ForceLogout] login_history atualizado`);
     }
 
     return new Response(
