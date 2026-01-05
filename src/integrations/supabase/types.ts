@@ -6872,10 +6872,12 @@ export type Database = {
         }
         Returns: string
       }
-      admin_execute_cleanup: {
-        Args: { _confirmation_phrase: string; _user_ids: string[] }
-        Returns: Json
-      }
+      admin_execute_cleanup:
+        | { Args: { _user_ids: string[] }; Returns: Json }
+        | {
+            Args: { _confirmation_phrase: string; _user_ids: string[] }
+            Returns: Json
+          }
       admin_find_workspaces_by_owner_emails: {
         Args: { p_emails: string[] }
         Returns: {
