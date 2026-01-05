@@ -3,6 +3,7 @@
  * Mostra badges e tooltips quando há valores em múltiplas moedas
  */
 
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -10,8 +11,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Globe, RefreshCcw, AlertCircle } from "lucide-react";
+import { Globe, RefreshCcw, AlertCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const BANNER_DISMISSED_KEY = "financeiro_multicurrency_banner_dismissed";
 
 interface MultiCurrencyBadgeProps {
   moedas: string[];
@@ -254,7 +257,20 @@ export function MultiCurrencyWarningBanner({
   cotacaoUSD,
   className,
 }: MultiCurrencyWarningBannerProps) {
+  const [isDismissed, setIsDismissed] = useState(true); // Start hidden to avoid flash
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem(BANNER_DISMISSED_KEY);
+    setIsDismissed(dismissed === "true");
+  }, []);
+
+  const handleDismiss = () => {
+    localStorage.setItem(BANNER_DISMISSED_KEY, "true");
+    setIsDismissed(true);
+  };
+
   if (!hasUSD && !hasCrypto) return null;
+  if (isDismissed) return null;
 
   return (
     <div className={cn(
@@ -264,11 +280,18 @@ export function MultiCurrencyWarningBanner({
       className
     )}>
       <AlertCircle className="h-4 w-4 flex-shrink-0" />
-      <span>
+      <span className="flex-1">
         Métricas consolidadas em BRL 
         {hasUSD && ` (USD @ R$ ${cotacaoUSD.toFixed(2)})`}
         {hasCrypto && " incluindo ativos crypto"}
       </span>
+      <button
+        onClick={handleDismiss}
+        className="p-1 rounded hover:bg-amber-500/20 transition-colors"
+        aria-label="Fechar aviso"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
