@@ -10,6 +10,7 @@ import { OnlineUsersCard } from '@/components/system-admin/OnlineUsersCard';
 import { LoginHistoryTab } from '@/components/system-admin/LoginHistoryTab';
 import { InfluenceMetricsTab } from '@/components/system-admin/InfluenceMetricsTab';
 import { OnlineStatusIndicator } from '@/components/system-admin/OnlineStatusIndicator';
+import { UserWorkspacesList } from '@/components/system-admin/UserWorkspacesList';
 import { usePresence } from '@/contexts/PresenceContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -402,21 +403,8 @@ export default function SystemAdmin() {
                               </div>
                             </TableCell>
                             <TableCell>{getUserStatus(u)}</TableCell>
-                            <TableCell>
-                              {u.workspaces && u.workspaces.length > 0 ? (
-                                <div className="flex flex-col gap-1">
-                                  {u.workspaces.map((ws, idx) => (
-                                    <div key={ws.workspace_id || idx} className="flex items-center gap-1.5">
-                                      <span className="text-sm">{ws.workspace_name}</span>
-                                      <Badge variant="outline" className="text-xs px-1.5 py-0">
-                                        {getRoleLabel(ws.role)}
-                                      </Badge>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">Sem workspace</span>
-                              )}
+                            <TableCell className="align-top py-3">
+                              <UserWorkspacesList workspaces={u.workspaces || []} />
                             </TableCell>
                             <TableCell className="text-sm">
                               {u.last_login_global ? (
