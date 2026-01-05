@@ -25,10 +25,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
-  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3, ArrowUpDown, LogOut
+  Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3, ArrowUpDown
 } from 'lucide-react';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -80,8 +78,6 @@ export default function SystemAdmin() {
   const [blockUserDialog, setBlockUserDialog] = useState<{ open: boolean; userId: string; userName: string; currentlyBlocked: boolean }>({ open: false, userId: '', userName: '', currentlyBlocked: false });
   const [changePlanDialog, setChangePlanDialog] = useState<{ open: boolean; workspaceId: string; workspaceName: string; currentPlan: string }>({ open: false, workspaceId: '', workspaceName: '', currentPlan: '' });
   const [viewMembersDialog, setViewMembersDialog] = useState<{ open: boolean; workspaceId: string; workspaceName: string; members: any[] }>({ open: false, workspaceId: '', workspaceName: '', members: [] });
-  const [forceLogoutDialog, setForceLogoutDialog] = useState(false);
-  const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
   
   // Form states
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
@@ -200,42 +196,6 @@ export default function SystemAdmin() {
     setViewMembersDialog({ open: true, workspaceId, workspaceName, members });
   };
 
-  // Forçar logout global de todos os usuários
-  const handleForceGlobalLogout = async () => {
-    setForceLogoutLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Você precisa estar logado');
-        return;
-      }
-
-      const response = await supabase.functions.invoke('force-global-logout', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      const result = response.data;
-      
-      if (result.success) {
-        toast.success(`Logout forçado: ${result.stats.logged_out} usuários deslogados`);
-        // Recarregar dados
-        await fetchUsers();
-      } else {
-        toast.error(result.error || 'Erro ao forçar logout');
-      }
-    } catch (error: any) {
-      console.error('Erro no force logout:', error);
-      toast.error(`Erro: ${error.message}`);
-    } finally {
-      setForceLogoutLoading(false);
-      setForceLogoutDialog(false);
-    }
-  };
-
   const getPlanBadge = (plan: string) => {
     const planConfig = PLANS.find(p => p.value === plan) || PLANS[0];
     return <Badge className={planConfig.color}>{planConfig.label}</Badge>;
@@ -268,64 +228,7 @@ export default function SystemAdmin() {
           </div>
           <p className="text-muted-foreground mt-1">Gerencie usuários, workspaces e planos da plataforma</p>
         </div>
-        
-        {/* Ações administrativas */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setForceLogoutDialog(true)}
-          className="gap-2 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
-        >
-          <LogOut className="h-4 w-4" />
-          Forçar Re-login Global
-        </Button>
       </div>
-
-      {/* Dialog de confirmação para Force Logout */}
-      <Dialog open={forceLogoutDialog} onOpenChange={setForceLogoutDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-500">
-              <AlertTriangle className="h-5 w-5" />
-              Forçar Re-login de Todos os Usuários
-            </DialogTitle>
-            <DialogDescription className="space-y-2 pt-2">
-              <p>Esta ação irá:</p>
-              <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Invalidar todas as sessões ativas</li>
-                <li>Forçar todos os usuários a fazer login novamente</li>
-                <li>Registrar novos logins no histórico</li>
-              </ul>
-              <p className="text-amber-500 font-medium pt-2">
-                ⚠️ Você permanecerá logado, mas todos os outros serão desconectados.
-              </p>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setForceLogoutDialog(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleForceGlobalLogout}
-              disabled={forceLogoutLoading}
-              className="gap-2"
-            >
-              {forceLogoutLoading ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  Executando...
-                </>
-              ) : (
-                <>
-                  <LogOut className="h-4 w-4" />
-                  Confirmar Logout Global
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-5">
