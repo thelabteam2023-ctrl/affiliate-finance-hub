@@ -157,68 +157,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [tabId, fetchWorkspaceDetails]);
 
-  useEffect(() => {
-    // Get initial session
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        
-        if (initialSession?.user) {
-          setSession(initialSession);
-          setUser(initialSession.user);
-          await initializeTabWorkspace(initialSession.user.id);
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-      } finally {
-        setLoading(false);
-        setInitialized(true);
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log(`[Auth][${tabId}] Auth state changed:`, event);
-        
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-
-        if (newSession?.user) {
-          // Use setTimeout to avoid blocking the auth state change
-          setTimeout(() => {
-            initializeTabWorkspace(newSession.user.id);
-          }, 0);
-        } else {
-          setWorkspace(null);
-          setRole(null);
-        }
-
-        if (event === 'SIGNED_OUT') {
-          // CRITICAL: Limpar cache e sessionStorage ao deslogar
-          queryClient.clear();
-          clearTabWorkspaceId();
-          console.log(`[Auth][${tabId}] SIGNED_OUT event, cleared cache and tab workspace`);
-          setWorkspace(null);
-          setRole(null);
-          setIsSystemOwner(false);
-          setIsBlocked(false);
-          setPublicId(null);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [initializeTabWorkspace, tabId, queryClient]);
-
   // Função de login seguro - usa RPC que encerra sessões anteriores atomicamente
-  const secureLoginRecord = useCallback(async (userId: string, email: string, userName?: string) => {
+  const secureLoginRecord = useCallback(async (userId: string, email: string, userName?: string, forceRecord: boolean = false) => {
     try {
-      console.log('[Auth] Recording secure login for user:', userId);
+      console.log(`[Auth][${tabId}] Recording secure login for user:`, userId, forceRecord ? '(forced)' : '');
       
       // Get workspace info for this user
       const { data: workspaceId } = await supabase.rpc('get_user_workspace', { _user_id: userId });
@@ -245,14 +187,121 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (error) {
-        console.error('[Auth] secure_login RPC error:', error);
+        console.error(`[Auth][${tabId}] secure_login RPC error:`, error);
       } else {
-        console.log('[Auth] Secure login recorded, session ID:', sessionId);
+        console.log(`[Auth][${tabId}] Secure login recorded, session ID:`, sessionId);
       }
     } catch (error) {
-      console.error('[Auth] Exception in secureLoginRecord:', error);
+      console.error(`[Auth][${tabId}] Exception in secureLoginRecord:`, error);
     }
-  }, []);
+  }, [tabId]);
+
+  /**
+   * Verifica se o usuário tem sessão ativa registrada.
+   * Se não tiver, registra automaticamente.
+   * Isso garante que usuários com sessão persistida também tenham login registrado.
+   */
+  const ensureLoginRecorded = useCallback(async (userId: string, email: string, userName?: string) => {
+    try {
+      // Verificar se existe sessão ativa para este usuário
+      const { data: activeSessions, error } = await supabase
+        .from('login_history')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .limit(1);
+
+      if (error) {
+        console.error(`[Auth][${tabId}] Error checking active sessions:`, error);
+        return;
+      }
+
+      // Se não há sessão ativa, registrar login
+      if (!activeSessions || activeSessions.length === 0) {
+        console.log(`[Auth][${tabId}] Nenhuma sessão ativa encontrada, registrando login automático`);
+        await secureLoginRecord(userId, email, userName, true);
+      } else {
+        console.log(`[Auth][${tabId}] Sessão ativa já existe, não precisa registrar`);
+      }
+    } catch (error) {
+      console.error(`[Auth][${tabId}] Exception in ensureLoginRecorded:`, error);
+    }
+  }, [tabId, secureLoginRecord]);
+
+  useEffect(() => {
+    // Get initial session
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
+        if (initialSession?.user) {
+          setSession(initialSession);
+          setUser(initialSession.user);
+          await initializeTabWorkspace(initialSession.user.id);
+          
+          // NOVO: Garantir que o login está registrado para usuários com sessão persistida
+          // Isso resolve o problema de usuários que já estavam logados antes da implementação
+          await ensureLoginRecorded(
+            initialSession.user.id,
+            initialSession.user.email || '',
+            initialSession.user.user_metadata?.full_name
+          );
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        setLoading(false);
+        setInitialized(true);
+      }
+    };
+
+    initializeAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        console.log(`[Auth][${tabId}] Auth state changed:`, event);
+        
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+
+        if (newSession?.user) {
+          // Use setTimeout to avoid blocking the auth state change
+          setTimeout(async () => {
+            await initializeTabWorkspace(newSession.user.id);
+            
+            // Garantir login registrado em qualquer evento de autenticação
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+              await ensureLoginRecorded(
+                newSession.user.id,
+                newSession.user.email || '',
+                newSession.user.user_metadata?.full_name
+              );
+            }
+          }, 0);
+        } else {
+          setWorkspace(null);
+          setRole(null);
+        }
+
+        if (event === 'SIGNED_OUT') {
+          // CRITICAL: Limpar cache e sessionStorage ao deslogar
+          queryClient.clear();
+          clearTabWorkspaceId();
+          console.log(`[Auth][${tabId}] SIGNED_OUT event, cleared cache and tab workspace`);
+          setWorkspace(null);
+          setRole(null);
+          setIsSystemOwner(false);
+          setIsBlocked(false);
+          setPublicId(null);
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [initializeTabWorkspace, tabId, queryClient, ensureLoginRecorded]);
 
   const signIn = async (email: string, password: string) => {
     try {
