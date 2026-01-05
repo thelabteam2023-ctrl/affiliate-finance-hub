@@ -842,6 +842,13 @@ export type Database = {
             referencedColumns: ["profile_id"]
           },
           {
+            foreignKeyName: "bookmakers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_last_login"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "bookmakers_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -3433,6 +3440,13 @@ export type Database = {
             referencedColumns: ["profile_id"]
           },
           {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_last_login"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "parceiros_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -3878,6 +3892,7 @@ export type Database = {
           is_blocked: boolean | null
           is_system_owner: boolean | null
           is_test_user: boolean | null
+          last_login_at: string | null
           observacoes_operador: string | null
           public_id: string | null
           telefone: string | null
@@ -3899,6 +3914,7 @@ export type Database = {
           is_blocked?: boolean | null
           is_system_owner?: boolean | null
           is_test_user?: boolean | null
+          last_login_at?: string | null
           observacoes_operador?: string | null
           public_id?: string | null
           telefone?: string | null
@@ -3920,6 +3936,7 @@ export type Database = {
           is_blocked?: boolean | null
           is_system_owner?: boolean | null
           is_test_user?: boolean | null
+          last_login_at?: string | null
           observacoes_operador?: string | null
           public_id?: string | null
           telefone?: string | null
@@ -5716,6 +5733,13 @@ export type Database = {
             referencedRelation: "v_operadores_workspace"
             referencedColumns: ["profile_id"]
           },
+          {
+            foreignKeyName: "bookmakers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_last_login"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       v_bookmakers_aguardando_saque: {
@@ -5781,6 +5805,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_operadores_workspace"
             referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_last_login"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -6523,6 +6554,13 @@ export type Database = {
             referencedRelation: "v_operadores_workspace"
             referencedColumns: ["profile_id"]
           },
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_last_login"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       v_parcerias_alerta: {
@@ -6715,6 +6753,13 @@ export type Database = {
             referencedRelation: "v_operadores_workspace"
             referencedColumns: ["profile_id"]
           },
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_last_login"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       v_saldo_parceiro_wallets: {
@@ -6744,7 +6789,31 @@ export type Database = {
             referencedRelation: "v_operadores_workspace"
             referencedColumns: ["profile_id"]
           },
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_last_login"
+            referencedColumns: ["user_id"]
+          },
         ]
+      }
+      v_user_last_login: {
+        Row: {
+          email: string | null
+          full_name: string | null
+          is_blocked: boolean | null
+          is_system_owner: boolean | null
+          last_ip_address: string | null
+          last_login_global: string | null
+          last_session_at: string | null
+          last_workspace_id: string | null
+          last_workspace_name: string | null
+          session_is_active: boolean | null
+          session_status: string | null
+          user_id: string | null
+        }
+        Relationships: []
       }
     }
     Functions: {
@@ -6907,6 +6976,7 @@ export type Database = {
           id: string
           ip_address: string
           is_active: boolean
+          last_login_global: string
           login_at: string
           logout_at: string
           session_status: string
@@ -6964,6 +7034,16 @@ export type Database = {
           status: string
           workspace_id: string
           workspace_name: string
+        }[]
+      }
+      admin_get_users_never_logged: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          user_id: string
+          workspaces_count: number
         }[]
       }
       admin_get_workspace_members: {

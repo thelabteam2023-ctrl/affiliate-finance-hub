@@ -15,6 +15,7 @@ interface LoginRecord {
   logout_at: string | null;
   is_active: boolean;
   session_status: 'active' | 'closed' | 'expired';
+  last_login_global: string | null;  // Último login GLOBAL do usuário
 }
 
 interface LoginStats {
@@ -74,6 +75,7 @@ export function useLoginHistory(params: UseLoginHistoryParams = {}) {
         logout_at: record.logout_at || null,
         is_active: record.is_active ?? false,
         session_status: record.session_status || 'closed',
+        last_login_global: record.last_login_global || null,  // NOVO: último login global
       }));
       
       setHistory(mappedData);
