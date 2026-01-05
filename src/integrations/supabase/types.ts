@@ -3878,6 +3878,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auth_version: number
           blocked_at: string | null
           blocked_reason: string | null
           cpf: string | null
@@ -3900,6 +3901,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auth_version?: number
           blocked_at?: string | null
           blocked_reason?: string | null
           cpf?: string | null
@@ -3922,6 +3924,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auth_version?: number
           blocked_at?: string | null
           blocked_reason?: string | null
           cpf?: string | null
@@ -5469,6 +5472,7 @@ export type Database = {
       }
       workspace_members: {
         Row: {
+          auth_version: number
           created_at: string
           id: string
           invited_at: string | null
@@ -5481,6 +5485,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          auth_version?: number
           created_at?: string
           id?: string
           invited_at?: string | null
@@ -5493,6 +5498,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          auth_version?: number
           created_at?: string
           id?: string
           invited_at?: string | null
@@ -6866,10 +6872,12 @@ export type Database = {
         }
         Returns: string
       }
-      admin_execute_cleanup: {
-        Args: { _confirmation_phrase: string; _user_ids: string[] }
-        Returns: Json
-      }
+      admin_execute_cleanup:
+        | { Args: { _user_ids: string[] }; Returns: Json }
+        | {
+            Args: { _confirmation_phrase: string; _user_ids: string[] }
+            Returns: Json
+          }
       admin_find_workspaces_by_owner_emails: {
         Args: { p_emails: string[] }
         Returns: {
@@ -7286,6 +7294,12 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      force_relogin_global: { Args: never; Returns: Json }
+      force_relogin_user: { Args: { p_user_id: string }; Returns: Json }
+      force_relogin_workspace: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
       generate_public_id: { Args: never; Returns: string }
       get_bookmaker_saldos: {
         Args: { p_projeto_id: string }
@@ -7374,6 +7388,7 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      get_user_auth_version: { Args: { p_user_id: string }; Returns: number }
       get_user_role: {
         Args: { _user_id: string; _workspace_id?: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -7389,6 +7404,10 @@ export type Database = {
           workspace_name: string
           workspace_slug: string
         }[]
+      }
+      get_workspace_auth_version: {
+        Args: { p_user_id: string; p_workspace_id: string }
+        Returns: number
       }
       get_workspace_invites: {
         Args: { _workspace_id: string }
