@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, TrendingUp, TrendingDown, HelpCircle, Target } from "lucide-react";
+import { Zap, TrendingUp, TrendingDown, HelpCircle, Target, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import {
   Tooltip as UITooltip,
   TooltipContent,
@@ -12,12 +13,21 @@ interface EficienciaCapitalCardProps {
   lucroOperacional: number;
   capitalEmBookmakers: number;
   formatCurrency: (value: number) => string;
+  // Novos props para multimoeda
+  hasMultiCurrency?: boolean;
+  capitalBRL?: number;
+  capitalUSD?: number;
+  cotacaoUSD?: number;
 }
 
 export function EficienciaCapitalCard({
   lucroOperacional,
   capitalEmBookmakers,
   formatCurrency,
+  hasMultiCurrency = false,
+  capitalBRL = 0,
+  capitalUSD = 0,
+  cotacaoUSD = 1,
 }: EficienciaCapitalCardProps) {
   const eficiencia = capitalEmBookmakers > 0 ? (lucroOperacional / capitalEmBookmakers) * 100 : 0;
   const roiMensal = eficiencia; // ROI sobre capital alocado
@@ -88,6 +98,35 @@ export function EficienciaCapitalCard({
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>
+            {hasMultiCurrency && (
+              <TooltipProvider>
+                <UITooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-xs gap-1 border-green-500/50 text-green-600 dark:text-green-400 ml-2">
+                      <Globe className="h-3 w-3" />
+                      <span>Multi</span>
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[240px]">
+                    <div className="space-y-1 text-xs">
+                      <p className="font-medium">Capital em Múltiplas Moedas</p>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">BRL:</span>
+                        <span>{formatCurrency(capitalBRL)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">USD:</span>
+                        <span>${capitalUSD.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-border/50">
+                        <span className="text-muted-foreground">Cotação:</span>
+                        <span>R$ {cotacaoUSD.toFixed(4)}</span>
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
+            )}
           </CardTitle>
         </div>
       </CardHeader>
