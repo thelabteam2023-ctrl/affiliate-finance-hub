@@ -216,9 +216,10 @@ export function LoginHistoryTab() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Usuário</TableHead>
-                    <TableHead>Workspace</TableHead>
-                    <TableHead>Data/Hora</TableHead>
-                    <TableHead>Sessão</TableHead>
+                    <TableHead>Workspace (sessão)</TableHead>
+                    <TableHead>Último Login Global</TableHead>
+                    <TableHead>Esta Sessão</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -250,8 +251,17 @@ export function LoginHistoryTab() {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
+                        <TableCell className="text-sm">
+                          {record.last_login_global ? (
+                            <span className="font-medium">
+                              {format(new Date(record.last_login_global), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Nunca logou</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {format(new Date(record.login_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          {format(new Date(record.login_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
                         </TableCell>
                         <TableCell>
                           <span className={cn(
@@ -266,7 +276,7 @@ export function LoginHistoryTab() {
                   })}
                   {sortedHistory.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                         {loading ? 'Carregando...' : 'Nenhum registro de login encontrado'}
                       </TableCell>
                     </TableRow>
