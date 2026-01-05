@@ -89,8 +89,8 @@ export function ParceiroListaSidebar({
         )}
       </div>
 
-      {/* Lista: flex-1 com scroll próprio */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      {/* Lista: flex-1 com scroll próprio - scrollbar sempre visível */}
+      <div className="flex-1 min-h-0 overflow-y-scroll">
         <div className="p-2 space-y-1 pb-4">
           {filteredParceiros.map((parceiro) => (
             <button
