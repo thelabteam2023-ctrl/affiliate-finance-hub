@@ -151,7 +151,7 @@ export const MERCADOS_COM_EMPATE_POR_ESPORTE: Record<string, string[]> = {
 };
 
 // Tipo para modelo de aposta
-export type ModeloAposta = "1-2" | "1-X-2";
+export type ModeloAposta = "1-2" | "1-X-2" | "SOLIBET";
 
 /**
  * Verifica se um mercado admite empate para um esporte específico
@@ -174,6 +174,9 @@ export function isMercadoCompativelComModelo(
 ): boolean {
   if (!mercado) return true; // Mercado vazio é sempre compatível
   
+  // SOLIBET é compatível com todos os mercados
+  if (modelo === "SOLIBET") return true;
+  
   const admiteEmpate = mercadoAdmiteEmpate(mercado, esporte);
   
   if (modelo === "1-X-2") {
@@ -191,6 +194,15 @@ export function isMercadoCompativelComModelo(
  */
 export function getMarketsForSportAndModel(esporte: string, modelo: ModeloAposta): string[] {
   const mercadosEsporte = getMarketsForSport(esporte);
+  
+  // SOLIBET: retornar todos os mercados do esporte
+  if (modelo === "SOLIBET") {
+    if (!mercadosEsporte.includes("Outro")) {
+      return [...mercadosEsporte, "Outro"];
+    }
+    return mercadosEsporte;
+  }
+  
   const mercadosComEmpate = MERCADOS_COM_EMPATE_POR_ESPORTE[esporte] || [];
   
   const mercadosFiltrados = mercadosEsporte.filter(mercado => {
