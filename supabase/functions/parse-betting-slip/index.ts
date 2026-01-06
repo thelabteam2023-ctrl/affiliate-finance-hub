@@ -17,6 +17,8 @@ interface ParsedBetSlip {
   esporte: ParsedField;
   mercado: ParsedField;
   selecao: ParsedField;
+  odd: ParsedField;
+  stake: ParsedField;
 }
 
 const SPORTS_LIST = [
@@ -76,17 +78,19 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um especialista em ler boletins de apostas esportivas. Sua tarefa é extrair informações do print de um boletim de aposta.
+            content: `Você é um especialista em ler boletins de apostas esportivas. Sua tarefa é extrair TODAS as informações visíveis do print de um boletim de aposta.
 
 REGRAS IMPORTANTES:
-1. NUNCA extraia valores financeiros (odd, stake, retorno, valor apostado)
-2. Extraia APENAS informações de contexto: times, data, esporte, mercado, seleção
-3. Se não tiver certeza sobre um campo, retorne null para o valor
-4. Para eventos esportivos, procure por padrões como "Time A x Time B", "Time A vs Time B", "Time A - Time B"
-5. Identifique o mandante (primeiro time) e visitante (segundo time)
-6. Reconheça mercados comuns: 1X2, Over/Under, Handicap, BTTS, etc.
-7. Identifique o esporte a partir de indicadores visuais ou textuais
-8. Para a seleção, extraia o que foi apostado (ex: "Over 2.5", "Time A", "1")
+1. Extraia TODOS os campos visíveis: times, data, esporte, mercado, seleção, ODD e STAKE
+2. A ODD é o valor numérico da cotação (ex: 1.85, 2.10, 3.50)
+3. O STAKE é o valor apostado em dinheiro (ex: 100, 50.00, R$ 200)
+4. Se não tiver certeza sobre um campo, retorne o valor mesmo assim com confiança baixa
+5. Para eventos esportivos, procure por padrões como "Time A x Time B", "Time A vs Time B", "Time A - Time B"
+6. Identifique o mandante (primeiro time) e visitante (segundo time)
+7. Reconheça mercados comuns: 1X2, Over/Under, Handicap, BTTS, etc.
+8. Identifique o esporte a partir de indicadores visuais ou textuais
+9. Para a seleção, extraia o que foi apostado (ex: "Over 2.5", "Time A", "1")
+10. Para valores numéricos (odd, stake), extraia APENAS os números, sem símbolos de moeda
 
 Esportes reconhecidos: ${SPORTS_LIST.join(", ")}
 
@@ -100,14 +104,18 @@ FORMATO DE RESPOSTA (JSON estrito):
   "dataHora": { "value": "YYYY-MM-DDTHH:mm ou null", "confidence": "high|medium|low|none" },
   "esporte": { "value": "NOME DO ESPORTE DA LISTA ou null", "confidence": "high|medium|low|none" },
   "mercado": { "value": "NOME DO MERCADO ou null", "confidence": "high|medium|low|none" },
-  "selecao": { "value": "TEXTO DA SELEÇÃO ou null", "confidence": "high|medium|low|none" }
+  "selecao": { "value": "TEXTO DA SELEÇÃO ou null", "confidence": "high|medium|low|none" },
+  "odd": { "value": "VALOR NUMÉRICO DA ODD ou null", "confidence": "high|medium|low|none" },
+  "stake": { "value": "VALOR NUMÉRICO APOSTADO ou null", "confidence": "high|medium|low|none" }
 }
 
 Nível de confiança:
 - "high": texto claramente visível e inequívoco
 - "medium": texto visível mas pode ter interpretação ambígua
 - "low": texto parcialmente visível ou muito incerto
-- "none": não foi possível detectar`
+- "none": não foi possível detectar
+
+DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com formato decimal (1.85, 2.10). O STAKE aparece como "Valor da aposta", "Stake", "Aposta", ou próximo a símbolos de moeda.`
           },
           {
             role: "user",
@@ -152,6 +160,14 @@ Nível de confiança:
     let parsedData: ParsedBetSlip;
     try {
       parsedData = JSON.parse(content);
+      
+      // Ensure odd and stake fields exist
+      if (!parsedData.odd) {
+        parsedData.odd = { value: null, confidence: "none" };
+      }
+      if (!parsedData.stake) {
+        parsedData.stake = { value: null, confidence: "none" };
+      }
     } catch (e) {
       console.error("Failed to parse AI response:", e);
       // Return empty result if parsing fails
@@ -161,7 +177,9 @@ Nível de confiança:
         dataHora: { value: null, confidence: "none" },
         esporte: { value: null, confidence: "none" },
         mercado: { value: null, confidence: "none" },
-        selecao: { value: null, confidence: "none" }
+        selecao: { value: null, confidence: "none" },
+        odd: { value: null, confidence: "none" },
+        stake: { value: null, confidence: "none" }
       };
     }
 

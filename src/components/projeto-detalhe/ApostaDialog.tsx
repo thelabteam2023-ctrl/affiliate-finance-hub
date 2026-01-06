@@ -571,6 +571,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         setSelecao(data.selecao);
         setSelecaoFromPrint(true);
       }
+      
+      // NEW: Fill ODD and Stake from print if detected
+      // These values are editable and won't be overwritten without user action
+      if (data.odd) {
+        setOdd(data.odd);
+      }
+      if (data.stake) {
+        setStake(data.stake);
+      }
     }
   }, [printParsedData, aposta, applyPrintData, printPendingData]);
 
