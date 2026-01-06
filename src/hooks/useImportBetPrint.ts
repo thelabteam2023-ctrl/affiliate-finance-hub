@@ -20,6 +20,8 @@ export interface ParsedBetSlip {
   esporte: ParsedField;
   mercado: ParsedField;
   selecao: ParsedField;
+  odd: ParsedField;
+  stake: ParsedField;
 }
 
 export type FieldsNeedingReview = {
@@ -29,6 +31,8 @@ export type FieldsNeedingReview = {
   esporte: boolean;
   mercado: boolean;
   selecao: boolean;
+  odd: boolean;
+  stake: boolean;
 };
 
 // Store intended market value that may need to be resolved later
@@ -54,6 +58,8 @@ interface UseImportBetPrintReturn {
     esporte: string;
     mercado: string;
     selecao: string;
+    odd: string;
+    stake: string;
   };
   resolveMarketForSport: (sport: string, availableOptions: string[]) => string;
 }
@@ -215,7 +221,9 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
         dataHora: "",
         esporte: "",
         mercado: "",
-        selecao: ""
+        selecao: "",
+        odd: "",
+        stake: ""
       };
     }
 
@@ -227,7 +235,9 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       dataHora: parsedData.dataHora?.value || "",
       esporte: parsedData.esporte?.value || "",
       mercado: parsedData.mercado?.value || "",
-      selecao: parsedData.selecao?.value || ""
+      selecao: parsedData.selecao?.value || "",
+      odd: parsedData.odd?.value || "",
+      stake: parsedData.stake?.value || ""
     };
   }, [parsedData]);
 
@@ -239,6 +249,8 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     esporte: (parsedData?.esporte?.confidence === "medium" || parsedData?.esporte?.confidence === "low") && !!parsedData?.esporte?.value,
     mercado: (parsedData?.mercado?.confidence === "medium" || parsedData?.mercado?.confidence === "low") && !!parsedData?.mercado?.value,
     selecao: (parsedData?.selecao?.confidence === "medium" || parsedData?.selecao?.confidence === "low") && !!parsedData?.selecao?.value,
+    odd: (parsedData?.odd?.confidence === "medium" || parsedData?.odd?.confidence === "low") && !!parsedData?.odd?.value,
+    stake: (parsedData?.stake?.confidence === "medium" || parsedData?.stake?.confidence === "low") && !!parsedData?.stake?.value,
   };
 
   return {
