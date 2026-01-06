@@ -795,13 +795,17 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       newOdds.forEach((o, i) => {
         if (i !== index) {
           o.isReference = false;
+          // Ao mudar referência, resetar edição manual das outras pernas
+          o.isManuallyEdited = false;
         }
       });
     }
     
-    // NOVO COMPORTAMENTO: Nunca marcar como editado manualmente
-    // A referência sempre é o driver dos cálculos
-    // Alterar stake NÃO desativa o cálculo automático
+    // CORREÇÃO: Quando o usuário edita a stake de uma perna NÃO-referência,
+    // marcar como editado manualmente para preservar o valor
+    if (field === "stake" && !newOdds[index].isReference) {
+      newOdds[index].isManuallyEdited = true;
+    }
     
     setOdds(newOdds);
   };
@@ -932,7 +936,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     const pernaData = odds.map(perna => ({
       oddMedia: getOddMediaPerna(perna),
       stakeAtual: getStakeTotalPerna(perna),
-      isReference: perna.isReference
+      isReference: perna.isReference,
+      isManuallyEdited: perna.isManuallyEdited
     }));
     
     // Verificar se temos referência
@@ -970,6 +975,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       // Nunca modificar a referência
       if (i === refIndex) return o;
       
+      // CORREÇÃO: Respeitar edição manual - não sobrescrever se o usuário editou
+      if (o.isManuallyEdited) return o;
+      
       const calculatedStake = resultado.stakes[i];
       const currentStake = parseFloat(o.stake) || 0;
       
@@ -986,7 +994,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     }
   }, [
     // Dependências: recalcular quando qualquer odd ou stake mudar (incluindo additionalEntries)
-    odds.map(o => `${o.odd}-${o.stake}-${(o.additionalEntries || []).map(ae => `${ae.odd}-${ae.stake}`).join('|')}`).join(','),
+    // CORREÇÃO: Incluir isManuallyEdited na chave para reagir a resets
+    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${(o.additionalEntries || []).map(ae => `${ae.odd}-${ae.stake}`).join('|')}`).join(','),
     // Quando a referência mudar
     odds.map(o => o.isReference).join(','),
     // NOVO: Quando o modelo mudar
@@ -2259,10 +2268,17 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     const parceiroShortName = parceiroNome 
                       ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
                       : "";
-                    const stakeCalculada = analysis?.calculatedStakes?.[index] || 0;
+                    // Usar suggestedStakes (stake calculada automaticamente) para comparação
+                    const stakeCalculada = analysis?.suggestedStakes?.[index] || 0;
                     const stakeAtual = parseFloat(entry.stake) || 0;
+                    // Mostrar indicador de edição manual quando:
+                    // - Perna está marcada como editada manualmente
+                    // - Tem stake atual preenchida
+                    // - Stake atual é diferente da sugerida
+                    // - Não é a perna de referência
                     const isDifferentFromCalculated = entry.isManuallyEdited && 
                       stakeAtual > 0 && 
+                      stakeCalculada > 0 &&
                       Math.abs(stakeAtual - stakeCalculada) > 0.01 &&
                       !entry.isReference;
                     
@@ -2590,6 +2606,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground whitespace-nowrap text-center block">
                                 Stake{!isEditing && entry.isReference && <span className="text-primary ml-0.5">(Ref)</span>}
+                                {!isEditing && !entry.isReference && entry.isManuallyEdited && (
+                                  <span className="text-amber-500 ml-0.5" title="Valor editado manualmente">(Manual)</span>
+                                )}
                               </Label>
                               {isEditing ? (
                                 <div className="h-8 px-1.5 text-[10px] flex items-center justify-center bg-muted/50 rounded-md border font-medium">
@@ -2610,14 +2629,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                     }`}
                                     tabIndex={index * 4 + 3}
                                   />
-                                  {isDifferentFromCalculated && stakeCalculada > 0 && (
+                                  {/* Botão de reset: aparece quando editado manualmente E há valor calculado */}
+                                  {!entry.isReference && entry.isManuallyEdited && stakeCalculada > 0 && (
                                     <Button
                                       type="button"
                                       variant="ghost"
                                       size="sm"
-                                      className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                      className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 p-0 text-amber-500 hover:text-primary"
                                       onClick={() => resetStakeToCalculated(index, stakeCalculada)}
-                                      title={`Resetar para ${stakeCalculada.toFixed(2)}`}
+                                      title={`Recalcular para ${formatCurrency(stakeCalculada, entry.moeda)}`}
                                     >
                                       <RotateCcw className="h-3 w-3" />
                                     </Button>
