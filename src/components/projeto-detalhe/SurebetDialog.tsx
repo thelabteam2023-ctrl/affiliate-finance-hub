@@ -475,13 +475,7 @@ const SELECOES_POR_MERCADO: Record<string, string[]> = {
   "Outro": ["Opção 1", "Opção 2"]
 };
 
-const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2" | "SOLIBET", numPernas?: number): string[] => {
-  // SOLIBET: retorna labels genéricos baseado no número de pernas
-  if (modelo === "SOLIBET") {
-    const n = numPernas || 2;
-    return n === 3 ? ["Perna 1", "Perna 2", "Perna 3"] : ["Perna 1", "Perna 2"];
-  }
-  
+const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2"): string[] => {
   // 1-X-2 sempre é Casa, Empate, Fora - fixo para 3 posições
   if (modelo === "1-X-2") {
     // Alguns mercados têm seleções específicas para 3-way
@@ -541,8 +535,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   const [evento, setEvento] = useState("");
   const [mercado, setMercado] = useState("");
   const [esporte, setEsporte] = useState("Futebol");
-  const [modelo, setModelo] = useState<"1-X-2" | "1-2" | "SOLIBET">("1-2");
-  const [solibetNumPernas, setSolibetNumPernas] = useState<2 | 3>(2); // Número de pernas no modelo Solibet
+  const [modelo, setModelo] = useState<"1-X-2" | "1-2">("1-2");
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   
@@ -620,9 +613,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         setMercado(""); // Resetar mercado incompatível
       }
       
-      // Para SOLIBET, usar solibetNumPernas
-      const numSlots = modelo === "SOLIBET" ? solibetNumPernas : (modelo === "1-X-2" ? 3 : 2);
-      const selecoes = getSelecoesPorMercado(mercado, modelo, numSlots);
+      const selecoes = getSelecoesPorMercado(mercado, modelo);
+      // Ajustar número de odds baseado APENAS no modelo escolhido
+      const numSlots = modelo === "1-X-2" ? 3 : 2;
       const currentNumSlots = odds.length;
       
       // Só atualizar se o número de slots mudou
@@ -630,13 +623,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         const newSelecoes = selecoes.slice(0, numSlots);
         // Preencher com fallback se necessário
         while (newSelecoes.length < numSlots) {
-          if (modelo === "SOLIBET") {
-            newSelecoes.push(`Perna ${newSelecoes.length + 1}`);
-          } else if (modelo === "1-X-2") {
-            newSelecoes.push(["Casa", "Empate", "Fora"][newSelecoes.length]);
-          } else {
-            newSelecoes.push(["Opção 1", "Opção 2"][newSelecoes.length]);
-          }
+          newSelecoes.push(modelo === "1-X-2" ? ["Casa", "Empate", "Fora"][newSelecoes.length] : ["Opção 1", "Opção 2"][newSelecoes.length]);
         }
         setOdds(newSelecoes.map((sel, i) => ({
           bookmaker_id: "",
@@ -645,39 +632,30 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           stake: "",
           selecao: sel,
           selecaoLivre: "",
-          isReference: modelo !== "SOLIBET" && i === 0, // SOLIBET não tem referência
-          isManuallyEdited: modelo === "SOLIBET", // SOLIBET é sempre manual
+          isReference: i === 0,
+          isManuallyEdited: false,
           additionalEntries: []
         })));
       } else {
         // Apenas atualizar as seleções mantendo dados existentes
         const newSelecoes = selecoes.slice(0, numSlots);
         while (newSelecoes.length < numSlots) {
-          if (modelo === "SOLIBET") {
-            newSelecoes.push(`Perna ${newSelecoes.length + 1}`);
-          } else if (modelo === "1-X-2") {
-            newSelecoes.push(["Casa", "Empate", "Fora"][newSelecoes.length]);
-          } else {
-            newSelecoes.push(["Opção 1", "Opção 2"][newSelecoes.length]);
-          }
+          newSelecoes.push(modelo === "1-X-2" ? ["Casa", "Empate", "Fora"][newSelecoes.length] : ["Opção 1", "Opção 2"][newSelecoes.length]);
         }
         setOdds(prev => prev.map((o, i) => ({
           ...o,
-          selecao: newSelecoes[i] || o.selecao,
-          isReference: modelo !== "SOLIBET" && (o.isReference || i === 0),
-          isManuallyEdited: modelo === "SOLIBET" || o.isManuallyEdited
+          selecao: newSelecoes[i] || o.selecao
         })));
       }
     }
-  }, [modelo, esporte, solibetNumPernas, isEditing]);
+  }, [modelo, esporte, isEditing]); // Adicionado esporte como dependência
   
   // Atualizar seleções quando mercado muda (sem afetar modelo)
   // Atualizar seleções quando mercado muda (TANTO em criação QUANTO em edição)
-  // SOLIBET não atualiza seleções pelo mercado - são genéricas
   useEffect(() => {
-    if (mercado && modelo !== "SOLIBET") {
+    if (mercado) {
+      const selecoes = getSelecoesPorMercado(mercado, modelo);
       const numSlots = modelo === "1-X-2" ? 3 : 2;
-      const selecoes = getSelecoesPorMercado(mercado, modelo, numSlots);
       const newSelecoes = selecoes.slice(0, numSlots);
       while (newSelecoes.length < numSlots) {
         newSelecoes.push(modelo === "1-X-2" ? ["Casa", "Empate", "Fora"][newSelecoes.length] : ["Opção 1", "Opção 2"][newSelecoes.length]);
@@ -687,18 +665,17 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         selecao: newSelecoes[i] || o.selecao
       })));
     }
-  }, [mercado, modelo]);
+  }, [mercado]);
 
   const resetForm = () => {
     setEvento("");
     setMercado("");
     setEsporte("Futebol");
     setModelo("1-2");
-    setSolibetNumPernas(2);
     setObservacoes("");
     setArredondarAtivado(true);
     setArredondarValor("1");
-    const defaultSelecoes = getSelecoesPorMercado("", "1-2", 2);
+    const defaultSelecoes = getSelecoesPorMercado("", "1-2");
     setOdds(defaultSelecoes.map((sel, i) => ({
       bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, selecaoLivre: "", isReference: i === 0, isManuallyEdited: false, additionalEntries: []
     })));
@@ -951,13 +928,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   // COMPORTAMENTO CORRIGIDO: Usa lógica DIFERENTE para modelos 1-2 e 1x2
   // - Modelo 1-2: Cálculo binário sequencial
   // - Modelo 1x2: Cálculo matricial global (3 pernas simultâneas)
-  // - Modelo SOLIBET: Sem cálculo automático (100% manual)
   useEffect(() => {
     // Não recalcular em modo edição
     if (isEditing) return;
-    
-    // SOLIBET: Sem cálculo automático de stakes - o usuário controla manualmente
-    if (modelo === "SOLIBET") return;
     
     // Preparar dados consolidados de cada perna
     const pernaData = odds.map(perna => ({
@@ -2184,15 +2157,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 compact
               />
               
-              {/* Modelo - Toggle inline com 3 opções */}
+              {/* Modelo - Toggle inline */}
               <div className="flex items-center gap-2">
                 <Label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Modelo:</Label>
-                <div className={`relative flex p-0.5 bg-muted/50 rounded h-8 ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
+                <div className={`relative flex p-0.5 bg-muted/50 rounded h-8 w-[120px] ${isEditing ? 'opacity-60 pointer-events-none' : ''}`}>
                   <div 
                     className="absolute h-[calc(100%-4px)] bg-primary rounded transition-all duration-200 ease-out"
                     style={{
-                      width: 'calc(33.33% - 2px)',
-                      left: modelo === "1-2" ? '2px' : modelo === "1-X-2" ? 'calc(33.33% + 1px)' : 'calc(66.66% + 1px)',
+                      width: 'calc(50% - 2px)',
+                      left: modelo === "1-X-2" ? 'calc(50% + 1px)' : '2px',
                       top: '2px'
                     }}
                   />
@@ -2200,7 +2173,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     type="button"
                     onClick={() => !isEditing && setModelo("1-2")}
                     disabled={isEditing}
-                    className={`relative z-10 px-3 text-sm font-medium rounded transition-colors ${
+                    className={`relative z-10 flex-1 text-sm font-medium rounded transition-colors ${
                       modelo === "1-2" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -2210,55 +2183,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     type="button"
                     onClick={() => !isEditing && setModelo("1-X-2")}
                     disabled={isEditing}
-                    className={`relative z-10 px-3 text-sm font-medium rounded transition-colors ${
+                    className={`relative z-10 flex-1 text-sm font-medium rounded transition-colors ${
                       modelo === "1-X-2" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     1–X–2
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => !isEditing && setModelo("SOLIBET")}
-                    disabled={isEditing}
-                    title="Modelo manual: defina cada perna independentemente, sem cálculo automático de stakes"
-                    className={`relative z-10 px-3 text-sm font-medium rounded transition-colors ${
-                      modelo === "SOLIBET" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Solibet
-                  </button>
                 </div>
-                
-                {/* Seletor de número de pernas para SOLIBET */}
-                {modelo === "SOLIBET" && !isEditing && (
-                  <div className="flex items-center gap-1 ml-2">
-                    <Label className="text-xs text-muted-foreground">Pernas:</Label>
-                    <div className="flex bg-muted/50 rounded p-0.5">
-                      <button
-                        type="button"
-                        onClick={() => setSolibetNumPernas(2)}
-                        className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                          solibetNumPernas === 2 
-                            ? "bg-primary text-primary-foreground" 
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        2
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSolibetNumPernas(3)}
-                        className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                          solibetNumPernas === 3 
-                            ? "bg-primary text-primary-foreground" 
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        3
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -2323,9 +2254,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">Posições da Operação</Label>
                   <span className="text-[10px] text-muted-foreground">
-                    {modelo === "SOLIBET" 
-                      ? "Modo manual: preencha cada perna independentemente" 
-                      : "Selecione a referência e ajuste as stakes"}
+                    Selecione a referência e ajuste as stakes
                   </span>
                 </div>
                 
@@ -2357,13 +2286,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                     const saldoInsuficiente = !isEditing && stakeAtual > 0 && saldoDisponivelPosicao !== null && stakeAtual > saldoDisponivelPosicao + 0.01;
                     
                     // Cores distintas por coluna
-                    const columnColors = modelo === "SOLIBET"
-                      ? [
-                          { bg: "bg-purple-500/10", border: "border-purple-500/40", badge: "bg-purple-500 text-white" },
-                          { bg: "bg-cyan-500/10", border: "border-cyan-500/40", badge: "bg-cyan-500 text-white" },
-                          { bg: "bg-pink-500/10", border: "border-pink-500/40", badge: "bg-pink-500 text-white" }
-                        ]
-                      : modelo === "1-X-2" 
+                    const columnColors = modelo === "1-X-2" 
                       ? [
                           { bg: "bg-blue-500/10", border: "border-blue-500/40", badge: "bg-blue-500 text-white" },
                           { bg: "bg-amber-500/10", border: "border-amber-500/40", badge: "bg-amber-500 text-black" },
@@ -2404,9 +2327,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                           {/* Badge + Seleção Centralizado */}
                           <div className="flex flex-col items-center gap-2">
                             <div className={`text-2xl font-bold px-5 py-2 rounded-xl ${colors.badge}`}>
-                              {modelo === "SOLIBET"
-                                ? `P${index + 1}`
-                                : modelo === "1-X-2" 
+                              {modelo === "1-X-2" 
                                 ? (index === 0 ? "1" : index === 1 ? "X" : "2") 
                                 : (index === 0 ? "1" : "2")
                               }
@@ -2532,8 +2453,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               </div>
                             )}
                             
-                            {/* RadioButton Referência - Glass/Subtle Effect (oculto no modo SOLIBET) */}
-                            {!isEditing && modelo !== "SOLIBET" && (
+                            {/* RadioButton Referência - Glass/Subtle Effect */}
+                            {!isEditing && (
                               <button
                                 type="button"
                                 role="radio"
