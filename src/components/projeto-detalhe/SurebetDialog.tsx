@@ -28,7 +28,8 @@ import {
   Gift,
   Plus,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Camera
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
@@ -49,6 +50,8 @@ import {
 } from "@/components/projeto-detalhe/MultiCurrencyIndicator";
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
+import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
+import { SurebetLegPrintCompact } from "./SurebetLegPrintFields";
 
 // Interface local DEPRECATED - agora usamos BookmakerSaldo do hook canônico diretamente
 interface LegacyBookmaker {
@@ -566,6 +569,22 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   // Estado para controlar expansão de resultados avançados por perna
   const [expandedResultados, setExpandedResultados] = useState<Record<number, boolean>>({});
 
+  // ========== IMPORTAÇÃO VIA PRINT (POR PERNA) ==========
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [activePrintLegIndex, setActivePrintLegIndex] = useState<number | null>(null);
+  const {
+    legPrints,
+    isProcessingAny,
+    sharedContext,
+    processLegImage,
+    clearLegPrint,
+    clearAllPrints,
+    initializeLegPrints,
+    applyLegData,
+    acceptInference,
+    rejectInference,
+  } = useSurebetPrintImport();
+
   // Filtrar bookmakers com saldo operável >= 0.50 (usando dados canônicos)
   const bookmakersDisponiveis = useMemo(() => {
     return bookmakerSaldos.filter((bk) => bk.saldo_operavel >= 0.50);
@@ -584,10 +603,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         setObservacoes(surebet.observacoes || "");
         // Buscar apostas vinculadas passando o modelo correto
         fetchLinkedPernas(surebet.id, surebet.modelo);
+        // Não inicializar prints em modo edição
       } else {
         // CRÍTICO: Modo criação - SEMPRE resetar o formulário completamente
         resetForm();
         setLinkedApostas([]);
+        // Inicializar prints para o modelo padrão (1-2 = 2 pernas)
+        initializeLegPrints(2);
       }
     }
   }, [open, surebet]); // Usar surebet diretamente para detectar mudanças de null<->objeto
@@ -599,6 +621,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       const timer = setTimeout(() => {
         resetForm();
         setLinkedApostas([]);
+        clearAllPrints();
       }, 150);
       return () => clearTimeout(timer);
     }
@@ -617,6 +640,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       // Ajustar número de odds baseado APENAS no modelo escolhido
       const numSlots = modelo === "1-X-2" ? 3 : 2;
       const currentNumSlots = odds.length;
+      
+      // Reinicializar prints quando modelo muda
+      initializeLegPrints(numSlots);
       
       // Só atualizar se o número de slots mudou
       if (numSlots !== currentNumSlots) {
@@ -649,6 +675,61 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       }
     }
   }, [modelo, esporte, isEditing]); // Adicionado esporte como dependência
+  
+  // Aplicar dados do print quando processado
+  useEffect(() => {
+    legPrints.forEach((legPrint, index) => {
+      if (legPrint.parsedData && !legPrint.isInferred && odds[index]) {
+        const applied = applyLegData(index);
+        if (applied.odd || applied.stake || applied.selecaoLivre) {
+          setOdds(prev => {
+            const updated = [...prev];
+            if (updated[index]) {
+              // Apenas preencher campos vazios ou sobrescrever se tiver dados
+              if (applied.odd && !updated[index].odd) {
+                updated[index].odd = applied.odd;
+              }
+              if (applied.stake && !updated[index].stake) {
+                updated[index].stake = applied.stake;
+              }
+              if (applied.selecaoLivre && !updated[index].selecaoLivre) {
+                updated[index].selecaoLivre = applied.selecaoLivre;
+              }
+            }
+            return updated;
+          });
+        }
+        
+        // Aplicar contexto compartilhado (esporte, evento, mercado) do primeiro print
+        if (index === 0 && sharedContext.esporte && !esporte) {
+          setEsporte(sharedContext.esporte);
+        }
+        if (sharedContext.evento && !evento) {
+          setEvento(sharedContext.evento);
+        }
+        if (sharedContext.mercado && !mercado) {
+          setMercado(sharedContext.mercado);
+        }
+      }
+    });
+  }, [legPrints, sharedContext]);
+
+  // Handler para importar print de uma perna específica
+  const handlePrintImport = useCallback((legIndex: number) => {
+    setActivePrintLegIndex(legIndex);
+    fileInputRefs.current[legIndex]?.click();
+  }, []);
+
+  const handlePrintFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>, legIndex: number) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      processLegImage(legIndex, file);
+    }
+    // Reset input
+    if (event.target) {
+      event.target.value = "";
+    }
+  }, [processLegImage]);
   
   // Atualizar seleções quando mercado muda (sem afetar modelo)
   // Atualizar seleções quando mercado muda (TANTO em criação QUANTO em edição)
@@ -2337,6 +2418,49 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             <span className="text-sm font-medium text-foreground">
                               {entry.selecao}
                             </span>
+                            
+                            {/* Botão de Importar Print (apenas em criação) */}
+                            {!isEditing && legPrints[index] && (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  ref={el => fileInputRefs.current[index] = el}
+                                  onChange={(e) => handlePrintFileSelect(e, index)}
+                                  className="hidden"
+                                />
+                                <SurebetLegPrintCompact
+                                  legPrint={legPrints[index]}
+                                  onImportClick={() => handlePrintImport(index)}
+                                  onClear={() => clearLegPrint(index)}
+                                  disabled={isProcessingAny}
+                                />
+                                {legPrints[index].isInferred && (
+                                  <div className="flex gap-0.5">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => acceptInference(index)}
+                                      className="h-5 w-5 p-0 text-emerald-500 hover:bg-emerald-500/10"
+                                      title="Aceitar sugestão"
+                                    >
+                                      <CheckCircle2 className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => rejectInference(index)}
+                                      className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                                      title="Rejeitar"
+                                    >
+                                      <XCircle className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                             
                             {/* Campo Seleção Livre foi movido para o nível de entrada */}
                             
