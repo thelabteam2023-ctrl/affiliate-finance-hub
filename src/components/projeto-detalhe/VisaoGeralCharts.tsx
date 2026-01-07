@@ -83,6 +83,8 @@ interface VisaoGeralChartsProps {
   isSingleDayPeriod?: boolean;
   /** Função de formatação obrigatória - deve vir do useProjetoCurrency */
   formatCurrency: (value: number) => string;
+  /** Função de formatação para eixos de gráfico (compacta, sem quebra) */
+  formatChartAxis?: (value: number) => string;
 }
 
 // =====================================================
@@ -105,6 +107,7 @@ interface EvolucaoLucroChartProps {
   accentColor: string;
   isSingleDayPeriod: boolean;
   formatCurrency: (value: number) => string;
+  formatChartAxis: (value: number) => string;
 }
 
 // Tooltip customizado para mostrar detalhes da entrada
@@ -137,7 +140,7 @@ const createCustomTooltip = (formatCurrency: (value: number) => string) => {
   };
 };
 
-function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurrency }: EvolucaoLucroChartProps) {
+function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurrency, formatChartAxis }: EvolucaoLucroChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
@@ -198,7 +201,8 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurren
           fontSize={11}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(v) => formatCurrency(v)}
+          width={60}
+          tickFormatter={(v) => formatChartAxis(v)}
         />
         <RechartsTooltip content={createCustomTooltip(formatCurrency)} />
         <Area
@@ -378,8 +382,21 @@ export function VisaoGeralCharts({
   showEvolucaoChart = true,
   showCasasCard = true,
   isSingleDayPeriod = false,
-  formatCurrency
+  formatCurrency,
+  formatChartAxis
 }: VisaoGeralChartsProps) {
+  // Fallback para formatChartAxis se não fornecido - usa versão compacta do formatCurrency
+  const axisFormatter = formatChartAxis || ((v: number) => {
+    const absVal = Math.abs(v);
+    const prefix = v < 0 ? "-" : "";
+    if (absVal >= 1000000) {
+      return `${prefix}R$${(absVal / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}M`;
+    }
+    if (absVal >= 1000) {
+      return `${prefix}R$${(absVal / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`;
+    }
+    return `${prefix}R$${absVal.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+  });
   const [calendarOpen, setCalendarOpen] = useState(false);
   const evolucaoData = useMemo((): EvolucaoData[] => {
     const sorted = [...apostas].sort(
@@ -572,7 +589,7 @@ export function VisaoGeralCharts({
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
-            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} />
+            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
           </div>
         </CardContent>
       </Card>
@@ -629,7 +646,7 @@ export function VisaoGeralCharts({
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
-            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} />
+            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
           </div>
         </CardContent>
       </Card>

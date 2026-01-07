@@ -22,10 +22,24 @@ interface FormatOptions {
   showSymbol?: boolean;
 }
 
+interface ChartAxisFormatOptions {
+  /** Força abreviação (K/M) mesmo para valores pequenos */
+  forceCompact?: boolean;
+  /** Número de decimais para valores abreviados (default: 0 para valores inteiros, 1 para decimais) */
+  decimals?: number;
+}
+
 export interface ProjectCurrencyReturn {
   // Formatação - SEMPRE na moeda do projeto
   formatCurrency: (valor: number, options?: FormatOptions) => string;
   formatCurrencyWithSign: (valor: number, options?: FormatOptions) => string;
+  
+  /**
+   * Formatação compacta para eixos de gráficos
+   * Garante símbolo + valor SEMPRE juntos, usando abreviações inteligentes
+   * Ex: "R$4k", "R$2.5k", "R$1.2M", "$150"
+   */
+  formatChartAxis: (valor: number, options?: ChartAxisFormatOptions) => string;
   
   // Conversão para moeda de consolidação
   convertToConsolidation: (valor: number, moedaOrigem: string) => number;
@@ -196,9 +210,60 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
     return showSymbol ? `${sign}${symbol} ${formatted}` : `${sign}${formatted}`;
   }, [getSymbol]);
 
+  /**
+   * Formatação compacta para eixos de gráficos
+   * REGRA DE OURO: Símbolo NUNCA se separa do número
+   * 
+   * Formato: R$4k, R$2,5k, R$1,2M, $150, -R$2k
+   * - Sem espaço entre símbolo e valor
+   * - Abreviação inteligente (k, M)
+   * - Sinal negativo antes do símbolo
+   */
+  const formatChartAxis = useCallback((valor: number, options?: ChartAxisFormatOptions): string => {
+    const { forceCompact = false, decimals } = options || {};
+    const symbol = getSymbol();
+    const safeValor = valor || 0;
+    const absValor = Math.abs(safeValor);
+    const isNegative = safeValor < 0;
+    const prefix = isNegative ? "-" : "";
+    
+    let formatted: string;
+    
+    // Valores >= 1M: sempre abreviar com M
+    if (absValor >= 1000000) {
+      const value = absValor / 1000000;
+      const dec = decimals ?? (value % 1 === 0 ? 0 : 1);
+      formatted = value.toLocaleString("pt-BR", {
+        minimumFractionDigits: dec,
+        maximumFractionDigits: dec,
+      }) + "M";
+    }
+    // Valores >= 1K: abreviar com k
+    else if (absValor >= 1000 || forceCompact) {
+      const value = absValor / 1000;
+      const dec = decimals ?? (value % 1 === 0 ? 0 : 1);
+      formatted = value.toLocaleString("pt-BR", {
+        minimumFractionDigits: dec,
+        maximumFractionDigits: dec,
+      }) + "k";
+    }
+    // Valores < 1K: sem abreviação, sem decimais para eixos
+    else {
+      const dec = decimals ?? 0;
+      formatted = absValor.toLocaleString("pt-BR", {
+        minimumFractionDigits: dec,
+        maximumFractionDigits: dec,
+      });
+    }
+    
+    // CRÍTICO: Sem espaço entre símbolo e valor para evitar quebra
+    return `${prefix}${symbol}${formatted}`;
+  }, [getSymbol]);
+
   return {
     formatCurrency,
     formatCurrencyWithSign,
+    formatChartAxis,
     convertToConsolidation,
     getSymbol,
     getMoeda,
@@ -212,11 +277,12 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
  * Versão simplificada para uso rápido em componentes
  */
 export function useFormatProjetoCurrency(projetoId: string | undefined) {
-  const { formatCurrency, formatCurrencyWithSign, isLoading, moedaConsolidacao, getSymbol } = useProjetoCurrency(projetoId);
+  const { formatCurrency, formatCurrencyWithSign, formatChartAxis, isLoading, moedaConsolidacao, getSymbol } = useProjetoCurrency(projetoId);
   
   return {
     format: formatCurrency,
     formatWithSign: formatCurrencyWithSign,
+    formatAxis: formatChartAxis,
     isLoading,
     moeda: moedaConsolidacao,
     symbol: getSymbol(),
