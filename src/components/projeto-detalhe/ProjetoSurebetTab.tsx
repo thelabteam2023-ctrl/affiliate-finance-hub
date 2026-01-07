@@ -53,6 +53,7 @@ import { useOperationalFiltersOptional, type EstrategiaFilter } from "@/contexts
 import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -893,6 +894,36 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}
+              extraActions={
+                <ExportMenu
+                  getData={() => surebetsListaAtual.map(s => 
+                    s.forma_registro === "SIMPLES" 
+                      ? transformApostaToExport({
+                          id: s.id,
+                          data_aposta: s.data_operacao,
+                          evento: s.evento,
+                          mercado: s.mercado,
+                          selecao: s.selecao,
+                          odd: s.odd,
+                          stake: s.stake,
+                          resultado: s.resultado,
+                          status: s.status,
+                          lucro_prejuizo: s.lucro_real,
+                          observacoes: s.observacoes,
+                          bookmaker_nome: s.bookmaker_nome,
+                          estrategia: "SUREBET",
+                        }, "Surebet")
+                      : transformSurebetToExport(s, "SUREBET")
+                  )}
+                  abaOrigem="Surebet"
+                  filename={`surebets-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
+                  filtrosAplicados={{
+                    periodo: effectivePeriod,
+                    dataInicio: dateRange?.start.toISOString(),
+                    dataFim: dateRange?.end.toISOString(),
+                  }}
+                />
+              }
             />
           </div>
           <div className="flex items-center gap-4">

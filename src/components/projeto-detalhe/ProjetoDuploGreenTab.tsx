@@ -53,6 +53,7 @@ import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 
 interface ProjetoDuploGreenTabProps {
   projetoId: string;
@@ -658,6 +659,46 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}
+              extraActions={
+                <ExportMenu
+                  getData={() => apostasFiltradas.map(a => {
+                    // Multi-pernas use transformSurebetToExport
+                    const hasPernas = Array.isArray(a.pernas) && a.pernas.length > 1;
+                    if (hasPernas) {
+                      return transformSurebetToExport({
+                        id: a.id,
+                        data_operacao: a.data_aposta,
+                        evento: a.evento,
+                        mercado: a.mercado,
+                        modelo: a.modelo,
+                        stake_total: a.stake_total || a.stake,
+                        spread_calculado: a.spread_calculado,
+                        resultado: a.resultado,
+                        status: a.status,
+                        lucro_real: a.lucro_prejuizo,
+                        observacoes: a.observacoes,
+                        pernas: a.pernas?.map(p => ({
+                          bookmaker_nome: p.bookmaker_nome,
+                          selecao: p.selecao,
+                          odd: p.odd,
+                          stake: p.stake,
+                        })),
+                      }, "DUPLO_GREEN");
+                    }
+                    return transformApostaToExport({
+                      ...a,
+                      estrategia: "DUPLO_GREEN",
+                    }, "Duplo Green");
+                  })}
+                  abaOrigem="Duplo Green"
+                  filename={`duplogreen-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
+                  filtrosAplicados={{
+                    periodo: internalPeriod,
+                    dataInicio: dateRange?.start.toISOString(),
+                    dataFim: dateRange?.end.toISOString(),
+                  }}
+                />
+              }
             />
           </div>
           <div className="flex items-center gap-4">
