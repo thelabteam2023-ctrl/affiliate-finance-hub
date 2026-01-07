@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, Gift, Plus, Minus } from "lucide-react";
+import { Loader2, Save, Trash2, Gift, Camera, X, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -47,6 +47,7 @@ import {
   getCurrencyTextColor 
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
+import { useImportMultiplaBetPrint } from "@/hooks/useImportMultiplaBetPrint";
 
 interface Selecao {
   descricao: string;
@@ -144,6 +145,99 @@ export function ApostaMultiplaDialog({
       bonus_rollover_started: bk.bonus_rollover_started
     }));
   }, [bookmakerSaldos]);
+
+  // ========== IMPORT BY PRINT ==========
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const {
+    isProcessing: isPrintProcessing,
+    parsedData: printParsedData,
+    imagePreview: printImagePreview,
+    fieldsNeedingReview: printFieldsNeedingReview,
+    processImage: processPrintImage,
+    processFromClipboard: processPrintClipboard,
+    clearParsedData: clearPrintData,
+    applyParsedData: applyPrintData
+  } = useImportMultiplaBetPrint();
+
+  // Handle paste for importing prints (Ctrl+V)
+  const handlePaste = useCallback((event: ClipboardEvent) => {
+    if (!open || aposta) return; // Only for new bets
+    processPrintClipboard(event);
+  }, [open, aposta, processPrintClipboard]);
+
+  useEffect(() => {
+    if (open && !aposta) {
+      document.addEventListener("paste", handlePaste);
+      return () => document.removeEventListener("paste", handlePaste);
+    }
+  }, [open, aposta, handlePaste]);
+
+  // Handle drag and drop for importing prints
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    if (aposta) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(true);
+  }, [aposta]);
+
+  const handleDragLeave = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+    
+    if (aposta) return; // Only for new bets
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith("image/")) {
+        processPrintImage(file);
+      }
+    }
+  }, [aposta, processPrintImage]);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      processPrintImage(file);
+    }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Apply parsed print data when available
+  useEffect(() => {
+    if (printParsedData && !aposta) {
+      const data = applyPrintData();
+      
+      // Set tipo de múltipla
+      setTipoMultipla(data.tipo);
+      
+      // Set stake if detected
+      if (data.stake) {
+        setStake(data.stake);
+      }
+      
+      // Set seleções
+      if (data.selecoes && data.selecoes.length > 0) {
+        const novasSelecoes = data.selecoes.map(sel => ({
+          descricao: sel.descricao.toUpperCase(),
+          odd: sel.odd,
+          resultado: "PENDENTE" as const
+        }));
+        setSelecoes(novasSelecoes);
+      }
+    }
+  }, [printParsedData, aposta, applyPrintData]);
 
   // Form state
   const [bookmakerId, setBookmakerId] = useState("");
@@ -1001,7 +1095,12 @@ export function ApostaMultiplaDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent 
+          className={`max-w-2xl max-h-[90vh] overflow-y-auto ${isDragging ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <DialogHeader>
             <DialogTitle>
               {aposta ? "Editar Aposta Múltipla" : "Nova Aposta Múltipla"}
@@ -1009,6 +1108,70 @@ export function ApostaMultiplaDialog({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* Import by Print - Only for new bets */}
+            {!aposta && (
+              <Card className={`border-dashed ${printImagePreview ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'}`}>
+                <CardContent className="pt-4 pb-4">
+                  {isPrintProcessing ? (
+                    <div className="flex items-center justify-center gap-2 py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      <span className="text-sm text-muted-foreground">Analisando print da múltipla...</span>
+                    </div>
+                  ) : printImagePreview ? (
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={printImagePreview} 
+                            alt="Print do bilhete" 
+                            className="h-16 w-16 object-cover rounded border"
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-primary">Print importado!</p>
+                            <p className="text-xs text-muted-foreground">
+                              {printParsedData?.selecoes?.length || 0} seleções detectadas
+                            </p>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={clearPrintData} className="h-8 w-8">
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {/* Show fields needing review */}
+                      {printFieldsNeedingReview.stake && (
+                        <div className="flex items-center gap-2 text-xs text-amber-500">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span>Stake pode precisar de revisão</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="gap-2"
+                      >
+                        <Camera className="h-4 w-4" />
+                        Importar Print
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Ou arraste uma imagem / cole com Ctrl+V
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Campos de Registro Obrigatórios */}
             <RegistroApostaFields
               values={registroValues}
