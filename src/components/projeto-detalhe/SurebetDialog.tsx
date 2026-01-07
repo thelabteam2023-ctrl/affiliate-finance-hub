@@ -2446,14 +2446,17 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                         >
                           {/* Hint no canto superior esquerdo */}
                           {!isEditing && legPrints[index] && !legPrints[index].isProcessing && !legPrints[index].parsedData && !legPrints[index].isInferred && (
-                            <button
-                              type="button"
-                              onClick={() => handlePrintImport(index)}
-                              className="absolute top-1.5 left-2 flex items-center gap-1 text-muted-foreground/40 hover:text-primary/70 transition-colors"
-                            >
+                            <div className="absolute top-1.5 left-2 flex items-center gap-1 text-muted-foreground/40">
                               <Camera className="h-2.5 w-2.5" />
-                              <span className="text-[9px]">clique aqui</span>
-                            </button>
+                              <span className="text-[9px]">Arraste ou </span>
+                              <button
+                                type="button"
+                                onClick={() => handlePrintImport(index)}
+                                className="text-[9px] underline hover:text-primary/70 transition-colors"
+                              >
+                                clique aqui
+                              </button>
+                            </div>
                           )}
                           {/* Badge + Seleção Centralizado */}
                           <div className="flex flex-col items-center gap-2">
