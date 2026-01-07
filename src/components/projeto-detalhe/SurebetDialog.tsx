@@ -152,6 +152,9 @@ interface OddFormEntry {
   selecaoLivre: string;
 }
 
+// Origem do stake para controle de precedência
+type StakeOrigem = "print" | "referencia" | "manual";
+
 // Estrutura interna do formulário - mantendo compatibilidade
 interface OddEntry {
   bookmaker_id: string;
@@ -162,6 +165,8 @@ interface OddEntry {
   selecaoLivre: string;
   isReference: boolean;
   isManuallyEdited: boolean;
+  // NOVO: Rastrear origem do stake para precedência correta
+  stakeOrigem?: StakeOrigem;
   resultado?: string | null;
   lucro_prejuizo?: number | null;
   gerouFreebet?: boolean;
@@ -559,8 +564,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   
   // Odds entries (2 for binary, 3 for 1X2)
   const [odds, setOdds] = useState<OddEntry[]>([
-    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Sim", selecaoLivre: "", isReference: true, isManuallyEdited: false, additionalEntries: [] },
-    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Não", selecaoLivre: "", isReference: false, isManuallyEdited: false, additionalEntries: [] }
+    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Sim", selecaoLivre: "", isReference: true, isManuallyEdited: false, stakeOrigem: undefined, additionalEntries: [] },
+    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Não", selecaoLivre: "", isReference: false, isManuallyEdited: false, stakeOrigem: undefined, additionalEntries: [] }
   ]);
   
   // Apostas vinculadas para edição
@@ -661,6 +666,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           selecaoLivre: "",
           isReference: i === 0,
           isManuallyEdited: false,
+          stakeOrigem: undefined,
           additionalEntries: []
         })));
       } else {
@@ -678,6 +684,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   }, [modelo, esporte, isEditing]); // Adicionado esporte como dependência
   
   // Aplicar dados do print quando processado
+  // REGRA DE PRECEDÊNCIA: Print com stake válido (> 0) é SOBERANO e não pode ser sobrescrito
   useEffect(() => {
     legPrints.forEach((legPrint, index) => {
       if (legPrint.parsedData && odds[index]) {
@@ -691,15 +698,28 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
             setOdds(prev => {
               const updated = [...prev];
               if (updated[index]) {
-                // Apenas preencher campos vazios
+                // Aplicar odd se detectada e campo vazio
                 if (applied.odd && !updated[index].odd) {
                   updated[index].odd = applied.odd;
                 }
-                if (applied.stake && !updated[index].stake) {
-                  updated[index].stake = applied.stake;
-                }
+                
+                // Aplicar linha se detectada e campo vazio
                 if (applied.selecaoLivre && !updated[index].selecaoLivre) {
                   updated[index].selecaoLivre = applied.selecaoLivre;
+                }
+                
+                // REGRA DE PRECEDÊNCIA PARA STAKE:
+                // Se o print tem stake válido (> 0), usar SEMPRE e marcar como origem "print"
+                // Se o print tem stake zerado/null, permitir cálculo automático (referência)
+                const stakeValue = parseFloat(applied.stake);
+                if (!isNaN(stakeValue) && stakeValue > 0) {
+                  // Stake real do print - é SOBERANO, não pode ser sobrescrito
+                  updated[index].stake = applied.stake;
+                  updated[index].stakeOrigem = "print";
+                  updated[index].isManuallyEdited = true; // Bloquear sobrescrita automática
+                } else if (!updated[index].stake && !updated[index].stakeOrigem) {
+                  // Print sem stake (zerado ou null) - permitir cálculo pela referência
+                  // Não definir stakeOrigem ainda - será definido quando o cálculo automático rodar
                 }
               }
               return updated;
@@ -776,7 +796,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     setArredondarValor("1");
     const defaultSelecoes = getSelecoesPorMercado("", "1-2");
     setOdds(defaultSelecoes.map((sel, i) => ({
-      bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, selecaoLivre: "", isReference: i === 0, isManuallyEdited: false, additionalEntries: []
+      bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, selecaoLivre: "", isReference: i === 0, isManuallyEdited: false, stakeOrigem: undefined, additionalEntries: []
     })));
     setLinkedApostas([]);
     setExpandedResultados({}); // Reset expansão de resultados avançados
@@ -895,15 +915,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
         if (i !== index) {
           o.isReference = false;
           // Ao mudar referência, resetar edição manual das outras pernas
-          o.isManuallyEdited = false;
+          // MAS PRESERVAR se a origem foi PRINT (stake real do print é soberano)
+          if (o.stakeOrigem !== "print") {
+            o.isManuallyEdited = false;
+            o.stakeOrigem = undefined; // Permitir recálculo
+          }
         }
       });
     }
     
     // CORREÇÃO: Quando o usuário edita a stake de uma perna NÃO-referência,
-    // marcar como editado manualmente para preservar o valor
+    // marcar como editado manualmente e origem "manual" para preservar o valor
     if (field === "stake" && !newOdds[index].isReference) {
       newOdds[index].isManuallyEdited = true;
+      newOdds[index].stakeOrigem = "manual";
     }
     
     setOdds(newOdds);
@@ -934,7 +959,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       ...o,
       isReference: i === index,
       // Ao mudar referência, resetar isManuallyEdited dos outros para permitir recálculo
-      isManuallyEdited: i === index ? o.isManuallyEdited : false
+      // MAS PRESERVAR se a origem foi PRINT (stake real do print é soberano)
+      isManuallyEdited: i === index 
+        ? o.isManuallyEdited 
+        : (o.stakeOrigem === "print" ? true : false),
+      // Limpar stakeOrigem para permitir recálculo (exceto print)
+      stakeOrigem: i === index 
+        ? o.stakeOrigem 
+        : (o.stakeOrigem === "print" ? "print" : undefined)
     }));
     setOdds(newOdds);
   };
@@ -944,7 +976,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
     newOdds[index] = { 
       ...newOdds[index], 
       stake: calculatedValue > 0 ? calculatedValue.toFixed(2) : "",
-      isManuallyEdited: false 
+      isManuallyEdited: false,
+      stakeOrigem: "referencia" // Resetar origem para referência
     };
     setOdds(newOdds);
   };
@@ -1074,8 +1107,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       // Nunca modificar a referência
       if (i === refIndex) return o;
       
-      // CORREÇÃO: Respeitar edição manual - não sobrescrever se o usuário editou
-      if (o.isManuallyEdited) return o;
+      // REGRA DE PRECEDÊNCIA: Respeitar stakes de print e edição manual
+      // stakeOrigem === "print" → valor real, NUNCA sobrescrever
+      // stakeOrigem === "manual" → usuário editou, NUNCA sobrescrever
+      // isManuallyEdited também bloqueia (compatibilidade)
+      if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") {
+        return o;
+      }
       
       const calculatedStake = resultado.stakes[i];
       const currentStake = parseFloat(o.stake) || 0;
@@ -1083,7 +1121,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       // Só atualizar se o valor calculado for diferente do atual
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
         needsUpdate = true;
-        return { ...o, stake: calculatedStake.toFixed(2) };
+        // Marcar origem como "referencia" para indicar que foi calculado automaticamente
+        return { ...o, stake: calculatedStake.toFixed(2), stakeOrigem: "referencia" as StakeOrigem };
       }
       return o;
     });
@@ -2867,8 +2906,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground whitespace-nowrap text-center block">
                                 Stake{!isEditing && entry.isReference && <span className="text-primary ml-0.5">(Ref)</span>}
-                                {!isEditing && !entry.isReference && entry.isManuallyEdited && (
-                                  <span className="text-amber-500 ml-0.5" title="Valor editado manualmente">(Manual)</span>
+                                {/* Indicador de origem do stake - PRECEDÊNCIA: Print > Manual > Referência */}
+                                {!isEditing && !entry.isReference && entry.stakeOrigem === "print" && (
+                                  <span className="text-emerald-500 ml-0.5" title="Valor real detectado do print">🖨️</span>
+                                )}
+                                {!isEditing && !entry.isReference && entry.stakeOrigem === "manual" && (
+                                  <span className="text-amber-500 ml-0.5" title="Valor editado manualmente">✍️</span>
+                                )}
+                                {!isEditing && !entry.isReference && entry.stakeOrigem === "referencia" && (
+                                  <span className="text-blue-400 ml-0.5" title="Valor calculado pela referência">🔗</span>
                                 )}
                               </Label>
                               {isEditing ? (
@@ -2884,14 +2930,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                     currency={entry.moeda}
                                     minDigits={5}
                                     className={`h-8 text-xs px-2 pr-7 ${
-                                      isDifferentFromCalculated 
-                                        ? "border-amber-500 ring-1 ring-amber-500/50" 
-                                        : ""
+                                      entry.stakeOrigem === "print"
+                                        ? "border-emerald-500 ring-1 ring-emerald-500/30"
+                                        : isDifferentFromCalculated 
+                                          ? "border-amber-500 ring-1 ring-amber-500/50" 
+                                          : ""
                                     }`}
                                     tabIndex={index * 4 + 3}
                                   />
-                                  {/* Botão de reset: aparece quando editado manualmente E há valor calculado */}
-                                  {!entry.isReference && entry.isManuallyEdited && stakeCalculada > 0 && (
+                                  {/* Botão de reset: aparece quando editado manualmente (não print) E há valor calculado */}
+                                  {!entry.isReference && entry.isManuallyEdited && entry.stakeOrigem !== "print" && stakeCalculada > 0 && (
                                     <Button
                                       type="button"
                                       variant="ghost"
