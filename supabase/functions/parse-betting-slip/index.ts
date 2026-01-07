@@ -21,6 +21,19 @@ interface ParsedBetSlip {
   stake: ParsedField;
 }
 
+interface ParsedSelecao {
+  evento: ParsedField;
+  selecao: ParsedField;
+  odd: ParsedField;
+}
+
+interface ParsedMultiplaBetSlip {
+  tipo: ParsedField; // "dupla" or "tripla"
+  stake: ParsedField;
+  retornoPotencial: ParsedField;
+  selecoes: ParsedSelecao[];
+}
+
 const SPORTS_LIST = [
   "Futebol", "Basquete", "Tênis", "Baseball", "Hockey", 
   "Futebol Americano", "Vôlei", "MMA/UFC", "League of Legends", 
@@ -40,13 +53,53 @@ const MARKETS_KEYWORDS = {
   "Total de Cantos": ["cantos", "corners", "escanteios"]
 };
 
+// Prompt for multiple bet slips (dupla/tripla)
+const MULTIPLA_SYSTEM_PROMPT = `Você é um especialista em ler boletins de apostas esportivas MÚLTIPLAS (combinadas/acumuladoras).
+Sua tarefa é extrair TODAS as informações de um print de APOSTA MÚLTIPLA (dupla, tripla, etc).
+
+REGRAS IMPORTANTES:
+1. Uma aposta múltipla contém 2 ou mais seleções no MESMO bilhete
+2. Cada seleção tem: evento (times/jogadores), seleção apostada, e odd individual
+3. O STAKE é o valor apostado TOTAL no bilhete (uma única aposta)
+4. O RETORNO POTENCIAL é o ganho total se todas as seleções ganharem
+5. A ODD FINAL (se mostrada) é o produto de todas as odds individuais
+
+COMO IDENTIFICAR SELEÇÕES:
+- Procure por padrões repetitivos de "Evento + Seleção + Odd"
+- Cada linha de evento representa uma seleção diferente
+- 2 seleções = Dupla, 3 seleções = Tripla
+- Se houver mais de 3 seleções, retorne apenas as 3 primeiras
+
+FORMATO DE RESPOSTA (JSON estrito):
+{
+  "tipo": { "value": "dupla" ou "tripla", "confidence": "high|medium|low|none" },
+  "stake": { "value": "VALOR NUMÉRICO APOSTADO ou null", "confidence": "high|medium|low|none" },
+  "retornoPotencial": { "value": "VALOR DO RETORNO POTENCIAL ou null", "confidence": "high|medium|low|none" },
+  "selecoes": [
+    {
+      "evento": { "value": "EVENTO (ex: Time A x Time B)", "confidence": "high|medium|low|none" },
+      "selecao": { "value": "O QUE FOI APOSTADO (ex: Time A vence, Over 2.5)", "confidence": "high|medium|low|none" },
+      "odd": { "value": "ODD INDIVIDUAL DESTA SELEÇÃO", "confidence": "high|medium|low|none" }
+    }
+  ]
+}
+
+Nível de confiança:
+- "high": texto claramente visível e inequívoco
+- "medium": texto visível mas pode ter interpretação ambígua
+- "low": texto parcialmente visível ou muito incerto
+- "none": não foi possível detectar
+
+DICA: Em bilhetes múltiplos, as seleções geralmente aparecem empilhadas verticalmente, cada uma com seu evento, seleção e odd.
+O stake total e retorno potencial costumam aparecer na parte inferior do bilhete.`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { imageBase64, imageUrl } = await req.json();
+    const { imageBase64, imageUrl, mode } = await req.json();
 
     if (!imageBase64 && !imageUrl) {
       return new Response(
@@ -65,20 +118,11 @@ serve(async (req) => {
       ? { type: "image_url", image_url: { url: imageUrl } }
       : { type: "image_url", image_url: { url: imageBase64 } };
 
-    console.log("Processing betting slip image...");
+    const isMultipla = mode === "multipla";
+    console.log(`Processing betting slip image... Mode: ${isMultipla ? "multipla" : "simples"}`);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `Você é um especialista em ler boletins de apostas esportivas. Sua tarefa é extrair TODAS as informações visíveis do print de um boletim de aposta.
+    // Choose prompt based on mode
+    const systemPrompt = isMultipla ? MULTIPLA_SYSTEM_PROMPT : `Você é um especialista em ler boletins de apostas esportivas. Sua tarefa é extrair TODAS as informações visíveis do print de um boletim de aposta.
 
 REGRAS IMPORTANTES:
 1. Extraia TODOS os campos visíveis: times, data, esporte, mercado, seleção, ODD e STAKE
@@ -115,12 +159,26 @@ Nível de confiança:
 - "low": texto parcialmente visível ou muito incerto
 - "none": não foi possível detectar
 
-DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com formato decimal (1.85, 2.10). O STAKE aparece como "Valor da aposta", "Stake", "Aposta", ou próximo a símbolos de moeda.`
-          },
+DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com formato decimal (1.85, 2.10). O STAKE aparece como "Valor da aposta", "Stake", "Aposta", ou próximo a símbolos de moeda.`;
+
+    const userPrompt = isMultipla 
+      ? "Analise este print de APOSTA MÚLTIPLA (combinada/acumuladora) e extraia as informações de TODAS as seleções. Retorne APENAS o JSON, sem explicações adicionais."
+      : "Analise este print de boletim de aposta e extraia as informações de contexto. Retorne APENAS o JSON, sem explicações adicionais.";
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
           {
             role: "user",
             content: [
-              { type: "text", text: "Analise este print de boletim de aposta e extraia as informações de contexto. Retorne APENAS o JSON, sem explicações adicionais." },
+              { type: "text", text: userPrompt },
               imageContent
             ]
           }
@@ -156,42 +214,7 @@ DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com
 
     console.log("AI Response:", content);
 
-    // Parse the JSON response
-    let parsedData: ParsedBetSlip;
-    try {
-      parsedData = JSON.parse(content);
-      
-      // Ensure odd and stake fields exist
-      if (!parsedData.odd) {
-        parsedData.odd = { value: null, confidence: "none" };
-      }
-      if (!parsedData.stake) {
-        parsedData.stake = { value: null, confidence: "none" };
-      }
-    } catch (e) {
-      console.error("Failed to parse AI response:", e);
-      // Return empty result if parsing fails
-      parsedData = {
-        mandante: { value: null, confidence: "none" },
-        visitante: { value: null, confidence: "none" },
-        dataHora: { value: null, confidence: "none" },
-        esporte: { value: null, confidence: "none" },
-        mercado: { value: null, confidence: "none" },
-        selecao: { value: null, confidence: "none" },
-        odd: { value: null, confidence: "none" },
-        stake: { value: null, confidence: "none" }
-      };
-    }
-
-    // Normalize team names to uppercase
-    if (parsedData.mandante?.value) {
-      parsedData.mandante.value = parsedData.mandante.value.toUpperCase();
-    }
-    if (parsedData.visitante?.value) {
-      parsedData.visitante.value = parsedData.visitante.value.toUpperCase();
-    }
-
-    // Normalizar ODD/STAKE para um formato numérico consistente (evita "R$177", "3,20", etc.)
+    // Normalizar ODD/STAKE para um formato numérico consistente
     const normalizeNumericString = (raw: string | null): string | null => {
       if (!raw) return null;
       const match = raw.replace(/\s+/g, "").match(/-?\d[\d.,]*/);
@@ -216,14 +239,107 @@ DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com
       return n.toFixed(2);
     };
 
-    parsedData.odd.value = normalizeNumericString(parsedData.odd?.value);
-    parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
+    if (isMultipla) {
+      // Parse multipla bet slip
+      let parsedData: ParsedMultiplaBetSlip;
+      try {
+        parsedData = JSON.parse(content);
+        
+        // Ensure basic structure
+        if (!parsedData.tipo) {
+          parsedData.tipo = { value: null, confidence: "none" };
+        }
+        if (!parsedData.stake) {
+          parsedData.stake = { value: null, confidence: "none" };
+        }
+        if (!parsedData.retornoPotencial) {
+          parsedData.retornoPotencial = { value: null, confidence: "none" };
+        }
+        if (!parsedData.selecoes || !Array.isArray(parsedData.selecoes)) {
+          parsedData.selecoes = [];
+        }
+        
+        // Normalize numeric values
+        parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
+        parsedData.retornoPotencial.value = normalizeNumericString(parsedData.retornoPotencial?.value);
+        
+        // Normalize each selection
+        for (const sel of parsedData.selecoes) {
+          if (sel.odd) {
+            sel.odd.value = normalizeNumericString(sel.odd.value);
+          }
+          // Uppercase event names
+          if (sel.evento?.value) {
+            sel.evento.value = sel.evento.value.toUpperCase();
+          }
+        }
+        
+        // Auto-detect tipo based on number of selections
+        const numSelecoes = parsedData.selecoes.length;
+        if (numSelecoes >= 3) {
+          parsedData.tipo = { value: "tripla", confidence: "high" };
+        } else if (numSelecoes === 2) {
+          parsedData.tipo = { value: "dupla", confidence: "high" };
+        }
+        
+      } catch (e) {
+        console.error("Failed to parse AI response for multipla:", e);
+        parsedData = {
+          tipo: { value: null, confidence: "none" },
+          stake: { value: null, confidence: "none" },
+          retornoPotencial: { value: null, confidence: "none" },
+          selecoes: []
+        };
+      }
 
-    console.log("Parsed data:", JSON.stringify(parsedData));
-    return new Response(
-      JSON.stringify({ success: true, data: parsedData }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+      console.log("Parsed multipla data:", JSON.stringify(parsedData));
+      return new Response(
+        JSON.stringify({ success: true, data: parsedData }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } else {
+      // Parse simple bet slip (original logic)
+      let parsedData: ParsedBetSlip;
+      try {
+        parsedData = JSON.parse(content);
+        
+        if (!parsedData.odd) {
+          parsedData.odd = { value: null, confidence: "none" };
+        }
+        if (!parsedData.stake) {
+          parsedData.stake = { value: null, confidence: "none" };
+        }
+      } catch (e) {
+        console.error("Failed to parse AI response:", e);
+        parsedData = {
+          mandante: { value: null, confidence: "none" },
+          visitante: { value: null, confidence: "none" },
+          dataHora: { value: null, confidence: "none" },
+          esporte: { value: null, confidence: "none" },
+          mercado: { value: null, confidence: "none" },
+          selecao: { value: null, confidence: "none" },
+          odd: { value: null, confidence: "none" },
+          stake: { value: null, confidence: "none" }
+        };
+      }
+
+      // Normalize team names to uppercase
+      if (parsedData.mandante?.value) {
+        parsedData.mandante.value = parsedData.mandante.value.toUpperCase();
+      }
+      if (parsedData.visitante?.value) {
+        parsedData.visitante.value = parsedData.visitante.value.toUpperCase();
+      }
+
+      parsedData.odd.value = normalizeNumericString(parsedData.odd?.value);
+      parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
+
+      console.log("Parsed data:", JSON.stringify(parsedData));
+      return new Response(
+        JSON.stringify({ success: true, data: parsedData }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
   } catch (error) {
     console.error("Error parsing betting slip:", error);
