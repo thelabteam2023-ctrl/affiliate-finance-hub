@@ -12,12 +12,19 @@
 const MARKET_EQUIVALENCES: Record<string, string[]> = {
   // 1X2 - Principal mercado de futebol (3 vias)
   "1X2": [
-    "1x2", "1 x 2", "moneyline", "money line", "ml",
-    "match winner", "matchwinners", "full time result", "ftr",
-    "winner", "vencedor", "ganhador", "resultado final",
-    "resultado do jogo", "resultado da partida", "quem vence",
-    "home/draw/away", "casa empate fora", "1-x-2",
-    "moneyline / 1x2", "resultado"
+    // Variações de 1X2
+    "1x2", "1 x 2", "1-x-2", "1 - x - 2",
+    // Moneyline / Money Line
+    "moneyline", "money line", "ml", "money-line",
+    // Resultado final / Match result
+    "resultado final", "resultado do jogo", "resultado da partida", "resultado",
+    "final result", "match result", "full time result", "ftr", "ft result",
+    // Vencedor
+    "match winner", "matchwinners", "winner", "vencedor", "ganhador", "quem vence",
+    "vencedor da partida", "vencedor do jogo", "who wins",
+    // Outras variações
+    "home/draw/away", "casa empate fora", "moneyline / 1x2",
+    "3 way", "3-way", "three way", "três vias", "tres vias"
   ],
   
   // Over (Gols)
@@ -64,18 +71,31 @@ const MARKET_EQUIVALENCES: Record<string, string[]> = {
   
   // Dupla Chance
   "Dupla Chance": [
-    "dupla chance", "double chance", "dc", "1x", "x2", "12",
+    // Português
+    "dupla chance", "chance dupla", "duas chances",
+    // Inglês
+    "double chance", "dc",
+    // Combinações específicas
+    "1x", "x2", "12", "1 ou x", "x ou 2", "1 ou 2",
     "casa ou empate", "fora ou empate", "casa ou fora",
-    "1 ou x", "x ou 2", "1 ou 2", "double chance 1x",
-    "double chance x2", "double chance 12"
+    "home or draw", "away or draw", "home or away",
+    "double chance 1x", "double chance x2", "double chance 12",
+    "1x (dupla chance)", "x2 (dupla chance)", "12 (dupla chance)"
   ],
   
   // Resultado do 1º Tempo
   "Resultado do 1º Tempo": [
-    "resultado do 1º tempo", "resultado 1 tempo", "resultado 1o tempo",
-    "resultado primeiro tempo", "1st half result", "first half result",
-    "ht result", "half time result", "intervalo", "1t", "1º tempo",
-    "primeiro tempo", "half time", "half-time"
+    // Português
+    "resultado do 1º tempo", "resultado 1º tempo", "resultado 1 tempo",
+    "resultado do primeiro tempo", "resultado primeiro tempo",
+    "1º tempo", "primeiro tempo", "1t", "1º t", "1o tempo",
+    "intervalo", "resultado intervalo", "resultado ao intervalo",
+    // Inglês
+    "1st half result", "first half result", "first half",
+    "ht result", "half time result", "half-time result",
+    "half time", "half-time", "ht", "h.t.", "1h", "1st half",
+    // Variações
+    "resultado ht", "ht", "halftime"
   ],
   
   // Draw No Bet
