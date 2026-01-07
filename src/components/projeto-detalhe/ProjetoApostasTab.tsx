@@ -56,6 +56,7 @@ interface ProjetoApostasTabProps {
   onDataChange?: () => void;
   refreshTrigger?: number;
   formatCurrency?: (value: number) => string;
+  formatChartAxis?: (value: number) => string;
 }
 
 // Fallback para formatação de moeda
@@ -247,7 +248,7 @@ function getSurebetContexto(
   return "NORMAL";
 }
 
-export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp }: ProjetoApostasTabProps) {
+export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp, formatChartAxis }: ProjetoApostasTabProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
@@ -907,6 +908,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           accentColor="hsl(var(--primary))"
           isSingleDayPeriod={globalFilters.period === "1dia"}
           formatCurrency={formatCurrency}
+          formatChartAxis={formatChartAxis}
         />
       )}
 

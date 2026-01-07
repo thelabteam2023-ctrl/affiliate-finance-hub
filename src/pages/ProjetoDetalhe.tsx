@@ -106,7 +106,7 @@ export default function ProjetoDetalhe() {
   const { canEdit } = useActionAccess();
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency } = useProjetoCurrency(id);
+  const { formatCurrency, formatChartAxis } = useProjetoCurrency(id);
   
   // KPIs sempre mostram dados completos (sem filtro de período - cada aba usa seu próprio)
   const [activeTab, setActiveTab] = useState("apostas");
@@ -510,6 +510,7 @@ export default function ProjetoDetalhe() {
               onDataChange={triggerGlobalRefresh}
               refreshTrigger={refreshTrigger}
               formatCurrency={formatCurrency}
+              formatChartAxis={formatChartAxis}
             />
           </TabsContent>
 
