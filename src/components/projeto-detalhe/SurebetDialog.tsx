@@ -572,6 +572,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   // ========== IMPORTAÇÃO VIA PRINT (POR PERNA) ==========
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [activePrintLegIndex, setActivePrintLegIndex] = useState<number | null>(null);
+  const [expandedPrintUrl, setExpandedPrintUrl] = useState<string | null>(null);
   const {
     legPrints,
     isProcessingAny,
@@ -2516,10 +2517,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                                 className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                {/* Miniatura */}
+                                {/* Miniatura - clicável para ampliar */}
                                 <div 
-                                  className="relative w-8 h-8 flex-shrink-0 cursor-pointer rounded overflow-hidden"
-                                  onClick={() => window.open(legPrints[index].imagePreview!, '_blank')}
+                                  className="relative w-8 h-8 flex-shrink-0 cursor-pointer rounded overflow-hidden hover:ring-2 hover:ring-primary transition-all"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedPrintUrl(legPrints[index].imagePreview!);
+                                  }}
+                                  title="Clique para ampliar"
                                 >
                                   <img 
                                     src={legPrints[index].imagePreview!} 
@@ -3548,6 +3553,19 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
           </div>
         </DialogFooter>
       </DialogContent>
+      
+      {/* Dialog para ampliar print */}
+      <Dialog open={!!expandedPrintUrl} onOpenChange={() => setExpandedPrintUrl(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-2">
+          {expandedPrintUrl && (
+            <img 
+              src={expandedPrintUrl} 
+              alt="Print ampliado" 
+              className="w-full h-full object-contain max-h-[85vh]"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
