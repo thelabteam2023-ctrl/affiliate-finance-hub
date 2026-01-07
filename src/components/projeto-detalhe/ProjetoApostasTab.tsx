@@ -46,6 +46,7 @@ import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { useOperationalFilters } from "@/contexts/OperationalFiltersContext";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 
 // Contextos de aposta para filtro unificado
 type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
@@ -923,6 +924,57 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}
+              extraActions={
+                <ExportMenu
+                  getData={() => apostasUnificadas.map(u => {
+                    if (u.tipo === "surebet") {
+                      const s = u.data as Surebet;
+                      return transformSurebetToExport({
+                        id: s.id,
+                        data_operacao: s.data_operacao,
+                        evento: s.evento,
+                        mercado: undefined,
+                        modelo: s.modelo,
+                        stake_total: s.stake_total,
+                        spread_calculado: s.spread_calculado,
+                        resultado: s.resultado,
+                        status: s.status,
+                        lucro_real: s.lucro_prejuizo,
+                        observacoes: s.observacoes,
+                        pernas: s.pernas?.map(p => ({
+                          bookmaker_nome: p.bookmaker?.nome,
+                          selecao: p.selecao,
+                          odd: p.odd,
+                          stake: p.stake,
+                        })),
+                      }, s.estrategia || "SUREBET");
+                    }
+                    const a = u.data as Aposta | ApostaMultipla;
+                    return transformApostaToExport({
+                      id: a.id,
+                      data_aposta: a.data_aposta,
+                      evento: 'evento' in a ? a.evento : '',
+                      mercado: 'mercado' in a ? a.mercado : null,
+                      selecao: 'selecao' in a ? a.selecao : '',
+                      odd: 'odd' in a ? a.odd : ('odd_final' in a ? a.odd_final : 0),
+                      stake: a.stake,
+                      resultado: a.resultado,
+                      status: a.status,
+                      lucro_prejuizo: a.lucro_prejuizo,
+                      observacoes: a.observacoes,
+                      bookmaker_nome: a.bookmaker?.nome,
+                      estrategia: 'estrategia' in a ? a.estrategia : null,
+                    }, "Apostas");
+                  })}
+                  abaOrigem="Apostas"
+                  filename={`apostas-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
+                  filtrosAplicados={{
+                    periodo: globalFilters.period,
+                    dataInicio: dateRange?.start.toISOString(),
+                    dataFim: dateRange?.end.toISOString(),
+                  }}
+                />
+              }
             />
           </div>
           

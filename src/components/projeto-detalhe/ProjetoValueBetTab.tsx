@@ -51,6 +51,7 @@ import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -722,6 +723,22 @@ export function ProjetoValueBetTab({
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}
+              extraActions={
+                <ExportMenu
+                  getData={() => apostasFiltradas.map(a => transformApostaToExport({
+                    ...a,
+                    data_aposta: a.data_aposta,
+                    estrategia: "VALUEBET",
+                  }, "ValueBet"))}
+                  abaOrigem="ValueBet"
+                  filename={`valuebets-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
+                  filtrosAplicados={{
+                    periodo: internalPeriod,
+                    dataInicio: dateRange?.start.toISOString(),
+                    dataFim: dateRange?.end.toISOString(),
+                  }}
+                />
+              }
             />
           </div>
           <div className="flex items-center gap-4">

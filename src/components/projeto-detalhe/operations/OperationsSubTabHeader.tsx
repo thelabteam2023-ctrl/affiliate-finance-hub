@@ -29,6 +29,9 @@ export interface OperationsSubTabHeaderProps {
   /** Mostrar toggle de visualização */
   showViewToggle?: boolean;
   
+  /** Ações extras (ex: ExportMenu) - renderizadas à direita */
+  extraActions?: ReactNode;
+  
   /** Classe CSS adicional */
   className?: string;
 }
@@ -47,6 +50,7 @@ export function OperationsSubTabHeader({
   viewMode = "cards",
   onViewModeChange,
   showViewToggle = true,
+  extraActions,
   className,
 }: OperationsSubTabHeaderProps) {
   return (
@@ -100,22 +104,28 @@ export function OperationsSubTabHeader({
         </Button>
       </div>
 
-      {/* Toggle View Mode - apenas se showViewToggle e onViewModeChange */}
-      {showViewToggle && onViewModeChange && (
-        <ToggleGroup
-          type="single"
-          value={viewMode}
-          onValueChange={(v) => v && onViewModeChange(v as "cards" | "list")}
-          className="bg-muted/50 p-0.5 rounded-md"
-        >
-          <ToggleGroupItem value="cards" size="sm" className="h-7 w-7 p-0">
-            <LayoutGrid className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="list" size="sm" className="h-7 w-7 p-0">
-            <List className="h-4 w-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
-      )}
+      {/* Right side: extra actions + view toggle */}
+      <div className="flex items-center gap-2">
+        {/* Extra actions slot (e.g., ExportMenu) */}
+        {extraActions}
+        
+        {/* Toggle View Mode - apenas se showViewToggle e onViewModeChange */}
+        {showViewToggle && onViewModeChange && (
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(v) => v && onViewModeChange(v as "cards" | "list")}
+            className="bg-muted/50 p-0.5 rounded-md"
+          >
+            <ToggleGroupItem value="cards" size="sm" className="h-7 w-7 p-0">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" size="sm" className="h-7 w-7 p-0">
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+        )}
+      </div>
     </div>
   );
 }
