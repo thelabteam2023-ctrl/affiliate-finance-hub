@@ -10,11 +10,14 @@
 
 // Mapeamento de equivalências: termo externo -> termo interno do sistema
 const MARKET_EQUIVALENCES: Record<string, string[]> = {
-  // 1X2 / Moneyline
-  "Moneyline / 1X2": [
-    "match winner", "matchwinners", "1x2", "moneyline", "money line", "ml",
-    "full time result", "ftr", "winner", "vencedor", "ganhador",
-    "resultado final", "quem vence", "1 x 2", "home/draw/away"
+  // 1X2 - Principal mercado de futebol (3 vias)
+  "1X2": [
+    "1x2", "1 x 2", "moneyline", "money line", "ml",
+    "match winner", "matchwinners", "full time result", "ftr",
+    "winner", "vencedor", "ganhador", "resultado final",
+    "resultado do jogo", "resultado da partida", "quem vence",
+    "home/draw/away", "casa empate fora", "1-x-2",
+    "moneyline / 1x2", "resultado"
   ],
   
   // Over (Gols)
@@ -62,7 +65,17 @@ const MARKET_EQUIVALENCES: Record<string, string[]> = {
   // Dupla Chance
   "Dupla Chance": [
     "dupla chance", "double chance", "dc", "1x", "x2", "12",
-    "casa ou empate", "fora ou empate", "casa ou fora"
+    "casa ou empate", "fora ou empate", "casa ou fora",
+    "1 ou x", "x ou 2", "1 ou 2", "double chance 1x",
+    "double chance x2", "double chance 12"
+  ],
+  
+  // Resultado do 1º Tempo
+  "Resultado do 1º Tempo": [
+    "resultado do 1º tempo", "resultado 1 tempo", "resultado 1o tempo",
+    "resultado primeiro tempo", "1st half result", "first half result",
+    "ht result", "half time result", "intervalo", "1t", "1º tempo",
+    "primeiro tempo", "half time", "half-time"
   ],
   
   // Draw No Bet
