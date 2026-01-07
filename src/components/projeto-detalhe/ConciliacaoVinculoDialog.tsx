@@ -93,7 +93,6 @@ export function ConciliacaoVinculoDialog({
             user_id: user.id,
             saldo_anterior: saldoSistema,
             saldo_novo: saldoRealNum,
-            diferenca: diferenca,
             origem: "CONCILIACAO_VINCULO",
             referencia_id: projetoId,
             referencia_tipo: "projeto",
