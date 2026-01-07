@@ -6811,7 +6811,6 @@ export type Database = {
         Row: {
           moeda: string | null
           saldo: number | null
-          user_id: string | null
         }
         Relationships: []
       }
