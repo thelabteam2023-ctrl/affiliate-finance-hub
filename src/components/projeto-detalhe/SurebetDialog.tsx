@@ -679,40 +679,57 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
   // Aplicar dados do print quando processado
   useEffect(() => {
     legPrints.forEach((legPrint, index) => {
-      if (legPrint.parsedData && !legPrint.isInferred && odds[index]) {
+      if (legPrint.parsedData && odds[index]) {
         const applied = applyLegData(index);
-        if (applied.odd || applied.stake || applied.selecaoLivre) {
-          setOdds(prev => {
-            const updated = [...prev];
-            if (updated[index]) {
-              // Apenas preencher campos vazios ou sobrescrever se tiver dados
-              if (applied.odd && !updated[index].odd) {
-                updated[index].odd = applied.odd;
+        
+        // Para prints com dados reais (não inferidos): aplicar ODD, Stake, Linha
+        // Para prints inferidos: aplicar apenas Linha
+        if (!legPrint.isInferred) {
+          // Print real - aplicar todos os campos detectados
+          if (applied.odd || applied.stake || applied.selecaoLivre) {
+            setOdds(prev => {
+              const updated = [...prev];
+              if (updated[index]) {
+                // Apenas preencher campos vazios
+                if (applied.odd && !updated[index].odd) {
+                  updated[index].odd = applied.odd;
+                }
+                if (applied.stake && !updated[index].stake) {
+                  updated[index].stake = applied.stake;
+                }
+                if (applied.selecaoLivre && !updated[index].selecaoLivre) {
+                  updated[index].selecaoLivre = applied.selecaoLivre;
+                }
               }
-              if (applied.stake && !updated[index].stake) {
-                updated[index].stake = applied.stake;
-              }
-              if (applied.selecaoLivre && !updated[index].selecaoLivre) {
+              return updated;
+            });
+          }
+        } else {
+          // Print inferido - aplicar apenas Linha (ODD e Stake nunca são inferidos)
+          if (applied.selecaoLivre) {
+            setOdds(prev => {
+              const updated = [...prev];
+              if (updated[index] && !updated[index].selecaoLivre) {
                 updated[index].selecaoLivre = applied.selecaoLivre;
               }
-            }
-            return updated;
-          });
-        }
-        
-        // Aplicar contexto compartilhado (esporte, evento, mercado) do primeiro print
-        if (index === 0 && sharedContext.esporte && !esporte) {
-          setEsporte(sharedContext.esporte);
-        }
-        if (sharedContext.evento && !evento) {
-          setEvento(sharedContext.evento);
-        }
-        if (sharedContext.mercado && !mercado) {
-          setMercado(sharedContext.mercado);
+              return updated;
+            });
+          }
         }
       }
     });
-  }, [legPrints, sharedContext]);
+    
+    // Aplicar contexto compartilhado (esporte, evento, mercado) do primeiro print
+    if (sharedContext.esporte) {
+      setEsporte(prev => prev || sharedContext.esporte || "Futebol");
+    }
+    if (sharedContext.evento) {
+      setEvento(prev => prev || sharedContext.evento || "");
+    }
+    if (sharedContext.mercado) {
+      setMercado(prev => prev || sharedContext.mercado || "");
+    }
+  }, [legPrints, sharedContext, applyLegData]);
 
   // Handler para importar print de uma perna específica
   const handlePrintImport = useCallback((legIndex: number) => {
