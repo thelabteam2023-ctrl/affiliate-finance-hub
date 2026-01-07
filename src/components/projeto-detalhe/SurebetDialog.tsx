@@ -2416,11 +2416,39 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                         )}
                         
                         <div 
-                          className={`flex-1 rounded-xl border-2 p-4 space-y-3 transition-all ${colors.bg} ${
+                          className={`flex-1 rounded-xl border-2 p-4 space-y-3 transition-all relative ${colors.bg} ${
                             entry.isReference 
                               ? `${colors.border} ring-2 ring-primary/30` 
                               : colors.border
-                          }`}
+                          } ${!isEditing && legPrints[index] && !legPrints[index].isProcessing && !legPrints[index].parsedData ? 'cursor-pointer hover:border-primary/60 hover:bg-primary/5' : ''}`}
+                          onClick={() => {
+                            // Apenas em criação, quando não há print e não está processando
+                            if (!isEditing && legPrints[index] && !legPrints[index].isProcessing && !legPrints[index].parsedData && !legPrints[index].isInferred) {
+                              handlePrintImport(index);
+                            }
+                          }}
+                          onDragOver={(e) => {
+                            if (!isEditing && legPrints[index] && !legPrints[index].isProcessing) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              e.currentTarget.classList.add('ring-2', 'ring-primary', 'border-primary');
+                            }
+                          }}
+                          onDragLeave={(e) => {
+                            e.currentTarget.classList.remove('ring-2', 'ring-primary', 'border-primary');
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.currentTarget.classList.remove('ring-2', 'ring-primary', 'border-primary');
+                            
+                            if (!isEditing && legPrints[index] && !legPrints[index].isProcessing) {
+                              const file = e.dataTransfer.files[0];
+                              if (file && file.type.startsWith('image/')) {
+                                processLegImage(index, file);
+                              }
+                            }
+                          }}
                         >
                           {/* Badge + Seleção Centralizado */}
                           <div className="flex flex-col items-center gap-2">
@@ -2436,133 +2464,113 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               {entry.selecao}
                             </span>
                             
-                            {/* Área de Importar Print - VISÍVEL E CLARA (apenas em criação) */}
-                            {!isEditing && legPrints[index] && (
-                              <div className="w-full mt-2">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  ref={el => fileInputRefs.current[index] = el}
-                                  onChange={(e) => handlePrintFileSelect(e, index)}
-                                  className="hidden"
-                                />
+                            {/* Input oculto para file select */}
+                            {!isEditing && (
+                              <input
+                                type="file"
+                                accept="image/*"
+                                ref={el => fileInputRefs.current[index] = el}
+                                onChange={(e) => handlePrintFileSelect(e, index)}
+                                className="hidden"
+                              />
+                            )}
+                            
+                            {/* Estado: Processando */}
+                            {!isEditing && legPrints[index]?.isProcessing && (
+                              <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-primary/10">
+                                <div className="h-3 w-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                <span className="text-xs text-primary font-medium">Analisando...</span>
+                              </div>
+                            )}
+                            
+                            {/* Estado: Print carregado - Compacto */}
+                            {!isEditing && legPrints[index] && !legPrints[index].isProcessing && legPrints[index].parsedData && legPrints[index].imagePreview && !legPrints[index].isInferred && (
+                              <div 
+                                className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {/* Miniatura */}
+                                <div 
+                                  className="relative w-8 h-8 flex-shrink-0 cursor-pointer rounded overflow-hidden"
+                                  onClick={() => window.open(legPrints[index].imagePreview!, '_blank')}
+                                >
+                                  <img 
+                                    src={legPrints[index].imagePreview!} 
+                                    alt="Print" 
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
                                 
-                                {/* Estado: Processando */}
-                                {legPrints[index].isProcessing && (
-                                  <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5">
-                                    <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                                    <span className="text-xs text-primary font-medium">Analisando print...</span>
+                                {/* Badge de sucesso */}
+                                <div className="flex items-center gap-1 flex-1">
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                                  <span className="text-[10px] text-emerald-400 font-medium">Print importado</span>
+                                </div>
+                                
+                                {/* Botão limpar */}
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    clearLegPrint(index);
+                                  }}
+                                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            )}
+                            
+                            {/* Estado: Linha inferida */}
+                            {!isEditing && legPrints[index] && !legPrints[index].isProcessing && legPrints[index].isInferred && legPrints[index].parsedData && (
+                              <div 
+                                className="rounded-lg border border-dashed border-amber-500/40 bg-amber-500/10 p-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-amber-500 text-xs">✨</span>
+                                    <span className="text-[10px] font-medium text-amber-400">
+                                      {legPrints[index].parsedData?.selecao?.value}
+                                    </span>
                                   </div>
-                                )}
-                                
-                                {/* Estado: Print carregado */}
-                                {!legPrints[index].isProcessing && legPrints[index].parsedData && legPrints[index].imagePreview && (
-                                  <div className="rounded-lg border-2 border-emerald-500/40 bg-emerald-500/10 overflow-hidden">
-                                    <div className="flex items-stretch">
-                                      {/* Miniatura do print com zoom */}
-                                      <div 
-                                        className="relative w-16 h-16 flex-shrink-0 cursor-pointer group border-r border-emerald-500/30"
-                                        onClick={() => window.open(legPrints[index].imagePreview!, '_blank')}
-                                      >
-                                        <img 
-                                          src={legPrints[index].imagePreview!} 
-                                          alt="Print" 
-                                          className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                                          <span className="text-white text-[10px]">🔍</span>
-                                        </div>
-                                      </div>
-                                      
-                                      {/* Dados detectados */}
-                                      <div className="flex-1 p-2 flex flex-wrap gap-1.5 items-center justify-center">
-                                        {legPrints[index].parsedData?.odd?.value && (
-                                          <Badge variant="outline" className="text-[10px] h-5 bg-blue-500/10 text-blue-400 border-blue-500/30">
-                                            ODD: {legPrints[index].parsedData.odd.value}
-                                          </Badge>
-                                        )}
-                                        {legPrints[index].parsedData?.stake?.value && (
-                                          <Badge variant="outline" className="text-[10px] h-5 bg-green-500/10 text-green-400 border-green-500/30">
-                                            Stake: {legPrints[index].parsedData.stake.value}
-                                          </Badge>
-                                        )}
-                                        {legPrints[index].parsedData?.selecao?.value && (
-                                          <Badge variant="outline" className="text-[10px] h-5 bg-purple-500/10 text-purple-400 border-purple-500/30">
-                                            {legPrints[index].parsedData.selecao.value}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      
-                                      {/* Botão limpar */}
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => clearLegPrint(index)}
-                                        className="h-auto px-2 rounded-none border-l border-emerald-500/30 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                      >
-                                        <XCircle className="h-4 w-4" />
-                                      </Button>
-                                    </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        acceptInference(index);
+                                      }}
+                                      className="h-5 px-1.5 text-emerald-500 hover:bg-emerald-500/10 text-[10px]"
+                                    >
+                                      ✓
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        rejectInference(index);
+                                      }}
+                                      className="h-5 px-1.5 text-muted-foreground hover:text-destructive text-[10px]"
+                                    >
+                                      ✕
+                                    </Button>
                                   </div>
-                                )}
-                                
-                                {/* Estado: Linha inferida */}
-                                {!legPrints[index].isProcessing && legPrints[index].isInferred && legPrints[index].parsedData && (
-                                  <div className="rounded-lg border-2 border-dashed border-amber-500/40 bg-amber-500/10 p-3">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-amber-500 text-sm">✨</span>
-                                        <span className="text-xs font-medium text-amber-500">Linha sugerida automaticamente</span>
-                                      </div>
-                                      <div className="flex gap-1">
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => acceptInference(index)}
-                                          className="h-6 px-2 text-emerald-500 hover:bg-emerald-500/10 text-xs"
-                                        >
-                                          ✓ Aceitar
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => rejectInference(index)}
-                                          className="h-6 px-2 text-muted-foreground hover:text-destructive text-xs"
-                                        >
-                                          ✕ Importar print
-                                        </Button>
-                                      </div>
-                                    </div>
-                                    <div className="text-center">
-                                      <Badge variant="outline" className="text-xs bg-amber-500/20 text-amber-400 border-amber-500/40">
-                                        {legPrints[index].parsedData?.selecao?.value || "—"}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* Estado: Vazio - Área de upload clara */}
-                                {!legPrints[index].isProcessing && !legPrints[index].parsedData && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handlePrintImport(index)}
-                                    disabled={isProcessingAny}
-                                    className="w-full py-4 px-3 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20 hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center gap-2 group"
-                                  >
-                                    <Camera className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                                    <div className="text-center">
-                                      <p className="text-xs font-medium text-muted-foreground group-hover:text-foreground">
-                                        Importar Print
-                                      </p>
-                                      <p className="text-[10px] text-muted-foreground/70">
-                                        Clique ou cole (Ctrl+V)
-                                      </p>
-                                    </div>
-                                  </button>
-                                )}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Hint sutil quando área está vazia */}
+                            {!isEditing && legPrints[index] && !legPrints[index].isProcessing && !legPrints[index].parsedData && !legPrints[index].isInferred && (
+                              <div className="flex items-center justify-center gap-1.5 py-1 text-muted-foreground/50">
+                                <Camera className="h-3 w-3" />
+                                <span className="text-[10px]">Arraste ou clique para importar print</span>
                               </div>
                             )}
                             
