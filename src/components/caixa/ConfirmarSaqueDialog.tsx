@@ -80,6 +80,22 @@ export function ConfirmarSaqueDialog({
     try {
       setLoading(true);
 
+      // PROTEÇÃO: Verificar se o saque ainda está PENDENTE antes de confirmar
+      // Isso evita decrementos duplos em caso de cliques duplos ou race conditions
+      const { data: currentSaque, error: fetchError } = await supabase
+        .from("cash_ledger")
+        .select("status")
+        .eq("id", saque.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (currentSaque?.status !== "PENDENTE") {
+        toast.error("Este saque já foi processado anteriormente.");
+        onClose();
+        return;
+      }
+
       // Atualizar status para CONFIRMADO
       const updateData: any = {
         status: "CONFIRMADO",
@@ -94,7 +110,8 @@ export function ConfirmarSaqueDialog({
       const { error } = await supabase
         .from("cash_ledger")
         .update(updateData)
-        .eq("id", saque.id);
+        .eq("id", saque.id)
+        .eq("status", "PENDENTE"); // Condição extra para evitar race condition
 
       if (error) throw error;
 
