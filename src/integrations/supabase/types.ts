@@ -601,6 +601,87 @@ export type Database = {
           },
         ]
       }
+      bookmaker_balance_audit: {
+        Row: {
+          bookmaker_id: string
+          created_at: string
+          diferenca: number | null
+          id: string
+          observacoes: string | null
+          origem: string
+          referencia_id: string | null
+          referencia_tipo: string | null
+          saldo_anterior: number
+          saldo_novo: number
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          bookmaker_id: string
+          created_at?: string
+          diferenca?: number | null
+          id?: string
+          observacoes?: string | null
+          origem: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          saldo_anterior: number
+          saldo_novo: number
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          bookmaker_id?: string
+          created_at?: string
+          diferenca?: number | null
+          id?: string
+          observacoes?: string | null
+          origem?: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          saldo_anterior?: number
+          saldo_novo?: number
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmaker_balance_audit_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_balance_audit_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_balance_audit_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_balance_audit_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_balance_audit_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookmaker_unlinked_acks: {
         Row: {
           acknowledged_at: string
@@ -6824,6 +6905,17 @@ export type Database = {
     }
     Functions: {
       accept_workspace_invite: { Args: { _token: string }; Returns: Json }
+      adjust_bookmaker_balance_with_audit: {
+        Args: {
+          p_bookmaker_id: string
+          p_delta: number
+          p_observacoes?: string
+          p_origem: string
+          p_referencia_id?: string
+          p_referencia_tipo?: string
+        }
+        Returns: number
+      }
       admin_add_user_to_workspace: {
         Args: {
           _role?: Database["public"]["Enums"]["app_role"]
@@ -7510,6 +7602,17 @@ export type Database = {
       set_current_workspace: {
         Args: { _workspace_id: string }
         Returns: boolean
+      }
+      update_bookmaker_balance_with_audit: {
+        Args: {
+          p_bookmaker_id: string
+          p_novo_saldo: number
+          p_observacoes?: string
+          p_origem: string
+          p_referencia_id?: string
+          p_referencia_tipo?: string
+        }
+        Returns: undefined
       }
       update_influence_config: {
         Args: {
