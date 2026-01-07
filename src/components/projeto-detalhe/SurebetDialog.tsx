@@ -2420,13 +2420,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             entry.isReference 
                               ? `${colors.border} ring-2 ring-primary/30` 
                               : colors.border
-                          } ${!isEditing && legPrints[index] && !legPrints[index].isProcessing && !legPrints[index].parsedData ? 'cursor-pointer hover:border-primary/60 hover:bg-primary/5' : ''}`}
-                          onClick={() => {
-                            // Apenas em criação, quando não há print e não está processando
-                            if (!isEditing && legPrints[index] && !legPrints[index].isProcessing && !legPrints[index].parsedData && !legPrints[index].isInferred) {
-                              handlePrintImport(index);
-                            }
-                          }}
+                          }`}
                           onDragOver={(e) => {
                             if (!isEditing && legPrints[index] && !legPrints[index].isProcessing) {
                               e.preventDefault();
@@ -2450,6 +2444,17 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                             }
                           }}
                         >
+                          {/* Hint no canto superior esquerdo */}
+                          {!isEditing && legPrints[index] && !legPrints[index].isProcessing && !legPrints[index].parsedData && !legPrints[index].isInferred && (
+                            <button
+                              type="button"
+                              onClick={() => handlePrintImport(index)}
+                              className="absolute top-1.5 left-2 flex items-center gap-1 text-muted-foreground/40 hover:text-primary/70 transition-colors"
+                            >
+                              <Camera className="h-2.5 w-2.5" />
+                              <span className="text-[9px]">clique aqui</span>
+                            </button>
+                          )}
                           {/* Badge + Seleção Centralizado */}
                           <div className="flex flex-col items-center gap-2">
                             <div className={`text-2xl font-bold px-5 py-2 rounded-xl ${colors.badge}`}>
@@ -2566,13 +2571,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               </div>
                             )}
                             
-                            {/* Hint sutil quando área está vazia */}
-                            {!isEditing && legPrints[index] && !legPrints[index].isProcessing && !legPrints[index].parsedData && !legPrints[index].isInferred && (
-                              <div className="flex items-center justify-center gap-1.5 py-1 text-muted-foreground/50">
-                                <Camera className="h-3 w-3" />
-                                <span className="text-[10px]">Arraste ou clique para importar print</span>
-                              </div>
-                            )}
                             
                             {/* Campo Seleção Livre foi movido para o nível de entrada */}
                             
