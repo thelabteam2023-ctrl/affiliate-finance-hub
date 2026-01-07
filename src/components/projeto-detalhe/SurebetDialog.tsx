@@ -35,7 +35,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
-import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, type ModeloAposta } from "@/lib/marketNormalizer";
+import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
   CurrencyBadge, 
@@ -789,9 +789,22 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
       setEvento(prev => prev || sharedContext.evento || "");
     }
     if (sharedContext.mercado) {
-      setMercado(prev => prev || sharedContext.mercado || "");
+      setMercado(prev => {
+        if (prev) return prev; // Já tem mercado definido
+        // Normalizar o mercado do print para corresponder às opções disponíveis
+        const currentEsporte = sharedContext.esporte || esporte || "Futebol";
+        const availableMarkets = getMarketsForSportAndModel(currentEsporte, modelo);
+        const resolved = resolveMarketToOptions(sharedContext.mercado!, availableMarkets);
+        console.debug("[SurebetPrint] Mercado normalizado:", {
+          raw: sharedContext.mercado,
+          resolved: resolved.normalized,
+          confidence: resolved.confidence,
+          availableMarkets
+        });
+        return resolved.normalized || "";
+      });
     }
-  }, [legPrints, sharedContext, applyLegData]);
+  }, [legPrints, sharedContext, applyLegData, esporte, modelo]);
 
   // Handler para importar print de uma perna específica
   const handlePrintImport = useCallback((legIndex: number) => {
