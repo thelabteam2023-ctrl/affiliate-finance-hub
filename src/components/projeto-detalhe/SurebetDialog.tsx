@@ -2416,11 +2416,12 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                         )}
                         
                         <div 
-                          className={`flex-1 rounded-xl border-2 p-4 space-y-3 transition-all relative ${colors.bg} ${
+                          tabIndex={!isEditing ? 0 : undefined}
+                          className={`flex-1 rounded-xl border-2 p-4 space-y-3 transition-all relative outline-none ${colors.bg} ${
                             entry.isReference 
                               ? `${colors.border} ring-2 ring-primary/30` 
                               : colors.border
-                          }`}
+                          } ${!isEditing ? 'focus:ring-2 focus:ring-primary/50' : ''}`}
                           onDragOver={(e) => {
                             if (!isEditing && legPrints[index] && !legPrints[index].isProcessing) {
                               e.preventDefault();
@@ -2443,12 +2444,30 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                               }
                             }
                           }}
+                          onPaste={(e) => {
+                            if (isEditing || !legPrints[index] || legPrints[index].isProcessing) return;
+                            
+                            const items = e.clipboardData?.items;
+                            if (!items) return;
+                            
+                            for (let i = 0; i < items.length; i++) {
+                              if (items[i].type.startsWith('image/')) {
+                                e.preventDefault();
+                                const file = items[i].getAsFile();
+                                if (file) {
+                                  processLegImage(index, file);
+                                }
+                                return;
+                              }
+                            }
+                            // Se não for imagem, ignora silenciosamente
+                          }}
                         >
                           {/* Hint no canto superior esquerdo */}
                           {!isEditing && legPrints[index] && !legPrints[index].isProcessing && !legPrints[index].parsedData && !legPrints[index].isInferred && (
                             <div className="absolute top-1.5 left-2 flex items-center gap-1 text-muted-foreground/40">
                               <Camera className="h-2.5 w-2.5" />
-                              <span className="text-[9px]">Arraste ou </span>
+                              <span className="text-[9px]">Ctrl+V, arraste ou </span>
                               <button
                                 type="button"
                                 onClick={() => handlePrintImport(index)}
