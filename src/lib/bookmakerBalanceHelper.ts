@@ -131,7 +131,13 @@ export async function updateBonusBalance(
 export async function updateBookmakerBalance(
   bookmakerId: string,
   delta: number,
-  projetoId?: string
+  projetoId?: string,
+  auditInfo?: {
+    origem: string;
+    referenciaId?: string;
+    referenciaTipo?: string;
+    observacoes?: string;
+  }
 ): Promise<boolean> {
   if (delta === 0) return true;
   
@@ -145,8 +151,27 @@ export async function updateBookmakerBalance(
       return await updateBonusBalance(activeBonus.id, delta);
     }
     
-    // Sem bônus ativo: aplicar delta no saldo da bookmaker
-    // Buscar moeda e saldo atual
+    // Sem bônus ativo: usar função RPC com auditoria se disponível
+    if (auditInfo) {
+      const { error: rpcError } = await supabase.rpc('adjust_bookmaker_balance_with_audit', {
+        p_bookmaker_id: bookmakerId,
+        p_delta: delta,
+        p_origem: auditInfo.origem,
+        p_referencia_id: auditInfo.referenciaId || null,
+        p_referencia_tipo: auditInfo.referenciaTipo || null,
+        p_observacoes: auditInfo.observacoes || null,
+      });
+      
+      if (!rpcError) {
+        console.log(`[updateBookmakerBalance] Bookmaker ${bookmakerId}: delta ${delta} aplicado com auditoria (${auditInfo.origem})`);
+        return true;
+      }
+      
+      // Se RPC falhar, continuar com método fallback
+      console.warn("[updateBookmakerBalance] RPC falhou, usando fallback:", rpcError);
+    }
+    
+    // Fallback: atualização direta sem auditoria
     const { data: bookmaker, error: fetchError } = await supabase
       .from("bookmakers")
       .select("moeda, saldo_atual, saldo_usd")

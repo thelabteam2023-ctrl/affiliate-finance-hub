@@ -115,10 +115,15 @@ export function ConfirmarSaqueDialog({
 
       if (error) throw error;
 
-      // ATUALIZAR SALDO DO BOOKMAKER DE ORIGEM (decrementar o valor sacado)
+      // ATUALIZAR SALDO DO BOOKMAKER DE ORIGEM (decrementar o valor sacado) com auditoria
       if (saque.origem_bookmaker_id) {
-        // Usar helper centralizado que respeita moeda do bookmaker
-        await updateBookmakerBalance(saque.origem_bookmaker_id, -saque.valor);
+        // Usar helper centralizado com auditoria
+        await updateBookmakerBalance(saque.origem_bookmaker_id, -saque.valor, undefined, {
+          origem: 'SAQUE',
+          referenciaId: saque.id,
+          referenciaTipo: 'cash_ledger',
+          observacoes: observacoes.trim() || undefined,
+        });
         
         // Verificar se precisa atualizar status baseado no saldo restante
         const { data: bookmaker } = await supabase
