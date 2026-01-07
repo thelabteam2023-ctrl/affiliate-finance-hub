@@ -191,8 +191,35 @@ DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com
       parsedData.visitante.value = parsedData.visitante.value.toUpperCase();
     }
 
-    console.log("Parsed data:", JSON.stringify(parsedData));
+    // Normalizar ODD/STAKE para um formato numérico consistente (evita "R$177", "3,20", etc.)
+    const normalizeNumericString = (raw: string | null): string | null => {
+      if (!raw) return null;
+      const match = raw.replace(/\s+/g, "").match(/-?\d[\d.,]*/);
+      if (!match) return null;
 
+      let s = match[0];
+      const hasDot = s.includes(".");
+      const hasComma = s.includes(",");
+
+      if (hasDot && hasComma) {
+        if (s.lastIndexOf(",") > s.lastIndexOf(".")) {
+          s = s.replace(/\./g, "").replace(",", ".");
+        } else {
+          s = s.replace(/,/g, "");
+        }
+      } else if (hasComma && !hasDot) {
+        s = s.replace(",", ".");
+      }
+
+      const n = parseFloat(s);
+      if (!Number.isFinite(n)) return null;
+      return n.toFixed(2);
+    };
+
+    parsedData.odd.value = normalizeNumericString(parsedData.odd?.value);
+    parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
+
+    console.log("Parsed data:", JSON.stringify(parsedData));
     return new Response(
       JSON.stringify({ success: true, data: parsedData }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
