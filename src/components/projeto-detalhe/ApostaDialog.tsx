@@ -2220,58 +2220,29 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 {aposta ? "Editar Aposta" : "Registrar Aposta"}
               </DialogTitle>
               {!aposta && (
-                <div className="relative">
-                  <div className="group relative">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isPrintProcessing}
-                      className="gap-2 text-xs border-dashed"
-                    >
-                      {isPrintProcessing ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Camera className="h-3.5 w-3.5" />
-                      )}
-                      {isPrintProcessing ? "Lendo..." : "Importar por Print"}
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                        Beta
-                      </span>
-                    </Button>
-
-                    {/* Tooltip (somente hover) */}
-                    <div
-                      className="pointer-events-none absolute right-0 top-full z-50 mt-2 w-[280px] origin-top-right rounded-md border border-border/60 bg-popover p-3 text-popover-foreground shadow-md opacity-0 translate-y-1 scale-[0.98] transition-all duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100"
-                      role="note"
-                    >
-                      <div className="space-y-2">
-                        <div className="space-y-1.5 text-xs">
-                          <div className="flex items-start gap-2">
-                            <span className="leading-none">🖱️</span>
-                            <span>Arraste a imagem do boletim aqui</span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="leading-none">⌨️</span>
-                            <span>
-                              Cole com{" "}
-                              <kbd className="px-1 py-0.5 rounded bg-muted/60 text-[10px] font-mono border border-border/40">
-                                Ctrl+V
-                              </kbd>
-                            </span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="leading-none">📁</span>
-                            <span>Ou clique para selecionar o arquivo</span>
-                          </div>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground/80 pt-1.5 border-t border-border/30">
-                          Preenche automaticamente: Evento, Mercado e Seleção.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isPrintProcessing}
+                        className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        {isPrintProcessing ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Camera className="h-3.5 w-3.5" />
+                        )}
+                        {isPrintProcessing ? "Lendo..." : "Importar"}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" align="end" className="max-w-[200px]">
+                      <p className="text-xs">Cole com Ctrl+V ou clique para selecionar imagem do bilhete</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
               <input
                 ref={fileInputRef}

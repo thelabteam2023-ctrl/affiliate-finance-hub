@@ -14,7 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, Gift, Camera, X, AlertTriangle } from "lucide-react";
+import { Loader2, Save, Trash2, Gift, Camera, CheckCircle2 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -1101,76 +1107,64 @@ export function ApostaMultiplaDialog({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <DialogHeader>
-            <DialogTitle>
-              {aposta ? "Editar Aposta Múltipla" : "Nova Aposta Múltipla"}
-            </DialogTitle>
+          <DialogHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-sm font-medium">
+                {aposta ? "Editar Aposta Múltipla" : "Nova Aposta Múltipla"}
+              </DialogTitle>
+              {!aposta && (
+                <div className="flex items-center gap-2">
+                  {/* Print preview when imported */}
+                  {printImagePreview && !isPrintProcessing && (
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded text-xs">
+                      <CheckCircle2 className="h-3 w-3 text-primary" />
+                      <span className="text-primary font-medium">
+                        {printParsedData?.selecoes?.length || 0} seleções
+                      </span>
+                      <button 
+                        onClick={clearPrintData}
+                        className="ml-1 text-muted-foreground hover:text-foreground"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isPrintProcessing}
+                          className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          {isPrintProcessing ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Camera className="h-3.5 w-3.5" />
+                          )}
+                          {isPrintProcessing ? "Lendo..." : "Importar"}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" align="end" className="max-w-[200px]">
+                        <p className="text-xs">Cole com Ctrl+V ou clique para selecionar imagem do bilhete</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </div>
+              )}
+            </div>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Import by Print - Only for new bets */}
-            {!aposta && (
-              <Card className={`border-dashed ${printImagePreview ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'}`}>
-                <CardContent className="pt-4 pb-4">
-                  {isPrintProcessing ? (
-                    <div className="flex items-center justify-center gap-2 py-4">
-                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                      <span className="text-sm text-muted-foreground">Analisando print da múltipla...</span>
-                    </div>
-                  ) : printImagePreview ? (
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <img 
-                            src={printImagePreview} 
-                            alt="Print do bilhete" 
-                            className="h-16 w-16 object-cover rounded border"
-                          />
-                          <div>
-                            <p className="text-sm font-medium text-primary">Print importado!</p>
-                            <p className="text-xs text-muted-foreground">
-                              {printParsedData?.selecoes?.length || 0} seleções detectadas
-                            </p>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="icon" onClick={clearPrintData} className="h-8 w-8">
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      {/* Show fields needing review */}
-                      {printFieldsNeedingReview.stake && (
-                        <div className="flex items-center gap-2 text-xs text-amber-500">
-                          <AlertTriangle className="h-3 w-3" />
-                          <span>Stake pode precisar de revisão</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-2">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="gap-2"
-                      >
-                        <Camera className="h-4 w-4" />
-                        Importar Print
-                      </Button>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Ou arraste uma imagem / cole com Ctrl+V
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
 
             {/* Campos de Registro Obrigatórios */}
             <RegistroApostaFields
