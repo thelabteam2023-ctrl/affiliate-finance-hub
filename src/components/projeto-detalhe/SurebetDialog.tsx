@@ -216,6 +216,36 @@ function calcularStakeTotal(mainEntry: { stake: string }, additionalEntries?: Od
   return mainStake + additionalStakes;
 }
 
+// Parser tolerante para números vindos do OCR (ex.: "R$ 1.234,56", "177", "3,20")
+function parseNumeroPtLoose(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+
+  // Remove espaços e busca o primeiro bloco numérico
+  const match = raw.replace(/\s+/g, "").match(/-?\d[\d.,]*/);
+  if (!match) return null;
+
+  let s = match[0];
+  const hasDot = s.includes(".");
+  const hasComma = s.includes(",");
+
+  if (hasDot && hasComma) {
+    // Decide separador decimal pelo último separador presente
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) {
+      // 1.234,56 => 1234.56
+      s = s.replace(/\./g, "").replace(",", ".");
+    } else {
+      // 1,234.56 => 1234.56
+      s = s.replace(/,/g, "");
+    }
+  } else if (hasComma && !hasDot) {
+    // 123,45 => 123.45
+    s = s.replace(",", ".");
+  }
+
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : null;
+}
+
 /**
  * ============================================================
  * CÁLCULO DE STAKES PARA MODELO 1x2 (TRÊS VIAS - MATRICIAL)
@@ -711,12 +741,23 @@ export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, sureb
                 // REGRA DE PRECEDÊNCIA PARA STAKE:
                 // Se o print tem stake válido (> 0), usar SEMPRE e marcar como origem "print"
                 // Se o print tem stake zerado/null, permitir cálculo automático (referência)
-                const stakeValue = parseFloat(applied.stake);
-                if (!isNaN(stakeValue) && stakeValue > 0) {
-                  // Stake real do print - é SOBERANO, não pode ser sobrescrito
-                  updated[index].stake = applied.stake;
-                  updated[index].stakeOrigem = "print";
-                  updated[index].isManuallyEdited = true; // Bloquear sobrescrita automática
+                const stakeNumber = parseNumeroPtLoose(applied.stake);
+
+                // DEBUG: ajuda a entender quando o OCR não está retornando stake
+                console.debug("[SurebetPrint] leg", index, {
+                  stakeRaw: applied.stake,
+                  stakeNumber,
+                  stakeAtual: updated[index].stake,
+                  stakeOrigemAtual: updated[index].stakeOrigem,
+                });
+
+                if (stakeNumber !== null && stakeNumber > 0) {
+                  // Stake real do print - é SOBERANO, não pode ser sobrescrito (exceto se usuário já marcou como manual)
+                  if (updated[index].stakeOrigem !== "manual") {
+                    updated[index].stake = stakeNumber.toFixed(2);
+                    updated[index].stakeOrigem = "print";
+                    updated[index].isManuallyEdited = true; // Bloquear sobrescrita automática
+                  }
                 } else if (!updated[index].stake && !updated[index].stakeOrigem) {
                   // Print sem stake (zerado ou null) - permitir cálculo pela referência
                   // Não definir stakeOrigem ainda - será definido quando o cálculo automático rodar
