@@ -13,17 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoricoVinculosTab } from "./HistoricoVinculosTab";
 import { VinculoBonusDrawer } from "./VinculoBonusDrawer";
 import { DeltaCambialCard } from "./DeltaCambialCard";
+import { ConciliacaoVinculoDialog } from "./ConciliacaoVinculoDialog";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -126,8 +117,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
-  const [vinculoToRemove, setVinculoToRemove] = useState<Vinculo | null>(null);
   const [statusPopoverId, setStatusPopoverId] = useState<string | null>(null);
   const [changingStatus, setChangingStatus] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
@@ -137,6 +126,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [selectedBookmakerForBonus, setSelectedBookmakerForBonus] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmakerCatalogoId?: string | null } | null>(null);
   const [filterBonusOnly, setFilterBonusOnly] = useState(false);
   const [cotacaoTrabalho, setCotacaoTrabalho] = useState<number | null>(null);
+  const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
+  const [vinculoParaConciliar, setVinculoParaConciliar] = useState<Vinculo | null>(null);
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
 
@@ -388,64 +379,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     }
   };
 
-  const handleRemoveVinculo = async () => {
-    if (!vinculoToRemove) return;
-
-    try {
-      setSaving(true);
-
-      // Salvar o status ORIGINAL do bookmaker (ativo ou limitada) antes de alterar
-      // Isso permite que a Central de Operações saiba se pode realocar ou só processar saque
-      const statusAnterior = vinculoToRemove.bookmaker_status; // "ativo" ou "LIMITADA"
-
-      // Update history record with unlink date and original status
-      await supabase
-        .from("projeto_bookmaker_historico")
-        .update({ 
-          data_desvinculacao: new Date().toISOString(),
-          status_final: statusAnterior // Salvar status original, não o futuro
-        })
-        .eq("projeto_id", projetoId)
-        .eq("bookmaker_id", vinculoToRemove.id);
-
-      // Se tiver saldo, muda para AGUARDANDO_SAQUE ao invés de liberar diretamente
-      if (vinculoToRemove.saldo_atual > 0) {
-        const { error } = await supabase
-          .from("bookmakers")
-          .update({ 
-            projeto_id: null, 
-            status: "AGUARDANDO_SAQUE" 
-          })
-          .eq("id", vinculoToRemove.id);
-
-        if (error) throw error;
-
-        toast.success(
-          `Vínculo liberado com saldo pendente de ${formatCurrency(vinculoToRemove.saldo_atual, vinculoToRemove.moeda)}. Um alerta foi criado para a tesouraria.`,
-          { duration: 5000 }
-        );
-      } else {
-        // Sem saldo, libera normalmente
-        const { error } = await supabase
-          .from("bookmakers")
-          .update({ projeto_id: null })
-          .eq("id", vinculoToRemove.id);
-
-        if (error) throw error;
-
-        toast.success("Vínculo liberado do projeto");
-      }
-
-      setRemoveDialogOpen(false);
-      setVinculoToRemove(null);
-      fetchVinculos();
-      fetchHistoricoCount();
-    } catch (error: any) {
-      toast.error("Erro ao liberar vínculo: " + error.message);
-    } finally {
-      setSaving(false);
-    }
-  };
+  // handleRemoveVinculo foi substituído pelo ConciliacaoVinculoDialog
 
   const handleChangeStatus = async (vinculoId: string, newStatus: string) => {
     try {
@@ -1023,8 +957,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       size="sm"
                       className="text-destructive hover:text-destructive"
                       onClick={() => {
-                        setVinculoToRemove(vinculo);
-                        setRemoveDialogOpen(true);
+                        setVinculoParaConciliar(vinculo);
+                        setConciliacaoDialogOpen(true);
                       }}
                     >
                       <Link2Off className="h-4 w-4" />
@@ -1266,8 +1200,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       title="Liberar do Projeto"
                       onClick={() => {
-                        setVinculoToRemove(vinculo);
-                        setRemoveDialogOpen(true);
+                        setVinculoParaConciliar(vinculo);
+                        setConciliacaoDialogOpen(true);
                       }}
                     >
                       <Link2Off className="h-4 w-4" />
@@ -1376,54 +1310,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Remove Confirmation Dialog */}
-      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Liberar Vínculo do Projeto?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p>
-                  O vínculo <strong>{vinculoToRemove?.nome}</strong> do parceiro{" "}
-                  <strong>{vinculoToRemove?.parceiro_nome}</strong> será liberado.
-                </p>
-                {vinculoToRemove && vinculoToRemove.saldo_atual > 0 && (
-                  <div className="p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
-                    <p className="text-yellow-400 font-medium flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      Atenção: Saldo pendente de {formatCurrency(vinculoToRemove.saldo_atual, vinculoToRemove.moeda)}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      O vínculo será marcado como "Aguardando Saque" e um alerta será criado 
-                      na Central de Operações para a tesouraria processar o saque.
-                    </p>
-                  </div>
-                )}
-                {vinculoToRemove && vinculoToRemove.saldo_atual === 0 && (
-                  <p className="text-muted-foreground">
-                    Este vínculo está com saldo zerado e ficará disponível para outros projetos.
-                  </p>
-                )}
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemoveVinculo} disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Liberando...
-                </>
-              ) : vinculoToRemove && vinculoToRemove.saldo_atual > 0 ? (
-                "Liberar e Criar Alerta"
-              ) : (
-                "Liberar"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* AlertDialog de remoção foi substituído pelo ConciliacaoVinculoDialog */}
 
       {/* Dialog Nova Transação */}
       <CaixaTransacaoDialog
@@ -1466,6 +1353,22 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       <TabsContent value="historico">
         <HistoricoVinculosTab projetoId={projetoId} />
       </TabsContent>
+
+      {/* Dialog de Conciliação Financeira */}
+      <ConciliacaoVinculoDialog
+        open={conciliacaoDialogOpen}
+        onOpenChange={(open) => {
+          setConciliacaoDialogOpen(open);
+          if (!open) setVinculoParaConciliar(null);
+        }}
+        vinculo={vinculoParaConciliar}
+        projetoId={projetoId}
+        workspaceId={workspaceId}
+        onConciliado={() => {
+          fetchVinculos();
+          fetchHistoricoCount();
+        }}
+      />
     </Tabs>
   );
 }
