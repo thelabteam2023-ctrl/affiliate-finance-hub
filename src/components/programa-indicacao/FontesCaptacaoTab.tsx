@@ -37,6 +37,7 @@ import {
   ArrowDownRight,
   Minus,
   Target,
+  ArrowRight,
 } from "lucide-react";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -132,15 +133,25 @@ export function FontesCaptacaoTab() {
     fetchData();
   }, []);
 
+  // Stats for direct acquisitions
+  const [statsDireto, setStatsDireto] = useState({
+    total: 0,
+    investido: 0,
+    lucroGerado: 0,
+    roi: 0,
+  });
+
   const fetchData = async () => {
     try {
       setLoading(true);
       
-      const [indicadoresRes, acordosRes, fornecedoresRes, parceriasRes] = await Promise.all([
+      const [indicadoresRes, acordosRes, fornecedoresRes, parceriasRes, custosDiretosRes, lucrosDiretosRes] = await Promise.all([
         supabase.from("v_indicador_performance").select("*"),
         supabase.from("indicador_acordos").select("*").eq("ativo", true),
         supabase.from("fornecedores").select("*").order("nome"),
         supabase.from("parcerias").select("fornecedor_id, valor_fornecedor").eq("origem_tipo", "FORNECEDOR"),
+        supabase.from("v_custos_aquisicao").select("parceiro_id, custo_total").eq("origem_tipo", "DIRETO"),
+        supabase.from("v_parceiro_lucro_total").select("parceiro_id, lucro_projetos"),
       ]);
 
       if (indicadoresRes.error) throw indicadoresRes.error;
@@ -157,6 +168,23 @@ export function FontesCaptacaoTab() {
         };
       });
       setFornecedores(fornecedoresWithStats);
+
+      // Calculate direct acquisition stats
+      const custosDiretos = custosDiretosRes.data || [];
+      const lucrosMap = new Map((lucrosDiretosRes.data || []).map(l => [l.parceiro_id, l.lucro_projetos || 0]));
+      
+      const parceirosDiretos = new Set(custosDiretos.map(c => c.parceiro_id));
+      const totalDireto = parceirosDiretos.size;
+      const investidoDireto = custosDiretos.reduce((acc, p) => acc + (p.custo_total || 0), 0);
+      const lucroGeradoDireto = Array.from(parceirosDiretos).reduce((acc, pid) => acc + (lucrosMap.get(pid) || 0), 0);
+      const roiDireto = investidoDireto > 0 ? ((lucroGeradoDireto - investidoDireto) / investidoDireto) * 100 : 0;
+
+      setStatsDireto({
+        total: totalDireto,
+        investido: investidoDireto,
+        lucroGerado: lucroGeradoDireto,
+        roi: roiDireto,
+      });
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
@@ -337,7 +365,7 @@ export function FontesCaptacaoTab() {
       {/* Comparative Overview Card */}
       <Card className="bg-gradient-to-br from-muted/30 to-muted/10 border-dashed">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-3 gap-6">
             {/* Indicadores Summary */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -383,6 +411,31 @@ export function FontesCaptacaoTab() {
                 </div>
               </div>
             </div>
+
+            {/* Direto Summary */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <ArrowRight className="h-4 w-4 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Direto</p>
+                  <p className="text-xs text-muted-foreground">{statsDireto.total} parceiros</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Investido</p>
+                  <p className="font-semibold text-amber-500">{formatCurrency(statsDireto.investido)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">ROI</p>
+                  <p className={`font-semibold ${statsDireto.roi >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                    {statsDireto.roi >= 0 ? '+' : ''}{statsDireto.roi.toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Comparison bar */}
@@ -390,39 +443,48 @@ export function FontesCaptacaoTab() {
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
               <span>Distribuição de Parceiros</span>
               <span>
-                {statsIndicadores.parceiros + statsFornecedores.parceiros} total
+                {statsIndicadores.parceiros + statsFornecedores.parceiros + statsDireto.total} total
               </span>
             </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden flex">
-              {statsIndicadores.parceiros + statsFornecedores.parceiros > 0 && (
+            {(() => {
+              const totalParceiros = statsIndicadores.parceiros + statsFornecedores.parceiros + statsDireto.total;
+              const pctIndicadores = totalParceiros > 0 ? (statsIndicadores.parceiros / totalParceiros) * 100 : 0;
+              const pctFornecedores = totalParceiros > 0 ? (statsFornecedores.parceiros / totalParceiros) * 100 : 0;
+              const pctDireto = totalParceiros > 0 ? (statsDireto.total / totalParceiros) * 100 : 0;
+              return (
                 <>
-                  <div 
-                    className="h-full bg-emerald-500 transition-all"
-                    style={{ 
-                      width: `${(statsIndicadores.parceiros / (statsIndicadores.parceiros + statsFornecedores.parceiros)) * 100}%` 
-                    }}
-                  />
-                  <div 
-                    className="h-full bg-blue-500 transition-all"
-                    style={{ 
-                      width: `${(statsFornecedores.parceiros / (statsIndicadores.parceiros + statsFornecedores.parceiros)) * 100}%` 
-                    }}
-                  />
+                  <div className="h-2 rounded-full bg-muted overflow-hidden flex">
+                    {totalParceiros > 0 && (
+                      <>
+                        <div 
+                          className="h-full bg-emerald-500 transition-all"
+                          style={{ width: `${pctIndicadores}%` }}
+                        />
+                        <div 
+                          className="h-full bg-blue-500 transition-all"
+                          style={{ width: `${pctFornecedores}%` }}
+                        />
+                        <div 
+                          className="h-full bg-amber-500 transition-all"
+                          style={{ width: `${pctDireto}%` }}
+                        />
+                      </>
+                    )}
+                  </div>
+                  <div className="flex justify-between mt-1 text-xs">
+                    <span className="text-emerald-500">
+                      {pctIndicadores.toFixed(0)}% Indicadores
+                    </span>
+                    <span className="text-blue-500">
+                      {pctFornecedores.toFixed(0)}% Fornecedores
+                    </span>
+                    <span className="text-amber-500">
+                      {pctDireto.toFixed(0)}% Direto
+                    </span>
+                  </div>
                 </>
-              )}
-            </div>
-            <div className="flex justify-between mt-1 text-xs">
-              <span className="text-emerald-500">
-                {statsIndicadores.parceiros > 0 
-                  ? `${((statsIndicadores.parceiros / (statsIndicadores.parceiros + statsFornecedores.parceiros)) * 100).toFixed(0)}%` 
-                  : "0%"} Indicadores
-              </span>
-              <span className="text-blue-500">
-                {statsFornecedores.parceiros > 0 
-                  ? `${((statsFornecedores.parceiros / (statsIndicadores.parceiros + statsFornecedores.parceiros)) * 100).toFixed(0)}%` 
-                  : "0%"} Fornecedores
-              </span>
-            </div>
+              );
+            })()}
           </div>
         </CardContent>
       </Card>
