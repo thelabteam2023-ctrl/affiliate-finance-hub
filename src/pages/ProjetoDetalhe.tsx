@@ -49,7 +49,7 @@ import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboa
 import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTab";
 import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculosTab";
 import { ProjetoPerdasTab } from "@/components/projeto-detalhe/ProjetoPerdasTab";
-import { ProjetoFreebetsTab } from "@/components/projeto-detalhe/ProjetoFreebetsTab";
+import { ProjetoPromocoesTab } from "@/components/projeto-detalhe/ProjetoPromocoesTab";
 import { ProjetoCiclosTab } from "@/components/projeto-detalhe/ProjetoCiclosTab";
 import { ProjetoSurebetTab } from "@/components/projeto-detalhe/ProjetoSurebetTab";
 import { ProjetoValueBetTab } from "@/components/projeto-detalhe/ProjetoValueBetTab";
@@ -163,7 +163,7 @@ export default function ProjetoDetalhe() {
     // Safe check - only add if isModuleActive function works
     try {
       if (isModuleActive("freebets")) {
-        moduleTabs.push({ value: "freebets", label: "Freebets", icon: <Gift className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+        moduleTabs.push({ value: "promocoes", label: "Promoções", icon: <Gift className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
       }
       if (isModuleActive("bonus")) {
         moduleTabs.push({ value: "bonus", label: "Bônus", icon: <Coins className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
@@ -199,7 +199,7 @@ export default function ProjetoDetalhe() {
     
     // Module tabs - check if active (only if modules are loaded)
     const moduleTabMap: Record<string, string> = {
-      freebets: "freebets",
+      promocoes: "freebets",
       bonus: "bonus",
       surebet: "surebet",
       valuebet: "valuebet",
@@ -659,8 +659,8 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="freebets" className="h-full m-0">
-            <ProjetoFreebetsTab 
+          <TabsContent value="promocoes" className="h-full m-0">
+            <ProjetoPromocoesTab 
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
               onDataChange={triggerGlobalRefresh}
