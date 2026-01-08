@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoricoVinculosTab } from "./HistoricoVinculosTab";
+import { HistoricoConciliacoesTab } from "./HistoricoConciliacoesTab";
 import { VinculoBonusDrawer } from "./VinculoBonusDrawer";
 import { DeltaCambialCard } from "./DeltaCambialCard";
 import { ConciliacaoVinculoDialog } from "./ConciliacaoVinculoDialog";
@@ -527,6 +528,10 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         <TabsTrigger value="historico" className="flex items-center gap-2">
           <History className="h-4 w-4" />
           Histórico ({historicoCount.total})
+        </TabsTrigger>
+        <TabsTrigger value="conciliacoes" className="flex items-center gap-2">
+          <ArrowRightLeft className="h-4 w-4" />
+          Ajustes
         </TabsTrigger>
       </TabsList>
 
@@ -1354,7 +1359,10 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         <HistoricoVinculosTab projetoId={projetoId} />
       </TabsContent>
 
-      {/* Dialog de Conciliação Financeira */}
+      <TabsContent value="conciliacoes">
+        <HistoricoConciliacoesTab projetoId={projetoId} />
+      </TabsContent>
+
       <ConciliacaoVinculoDialog
         open={conciliacaoDialogOpen}
         onOpenChange={(open) => {
