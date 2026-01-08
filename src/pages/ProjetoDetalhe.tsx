@@ -24,6 +24,7 @@ import {
   Clock,
   Edit,
   Coins,
+  HelpCircle,
   AlertTriangle,
   Percent,
   Gift,
@@ -428,7 +429,53 @@ export default function ProjetoDetalhe() {
                 {formatCurrency(Math.abs(projetoResultado?.netProfit || 0))}
               </div>
               <p className="text-[10px] md:text-xs text-muted-foreground truncate">
-                {projetoResultado?.operationalLossesConfirmed ? (
+                {projetoResultado?.temAjustesConciliacao ? (
+                  <span className="flex items-center gap-1">
+                    <span>Resultado</span>
+                    <span className="text-muted-foreground/70">·</span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center gap-0.5 text-muted-foreground/70 cursor-help">
+                            Inclui ajustes
+                            <HelpCircle className="h-2.5 w-2.5" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[220px]">
+                          <div className="space-y-1.5 text-xs">
+                            <p className="font-medium">Composição do Resultado</p>
+                            <div className="space-y-0.5">
+                              <div className="flex justify-between gap-3">
+                                <span className="text-muted-foreground">Lucro Apostas:</span>
+                                <span>{formatCurrency(projetoResultado?.grossProfitFromBets || 0)}</span>
+                              </div>
+                              {projetoResultado?.operationalLossesConfirmed ? (
+                                <div className="flex justify-between gap-3">
+                                  <span className="text-muted-foreground">Perdas:</span>
+                                  <span className="text-red-400">-{formatCurrency(projetoResultado.operationalLossesConfirmed)}</span>
+                                </div>
+                              ) : null}
+                              <div className="flex justify-between gap-3">
+                                <span className="text-muted-foreground">Ajustes Conciliação:</span>
+                                <span className={(projetoResultado?.ajustesConciliacao || 0) >= 0 ? "text-emerald-400" : "text-red-400"}>
+                                  {(projetoResultado?.ajustesConciliacao || 0) >= 0 ? "+" : ""}{formatCurrency(projetoResultado?.ajustesConciliacao || 0)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="border-t border-border pt-1">
+                              <div className="flex justify-between gap-3 font-medium">
+                                <span>Lucro Líquido:</span>
+                                <span className={(projetoResultado?.netProfit || 0) >= 0 ? "text-emerald-400" : "text-red-400"}>
+                                  {formatCurrency(projetoResultado?.netProfit || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </span>
+                ) : projetoResultado?.operationalLossesConfirmed ? (
                   <>Bruto: {formatCurrency(projetoResultado.grossProfitFromBets)} - Perdas: {formatCurrency(projetoResultado.operationalLossesConfirmed)}</>
                 ) : (
                   "Resultado do período"
