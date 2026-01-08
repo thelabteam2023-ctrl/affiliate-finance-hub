@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { toast } from "sonner";
@@ -39,55 +39,91 @@ export function useProjectModules(projetoId: string | undefined) {
   const [catalog, setCatalog] = useState<ModuleCatalog[]>([]);
   const [projectModules, setProjectModules] = useState<ProjectModule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [modulesWithStatus, setModulesWithStatus] = useState<ModuleWithStatus[]>([]);
+  
+  // Track if we've done initial fetch to avoid flicker
+  const hasFetched = useRef(false);
 
-  // Fetch catalog (all available modules)
-  const fetchCatalog = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("project_modules_catalog")
-      .select("*")
-      .order("default_order");
+  // Fetch catalog (all available modules) - with error handling
+  const fetchCatalog = useCallback(async (): Promise<ModuleCatalog[]> => {
+    try {
+      const { data, error } = await supabase
+        .from("project_modules_catalog")
+        .select("*")
+        .order("default_order");
 
-    if (!error && data) {
-      setCatalog(data);
+      if (error) {
+        console.error("Error fetching module catalog:", error);
+        setError("Erro ao carregar catálogo de módulos");
+        return [];
+      }
+      
+      setCatalog(data || []);
+      return data || [];
+    } catch (err) {
+      console.error("Exception fetching catalog:", err);
+      return [];
     }
-    return data || [];
   }, []);
 
-  // Fetch project-specific modules
-  const fetchProjectModules = useCallback(async () => {
+  // Fetch project-specific modules - with error handling
+  const fetchProjectModules = useCallback(async (): Promise<ProjectModule[]> => {
     if (!projetoId) return [];
     
-    const { data, error } = await supabase
-      .from("project_modules")
-      .select(`
-        id,
-        module_id,
-        status,
-        display_order,
-        activated_at,
-        archived_at,
-        archive_reason
-      `)
-      .eq("projeto_id", projetoId)
-      .order("display_order");
+    try {
+      const { data, error } = await supabase
+        .from("project_modules")
+        .select(`
+          id,
+          module_id,
+          status,
+          display_order,
+          activated_at,
+          archived_at,
+          archive_reason
+        `)
+        .eq("projeto_id", projetoId)
+        .order("display_order");
 
-    if (!error && data) {
-      setProjectModules(data as ProjectModule[]);
+      if (error) {
+        console.error("Error fetching project modules:", error);
+        // Don't set error state here - just return empty, the project might be new
+        return [];
+      }
+      
+      setProjectModules((data || []) as ProjectModule[]);
+      return (data || []) as ProjectModule[];
+    } catch (err) {
+      console.error("Exception fetching project modules:", err);
+      return [];
     }
-    return data || [];
   }, [projetoId]);
 
-  // Refresh all data
+  // Refresh all data - with retry on failure
   const refresh = useCallback(async () => {
+    if (!projetoId) {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
+    setError(null);
+    
     try {
       const [catalogData, modulesData] = await Promise.all([
         fetchCatalog(),
         fetchProjectModules(),
       ]);
 
-      // Build combined status list
+      // Build combined status list - only if we have catalog data
+      if (catalogData.length === 0) {
+        // No catalog - might be a network error or empty database
+        // Keep existing data if any, just stop loading
+        setLoading(false);
+        return;
+      }
+
       const combined: ModuleWithStatus[] = catalogData.map((cat) => {
         const projectModule = modulesData.find((pm) => pm.module_id === cat.id);
         
@@ -106,10 +142,14 @@ export function useProjectModules(projetoId: string | undefined) {
       });
 
       setModulesWithStatus(combined);
+      hasFetched.current = true;
+    } catch (err) {
+      console.error("Error refreshing modules:", err);
+      setError("Erro ao carregar módulos");
     } finally {
       setLoading(false);
     }
-  }, [fetchCatalog, fetchProjectModules]);
+  }, [fetchCatalog, fetchProjectModules, projetoId]);
 
   useEffect(() => {
     if (projetoId) {
@@ -185,10 +225,13 @@ export function useProjectModules(projetoId: string | undefined) {
     [projetoId, workspaceId, catalog, modulesWithStatus, refresh]
   );
 
-  // Deactivate/archive a module
+  // Deactivate/archive a module - with robust error handling
   const deactivateModule = useCallback(
     async (moduleId: string, reason?: string) => {
-      if (!projetoId) return false;
+      if (!projetoId) {
+        toast.error("Projeto não identificado");
+        return false;
+      }
 
       try {
         const { data: session } = await supabase.auth.getSession();
@@ -203,11 +246,25 @@ export function useProjectModules(projetoId: string | undefined) {
           return false;
         }
 
-        // Check if module has data
-        const { data: hasData } = await supabase.rpc("check_module_has_data", {
-          p_projeto_id: projetoId,
-          p_module_id: moduleId,
-        });
+        // Check if module has data - with fallback if function fails
+        let hasData = false;
+        try {
+          const { data, error } = await supabase.rpc("check_module_has_data", {
+            p_projeto_id: projetoId,
+            p_module_id: moduleId,
+          });
+          
+          if (error) {
+            console.warn("check_module_has_data failed, defaulting to archive:", error);
+            // If the function fails, default to archiving (safer)
+            hasData = true;
+          } else {
+            hasData = Boolean(data);
+          }
+        } catch (rpcError) {
+          console.warn("RPC call failed, defaulting to archive:", rpcError);
+          hasData = true;
+        }
 
         if (hasData) {
           // Archive (preserve data)
@@ -237,6 +294,7 @@ export function useProjectModules(projetoId: string | undefined) {
         await refresh();
         return true;
       } catch (error: any) {
+        console.error("Error deactivating module:", error);
         toast.error("Erro ao desativar módulo: " + error.message);
         return false;
       }
@@ -244,48 +302,95 @@ export function useProjectModules(projetoId: string | undefined) {
     [projetoId, modulesWithStatus, refresh]
   );
 
-  // Bulk activate modules (for wizard)
+  // Bulk activate modules (for wizard) - with robust error handling
   const activateModules = useCallback(
-    async (moduleIds: string[]) => {
-      if (!projetoId || !workspaceId) return false;
+    async (moduleIds: string[]): Promise<boolean> => {
+      if (!projetoId || !workspaceId) {
+        console.warn("activateModules called without projetoId or workspaceId");
+        return false;
+      }
+      
+      if (!moduleIds || moduleIds.length === 0) {
+        // No modules to activate is not an error
+        return true;
+      }
 
       try {
         const { data: session } = await supabase.auth.getSession();
-        if (!session.session) return false;
+        if (!session.session) {
+          toast.error("Usuário não autenticado");
+          return false;
+        }
 
-        const inserts = moduleIds.map((moduleId) => {
-          const catalogModule = catalog.find((c) => c.id === moduleId);
-          return {
-            projeto_id: projetoId,
-            module_id: moduleId,
-            workspace_id: workspaceId,
-            activated_by: session.session!.user.id,
-            display_order: catalogModule?.default_order || 100,
-            status: "active" as const,
-          };
-        });
+        let successCount = 0;
+        let errorCount = 0;
 
-        // Use upsert to handle existing archived modules
-        for (const insert of inserts) {
-          const existing = modulesWithStatus.find((m) => m.id === insert.module_id);
-          
-          if (existing?.projectModuleId) {
-            await supabase
-              .from("project_modules")
-              .update({
+        // Process each module with individual error handling
+        for (const moduleId of moduleIds) {
+          try {
+            const existing = modulesWithStatus.find((m) => m.id === moduleId);
+            
+            if (existing?.projectModuleId) {
+              // Reactivate existing archived module
+              const { error } = await supabase
+                .from("project_modules")
+                .update({
+                  status: "active",
+                  archived_at: null,
+                  archive_reason: null,
+                })
+                .eq("id", existing.projectModuleId);
+              
+              if (error) {
+                console.error(`Failed to reactivate module ${moduleId}:`, error);
+                errorCount++;
+              } else {
+                successCount++;
+              }
+            } else {
+              // Insert new module
+              const catalogModule = catalog.find((c) => c.id === moduleId);
+              const { error } = await supabase.from("project_modules").insert({
+                projeto_id: projetoId,
+                module_id: moduleId,
+                workspace_id: workspaceId,
+                activated_by: session.session.user.id,
+                display_order: catalogModule?.default_order || 100,
                 status: "active",
-                archived_at: null,
-                archive_reason: null,
-              })
-              .eq("id", existing.projectModuleId);
-          } else {
-            await supabase.from("project_modules").insert(insert);
+              });
+
+              if (error) {
+                // Check for duplicate key - not really an error
+                if (error.code === "23505") {
+                  console.warn(`Module ${moduleId} already exists, skipping`);
+                  successCount++;
+                } else {
+                  console.error(`Failed to activate module ${moduleId}:`, error);
+                  errorCount++;
+                }
+              } else {
+                successCount++;
+              }
+            }
+          } catch (moduleError) {
+            console.error(`Exception activating module ${moduleId}:`, moduleError);
+            errorCount++;
           }
         }
 
+        // Refresh regardless of partial failures
         await refresh();
+
+        if (errorCount > 0 && successCount > 0) {
+          toast.warning(`${successCount} módulo(s) ativado(s), ${errorCount} com erro`);
+        } else if (errorCount > 0) {
+          toast.error("Erro ao ativar módulos");
+          return false;
+        }
+
         return true;
       } catch (error: any) {
+        console.error("Error in activateModules:", error);
         toast.error("Erro ao ativar módulos: " + error.message);
         return false;
       }
@@ -299,6 +404,7 @@ export function useProjectModules(projetoId: string | undefined) {
     modulesWithStatus,
     activeModules,
     loading,
+    error,
     refresh,
     isModuleActive,
     activateModule,

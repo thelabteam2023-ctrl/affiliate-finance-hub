@@ -45,7 +45,7 @@ interface ProjectModulesManagerProps {
 }
 
 export function ProjectModulesManager({ projetoId }: ProjectModulesManagerProps) {
-  const { modulesWithStatus, loading, activateModule, deactivateModule } = useProjectModules(projetoId);
+  const { modulesWithStatus, loading, error, activateModule, deactivateModule, refresh } = useProjectModules(projetoId);
   const { canEdit } = useActionAccess();
   const canManage = canEdit('projetos', 'projetos.edit');
   
@@ -58,9 +58,10 @@ export function ProjectModulesManager({ projetoId }: ProjectModulesManagerProps)
   
   const [processing, setProcessing] = useState<string | null>(null);
 
-  const activeModules = modulesWithStatus.filter((m) => m.status === "active");
-  const availableModules = modulesWithStatus.filter((m) => m.status === "available");
-  const archivedModules = modulesWithStatus.filter((m) => m.status === "archived");
+  // Safe filtering - handle undefined/null cases
+  const activeModules = (modulesWithStatus || []).filter((m) => m.status === "active");
+  const availableModules = (modulesWithStatus || []).filter((m) => m.status === "available");
+  const archivedModules = (modulesWithStatus || []).filter((m) => m.status === "archived");
 
   const handleToggle = async (module: ModuleWithStatus) => {
     if (!canManage) return;
@@ -172,6 +173,39 @@ export function ProjectModulesManager({ projetoId }: ProjectModulesManagerProps)
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-20" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Error state with retry option
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col items-center justify-center p-8 text-center">
+          <Info className="h-10 w-10 text-muted-foreground mb-3" />
+          <h3 className="font-semibold text-lg">Erro ao carregar módulos</h3>
+          <p className="text-sm text-muted-foreground mt-1 mb-4">
+            Não foi possível carregar a lista de módulos disponíveis.
+          </p>
+          <Button variant="outline" onClick={() => refresh()}>
+            Tentar novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state - no modules in catalog
+  if (modulesWithStatus.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col items-center justify-center p-8 text-center">
+          <Puzzle className="h-10 w-10 text-muted-foreground mb-3" />
+          <h3 className="font-semibold text-lg">Nenhum módulo disponível</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Não há módulos estratégicos configurados no sistema.
+          </p>
         </div>
       </div>
     );

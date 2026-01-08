@@ -121,7 +121,7 @@ export default function ProjetoDetalhe() {
   const { canEdit } = useActionAccess();
   
   // Project modules - dynamic menu
-  const { activeModules, isModuleActive, activateModule, refresh: refreshModules } = useProjectModules(id);
+  const { activeModules, isModuleActive, activateModule, refresh: refreshModules, loading: modulesLoading, error: modulesError } = useProjectModules(id);
   
   // Module activation dialog state
   const [moduleActivationDialog, setModuleActivationDialog] = useState<{
@@ -142,40 +142,62 @@ export default function ProjetoDetalhe() {
   // KPIs should only show on performance tabs
   const showKpis = ["visao-geral", "apostas", "perdas", "ciclos"].includes(activeTab);
   
-  // Build dynamic tabs based on active modules
+  // Build dynamic tabs based on active modules - with safe fallback
   const dynamicTabs = useMemo(() => {
-    // Base tabs that are always visible
+    // Base tabs that are always visible (these are the "menu padrão")
+    // Note: "Gestão" is rendered as a tabGroup dropdown, not a direct tab
     const baseTabs: TabItem[] = [
       { value: "visao-geral", label: "Visão Geral", icon: <LayoutDashboard className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
       { value: "apostas", label: "Apostas", icon: <Target className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
       { value: "vinculos", label: "Vínculos", icon: <Link2 className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
     ];
 
+    // If modules are still loading or there was an error, just show base tabs
+    if (modulesLoading || modulesError) {
+      return baseTabs;
+    }
+
     // Module tabs - only show if module is active
     const moduleTabs: TabItem[] = [];
     
-    if (isModuleActive("freebets")) {
-      moduleTabs.push({ value: "freebets", label: "Freebets", icon: <Gift className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
-    }
-    if (isModuleActive("bonus")) {
-      moduleTabs.push({ value: "bonus", label: "Bônus", icon: <Coins className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
-    }
-    if (isModuleActive("surebet")) {
-      moduleTabs.push({ value: "surebet", label: "Surebet", icon: <ArrowLeftRight className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
-    }
-    if (isModuleActive("valuebet")) {
-      moduleTabs.push({ value: "valuebet", label: "ValueBet", icon: <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
-    }
-    if (isModuleActive("duplogreen")) {
-      moduleTabs.push({ value: "duplogreen", label: "Duplo Green", icon: <Zap className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+    // Safe check - only add if isModuleActive function works
+    try {
+      if (isModuleActive("freebets")) {
+        moduleTabs.push({ value: "freebets", label: "Freebets", icon: <Gift className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+      }
+      if (isModuleActive("bonus")) {
+        moduleTabs.push({ value: "bonus", label: "Bônus", icon: <Coins className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+      }
+      if (isModuleActive("surebet")) {
+        moduleTabs.push({ value: "surebet", label: "Surebet", icon: <ArrowLeftRight className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+      }
+      if (isModuleActive("valuebet")) {
+        moduleTabs.push({ value: "valuebet", label: "ValueBet", icon: <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+      }
+      if (isModuleActive("duplogreen")) {
+        moduleTabs.push({ value: "duplogreen", label: "Duplo Green", icon: <Zap className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+      }
+    } catch (e) {
+      console.error("Error checking active modules:", e);
     }
 
-    // Insert module tabs after "apostas"
+    // Insert module tabs between "apostas" and "vinculos"
+    // baseTabs: [visao-geral, apostas, vinculos]
+    // Result: [visao-geral, apostas, ...moduleTabs, vinculos]
     return [...baseTabs.slice(0, 2), ...moduleTabs, ...baseTabs.slice(2)];
-  }, [activeModules, isModuleActive]);
+  }, [activeModules, isModuleActive, modulesLoading, modulesError]);
 
   // Handle tab change with module activation prompt
   const handleTabChange = (tabValue: string) => {
+    // Base tabs that are always available (don't need module activation)
+    const baseTabs = ["visao-geral", "apostas", "vinculos", "gestao", "modulos", "ciclos", "perdas"];
+    
+    if (baseTabs.includes(tabValue)) {
+      setActiveTab(tabValue);
+      return;
+    }
+    
+    // Module tabs - check if active (only if modules are loaded)
     const moduleTabMap: Record<string, string> = {
       freebets: "freebets",
       bonus: "bonus",
@@ -185,6 +207,14 @@ export default function ProjetoDetalhe() {
     };
 
     const moduleId = moduleTabMap[tabValue];
+    
+    // If modules haven't loaded yet, don't try to check activation
+    if (modulesLoading || modulesError) {
+      // Allow navigation but don't show content (tab content will handle empty state)
+      setActiveTab(tabValue);
+      return;
+    }
+    
     if (moduleId && !isModuleActive(moduleId)) {
       // Show activation dialog
       setModuleActivationDialog({ open: true, moduleId, targetTab: tabValue });

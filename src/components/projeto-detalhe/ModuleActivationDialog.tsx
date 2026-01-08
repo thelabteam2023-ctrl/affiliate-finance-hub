@@ -71,6 +71,7 @@ export function ModuleActivationDialog({
   onSkip,
 }: ModuleActivationDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const moduleInfo = MODULE_INFO[moduleId] || {
     name: "Módulo",
@@ -82,10 +83,19 @@ export function ModuleActivationDialog({
 
   const handleActivate = async () => {
     setLoading(true);
-    const success = await onActivate();
-    setLoading(false);
-    if (success) {
-      onOpenChange(false);
+    setError(null);
+    try {
+      const success = await onActivate();
+      if (success) {
+        onOpenChange(false);
+      } else {
+        setError("Não foi possível ativar o módulo. Tente novamente.");
+      }
+    } catch (err: any) {
+      console.error("Error activating module:", err);
+      setError(err.message || "Erro ao ativar módulo");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,9 +103,17 @@ export function ModuleActivationDialog({
     onSkip?.();
     onOpenChange(false);
   };
+  
+  // Reset error when dialog opens
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen) {
+      setError(null);
+    }
+    onOpenChange(newOpen);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
@@ -117,6 +135,12 @@ export function ModuleActivationDialog({
           Ao ativar, o módulo aparecerá no menu do projeto e suas funcionalidades serão habilitadas.
           Você pode gerenciar módulos em <strong>Gestão → Módulos</strong>.
         </div>
+        
+        {error && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
         
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={handleSkip} disabled={loading}>
