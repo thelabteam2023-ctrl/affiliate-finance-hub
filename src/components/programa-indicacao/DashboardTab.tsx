@@ -3,16 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Users, TrendingUp, UserPlus, Truck, ArrowRight, CalendarDays, Trophy, Award, Target, Gift, History } from "lucide-react";
+import { DollarSign, Users, TrendingUp, UserPlus, Truck, ArrowRight, Trophy, Award, Target, Gift, History } from "lucide-react";
 import { ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { HistoricoCaptacaoDrawer } from "./HistoricoCaptacaoDrawer";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
-import { format, startOfMonth, endOfMonth, startOfYear, subMonths, parseISO } from "date-fns";
+import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange } from "@/components/projeto-detalhe/StandardTimeFilter";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface CustoData {
@@ -30,10 +29,6 @@ interface CustoData {
   fornecedor_id: string | null;
 }
 
-interface DateRange {
-  from: Date | undefined;
-  to: Date | undefined;
-}
 
 interface Acordo {
   indicador_id: string;
@@ -62,12 +57,12 @@ export function DashboardTab() {
   const [acordos, setAcordos] = useState<Acordo[]>([]);
   const [bonusPagos, setBonusPagos] = useState<BonusPago[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: startOfMonth(new Date()),
-    to: new Date(),
-  });
-  const [quickFilter, setQuickFilter] = useState<string>("mes");
+  const [period, setPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [historicoOpen, setHistoricoOpen] = useState(false);
+  
+  // Derive date range from period
+  const dateRange = getDateRangeFromPeriod(period, customDateRange);
 
   useEffect(() => {
     fetchData();
@@ -125,46 +120,25 @@ export function DashboardTab() {
     }
   };
 
-  const handleQuickFilter = (filter: string) => {
-    setQuickFilter(filter);
-    const now = new Date();
-    
-    switch (filter) {
-      case "mes":
-        setDateRange({ from: startOfMonth(now), to: now });
-        break;
-      case "mesAnterior":
-        const previousMonth = subMonths(now, 1);
-        setDateRange({ from: startOfMonth(previousMonth), to: endOfMonth(previousMonth) });
-        break;
-      case "ano":
-        setDateRange({ from: startOfYear(now), to: now });
-        break;
-      case "todos":
-        setDateRange({ from: undefined, to: undefined });
-        break;
-    }
-  };
-
   const filterByPeriod = (data: CustoData[]) => {
-    if (!dateRange.from && !dateRange.to) return data;
+    if (!dateRange) return data;
     
     return data.filter((item) => {
       const dataInicio = new Date(item.data_inicio);
-      if (dateRange.from && dataInicio < dateRange.from) return false;
-      if (dateRange.to && dataInicio > dateRange.to) return false;
+      if (dataInicio < dateRange.start) return false;
+      if (dataInicio > dateRange.end) return false;
       return true;
     });
   };
 
   // Filter movimentacoes by the same period
   const filterMovByPeriod = (data: Movimentacao[]) => {
-    if (!dateRange.from && !dateRange.to) return data;
+    if (!dateRange) return data;
     
     return data.filter((item) => {
       const dataMov = new Date(item.data_movimentacao);
-      if (dateRange.from && dataMov < dateRange.from) return false;
-      if (dateRange.to && dataMov > dateRange.to) return false;
+      if (dataMov < dateRange.start) return false;
+      if (dataMov > dateRange.end) return false;
       return true;
     });
   };
@@ -329,73 +303,24 @@ export function DashboardTab() {
 
   return (
     <div className="space-y-6">
-      {/* Period Filter */}
+      {/* Period Filter - Standardized */}
       <div className="flex flex-wrap gap-2 items-center justify-between">
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={quickFilter === "mes" ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleQuickFilter("mes")}
-          >
-            Este mês
-          </Button>
-          <Button
-            variant={quickFilter === "mesAnterior" ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleQuickFilter("mesAnterior")}
-          >
-            Mês anterior
-          </Button>
-          <Button
-            variant={quickFilter === "ano" ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleQuickFilter("ano")}
-          >
-            Este ano
-          </Button>
-          <Button
-            variant={quickFilter === "todos" ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleQuickFilter("todos")}
-          >
-            Todo período
-          </Button>
-        </div>
+        <StandardTimeFilter
+          period={period}
+          onPeriodChange={setPeriod}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={setCustomDateRange}
+        />
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2 text-muted-foreground hover:text-foreground"
-            onClick={() => setHistoricoOpen(true)}
-          >
-            <History className="h-4 w-4" />
-            <span className="hidden sm:inline">Histórico</span>
-          </Button>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <CalendarDays className="h-4 w-4" />
-                {dateRange.from && dateRange.to
-                  ? `${format(dateRange.from, "dd/MM/yy")} - ${format(dateRange.to, "dd/MM/yy")}`
-                  : "Período personalizado"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="range"
-                selected={{ from: dateRange.from, to: dateRange.to }}
-                onSelect={(range) => {
-                  setDateRange({ from: range?.from, to: range?.to });
-                  setQuickFilter("custom");
-                }}
-                locale={ptBR}
-                numberOfMonths={2}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2 text-muted-foreground hover:text-foreground"
+          onClick={() => setHistoricoOpen(true)}
+        >
+          <History className="h-4 w-4" />
+          <span className="hidden sm:inline">Histórico</span>
+        </Button>
       </div>
 
       {/* KPIs */}
