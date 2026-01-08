@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useProjetoResultado } from "@/hooks/useProjetoResultado";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
+import { useProjectModules } from "@/hooks/useProjectModules";
 import { 
   ArrowLeft, 
   FolderKanban, 
@@ -33,7 +34,8 @@ import {
   ChevronDown,
   ArrowLeftRight,
   Sparkles,
-  Zap
+  Zap,
+  Puzzle
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import {
@@ -53,10 +55,22 @@ import { ProjetoSurebetTab } from "@/components/projeto-detalhe/ProjetoSurebetTa
 import { ProjetoValueBetTab } from "@/components/projeto-detalhe/ProjetoValueBetTab";
 import { ProjetoDuploGreenTab } from "@/components/projeto-detalhe/ProjetoDuploGreenTab";
 import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
+import { ProjetoGestaoTab } from "@/components/projeto-detalhe/ProjetoGestaoTab";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
+import { ModuleActivationDialog } from "@/components/projeto-detalhe/ModuleActivationDialog";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { OperationalFiltersProvider } from "@/contexts/OperationalFiltersContext";
+
+// Icon map for dynamic modules
+const MODULE_ICON_MAP: Record<string, React.ElementType> = {
+  ArrowLeftRight,
+  Sparkles,
+  Zap,
+  Gift,
+  Coins,
+  Puzzle,
+};
 
 interface Projeto {
   id: string;
@@ -106,6 +120,16 @@ export default function ProjetoDetalhe() {
   const { isFavorite, toggleFavorite } = useProjectFavorites();
   const { canEdit } = useActionAccess();
   
+  // Project modules - dynamic menu
+  const { activeModules, isModuleActive, activateModule, refresh: refreshModules } = useProjectModules(id);
+  
+  // Module activation dialog state
+  const [moduleActivationDialog, setModuleActivationDialog] = useState<{
+    open: boolean;
+    moduleId: string;
+    targetTab: string;
+  }>({ open: false, moduleId: "", targetTab: "" });
+  
   // Hook de formatação de moeda do projeto
   const { formatCurrency, formatChartAxis } = useProjetoCurrency(id);
   
@@ -117,6 +141,58 @@ export default function ProjetoDetalhe() {
   
   // KPIs should only show on performance tabs
   const showKpis = ["visao-geral", "apostas", "perdas", "ciclos"].includes(activeTab);
+  
+  // Build dynamic tabs based on active modules
+  const dynamicTabs = useMemo(() => {
+    // Base tabs that are always visible
+    const baseTabs: TabItem[] = [
+      { value: "visao-geral", label: "Visão Geral", icon: <LayoutDashboard className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
+      { value: "apostas", label: "Apostas", icon: <Target className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
+      { value: "vinculos", label: "Vínculos", icon: <Link2 className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
+    ];
+
+    // Module tabs - only show if module is active
+    const moduleTabs: TabItem[] = [];
+    
+    if (isModuleActive("freebets")) {
+      moduleTabs.push({ value: "freebets", label: "Freebets", icon: <Gift className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+    }
+    if (isModuleActive("bonus")) {
+      moduleTabs.push({ value: "bonus", label: "Bônus", icon: <Coins className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+    }
+    if (isModuleActive("surebet")) {
+      moduleTabs.push({ value: "surebet", label: "Surebet", icon: <ArrowLeftRight className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+    }
+    if (isModuleActive("valuebet")) {
+      moduleTabs.push({ value: "valuebet", label: "ValueBet", icon: <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+    }
+    if (isModuleActive("duplogreen")) {
+      moduleTabs.push({ value: "duplogreen", label: "Duplo Green", icon: <Zap className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+    }
+
+    // Insert module tabs after "apostas"
+    return [...baseTabs.slice(0, 2), ...moduleTabs, ...baseTabs.slice(2)];
+  }, [activeModules, isModuleActive]);
+
+  // Handle tab change with module activation prompt
+  const handleTabChange = (tabValue: string) => {
+    const moduleTabMap: Record<string, string> = {
+      freebets: "freebets",
+      bonus: "bonus",
+      surebet: "surebet",
+      valuebet: "valuebet",
+      duplogreen: "duplogreen",
+    };
+
+    const moduleId = moduleTabMap[tabValue];
+    if (moduleId && !isModuleActive(moduleId)) {
+      // Show activation dialog
+      setModuleActivationDialog({ open: true, moduleId, targetTab: tabValue });
+      return;
+    }
+
+    setActiveTab(tabValue);
+  };
   
   // Função centralizada para disparar refresh em todas as abas
   const triggerGlobalRefresh = () => {
@@ -503,31 +579,23 @@ export default function ProjetoDetalhe() {
       )}
 
       {/* Tabs - Área flexível com contenção */}
-      <Tabs defaultValue="apostas" value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 space-y-3 md:space-y-4">
+      <Tabs defaultValue="apostas" value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col min-h-0 space-y-3 md:space-y-4">
         <div className="flex-shrink-0 overflow-hidden" style={{ contain: "layout" }}>
           <ResponsiveTabsList
-            tabs={[
-              { value: "visao-geral", label: "Visão Geral", icon: <LayoutDashboard className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
-              { value: "apostas", label: "Apostas", icon: <Target className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
-              { value: "freebets", label: "Freebets", icon: <Gift className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
-              { value: "bonus", label: "Bônus", icon: <Coins className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
-              { value: "surebet", label: "Surebet", icon: <ArrowLeftRight className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
-              { value: "valuebet", label: "ValueBet", icon: <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
-              { value: "duplogreen", label: "Duplo Green", icon: <Zap className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
-              { value: "vinculos", label: "Vínculos", icon: <Link2 className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
-            ]}
+            tabs={dynamicTabs}
             tabGroups={[
               {
                 label: "Gestão",
                 icon: <Settings2 className="h-3.5 w-3.5 md:h-4 md:w-4" />,
                 items: [
+                  { value: "modulos", label: "Módulos", icon: <Puzzle className="h-4 w-4" /> },
                   { value: "ciclos", label: "Ciclos", icon: <Clock className="h-4 w-4" /> },
                   { value: "perdas", label: "Perdas", icon: <AlertTriangle className="h-4 w-4" /> },
                 ],
               },
             ]}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             minVisibleTabs={2}
           />
         </div>
@@ -605,6 +673,10 @@ export default function ProjetoDetalhe() {
             <ProjetoVinculosTab projetoId={id!} />
           </TabsContent>
 
+          <TabsContent value="modulos" className="h-full m-0">
+            <ProjetoGestaoTab projetoId={id!} />
+          </TabsContent>
+
           <TabsContent value="ciclos" className="h-full m-0">
             <ProjetoCiclosTab projetoId={id!} formatCurrency={formatCurrency} />
           </TabsContent>
@@ -634,6 +706,22 @@ export default function ProjetoDetalhe() {
         }}
         mode="edit"
         onSuccess={fetchProjeto}
+      />
+
+      {/* Module Activation Dialog */}
+      <ModuleActivationDialog
+        open={moduleActivationDialog.open}
+        onOpenChange={(open) => setModuleActivationDialog({ ...moduleActivationDialog, open })}
+        moduleId={moduleActivationDialog.moduleId}
+        onActivate={async () => {
+          const success = await activateModule(moduleActivationDialog.moduleId);
+          if (success) {
+            await refreshModules();
+            setActiveTab(moduleActivationDialog.targetTab);
+          }
+          return success;
+        }}
+        onSkip={() => {}}
       />
       </div>
     </OperationalFiltersProvider>

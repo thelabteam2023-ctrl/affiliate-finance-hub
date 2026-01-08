@@ -4221,6 +4221,103 @@ export type Database = {
           },
         ]
       }
+      project_modules: {
+        Row: {
+          activated_at: string
+          activated_by: string | null
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
+          display_order: number
+          id: string
+          module_id: string
+          projeto_id: string
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          activated_at?: string
+          activated_by?: string | null
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          display_order?: number
+          id?: string
+          module_id: string
+          projeto_id: string
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          activated_at?: string
+          activated_by?: string | null
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          display_order?: number
+          id?: string
+          module_id?: string
+          projeto_id?: string
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_modules_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "project_modules_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_modules_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_modules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_modules_catalog: {
+        Row: {
+          category: string
+          created_at: string
+          default_order: number
+          description: string | null
+          icon: string
+          id: string
+          name: string
+          requires_modules: string[] | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          default_order?: number
+          description?: string | null
+          icon?: string
+          id: string
+          name: string
+          requires_modules?: string[] | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          default_order?: number
+          description?: string | null
+          icon?: string
+          id?: string
+          name?: string
+          requires_modules?: string[] | null
+        }
+        Relationships: []
+      }
       projeto_bookmaker_historico: {
         Row: {
           bookmaker_id: string
@@ -7318,6 +7415,10 @@ export type Database = {
           is_blocked: boolean
         }[]
       }
+      check_module_has_data: {
+        Args: { p_module_id: string; p_projeto_id: string }
+        Returns: boolean
+      }
       check_partner_limit: { Args: { workspace_uuid: string }; Returns: Json }
       check_session_inactivity: {
         Args: { p_timeout_minutes?: number; p_user_id: string }
@@ -7439,6 +7540,17 @@ export type Database = {
         }[]
       }
       get_plan_entitlements: { Args: { plan_name: string }; Returns: Json }
+      get_project_active_modules: {
+        Args: { p_projeto_id: string }
+        Returns: {
+          activated_at: string
+          description: string
+          display_order: number
+          icon: string
+          module_id: string
+          name: string
+        }[]
+      }
       get_project_operator_candidates: {
         Args: { _workspace_id: string }
         Returns: {
