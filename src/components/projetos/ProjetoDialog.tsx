@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -53,7 +54,8 @@ import {
   Briefcase,
   Percent,
   Info,
-  DollarSign
+  DollarSign,
+  Puzzle
 } from "lucide-react";
 import { CurrencyConsolidationSettings } from "@/components/projeto-detalhe/CurrencyConsolidationSettings";
 import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDialog";
@@ -62,6 +64,7 @@ import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliac
 import { ConfirmacaoSenhaDialog } from "@/components/ui/confirmacao-senha-dialog";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjectPostCreateWizard } from "@/components/projetos/ProjectPostCreateWizard";
+import { ProjectModulesStep } from "@/components/projetos/ProjectModulesStep";
 
 interface Projeto {
   id?: string;
@@ -137,6 +140,7 @@ export function ProjetoDialog({
   const [novoProjetoNome, setNovoProjetoNome] = useState<string>("");
   const [confirmacaoDialogOpen, setConfirmacaoDialogOpen] = useState(false);
   const [operadorParaDesvincular, setOperadorParaDesvincular] = useState<string | null>(null);
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
   
   const [formData, setFormData] = useState<Projeto>({
     nome: "",
@@ -213,6 +217,7 @@ export function ProjetoDialog({
         });
         setOperadores([]);
         setTemConciliacao(false);
+        setSelectedModules([]);
       }
       setActiveTab(initialTab || "dados");
     }
@@ -344,6 +349,30 @@ export function ProjetoDialog({
           throw error;
         }
         
+        // Ativar módulos selecionados
+        if (selectedModules.length > 0 && newProjeto?.id) {
+          const { data: session } = await supabase.auth.getSession();
+          const userId = session.session?.user.id;
+          
+          const modulesToInsert = selectedModules.map((moduleId, index) => ({
+            projeto_id: newProjeto.id,
+            module_id: moduleId,
+            status: 'active',
+            display_order: index + 1,
+            activated_by: userId || null,
+            workspace_id: workspaceId!,
+          }));
+          
+          const { error: modulesError } = await supabase
+            .from("project_modules")
+            .insert(modulesToInsert);
+          
+          if (modulesError) {
+            console.error("Erro ao ativar módulos:", modulesError);
+            // Não bloqueia a criação do projeto
+          }
+        }
+        
         // Perguntar se deseja vincular operador
         setNovoProjetoId(newProjeto.id);
         setNovoProjetoNome(formData.nome);
@@ -425,19 +454,33 @@ export function ProjetoDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className={cn("grid w-full", mode === "create" ? "grid-cols-2" : "grid-cols-3")}>
               <TabsTrigger value="dados">
                 <FolderKanban className="h-4 w-4 mr-2" />
                 Dados
               </TabsTrigger>
-              <TabsTrigger value="moeda" disabled={mode === "create"}>
-                <DollarSign className="h-4 w-4 mr-2" />
-                Moeda
-              </TabsTrigger>
-              <TabsTrigger value="operadores" disabled={mode === "create"}>
-                <Users className="h-4 w-4 mr-2" />
-                Operadores
-              </TabsTrigger>
+              {mode === "create" ? (
+                <TabsTrigger value="modulos">
+                  <Puzzle className="h-4 w-4 mr-2" />
+                  Módulos
+                  {selectedModules.length > 0 && (
+                    <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                      {selectedModules.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              ) : (
+                <>
+                  <TabsTrigger value="moeda">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Moeda
+                  </TabsTrigger>
+                  <TabsTrigger value="operadores">
+                    <Users className="h-4 w-4 mr-2" />
+                    Operadores
+                  </TabsTrigger>
+                </>
+              )}
             </TabsList>
 
             <ScrollArea className="h-[500px] mt-4">
@@ -697,6 +740,16 @@ export function ProjetoDialog({
                   <CurrencyConsolidationSettings projetoId={projeto.id} />
                 )}
               </TabsContent>
+
+              {/* Módulos - apenas no modo create */}
+              {mode === "create" && (
+                <TabsContent value="modulos" className="px-1">
+                  <ProjectModulesStep 
+                    selectedModules={selectedModules} 
+                    onSelectionChange={setSelectedModules} 
+                  />
+                </TabsContent>
+              )}
 
               <TabsContent value="operadores" className="space-y-4 px-1">
                 <div className="flex justify-between items-center">
