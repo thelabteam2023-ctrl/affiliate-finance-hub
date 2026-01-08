@@ -27,7 +27,7 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
   const [period, setPeriod] = useState<StandardPeriodFilter>("30dias");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
 
-  const { formatCurrency } = useProjectCurrencyFormat(projetoId);
+  const { formatCurrency } = useProjectCurrencyFormat();
 
   // Calcular datas baseado no período
   const dateRange = useMemo(() => {
