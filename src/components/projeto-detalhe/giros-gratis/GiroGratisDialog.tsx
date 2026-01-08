@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,8 +23,9 @@ import {
 } from "@/components/ui/select";
 import { Info, Zap, ListChecks, Calculator, Loader2 } from "lucide-react";
 import { GiroGratisComBookmaker, GiroGratisFormData, GiroGratisModo } from "@/types/girosGratis";
-import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
+import { BookmakerSelectOption } from "@/components/bookmakers/BookmakerSelectOption";
 
 interface GiroGratisDialogProps {
   open: boolean;
@@ -32,13 +33,6 @@ interface GiroGratisDialogProps {
   projetoId: string;
   giro?: GiroGratisComBookmaker | null;
   onSave: (data: GiroGratisFormData) => Promise<boolean>;
-}
-
-interface BookmakerOption {
-  id: string;
-  nome: string;
-  logo_url: string | null;
-  parceiro_nome: string | null;
 }
 
 export function GiroGratisDialog({
@@ -49,8 +43,6 @@ export function GiroGratisDialog({
   onSave,
 }: GiroGratisDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [bookmakers, setBookmakers] = useState<BookmakerOption[]>([]);
-  const [loadingBookmakers, setLoadingBookmakers] = useState(false);
   const [modo, setModo] = useState<GiroGratisModo>("simples");
   const [bookmakerId, setBookmakerId] = useState("");
   const [dataRegistro, setDataRegistro] = useState<string>(format(new Date(), "yyyy-MM-dd"));
@@ -59,42 +51,40 @@ export function GiroGratisDialog({
   const [valorPorGiro, setValorPorGiro] = useState<number>(0);
   const [observacoes, setObservacoes] = useState("");
 
+  // Hook canônico para bookmakers
+  const { 
+    data: bookmakerSaldos = [], 
+    isLoading: loadingBookmakers 
+  } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: true,
+    currentBookmakerId: giro?.bookmaker_id || null
+  });
+
+  // Mapear para formato usado pelo BookmakerSelectOption
+  const bookmakers = useMemo(() => {
+    return bookmakerSaldos.map(bk => ({
+      id: bk.id,
+      nome: bk.nome,
+      parceiro_nome: bk.parceiro_nome,
+      moeda: bk.moeda,
+      saldo_operavel: bk.saldo_operavel,
+      saldo_disponivel: bk.saldo_disponivel,
+      saldo_freebet: bk.saldo_freebet,
+      saldo_bonus: bk.saldo_bonus,
+      logo_url: bk.logo_url,
+      bonus_rollover_started: bk.bonus_rollover_started
+    }));
+  }, [bookmakerSaldos]);
+
+  // Bookmaker selecionado para exibição
+  const selectedBookmaker = useMemo(() => {
+    return bookmakers.find(b => b.id === bookmakerId);
+  }, [bookmakers, bookmakerId]);
+
   // Valor total calculado automaticamente no modo detalhado
   const valorTotalGiros = quantidadeGiros * valorPorGiro;
-
-  // Buscar bookmakers do projeto
-  useEffect(() => {
-    if (!open || !projetoId) return;
-
-    const fetchBookmakers = async () => {
-      setLoadingBookmakers(true);
-      try {
-        const { data } = await supabase
-          .from("bookmakers")
-          .select(`
-            id,
-            nome,
-            bookmakers_catalogo:bookmaker_catalogo_id (logo_url),
-            parceiros:parceiro_id (nome)
-          `)
-          .eq("projeto_id", projetoId)
-          .order("nome");
-
-        setBookmakers((data || []).map((b: any) => ({
-          id: b.id,
-          nome: b.nome,
-          logo_url: b.bookmakers_catalogo?.logo_url || null,
-          parceiro_nome: b.parceiros?.nome || null,
-        })));
-      } catch (err) {
-        console.error("Erro ao buscar bookmakers:", err);
-      } finally {
-        setLoadingBookmakers(false);
-      }
-    };
-
-    fetchBookmakers();
-  }, [open, projetoId]);
 
   useEffect(() => {
     if (open) {
@@ -196,23 +186,21 @@ export function GiroGratisDialog({
           <div className="space-y-2">
             <Label>Casa de Apostas *</Label>
             <Select value={bookmakerId} onValueChange={setBookmakerId}>
-              <SelectTrigger disabled={loadingBookmakers}>
-                <SelectValue placeholder={loadingBookmakers ? "Carregando..." : "Selecione a casa"} />
+              <SelectTrigger disabled={loadingBookmakers} className="h-auto min-h-10">
+                {loadingBookmakers ? (
+                  <span className="text-muted-foreground">Carregando...</span>
+                ) : selectedBookmaker ? (
+                  <BookmakerSelectOption
+                    bookmaker={selectedBookmaker}
+                  />
+                ) : (
+                  <span className="text-muted-foreground">Selecione a casa</span>
+                )}
               </SelectTrigger>
               <SelectContent>
                 {bookmakers.map((b) => (
-                  <SelectItem key={b.id} value={b.id} className="justify-end">
-                    <div className="flex items-center gap-2 w-full justify-end">
-                      <span className="text-right">
-                        {b.nome}
-                        {b.parceiro_nome && (
-                          <span className="text-muted-foreground ml-1">({b.parceiro_nome})</span>
-                        )}
-                      </span>
-                      {b.logo_url && (
-                        <img src={b.logo_url} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
-                      )}
-                    </div>
+                  <SelectItem key={b.id} value={b.id}>
+                    <BookmakerSelectOption bookmaker={b} />
                   </SelectItem>
                 ))}
               </SelectContent>
