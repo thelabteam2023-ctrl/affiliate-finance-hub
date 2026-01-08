@@ -4,11 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/PageHeader";
 import { DashboardTab } from "@/components/programa-indicacao/DashboardTab";
-import { IndicadoresTab } from "@/components/programa-indicacao/IndicadoresTab";
-import { FornecedoresTab } from "@/components/programa-indicacao/FornecedoresTab";
+import { FontesCaptacaoTab } from "@/components/programa-indicacao/FontesCaptacaoTab";
 import { ParceriasTab } from "@/components/programa-indicacao/ParceriasTab";
 import { FinanceiroTab } from "@/components/programa-indicacao/FinanceiroTab";
-import { BarChart3, UserPlus, Truck, Handshake, Wallet } from "lucide-react";
+import { BarChart3, Users, Handshake, Wallet } from "lucide-react";
 
 export default function ProgramaIndicacao() {
   const navigate = useNavigate();
@@ -26,7 +25,12 @@ export default function ProgramaIndicacao() {
   useEffect(() => {
     const state = location.state as { tab?: string; parceiroId?: string } | null;
     if (state?.tab) {
-      setActiveTab(state.tab);
+      // Map old tab names to new ones
+      const tabMap: Record<string, string> = {
+        indicadores: "fontes",
+        fornecedores: "fontes",
+      };
+      setActiveTab(tabMap[state.tab] || state.tab);
     }
     if (state?.parceiroId) {
       setPreSelectedParceiroId(state.parceiroId);
@@ -49,25 +53,21 @@ export default function ProgramaIndicacao() {
       {/* Header */}
       <PageHeader
         title="Captação de Parceiros"
-        description="Gerencie indicadores, fornecedores e parcerias de aquisição"
+        description="Gerencie fontes de captação, parcerias e financeiro"
         pagePath="/programa-indicacao"
         pageIcon="UserPlus"
       />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full max-w-3xl grid-cols-5">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Dashboard</span>
           </TabsTrigger>
-          <TabsTrigger value="indicadores" className="flex items-center gap-2">
-            <UserPlus className="h-4 w-4" />
-            <span className="hidden sm:inline">Indicadores</span>
-          </TabsTrigger>
-          <TabsTrigger value="fornecedores" className="flex items-center gap-2">
-            <Truck className="h-4 w-4" />
-            <span className="hidden sm:inline">Fornecedores</span>
+          <TabsTrigger value="fontes" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Fontes</span>
           </TabsTrigger>
           <TabsTrigger value="parcerias" className="flex items-center gap-2">
             <Handshake className="h-4 w-4" />
@@ -83,12 +83,8 @@ export default function ProgramaIndicacao() {
           <DashboardTab />
         </TabsContent>
 
-        <TabsContent value="indicadores">
-          <IndicadoresTab />
-        </TabsContent>
-
-        <TabsContent value="fornecedores">
-          <FornecedoresTab />
+        <TabsContent value="fontes">
+          <FontesCaptacaoTab />
         </TabsContent>
 
         <TabsContent value="parcerias">
