@@ -38,6 +38,7 @@ interface BookmakerOption {
   id: string;
   nome: string;
   logo_url: string | null;
+  parceiro_nome: string | null;
 }
 
 export function GiroGratisDialog({
@@ -73,7 +74,8 @@ export function GiroGratisDialog({
           .select(`
             id,
             nome,
-            bookmakers_catalogo:bookmaker_catalogo_id (logo_url)
+            bookmakers_catalogo:bookmaker_catalogo_id (logo_url),
+            parceiros:parceiro_id (nome)
           `)
           .eq("projeto_id", projetoId)
           .order("nome");
@@ -82,6 +84,7 @@ export function GiroGratisDialog({
           id: b.id,
           nome: b.nome,
           logo_url: b.bookmakers_catalogo?.logo_url || null,
+          parceiro_nome: b.parceiros?.nome || null,
         })));
       } catch (err) {
         console.error("Erro ao buscar bookmakers:", err);
@@ -198,12 +201,17 @@ export function GiroGratisDialog({
               </SelectTrigger>
               <SelectContent>
                 {bookmakers.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    <div className="flex items-center gap-2">
+                  <SelectItem key={b.id} value={b.id} className="justify-end">
+                    <div className="flex items-center gap-2 w-full justify-end">
+                      <span className="text-right">
+                        {b.nome}
+                        {b.parceiro_nome && (
+                          <span className="text-muted-foreground ml-1">({b.parceiro_nome})</span>
+                        )}
+                      </span>
                       {b.logo_url && (
-                        <img src={b.logo_url} alt="" className="h-5 w-5 rounded object-contain" />
+                        <img src={b.logo_url} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
                       )}
-                      <span>{b.nome}</span>
                     </div>
                   </SelectItem>
                 ))}
