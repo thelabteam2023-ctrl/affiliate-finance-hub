@@ -12,6 +12,10 @@ export interface ProjetoResultado {
   operationalLossesPending: number;
   operationalLossesReverted: number;
   
+  // Ajustes de conciliação
+  ajustesConciliacao: number;
+  temAjustesConciliacao: boolean;
+  
   // Resultado final
   netProfit: number;
   roi: number | null;
@@ -88,11 +92,14 @@ export function useProjetoResultado({
       // 4. Fetch dados de capital (saldo bookmakers, depósitos, saques)
       const capitalData = await fetchCapitalData(projetoId, moedaConsolidacao, cotacaoTrabalho);
       
-      // 5. Calcular lucro líquido (fonte única de verdade)
-      // net_profit = gross_profit_from_bets - operational_losses_confirmed
-      const netProfit = grossProfitFromBets - operationalLosses.confirmed;
+      // 5. Fetch ajustes de conciliação
+      const ajustesConciliacao = await fetchConciliacaoAdjustments(projetoId);
       
-      // 6. Calcular ROI
+      // 6. Calcular lucro líquido (fonte única de verdade)
+      // net_profit = gross_profit_from_bets - operational_losses_confirmed + ajustes_conciliacao
+      const netProfit = grossProfitFromBets - operationalLosses.confirmed + ajustesConciliacao;
+      
+      // 7. Calcular ROI
       const roi = totalStaked > 0 ? (netProfit / totalStaked) * 100 : null;
 
       setResultado({
@@ -101,6 +108,8 @@ export function useProjetoResultado({
         operationalLossesConfirmed: operationalLosses.confirmed,
         operationalLossesPending: operationalLosses.pending,
         operationalLossesReverted: operationalLosses.reverted,
+        ajustesConciliacao,
+        temAjustesConciliacao: ajustesConciliacao !== 0,
         netProfit,
         roi,
         saldoBookmakers: capitalData.saldoBookmakers,
@@ -275,6 +284,28 @@ async function fetchOperationalLosses(
   });
 
   return losses;
+}
+
+async function fetchConciliacaoAdjustments(projetoId: string): Promise<number> {
+  // Buscar ajustes de conciliação da tabela bookmaker_balance_audit
+  // Filtra por origem = 'CONCILIACAO_VINCULO' e referencia_id = projetoId
+  const { data, error } = await supabase
+    .from('bookmaker_balance_audit')
+    .select('saldo_anterior, saldo_novo')
+    .eq('origem', 'CONCILIACAO_VINCULO')
+    .eq('referencia_id', projetoId)
+    .eq('referencia_tipo', 'projeto');
+
+  if (error) {
+    console.error('Erro ao buscar ajustes de conciliação:', error);
+    return 0;
+  }
+
+  // Somar as diferenças (saldo_novo - saldo_anterior)
+  return data?.reduce((acc, item) => {
+    const diferenca = Number(item.saldo_novo) - Number(item.saldo_anterior);
+    return acc + diferenca;
+  }, 0) || 0;
 }
 
 async function fetchCapitalData(
