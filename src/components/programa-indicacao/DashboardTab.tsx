@@ -7,8 +7,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Users, TrendingUp, UserPlus, Truck, ArrowRight, CalendarDays, Trophy, Award, Target, Gift } from "lucide-react";
+import { DollarSign, Users, TrendingUp, UserPlus, Truck, ArrowRight, CalendarDays, Trophy, Award, Target, Gift, History } from "lucide-react";
 import { ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+import { HistoricoCaptacaoDrawer } from "./HistoricoCaptacaoDrawer";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { format, startOfMonth, endOfMonth, startOfYear, subMonths, parseISO } from "date-fns";
@@ -66,6 +67,7 @@ export function DashboardTab() {
     to: new Date(),
   });
   const [quickFilter, setQuickFilter] = useState<string>("mes");
+  const [historicoOpen, setHistoricoOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -360,28 +362,40 @@ export function DashboardTab() {
           </Button>
         </div>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <CalendarDays className="h-4 w-4" />
-              {dateRange.from && dateRange.to
-                ? `${format(dateRange.from, "dd/MM/yy")} - ${format(dateRange.to, "dd/MM/yy")}`
-                : "Período personalizado"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <Calendar
-              mode="range"
-              selected={{ from: dateRange.from, to: dateRange.to }}
-              onSelect={(range) => {
-                setDateRange({ from: range?.from, to: range?.to });
-                setQuickFilter("custom");
-              }}
-              locale={ptBR}
-              numberOfMonths={2}
-            />
-          </PopoverContent>
-        </Popover>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setHistoricoOpen(true)}
+          >
+            <History className="h-4 w-4" />
+            <span className="hidden sm:inline">Histórico</span>
+          </Button>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <CalendarDays className="h-4 w-4" />
+                {dateRange.from && dateRange.to
+                  ? `${format(dateRange.from, "dd/MM/yy")} - ${format(dateRange.to, "dd/MM/yy")}`
+                  : "Período personalizado"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="range"
+                selected={{ from: dateRange.from, to: dateRange.to }}
+                onSelect={(range) => {
+                  setDateRange({ from: range?.from, to: range?.to });
+                  setQuickFilter("custom");
+                }}
+                locale={ptBR}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -749,6 +763,12 @@ export function DashboardTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Histórico de Captação Drawer */}
+      <HistoricoCaptacaoDrawer
+        open={historicoOpen}
+        onOpenChange={setHistoricoOpen}
+      />
     </div>
   );
 }
