@@ -327,7 +327,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   } = useBookmakerSaldosQuery({
     projetoId,
     enabled: open,
-    includeZeroBalance: !!aposta, // Em edição, mostrar todos
+    includeZeroBalance: true, // Permitir selecionar mesmo com saldo 0 (registro histórico/ajustes)
     currentBookmakerId: aposta?.bookmaker_id || null
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
