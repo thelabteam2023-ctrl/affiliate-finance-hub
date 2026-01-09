@@ -2251,10 +2251,12 @@ export type Database = {
           observacoes: string | null
           projeto_id: string
           quantidade_giros: number | null
+          status: string
           updated_at: string
           user_id: string
           valor_por_giro: number | null
           valor_retorno: number
+          valor_total_giros: number | null
           workspace_id: string
         }
         Insert: {
@@ -2266,10 +2268,12 @@ export type Database = {
           observacoes?: string | null
           projeto_id: string
           quantidade_giros?: number | null
+          status?: string
           updated_at?: string
           user_id: string
           valor_por_giro?: number | null
           valor_retorno?: number
+          valor_total_giros?: number | null
           workspace_id: string
         }
         Update: {
@@ -2281,10 +2285,12 @@ export type Database = {
           observacoes?: string | null
           projeto_id?: string
           quantidade_giros?: number | null
+          status?: string
           updated_at?: string
           user_id?: string
           valor_por_giro?: number | null
           valor_retorno?: number
+          valor_total_giros?: number | null
           workspace_id?: string
         }
         Relationships: [
