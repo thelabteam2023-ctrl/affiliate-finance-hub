@@ -151,7 +151,7 @@ export default function GestaoProjetos() {
       const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
-      const [bookmarkersResult, apostasResult, operadoresResult, perdasResult, girosGratisResult] = await Promise.all([
+      const [bookmarkersResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackResult] = await Promise.all([
         // Bookmakers por projeto (incluindo saldo_freebet e moeda para conversão)
         supabase
           .from("bookmakers")
@@ -184,7 +184,14 @@ export default function GestaoProjetos() {
           .from("giros_gratis")
           .select("projeto_id, valor_retorno, bookmaker_id")
           .in("projeto_id", finalProjetoIds)
-          .eq("status", "CONFIRMADO")
+          .eq("status", "confirmado"),
+        
+        // Cashback recebido por projeto
+        supabase
+          .from("cashback_registros")
+          .select("projeto_id, valor_recebido")
+          .in("projeto_id", finalProjetoIds)
+          .eq("status", "recebido")
       ]);
       
       // Taxa de conversão USD->BRL aproximada (idealmente vir de uma API ou cache)
@@ -269,6 +276,19 @@ export default function GestaoProjetos() {
         // buscaríamos a moeda do bookmaker.
         lucroByProjeto[giro.projeto_id].BRL += valorRetorno;
         lucroByProjeto[giro.projeto_id].total += valorRetorno;
+      });
+      
+      // Agregar lucro de cashback recebido por projeto
+      (cashbackResult.data || []).forEach((cb: any) => {
+        if (!cb.projeto_id) return;
+        if (!lucroByProjeto[cb.projeto_id]) {
+          lucroByProjeto[cb.projeto_id] = { total: 0, BRL: 0, USD: 0 };
+        }
+        
+        const valorRecebido = cb.valor_recebido || 0;
+        // Cashback é sempre em BRL por enquanto
+        lucroByProjeto[cb.projeto_id].BRL += valorRecebido;
+        lucroByProjeto[cb.projeto_id].total += valorRecebido;
       });
       
       // Agregar operadores ativos por projeto
