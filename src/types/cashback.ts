@@ -81,6 +81,9 @@ export interface CashbackRegistro {
   status: CashbackRegistroStatus;
   data_credito: string | null;
   
+  // Integração Financeira
+  cash_ledger_id: string | null; // Referência ao lançamento que impactou o saldo
+  
   // Metadados
   observacoes: string | null;
   created_at: string;

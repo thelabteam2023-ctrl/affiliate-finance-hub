@@ -19,7 +19,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Pencil, Trash2, Zap, ListChecks, Calendar, Hash } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Zap, ListChecks, Calendar, Hash, Wallet } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { GiroGratisComBookmaker } from "@/types/girosGratis";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -105,18 +111,42 @@ export function GirosGratisList({ giros, formatCurrency, onEdit, onDelete }: Gir
                 </div>
 
                 {/* Value */}
-                <div className="text-right">
-                  <Badge 
-                    variant={giro.valor_retorno >= 0 ? "default" : "destructive"}
-                    className="text-sm font-mono"
-                  >
-                    {formatCurrency(giro.valor_retorno)}
-                  </Badge>
-                  {giro.modo === "detalhado" && giro.valor_total_giros && giro.valor_total_giros > 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {((giro.valor_retorno / giro.valor_total_giros) * 100).toFixed(1)}% conversão
-                    </p>
+                <div className="text-right flex items-center gap-2">
+                  {/* Indicador de Integração Financeira */}
+                  {giro.status === 'confirmado' && giro.cash_ledger_id && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 text-[10px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+                            <Wallet className="h-2.5 w-2.5" />
+                            <span>Saldo</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-[200px]">
+                          <p className="text-xs">
+                            ✔ Este valor compõe o saldo da casa
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Lançamento financeiro gerado automaticamente
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
+                  
+                  <div>
+                    <Badge 
+                      variant={giro.valor_retorno >= 0 ? "default" : "destructive"}
+                      className="text-sm font-mono"
+                    >
+                      {formatCurrency(giro.valor_retorno)}
+                    </Badge>
+                    {giro.modo === "detalhado" && giro.valor_total_giros && giro.valor_total_giros > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {((giro.valor_retorno / giro.valor_total_giros) * 100).toFixed(1)}% conversão
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Actions */}

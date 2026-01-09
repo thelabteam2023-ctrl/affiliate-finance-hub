@@ -17,6 +17,8 @@ export interface GiroGratis {
   valor_total_giros: number | null;
   status: GiroGratisStatus;
   observacoes: string | null;
+  // Integração Financeira
+  cash_ledger_id: string | null; // Referência ao lançamento que impactou o saldo
   created_at: string;
   updated_at: string;
 }
