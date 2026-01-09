@@ -578,8 +578,8 @@ export default function ProjetoDetalhe() {
                     <Percent className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                    <div className={`text-lg md:text-2xl font-bold ${(projetoResultado?.roi || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {(projetoResultado?.roi || 0).toFixed(2)}%
+                    <div className={`text-lg md:text-2xl font-bold ${(kpiBreakdowns?.roi?.total || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {(kpiBreakdowns?.roi?.total || 0).toFixed(2)}%
                     </div>
                     <p className="text-[10px] md:text-xs text-muted-foreground">
                       Retorno sobre investimento
@@ -607,9 +607,9 @@ export default function ProjetoDetalhe() {
                       <span className="text-muted-foreground">ROI = Lucro ÷ Volume</span>
                       <span className={cn(
                         "font-bold",
-                        (projetoResultado?.roi || 0) >= 0 ? "text-emerald-500" : "text-red-500"
+                        (kpiBreakdowns?.roi?.total || 0) >= 0 ? "text-emerald-500" : "text-red-500"
                       )}>
-                        {(projetoResultado?.roi || 0).toFixed(2)}%
+                        {(kpiBreakdowns?.roi?.total || 0).toFixed(2)}%
                       </span>
                     </div>
                   </div>
