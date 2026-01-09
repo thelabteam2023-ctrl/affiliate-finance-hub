@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Plus, BarChart3, List, Building2, RefreshCw, Gift, History } from "lucide-react";
 import { useGirosGratis } from "@/hooks/useGirosGratis";
 import { useGirosDisponiveis } from "@/hooks/useGirosDisponiveis";
@@ -11,14 +10,14 @@ import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from
 import { DateRange } from "react-day-picker";
 import {
   GiroGratisDialog,
-  GirosGratisKPIs,
   GirosGratisChart,
   GirosGratisPorBookmaker,
   GirosGratisList,
   GiroDisponivelDialog,
-  GirosDisponiveisCard,
-  GirosDisponiveisList,
 } from "./giros-gratis";
+import { GirosAtivosCard } from "./giros-gratis/GirosAtivosCard";
+import { GirosGratisKPIsCompact } from "./giros-gratis/GirosGratisKPIsCompact";
+import { PromocoesAtivasList } from "./giros-gratis/PromocoesAtivasList";
 import { GiroGratisComBookmaker, GiroGratisFormData } from "@/types/girosGratis";
 import { GiroDisponivelComBookmaker, GiroDisponivelFormData } from "@/types/girosGratisDisponiveis";
 
@@ -37,10 +36,10 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
   const [usandoDisponivel, setUsandoDisponivel] = useState<GiroDisponivelComBookmaker | null>(null);
   
   // Estados gerais
-  const [activeTab, setActiveTab] = useState("visao-geral");
+  const [activeTab, setActiveTab] = useState("resumo");
   const [period, setPeriod] = useState<StandardPeriodFilter>("30dias");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
-  const [showAllDisponiveis, setShowAllDisponiveis] = useState(false);
+  const [showHistorico, setShowHistorico] = useState(false);
 
   const { formatCurrency } = useProjectCurrencyFormat();
 
@@ -88,7 +87,6 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
       return await updateGiro(editingGiro.id, data);
     }
     
-    // Se estiver usando uma promoção disponível, incluir o ID na criação
     if (usandoDisponivel) {
       data.giro_disponivel_id = usandoDisponivel.id;
     }
@@ -96,7 +94,6 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
     const giroId = await createGiro(data);
     
     if (giroId && usandoDisponivel) {
-      // Marcar a promoção como utilizada com o ID do resultado
       await marcarComoUtilizado(usandoDisponivel.id, giroId);
       setUsandoDisponivel(null);
     }
@@ -138,7 +135,6 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
   };
 
   const handleUsarDisponivel = (giro: GiroDisponivelComBookmaker) => {
-    // Ao clicar em "Usar", abrir o dialog de resultado pré-preenchido
     setUsandoDisponivel(giro);
     setEditingGiro(null);
     setResultadoDialogOpen(true);
@@ -149,6 +145,9 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
     refreshDisponiveis();
   };
 
+  // Lista de promoções para exibir
+  const promocoesParaExibir = showHistorico ? todosGirosDisponiveis : girosDisponiveis;
+
   if (loading && giros.length === 0) {
     return (
       <div className="space-y-6">
@@ -156,9 +155,10 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-10 w-32" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Skeleton className="h-20" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-20" />
           ))}
         </div>
         <Skeleton className="h-64" />
@@ -167,44 +167,37 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-5">
+      {/* Header - Uma única ação primária */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">Giros Grátis</h2>
           <p className="text-sm text-muted-foreground">
-            Registre promoções e analise o retorno de giros grátis
+            Gerencie promoções e acompanhe retornos
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             onClick={handleRefreshAll}
             disabled={loading}
+            className="text-muted-foreground"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
-          <Button 
-            variant="outline"
-            onClick={() => setDisponivelDialogOpen(true)}
-          >
-            <Gift className="h-4 w-4 mr-2" />
-            Nova Promoção
-          </Button>
-          <Button onClick={() => setResultadoDialogOpen(true)}>
+          <Button onClick={() => setDisponivelDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Novo Resultado
+            Nova Promoção
           </Button>
         </div>
       </div>
 
-      {/* Card de Giros Disponíveis (destaque) */}
-      <GirosDisponiveisCard
+      {/* Card de Status - Giros Ativos (sem ação de criação) */}
+      <GirosAtivosCard
         metrics={metricsDisponiveis}
         formatCurrency={formatCurrency}
-        onViewAll={() => setActiveTab("disponiveis")}
-        onAddNew={() => setDisponivelDialogOpen(true)}
+        onViewDetails={() => setActiveTab("promocoes")}
       />
 
       {/* Filtro de tempo */}
@@ -215,81 +208,96 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
         onCustomDateRangeChange={setCustomDateRange}
       />
 
-      {/* KPIs */}
-      <GirosGratisKPIs metrics={metrics} formatCurrency={formatCurrency} />
+      {/* KPIs de Performance - Compactos */}
+      <GirosGratisKPIsCompact metrics={metrics} formatCurrency={formatCurrency} />
 
-      {/* Tabs de conteúdo */}
+      {/* Navegação por Sub-abas */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="visao-geral" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Visão Geral
+        <TabsList className="h-9">
+          <TabsTrigger value="resumo" className="text-xs px-3">
+            <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+            Resumo
           </TabsTrigger>
-          <TabsTrigger value="registros" className="flex items-center gap-2">
-            <List className="h-4 w-4" />
+          <TabsTrigger value="resultados" className="text-xs px-3">
+            <List className="h-3.5 w-3.5 mr-1.5" />
             Resultados
           </TabsTrigger>
-          <TabsTrigger value="por-casa" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Por Casa
+          <TabsTrigger value="promocoes" className="text-xs px-3">
+            <Gift className="h-3.5 w-3.5 mr-1.5" />
+            Promoções Ativas
           </TabsTrigger>
-          <TabsTrigger value="disponiveis" className="flex items-center gap-2">
-            <Gift className="h-4 w-4" />
-            Disponíveis
-            {metricsDisponiveis.totalDisponiveis > 0 && (
-              <Badge variant="default" className="ml-1 h-5 px-1.5 text-xs">
-                {metricsDisponiveis.totalDisponiveis}
-              </Badge>
-            )}
+          <TabsTrigger value="historico" className="text-xs px-3">
+            <History className="h-3.5 w-3.5 mr-1.5" />
+            Histórico
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="visao-geral" className="space-y-6 mt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Tab: Resumo (default) */}
+        <TabsContent value="resumo" className="space-y-5 mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <GirosGratisChart data={chartData} formatCurrency={formatCurrency} />
             <GirosGratisPorBookmaker data={porBookmaker} formatCurrency={formatCurrency} />
           </div>
         </TabsContent>
 
-        <TabsContent value="registros" className="mt-4">
-          <GirosGratisList
-            giros={giros}
-            formatCurrency={formatCurrency}
-            onEdit={handleEditResultado}
-            onDelete={deleteGiro}
-          />
-        </TabsContent>
-
-        <TabsContent value="por-casa" className="mt-4">
-          <GirosGratisPorBookmaker data={porBookmaker} formatCurrency={formatCurrency} />
-        </TabsContent>
-
-        <TabsContent value="disponiveis" className="mt-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                variant={showAllDisponiveis ? "default" : "outline"}
+        {/* Tab: Resultados */}
+        <TabsContent value="resultados" className="mt-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {giros.length} resultado(s) no período
+              </p>
+              <Button 
+                variant="outline" 
                 size="sm"
-                onClick={() => setShowAllDisponiveis(!showAllDisponiveis)}
+                onClick={() => setResultadoDialogOpen(true)}
               >
-                <History className="h-4 w-4 mr-1" />
-                {showAllDisponiveis ? "Mostrando todas" : "Ver histórico"}
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Registrar Resultado
               </Button>
             </div>
-            <Button onClick={() => setDisponivelDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Promoção
-            </Button>
+            <GirosGratisList
+              giros={giros}
+              formatCurrency={formatCurrency}
+              onEdit={handleEditResultado}
+              onDelete={deleteGiro}
+            />
           </div>
-          <GirosDisponiveisList
-            giros={showAllDisponiveis ? todosGirosDisponiveis : girosDisponiveis}
+        </TabsContent>
+
+        {/* Tab: Promoções Ativas */}
+        <TabsContent value="promocoes" className="mt-4">
+          <PromocoesAtivasList
+            giros={girosDisponiveis}
             formatCurrency={formatCurrency}
-            onEdit={handleEditDisponivel}
             onUsar={handleUsarDisponivel}
+            onEdit={handleEditDisponivel}
             onMarcarExpirado={marcarComoExpirado}
             onCancelar={cancelarDisponivel}
-            showAll={showAllDisponiveis}
           />
+        </TabsContent>
+
+        {/* Tab: Histórico */}
+        <TabsContent value="historico" className="mt-4">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={showHistorico ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowHistorico(!showHistorico)}
+              >
+                {showHistorico ? "Mostrando todas" : "Mostrar finalizadas"}
+              </Button>
+            </div>
+            <PromocoesAtivasList
+              giros={promocoesParaExibir}
+              formatCurrency={formatCurrency}
+              onUsar={handleUsarDisponivel}
+              onEdit={handleEditDisponivel}
+              onMarcarExpirado={marcarComoExpirado}
+              onCancelar={cancelarDisponivel}
+            />
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -300,7 +308,6 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
         projetoId={projetoId}
         giro={editingGiro}
         onSave={handleSaveResultado}
-        // Se estiver usando uma promoção disponível, passar para pré-preencher
         giroDisponivel={usandoDisponivel}
       />
 
