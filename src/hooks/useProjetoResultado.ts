@@ -10,6 +10,9 @@ export interface ProjetoResultado {
   // Lucro de giros grátis (sempre positivo ou zero)
   lucroGirosGratis: number;
   
+  // Lucro de cashback (valor recebido de cashback confirmado)
+  lucroCashback: number;
+  
   // Perdas operacionais
   operationalLossesConfirmed: number;
   operationalLossesPending: number;
@@ -101,17 +104,21 @@ export function useProjetoResultado({
       // 6. Fetch lucro de giros grátis (sempre >= 0)
       const lucroGirosGratis = await fetchLucroGirosGratis(projetoId, dataInicio, dataFim);
       
-      // 7. Calcular lucro líquido (fonte única de verdade)
-      // net_profit = gross_profit_from_bets + lucro_giros_gratis - operational_losses_confirmed + ajustes_conciliacao
-      const netProfit = grossProfitFromBets + lucroGirosGratis - operationalLosses.confirmed + ajustesConciliacao;
+      // 7. Fetch lucro de cashback (sempre >= 0)
+      const lucroCashback = await fetchLucroCashback(projetoId, dataInicio, dataFim);
       
-      // 8. Calcular ROI
+      // 8. Calcular lucro líquido (fonte única de verdade)
+      // net_profit = gross_profit_from_bets + lucro_giros_gratis + lucro_cashback - operational_losses_confirmed + ajustes_conciliacao
+      const netProfit = grossProfitFromBets + lucroGirosGratis + lucroCashback - operationalLosses.confirmed + ajustesConciliacao;
+      
+      // 9. Calcular ROI
       const roi = totalStaked > 0 ? (netProfit / totalStaked) * 100 : null;
 
       setResultado({
         totalStaked,
         grossProfitFromBets,
         lucroGirosGratis,
+        lucroCashback,
         operationalLossesConfirmed: operationalLosses.confirmed,
         operationalLossesPending: operationalLosses.pending,
         operationalLossesReverted: operationalLosses.reverted,
@@ -344,6 +351,38 @@ async function fetchLucroGirosGratis(
   return data?.reduce((acc: number, g: any) => {
     const valor = Number(g.valor_retorno || 0);
     // Garantir que nunca seja negativo (regra de negócio)
+    return acc + Math.max(0, valor);
+  }, 0) || 0;
+}
+
+/**
+ * Busca o lucro total de cashback recebido do projeto.
+ * Cashback recebido é sempre positivo ou zero.
+ */
+async function fetchLucroCashback(
+  projetoId: string,
+  dataInicio: Date | null,
+  dataFim: Date | null
+): Promise<number> {
+  let query = supabase
+    .from('cashback_registros')
+    .select('valor_recebido')
+    .eq('projeto_id', projetoId)
+    .eq('status', 'recebido'); // Apenas cashback recebido
+
+  if (dataInicio) query = query.gte('data_credito', dataInicio.toISOString());
+  if (dataFim) query = query.lte('data_credito', dataFim.toISOString());
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Erro ao buscar lucro de cashback:', error);
+    return 0;
+  }
+
+  // Somar todos os valores recebidos (sempre >= 0)
+  return data?.reduce((acc: number, c: any) => {
+    const valor = Number(c.valor_recebido || 0);
     return acc + Math.max(0, valor);
   }, 0) || 0;
 }
