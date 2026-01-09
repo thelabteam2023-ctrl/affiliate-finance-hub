@@ -82,6 +82,7 @@ export function useKpiBreakdowns({
       ], moedaConsolidacao);
 
       // === BREAKDOWN VOLUME (stake) ===
+      // Nota: Giros Grátis NÃO contribui para volume pois não há investimento
       const volumeBreakdown = createKpiBreakdown([
         createModuleContribution(
           'apostas',
@@ -90,13 +91,7 @@ export function useKpiBreakdowns({
           true,
           { icon: 'Target', color: 'default' }
         ),
-        createModuleContribution(
-          'giros_gratis',
-          'Giros Grátis (valor)',
-          girosGratisData.valorTotal,
-          girosGratisData.count > 0,
-          { icon: 'Dices', color: 'default' }
-        ),
+        // Giros Grátis não tem volume (investimento = 0, é promoção gratuita)
       ], moedaConsolidacao);
 
       // === BREAKDOWN LUCRO ===
