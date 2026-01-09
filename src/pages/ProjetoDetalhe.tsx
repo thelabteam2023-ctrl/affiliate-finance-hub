@@ -57,6 +57,7 @@ import { ProjetoSurebetTab } from "@/components/projeto-detalhe/ProjetoSurebetTa
 import { ProjetoValueBetTab } from "@/components/projeto-detalhe/ProjetoValueBetTab";
 import { ProjetoDuploGreenTab } from "@/components/projeto-detalhe/ProjetoDuploGreenTab";
 import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
+import { ProjetoCashbackTab } from "@/components/projeto-detalhe/ProjetoCashbackTab";
 import { ProjetoGestaoTab } from "@/components/projeto-detalhe/ProjetoGestaoTab";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
@@ -179,6 +180,9 @@ export default function ProjetoDetalhe() {
       if (isModuleActive("duplogreen")) {
         moduleTabs.push({ value: "duplogreen", label: "Duplo Green", icon: <Zap className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
       }
+      if (isModuleActive("cashback")) {
+        moduleTabs.push({ value: "cashback", label: "Cashback", icon: <Percent className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+      }
     } catch (e) {
       console.error("Error checking active modules:", e);
     }
@@ -206,6 +210,7 @@ export default function ProjetoDetalhe() {
       surebet: "surebet",
       valuebet: "valuebet",
       duplogreen: "duplogreen",
+      cashback: "cashback",
     };
 
     const moduleId = moduleTabMap[tabValue];
@@ -709,6 +714,10 @@ export default function ProjetoDetalhe() {
               onDataChange={triggerGlobalRefresh}
               refreshTrigger={refreshTrigger}
             />
+          </TabsContent>
+
+          <TabsContent value="cashback" className="h-full m-0">
+            <ProjetoCashbackTab projetoId={id!} />
           </TabsContent>
 
           <TabsContent value="vinculos" className="h-full m-0">
