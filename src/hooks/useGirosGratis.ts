@@ -186,6 +186,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
         modo: formData.modo,
         data_registro: formData.data_registro.toISOString(),
         valor_retorno: formData.valor_retorno,
+        status: "confirmado", // Sempre confirmar automaticamente - trigger gera lançamento financeiro
         observacoes: formData.observacoes || null,
         giro_disponivel_id: formData.giro_disponivel_id || null,
       };
@@ -193,6 +194,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
       if (formData.modo === "detalhado") {
         insertData.quantidade_giros = formData.quantidade_giros;
         insertData.valor_por_giro = formData.valor_por_giro;
+        insertData.valor_total_giros = (formData.quantidade_giros || 0) * (formData.valor_por_giro || 0);
       }
 
       const { data, error } = await supabase
