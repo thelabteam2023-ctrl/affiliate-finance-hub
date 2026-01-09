@@ -21,8 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Info, Zap, ListChecks, Calculator, Loader2 } from "lucide-react";
+import { Info, Zap, ListChecks, Calculator, Loader2, Gift } from "lucide-react";
 import { GiroGratisComBookmaker, GiroGratisFormData, GiroGratisModo } from "@/types/girosGratis";
+import { GiroDisponivelComBookmaker } from "@/types/girosGratisDisponiveis";
 import { format } from "date-fns";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BookmakerSelectOption } from "@/components/bookmakers/BookmakerSelectOption";
@@ -32,6 +33,7 @@ interface GiroGratisDialogProps {
   onOpenChange: (open: boolean) => void;
   projetoId: string;
   giro?: GiroGratisComBookmaker | null;
+  giroDisponivel?: GiroDisponivelComBookmaker | null;
   onSave: (data: GiroGratisFormData) => Promise<boolean>;
 }
 
@@ -40,6 +42,7 @@ export function GiroGratisDialog({
   onOpenChange,
   projetoId,
   giro,
+  giroDisponivel,
   onSave,
 }: GiroGratisDialogProps) {
   const [loading, setLoading] = useState(false);
@@ -59,7 +62,7 @@ export function GiroGratisDialog({
     projetoId,
     enabled: open,
     includeZeroBalance: true,
-    currentBookmakerId: giro?.bookmaker_id || null
+    currentBookmakerId: giro?.bookmaker_id || giroDisponivel?.bookmaker_id || null
   });
 
   // Mapear para formato usado pelo BookmakerSelectOption
@@ -86,9 +89,13 @@ export function GiroGratisDialog({
   // Valor total calculado automaticamente no modo detalhado
   const valorTotalGiros = quantidadeGiros * valorPorGiro;
 
+  // Verificar se está usando uma promoção disponível
+  const usandoPromo = !!giroDisponivel;
+
   useEffect(() => {
     if (open) {
       if (giro) {
+        // Editando um giro existente
         setModo(giro.modo);
         setBookmakerId(giro.bookmaker_id);
         setDataRegistro(format(new Date(giro.data_registro), "yyyy-MM-dd"));
@@ -96,6 +103,15 @@ export function GiroGratisDialog({
         setQuantidadeGiros(giro.quantidade_giros || 0);
         setValorPorGiro(giro.valor_por_giro || 0);
         setObservacoes(giro.observacoes || "");
+      } else if (giroDisponivel) {
+        // Usando uma promoção disponível - pré-preencher
+        setModo("detalhado");
+        setBookmakerId(giroDisponivel.bookmaker_id);
+        setDataRegistro(format(new Date(), "yyyy-MM-dd"));
+        setValorRetorno(0);
+        setQuantidadeGiros(giroDisponivel.quantidade_giros);
+        setValorPorGiro(giroDisponivel.valor_por_giro);
+        setObservacoes(`Promoção: ${giroDisponivel.motivo}`);
       } else {
         // Reset para novo registro
         setModo("simples");
@@ -107,7 +123,7 @@ export function GiroGratisDialog({
         setObservacoes("");
       }
     }
-  }, [open, giro]);
+  }, [open, giro, giroDisponivel]);
 
   const handleSubmit = async () => {
     if (!bookmakerId) {
@@ -151,10 +167,27 @@ export function GiroGratisDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Editar Giro Grátis" : "Novo Giro Grátis"}
+          <DialogTitle className="flex items-center gap-2">
+            {usandoPromo && <Gift className="h-5 w-5 text-primary" />}
+            {isEditing 
+              ? "Editar Giro Grátis" 
+              : usandoPromo 
+                ? "Registrar Resultado da Promoção" 
+                : "Novo Giro Grátis"}
           </DialogTitle>
         </DialogHeader>
+
+        {usandoPromo && (
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              <Gift className="h-4 w-4 text-primary" />
+              Usando promoção: {giroDisponivel?.motivo}
+            </div>
+            <p className="text-muted-foreground mt-1">
+              {giroDisponivel?.quantidade_giros} giros × R$ {giroDisponivel?.valor_por_giro?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+        )}
 
         <div className="space-y-4 py-4">
           {/* Seletor de Modo */}

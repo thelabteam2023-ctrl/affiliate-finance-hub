@@ -3,3 +3,6 @@ export { GirosGratisKPIs } from "./GirosGratisKPIs";
 export { GirosGratisChart } from "./GirosGratisChart";
 export { GirosGratisPorBookmaker } from "./GirosGratisPorBookmaker";
 export { GirosGratisList } from "./GirosGratisList";
+export { GiroDisponivelDialog } from "./GiroDisponivelDialog";
+export { GirosDisponiveisCard } from "./GirosDisponiveisCard";
+export { GirosDisponiveisList } from "./GirosDisponiveisList";
