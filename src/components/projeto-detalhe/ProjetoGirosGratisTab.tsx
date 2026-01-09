@@ -84,22 +84,24 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
 
   // Handlers para resultados
   const handleSaveResultado = async (data: GiroGratisFormData): Promise<boolean> => {
-    let success: boolean;
     if (editingGiro) {
-      success = await updateGiro(editingGiro.id, data);
-    } else {
-      success = await createGiro(data);
+      return await updateGiro(editingGiro.id, data);
     }
     
-    // Se estava usando uma promoção disponível, marcar como utilizada
-    if (success && usandoDisponivel) {
-      // Buscar o ID do giro criado seria ideal, mas por simplicidade
-      // vamos apenas atualizar o status
-      await marcarComoUtilizado(usandoDisponivel.id, "");
+    // Se estiver usando uma promoção disponível, incluir o ID na criação
+    if (usandoDisponivel) {
+      data.giro_disponivel_id = usandoDisponivel.id;
+    }
+    
+    const giroId = await createGiro(data);
+    
+    if (giroId && usandoDisponivel) {
+      // Marcar a promoção como utilizada com o ID do resultado
+      await marcarComoUtilizado(usandoDisponivel.id, giroId);
       setUsandoDisponivel(null);
     }
     
-    return success;
+    return !!giroId;
   };
 
   const handleEditResultado = (giro: GiroGratisComBookmaker) => {

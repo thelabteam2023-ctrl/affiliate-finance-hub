@@ -165,7 +165,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     });
   };
 
-  const createGiro = async (formData: GiroGratisFormData): Promise<boolean> => {
+  const createGiro = async (formData: GiroGratisFormData): Promise<string | null> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
@@ -187,6 +187,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
         data_registro: formData.data_registro.toISOString(),
         valor_retorno: formData.valor_retorno,
         observacoes: formData.observacoes || null,
+        giro_disponivel_id: formData.giro_disponivel_id || null,
       };
 
       if (formData.modo === "detalhado") {
@@ -194,17 +195,21 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
         insertData.valor_por_giro = formData.valor_por_giro;
       }
 
-      const { error } = await supabase.from("giros_gratis" as any).insert(insertData);
+      const { data, error } = await supabase
+        .from("giros_gratis")
+        .insert(insertData)
+        .select("id")
+        .single();
 
       if (error) throw error;
 
       toast.success("Giro grátis registrado com sucesso!");
       await fetchGiros();
-      return true;
+      return (data as any)?.id || null;
     } catch (err) {
       console.error("Erro ao criar giro grátis:", err);
       toast.error("Erro ao registrar giro grátis");
-      return false;
+      return null;
     }
   };
 

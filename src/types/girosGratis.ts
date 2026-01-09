@@ -35,6 +35,7 @@ export interface GiroGratisFormData {
   quantidade_giros?: number;
   valor_por_giro?: number;
   observacoes?: string;
+  giro_disponivel_id?: string;
 }
 
 export interface GirosGratisMetrics {
