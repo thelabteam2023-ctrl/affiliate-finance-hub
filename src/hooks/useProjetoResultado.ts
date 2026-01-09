@@ -7,6 +7,9 @@ export interface ProjetoResultado {
   totalStaked: number;
   grossProfitFromBets: number;
   
+  // Lucro de giros grátis (sempre positivo ou zero)
+  lucroGirosGratis: number;
+  
   // Perdas operacionais
   operationalLossesConfirmed: number;
   operationalLossesPending: number;
@@ -95,16 +98,20 @@ export function useProjetoResultado({
       // 5. Fetch ajustes de conciliação
       const ajustesConciliacao = await fetchConciliacaoAdjustments(projetoId);
       
-      // 6. Calcular lucro líquido (fonte única de verdade)
-      // net_profit = gross_profit_from_bets - operational_losses_confirmed + ajustes_conciliacao
-      const netProfit = grossProfitFromBets - operationalLosses.confirmed + ajustesConciliacao;
+      // 6. Fetch lucro de giros grátis (sempre >= 0)
+      const lucroGirosGratis = await fetchLucroGirosGratis(projetoId, dataInicio, dataFim);
       
-      // 7. Calcular ROI
+      // 7. Calcular lucro líquido (fonte única de verdade)
+      // net_profit = gross_profit_from_bets + lucro_giros_gratis - operational_losses_confirmed + ajustes_conciliacao
+      const netProfit = grossProfitFromBets + lucroGirosGratis - operationalLosses.confirmed + ajustesConciliacao;
+      
+      // 8. Calcular ROI
       const roi = totalStaked > 0 ? (netProfit / totalStaked) * 100 : null;
 
       setResultado({
         totalStaked,
         grossProfitFromBets,
+        lucroGirosGratis,
         operationalLossesConfirmed: operationalLosses.confirmed,
         operationalLossesPending: operationalLosses.pending,
         operationalLossesReverted: operationalLosses.reverted,
@@ -305,6 +312,39 @@ async function fetchConciliacaoAdjustments(projetoId: string): Promise<number> {
   return data?.reduce((acc, item) => {
     const diferenca = Number(item.saldo_novo) - Number(item.saldo_anterior);
     return acc + diferenca;
+  }, 0) || 0;
+}
+
+/**
+ * Busca o lucro total de giros grátis do projeto
+ * Giros grátis são SEMPRE positivos ou zero (não há como ter prejuízo)
+ */
+async function fetchLucroGirosGratis(
+  projetoId: string,
+  dataInicio: Date | null,
+  dataFim: Date | null
+): Promise<number> {
+  let query = supabase
+    .from('giros_gratis' as any)
+    .select('valor_retorno')
+    .eq('projeto_id', projetoId)
+    .eq('status', 'confirmado'); // Apenas giros confirmados
+  
+  if (dataInicio) query = query.gte('data_registro', dataInicio.toISOString());
+  if (dataFim) query = query.lte('data_registro', dataFim.toISOString());
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Erro ao buscar lucro de giros grátis:', error);
+    return 0;
+  }
+
+  // Somar todos os retornos (valor_retorno é sempre >= 0)
+  return data?.reduce((acc: number, g: any) => {
+    const valor = Number(g.valor_retorno || 0);
+    // Garantir que nunca seja negativo (regra de negócio)
+    return acc + Math.max(0, valor);
   }, 0) || 0;
 }
 
