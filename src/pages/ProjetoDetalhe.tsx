@@ -8,9 +8,11 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ResponsiveTabsList, TabItem } from "@/components/ui/responsive-tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { KpiBreakdownTooltip, CountBreakdownTooltip } from "@/components/ui/kpi-breakdown-tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useProjetoResultado } from "@/hooks/useProjetoResultado";
+import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { useProjectModules } from "@/hooks/useProjectModules";
 import { 
@@ -229,6 +231,7 @@ export default function ProjetoDetalhe() {
     setRefreshTrigger(prev => prev + 1);
     fetchApostasResumo();
     refreshResultado();
+    refreshBreakdowns();
   };
 
   // KPIs sempre mostram dados completos do projeto (sem filtro de período no nível da página)
@@ -246,6 +249,14 @@ export default function ProjetoDetalhe() {
     projetoId: id || '',
     dataInicio,
     dataFim,
+  });
+
+  // Hook para breakdowns dinâmicos dos KPIs por módulo
+  const { breakdowns: kpiBreakdowns, refresh: refreshBreakdowns } = useKpiBreakdowns({
+    projetoId: id || '',
+    dataInicio,
+    dataFim,
+    moedaConsolidacao: projetoResultado?.moedaConsolidacao || 'BRL',
   });
 
   useEffect(() => {
@@ -486,125 +497,126 @@ export default function ProjetoDetalhe() {
       {/* KPIs Resumo - Only show on performance tabs */}
       {showKpis && (
         <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4 flex-shrink-0">
-          {/* Apostas */}
-          <Card className="overflow-hidden" style={{ contain: "layout paint" }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
-              <CardTitle className="text-xs md:text-sm font-medium">Apostas</CardTitle>
-              <Target className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-              <div className="text-lg md:text-2xl font-bold">{apostasResumo?.total_apostas || 0}</div>
-              <div className="flex flex-wrap gap-x-1.5 md:gap-x-2 gap-y-0.5 text-[10px] md:text-xs">
-                <span className="text-emerald-500">{apostasResumo?.greens || 0} G</span>
-                <span className="text-red-500">{apostasResumo?.reds || 0} R</span>
-                <span className="text-lime-400">{apostasResumo?.meio_greens || 0} ½G</span>
-                <span className="text-orange-400">{apostasResumo?.meio_reds || 0} ½R</span>
-                <span className="text-gray-400">{apostasResumo?.voids || 0} V</span>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Apostas - Com breakdown por módulo */}
+          <CountBreakdownTooltip
+            breakdown={kpiBreakdowns?.apostas || null}
+            title="Entradas por Módulo"
+          >
+            <Card className="overflow-hidden cursor-help" style={{ contain: "layout paint" }}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium">Apostas</CardTitle>
+                <Target className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className="text-lg md:text-2xl font-bold">{apostasResumo?.total_apostas || 0}</div>
+                <div className="flex flex-wrap gap-x-1.5 md:gap-x-2 gap-y-0.5 text-[10px] md:text-xs">
+                  <span className="text-emerald-500">{apostasResumo?.greens || 0} G</span>
+                  <span className="text-red-500">{apostasResumo?.reds || 0} R</span>
+                  <span className="text-lime-400">{apostasResumo?.meio_greens || 0} ½G</span>
+                  <span className="text-orange-400">{apostasResumo?.meio_reds || 0} ½R</span>
+                  <span className="text-gray-400">{apostasResumo?.voids || 0} V</span>
+                </div>
+              </CardContent>
+            </Card>
+          </CountBreakdownTooltip>
 
-          {/* Volume em Apostas */}
-          <Card className="overflow-hidden" style={{ contain: "layout paint" }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
-              <CardTitle className="text-xs md:text-sm font-medium">Volume</CardTitle>
-              <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-              <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(projetoResultado?.totalStaked || 0)}</div>
-              <p className="text-[10px] md:text-xs text-muted-foreground">
-                Total apostado
-              </p>
-            </CardContent>
-          </Card>
+          {/* Volume em Apostas - Com breakdown por módulo */}
+          <KpiBreakdownTooltip
+            breakdown={kpiBreakdowns?.volume || null}
+            formatValue={formatCurrency}
+            title="Volume por Módulo"
+          >
+            <Card className="overflow-hidden cursor-help" style={{ contain: "layout paint" }}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium">Volume</CardTitle>
+                <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(projetoResultado?.totalStaked || 0)}</div>
+                <p className="text-[10px] md:text-xs text-muted-foreground">
+                  Total apostado
+                </p>
+              </CardContent>
+            </Card>
+          </KpiBreakdownTooltip>
 
-          {/* Resultado - FONTE ÚNICA DE VERDADE (usa projetoResultado.netProfit) */}
-          <Card className="overflow-hidden" style={{ contain: "layout paint" }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
-              <CardTitle className="text-xs md:text-sm font-medium">
-                {(projetoResultado?.netProfit || 0) >= 0 ? "Lucro" : "Prejuízo"}
-              </CardTitle>
-              {(projetoResultado?.netProfit || 0) >= 0 ? (
-                <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-emerald-500" />
-              ) : (
-                <TrendingDown className="h-3.5 w-3.5 md:h-4 md:w-4 text-red-500" />
-              )}
-            </CardHeader>
-            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-              <div className={`text-lg md:text-2xl font-bold truncate ${(projetoResultado?.netProfit || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                {formatCurrency(Math.abs(projetoResultado?.netProfit || 0))}
-              </div>
-              <p className="text-[10px] md:text-xs text-muted-foreground truncate">
-                {projetoResultado?.temAjustesConciliacao ? (
-                  <span className="flex items-center gap-1">
-                    <span>Resultado</span>
-                    <span className="text-muted-foreground/70">·</span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex items-center gap-0.5 text-muted-foreground/70 cursor-help">
-                            Inclui ajustes
-                            <HelpCircle className="h-2.5 w-2.5" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-[220px]">
-                          <div className="space-y-1.5 text-xs">
-                            <p className="font-medium">Composição do Resultado</p>
-                            <div className="space-y-0.5">
-                              <div className="flex justify-between gap-3">
-                                <span className="text-muted-foreground">Lucro Apostas:</span>
-                                <span>{formatCurrency(projetoResultado?.grossProfitFromBets || 0)}</span>
-                              </div>
-                              {projetoResultado?.operationalLossesConfirmed ? (
-                                <div className="flex justify-between gap-3">
-                                  <span className="text-muted-foreground">Perdas:</span>
-                                  <span className="text-red-400">-{formatCurrency(projetoResultado.operationalLossesConfirmed)}</span>
-                                </div>
-                              ) : null}
-                              <div className="flex justify-between gap-3">
-                                <span className="text-muted-foreground">Ajustes Conciliação:</span>
-                                <span className={(projetoResultado?.ajustesConciliacao || 0) >= 0 ? "text-emerald-400" : "text-red-400"}>
-                                  {(projetoResultado?.ajustesConciliacao || 0) >= 0 ? "+" : ""}{formatCurrency(projetoResultado?.ajustesConciliacao || 0)}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="border-t border-border pt-1">
-                              <div className="flex justify-between gap-3 font-medium">
-                                <span>Lucro Líquido:</span>
-                                <span className={(projetoResultado?.netProfit || 0) >= 0 ? "text-emerald-400" : "text-red-400"}>
-                                  {formatCurrency(projetoResultado?.netProfit || 0)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </span>
-                ) : projetoResultado?.operationalLossesConfirmed ? (
-                  <>Bruto: {formatCurrency(projetoResultado.grossProfitFromBets)} - Perdas: {formatCurrency(projetoResultado.operationalLossesConfirmed)}</>
+          {/* Resultado/Lucro - Com breakdown dinâmico por módulo */}
+          <KpiBreakdownTooltip
+            breakdown={kpiBreakdowns?.lucro || null}
+            formatValue={formatCurrency}
+            title="Lucro por Módulo"
+          >
+            <Card className="overflow-hidden cursor-help" style={{ contain: "layout paint" }}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium">
+                  {(projetoResultado?.netProfit || 0) >= 0 ? "Lucro" : "Prejuízo"}
+                </CardTitle>
+                {(projetoResultado?.netProfit || 0) >= 0 ? (
+                  <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-emerald-500" />
                 ) : (
-                  "Resultado do período"
+                  <TrendingDown className="h-3.5 w-3.5 md:h-4 md:w-4 text-red-500" />
                 )}
-              </p>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className={`text-lg md:text-2xl font-bold truncate ${(projetoResultado?.netProfit || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {formatCurrency(Math.abs(projetoResultado?.netProfit || 0))}
+                </div>
+                <p className="text-[10px] md:text-xs text-muted-foreground truncate">
+                  Resultado consolidado
+                </p>
+              </CardContent>
+            </Card>
+          </KpiBreakdownTooltip>
 
-          {/* ROI - FONTE ÚNICA DE VERDADE */}
-          <Card className="overflow-hidden" style={{ contain: "layout paint" }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
-              <CardTitle className="text-xs md:text-sm font-medium">ROI</CardTitle>
-              <Percent className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-              <div className={`text-lg md:text-2xl font-bold ${(projetoResultado?.roi || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                {(projetoResultado?.roi || 0).toFixed(2)}%
-              </div>
-              <p className="text-[10px] md:text-xs text-muted-foreground">
-                Retorno sobre investimento
-              </p>
-            </CardContent>
-          </Card>
+          {/* ROI - Com tooltip explicativo */}
+          <TooltipProvider>
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <Card className="overflow-hidden cursor-help" style={{ contain: "layout paint" }}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
+                    <CardTitle className="text-xs md:text-sm font-medium">ROI</CardTitle>
+                    <Percent className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                    <div className={`text-lg md:text-2xl font-bold ${(projetoResultado?.roi || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {(projetoResultado?.roi || 0).toFixed(2)}%
+                    </div>
+                    <p className="text-[10px] md:text-xs text-muted-foreground">
+                      Retorno sobre investimento
+                    </p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[240px] p-3" sideOffset={8}>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold border-b border-border pb-1.5">Cálculo do ROI</p>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">Lucro Total:</span>
+                      <span className={(kpiBreakdowns?.roi?.lucroTotal || 0) >= 0 ? "text-emerald-500" : "text-red-500"}>
+                        {formatCurrency(kpiBreakdowns?.roi?.lucroTotal || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">Volume Total:</span>
+                      <span>{formatCurrency(kpiBreakdowns?.roi?.volumeTotal || 0)}</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-border pt-1.5 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">ROI = Lucro ÷ Volume</span>
+                      <span className={cn(
+                        "font-bold",
+                        (projetoResultado?.roi || 0) >= 0 ? "text-emerald-500" : "text-red-500"
+                      )}>
+                        {(projetoResultado?.roi || 0).toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )}
 
