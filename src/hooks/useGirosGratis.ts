@@ -267,6 +267,26 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     }
   };
 
+  // Confirmar giro - dispara trigger que gera lançamento financeiro
+  const confirmarGiro = async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from("giros_gratis" as any)
+        .update({ status: "confirmado" })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Giro confirmado! Saldo da casa atualizado.");
+      await fetchGiros();
+      return true;
+    } catch (err) {
+      console.error("Erro ao confirmar giro grátis:", err);
+      toast.error("Erro ao confirmar giro");
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchGiros();
   }, [fetchGiros]);
@@ -282,5 +302,6 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     createGiro,
     updateGiro,
     deleteGiro,
+    confirmarGiro,
   };
 }

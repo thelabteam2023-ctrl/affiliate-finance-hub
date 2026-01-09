@@ -8,8 +8,16 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  Eye
+  Eye,
+  Wallet,
+  ExternalLink
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { CashbackRegistroComDetalhes } from "@/types/cashback";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -143,6 +151,28 @@ export function CashbackRegistrosList({
                   </div>
                   
                   <div className="flex items-center gap-2">
+                    {/* Indicador de Integração Financeira */}
+                    {registro.status === 'recebido' && registro.cash_ledger_id && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1 text-[10px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+                              <Wallet className="h-2.5 w-2.5" />
+                              <span>Saldo</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-[200px]">
+                            <p className="text-xs">
+                              ✔ Este valor compõe o saldo da casa
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Lançamento financeiro gerado automaticamente
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    
                     <Badge className={cn("text-[10px]", status.className)}>
                       <StatusIcon className="h-2.5 w-2.5 mr-1" />
                       {status.label}

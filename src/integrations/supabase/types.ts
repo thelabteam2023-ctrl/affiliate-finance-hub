@@ -1336,6 +1336,7 @@ export type Database = {
       cashback_registros: {
         Row: {
           bookmaker_id: string
+          cash_ledger_id: string | null
           cotacao_snapshot: number | null
           cotacao_snapshot_at: string | null
           created_at: string
@@ -1359,6 +1360,7 @@ export type Database = {
         }
         Insert: {
           bookmaker_id: string
+          cash_ledger_id?: string | null
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string
@@ -1382,6 +1384,7 @@ export type Database = {
         }
         Update: {
           bookmaker_id?: string
+          cash_ledger_id?: string | null
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string
@@ -1430,6 +1433,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_registros_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
             referencedColumns: ["id"]
           },
           {
@@ -2490,6 +2500,7 @@ export type Database = {
       giros_gratis: {
         Row: {
           bookmaker_id: string
+          cash_ledger_id: string | null
           created_at: string
           data_registro: string
           giro_disponivel_id: string | null
@@ -2508,6 +2519,7 @@ export type Database = {
         }
         Insert: {
           bookmaker_id: string
+          cash_ledger_id?: string | null
           created_at?: string
           data_registro?: string
           giro_disponivel_id?: string | null
@@ -2526,6 +2538,7 @@ export type Database = {
         }
         Update: {
           bookmaker_id?: string
+          cash_ledger_id?: string | null
           created_at?: string
           data_registro?: string
           giro_disponivel_id?: string | null
@@ -2569,6 +2582,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
             referencedColumns: ["id"]
           },
           {
