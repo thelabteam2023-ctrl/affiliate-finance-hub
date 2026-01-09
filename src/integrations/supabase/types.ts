@@ -2241,6 +2241,97 @@ export type Database = {
           },
         ]
       }
+      giros_gratis: {
+        Row: {
+          bookmaker_id: string
+          created_at: string
+          data_registro: string
+          id: string
+          modo: string
+          observacoes: string | null
+          projeto_id: string
+          quantidade_giros: number | null
+          updated_at: string
+          user_id: string
+          valor_por_giro: number | null
+          valor_retorno: number
+          workspace_id: string
+        }
+        Insert: {
+          bookmaker_id: string
+          created_at?: string
+          data_registro?: string
+          id?: string
+          modo?: string
+          observacoes?: string | null
+          projeto_id: string
+          quantidade_giros?: number | null
+          updated_at?: string
+          user_id: string
+          valor_por_giro?: number | null
+          valor_retorno?: number
+          workspace_id: string
+        }
+        Update: {
+          bookmaker_id?: string
+          created_at?: string
+          data_registro?: string
+          id?: string
+          modo?: string
+          observacoes?: string | null
+          projeto_id?: string
+          quantidade_giros?: number | null
+          updated_at?: string
+          user_id?: string
+          valor_por_giro?: number | null
+          valor_retorno?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "giros_gratis_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       indicacoes: {
         Row: {
           created_at: string | null
