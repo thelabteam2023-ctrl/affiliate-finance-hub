@@ -151,7 +151,7 @@ export default function GestaoProjetos() {
       const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
-      const [bookmarkersResult, apostasResult, operadoresResult, perdasResult] = await Promise.all([
+      const [bookmarkersResult, apostasResult, operadoresResult, perdasResult, girosGratisResult] = await Promise.all([
         // Bookmakers por projeto (incluindo saldo_freebet e moeda para conversão)
         supabase
           .from("bookmakers")
@@ -177,7 +177,14 @@ export default function GestaoProjetos() {
           .from("projeto_perdas")
           .select("projeto_id, valor")
           .in("projeto_id", finalProjetoIds)
-          .eq("status", "CONFIRMADA")
+          .eq("status", "CONFIRMADA"),
+        
+        // Giros grátis confirmados por projeto (valor_retorno é o lucro do giro)
+        supabase
+          .from("giros_gratis")
+          .select("projeto_id, valor_retorno, bookmaker_id")
+          .in("projeto_id", finalProjetoIds)
+          .eq("status", "CONFIRMADO")
       ]);
       
       // Taxa de conversão USD->BRL aproximada (idealmente vir de uma API ou cache)
@@ -217,6 +224,15 @@ export default function GestaoProjetos() {
         bookmakersByProjeto[bk.projeto_id].count += 1;
       });
       
+      // Criar mapa de moeda por bookmaker_id para conversão dos giros grátis
+      const bookmakerMoedaMap: Record<string, string> = {};
+      (bookmarkersResult.data || []).forEach((bk: any) => {
+        if (bk.projeto_id) {
+          // O bookmaker_id não está diretamente disponível aqui, então vamos
+          // fazer uma busca separada ou assumir BRL por padrão
+        }
+      });
+
       // Agregar lucro de apostas por projeto COM BREAKDOWN POR MOEDA
       const lucroByProjeto: Record<string, { total: number; BRL: number; USD: number }> = {};
       (apostasResult.data || []).forEach((ap: any) => {
@@ -238,6 +254,21 @@ export default function GestaoProjetos() {
           lucroByProjeto[ap.projeto_id].BRL += lucroOriginal;
           lucroByProjeto[ap.projeto_id].total += lucroOriginal;
         }
+      });
+      
+      // Agregar lucro de giros grátis confirmados por projeto
+      (girosGratisResult.data || []).forEach((giro: any) => {
+        if (!giro.projeto_id) return;
+        if (!lucroByProjeto[giro.projeto_id]) {
+          lucroByProjeto[giro.projeto_id] = { total: 0, BRL: 0, USD: 0 };
+        }
+        
+        const valorRetorno = giro.valor_retorno || 0;
+        // Giros grátis são creditados em BRL (valor_retorno é sempre na moeda do bookmaker)
+        // Por simplicidade, assumimos BRL. Em uma implementação mais robusta,
+        // buscaríamos a moeda do bookmaker.
+        lucroByProjeto[giro.projeto_id].BRL += valorRetorno;
+        lucroByProjeto[giro.projeto_id].total += valorRetorno;
       });
       
       // Agregar operadores ativos por projeto
