@@ -1,8 +1,11 @@
 export { GiroGratisDialog } from "./GiroGratisDialog";
 export { GirosGratisKPIs } from "./GirosGratisKPIs";
+export { GirosGratisKPIsCompact } from "./GirosGratisKPIsCompact";
 export { GirosGratisChart } from "./GirosGratisChart";
 export { GirosGratisPorBookmaker } from "./GirosGratisPorBookmaker";
 export { GirosGratisList } from "./GirosGratisList";
 export { GiroDisponivelDialog } from "./GiroDisponivelDialog";
 export { GirosDisponiveisCard } from "./GirosDisponiveisCard";
 export { GirosDisponiveisList } from "./GirosDisponiveisList";
+export { GirosAtivosCard } from "./GirosAtivosCard";
+export { PromocoesAtivasList } from "./PromocoesAtivasList";
