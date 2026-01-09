@@ -50,58 +50,54 @@ export function BookmakerSelectOption({
   
   return (
     <div className={cn(
-      "flex items-center justify-between w-full gap-2 min-w-0",
+      "grid grid-cols-[auto_1fr_auto] items-center w-full gap-2 min-w-0",
       disabled && "opacity-50",
       className
     )}>
-      <div className="flex flex-col min-w-0 flex-1">
-        {/* Linha 1: Nome + Badge de Moeda */}
+      {/* Coluna 1: Logo (fixa à esquerda) */}
+      <div className="flex-shrink-0">
+        {logo_url ? (
+          <img
+            src={logo_url}
+            alt=""
+            className="h-5 w-5 rounded object-contain"
+          />
+        ) : (
+          <div className="h-5 w-5" aria-hidden="true" />
+        )}
+      </div>
+
+      {/* Coluna 2: Nome + Parceiro (centralizado) */}
+      <div className="flex flex-col items-center justify-center min-w-0">
         <div className="flex items-center gap-1.5">
-          {logo_url && (
-            <img
-              src={logo_url}
-              alt=""
-              className="h-4 w-4 rounded object-contain flex-shrink-0"
-            />
-          )}
           <span className="uppercase text-xs font-medium truncate">{nome}</span>
           <CurrencyBadge moeda={moeda} />
         </div>
-        
-        {/* Linha 2: Parceiro - centralizado */}
         {parceiroShortName && (
-          <span className="text-[10px] text-muted-foreground truncate text-center w-full">
+          <span className="text-[10px] text-muted-foreground truncate">
             {parceiroShortName}
           </span>
         )}
       </div>
       
-      {/* Coluna direita: Saldo */}
+      {/* Coluna 3: Saldo (fixo à direita) */}
       <div className="flex flex-col items-end flex-shrink-0">
         <span className={cn(
           "text-xs font-medium flex items-center gap-1",
           disabled ? "text-destructive" : getCurrencyTextColor(moeda)
         )}>
           {disabled ? "Indisponível" : formatCurrency(saldo_operavel, moeda)}
-          {/* Indicador de bônus ativo (em rollover) - só mostra após 1ª aposta */}
           {!disabled && saldo_bonus > 0 && bonus_rollover_started && (
             <span className="text-purple-400" title="Bônus ativo em rollover">🎁</span>
           )}
         </span>
         
-        {/* Breakdown: 
-            - Se bônus existe MAS rollover NÃO iniciou: mostra separado (antes da 1ª aposta)
-            - Se bônus existe E rollover iniciou: saldo unificado com 🎁 (acima)
-            - Se só tem freebet: mostra breakdown normal
-        */}
         {showBreakdown && !disabled && (
           (saldo_bonus > 0 && !bonus_rollover_started) ? (
-            // Antes da 1ª aposta: mostra real + bônus separados
             <span className="text-[9px] text-muted-foreground/70">
               {formatBreakdown(bookmaker.saldo_disponivel || (saldo_operavel - saldo_bonus - saldo_freebet), saldo_freebet, saldo_bonus, moeda)}
             </span>
           ) : (saldo_freebet > 0 && saldo_bonus === 0) ? (
-            // Só freebet, sem bônus
             <span className="text-[9px] text-muted-foreground/70">
               {formatBreakdown(bookmaker.saldo_disponivel || saldo_operavel, saldo_freebet, 0, moeda)}
             </span>
