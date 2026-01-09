@@ -68,9 +68,9 @@ export function BookmakerSelectOption({
           <CurrencyBadge moeda={moeda} />
         </div>
         
-        {/* Linha 2: Parceiro */}
+        {/* Linha 2: Parceiro - centralizado */}
         {parceiroShortName && (
-          <span className="text-[10px] text-muted-foreground truncate pl-0.5">
+          <span className="text-[10px] text-muted-foreground truncate text-center w-full">
             {parceiroShortName}
           </span>
         )}
