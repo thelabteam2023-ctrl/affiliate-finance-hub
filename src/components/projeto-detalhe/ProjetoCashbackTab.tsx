@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, BarChart3, List, Building2, RefreshCw, History, RotateCcw } from "lucide-react";
+import { Plus, List, Building2, RefreshCw, History, RotateCcw } from "lucide-react";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
+import { useCashback } from "@/hooks/useCashback";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
 import { DateRange } from "react-day-picker";
 import {
@@ -15,63 +16,14 @@ import {
   CashbackRegraDialog,
 } from "./cashback";
 import { 
-  CashbackMetrics, 
   CashbackRegraComBookmaker, 
   CashbackRegistroComDetalhes, 
-  CashbackPorBookmaker,
   CashbackRegraFormData
 } from "@/types/cashback";
 import { toast } from "sonner";
 
 interface ProjetoCashbackTabProps {
   projetoId: string;
-}
-
-// TODO: Substituir por hook real quando tabela for criada
-function useCashbackMock(projetoId: string) {
-  const [loading, setLoading] = useState(false);
-  
-  // Dados mock para demonstração
-  const regras: CashbackRegraComBookmaker[] = [];
-  const registros: CashbackRegistroComDetalhes[] = [];
-  const porBookmaker: CashbackPorBookmaker[] = [];
-  
-  const metrics: CashbackMetrics = {
-    totalRecebido: 0,
-    totalPendente: 0,
-    volumeElegivel: 0,
-    percentualMedioRetorno: 0,
-    totalRegistros: 0,
-    regrasAtivas: regras.filter(r => r.status === 'ativo').length,
-  };
-
-  const refresh = useCallback(() => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 500);
-  }, []);
-
-  const createRegra = useCallback(async (data: CashbackRegraFormData): Promise<boolean> => {
-    // TODO: Implementar criação real
-    toast.info("Funcionalidade de criação será implementada após criação da tabela");
-    return false;
-  }, []);
-
-  const updateRegra = useCallback(async (id: string, data: CashbackRegraFormData): Promise<boolean> => {
-    // TODO: Implementar atualização real
-    toast.info("Funcionalidade de edição será implementada após criação da tabela");
-    return false;
-  }, []);
-
-  return {
-    regras,
-    registros,
-    metrics,
-    porBookmaker,
-    loading,
-    refresh,
-    createRegra,
-    updateRegra,
-  };
 }
 
 export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
@@ -91,7 +43,7 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
     return getDateRangeFromPeriod(period, customDateRange);
   }, [period, customDateRange]);
 
-  // Hook para cashback (mock por enquanto)
+  // Hook para cashback
   const {
     regras,
     registros,
@@ -101,7 +53,12 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
     refresh,
     createRegra,
     updateRegra,
-  } = useCashbackMock(projetoId);
+    confirmarRecebimento,
+  } = useCashback({
+    projetoId,
+    dataInicio: dateRange?.start,
+    dataFim: dateRange?.end,
+  });
 
   // Handlers
   const handleSaveRegra = async (data: CashbackRegraFormData): Promise<boolean> => {
@@ -133,9 +90,8 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
     toast.info("Visualização de detalhes será implementada");
   };
 
-  const handleConfirmRegistro = (registro: CashbackRegistroComDetalhes) => {
-    // TODO: Implementar confirmação de recebimento
-    toast.info("Confirmação de recebimento será implementada");
+  const handleConfirmRegistro = async (registro: CashbackRegistroComDetalhes) => {
+    await confirmarRecebimento(registro.id, registro.valor_calculado);
   };
 
   if (loading && regras.length === 0) {
