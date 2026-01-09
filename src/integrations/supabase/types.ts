@@ -1333,6 +1333,252 @@ export type Database = {
           },
         ]
       }
+      cashback_registros: {
+        Row: {
+          bookmaker_id: string
+          cotacao_snapshot: number | null
+          cotacao_snapshot_at: string | null
+          created_at: string
+          data_credito: string | null
+          id: string
+          moeda_operacao: string
+          observacoes: string | null
+          percentual_aplicado: number
+          periodo_fim: string
+          periodo_inicio: string
+          projeto_id: string
+          regra_id: string
+          status: string
+          updated_at: string
+          user_id: string
+          valor_brl_referencia: number | null
+          valor_calculado: number
+          valor_recebido: number | null
+          volume_elegivel: number
+          workspace_id: string
+        }
+        Insert: {
+          bookmaker_id: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
+          created_at?: string
+          data_credito?: string | null
+          id?: string
+          moeda_operacao?: string
+          observacoes?: string | null
+          percentual_aplicado: number
+          periodo_fim: string
+          periodo_inicio: string
+          projeto_id: string
+          regra_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          valor_brl_referencia?: number | null
+          valor_calculado?: number
+          valor_recebido?: number | null
+          volume_elegivel?: number
+          workspace_id: string
+        }
+        Update: {
+          bookmaker_id?: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
+          created_at?: string
+          data_credito?: string | null
+          id?: string
+          moeda_operacao?: string
+          observacoes?: string | null
+          percentual_aplicado?: number
+          periodo_fim?: string
+          periodo_inicio?: string
+          projeto_id?: string
+          regra_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valor_brl_referencia?: number | null
+          valor_calculado?: number
+          valor_recebido?: number | null
+          volume_elegivel?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cashback_registros_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_registros_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_registros_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "cashback_registros_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_registros_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_registros_regra_id_fkey"
+            columns: ["regra_id"]
+            isOneToOne: false
+            referencedRelation: "cashback_regras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_registros_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cashback_regras: {
+        Row: {
+          aplicacao: string
+          bookmaker_id: string
+          categoria: string
+          created_at: string
+          esportes_validos: string[] | null
+          id: string
+          limite_maximo: number | null
+          mercados_validos: string[] | null
+          nome: string
+          observacoes: string | null
+          odds_minimas: number | null
+          percentual: number
+          periodo_apuracao: string
+          periodo_dias_custom: number | null
+          prazo_credito: string
+          prazo_dias_custom: number | null
+          projeto_id: string
+          status: string
+          tipo: string
+          tipo_credito: string
+          updated_at: string
+          user_id: string
+          valor_minimo_aposta: number | null
+          workspace_id: string
+        }
+        Insert: {
+          aplicacao: string
+          bookmaker_id: string
+          categoria: string
+          created_at?: string
+          esportes_validos?: string[] | null
+          id?: string
+          limite_maximo?: number | null
+          mercados_validos?: string[] | null
+          nome: string
+          observacoes?: string | null
+          odds_minimas?: number | null
+          percentual: number
+          periodo_apuracao: string
+          periodo_dias_custom?: number | null
+          prazo_credito: string
+          prazo_dias_custom?: number | null
+          projeto_id: string
+          status?: string
+          tipo: string
+          tipo_credito: string
+          updated_at?: string
+          user_id: string
+          valor_minimo_aposta?: number | null
+          workspace_id: string
+        }
+        Update: {
+          aplicacao?: string
+          bookmaker_id?: string
+          categoria?: string
+          created_at?: string
+          esportes_validos?: string[] | null
+          id?: string
+          limite_maximo?: number | null
+          mercados_validos?: string[] | null
+          nome?: string
+          observacoes?: string | null
+          odds_minimas?: number | null
+          percentual?: number
+          periodo_apuracao?: string
+          periodo_dias_custom?: number | null
+          prazo_credito?: string
+          prazo_dias_custom?: number | null
+          projeto_id?: string
+          status?: string
+          tipo?: string
+          tipo_credito?: string
+          updated_at?: string
+          user_id?: string
+          valor_minimo_aposta?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cashback_regras_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_regras_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_regras_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "cashback_regras_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_regras_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_regras_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_chat_messages: {
         Row: {
           content: string
