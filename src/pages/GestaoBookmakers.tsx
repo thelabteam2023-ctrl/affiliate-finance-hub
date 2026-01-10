@@ -128,17 +128,39 @@ export default function GestaoBookmakers() {
     }
   };
 
+  // Busca apenas bookmakers que o usuário possui registradas no workspace (para aba Vínculos)
   const fetchBookmakersCatalogo = async () => {
     try {
-      const { data, error } = await supabase
-        .from("bookmakers_catalogo")
-        .select("id, nome")
-        .order("nome");
+      // Buscar bookmaker_catalogo_ids distintos da tabela bookmakers do workspace
+      const { data: userBookmakers, error: userError } = await supabase
+        .from("bookmakers")
+        .select("bookmaker_catalogo_id, bookmakers_catalogo(id, nome)")
+        .not("bookmaker_catalogo_id", "is", null);
 
-      if (error) throw error;
-      setBookmakersCatalogo(data || []);
+      if (userError) throw userError;
+
+      // Extrair bookmakers únicas do catálogo que o usuário possui
+      const uniqueBookmakers = new Map<string, { id: string; nome: string }>();
+      userBookmakers?.forEach((bm) => {
+        if (bm.bookmakers_catalogo && bm.bookmaker_catalogo_id) {
+          const catalogo = bm.bookmakers_catalogo as { id: string; nome: string };
+          if (!uniqueBookmakers.has(catalogo.id)) {
+            uniqueBookmakers.set(catalogo.id, {
+              id: catalogo.id,
+              nome: catalogo.nome,
+            });
+          }
+        }
+      });
+
+      // Converter para array e ordenar por nome
+      const catalogoList = Array.from(uniqueBookmakers.values()).sort((a, b) =>
+        a.nome.localeCompare(b.nome)
+      );
+
+      setBookmakersCatalogo(catalogoList);
     } catch (error: any) {
-      console.error("Erro ao carregar catálogo:", error);
+      console.error("Erro ao carregar bookmakers do projeto:", error);
     }
   };
 
@@ -463,22 +485,43 @@ export default function GestaoBookmakers() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={bookmakerFilter} onValueChange={setBookmakerFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Todas bookmakers" />
+              <Select 
+                value={bookmakerFilter} 
+                onValueChange={setBookmakerFilter}
+                disabled={bookmakersCatalogo.length === 0}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder={bookmakersCatalogo.length === 0 ? "Nenhuma bookmaker" : "Bookmakers do projeto"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">
-                    <div className="flex items-center gap-2">
-                      <Building className="h-4 w-4" />
-                      Todas bookmakers
+                  {bookmakersCatalogo.length === 0 ? (
+                    <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                      <p>Nenhuma bookmaker registrada neste projeto</p>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="mt-2 text-primary"
+                        onClick={() => setDialogOpen(true)}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Cadastrar nova bookmaker
+                      </Button>
                     </div>
-                  </SelectItem>
-                  {bookmakersCatalogo.map((bookmaker) => (
-                    <SelectItem key={bookmaker.id} value={bookmaker.id}>
-                      {bookmaker.nome}
-                    </SelectItem>
-                  ))}
+                  ) : (
+                    <>
+                      <SelectItem value="todos">
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4" />
+                          Bookmakers do projeto
+                        </div>
+                      </SelectItem>
+                      {bookmakersCatalogo.map((bookmaker) => (
+                        <SelectItem key={bookmaker.id} value={bookmaker.id}>
+                          {bookmaker.nome}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
               <div className="flex gap-2">
