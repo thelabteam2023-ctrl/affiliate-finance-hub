@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { 
+  PROJECT_RESPONSIBILITIES, 
+  RESPONSIBILITY_LABELS, 
+  RESPONSIBILITY_DESCRIPTIONS,
+  type ProjectResponsibility 
+} from "@/hooks/useProjectResponsibilities";
 import {
   Dialog,
   DialogContent,
@@ -21,13 +27,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { ChevronDown, ChevronUp, FileText, User, Shield } from "lucide-react";
+import { ChevronDown, ChevronUp, FileText, User, Shield, Key } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface EligibleUser {
   user_id: string;
@@ -81,6 +94,8 @@ export function VincularOperadorDialog({
   const [eligibleUsers, setEligibleUsers] = useState<EligibleUser[]>([]);
   const [usersVinculados, setUsersVinculados] = useState<string[]>([]);
   const [acordoExpanded, setAcordoExpanded] = useState(false);
+  const [responsabilidadesExpanded, setResponsabilidadesExpanded] = useState(false);
+  const [selectedResponsibilities, setSelectedResponsibilities] = useState<string[]>(['REGISTRAR_APOSTAS']);
   const [formData, setFormData] = useState({
     selected_user_id: "",
     funcao: "",
@@ -106,7 +121,9 @@ export function VincularOperadorDialog({
         percentual: "",
         base_calculo: "LUCRO_PROJETO",
       });
+      setSelectedResponsibilities(['REGISTRAR_APOSTAS']);
       setAcordoExpanded(false);
+      setResponsabilidadesExpanded(false);
     }
   }, [open, projetoId, workspaceId]);
 
@@ -200,7 +217,7 @@ export function VincularOperadorDialog({
         operadorId = novoOperador.id;
       }
 
-      // Criar vínculo com projeto
+      // Criar vínculo com projeto incluindo responsabilidades
       const insertData = {
         operador_id: operadorId,
         projeto_id: projetoId,
@@ -214,6 +231,7 @@ export function VincularOperadorDialog({
         valor_fixo: formData.valor_fixo ? parseFloat(formData.valor_fixo) : 0,
         percentual: formData.percentual ? parseFloat(formData.percentual) : 0,
         base_calculo: formData.base_calculo,
+        responsabilidades: selectedResponsibilities,
       };
 
       const { error } = await supabase.from("operador_projetos").insert(insertData);
@@ -348,6 +366,82 @@ export function VincularOperadorDialog({
               </p>
             </div>
           </div>
+
+          {/* Seção Colapsável: Responsabilidades no Projeto */}
+          <Collapsible open={responsabilidadesExpanded} onOpenChange={setResponsabilidadesExpanded}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <div className="flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  <span>Responsabilidades no Projeto</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {selectedResponsibilities.length} selecionada(s)
+                  </Badge>
+                </div>
+                {responsabilidadesExpanded ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 space-y-4">
+              <div className="p-3 rounded-lg bg-muted/50 border">
+                <p className="text-xs text-muted-foreground">
+                  ℹ️ Defina quais <strong>ações</strong> o operador pode realizar neste projeto.
+                  Isso controla o acesso a funcionalidades específicas.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {(Object.keys(PROJECT_RESPONSIBILITIES) as ProjectResponsibility[]).map((resp) => {
+                  const isChecked = selectedResponsibilities.includes(resp);
+                  const isDefault = resp === 'REGISTRAR_APOSTAS';
+                  
+                  return (
+                    <TooltipProvider key={resp}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-start space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                            <Checkbox
+                              id={`resp-${resp}`}
+                              checked={isChecked}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedResponsibilities(prev => [...prev, resp]);
+                                } else {
+                                  setSelectedResponsibilities(prev => prev.filter(r => r !== resp));
+                                }
+                              }}
+                            />
+                            <div className="flex-1 space-y-0.5">
+                              <Label 
+                                htmlFor={`resp-${resp}`} 
+                                className="text-sm font-medium cursor-pointer flex items-center gap-2"
+                              >
+                                {RESPONSIBILITY_LABELS[resp]}
+                                {isDefault && (
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                    Padrão
+                                  </Badge>
+                                )}
+                              </Label>
+                              <p className="text-xs text-muted-foreground">
+                                {RESPONSIBILITY_DESCRIPTIONS[resp]}
+                              </p>
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <p>{RESPONSIBILITY_DESCRIPTIONS[resp]}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                })}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Seção Colapsável: Referência do Acordo */}
           <Collapsible open={acordoExpanded} onOpenChange={setAcordoExpanded}>
