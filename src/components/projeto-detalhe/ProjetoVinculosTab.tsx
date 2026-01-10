@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
+import { useProjectResponsibilities } from "@/hooks/useProjectResponsibilities";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +69,7 @@ import {
   Copy,
   Check,
   Globe,
+  Lock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
@@ -109,6 +111,14 @@ interface BookmakerDisponivel {
 export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const { workspaceId } = useWorkspace();
   const navigate = useNavigate();
+  
+  // Hook de responsabilidades - verifica se o usuário pode gerenciar vínculos
+  const { 
+    canManageVinculos, 
+    canManageBonus,
+    loading: responsibilitiesLoading 
+  } = useProjectResponsibilities(projetoId);
+  
   const [vinculos, setVinculos] = useState<Vinculo[]>([]);
   const [disponiveis, setDisponiveis] = useState<BookmakerDisponivel[]>([]);
   const [historicoCount, setHistoricoCount] = useState({ total: 0, devolvidas: 0 });
@@ -688,10 +698,37 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         )}
       </div>
       <div className="flex items-center gap-4 flex-wrap">
-        <Button onClick={handleOpenAddDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar Vínculos
-        </Button>
+        {/* Botão Adicionar Vínculos - com controle de responsabilidade */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-block">
+                <Button 
+                  onClick={handleOpenAddDialog}
+                  disabled={!canManageVinculos || responsibilitiesLoading}
+                  className={!canManageVinculos && !responsibilitiesLoading ? "opacity-50 cursor-not-allowed" : ""}
+                >
+                  {responsibilitiesLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : !canManageVinculos ? (
+                    <Lock className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  Adicionar Vínculos
+                </Button>
+              </span>
+            </TooltipTrigger>
+            {!canManageVinculos && !responsibilitiesLoading && (
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p className="text-sm">
+                  Você não possui a responsabilidade para gerenciar vínculos neste projeto.
+                  Entre em contato com o administrador para solicitar esta permissão.
+                </p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
         <Toggle
           pressed={viewMode === "list"}
           onPressedChange={(pressed) => setViewMode(pressed ? "list" : "cards")}
@@ -739,12 +776,17 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
               <Link2 className="mx-auto h-12 w-12 text-muted-foreground/50" />
               <h3 className="mt-4 text-lg font-semibold">Nenhum vínculo encontrado</h3>
               <p className="text-muted-foreground">
-                Adicione vínculos parceiro-bookmaker para começar
+                {canManageVinculos 
+                  ? "Adicione vínculos parceiro-bookmaker para começar"
+                  : "Nenhum vínculo disponível para visualização"
+                }
               </p>
-              <Button className="mt-4" onClick={handleOpenAddDialog}>
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Vínculos
-              </Button>
+              {canManageVinculos && (
+                <Button className="mt-4" onClick={handleOpenAddDialog}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Adicionar Vínculos
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

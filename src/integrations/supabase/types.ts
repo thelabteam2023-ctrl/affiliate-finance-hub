@@ -3371,6 +3371,7 @@ export type Database = {
           projeto_id: string
           proxima_conciliacao: string | null
           regra_prejuizo: string | null
+          responsabilidades: string[] | null
           resumo_acordo: string | null
           status: string
           teto_pagamento: number | null
@@ -3404,6 +3405,7 @@ export type Database = {
           projeto_id: string
           proxima_conciliacao?: string | null
           regra_prejuizo?: string | null
+          responsabilidades?: string[] | null
           resumo_acordo?: string | null
           status?: string
           teto_pagamento?: number | null
@@ -3437,6 +3439,7 @@ export type Database = {
           projeto_id?: string
           proxima_conciliacao?: string | null
           regra_prejuizo?: string | null
+          responsabilidades?: string[] | null
           resumo_acordo?: string | null
           status?: string
           teto_pagamento?: number | null
@@ -8075,6 +8078,15 @@ export type Database = {
         }[]
       }
       get_user_auth_version: { Args: { p_user_id: string }; Returns: number }
+      get_user_project_responsibilities: {
+        Args: { _projeto_id: string; _user_id: string }
+        Returns: {
+          is_linked_operator: boolean
+          is_owner_or_admin: boolean
+          operador_projeto_id: string
+          responsabilidades: string[]
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string; _workspace_id?: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -8127,6 +8139,14 @@ export type Database = {
           _permission_code: string
           _user_id: string
           _workspace_id?: string
+        }
+        Returns: boolean
+      }
+      has_project_responsibility: {
+        Args: {
+          _projeto_id: string
+          _responsabilidade: string
+          _user_id: string
         }
         Returns: boolean
       }
