@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen } from "lucide-react";
+import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen, Filter, UserCheck, UserX, Users } from "lucide-react";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
@@ -56,6 +56,7 @@ export default function GestaoBookmakers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [parceiroFilter, setParceiroFilter] = useState("todos");
+  const [parceiroStatusFilter, setParceiroStatusFilter] = useState<"todos" | "ativo" | "inativo">("todos");
   const [bookmakerFilter, setBookmakerFilter] = useState("todos");
   const [showCredentials, setShowCredentials] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -65,7 +66,7 @@ export default function GestaoBookmakers() {
   const [editingBookmaker, setEditingBookmaker] = useState<any | null>(null);
   const [selectedBookmaker, setSelectedBookmaker] = useState<Bookmaker | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
-  const [parceiros, setParceiros] = useState<Array<{ id: string; nome: string }>>([]);
+  const [parceiros, setParceiros] = useState<Array<{ id: string; nome: string; status: string }>>([]);
   const [bookmakersCatalogo, setBookmakersCatalogo] = useState<Array<{ id: string; nome: string }>>([]);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [limitadaPopoverOpen, setLimitadaPopoverOpen] = useState<string | null>(null);
@@ -113,13 +114,19 @@ export default function GestaoBookmakers() {
     }
   };
 
-  const fetchParceiros = async () => {
+  const fetchParceiros = async (statusFilter: "todos" | "ativo" | "inativo" = "todos") => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("parceiros")
-        .select("id, nome")
-        .eq("status", "ativo")
+        .select("id, nome, status")
         .order("nome");
+
+      // Aplicar filtro de status no backend
+      if (statusFilter !== "todos") {
+        query = query.eq("status", statusFilter);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setParceiros(data || []);
@@ -127,6 +134,13 @@ export default function GestaoBookmakers() {
       console.error("Erro ao carregar parceiros:", error);
     }
   };
+
+  // Recarregar parceiros quando o filtro de status muda
+  useEffect(() => {
+    fetchParceiros(parceiroStatusFilter);
+    // Reset do parceiro selecionado quando muda o filtro de status
+    setParceiroFilter("todos");
+  }, [parceiroStatusFilter]);
 
   // Busca apenas bookmakers que o usuário possui registradas no workspace (para aba Vínculos)
   const fetchBookmakersCatalogo = async () => {
@@ -467,22 +481,83 @@ export default function GestaoBookmakers() {
                   <SelectItem value="limitada">Limitada</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={parceiroFilter} onValueChange={setParceiroFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Todos parceiros" />
+              {/* Filtro de Status do Parceiro */}
+              <Select value={parceiroStatusFilter} onValueChange={(value: "todos" | "ativo" | "inativo") => setParceiroStatusFilter(value)}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">
                     <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Todos parceiros
+                      <Users className="h-4 w-4" />
+                      Todos
                     </div>
                   </SelectItem>
-                  {parceiros.map((parceiro) => (
-                    <SelectItem key={parceiro.id} value={parceiro.id}>
-                      {parceiro.nome}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="ativo">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-4 w-4 text-green-500" />
+                      Ativos
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="inativo">
+                    <div className="flex items-center gap-2">
+                      <UserX className="h-4 w-4 text-muted-foreground" />
+                      Inativos
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Select de Parceiros */}
+              <Select 
+                value={parceiroFilter} 
+                onValueChange={setParceiroFilter}
+                disabled={parceiros.length === 0}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder={parceiros.length === 0 ? "Nenhum parceiro" : "Parceiro"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {parceiros.length === 0 ? (
+                    <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                      <p>Nenhum parceiro encontrado</p>
+                      {parceiroStatusFilter === "inativo" ? (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="mt-2 text-primary"
+                          onClick={() => navigate("/parceiros")}
+                        >
+                          <UserCheck className="h-3 w-3 mr-1" />
+                          Ativar parceiro
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="mt-2 text-primary"
+                          onClick={() => navigate("/parceiros")}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Criar parceiro
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <SelectItem value="todos">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Todos os parceiros
+                        </div>
+                      </SelectItem>
+                      {parceiros.map((parceiro) => (
+                        <SelectItem key={parceiro.id} value={parceiro.id}>
+                          {parceiro.nome}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
               <Select 
