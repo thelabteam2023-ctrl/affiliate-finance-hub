@@ -72,8 +72,9 @@ const CONFIRMATION_TEXT = "FECHAR CICLO";
 
 const TIPO_GATILHO_LABELS: Record<string, string> = {
   TEMPO: "Por Tempo",
-  VOLUME: "Por Volume",
-  HIBRIDO: "Híbrido",
+  META: "Por Meta",
+  VOLUME: "Por Meta", // legado
+  HIBRIDO: "Meta + Prazo", // legado
 };
 
 export function FecharCicloConfirmDialog({
