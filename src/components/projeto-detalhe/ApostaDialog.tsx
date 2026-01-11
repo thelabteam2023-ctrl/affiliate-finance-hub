@@ -290,6 +290,35 @@ const isMoneylineMercado = (mercado: string): boolean => {
   return moneylineKeywords.some(kw => mercado.includes(kw));
 };
 
+// Normalize text for comparison (remove accents, trim, uppercase)
+const normalizeText = (text: string): string => {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+};
+
+// Match OCR detected selection with existing options (returns matched option or null)
+const matchSelecaoWithOptions = (options: string[], detected: string): string | null => {
+  if (!detected || options.length === 0) return null;
+  
+  const normalizedDetected = normalizeText(detected);
+  
+  // Try exact match first (normalized)
+  const exactMatch = options.find(opt => normalizeText(opt) === normalizedDetected);
+  if (exactMatch) return exactMatch;
+  
+  // Try partial match (contains)
+  const partialMatch = options.find(opt => 
+    normalizeText(opt).includes(normalizedDetected) || 
+    normalizedDetected.includes(normalizeText(opt))
+  );
+  if (partialMatch) return partialMatch;
+  
+  return null;
+};
+
 // Get Moneyline selection options based on sport and evento
 const getMoneylineSelecoes = (esporte: string | undefined, evento: string): string[] => {
   // Parse evento para extrair times (formato "MANDANTE x VISITANTE")
@@ -452,11 +481,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   // Check if current mercado is Moneyline (uses select instead of free text)
   const isMoneyline = isMoneylineMercado(mercado);
 
-  // Get Moneyline options for current sport/evento - include print selection if not in list
-  const baseMoneylineOptions = isMoneyline ? getMoneylineSelecoes(esporte, evento) : [];
-  const moneylineOptions = selecaoFromPrint && selecao && !baseMoneylineOptions.includes(selecao)
-    ? [selecao, ...baseMoneylineOptions]
-    : baseMoneylineOptions;
+  // Get Moneyline options for current sport/evento - NEVER inject OCR values
+  const moneylineOptions = isMoneyline ? getMoneylineSelecoes(esporte, evento) : [];
 
   // Effective selection (always the selecao state now)
   const effectiveSelecao = selecao;
@@ -563,8 +589,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         setMercadoFromPrint(true);
       }
       
-      // ALWAYS fill selecao if detected
+      // Store OCR selecao for later matching (will be resolved when evento/mercado are set)
       if (data.selecao) {
+        // Store the raw OCR value temporarily - will be matched against options later
         setSelecao(data.selecao);
         setSelecaoFromPrint(true);
       }
@@ -598,6 +625,27 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       }
     }
   }, [pendingMercadoIntencao, esporte, mercadoFromPrint, resolvePrintMarket]);
+
+  // Match OCR selection with available options when they become available
+  useEffect(() => {
+    // Only run for OCR-imported selections in moneyline markets
+    if (!selecaoFromPrint || !selecao || !isMoneyline || !evento) return;
+    
+    // Check if current selection is already a valid option
+    if (moneylineOptions.includes(selecao)) return;
+    
+    // Try to match the OCR selection with available options
+    const matchedOption = matchSelecaoWithOptions(moneylineOptions, selecao);
+    
+    if (matchedOption) {
+      // Found a match - update to the canonical option value
+      setSelecao(matchedOption);
+    } else {
+      // No match found - clear the selection so user must choose manually
+      // Keep selecaoFromPrint true to indicate OCR attempted but failed
+      setSelecao("");
+    }
+  }, [selecaoFromPrint, selecao, isMoneyline, evento, esporte, mercado, moneylineOptions]);
 
   useEffect(() => {
     if (open) {
