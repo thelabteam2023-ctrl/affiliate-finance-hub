@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Shuffle, Users, Building2, Wallet, FolderKanban, TrendingUp, UserPlus, Loader2, AlertTriangle, RotateCcw, Banknote } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Trash2, Shuffle, Users, Building2, Wallet, FolderKanban, TrendingUp, UserPlus, Loader2, AlertTriangle, RotateCcw, Banknote, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function Testes() {
   const [loading, setLoading] = useState<string | null>(null);
   const [valorAporte, setValorAporte] = useState<string>("5000");
+  const [confirmResetCompleto, setConfirmResetCompleto] = useState(false);
 
   const handleDeleteAll = async (table: string, label: string) => {
     setLoading(table);
@@ -893,6 +895,189 @@ export default function Testes() {
     }
   };
 
+  const handleResetCompletoParaTestes = async () => {
+    setLoading("reset_completo");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      console.log("🔄 Iniciando reset completo para testes...");
+
+      // 1. Buscar todos os projetos do usuário
+      const { data: projetos } = await supabase
+        .from("projetos")
+        .select("id")
+        .eq("user_id", user.id);
+
+      const projetoIds = projetos?.map(p => p.id) || [];
+      console.log(`📋 Projetos encontrados: ${projetoIds.length}`);
+
+      if (projetoIds.length > 0) {
+        // 2. Buscar operador_projetos para apagar entregas
+        const { data: opProjetos } = await supabase
+          .from("operador_projetos")
+          .select("id")
+          .in("projeto_id", projetoIds);
+
+        if (opProjetos && opProjetos.length > 0) {
+          const opProjetoIds = opProjetos.map(op => op.id);
+          
+          // Apagar entregas vinculadas
+          await supabase.from("entregas").delete().in("operador_projeto_id", opProjetoIds);
+          console.log("✅ Entregas apagadas");
+          
+          // Apagar pagamentos propostos
+          await supabase.from("pagamentos_propostos").delete().in("operador_projeto_id", opProjetoIds);
+          console.log("✅ Pagamentos propostos apagados");
+        }
+
+        // 3. Apagar dados vinculados aos projetos
+        await supabase.from("projeto_ciclos").delete().in("projeto_id", projetoIds);
+        console.log("✅ Ciclos de projeto apagados");
+
+        await supabase.from("projeto_perdas").delete().in("projeto_id", projetoIds);
+        console.log("✅ Perdas de projeto apagadas");
+
+        await supabase.from("projeto_conciliacoes").delete().in("projeto_id", projetoIds);
+        console.log("✅ Conciliações de projeto apagadas");
+
+        await supabase.from("apostas_unificada").delete().in("projeto_id", projetoIds);
+        console.log("✅ Apostas unificadas apagadas");
+
+        await supabase.from("freebets_recebidas").delete().in("projeto_id", projetoIds);
+        console.log("✅ Freebets recebidas apagadas");
+
+        await supabase.from("giros_gratis").delete().in("projeto_id", projetoIds);
+        console.log("✅ Giros grátis apagados");
+
+        await supabase.from("giros_gratis_disponiveis").delete().in("projeto_id", projetoIds);
+        console.log("✅ Giros grátis disponíveis apagados");
+
+        await supabase.from("cashback_registros").delete().in("projeto_id", projetoIds);
+        console.log("✅ Cashback registros apagados");
+
+        await supabase.from("cashback_regras").delete().in("projeto_id", projetoIds);
+        console.log("✅ Cashback regras apagadas");
+
+        await supabase.from("project_bookmaker_link_bonuses").delete().in("project_id", projetoIds);
+        console.log("✅ Bônus de bookmakers apagados");
+
+        await supabase.from("operador_projetos").delete().in("projeto_id", projetoIds);
+        console.log("✅ Operador-projetos apagados");
+
+        // 4. Desvincular bookmakers dos projetos
+        await supabase
+          .from("bookmakers")
+          .update({ projeto_id: null })
+          .in("projeto_id", projetoIds);
+        console.log("✅ Bookmakers desvinculados");
+
+        // 5. Apagar os projetos
+        const { error: projetosError } = await supabase
+          .from("projetos")
+          .delete()
+          .eq("user_id", user.id);
+
+        if (projetosError) throw projetosError;
+        console.log("✅ Projetos apagados");
+      }
+
+      // 6. Recalcular saldos das bookmakers baseado no ledger
+      const { data: bookmakers } = await supabase
+        .from("bookmakers")
+        .select("id, nome, moeda")
+        .eq("user_id", user.id);
+
+      if (bookmakers && bookmakers.length > 0) {
+        const bookmakerIds = bookmakers.map(b => b.id);
+
+        // Buscar depósitos confirmados
+        const { data: depositos } = await supabase
+          .from("cash_ledger")
+          .select("destino_bookmaker_id, valor, moeda_destino")
+          .eq("user_id", user.id)
+          .eq("tipo_transacao", "DEPOSITO")
+          .eq("status", "CONFIRMADO")
+          .in("destino_bookmaker_id", bookmakerIds);
+
+        // Buscar saques confirmados
+        const { data: saques } = await supabase
+          .from("cash_ledger")
+          .select("origem_bookmaker_id, valor, moeda_origem")
+          .eq("user_id", user.id)
+          .eq("tipo_transacao", "SAQUE")
+          .eq("status", "CONFIRMADO")
+          .in("origem_bookmaker_id", bookmakerIds);
+
+        // Calcular saldos
+        const saldosCalculados: Record<string, number> = {};
+        
+        for (const bookmaker of bookmakers) {
+          saldosCalculados[bookmaker.id] = 0;
+        }
+
+        // Somar depósitos
+        if (depositos) {
+          for (const d of depositos) {
+            if (d.destino_bookmaker_id) {
+              saldosCalculados[d.destino_bookmaker_id] = (saldosCalculados[d.destino_bookmaker_id] || 0) + Number(d.valor);
+            }
+          }
+        }
+
+        // Subtrair saques
+        if (saques) {
+          for (const s of saques) {
+            if (s.origem_bookmaker_id) {
+              saldosCalculados[s.origem_bookmaker_id] = (saldosCalculados[s.origem_bookmaker_id] || 0) - Number(s.valor);
+            }
+          }
+        }
+
+        // Atualizar cada bookmaker com saldo recalculado
+        let atualizados = 0;
+        for (const bookmaker of bookmakers) {
+          const saldoNovo = saldosCalculados[bookmaker.id] || 0;
+          const isUSD = ['USD', 'USDT', 'BTC', 'ETH', 'USDC'].includes(bookmaker.moeda);
+          
+          const updateData = isUSD
+            ? { saldo_usd: saldoNovo, saldo_atual: 0, saldo_freebet: 0, saldo_irrecuperavel: 0, projeto_id: null }
+            : { saldo_atual: saldoNovo, saldo_usd: 0, saldo_freebet: 0, saldo_irrecuperavel: 0, projeto_id: null };
+
+          const { error: updateError } = await supabase
+            .from("bookmakers")
+            .update(updateData)
+            .eq("id", bookmaker.id);
+
+          if (!updateError) {
+            atualizados++;
+          }
+        }
+        console.log(`✅ ${atualizados} bookmakers com saldos recalculados`);
+      }
+
+      // Reset checkbox
+      setConfirmResetCompleto(false);
+
+      toast.success(
+        `Reset completo executado!\n` +
+        `• ${projetoIds.length} projetos apagados\n` +
+        `• Todas as apostas, bônus e freebets removidos\n` +
+        `• Saldos das bookmakers recalculados pelo ledger\n` +
+        `• Cash ledger preservado`
+      );
+
+    } catch (error: any) {
+      console.error("Erro no reset completo:", error);
+      toast.error(`Erro no reset completo: ${error.message}`);
+    } finally {
+      setLoading(null);
+    }
+  };
+
   // Função para gerar valor múltiplo de 10 dentro de um range
   const gerarValorMultiplo10 = (min: number, max: number): number => {
     const minMultiplo = Math.ceil(min / 10) * 10;
@@ -1330,6 +1515,95 @@ export default function Testes() {
               )}
               Simular Fluxo
             </Button>
+          </div>
+          {/* Reset Completo para Testes */}
+          <div className="p-4 border-2 border-destructive/50 rounded-lg bg-destructive/5">
+            <div className="flex items-start gap-3 mb-4">
+              <RefreshCw className="h-5 w-5 text-destructive mt-0.5" />
+              <div className="flex-1">
+                <p className="font-medium text-destructive">Reset Completo para Testes</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Apaga TODOS os projetos e dados vinculados (apostas, bônus, freebets, ciclos, entregas), 
+                  recalcula saldos das bookmakers baseado apenas no cash ledger (depósitos - saques).
+                </p>
+                <div className="mt-3 p-3 bg-destructive/10 rounded-md">
+                  <p className="text-xs text-destructive font-medium mb-2">⚠️ Esta ação irá:</p>
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Apagar todos os projetos</li>
+                    <li>Apagar todas as apostas, bônus, freebets e giros grátis</li>
+                    <li>Apagar entregas e pagamentos de operadores</li>
+                    <li>Resetar saldos das bookmakers (preservando cash ledger)</li>
+                    <li>Desvincular bookmakers de projetos</li>
+                  </ul>
+                  <p className="text-xs text-primary font-medium mt-2">✅ Será preservado:</p>
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Cash ledger (histórico financeiro)</li>
+                    <li>Parceiros, operadores, investidores, indicadores</li>
+                    <li>Contas bancárias e wallets</li>
+                    <li>Registros de bookmakers (apenas saldos resetados)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between pt-3 border-t border-destructive/20">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="confirmReset" 
+                  checked={confirmResetCompleto}
+                  onCheckedChange={(checked) => setConfirmResetCompleto(checked === true)}
+                />
+                <Label 
+                  htmlFor="confirmReset" 
+                  className="text-sm text-muted-foreground cursor-pointer"
+                >
+                  Eu entendo que esta ação é irreversível
+                </Label>
+              </div>
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="destructive"
+                    disabled={!confirmResetCompleto || loading === "reset_completo"}
+                  >
+                    {loading === "reset_completo" ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
+                    Executar Reset Completo
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-destructive">
+                      ⚠️ Confirmar Reset Completo
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-2">
+                      <p>
+                        Você está prestes a <strong>apagar TODOS os projetos</strong> e dados vinculados.
+                      </p>
+                      <p>
+                        Os saldos das bookmakers serão recalculados baseado apenas no histórico de depósitos e saques.
+                      </p>
+                      <p className="text-destructive font-medium">
+                        Esta ação NÃO pode ser desfeita!
+                      </p>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleResetCompletoParaTestes}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Sim, executar reset completo
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         </CardContent>
       </Card>
