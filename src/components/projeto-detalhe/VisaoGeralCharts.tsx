@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, Building2, Users, Calendar } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { TrendingUp, TrendingDown, Building2, Users, Calendar, Globe, FolderOpen } from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -74,6 +75,8 @@ interface EvolucaoData {
 
 interface VisaoGeralChartsProps {
   apostas: ApostaBase[];
+  /** Apostas de todos os projetos (para visão global) */
+  apostasGlobal?: ApostaBase[];
   accentColor?: string;
   title?: string;
   logoMap?: Map<string, string | null>;
@@ -85,6 +88,8 @@ interface VisaoGeralChartsProps {
   formatCurrency: (value: number) => string;
   /** Função de formatação para eixos de gráfico (compacta, sem quebra) */
   formatChartAxis?: (value: number) => string;
+  /** Habilita toggle de escopo global para o card de Casas */
+  showScopeToggle?: boolean;
 }
 
 // =====================================================
@@ -223,15 +228,21 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurren
 
 interface CasasMaisUtilizadasCardProps {
   casas: CasaUsada[];
+  casasGlobal?: CasaUsada[];
   accentColor: string;
   logoMap?: Map<string, string | null>;
   formatCurrency: (value: number) => string;
+  showScopeToggle?: boolean;
 }
 
-function CasasMaisUtilizadasCard({ casas, accentColor, logoMap, formatCurrency }: CasasMaisUtilizadasCardProps) {
+function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, formatCurrency, showScopeToggle }: CasasMaisUtilizadasCardProps) {
+  const [scope, setScope] = useState<"projeto" | "global">("projeto");
+  
+  const activeCasas = scope === "global" && casasGlobal ? casasGlobal : casas;
+  
   const topCasas = useMemo(() => 
-    [...casas].sort((a, b) => b.volume - a.volume).slice(0, 6), 
-    [casas]
+    [...activeCasas].sort((a, b) => b.volume - a.volume).slice(0, 6), 
+    [activeCasas]
   );
 
   // Normaliza nome para comparação: remove acentos, espaços extras, caracteres especiais
@@ -244,27 +255,27 @@ function CasasMaisUtilizadasCard({ casas, accentColor, logoMap, formatCurrency }
       .trim();
   };
 
-  const getLogoUrl = (casaName: string): string | null | undefined => {
+  const getLogoUrl = (casaData: CasaUsada): string | null | undefined => {
+    // 1. Prioridade: logo_url já processado na agregação
+    if (casaData.logo_url) return casaData.logo_url;
+    
+    // 2. Fallback: buscar no logoMap se disponível
     if (!logoMap) return null;
     
-    const normalizedInput = normalizeName(casaName);
+    const normalizedInput = normalizeName(casaData.casa);
     
-    // 1. Tentar match exato normalizado
+    // Match exato normalizado
     for (const [key, value] of logoMap.entries()) {
       if (normalizeName(key) === normalizedInput) return value;
     }
     
-    // 2. Tentar match parcial (um contém o outro)
+    // Match parcial (um contém o outro)
     for (const [key, value] of logoMap.entries()) {
       const normalizedKey = normalizeName(key);
       if (normalizedInput.includes(normalizedKey) || normalizedKey.includes(normalizedInput)) {
         return value;
       }
     }
-    
-    // 3. Fallback: tentar logo_url direto da casa se disponível
-    const casa = casas.find(c => c.casa === casaName);
-    if (casa?.logo_url) return casa.logo_url;
     
     return null;
   };
@@ -292,11 +303,27 @@ function CasasMaisUtilizadasCard({ casas, accentColor, logoMap, formatCurrency }
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4" style={{ color: accentColor }} />
-          <CardTitle className="text-sm font-medium">Casas Mais Utilizadas</CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" style={{ color: accentColor }} />
+            <CardTitle className="text-sm font-medium">Casas Mais Utilizadas</CardTitle>
+          </div>
+          {showScopeToggle && casasGlobal && casasGlobal.length > 0 && (
+            <ToggleGroup type="single" value={scope} onValueChange={(v) => v && setScope(v as "projeto" | "global")} size="sm">
+              <ToggleGroupItem value="projeto" aria-label="Projeto atual" className="h-7 px-2 text-xs">
+                <FolderOpen className="h-3 w-3 mr-1" />
+                Projeto
+              </ToggleGroupItem>
+              <ToggleGroupItem value="global" aria-label="Todos os projetos" className="h-7 px-2 text-xs">
+                <Globe className="h-3 w-3 mr-1" />
+                Global
+              </ToggleGroupItem>
+            </ToggleGroup>
+          )}
         </div>
-        <CardDescription className="text-xs">Por volume apostado</CardDescription>
+        <CardDescription className="text-xs">
+          Por volume apostado {scope === "global" && "(Todos os projetos)"}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Header row */}
@@ -312,7 +339,7 @@ function CasasMaisUtilizadasCard({ casas, accentColor, logoMap, formatCurrency }
         {topCasas.map((casa, idx) => {
           const barWidth = (casa.volume / maxVolume) * 100;
           const roiColor = casa.roi >= 0 ? "text-emerald-500" : "text-red-500";
-          const logoUrl = getLogoUrl(casa.casa);
+          const logoUrl = getLogoUrl(casa);
           return (
             <Tooltip key={casa.casa}>
               <TooltipTrigger asChild>
@@ -399,6 +426,7 @@ function CasasMaisUtilizadasCard({ casas, accentColor, logoMap, formatCurrency }
 
 export function VisaoGeralCharts({ 
   apostas, 
+  apostasGlobal,
   accentColor = "hsl(var(--primary))", 
   logoMap, 
   showCalendar = true,
@@ -406,7 +434,8 @@ export function VisaoGeralCharts({
   showCasasCard = true,
   isSingleDayPeriod = false,
   formatCurrency,
-  formatChartAxis
+  formatChartAxis,
+  showScopeToggle = false
 }: VisaoGeralChartsProps) {
   // Fallback para formatChartAxis se não fornecido - usa versão compacta do formatCurrency
   const axisFormatter = formatChartAxis || ((v: number) => {
@@ -590,7 +619,7 @@ export function VisaoGeralCharts({
 
   // Só casas
   if (!showEvolucaoChart && showCasasCard) {
-    return <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} logoMap={logoMap} formatCurrency={formatCurrency} />;
+    return <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} logoMap={logoMap} formatCurrency={formatCurrency} showScopeToggle={showScopeToggle} />;
   }
 
   // Só evolução
@@ -705,7 +734,7 @@ export function VisaoGeralCharts({
       </Card>
 
       {/* Card — Casas Mais Utilizadas (CONTEXTUAL - 1 coluna) */}
-      <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} logoMap={logoMap} formatCurrency={formatCurrency} />
+      <CasasMaisUtilizadasCard casas={casasData} accentColor={accentColor} logoMap={logoMap} formatCurrency={formatCurrency} showScopeToggle={showScopeToggle} />
     </div>
   );
 }
