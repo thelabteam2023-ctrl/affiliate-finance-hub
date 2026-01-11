@@ -6439,6 +6439,9 @@ export type Database = {
           projeto_id: string | null
           projeto_nome: string | null
           saldo_atual: number | null
+          saldo_efetivo: number | null
+          saldo_freebet: number | null
+          saldo_usd: number | null
           status: string | null
           user_id: string | null
         }
