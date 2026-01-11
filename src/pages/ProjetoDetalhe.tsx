@@ -672,7 +672,6 @@ export default function ProjetoDetalhe() {
               onDataChange={triggerGlobalRefresh}
               refreshTrigger={refreshTrigger}
               formatCurrency={formatCurrency}
-              formatChartAxis={formatChartAxis}
             />
           </TabsContent>
 
