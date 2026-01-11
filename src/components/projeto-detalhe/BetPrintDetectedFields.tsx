@@ -98,8 +98,7 @@ export function BetPrintDetectedFields({ parsedData, imagePreview, onClear }: Be
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   
   const contextFields = [
-    { label: "Mandante", value: parsedData.mandante?.value, confidence: parsedData.mandante?.confidence || "none" },
-    { label: "Visitante", value: parsedData.visitante?.value, confidence: parsedData.visitante?.confidence || "none" },
+    { label: "Evento", value: parsedData.evento?.value, confidence: parsedData.evento?.confidence || "none" },
     { label: "Data/Hora", value: parsedData.dataHora?.value, confidence: parsedData.dataHora?.confidence || "none" },
     { label: "Esporte", value: parsedData.esporte?.value, confidence: parsedData.esporte?.confidence || "none" },
     { label: "Mercado", value: parsedData.mercado?.value, confidence: parsedData.mercado?.confidence || "none" },
@@ -138,7 +137,7 @@ export function BetPrintDetectedFields({ parsedData, imagePreview, onClear }: Be
             </span>
             <div className="flex items-center gap-2 mt-0.5">
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500/30 text-emerald-500 bg-emerald-500/10">
-                {detectedCount}/8 campos
+                {detectedCount}/7 campos
               </Badge>
               {financialDetected > 0 && (
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-500 bg-blue-500/10">

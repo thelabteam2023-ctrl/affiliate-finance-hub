@@ -290,10 +290,12 @@ const isMoneylineMercado = (mercado: string): boolean => {
   return moneylineKeywords.some(kw => mercado.includes(kw));
 };
 
-// Get Moneyline selection options based on sport
-const getMoneylineSelecoes = (esporte: string | undefined, mandante: string, visitante: string): string[] => {
-  const timeCasa = mandante || "MANDANTE";
-  const timeFora = visitante || "VISITANTE";
+// Get Moneyline selection options based on sport and evento
+const getMoneylineSelecoes = (esporte: string | undefined, evento: string): string[] => {
+  // Parse evento para extrair times (formato "MANDANTE x VISITANTE")
+  const partes = evento.split(/\s*x\s*/i);
+  const timeCasa = partes[0]?.trim() || "MANDANTE";
+  const timeFora = partes[1]?.trim() || "VISITANTE";
   
   // Guard against undefined esporte
   if (!esporte) {
@@ -438,8 +440,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   // Campos comuns
   const [dataAposta, setDataAposta] = useState("");
   const [esporte, setEsporte] = useState("");
-  const [mandante, setMandante] = useState("");
-  const [visitante, setVisitante] = useState("");
+  const [evento, setEvento] = useState(""); // Campo unificado (antes era mandante x visitante)
   const [mercado, setMercado] = useState("");
   const [selecao, setSelecao] = useState("");
   const [odd, setOdd] = useState("");
@@ -448,14 +449,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [valorRetorno, setValorRetorno] = useState("");
   const [observacoes, setObservacoes] = useState("");
 
-  // Computed evento
-  const evento = mandante && visitante ? `${mandante} x ${visitante}` : "";
-
   // Check if current mercado is Moneyline (uses select instead of free text)
   const isMoneyline = isMoneylineMercado(mercado);
 
-  // Get Moneyline options for current sport/teams - include print selection if not in list
-  const baseMoneylineOptions = isMoneyline ? getMoneylineSelecoes(esporte, mandante, visitante) : [];
+  // Get Moneyline options for current sport/evento - include print selection if not in list
+  const baseMoneylineOptions = isMoneyline ? getMoneylineSelecoes(esporte, evento) : [];
   const moneylineOptions = selecaoFromPrint && selecao && !baseMoneylineOptions.includes(selecao)
     ? [selecao, ...baseMoneylineOptions]
     : baseMoneylineOptions;
@@ -546,9 +544,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     if (printParsedData && !aposta) {
       const data = applyPrintData();
       
-      // ALWAYS fill mandante/visitante if detected
-      if (data.mandante) setMandante(data.mandante);
-      if (data.visitante) setVisitante(data.visitante);
+      // Preencher evento unificado
+      if (data.evento) setEvento(data.evento.toUpperCase());
       if (data.dataHora) setDataAposta(data.dataHora);
       
       // Set esporte first (market depends on it for options, but we decouple for print)
@@ -608,10 +605,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       if (aposta) {
         setDataAposta(aposta.data_aposta.slice(0, 16));
         setEsporte(aposta.esporte);
-        // Parse evento para mandante/visitante
-        const eventoParts = aposta.evento?.split(" x ") || [];
-        setMandante(eventoParts[0] || aposta.evento || "");
-        setVisitante(eventoParts[1] || "");
+        // Usar evento direto (campo já unificado no banco)
+        setEvento(aposta.evento || "");
         setOdd(aposta.odd?.toString() || "");
         setStake(aposta.stake?.toString() || "");
         setStatusResultado(aposta.resultado || aposta.status);
@@ -945,8 +940,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     setTipoAposta("bookmaker");
     setDataAposta(getLocalDateTimeString());
     setEsporte("");
-    setMandante("");
-    setVisitante("");
+    setEvento(""); // Campo unificado
     setMercado("");
     setSelecao("");
     setOdd("");
@@ -2275,31 +2269,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               />
             </div>
 
-            {/* Linha 1: Mandante x Visitante + Data/Hora */}
-            <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-3 items-end">
+            {/* Linha 1: Evento + Data/Hora */}
+            <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
               <div className="space-y-1.5">
-                <Label className={`block text-center uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.mandante ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                  Mandante {printFieldsNeedingReview.mandante && <span className="text-[9px]">⚠</span>}
+                <Label className={`block uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.evento ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                  Evento {printFieldsNeedingReview.evento && <span className="text-[9px]">⚠</span>}
                 </Label>
                 <Input
-                  value={mandante}
-                  onChange={(e) => setMandante(e.target.value.toUpperCase())}
-                  placeholder="REAL MADRID"
-                  className={`uppercase text-center h-10 ${printFieldsNeedingReview.mandante ? 'border-amber-500/50 focus:ring-amber-500/30' : ''}`}
-                />
-              </div>
-              <div className="flex items-center justify-center pb-1">
-                <span className="text-lg font-bold text-muted-foreground/60">×</span>
-              </div>
-              <div className="space-y-1.5">
-                <Label className={`block text-center uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.visitante ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                  Visitante {printFieldsNeedingReview.visitante && <span className="text-[9px]">⚠</span>}
-                </Label>
-                <Input
-                  value={visitante}
-                  onChange={(e) => setVisitante(e.target.value.toUpperCase())}
-                  placeholder="BARCELONA"
-                  className={`uppercase text-center h-10 ${printFieldsNeedingReview.visitante ? 'border-amber-500/50 focus:ring-amber-500/30' : ''}`}
+                  value={evento}
+                  onChange={(e) => setEvento(e.target.value.toUpperCase())}
+                  placeholder="Ex: REAL MADRID x BARCELONA, Over 2.5 - PSG"
+                  className={`uppercase h-10 ${printFieldsNeedingReview.evento ? 'border-amber-500/50 focus:ring-amber-500/30' : ''}`}
                 />
               </div>
               <div className={`space-y-1.5 min-w-[180px] ${printFieldsNeedingReview.dataHora ? '[&_button]:border-amber-500/50' : ''}`}>
