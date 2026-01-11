@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -11,14 +10,7 @@ import {
   Target,
   AlertTriangle,
   CheckCircle2,
-  ArrowUp,
-  ArrowDown,
-  Minus,
   BarChart3,
-  Lightbulb,
-  Calendar,
-  Zap,
-  Award,
   ThumbsUp,
   ThumbsDown,
   Building2
@@ -27,6 +19,13 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AnalisePorCasaSection } from "./AnalisePorCasaSection";
 import { useBookmakerAnalise } from "@/hooks/useBookmakerAnalise";
+import { PerdaCicloTooltip } from "./ciclos/PerdaCicloTooltip";
+
+interface PerdaDetalhe {
+  valor: number;
+  bookmaker_nome?: string;
+  categoria: string;
+}
 
 interface CicloData {
   id: string;
@@ -48,6 +47,7 @@ interface CicloData {
   lucro: number;  // Lucro real (líquido, após perdas)
   lucroBruto: number;
   perdasConfirmadas: number;
+  perdasDetalhes: PerdaDetalhe[];
   roi: number;
   // Métricas derivadas
   lucroPoAposta: number;
@@ -103,7 +103,7 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
           // Ajustar data fim para incluir o dia inteiro (timestamp com hora 23:59:59)
           const dataFimAjustada = `${dataFim}T23:59:59.999Z`;
           
-          const [apostasResult, perdasResult] = await Promise.all([
+          const [apostasResult, perdasResult, bookmakersResult] = await Promise.all([
             supabase
               .from("apostas_unificada")
               .select("lucro_prejuizo, stake, stake_total, status, forma_registro")
@@ -112,15 +112,22 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
               .lte("data_aposta", dataFimAjustada),
             supabase
               .from("projeto_perdas")
-              .select("valor, status")
+              .select("valor, status, categoria, bookmaker_id")
               .eq("projeto_id", projetoId)
               .eq("status", "CONFIRMADA")
               .gte("data_registro", ciclo.data_inicio)
               .lte("data_registro", dataFimAjustada),
+            supabase
+              .from("bookmakers")
+              .select("id, nome")
           ]);
 
           const apostas = apostasResult.data || [];
           const perdas = perdasResult.data || [];
+          const bookmakers = bookmakersResult.data || [];
+          
+          // Mapa de bookmaker ID -> nome
+          const bookmakerMap = new Map(bookmakers.map(b => [b.id, b.nome]));
 
           const qtdApostas = apostas.length;
           const volume = apostas.reduce((acc, a) => {
@@ -135,6 +142,13 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
             .reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
 
           const perdasConfirmadas = perdas.reduce((acc, p) => acc + p.valor, 0);
+          
+          // Detalhes das perdas para tooltip
+          const perdasDetalhes: PerdaDetalhe[] = perdas.map(p => ({
+            valor: p.valor,
+            categoria: p.categoria,
+            bookmaker_nome: p.bookmaker_id ? bookmakerMap.get(p.bookmaker_id) : undefined
+          }));
           
           // Para ciclos fechados, usar lucro_liquido do banco; para em andamento, calcular
           const lucroReal = ciclo.status === "FECHADO" 
@@ -154,6 +168,7 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
             lucro: lucroReal,
             lucroBruto: ciclo.status === "FECHADO" ? ciclo.lucro_bruto : lucroBrutoCalculado,
             perdasConfirmadas,
+            perdasDetalhes,
             roi,
             lucroPoAposta,
             lucroPor100Apostados,
@@ -470,10 +485,9 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
                   <th className="text-left p-2">Período</th>
                   <th className="text-right p-2">Apostas</th>
                   <th className="text-right p-2">Volume</th>
-                  <th className="text-right p-2">Ticket Médio</th>
                   <th className="text-right p-2">Lucro</th>
+                  <th className="text-right p-2">Perdas</th>
                   <th className="text-right p-2">ROI</th>
-                  <th className="text-right p-2">Lucro/Aposta</th>
                   <th className="text-center p-2">Status</th>
                 </tr>
               </thead>
@@ -486,14 +500,19 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
                     </td>
                     <td className="p-2 text-right">{ciclo.qtdApostas}</td>
                     <td className="p-2 text-right">{formatCurrency(ciclo.volume)}</td>
-                    <td className="p-2 text-right">{formatCurrency(ciclo.ticketMedio)}</td>
                     <td className={`p-2 text-right font-medium ${ciclo.lucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                       {formatCurrency(ciclo.lucro)}
+                    </td>
+                    <td className="p-2 text-right">
+                      <PerdaCicloTooltip
+                        totalPerdas={ciclo.perdasConfirmadas}
+                        perdas={ciclo.perdasDetalhes}
+                        formatCurrency={formatCurrency}
+                      />
                     </td>
                     <td className={`p-2 text-right ${ciclo.roi >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                       {ciclo.roi.toFixed(2)}%
                     </td>
-                    <td className="p-2 text-right">{formatCurrency(ciclo.lucroPoAposta)}</td>
                     <td className="p-2 text-center">
                       <Badge variant={ciclo.status === "FECHADO" ? "secondary" : "default"} className="text-xs">
                         {ciclo.status === "FECHADO" ? "Fechado" : "Em Andamento"}
