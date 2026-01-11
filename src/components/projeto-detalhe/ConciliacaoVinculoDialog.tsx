@@ -133,8 +133,11 @@ export function ConciliacaoVinculoDialog({
       // 4. Liberar o vínculo (com novo saldo já ajustado)
       const saldoFinalReal = temDiferenca ? saldoRealNum : saldoSistema;
       
-      if (saldoFinalReal > 0) {
-        // Com saldo: mover para AGUARDANDO_SAQUE
+      // Verificar se a casa está limitada
+      const isLimitada = vinculo.bookmaker_status.toUpperCase() === "LIMITADA";
+      
+      if (isLimitada) {
+        // Casa limitada: OBRIGATÓRIO ir para saque (independente do saldo)
         const { error } = await supabase
           .from("bookmakers")
           .update({
@@ -146,14 +149,33 @@ export function ConciliacaoVinculoDialog({
         if (error) throw error;
 
         toast.success(
-          `Vínculo liberado com saldo de ${formatCurrency(saldoFinalReal, vinculo.moeda)}. Alerta criado para tesouraria.`,
+          `Casa limitada liberada. Saque obrigatório de ${formatCurrency(saldoFinalReal, vinculo.moeda)}.`,
+          { duration: 5000 }
+        );
+      } else if (saldoFinalReal > 0) {
+        // Casa ativa com saldo: aguardar decisão do responsável
+        const { error } = await supabase
+          .from("bookmakers")
+          .update({
+            projeto_id: null,
+            status: "AGUARDANDO_DECISAO",
+          })
+          .eq("id", vinculo.id);
+
+        if (error) throw error;
+
+        toast.success(
+          `Vínculo liberado. Aguardando decisão da tesouraria sobre destino da casa.`,
           { duration: 5000 }
         );
       } else {
-        // Sem saldo: liberar normalmente
+        // Casa ativa sem saldo: disponibilizar diretamente
         const { error } = await supabase
           .from("bookmakers")
-          .update({ projeto_id: null })
+          .update({ 
+            projeto_id: null,
+            status: "ativo" 
+          })
           .eq("id", vinculo.id);
 
         if (error) throw error;

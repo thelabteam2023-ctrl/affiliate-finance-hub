@@ -708,6 +708,42 @@ export default function CentralOperacoes() {
     navigate("/caixa", { state: { openDialog: true, bookmakerId: casa.id, bookmakerNome: casa.nome } });
   };
 
+  // Marcar casa para saque (decisão do responsável)
+  const handleMarcarParaSaque = async (casa: BookmakerDesvinculado) => {
+    try {
+      const { error } = await supabase
+        .from("bookmakers")
+        .update({ status: "AGUARDANDO_SAQUE" })
+        .eq("id", casa.id);
+
+      if (error) throw error;
+      
+      toast.success(`"${casa.nome}" marcada para saque`);
+      fetchData(true);
+    } catch (err) {
+      console.error("Erro ao marcar para saque:", err);
+      toast.error("Erro ao marcar para saque");
+    }
+  };
+
+  // Disponibilizar casa para novos projetos (decisão do responsável)
+  const handleDisponibilizarCasa = async (casa: BookmakerDesvinculado) => {
+    try {
+      const { error } = await supabase
+        .from("bookmakers")
+        .update({ status: "ativo" })
+        .eq("id", casa.id);
+
+      if (error) throw error;
+      
+      toast.success(`"${casa.nome}" disponibilizada para novos projetos`);
+      fetchData(true);
+    } catch (err) {
+      console.error("Erro ao disponibilizar casa:", err);
+      toast.error("Erro ao disponibilizar casa");
+    }
+  };
+
   const handleAcknowledgeCasaDesvinculada = async (casa: BookmakerDesvinculado) => {
     try {
       const { error } = await supabase
@@ -920,27 +956,31 @@ export default function CentralOperacoes() {
       });
     }
 
-    // 4.6. Casas Desvinculadas - financial_event
-    if (casasDesvinculadas.length > 0 && allowedDomains.includes('financial_event')) {
+    // 4.6. Casas Aguardando Decisão - financial_event
+    // Separar casas por status: AGUARDANDO_DECISAO vs ATIVO (legado)
+    const casasAguardandoDecisao = casasDesvinculadas.filter(c => c.status === 'AGUARDANDO_DECISAO');
+    const casasAtivasDesvinculadas = casasDesvinculadas.filter(c => c.status === 'ATIVO');
+    
+    if (casasAguardandoDecisao.length > 0 && allowedDomains.includes('financial_event')) {
       cards.push({
-        id: "casas-desvinculadas",
+        id: "casas-aguardando-decisao",
         priority: PRIORITY.HIGH,
         domain: 'financial_event',
         component: (
-          <Card key="casas-desvinculadas" className="border-purple-500/30 bg-purple-500/5">
+          <Card key="casas-aguardando-decisao" className="border-purple-500/30 bg-purple-500/5">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Unlink className="h-4 w-4 text-purple-400" />
-                Casas Desvinculadas
-                <Badge className="ml-auto bg-purple-500/20 text-purple-400">{casasDesvinculadas.length}</Badge>
+                Casas Aguardando Decisão
+                <Badge className="ml-auto bg-purple-500/20 text-purple-400">{casasAguardandoDecisao.length}</Badge>
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
-                Casas sem projeto com saldo pendente
+                Definir destino: disponibilizar ou sacar
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-2">
-                {casasDesvinculadas.slice(0, 4).map((casa) => (
+                {casasAguardandoDecisao.slice(0, 4).map((casa) => (
                   <div key={casa.id} className="flex items-center justify-between p-2 rounded-lg border border-purple-500/30 bg-purple-500/10">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Unlink className="h-3.5 w-3.5 text-purple-400 shrink-0" />
@@ -956,8 +996,68 @@ export default function CentralOperacoes() {
                       <div className="flex gap-1">
                         <Button 
                           size="sm" 
-                          onClick={() => handleSolicitarSaqueCasaDesvinculada(casa)} 
+                          variant="outline"
+                          onClick={() => handleDisponibilizarCasa(casa)} 
+                          className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 h-6 text-xs px-2"
+                        >
+                          Disponibilizar
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleMarcarParaSaque(casa)} 
                           className="bg-purple-600 hover:bg-purple-700 h-6 text-xs px-2"
+                        >
+                          Marcar Saque
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
+    // Card legado para casas ativas desvinculadas (compatibilidade)
+    if (casasAtivasDesvinculadas.length > 0 && allowedDomains.includes('financial_event')) {
+      cards.push({
+        id: "casas-desvinculadas",
+        priority: PRIORITY.MEDIUM,
+        domain: 'financial_event',
+        component: (
+          <Card key="casas-desvinculadas" className="border-slate-500/30 bg-slate-500/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Unlink className="h-4 w-4 text-slate-400" />
+                Casas Desvinculadas
+                <Badge className="ml-auto bg-slate-500/20 text-slate-400">{casasAtivasDesvinculadas.length}</Badge>
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground">
+                Casas sem projeto com saldo pendente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {casasAtivasDesvinculadas.slice(0, 4).map((casa) => (
+                  <div key={casa.id} className="flex items-center justify-between p-2 rounded-lg border border-slate-500/30 bg-slate-500/10">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Unlink className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{casa.nome}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {casa.parceiro_nome || "Sem parceiro"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-slate-400">{formatCurrency(casa.saldo_efetivo, casa.moeda)}</span>
+                      <div className="flex gap-1">
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleSolicitarSaqueCasaDesvinculada(casa)} 
+                          className="bg-slate-600 hover:bg-slate-700 h-6 text-xs px-2"
                         >
                           Sacar
                         </Button>
@@ -965,7 +1065,7 @@ export default function CentralOperacoes() {
                           size="sm" 
                           variant="outline"
                           onClick={() => handleAcknowledgeCasaDesvinculada(casa)} 
-                          className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10 h-6 text-xs px-2"
+                          className="border-slate-500/30 text-slate-400 hover:bg-slate-500/10 h-6 text-xs px-2"
                         >
                           Ciente
                         </Button>
