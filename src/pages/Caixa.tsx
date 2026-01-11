@@ -25,6 +25,9 @@ interface LocationState {
   bookmakerNome?: string;
   parceiroId?: string;
   parceiroNome?: string;
+  tipoMoeda?: "FIAT" | "CRYPTO";
+  moeda?: string;
+  coin?: string;
 }
 
 interface Transacao {
@@ -94,6 +97,9 @@ export default function Caixa() {
     origemBookmakerNome?: string;
     destinoParceiroId?: string;
     destinoParceiroNome?: string;
+    tipoMoeda?: "FIAT" | "CRYPTO";
+    moeda?: string;
+    coin?: string;
   } | null>(null);
 
   // Hook centralizado de cotações
@@ -251,6 +257,9 @@ export default function Caixa() {
           origemBookmakerNome: locationState.bookmakerNome,
           destinoParceiroId: locationState.parceiroId,
           destinoParceiroNome: locationState.parceiroNome,
+          tipoMoeda: locationState.tipoMoeda,
+          moeda: locationState.moeda,
+          coin: locationState.coin,
         });
       }
       setDialogOpen(true);
@@ -621,6 +630,9 @@ export default function Caixa() {
         defaultTipoTransacao={dialogDefaultData?.tipoTransacao}
         defaultOrigemBookmakerId={dialogDefaultData?.origemBookmakerId}
         defaultDestinoParceiroId={dialogDefaultData?.destinoParceiroId}
+        defaultTipoMoeda={dialogDefaultData?.tipoMoeda}
+        defaultMoeda={dialogDefaultData?.moeda}
+        defaultCoin={dialogDefaultData?.coin}
       />
 
       {/* Dialog Confirmar Saque */}
