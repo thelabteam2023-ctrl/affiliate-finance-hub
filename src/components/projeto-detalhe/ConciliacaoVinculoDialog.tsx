@@ -136,50 +136,34 @@ export function ConciliacaoVinculoDialog({
       // Verificar se a casa está limitada
       const isLimitada = vinculo.bookmaker_status.toUpperCase() === "LIMITADA";
       
+      // Determinar o status final baseado nas regras de negócio:
+      // - Casa LIMITADA OU casa com saldo > 0: vai para AGUARDANDO_SAQUE (precisa sacar)
+      // - Casa ATIVA sem saldo: volta para ATIVO (disponível para novo vínculo)
+      const precisaSaque = isLimitada || saldoFinalReal > 0;
+      const novoStatus = precisaSaque ? "AGUARDANDO_SAQUE" : "ATIVO";
+      
+      const { error } = await supabase
+        .from("bookmakers")
+        .update({
+          projeto_id: null,
+          status: novoStatus,
+        })
+        .eq("id", vinculo.id);
+
+      if (error) throw error;
+
+      // Mensagem apropriada baseada no cenário
       if (isLimitada) {
-        // Casa limitada: OBRIGATÓRIO ir para saque (independente do saldo)
-        const { error } = await supabase
-          .from("bookmakers")
-          .update({
-            projeto_id: null,
-            status: "AGUARDANDO_SAQUE",
-          })
-          .eq("id", vinculo.id);
-
-        if (error) throw error;
-
         toast.success(
           `Casa limitada liberada. Saque obrigatório de ${formatCurrency(saldoFinalReal, vinculo.moeda)}.`,
           { duration: 5000 }
         );
       } else if (saldoFinalReal > 0) {
-        // Casa ativa com saldo: aguardar decisão do responsável
-        const { error } = await supabase
-          .from("bookmakers")
-          .update({
-            projeto_id: null,
-            status: "AGUARDANDO_DECISAO",
-          })
-          .eq("id", vinculo.id);
-
-        if (error) throw error;
-
         toast.success(
-          `Vínculo liberado. Aguardando decisão da tesouraria sobre destino da casa.`,
+          `Vínculo liberado. Casa com saldo de ${formatCurrency(saldoFinalReal, vinculo.moeda)} aguardando saque.`,
           { duration: 5000 }
         );
       } else {
-        // Casa ativa sem saldo: disponibilizar diretamente
-        const { error } = await supabase
-          .from("bookmakers")
-          .update({ 
-            projeto_id: null,
-            status: "ativo" 
-          })
-          .eq("id", vinculo.id);
-
-        if (error) throw error;
-
         toast.success("Vínculo conciliado e liberado com sucesso");
       }
 
