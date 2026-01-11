@@ -887,8 +887,8 @@ export default function CentralOperacoes() {
                 Saques Pendentes de Processamento
                 <CardInfoTooltip 
                   title="Saques Pendentes de Processamento"
-                  description="Bookmakers com status 'Aguardando Saque' que precisam ter o saque processado pela tesouraria."
-                  flow="Casas limitadas desvinculadas de projetos vão diretamente para cá, pois o saque é obrigatório."
+                  description="Bookmakers marcados para saque que aguardam a tesouraria processar a retirada do saldo."
+                  flow="Uma casa chega aqui quando: (1) Foi desvinculada de um projeto e estava marcada como 'limitada' — nesse caso o saque é automático; ou (2) Estava em 'Casas Aguardando Decisão' e o gestor escolheu 'Marcar para Saque'."
                 />
                 <Badge className="ml-auto bg-emerald-500/20 text-emerald-400">{alertasSaques.length}</Badge>
               </CardTitle>
