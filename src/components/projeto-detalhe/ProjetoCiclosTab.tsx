@@ -24,7 +24,8 @@ import {
   ShieldAlert,
   ChevronDown,
   Ban,
-  Lock
+  Lock,
+  ChevronUp
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -32,12 +33,11 @@ import { CicloDialog } from "./CicloDialog";
 import { ComparativoCiclosTab } from "./ComparativoCiclosTab";
 import { FecharCicloConfirmDialog } from "./FecharCicloConfirmDialog";
 import { useCicloActions } from "@/hooks/useCicloActions";
-import { CicloFilters, CicloFilterStatus, CicloFilterTipo } from "./ciclos/CicloFilters";
+import { CicloFiltersSimplified, CicloStatusFilter, CicloTipoFilter } from "./ciclos/CicloFiltersSimplified";
 import { 
   sortCiclosOperacional, 
   getCicloRealStatus, 
-  isMetaPrazo, 
-  useCicloCounts 
+  isMetaPrazo
 } from "./ciclos/useCicloSorting";
 import { CicloDuracao, CicloMetaDiaria } from "./ciclos/CicloDuracaoMetaDiaria";
 
@@ -118,12 +118,20 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
   const [encerrandoPorMeta, setEncerrandoPorMeta] = useState<string | null>(null);
   const { encerrarPorMeta } = useCicloActions();
   
-  // Filtros
-  const [statusFilter, setStatusFilter] = useState<CicloFilterStatus>("TODOS");
-  const [tipoFilter, setTipoFilter] = useState<CicloFilterTipo>("TODOS");
+  // Filtros simplificados - default é ATIVO
+  const [statusFilter, setStatusFilter] = useState<CicloStatusFilter>("ATIVO");
+  const [tipoFilter, setTipoFilter] = useState<CicloTipoFilter>("TODOS");
   
-  // Contagens para filtros
-  const counts = useCicloCounts(ciclos);
+  // Controle de exibição expandida
+  const [showAllCycles, setShowAllCycles] = useState(false);
+  
+  // Encontrar ciclo ativo atual
+  const cicloAtivo = useMemo(() => {
+    return ciclos.find(c => {
+      const realStatus = getCicloRealStatus(c);
+      return realStatus === "EM_ANDAMENTO";
+    });
+  }, [ciclos]);
   
   // Ciclos ordenados e filtrados
   const ciclosFiltrados = useMemo(() => {
@@ -131,28 +139,44 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
     let resultado = sortCiclosOperacional(ciclos);
     
     // Filtrar por status
-    if (statusFilter !== "TODOS") {
-      resultado = resultado.filter(ciclo => {
-        const realStatus = getCicloRealStatus(ciclo);
-        if (statusFilter === "FUTURO") return realStatus === "FUTURO";
-        if (statusFilter === "EM_ANDAMENTO") return realStatus === "EM_ANDAMENTO";
-        if (statusFilter === "FECHADO") return realStatus === "FECHADO";
-        return true;
-      });
-    }
+    resultado = resultado.filter(ciclo => {
+      const realStatus = getCicloRealStatus(ciclo);
+      if (statusFilter === "FUTURO") return realStatus === "FUTURO";
+      if (statusFilter === "ATIVO") return realStatus === "EM_ANDAMENTO";
+      if (statusFilter === "CONCLUIDO") return realStatus === "FECHADO";
+      return true;
+    });
     
     // Filtrar por tipo
     if (tipoFilter !== "TODOS") {
       resultado = resultado.filter(ciclo => {
         if (tipoFilter === "META_PRAZO") return isMetaPrazo(ciclo);
         if (tipoFilter === "META") return (ciclo.tipo_gatilho === "META" || ciclo.tipo_gatilho === "VOLUME") && !isMetaPrazo(ciclo);
-        if (tipoFilter === "TEMPO") return ciclo.tipo_gatilho === "TEMPO";
+        if (tipoFilter === "PRAZO") return ciclo.tipo_gatilho === "TEMPO";
         return true;
       });
     }
     
     return resultado;
   }, [ciclos, statusFilter, tipoFilter]);
+  
+  // Ciclos a exibir (com controle de expansão)
+  const ciclosParaExibir = useMemo(() => {
+    // Se filtro não é ATIVO, mostrar todos do filtro
+    if (statusFilter !== "ATIVO") {
+      return ciclosFiltrados;
+    }
+    
+    // Se está expandido, mostrar todos
+    if (showAllCycles) {
+      return ciclosFiltrados;
+    }
+    
+    // Por padrão, mostrar apenas 1 ciclo ativo
+    return ciclosFiltrados.slice(0, 1);
+  }, [ciclosFiltrados, showAllCycles, statusFilter]);
+  
+  const hasMoreCycles = statusFilter === "ATIVO" && ciclosFiltrados.length > 1;
 
   useEffect(() => {
     fetchCiclos();
@@ -468,14 +492,16 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
           </div>
         </div>
 
-        {/* Filtros rápidos */}
+        {/* Filtros simplificados */}
         {ciclos.length > 0 && (
-          <CicloFilters
-            activeStatusFilter={statusFilter}
-            activeTipoFilter={tipoFilter}
-            onStatusFilterChange={setStatusFilter}
-            onTipoFilterChange={setTipoFilter}
-            counts={counts}
+          <CicloFiltersSimplified
+            activeStatus={statusFilter}
+            activeTipo={tipoFilter}
+            onStatusChange={(status) => {
+              setStatusFilter(status);
+              setShowAllCycles(false); // Reset ao trocar filtro
+            }}
+            onTipoChange={setTipoFilter}
           />
         )}
 
@@ -504,17 +530,18 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
             <Button 
               variant="outline" 
               onClick={() => {
-                setStatusFilter("TODOS");
+                setStatusFilter("ATIVO");
                 setTipoFilter("TODOS");
               }}
             >
-              Limpar filtros
+              Ver ciclos ativos
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {ciclosFiltrados.map((ciclo) => {
+        <div className="space-y-4">
+          <div className="grid gap-4">
+          {ciclosParaExibir.map((ciclo) => {
             const diasRestantes = getDiasRestantes(ciclo.data_fim_prevista);
             const isAtrasado = ciclo.status === "EM_ANDAMENTO" && diasRestantes < 0;
             const realTimeMetrics = cicloMetrics[ciclo.id];
@@ -898,6 +925,31 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
               </Card>
             );
           })}
+          </div>
+          
+          {/* Botão Ver mais/menos ciclos */}
+          {hasMoreCycles && (
+            <div className="flex justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowAllCycles(!showAllCycles)}
+              >
+                {showAllCycles ? (
+                  <>
+                    <ChevronUp className="h-4 w-4" />
+                    Ver menos ciclos
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-4 w-4" />
+                    Ver mais {ciclosFiltrados.length - 1} ciclo{ciclosFiltrados.length > 2 ? 's' : ''}
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
