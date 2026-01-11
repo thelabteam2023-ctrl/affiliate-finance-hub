@@ -9,6 +9,7 @@ export interface FreebetRecebidaCompleta {
   parceiro_nome: string | null;
   logo_url: string | null;
   valor: number;
+  moeda: string; // CRÍTICO: moeda da freebet (herdada da bookmaker)
   motivo: string;
   data_recebida: string;
   data_validade: string | null;
@@ -70,10 +71,10 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
       let query = supabase
         .from("freebets_recebidas")
         .select(`
-          id, bookmaker_id, valor, motivo, data_recebida, data_validade,
+          id, bookmaker_id, valor, moeda_operacao, motivo, data_recebida, data_validade,
           utilizada, data_utilizacao, aposta_id, status, origem, qualificadora_id,
           bookmakers!freebets_recebidas_bookmaker_id_fkey (
-            nome, parceiro_id,
+            nome, moeda, parceiro_id,
             parceiros!bookmakers_parceiro_id_fkey (nome),
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
           )
@@ -107,6 +108,8 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
           parceiro_nome: fb.bookmakers?.parceiros?.nome || null,
           logo_url: fb.bookmakers?.bookmakers_catalogo?.logo_url || null,
           valor: fb.valor,
+          // CRÍTICO: moeda_operacao tem prioridade, fallback para moeda da bookmaker
+          moeda: fb.moeda_operacao || fb.bookmakers?.moeda || "BRL",
           motivo: fb.motivo,
           data_recebida: fb.data_recebida,
           data_validade: fb.data_validade,

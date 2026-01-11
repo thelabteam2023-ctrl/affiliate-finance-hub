@@ -55,6 +55,7 @@ import {
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
+import { GerouFreebetInput } from "./GerouFreebetInput";
 
 interface Aposta {
   id: string;
@@ -1811,6 +1812,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   };
 
   // Função para registrar freebet gerada (com apostaId opcional para edição)
+  // REGRA CRÍTICA: Freebet NÃO tem moeda própria - herda da bookmaker onde foi gerada
   const registrarFreebetGerada = async (
     bookmakerIdFreebet: string, 
     valor: number, 
@@ -1831,24 +1833,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         status = resultadoAposta === "VOID" ? "NAO_LIBERADA" : "LIBERADA";
       }
 
-      // Só incrementar saldo_freebet se a freebet for liberada (GREEN)
-      if (status === "LIBERADA") {
-        const { data: bookmaker } = await supabase
-          .from("bookmakers")
-          .select("saldo_freebet")
-          .eq("id", bookmakerIdFreebet)
-          .maybeSingle();
+      // Buscar a moeda da bookmaker - CRÍTICO para multimoeda
+      const { data: bookmaker } = await supabase
+        .from("bookmakers")
+        .select("saldo_freebet, moeda")
+        .eq("id", bookmakerIdFreebet)
+        .maybeSingle();
 
-        if (bookmaker) {
-          const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_freebet: novoSaldoFreebet })
-            .eq("id", bookmakerIdFreebet);
-        }
+      const moedaOperacao = bookmaker?.moeda || "BRL";
+
+      // Só incrementar saldo_freebet se a freebet for liberada
+      if (status === "LIBERADA" && bookmaker) {
+        const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
+        await supabase
+          .from("bookmakers")
+          .update({ saldo_freebet: novoSaldoFreebet })
+          .eq("id", bookmakerIdFreebet);
       }
 
-      // Registrar na tabela freebets_recebidas com status apropriado
+      // Registrar na tabela freebets_recebidas com status e MOEDA da bookmaker
       await supabase
         .from("freebets_recebidas")
         .insert({
@@ -1857,7 +1860,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           projeto_id: projetoId,
           bookmaker_id: bookmakerIdFreebet,
           valor: valor,
+          moeda_operacao: moedaOperacao, // CRÍTICO: herda moeda da bookmaker
           motivo: "Aposta qualificadora",
+          origem: "QUALIFICADORA",
+          qualificadora_id: apostaId || null,
           data_recebida: new Date().toISOString(),
           utilizada: false,
           aposta_id: apostaId || null,
@@ -2307,7 +2313,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             
             {/* Estado: Print carregado - Compacto */}
             {!isPrintProcessing && printParsedData && printImagePreview && !aposta && (
-              <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+              <div className="flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
                 {/* Miniatura - clicável para ampliar */}
                 <Dialog>
                   <DialogTrigger asChild>
@@ -2331,10 +2337,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   </DialogContent>
                 </Dialog>
                 
-                {/* Badge de sucesso */}
-                <div className="flex items-center gap-1 flex-1">
+                {/* Badge de sucesso - centralizado */}
+                <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className="text-[10px] text-emerald-400 font-medium">Print importado</span>
+                  <span className="text-xs text-emerald-400 font-medium">Print importado</span>
                 </div>
                 
                 {/* Botão limpar */}
@@ -3544,68 +3550,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </div>
             )}
 
-            {/* Freebet Gerada - design moderno com toggle pill */}
+            {/* Freebet Gerada - Componente padronizado com suporte multimoeda */}
             {/* Disponível para: Bookmaker (sem usar freebet), Exchange Back/Lay (sem usar freebet) - NÃO para Cobertura (tem toggle interno) */}
             {((tipoAposta === "bookmaker" && !usarFreebetBookmaker) || 
               (tipoAposta === "exchange" && tipoOperacaoExchange !== "cobertura" && tipoApostaExchangeBack === "normal" && tipoApostaBack === "normal")) && (
-              <div className={`flex items-center justify-between py-3 px-4 rounded-lg transition-all duration-200 ${
-                gerouFreebet 
-                  ? "bg-gradient-to-r from-emerald-500/15 to-emerald-500/5 border border-emerald-500/40" 
-                  : "bg-muted/20 border border-border/40 hover:border-border/60 hover:bg-muted/30"
-              }`}>
-                <button
-                  type="button"
-                  onClick={() => setGerouFreebet(!gerouFreebet)}
-                  className="flex items-center gap-3 group"
-                >
-                  {/* Toggle pill moderno */}
-                  <div className={`relative w-10 h-[22px] rounded-full transition-all duration-200 ${
-                    gerouFreebet 
-                      ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" 
-                      : "bg-muted-foreground/30"
-                  }`}>
-                    <div className={`absolute top-[3px] w-4 h-4 rounded-full bg-white shadow-md transition-all duration-200 ${
-                      gerouFreebet 
-                        ? "left-[21px]" 
-                        : "left-[3px]"
-                    }`} />
-                  </div>
-                  
-                  {/* Label com ícone */}
-                  <div className="flex items-center gap-2">
-                    <Gift className={`h-4 w-4 transition-colors ${
-                      gerouFreebet 
-                        ? "text-emerald-400" 
-                        : "text-muted-foreground"
-                    }`} />
-                    <span className={`text-sm font-medium transition-colors ${
-                      gerouFreebet 
-                        ? "text-emerald-400" 
-                        : "text-foreground/80 group-hover:text-foreground"
-                    }`}>
-                      Gerou Freebet
-                    </span>
-                  </div>
-                </button>
-                
-                {/* Input de valor com animação */}
-                <div className={`flex items-center gap-2 overflow-hidden transition-all duration-200 ${
-                  gerouFreebet 
-                    ? "opacity-100 max-w-[130px]" 
-                    : "opacity-0 max-w-0"
-                }`}>
-                  <span className="text-xs text-emerald-400/80 whitespace-nowrap font-medium">R$</span>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={valorFreebetGerada}
-                    onChange={(e) => setValorFreebetGerada(e.target.value)}
-                    placeholder="0.00"
-                    className="h-8 w-24 text-sm text-center px-2 bg-background/60 border-emerald-500/40 focus:border-emerald-500/60"
-                  />
-                </div>
-              </div>
+              <GerouFreebetInput
+                gerouFreebet={gerouFreebet}
+                onGerouFreebetChange={setGerouFreebet}
+                valorFreebetGerada={valorFreebetGerada}
+                onValorFreebetGeradaChange={setValorFreebetGerada}
+                moeda={getSelectedBookmakerMoeda()}
+              />
             )}
           </div>
 
