@@ -242,9 +242,21 @@ DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com
     console.log("AI Response:", content);
 
     // Normalizar ODD/STAKE para um formato numérico consistente
-    const normalizeNumericString = (raw: string | null): string | null => {
-      if (!raw) return null;
-      const match = raw.replace(/\s+/g, "").match(/-?\d[\d.,]*/);
+    // Handles both string and number inputs from AI response
+    const normalizeNumericString = (raw: string | number | null | undefined): string | null => {
+      if (raw === null || raw === undefined) return null;
+      
+      // If it's already a number, just format it
+      if (typeof raw === 'number') {
+        if (!Number.isFinite(raw)) return null;
+        return raw.toFixed(2);
+      }
+      
+      // If it's not a string at this point, convert it
+      const rawStr = String(raw);
+      if (!rawStr) return null;
+      
+      const match = rawStr.replace(/\s+/g, "").match(/-?\d[\d.,]*/);
       if (!match) return null;
 
       let s = match[0];
