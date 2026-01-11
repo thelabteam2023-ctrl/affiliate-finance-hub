@@ -51,6 +51,7 @@ import { DuploGreenStatisticsCard } from "./DuploGreenStatisticsCard";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
@@ -154,6 +155,9 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   
   // Hook de formatação de moeda do projeto
   const { formatCurrency } = useProjetoCurrency(projetoId);
+  
+  // Hook global de logos de bookmakers (busca do catálogo)
+  const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [surebetDialogOpen, setSurebetDialogOpen] = useState(false);
   const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
@@ -494,30 +498,51 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       .slice(0, 8);
   }, [apostas]);
 
-  // Mapa de logos por nome do catálogo (case-insensitive)
+  // Mapa de logos combinando catálogo global + bookmakers do projeto
   const logoMap = useMemo(() => {
     const map = new Map<string, string | null>();
+    
+    if (catalogLogoMap) {
+      for (const [key, value] of catalogLogoMap.entries()) {
+        map.set(key, value);
+      }
+    }
+    
     bookmakers.forEach(bk => {
-      // Extract base name (before " - ") for the logo mapping
       const nomeParts = bk.nome.split(" - ");
-      const baseName = nomeParts[0].trim().toUpperCase();
+      const baseName = nomeParts[0].trim().toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
       const logoUrl = bk.bookmakers_catalogo?.logo_url || null;
       if (logoUrl && !map.has(baseName)) {
         map.set(baseName, logoUrl);
       }
     });
+    
     return map;
-  }, [bookmakers]);
+  }, [bookmakers, catalogLogoMap]);
 
-  const getLogoUrl = (casaName: string) => {
-    const upperName = casaName.toUpperCase();
-    if (logoMap.has(upperName)) return logoMap.get(upperName);
-    // Try partial match
-    for (const [key, value] of logoMap.entries()) {
-      if (upperName.includes(key) || key.includes(upperName)) return value;
+  const getLogoUrl = useCallback((casaName: string): string | null => {
+    if (!casaName || logoMap.size === 0) return null;
+    
+    const normalizedInput = casaName
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+    
+    if (logoMap.has(normalizedInput)) {
+      return logoMap.get(normalizedInput) ?? null;
     }
+    
+    for (const [key, value] of logoMap.entries()) {
+      if (normalizedInput.includes(key) || key.includes(normalizedInput)) {
+        return value ?? null;
+      }
+    }
+    
     return null;
-  };
+  }, [logoMap]);
 
   // Separar apostas em abertas e histórico
   const apostasAbertas = useMemo(() => apostas.filter(a => !a.resultado || a.resultado === "PENDENTE"), [apostas]);

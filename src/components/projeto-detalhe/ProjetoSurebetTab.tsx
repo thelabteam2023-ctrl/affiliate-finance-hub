@@ -49,6 +49,7 @@ import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { useOperationalFiltersOptional, type EstrategiaFilter } from "@/contexts/OperationalFiltersContext";
 import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
@@ -176,6 +177,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+
+  // Hook global de logos de bookmakers (busca do catálogo)
+  const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
 
   // Hook de formatação de moeda do projeto
   const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol } = useProjetoCurrency(projetoId);
@@ -632,30 +636,57 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       .slice(0, 8);
   }, [filteredSurebets]);
 
-  // Mapa de logos por nome do catálogo (case-insensitive)
+  // Mapa de logos combinando catálogo global + bookmakers do projeto
+  // Prioridade: catálogo global (mais completo e confiável)
   const logoMap = useMemo(() => {
     const map = new Map<string, string | null>();
+    
+    // 1. Primeiro, adiciona logos do catálogo global
+    if (catalogLogoMap) {
+      for (const [key, value] of catalogLogoMap.entries()) {
+        map.set(key, value);
+      }
+    }
+    
+    // 2. Adiciona logos dos bookmakers do projeto (fallback)
     bookmakers.forEach(bk => {
       const nomeParts = bk.nome.split(" - ");
-      const baseName = nomeParts[0].trim().toUpperCase();
+      const baseName = nomeParts[0].trim().toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
       const logoUrl = bk.bookmakers_catalogo?.logo_url || null;
       if (logoUrl && !map.has(baseName)) {
         map.set(baseName, logoUrl);
       }
     });
+    
     return map;
-  }, [bookmakers]);
+  }, [bookmakers, catalogLogoMap]);
 
-  const getLogoUrl = (casaName: string) => {
-    const upperName = casaName.toUpperCase();
-    if (logoMap.has(upperName)) return logoMap.get(upperName);
-    for (const [key, value] of logoMap.entries()) {
-      if (upperName.includes(key) || key.includes(upperName)) return value;
+  // Função helper para buscar logo por nome da casa
+  const getLogoUrl = useCallback((casaName: string): string | null => {
+    if (!casaName || logoMap.size === 0) return null;
+    
+    const normalizedInput = casaName
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+    
+    // Match exato
+    if (logoMap.has(normalizedInput)) {
+      return logoMap.get(normalizedInput) ?? null;
     }
+    
+    // Match parcial
+    for (const [key, value] of logoMap.entries()) {
+      if (normalizedInput.includes(key) || key.includes(normalizedInput)) {
+        return value ?? null;
+      }
+    }
+    
     return null;
-  };
-
-  // Ordenar casaData conforme filtro selecionado
+  }, [logoMap]);
   const casaDataSorted = useMemo(() => {
     return [...casaData].sort((a, b) => {
       switch (porCasaSort) {

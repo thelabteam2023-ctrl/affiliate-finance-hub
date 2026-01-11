@@ -234,15 +234,38 @@ function CasasMaisUtilizadasCard({ casas, accentColor, logoMap, formatCurrency }
     [casas]
   );
 
-  const getLogoUrl = (casaName: string) => {
+  // Normaliza nome para comparação: remove acentos, espaços extras, caracteres especiais
+  const normalizeName = (name: string): string => {
+    return name
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // remove acentos
+      .replace(/[^A-Z0-9]/g, "") // mantém apenas letras e números
+      .trim();
+  };
+
+  const getLogoUrl = (casaName: string): string | null | undefined => {
     if (!logoMap) return null;
-    // Try exact match first
-    if (logoMap.has(casaName)) return logoMap.get(casaName);
-    // Try case-insensitive match
-    const upperName = casaName.toUpperCase();
+    
+    const normalizedInput = normalizeName(casaName);
+    
+    // 1. Tentar match exato normalizado
     for (const [key, value] of logoMap.entries()) {
-      if (key.toUpperCase() === upperName) return value;
+      if (normalizeName(key) === normalizedInput) return value;
     }
+    
+    // 2. Tentar match parcial (um contém o outro)
+    for (const [key, value] of logoMap.entries()) {
+      const normalizedKey = normalizeName(key);
+      if (normalizedInput.includes(normalizedKey) || normalizedKey.includes(normalizedInput)) {
+        return value;
+      }
+    }
+    
+    // 3. Fallback: tentar logo_url direto da casa se disponível
+    const casa = casas.find(c => c.casa === casaName);
+    if (casa?.logo_url) return casa.logo_url;
+    
     return null;
   };
 
@@ -503,6 +526,35 @@ export function VisaoGeralCharts({
       }
     });
 
+    // Função helper para buscar logo do logoMap
+    const findLogoForCasa = (casaName: string): string | null => {
+      if (!logoMap) return null;
+      
+      const normalizeName = (name: string): string => {
+        return name
+          .toUpperCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^A-Z0-9]/g, "")
+          .trim();
+      };
+      
+      const normalizedInput = normalizeName(casaName);
+      
+      for (const [key, value] of logoMap.entries()) {
+        if (normalizeName(key) === normalizedInput) return value ?? null;
+      }
+      
+      for (const [key, value] of logoMap.entries()) {
+        const normalizedKey = normalizeName(key);
+        if (normalizedInput.includes(normalizedKey) || normalizedKey.includes(normalizedInput)) {
+          return value ?? null;
+        }
+      }
+      
+      return null;
+    };
+
     return Array.from(casaMap.entries()).map(([casa, data]) => {
       const roi = data.volume > 0 ? (data.lucro / data.volume) * 100 : 0;
       return {
@@ -511,6 +563,7 @@ export function VisaoGeralCharts({
         volume: data.volume,
         lucro: data.lucro,
         roi,
+        logo_url: findLogoForCasa(casa),
         vinculos: Array.from(data.vinculos.entries()).map(([vinculo, v]) => {
           const vinculoRoi = v.volume > 0 ? (v.lucro / v.volume) * 100 : 0;
           return {
@@ -523,7 +576,7 @@ export function VisaoGeralCharts({
         }).sort((a, b) => b.volume - a.volume),
       };
     });
-  }, [apostas]);
+  }, [apostas, logoMap]);
 
   const lastAccumulated = evolucaoData[evolucaoData.length - 1]?.acumulado ?? 0;
   const isPositive = lastAccumulated >= 0;
