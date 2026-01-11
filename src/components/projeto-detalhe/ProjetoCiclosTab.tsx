@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,14 @@ import { CicloDialog } from "./CicloDialog";
 import { ComparativoCiclosTab } from "./ComparativoCiclosTab";
 import { FecharCicloConfirmDialog } from "./FecharCicloConfirmDialog";
 import { useCicloActions } from "@/hooks/useCicloActions";
+import { CicloFilters, CicloFilterStatus, CicloFilterTipo } from "./ciclos/CicloFilters";
+import { 
+  sortCiclosOperacional, 
+  getCicloRealStatus, 
+  isMetaPrazo, 
+  useCicloCounts 
+} from "./ciclos/useCicloSorting";
+import { CicloDuracao, CicloMetaDiaria } from "./ciclos/CicloDuracaoMetaDiaria";
 
 interface Ciclo {
   id: string;
@@ -109,6 +117,42 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
   const [projetoNome, setProjetoNome] = useState("");
   const [encerrandoPorMeta, setEncerrandoPorMeta] = useState<string | null>(null);
   const { encerrarPorMeta } = useCicloActions();
+  
+  // Filtros
+  const [statusFilter, setStatusFilter] = useState<CicloFilterStatus>("TODOS");
+  const [tipoFilter, setTipoFilter] = useState<CicloFilterTipo>("TODOS");
+  
+  // Contagens para filtros
+  const counts = useCicloCounts(ciclos);
+  
+  // Ciclos ordenados e filtrados
+  const ciclosFiltrados = useMemo(() => {
+    // Primeiro ordenar
+    let resultado = sortCiclosOperacional(ciclos);
+    
+    // Filtrar por status
+    if (statusFilter !== "TODOS") {
+      resultado = resultado.filter(ciclo => {
+        const realStatus = getCicloRealStatus(ciclo);
+        if (statusFilter === "FUTURO") return realStatus === "FUTURO";
+        if (statusFilter === "EM_ANDAMENTO") return realStatus === "EM_ANDAMENTO";
+        if (statusFilter === "FECHADO") return realStatus === "FECHADO";
+        return true;
+      });
+    }
+    
+    // Filtrar por tipo
+    if (tipoFilter !== "TODOS") {
+      resultado = resultado.filter(ciclo => {
+        if (tipoFilter === "META_PRAZO") return isMetaPrazo(ciclo);
+        if (tipoFilter === "META") return (ciclo.tipo_gatilho === "META" || ciclo.tipo_gatilho === "VOLUME") && !isMetaPrazo(ciclo);
+        if (tipoFilter === "TEMPO") return ciclo.tipo_gatilho === "TEMPO";
+        return true;
+      });
+    }
+    
+    return resultado;
+  }, [ciclos, statusFilter, tipoFilter]);
 
   useEffect(() => {
     fetchCiclos();
@@ -272,7 +316,20 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
   };
 
 
-  const getStatusBadge = (status: string, gatilhoFechamento?: string | null) => {
+  const getStatusBadge = (status: string, gatilhoFechamento?: string | null, ciclo?: Ciclo) => {
+    // Verificar se é um ciclo futuro (data_inicio > hoje)
+    if (ciclo && status === "EM_ANDAMENTO") {
+      const realStatus = getCicloRealStatus(ciclo);
+      if (realStatus === "FUTURO") {
+        return (
+          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+            <Clock className="h-3 w-3 mr-1" />
+            Futuro
+          </Badge>
+        );
+      }
+    }
+    
     switch (status) {
       case "EM_ANDAMENTO":
         return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30"><Play className="h-3 w-3 mr-1" />Em Andamento</Badge>;
@@ -402,12 +459,25 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
       </div>
 
       <TabsContent value="ciclos" className="space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold">Ciclos de Apuração</h3>
-          <p className="text-sm text-muted-foreground">
-            Períodos de apuração financeira (por tempo ou volume)
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">Ciclos de Apuração</h3>
+            <p className="text-sm text-muted-foreground">
+              Períodos de apuração financeira (por tempo ou volume)
+            </p>
+          </div>
         </div>
+
+        {/* Filtros rápidos */}
+        {ciclos.length > 0 && (
+          <CicloFilters
+            activeStatusFilter={statusFilter}
+            activeTipoFilter={tipoFilter}
+            onStatusFilterChange={setStatusFilter}
+            onTipoFilterChange={setTipoFilter}
+            counts={counts}
+          />
+        )}
 
       {ciclos.length === 0 ? (
         <Card>
@@ -423,9 +493,28 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
             </Button>
           </CardContent>
         </Card>
+      ) : ciclosFiltrados.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+            <h4 className="text-lg font-medium mb-2">Nenhum ciclo encontrado</h4>
+            <p className="text-muted-foreground text-center mb-4">
+              Nenhum ciclo corresponde aos filtros selecionados
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setStatusFilter("TODOS");
+                setTipoFilter("TODOS");
+              }}
+            >
+              Limpar filtros
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4">
-          {ciclos.map((ciclo) => {
+          {ciclosFiltrados.map((ciclo) => {
             const diasRestantes = getDiasRestantes(ciclo.data_fim_prevista);
             const isAtrasado = ciclo.status === "EM_ANDAMENTO" && diasRestantes < 0;
             const realTimeMetrics = cicloMetrics[ciclo.id];
@@ -452,19 +541,30 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                             </Badge>
                           )}
                         </div>
-                        <CardDescription className="flex items-center gap-2">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(ciclo.data_inicio), "dd/MM/yyyy", { locale: ptBR })} - {format(new Date(ciclo.data_fim_prevista), "dd/MM/yyyy", { locale: ptBR })}
+                        <CardDescription className="flex flex-wrap items-center gap-2">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(ciclo.data_inicio), "dd/MM/yyyy", { locale: ptBR })} - {format(new Date(ciclo.data_fim_prevista), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                          <CicloDuracao ciclo={ciclo} formatCurrency={formatCurrency} />
                         </CardDescription>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusBadge(ciclo.status, ciclo.gatilho_fechamento)}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {getStatusBadge(ciclo.status, ciclo.gatilho_fechamento, ciclo)}
                       {ciclo.status === "EM_ANDAMENTO" && ciclo.tipo_gatilho === "TEMPO" && (
                         <Badge variant="outline" className={isAtrasado ? "text-amber-400 border-amber-500/50" : ""}>
                           <Clock className="h-3 w-3 mr-1" />
                           {isAtrasado ? `${Math.abs(diasRestantes)} dias atrasado` : `${diasRestantes} dias restantes`}
                         </Badge>
+                      )}
+                      {/* Meta diária para ciclos Meta + Prazo em andamento */}
+                      {ciclo.status === "EM_ANDAMENTO" && ciclo.tipo_gatilho === "META" && ciclo.meta_volume && temDataLimite && (
+                        <CicloMetaDiaria 
+                          ciclo={ciclo} 
+                          valorAtual={valorAtual} 
+                          formatCurrency={formatCurrency} 
+                        />
                       )}
                     </div>
                   </div>
