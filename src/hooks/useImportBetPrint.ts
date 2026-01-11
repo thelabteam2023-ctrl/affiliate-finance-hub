@@ -5,7 +5,8 @@ import {
   findCanonicalMarket, 
   normalizeSport, 
   resolveMarketToOptions,
-  getMarketsForSport
+  getMarketsForSport,
+  normalizeMarketSemantically
 } from "@/lib/marketNormalizer";
 
 export interface ParsedField {
@@ -161,27 +162,49 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
           }
         }
         
-        // Normalize market and store intention for later resolution
+        // Normalize market using semantic normalization
         if (rawData.mercado?.value) {
           const marketRaw = rawData.mercado.value;
+          const sportDetected = rawData.esporte?.value || "Outro";
+          
+          // Use semantic normalization which considers sport context
+          const semanticResult = normalizeMarketSemantically({
+            sport: sportDetected,
+            marketLabel: marketRaw,
+            // If we have selection info, we could pass it here
+            selections: rawData.selecao?.value ? [rawData.selecao.value] : undefined
+          });
+          
+          // Also get the canonical result for fallback
           const canonicalResult = findCanonicalMarket(marketRaw);
+          
+          // Use semantic result display name if it's better than "Outro"
+          const resolvedMarket = semanticResult.canonicalType !== "OTHER" 
+            ? semanticResult.displayName 
+            : canonicalResult.normalized;
           
           // Store the intention for later resolution
           setPendingData({
-            mercadoIntencao: canonicalResult.normalized,
+            mercadoIntencao: resolvedMarket,
             mercadoRaw: marketRaw,
-            esporteDetectado: rawData.esporte?.value || null
+            esporteDetectado: sportDetected
           });
           
           // Set the normalized value
-          rawData.mercado.value = canonicalResult.normalized;
+          rawData.mercado.value = resolvedMarket;
           
           // Adjust confidence based on normalization
-          if (canonicalResult.confidence === "low") {
+          const effectiveConfidence = semanticResult.canonicalType !== "OTHER" 
+            ? semanticResult.confidence 
+            : canonicalResult.confidence;
+            
+          if (effectiveConfidence === "low") {
             rawData.mercado.confidence = "low";
-          } else if (canonicalResult.confidence === "medium" && rawData.mercado.confidence === "high") {
+          } else if (effectiveConfidence === "medium" && rawData.mercado.confidence === "high") {
             rawData.mercado.confidence = "medium";
           }
+          
+          console.log(`[OCR Market] Raw: "${marketRaw}" → Semantic: ${semanticResult.canonicalType} (${semanticResult.displayName}) for sport ${sportDetected}`);
         }
         
         setParsedData(rawData);
@@ -227,15 +250,32 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       return "";
     }
     
-    // Use the raw market if intention is not set
-    const marketToResolve = pendingData.mercadoIntencao || pendingData.mercadoRaw || "";
+    // Use the raw market for semantic analysis
+    const marketRaw = pendingData.mercadoRaw || pendingData.mercadoIntencao || "";
+    
+    // First, try semantic normalization with sport context
+    const semanticResult = normalizeMarketSemantically({
+      sport: sport,
+      marketLabel: marketRaw
+    });
     
     // If no available options provided, get them from sport
     const options = availableOptions.length > 0 
       ? availableOptions 
       : getMarketsForSport(sport);
     
-    const resolved = resolveMarketToOptions(marketToResolve, options);
+    // If semantic result is valid (not OTHER), try to find it in options
+    if (semanticResult.canonicalType !== "OTHER") {
+      // Check if semantic display name is in available options
+      if (options.includes(semanticResult.displayName)) {
+        console.log(`[resolveMarketForSport] Semantic match: "${marketRaw}" → "${semanticResult.displayName}" for ${sport}`);
+        return semanticResult.displayName;
+      }
+    }
+    
+    // Fallback to text-based resolution
+    const resolved = resolveMarketToOptions(marketRaw, options);
+    console.log(`[resolveMarketForSport] Text match: "${marketRaw}" → "${resolved.normalized}" for ${sport}`);
     return resolved.normalized;
   }, [pendingData]);
 
