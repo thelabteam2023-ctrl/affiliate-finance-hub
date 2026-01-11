@@ -2395,11 +2395,14 @@ export type Database = {
           created_at: string
           data_recebida: string
           data_utilizacao: string | null
+          data_validade: string | null
           id: string
           moeda_operacao: string | null
           motivo: string
           observacoes: string | null
+          origem: string | null
           projeto_id: string
+          qualificadora_id: string | null
           status: string
           updated_at: string
           user_id: string
@@ -2417,11 +2420,14 @@ export type Database = {
           created_at?: string
           data_recebida?: string
           data_utilizacao?: string | null
+          data_validade?: string | null
           id?: string
           moeda_operacao?: string | null
           motivo: string
           observacoes?: string | null
+          origem?: string | null
           projeto_id: string
+          qualificadora_id?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -2439,11 +2445,14 @@ export type Database = {
           created_at?: string
           data_recebida?: string
           data_utilizacao?: string | null
+          data_validade?: string | null
           id?: string
           moeda_operacao?: string | null
           motivo?: string
           observacoes?: string | null
+          origem?: string | null
           projeto_id?: string
+          qualificadora_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -2486,6 +2495,13 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_qualificadora_id_fkey"
+            columns: ["qualificadora_id"]
+            isOneToOne: false
+            referencedRelation: "apostas_unificada"
             referencedColumns: ["id"]
           },
           {
