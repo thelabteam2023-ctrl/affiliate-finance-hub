@@ -68,6 +68,7 @@ interface CaixaTransacaoDialogProps {
   onSuccess: () => void;
   defaultTipoTransacao?: string;
   defaultOrigemBookmakerId?: string;
+  defaultDestinoParceiroId?: string;
 }
 
 interface ContaBancaria {
@@ -125,6 +126,7 @@ export function CaixaTransacaoDialog({
   onSuccess,
   defaultTipoTransacao,
   defaultOrigemBookmakerId,
+  defaultDestinoParceiroId,
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -170,15 +172,20 @@ export function CaixaTransacaoDialog({
   useEffect(() => {
     if (open) {
       resetForm();
-      // Aplicar defaults após reset
-      if (defaultTipoTransacao) {
-        setTipoTransacao(defaultTipoTransacao);
-      }
-      if (defaultOrigemBookmakerId) {
-        setOrigemBookmakerId(defaultOrigemBookmakerId);
-      }
+      // Aplicar defaults após reset (com delay para garantir que o estado foi limpo)
+      setTimeout(() => {
+        if (defaultTipoTransacao) {
+          setTipoTransacao(defaultTipoTransacao);
+        }
+        if (defaultOrigemBookmakerId) {
+          setOrigemBookmakerId(defaultOrigemBookmakerId);
+        }
+        if (defaultDestinoParceiroId) {
+          setDestinoParceiroId(defaultDestinoParceiroId);
+        }
+      }, 50);
     }
-  }, [open, defaultTipoTransacao, defaultOrigemBookmakerId]);
+  }, [open, defaultTipoTransacao, defaultOrigemBookmakerId, defaultDestinoParceiroId]);
 
   // ============================================================================
   // FUNÇÃO CENTRALIZADA: Reset de contexto de transação
