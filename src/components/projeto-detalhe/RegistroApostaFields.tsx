@@ -125,11 +125,36 @@ export function RegistroApostaFields({
     }
   }, [lockedEstrategia, suggestions, values.estrategia, values.contexto_operacional, values.forma_registro]);
 
+  // Mapeamento de estratégia → contexto sugerido (auto-inferência)
+  const getContextoFromEstrategia = (estrategia: string): ContextoOperacional | null => {
+    const mapping: Record<string, ContextoOperacional> = {
+      'EXTRACAO_FREEBET': 'FREEBET',
+      'EXTRACAO_BONUS': 'BONUS',
+    };
+    return mapping[estrategia] || null;
+  };
+
   const handleChange = (field: keyof RegistroApostaValues, value: string) => {
-    onChange({
-      ...values,
-      [field]: value,
-    });
+    const newValues = { ...values, [field]: value };
+    
+    // Auto-inferência: quando estratégia muda, sugere contexto correspondente
+    if (field === 'estrategia') {
+      const contextoSugerido = getContextoFromEstrategia(value);
+      if (contextoSugerido) {
+        // Só altera se contexto atual é NORMAL (não sobrescreve escolha manual)
+        if (values.contexto_operacional === 'NORMAL' || values.contexto_operacional === null) {
+          newValues.contexto_operacional = contextoSugerido;
+        }
+      } else if (value !== 'EXTRACAO_FREEBET' && value !== 'EXTRACAO_BONUS') {
+        // Para outras estratégias, reseta para NORMAL se estava em FREEBET/BONUS
+        // (evita contaminação acidental)
+        if (values.contexto_operacional === 'FREEBET' || values.contexto_operacional === 'BONUS') {
+          newValues.contexto_operacional = 'NORMAL';
+        }
+      }
+    }
+    
+    onChange(newValues);
   };
 
   // Modo compacto: inline com hierarquia visual clara
