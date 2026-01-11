@@ -53,6 +53,7 @@ export interface ApostaCardData {
   selecoes?: Selecao[];
   tipo_multipla?: string;
   bookmaker_nome?: string;
+  parceiro_nome?: string;
   operador_nome?: string;
   moeda?: string; // Moeda da operação
 }
@@ -437,9 +438,9 @@ export function ApostaCard({
               {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
             </span>
             {/* Só mostra casa/vínculo para apostas simples (sem pernas) */}
-            {!hasPernas && (aposta.bookmaker_nome || aposta.operador_nome) && (
+            {!hasPernas && (aposta.bookmaker_nome || aposta.parceiro_nome || aposta.operador_nome) && (
               (() => {
-                const label = [aposta.bookmaker_nome, aposta.operador_nome].filter(Boolean).join(" • ");
+                const label = [aposta.bookmaker_nome, aposta.parceiro_nome || aposta.operador_nome].filter(Boolean).join(" • ");
                 return (
                   <span
                     title={label}
