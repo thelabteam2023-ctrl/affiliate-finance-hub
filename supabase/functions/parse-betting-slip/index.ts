@@ -19,6 +19,9 @@ interface ParsedBetSlip {
   selecao: ParsedField;
   odd: ParsedField;
   stake: ParsedField;
+  retorno: ParsedField;
+  resultado: ParsedField;
+  bookmakerNome: ParsedField;
 }
 
 interface ParsedSelecao {
@@ -93,6 +96,11 @@ Nível de confiança:
 DICA: Em bilhetes múltiplos, as seleções geralmente aparecem empilhadas verticalmente, cada uma com seu evento, seleção e odd.
 O stake total e retorno potencial costumam aparecer na parte inferior do bilhete.`;
 
+// Get current year for date inference
+const getCurrentYear = (): number => {
+  return new Date().getFullYear();
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -119,22 +127,38 @@ serve(async (req) => {
       : { type: "image_url", image_url: { url: imageBase64 } };
 
     const isMultipla = mode === "multipla";
-    console.log(`Processing betting slip image... Mode: ${isMultipla ? "multipla" : "simples"}`);
+    const currentYear = getCurrentYear();
+    console.log(`Processing betting slip image... Mode: ${isMultipla ? "multipla" : "simples"}, CurrentYear: ${currentYear}`);
 
     // Choose prompt based on mode
     const systemPrompt = isMultipla ? MULTIPLA_SYSTEM_PROMPT : `Você é um especialista em ler boletins de apostas esportivas. Sua tarefa é extrair TODAS as informações visíveis do print de um boletim de aposta.
 
+REGRA CRÍTICA DE DATA/HORA:
+1. Se o bilhete mostrar APENAS dia e mês (ex: "11/06", "11-6", "11 de junho") SEM o ano explícito:
+   - SEMPRE assuma o ANO ATUAL: ${currentYear}
+   - Combine: dia + mês reconhecidos + ${currentYear}
+   - Exemplo: "11/6" → "${currentYear}-06-11"
+2. NUNCA invente anos passados ou futuros
+3. Se houver ambiguidade, use o melhor palpite mas com confiança "medium"
+
 REGRAS IMPORTANTES:
-1. Extraia TODOS os campos visíveis: times, data, esporte, mercado, seleção, ODD e STAKE
+1. Extraia TODOS os campos visíveis: times, data, esporte, mercado, seleção, ODD, STAKE, RETORNO, RESULTADO, NOME DA CASA
 2. A ODD é o valor numérico da cotação (ex: 1.85, 2.10, 3.50)
 3. O STAKE é o valor apostado em dinheiro (ex: 100, 50.00, R$ 200)
-4. Se não tiver certeza sobre um campo, retorne o valor mesmo assim com confiança baixa
-5. Para eventos esportivos, procure por padrões como "Time A x Time B", "Time A vs Time B", "Time A - Time B"
-6. Identifique o mandante (primeiro time) e visitante (segundo time)
-7. Reconheça mercados comuns: 1X2, Over/Under, Handicap, BTTS, etc.
-8. Identifique o esporte a partir de indicadores visuais ou textuais
-9. Para a seleção, extraia o que foi apostado (ex: "Over 2.5", "Time A", "1")
-10. Para valores numéricos (odd, stake), extraia APENAS os números, sem símbolos de moeda
+4. O RETORNO é o valor total a receber se ganhar (stake * odd)
+5. O RESULTADO pode ser: "GREEN" (ganhou), "RED" (perdeu), "VOID" (cancelado), ou null se pendente
+   - Identifique por textos como: "GANHOU", "VENCIDO", "PERDIDO", "CANCELADO", etc.
+   - Badge verde/vermelho também indica resultado
+6. O BOOKMAKER/CASA é o nome da casa de apostas (ex: "Bet365", "Betano", "EstrelaBet")
+   - Geralmente aparece no topo ou rodapé do bilhete
+   - Pode ser logo ou texto
+7. Se não tiver certeza sobre um campo, retorne o valor mesmo assim com confiança baixa
+8. Para eventos esportivos, procure por padrões como "Time A x Time B", "Time A vs Time B", "Time A - Time B"
+9. Identifique o mandante (primeiro time) e visitante (segundo time)
+10. Reconheça mercados comuns: 1X2, Over/Under, Handicap, BTTS, etc.
+11. Identifique o esporte a partir de indicadores visuais ou textuais
+12. Para a seleção, extraia o que foi apostado (ex: "Over 2.5", "Time A", "1")
+13. Para valores numéricos (odd, stake, retorno), extraia APENAS os números, sem símbolos de moeda
 
 Esportes reconhecidos: ${SPORTS_LIST.join(", ")}
 
@@ -150,16 +174,19 @@ FORMATO DE RESPOSTA (JSON estrito):
   "mercado": { "value": "NOME DO MERCADO ou null", "confidence": "high|medium|low|none" },
   "selecao": { "value": "TEXTO DA SELEÇÃO ou null", "confidence": "high|medium|low|none" },
   "odd": { "value": "VALOR NUMÉRICO DA ODD ou null", "confidence": "high|medium|low|none" },
-  "stake": { "value": "VALOR NUMÉRICO APOSTADO ou null", "confidence": "high|medium|low|none" }
+  "stake": { "value": "VALOR NUMÉRICO APOSTADO ou null", "confidence": "high|medium|low|none" },
+  "retorno": { "value": "VALOR NUMÉRICO DO RETORNO ou null", "confidence": "high|medium|low|none" },
+  "resultado": { "value": "GREEN|RED|VOID ou null se pendente", "confidence": "high|medium|low|none" },
+  "bookmakerNome": { "value": "NOME DA CASA DE APOSTAS ou null", "confidence": "high|medium|low|none" }
 }
 
 Nível de confiança:
 - "high": texto claramente visível e inequívoco
-- "medium": texto visível mas pode ter interpretação ambígua
+- "medium": texto visível mas pode ter interpretação ambígua OU data sem ano explícito
 - "low": texto parcialmente visível ou muito incerto
 - "none": não foi possível detectar
 
-DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com formato decimal (1.85, 2.10). O STAKE aparece como "Valor da aposta", "Stake", "Aposta", ou próximo a símbolos de moeda.`;
+DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com formato decimal (1.85, 2.10). O STAKE aparece como "Valor da aposta", "Stake", "Aposta", ou próximo a símbolos de moeda. O RETORNO aparece como "Ganho total", "Retorno potencial", etc.`;
 
     const userPrompt = isMultipla 
       ? "Analise este print de APOSTA MÚLTIPLA (combinada/acumuladora) e extraia as informações de TODAS as seleções. Retorne APENAS o JSON, sem explicações adicionais."
@@ -239,6 +266,42 @@ DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com
       return n.toFixed(2);
     };
 
+    // Normalize date to ensure current year if not specified
+    const normalizeDateWithCurrentYear = (dateStr: string | null): { value: string | null; wasYearInferred: boolean } => {
+      if (!dateStr) return { value: null, wasYearInferred: false };
+      
+      // If already has a valid year (2020-2030 range), return as is
+      const yearMatch = dateStr.match(/20[2-3]\d/);
+      if (yearMatch) {
+        return { value: dateStr, wasYearInferred: false };
+      }
+      
+      // Try to extract day and month
+      const patterns = [
+        /(\d{1,2})[\/\-](\d{1,2})(?:T|$|\s)/,  // DD/MM or DD-MM
+        /(\d{1,2})\s*(?:de\s*)?(\d{1,2})/i,     // DD de MM
+      ];
+      
+      for (const pattern of patterns) {
+        const match = dateStr.match(pattern);
+        if (match) {
+          const day = match[1].padStart(2, '0');
+          const month = match[2].padStart(2, '0');
+          
+          // Extract time if present
+          const timeMatch = dateStr.match(/(\d{1,2}):(\d{2})/);
+          const time = timeMatch ? `T${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}` : "T12:00";
+          
+          return { 
+            value: `${currentYear}-${month}-${day}${time}`, 
+            wasYearInferred: true 
+          };
+        }
+      }
+      
+      return { value: dateStr, wasYearInferred: false };
+    };
+
     if (isMultipla) {
       // Parse multipla bet slip
       let parsedData: ParsedMultiplaBetSlip;
@@ -303,11 +366,21 @@ DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com
       try {
         parsedData = JSON.parse(content);
         
+        // Ensure all fields exist
         if (!parsedData.odd) {
           parsedData.odd = { value: null, confidence: "none" };
         }
         if (!parsedData.stake) {
           parsedData.stake = { value: null, confidence: "none" };
+        }
+        if (!parsedData.retorno) {
+          parsedData.retorno = { value: null, confidence: "none" };
+        }
+        if (!parsedData.resultado) {
+          parsedData.resultado = { value: null, confidence: "none" };
+        }
+        if (!parsedData.bookmakerNome) {
+          parsedData.bookmakerNome = { value: null, confidence: "none" };
         }
       } catch (e) {
         console.error("Failed to parse AI response:", e);
@@ -319,7 +392,10 @@ DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com
           mercado: { value: null, confidence: "none" },
           selecao: { value: null, confidence: "none" },
           odd: { value: null, confidence: "none" },
-          stake: { value: null, confidence: "none" }
+          stake: { value: null, confidence: "none" },
+          retorno: { value: null, confidence: "none" },
+          resultado: { value: null, confidence: "none" },
+          bookmakerNome: { value: null, confidence: "none" }
         };
       }
 
@@ -331,8 +407,41 @@ DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com
         parsedData.visitante.value = parsedData.visitante.value.toUpperCase();
       }
 
+      // Normalize date with current year inference
+      if (parsedData.dataHora?.value) {
+        const dateResult = normalizeDateWithCurrentYear(parsedData.dataHora.value);
+        parsedData.dataHora.value = dateResult.value;
+        // Downgrade confidence if year was inferred
+        if (dateResult.wasYearInferred && parsedData.dataHora.confidence === "high") {
+          parsedData.dataHora.confidence = "medium";
+        }
+      }
+
+      // Normalize numeric fields
       parsedData.odd.value = normalizeNumericString(parsedData.odd?.value);
       parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
+      parsedData.retorno.value = normalizeNumericString(parsedData.retorno?.value);
+
+      // Normalize resultado to standard values
+      if (parsedData.resultado?.value) {
+        const resultLower = parsedData.resultado.value.toLowerCase();
+        if (resultLower.includes("ganhou") || resultLower.includes("vencido") || resultLower.includes("win") || resultLower === "green") {
+          parsedData.resultado.value = "GREEN";
+        } else if (resultLower.includes("perdeu") || resultLower.includes("perdido") || resultLower.includes("lose") || resultLower.includes("lost") || resultLower === "red") {
+          parsedData.resultado.value = "RED";
+        } else if (resultLower.includes("void") || resultLower.includes("cancelado") || resultLower.includes("devolvido")) {
+          parsedData.resultado.value = "VOID";
+        }
+      }
+
+      // Normalize bookmaker name (capitalize first letter of each word)
+      if (parsedData.bookmakerNome?.value) {
+        parsedData.bookmakerNome.value = parsedData.bookmakerNome.value
+          .toLowerCase()
+          .split(/\s+/)
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      }
 
       console.log("Parsed data:", JSON.stringify(parsedData));
       return new Response(
