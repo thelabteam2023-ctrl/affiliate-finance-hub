@@ -12,78 +12,45 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   TrendingUp, 
+  TrendingDown,
   Target, 
   Building2,
-  BarChart3
+  BarChart3,
+  DollarSign,
+  Percent
 } from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
-import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DateRange } from "react-day-picker";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
-
-type PeriodFilter = "hoje" | "ontem" | "7dias" | "mes" | "ano" | "todo" | "custom";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+import { OperationalFiltersBar } from "./OperationalFiltersBar";
+import { VisaoGeralCharts } from "./VisaoGeralCharts";
+import { useOperationalFiltersOptional } from "@/contexts/OperationalFiltersContext";
 
 interface ProjetoDashboardTabProps {
   projetoId: string;
-  periodFilter?: PeriodFilter;
-  dateRange?: DateRange;
 }
 
-interface Aposta {
-  id: string;
-  data_aposta: string;
-  lucro_prejuizo: number | null;
-  resultado: string | null;
-  stake: number;
-  esporte: string;
-  bookmaker_id: string;
-  bookmaker_nome: string;
-  parceiro_nome: string | null;
-  logo_url: string | null;
-}
-
-interface ApostaMultipla {
-  id: string;
-  data_aposta: string;
-  lucro_prejuizo: number | null;
-  resultado: string | null;
-  stake: number;
-  selecoes: { descricao: string; odd: string; resultado?: string }[];
-  bookmaker_id: string;
-  bookmaker_nome: string;
-  parceiro_nome: string | null;
-  logo_url: string | null;
-}
-
-// Tipo unificado para agregação
 interface ApostaUnificada {
   id: string;
   data_aposta: string;
   lucro_prejuizo: number | null;
   resultado: string | null;
   stake: number;
+  stake_total: number | null;
   esporte: string;
   bookmaker_id: string;
   bookmaker_nome: string;
   parceiro_nome: string | null;
   logo_url: string | null;
-}
-
-interface DailyData {
-  data: string;
-  dataCompleta: string;
-  lucro_dia: number;
-  saldo: number;
+  forma_registro: string | null;
+  pernas?: {
+    bookmaker_id?: string;
+    bookmaker_nome?: string;
+    stake?: number;
+    lucro_prejuizo?: number;
+  }[];
 }
 
 interface BookmakerMetrics {
@@ -101,53 +68,33 @@ interface BookmakerMetrics {
 
 type BookmakerFilter = "all" | "bookmaker" | "parceiro";
 
-export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRange }: ProjetoDashboardTabProps) {
+export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const [apostasUnificadas, setApostasUnificadas] = useState<ApostaUnificada[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEsporte, setSelectedEsporte] = useState<string>("");
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, getSymbol } = useProjetoCurrency(projetoId);
+  const { formatCurrency, formatChartAxis, getSymbol } = useProjetoCurrency(projetoId);
+  
+  // Hook global de logos
+  const { logoMap: catalogLogoMap, getLogoUrl: getCatalogLogoUrl } = useBookmakerLogoMap();
+  
+  // Consumir filtros do contexto global (opcional - pode estar fora do provider)
+  const globalFilters = useOperationalFiltersOptional();
+  const dateRange = globalFilters?.dateRange;
   
   // Filtros para Performance por Casa
   const [bookmakerFilterType, setBookmakerFilterType] = useState<BookmakerFilter>("all");
   const [selectedBookmakerId, setSelectedBookmakerId] = useState<string>("");
   const [selectedParceiro, setSelectedParceiro] = useState<string>("");
 
-  const getDateRangeFromFilter = (): { start: Date | null; end: Date | null } => {
-    const today = new Date();
-    
-    switch (periodFilter) {
-      case "hoje":
-        return { start: startOfDay(today), end: endOfDay(today) };
-      case "ontem":
-        const yesterday = subDays(today, 1);
-        return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
-      case "7dias":
-        return { start: startOfDay(subDays(today, 7)), end: endOfDay(today) };
-      case "mes":
-        return { start: startOfMonth(today), end: endOfDay(today) };
-      case "ano":
-        return { start: startOfYear(today), end: endOfDay(today) };
-      case "custom":
-        return { 
-          start: dateRange?.from || null, 
-          end: dateRange?.to || dateRange?.from || null 
-        };
-      case "todo":
-      default:
-        return { start: null, end: null };
-    }
-  };
-
   useEffect(() => {
     fetchAllApostas();
-  }, [projetoId, periodFilter, dateRange]);
+  }, [projetoId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()]);
 
   const fetchAllApostas = async () => {
     try {
       setLoading(true);
-      const { start, end } = getDateRangeFromFilter();
       
       // Usar apostas_unificada como fonte única
       let query = supabase
@@ -162,16 +109,18 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
           esporte,
           bookmaker_id,
           forma_registro,
-          estrategia
+          estrategia,
+          pernas
         `)
         .eq("projeto_id", projetoId)
+        .is("cancelled_at", null)
         .order("data_aposta", { ascending: true });
 
-      if (start) {
-        query = query.gte("data_aposta", start.toISOString());
+      if (dateRange?.start) {
+        query = query.gte("data_aposta", dateRange.start.toISOString());
       }
-      if (end) {
-        query = query.lte("data_aposta", end.toISOString());
+      if (dateRange?.end) {
+        query = query.lte("data_aposta", dateRange.end.toISOString());
       }
 
       const { data, error } = await query;
@@ -209,11 +158,14 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
           lucro_prejuizo: item.lucro_prejuizo,
           resultado: item.resultado,
           stake: stake || 0,
+          stake_total: item.stake_total,
           esporte: item.esporte || item.estrategia || 'N/A',
           bookmaker_id: item.bookmaker_id || 'unknown',
           bookmaker_nome: item.forma_registro === 'ARBITRAGEM' ? 'Arbitragem' : bkInfo.nome,
           parceiro_nome: bkInfo.parceiro_nome,
           logo_url: bkInfo.logo_url,
+          forma_registro: item.forma_registro,
+          pernas: Array.isArray(item.pernas) ? item.pernas : undefined,
         };
       });
       
@@ -225,61 +177,8 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     }
   };
 
-  const parseLocalDateTime = (dateString: string): Date => {
-    if (!dateString) return new Date();
-    const cleanDate = dateString.replace(/\+00:00$/, '').replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
-    const [datePart, timePart] = cleanDate.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
-    return new Date(year, month - 1, day, hours || 0, minutes || 0);
-  };
-
-  // Determina se é período de 1 dia (hoje/ontem) para usar hora no eixo X
-  const isSingleDayPeriod = periodFilter === "hoje" || periodFilter === "ontem" || 
-    (periodFilter === "custom" && dateRange?.from && dateRange?.to && 
-      startOfDay(dateRange.from).getTime() === startOfDay(dateRange.to).getTime());
-
-  // Dados de evolução com eixo X baseado no período
-  const evolutionData: DailyData[] = useMemo(() => {
-    // Ordena apostas cronologicamente
-    const sortedApostas = [...apostasUnificadas].sort((a, b) => 
-      new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
-    );
-    
-    let cumulativeBalance = 0;
-    let lastDateLabel = "";
-    
-    return sortedApostas.map((aposta, index) => {
-      cumulativeBalance += aposta.lucro_prejuizo || 0;
-      const date = parseLocalDateTime(aposta.data_aposta);
-      
-      const dataFormatada = format(date, "dd/MM", { locale: ptBR });
-      const horaFormatada = format(date, "HH:mm", { locale: ptBR });
-      
-      // Eixo X: hora para período de 1 dia, data para períodos maiores
-      // Mostra o label apenas na primeira ocorrência de cada data/hora
-      let xLabel: string;
-      if (isSingleDayPeriod) {
-        // Para 1 dia: sempre mostra hora
-        xLabel = horaFormatada;
-      } else {
-        // Para múltiplos dias: mostra data apenas na primeira entrada do dia
-        if (dataFormatada !== lastDateLabel) {
-          xLabel = dataFormatada;
-          lastDateLabel = dataFormatada;
-        } else {
-          xLabel = ""; // Oculta label para entradas subsequentes do mesmo dia
-        }
-      }
-      
-      return {
-        data: xLabel,
-        dataCompleta: `Entrada #${index + 1} - ${format(date, "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
-        lucro_dia: aposta.lucro_prejuizo || 0,
-        saldo: cumulativeBalance
-      };
-    });
-  }, [apostasUnificadas, isSingleDayPeriod]);
+  // Determina se é período de 1 dia
+  const isSingleDayPeriod = globalFilters?.period === "1dia";
 
   // Aggregate by bookmaker
   const bookmakerMetrics = useMemo(() => {
@@ -418,186 +317,157 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
     return esportesData.filter(e => e.esporte === selectedEsporte);
   }, [esportesData, selectedEsporte]);
 
-  // formatCurrency agora vem do useProjetoCurrency
+  // KPIs consolidados
+  const kpis = useMemo(() => {
+    const totalApostas = apostasUnificadas.length;
+    const greens = apostasUnificadas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+    const reds = apostasUnificadas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+    const totalVolume = apostasUnificadas.reduce((acc, a) => acc + (a.stake || 0), 0);
+    const totalLucro = apostasUnificadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+    const roi = totalVolume > 0 ? (totalLucro / totalVolume) * 100 : 0;
+    
+    return { totalApostas, greens, reds, totalVolume, totalLucro, roi };
+  }, [apostasUnificadas]);
+
+  // Preparar dados para VisaoGeralCharts
+  const apostasParaGraficos = useMemo(() => {
+    return apostasUnificadas.map(a => ({
+      data_aposta: a.data_aposta,
+      lucro_prejuizo: a.lucro_prejuizo,
+      stake: a.stake,
+      stake_total: a.stake_total,
+      bookmaker_nome: a.bookmaker_nome,
+      bookmaker_id: a.bookmaker_id,
+      pernas: a.pernas,
+      forma_registro: a.forma_registro,
+    }));
+  }, [apostasUnificadas]);
 
   if (loading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-64" />
-        ))}
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-full" />
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-64" />
+          ))}
+        </div>
       </div>
     );
   }
 
   if (apostasUnificadas.length === 0) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-10">
-            <Target className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <h3 className="mt-4 text-lg font-semibold">Nenhuma aposta registrada</h3>
-            <p className="text-muted-foreground">
-              Vá para a aba "Apostas" para registrar suas operações
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        {/* Barra de Filtros */}
+        <OperationalFiltersBar
+          projetoId={projetoId}
+          showEstrategiaFilter={true}
+        />
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-10">
+              <Target className="mx-auto h-12 w-12 text-muted-foreground/50" />
+              <h3 className="mt-4 text-lg font-semibold">Nenhuma aposta registrada</h3>
+              <p className="text-muted-foreground">
+                Vá para a aba "Apostas" para registrar suas operações
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      {/* Evolução do Saldo */}
-      <Card className="md:col-span-2">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Evolução do Saldo
-          </CardTitle>
-          <CardDescription>
-            {isSingleDayPeriod ? "Evolução por horário" : "Evolução por data"} ({evolutionData.length} apostas)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              {(() => {
-                const values = evolutionData.map(d => d.saldo);
-                const minValue = Math.min(...values, 0);
-                const maxValue = Math.max(...values, 0);
-                const range = maxValue - minValue;
-                
-                const zeroPosition = range > 0 ? maxValue / range : 0.5;
-                const zeroPercent = Math.max(0, Math.min(100, zeroPosition * 100));
-                
-                const allPositive = minValue >= 0;
-                const allNegative = maxValue <= 0;
+    <div className="space-y-4">
+      {/* Barra de Filtros Global */}
+      <OperationalFiltersBar
+        projetoId={projetoId}
+        showEstrategiaFilter={true}
+      />
 
-                return (
-                  <AreaChart data={evolutionData}>
-                    <defs>
-                      <linearGradient id="saldoBicolorGradient" x1="0" y1="0" x2="0" y2="1">
-                        {allNegative ? (
-                          <>
-                            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.1} />
-                            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.4} />
-                          </>
-                        ) : allPositive ? (
-                          <>
-                            <stop offset="0%" stopColor="#2dd4bf" stopOpacity={0.4} />
-                            <stop offset="100%" stopColor="#2dd4bf" stopOpacity={0.05} />
-                          </>
-                        ) : (
-                          <>
-                            <stop offset="0%" stopColor="#2dd4bf" stopOpacity={0.4} />
-                            <stop offset={`${zeroPercent}%`} stopColor="#2dd4bf" stopOpacity={0.1} />
-                            <stop offset={`${zeroPercent}%`} stopColor="#ef4444" stopOpacity={0.1} />
-                            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.4} />
-                          </>
-                        )}
-                      </linearGradient>
-                      <linearGradient id="saldoStrokeGradient" x1="0" y1="0" x2="0" y2="1">
-                        {allNegative ? (
-                          <>
-                            <stop offset="0%" stopColor="#ef4444" />
-                            <stop offset="100%" stopColor="#ef4444" />
-                          </>
-                        ) : allPositive ? (
-                          <>
-                            <stop offset="0%" stopColor="#2dd4bf" />
-                            <stop offset="100%" stopColor="#2dd4bf" />
-                          </>
-                        ) : (
-                          <>
-                            <stop offset="0%" stopColor="#2dd4bf" />
-                            <stop offset={`${zeroPercent}%`} stopColor="#2dd4bf" />
-                            <stop offset={`${zeroPercent}%`} stopColor="#ef4444" />
-                            <stop offset="100%" stopColor="#ef4444" />
-                          </>
-                        )}
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid 
-                      strokeDasharray="0" 
-                      stroke="hsl(var(--border)/0.3)" 
-                      vertical={false}
-                    />
-                    <XAxis 
-                      dataKey="data" 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      axisLine={false}
-                      tickLine={false}
-                      interval={isSingleDayPeriod 
-                        ? (evolutionData.length > 50 ? Math.floor(evolutionData.length / 10) : evolutionData.length > 20 ? 5 : 0)
-                        : 0}
-                      tick={({ x, y, payload }: any) => {
-                        // Não renderiza tick se o label for vazio
-                        if (!payload.value) return null;
-                        return (
-                          <text 
-                            x={x} 
-                            y={y + 10} 
-                            textAnchor="middle" 
-                            fill="hsl(var(--muted-foreground))" 
-                            fontSize={12}
-                          >
-                            {payload.value}
-                          </text>
-                        );
-                      }}
-                    />
-                    <YAxis 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      axisLine={false}
-                      tickLine={false}
-                      domain={[(dataMin: number) => Math.min(dataMin, 0), (dataMax: number) => Math.max(dataMax, 0)]}
-                      tickFormatter={(value) => `${getSymbol()} ${value.toLocaleString('pt-BR')}`}
-                    />
-                    <Tooltip 
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const data = payload[0].payload as DailyData;
-                          const isPositive = data.saldo >= 0;
-                          const lucroDiaPositive = data.lucro_dia >= 0;
-                          return (
-                            <div className="bg-background/90 backdrop-blur-xl border border-border/50 rounded-lg px-3 py-2 shadow-xl">
-                              <p className="text-sm font-medium">{data.dataCompleta}</p>
-                              <p className="text-sm text-muted-foreground">
-                                <span className={`inline-block w-2 h-2 rounded-sm mr-2 ${lucroDiaPositive ? 'bg-teal-400' : 'bg-red-400'}`} />
-                                Impacto: {formatCurrency(data.lucro_dia)}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                <span className={`inline-block w-2 h-2 rounded-sm mr-2 ${isPositive ? 'bg-teal-400' : 'bg-red-400'}`} />
-                                Acumulado: {formatCurrency(data.saldo)}
-                              </p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                      cursor={{ stroke: 'rgba(255, 255, 255, 0.1)', strokeWidth: 1 }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="saldo"
-                      stroke="url(#saldoStrokeGradient)"
-                      strokeWidth={2}
-                      fill="url(#saldoBicolorGradient)"
-                      dot={false}
-                      activeDot={{ r: 4, strokeWidth: 0 }}
-                    />
-                  </AreaChart>
-                );
-              })()}
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      {/* KPIs Consolidados */}
+      <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium">Apostas</CardTitle>
+            <Target className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+            <div className="text-lg md:text-2xl font-bold">{kpis.totalApostas}</div>
+            <div className="flex gap-2 text-[10px] md:text-xs">
+              <span className="text-emerald-500">{kpis.greens} G</span>
+              <span className="text-red-500">{kpis.reds} R</span>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Performance por Casa - Lista */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium">Volume</CardTitle>
+            <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+            <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(kpis.totalVolume)}</div>
+            <p className="text-[10px] md:text-xs text-muted-foreground">Total apostado</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium">
+              {kpis.totalLucro >= 0 ? "Lucro" : "Prejuízo"}
+            </CardTitle>
+            {kpis.totalLucro >= 0 ? (
+              <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-emerald-500" />
+            ) : (
+              <TrendingDown className="h-3.5 w-3.5 md:h-4 md:w-4 text-red-500" />
+            )}
+          </CardHeader>
+          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+            <div className={`text-lg md:text-2xl font-bold truncate ${kpis.totalLucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              {formatCurrency(Math.abs(kpis.totalLucro))}
+            </div>
+            <p className="text-[10px] md:text-xs text-muted-foreground">Resultado no período</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+            <CardTitle className="text-xs md:text-sm font-medium">ROI</CardTitle>
+            <Percent className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+            <div className={`text-lg md:text-2xl font-bold ${kpis.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              {kpis.roi.toFixed(2)}%
+            </div>
+            <p className="text-[10px] md:text-xs text-muted-foreground">Retorno sobre investimento</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Gráficos de Evolução e Casas Mais Utilizadas */}
+      <VisaoGeralCharts 
+        apostas={apostasParaGraficos}
+        accentColor="hsl(var(--primary))"
+        logoMap={catalogLogoMap}
+        showCalendar={true}
+        showEvolucaoChart={true}
+        showCasasCard={true}
+        isSingleDayPeriod={isSingleDayPeriod}
+        formatCurrency={formatCurrency}
+        formatChartAxis={formatChartAxis}
+        showScopeToggle={false}
+      />
+
+      {/* Performance por Casa */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -669,51 +539,57 @@ export function ProjetoDashboardTab({ projetoId, periodFilter = "todo", dateRang
                     : "Nenhum resultado encontrado"}
                 </div>
               ) : (
-                filteredBookmakerMetrics.map((bm) => (
-                  <div 
-                    key={bm.bookmaker_id} 
-                    className="grid grid-cols-5 gap-2 px-6 py-3 hover:bg-muted/30 transition-colors"
-                  >
-                    <div className="col-span-1 flex items-center gap-2">
-                      {bm.logo_url ? (
-                        <img 
-                          src={bm.logo_url} 
-                          alt={bm.bookmaker_nome}
-                          className="w-6 h-6 rounded object-contain bg-muted/50 p-0.5 flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-6 h-6 rounded bg-muted/50 flex items-center justify-center flex-shrink-0">
-                          <Building2 className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{bm.bookmaker_nome}</p>
-                        {bm.parceiro_nome && (
-                          <p className="text-[10px] text-muted-foreground truncate">{bm.parceiro_nome}</p>
+                filteredBookmakerMetrics.map((bm) => {
+                  // Tentar buscar logo do catálogo global
+                  const logoFromCatalog = getCatalogLogoUrl(bm.bookmaker_nome);
+                  const displayLogo = bm.logo_url || logoFromCatalog;
+                  
+                  return (
+                    <div 
+                      key={bm.bookmaker_id} 
+                      className="grid grid-cols-5 gap-2 px-6 py-3 hover:bg-muted/30 transition-colors"
+                    >
+                      <div className="col-span-1 flex items-center gap-2">
+                        {displayLogo ? (
+                          <img 
+                            src={displayLogo} 
+                            alt={bm.bookmaker_nome}
+                            className="w-6 h-6 rounded object-contain bg-muted/50 p-0.5 flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-6 h-6 rounded bg-muted/50 flex items-center justify-center flex-shrink-0">
+                            <Building2 className="h-3 w-3 text-muted-foreground" />
+                          </div>
                         )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{bm.bookmaker_nome}</p>
+                          {bm.parceiro_nome && (
+                            <p className="text-[10px] text-muted-foreground truncate">{bm.parceiro_nome}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-mono">{bm.totalApostas}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {bm.greens}G / {bm.reds}R
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-mono">{formatCurrency(bm.totalStake)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-mono font-medium ${bm.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {formatCurrency(bm.lucro)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-mono font-medium ${bm.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {bm.roi.toFixed(1)}%
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-mono">{bm.totalApostas}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {bm.greens}G / {bm.reds}R
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-mono">{formatCurrency(bm.totalStake)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-mono font-medium ${bm.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {formatCurrency(bm.lucro)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-mono font-medium ${bm.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {bm.roi.toFixed(1)}%
-                      </p>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </ScrollArea>
