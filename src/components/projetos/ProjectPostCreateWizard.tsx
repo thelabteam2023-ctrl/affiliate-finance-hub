@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { getMoedaSymbol, type MoedaConsolidacao } from "@/types/projeto";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +43,8 @@ import {
   Sparkles,
   SkipForward,
   Plus,
-  RotateCcw
+  RotateCcw,
+  AlertCircle
 } from "lucide-react";
 import {
   Collapsible,
@@ -250,6 +252,10 @@ export function ProjectPostCreateWizard({
   const [cicloMetaVolume, setCicloMetaVolume] = useState("");
   const [cicloMetricaAcumuladora, setCicloMetricaAcumuladora] = useState("LUCRO");
   const [cicloObservacoes, setCicloObservacoes] = useState("");
+  
+  // Project currency state
+  const [moedaConsolidacao, setMoedaConsolidacao] = useState<MoedaConsolidacao>("BRL");
+  const currencySymbol = getMoedaSymbol(moedaConsolidacao);
 
   // Derived values
   const showValorFixo = ["FIXO_MENSAL", "HIBRIDO"].includes(opModeloPagamento);
@@ -264,6 +270,17 @@ export function ProjectPostCreateWizard({
   // Fetch functions
   const fetchProjectStatus = useCallback(async () => {
     if (!projectId) return;
+    
+    // Fetch project status AND currency config
+    const { data: projeto } = await supabase
+      .from("projetos")
+      .select("moeda_consolidacao")
+      .eq("id", projectId)
+      .single();
+    
+    if (projeto?.moeda_consolidacao) {
+      setMoedaConsolidacao(projeto.moeda_consolidacao as MoedaConsolidacao);
+    }
     
     const { data: operators } = await supabase
       .from("operador_projetos")
@@ -1077,8 +1094,13 @@ export function ProjectPostCreateWizard({
                       </div>
 
                       <div className="space-y-2">
-                        <Label>
-                          {cicloMetricaAcumuladora === "LUCRO" ? "Meta de Lucro (R$)" : "Meta de Volume (R$)"} *
+                        <Label className="flex items-center gap-2">
+                          {cicloMetricaAcumuladora === "LUCRO" 
+                            ? `Meta de Lucro (${currencySymbol})` 
+                            : `Meta de Volume (${currencySymbol})`} *
+                          <span className="text-xs text-muted-foreground font-normal">
+                            (moeda: {moedaConsolidacao})
+                          </span>
                         </Label>
                         <Input
                           type="number"
@@ -1088,6 +1110,12 @@ export function ProjectPostCreateWizard({
                           onChange={(e) => setCicloMetaVolume(e.target.value)}
                           placeholder={cicloMetricaAcumuladora === "LUCRO" ? "5000" : "150000"}
                         />
+                        <div className="flex items-start gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/30">
+                          <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                          <p className="text-xs text-amber-200">
+                            Este valor será registrado em <strong>{moedaConsolidacao}</strong>.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
