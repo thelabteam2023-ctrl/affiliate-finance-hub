@@ -29,14 +29,21 @@ export function useBookmakerLogoMap() {
     
     catalogoData.forEach((item) => {
       if (item.logo_url && item.nome) {
-        // Normalizar nome: UPPER CASE, sem acentos, sem caracteres especiais
+        // Guardar nome ORIGINAL em maiúsculas (para matching direto)
+        const upperName = item.nome.toUpperCase().trim();
+        if (!map.has(upperName)) {
+          map.set(upperName, item.logo_url);
+        }
+        
+        // Também guardar versão totalmente normalizada (sem acentos, sem especiais)
         const normalizedName = item.nome
           .toUpperCase()
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^A-Z0-9]/g, "")
           .trim();
         
-        if (!map.has(normalizedName)) {
+        if (normalizedName && !map.has(normalizedName)) {
           map.set(normalizedName, item.logo_url);
         }
       }

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -271,6 +272,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
 
+  // Hook global de logos de bookmakers (busca do catálogo)
+  const { logoMap: catalogLogoMap, getLogoUrl: getCatalogLogoUrl } = useBookmakerLogoMap();
+
   // Consumir filtros do contexto global
   const globalFilters = useOperationalFilters();
 
@@ -280,6 +284,22 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   // Usar dateRange do contexto global
   const dateRange = globalFilters.dateRange;
+
+  // Construir logoMap combinando catálogo global com bookmakers do projeto
+  const logoMap = useMemo(() => {
+    const map = new Map<string, string | null>(catalogLogoMap);
+    // Adicionar logos de bookmakers do projeto que podem não estar no catálogo
+    bookmakers.forEach((bk) => {
+      const nomeCasa = bk.nome?.split(" - ")?.[0]?.trim();
+      if (nomeCasa && !map.has(nomeCasa)) {
+        const logoUrl = bk.bookmakers_catalogo?.logo_url || null;
+        if (logoUrl) {
+          map.set(nomeCasa, logoUrl);
+        }
+      }
+    });
+    return map;
+  }, [catalogLogoMap, bookmakers]);
 
   useEffect(() => {
     fetchAllApostas();
@@ -906,6 +926,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             }))
           ]} 
           accentColor="hsl(var(--primary))"
+          logoMap={logoMap}
           isSingleDayPeriod={globalFilters.period === "1dia"}
           formatCurrency={formatCurrency}
           formatChartAxis={formatChartAxis}
