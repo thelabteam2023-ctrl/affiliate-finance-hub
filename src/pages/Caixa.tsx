@@ -21,6 +21,10 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
 interface LocationState {
   openDialog?: boolean;
+  bookmakerId?: string;
+  bookmakerNome?: string;
+  parceiroId?: string;
+  parceiroNome?: string;
 }
 
 interface Transacao {
@@ -82,6 +86,15 @@ export default function Caixa() {
   // Estado para confirmação de saque
   const [saqueParaConfirmar, setSaqueParaConfirmar] = useState<any>(null);
   const [confirmSaqueDialogOpen, setConfirmSaqueDialogOpen] = useState(false);
+
+  // Estado para pré-preenchimento do dialog de transação (vindo de navegação)
+  const [dialogDefaultData, setDialogDefaultData] = useState<{
+    tipoTransacao?: string;
+    origemBookmakerId?: string;
+    origemBookmakerNome?: string;
+    destinoParceiroId?: string;
+    destinoParceiroNome?: string;
+  } | null>(null);
 
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => saldosCrypto.map(s => s.coin), [saldosCrypto]);
@@ -230,6 +243,16 @@ export default function Caixa() {
   // Handle navigation state to open dialog
   useEffect(() => {
     if (locationState?.openDialog) {
+      // Se veio com dados de bookmaker/parceiro, pré-preencher o dialog como SAQUE
+      if (locationState.bookmakerId) {
+        setDialogDefaultData({
+          tipoTransacao: "SAQUE",
+          origemBookmakerId: locationState.bookmakerId,
+          origemBookmakerNome: locationState.bookmakerNome,
+          destinoParceiroId: locationState.parceiroId,
+          destinoParceiroNome: locationState.parceiroNome,
+        });
+      }
       setDialogOpen(true);
       // Clear state to prevent reopening on refresh
       navigate(location.pathname, { replace: true, state: null });
@@ -585,12 +608,19 @@ export default function Caixa() {
       {/* Dialog Nova Transação */}
       <CaixaTransacaoDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => {
+          setDialogOpen(false);
+          setDialogDefaultData(null);
+        }}
         onSuccess={async () => {
           setDialogOpen(false);
+          setDialogDefaultData(null);
           await new Promise(resolve => setTimeout(resolve, 300));
           fetchData();
         }}
+        defaultTipoTransacao={dialogDefaultData?.tipoTransacao}
+        defaultOrigemBookmakerId={dialogDefaultData?.origemBookmakerId}
+        defaultDestinoParceiroId={dialogDefaultData?.destinoParceiroId}
       />
 
       {/* Dialog Confirmar Saque */}

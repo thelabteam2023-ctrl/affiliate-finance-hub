@@ -675,7 +675,16 @@ export default function CentralOperacoes() {
   };
 
   const handleSaqueAction = (alerta: Alerta) => {
-    navigate("/caixa", { state: { openDialog: true } });
+    // Navegar para Caixa com dados pré-preenchidos para saque
+    navigate("/caixa", { 
+      state: { 
+        openDialog: true, 
+        bookmakerId: alerta.entidade_id,
+        bookmakerNome: alerta.titulo,
+        parceiroId: alerta.parceiro_id,
+        parceiroNome: alerta.parceiro_nome,
+      } 
+    });
   };
 
   const handleConciliarEntrega = (entrega: EntregaPendente) => {
@@ -836,7 +845,12 @@ export default function CentralOperacoes() {
                   <div key={alerta.entidade_id} className="flex items-center justify-between p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Building2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                      <span className="text-xs font-medium truncate">{alerta.titulo}</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{alerta.titulo}</p>
+                        {alerta.parceiro_nome && (
+                          <p className="text-[10px] text-muted-foreground truncate">{alerta.parceiro_nome}</p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {alerta.valor && <span className="text-xs font-bold text-emerald-400">{formatCurrency(alerta.valor, alerta.moeda)}</span>}
