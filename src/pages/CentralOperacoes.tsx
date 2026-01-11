@@ -43,6 +43,7 @@ import {
   ShieldAlert,
   Unlink,
 } from "lucide-react";
+import { CardInfoTooltip } from "@/components/ui/card-info-tooltip";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
@@ -838,6 +839,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-yellow-400" />
                 Saques Aguardando Confirmação
+                <CardInfoTooltip 
+                  title="Saques Aguardando Confirmação"
+                  description="Saques que foram iniciados e precisam de confirmação de recebimento pelo parceiro/conta bancária."
+                  flow="Quando um saque é registrado no Caixa, ele fica pendente até que a tesouraria confirme que o valor foi recebido no destino."
+                />
                 <Badge className="ml-auto bg-yellow-500/20 text-yellow-400">{saquesPendentes.length}</Badge>
               </CardTitle>
             </CardHeader>
@@ -879,6 +885,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <DollarSign className="h-4 w-4 text-emerald-400" />
                 Saques Pendentes de Processamento
+                <CardInfoTooltip 
+                  title="Saques Pendentes de Processamento"
+                  description="Bookmakers com status 'Aguardando Saque' que precisam ter o saque processado pela tesouraria."
+                  flow="Casas limitadas desvinculadas de projetos vão diretamente para cá, pois o saque é obrigatório."
+                />
                 <Badge className="ml-auto bg-emerald-500/20 text-emerald-400">{alertasSaques.length}</Badge>
               </CardTitle>
             </CardHeader>
@@ -922,6 +933,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <ShieldAlert className="h-4 w-4 text-orange-400" />
                 Casas Limitadas
+                <CardInfoTooltip 
+                  title="Casas Limitadas"
+                  description="Bookmakers que foram marcadas como limitadas e ainda estão vinculadas a projetos. Precisam de atenção para saque."
+                  flow="Quando uma bookmaker é marcada como 'Limitada' (conta restrita pela casa), ela aparece aqui para processamento de saque."
+                />
                 <Badge className="ml-auto bg-orange-500/20 text-orange-400">{alertasLimitadas.length}</Badge>
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
@@ -972,6 +988,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Unlink className="h-4 w-4 text-purple-400" />
                 Casas Aguardando Decisão
+                <CardInfoTooltip 
+                  title="Casas Aguardando Decisão"
+                  description="Bookmakers ativas que foram desvinculadas de projetos com saldo positivo. Você decide: disponibilizar para outros projetos ou sacar."
+                  flow="Quando um operador desvincula uma casa ATIVA (não limitada) com saldo, ela vem para cá aguardando decisão do responsável financeiro."
+                />
                 <Badge className="ml-auto bg-purple-500/20 text-purple-400">{casasAguardandoDecisao.length}</Badge>
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
@@ -1032,6 +1053,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Unlink className="h-4 w-4 text-slate-400" />
                 Casas Desvinculadas
+                <CardInfoTooltip 
+                  title="Casas Desvinculadas (Legado)"
+                  description="Bookmakers que foram desvinculadas antes da nova regra de decisão. Podem ser sacadas ou marcadas como cientes."
+                  flow="Casas desvinculadas antes da implementação do novo fluxo de decisão aparecem aqui para compatibilidade."
+                />
                 <Badge className="ml-auto bg-slate-500/20 text-slate-400">{casasAtivasDesvinculadas.length}</Badge>
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
@@ -1092,6 +1118,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Banknote className="h-4 w-4 text-indigo-400" />
                 Participações de Investidores
+                <CardInfoTooltip 
+                  title="Participações de Investidores"
+                  description="Pagamentos de participação nos lucros devidos aos investidores com base nos ciclos apurados."
+                  flow="Quando um ciclo de projeto é fechado com lucro, é calculada a participação de cada investidor conforme percentual acordado."
+                />
                 <Badge className="ml-auto bg-indigo-500/20 text-indigo-400">{participacoesPendentes.length}</Badge>
               </CardTitle>
             </CardHeader>
@@ -1133,6 +1164,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Users className="h-4 w-4 text-orange-400" />
                 Pagamentos de Operador
+                <CardInfoTooltip 
+                  title="Pagamentos de Operador"
+                  description="Pagamentos pendentes aos operadores de projetos (fixos, comissões ou bonificações)."
+                  flow="Quando um operador atinge meta ou tem pagamento agendado, o valor é gerado automaticamente e aguarda processamento."
+                />
                 <Badge className="ml-auto bg-orange-500/20 text-orange-400">{pagamentosOperadorPendentes.length}</Badge>
               </CardTitle>
             </CardHeader>
@@ -1174,6 +1210,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Target className="h-4 w-4 text-violet-400" />
                 Ciclos de Apuração
+                <CardInfoTooltip 
+                  title="Ciclos de Apuração"
+                  description="Ciclos de projetos que estão próximos do fechamento ou já atingiram a meta de volume/tempo."
+                  flow="Ciclos são criados automaticamente para projetos e fecham por tempo, volume apostado ou ambos (híbrido)."
+                />
                 <Badge className="ml-auto bg-violet-500/20 text-violet-400">{alertasCiclosFiltrados.length}</Badge>
               </CardTitle>
             </CardHeader>
@@ -1229,6 +1270,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <TrendingUp className="h-4 w-4 text-emerald-400" />
                 Marcos de Lucro Atingidos
+                <CardInfoTooltip 
+                  title="Marcos de Lucro Atingidos"
+                  description="Parceiros que atingiram marcos importantes de lucro acumulado (ex: R$1.000, R$5.000)."
+                  flow="Quando o lucro total de um parceiro cruza um marco configurado, um alerta é gerado para acompanhamento."
+                />
                 <Badge className="ml-auto bg-emerald-500/20 text-emerald-400">{alertasLucro.length}</Badge>
               </CardTitle>
             </CardHeader>
@@ -1276,6 +1322,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Package className="h-4 w-4 text-purple-400" />
                 Entregas Pendentes
+                <CardInfoTooltip 
+                  title="Entregas Pendentes"
+                  description="Entregas de operadores que estão prontas para conciliação e pagamento."
+                  flow="Quando uma entrega atinge a meta (tempo ou valor), ela fica disponível para conciliação e posterior pagamento ao operador."
+                />
                 <Badge className="ml-auto bg-purple-500/20 text-purple-400">{entregasPendentes.length}</Badge>
               </CardTitle>
             </CardHeader>
@@ -1317,6 +1368,11 @@ export default function CentralOperacoes() {
                 <CardTitle className="flex items-center gap-2 text-sm">
                 <UserPlus className="h-4 w-4 text-amber-400" />
                 Parceiros sem Origem
+                <CardInfoTooltip 
+                  title="Parceiros sem Origem"
+                  description="Parceiros ativos que não possuem indicador, fornecedor ou outra origem registrada."
+                  flow="Parceiros cadastrados sem origem aparecem aqui para definição de como chegaram à operação."
+                />
                 <Badge className="ml-auto bg-amber-500/20 text-amber-400">{parceirosSemParceria.length}</Badge>
               </CardTitle>
               <p className="text-xs text-muted-foreground">Parceiros sem indicação, fornecedor ou origem registrada</p>
@@ -1353,6 +1409,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <DollarSign className="h-4 w-4 text-cyan-400" />
                 Pagamentos a Parceiros
+                <CardInfoTooltip 
+                  title="Pagamentos a Parceiros"
+                  description="Valores devidos aos parceiros conforme acordado na parceria (valor fixo ou percentual)."
+                  flow="Quando uma parceria possui valor acordado para o parceiro, ele aparece aqui para pagamento."
+                />
                 <Badge className="ml-auto bg-cyan-500/20 text-cyan-400">{pagamentosParceiros.length}</Badge>
               </CardTitle>
             </CardHeader>
@@ -1391,6 +1452,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Gift className="h-4 w-4 text-pink-400" />
                 Bônus de Indicadores
+                <CardInfoTooltip 
+                  title="Bônus de Indicadores"
+                  description="Bônus devidos a indicadores que atingiram metas de parceiros indicados."
+                  flow="Quando um indicador atinge a meta de parceiros indicados, um bônus é gerado conforme acordo."
+                />
                 <Badge className="ml-auto bg-pink-500/20 text-pink-400">{bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0)}</Badge>
               </CardTitle>
             </CardHeader>
@@ -1432,6 +1498,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Banknote className="h-4 w-4 text-teal-400" />
                 Comissões Pendentes
+                <CardInfoTooltip 
+                  title="Comissões Pendentes"
+                  description="Comissões devidas a indicadores por parceiros que eles indicaram."
+                  flow="Quando uma parceria indicada gera receita, uma comissão é calculada para o indicador responsável."
+                />
                 <Badge className="ml-auto bg-teal-500/20 text-teal-400">{comissoesPendentes.length}</Badge>
               </CardTitle>
             </CardHeader>
@@ -1473,6 +1544,11 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Calendar className="h-4 w-4 text-red-400" />
                 Parcerias Encerrando
+                <CardInfoTooltip 
+                  title="Parcerias Encerrando"
+                  description="Parcerias com data de fim próxima que precisam ser renovadas ou encerradas."
+                  flow="Parcerias com data de encerramento nos próximos dias aparecem aqui para ação preventiva."
+                />
                 <Badge className="ml-auto bg-red-500/20 text-red-400">{parceriasEncerramento.length}</Badge>
               </CardTitle>
             </CardHeader>
