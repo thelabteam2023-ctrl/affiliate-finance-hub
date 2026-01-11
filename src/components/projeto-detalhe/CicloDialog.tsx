@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
+import { getMoedaSymbol } from "@/types/projeto";
 import {
   Dialog,
   DialogContent,
@@ -21,8 +23,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { addMonths, addDays } from "date-fns";
-import { Clock, Target } from "lucide-react";
-
+import { Clock, Target, AlertCircle } from "lucide-react";
 interface Ciclo {
   id: string;
   numero_ciclo: number;
@@ -81,6 +82,8 @@ export function CicloDialog({
   onSuccess,
 }: CicloDialogProps) {
   const { workspaceId } = useWorkspace();
+  const { moedaConsolidacao, isLoading: loadingConfig } = useProjetoConsolidacao({ projetoId });
+  const currencySymbol = getMoedaSymbol(moedaConsolidacao);
   const [loading, setLoading] = useState(false);
   const [operadoresProjeto, setOperadoresProjeto] = useState<OperadorProjeto[]>([]);
   const [formData, setFormData] = useState({
@@ -396,8 +399,13 @@ export function CicloDialog({
               </div>
 
               <div className="space-y-2">
-                <Label>
-                  {formData.metrica_acumuladora === "LUCRO" ? "Meta de Lucro (R$)" : "Meta de Volume (R$)"} *
+                <Label className="flex items-center gap-2">
+                  {formData.metrica_acumuladora === "LUCRO" 
+                    ? `Meta de Lucro (${currencySymbol})` 
+                    : `Meta de Volume (${currencySymbol})`} *
+                  <span className="text-xs text-muted-foreground font-normal">
+                    (moeda do projeto: {moedaConsolidacao})
+                  </span>
                 </Label>
                 <Input
                   type="number"
@@ -407,6 +415,13 @@ export function CicloDialog({
                   onChange={(e) => setFormData({ ...formData, meta_volume: e.target.value })}
                   placeholder={formData.metrica_acumuladora === "LUCRO" ? "5000" : "150000"}
                 />
+                <div className="flex items-start gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/30">
+                  <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-200">
+                    Este valor será registrado em <strong>{moedaConsolidacao}</strong>.
+                    Certifique-se de digitar na moeda correta.
+                  </p>
+                </div>
               </div>
             </>
           )}
