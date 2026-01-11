@@ -4938,6 +4938,7 @@ export type Database = {
       }
       projeto_ciclos: {
         Row: {
+          auto_criado: boolean | null
           cotacao_fechamento: number | null
           cotacao_fechamento_at: string | null
           created_at: string | null
@@ -4970,6 +4971,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          auto_criado?: boolean | null
           cotacao_fechamento?: number | null
           cotacao_fechamento_at?: string | null
           created_at?: string | null
@@ -5002,6 +5004,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          auto_criado?: boolean | null
           cotacao_fechamento?: number | null
           cotacao_fechamento_at?: string | null
           created_at?: string | null
@@ -7985,6 +7988,10 @@ export type Database = {
         }
         Returns: Json
       }
+      encerrar_ciclo_e_criar_proximo: {
+        Args: { p_ciclo_id: string; p_excedente?: number; p_gatilho: string }
+        Returns: string
+      }
       end_user_session: { Args: { p_user_id: string }; Returns: number }
       expire_old_invites: { Args: never; Returns: number }
       expire_session_by_inactivity: {
@@ -8271,6 +8278,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      verificar_ciclos_vencidos: { Args: never; Returns: number }
       workspace_has_group_access: {
         Args: { _bookmaker_catalogo_id: string; _workspace_id: string }
         Returns: boolean

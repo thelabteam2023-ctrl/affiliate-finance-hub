@@ -31,6 +31,7 @@ import { ptBR } from "date-fns/locale";
 import { CicloDialog } from "./CicloDialog";
 import { ComparativoCiclosTab } from "./ComparativoCiclosTab";
 import { FecharCicloConfirmDialog } from "./FecharCicloConfirmDialog";
+import { useCicloActions } from "@/hooks/useCicloActions";
 
 interface Ciclo {
   id: string;
@@ -49,6 +50,8 @@ interface Ciclo {
   excedente_anterior: number;
   excedente_proximo: number;
   operador_projeto_id: string | null;
+  gatilho_fechamento: string | null;
+  auto_criado: boolean | null;
 }
 
 interface ProjetoCiclosTabProps {
@@ -104,6 +107,8 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
   const [fecharConfirmOpen, setFecharConfirmOpen] = useState(false);
   const [cicloParaFechar, setCicloParaFechar] = useState<Ciclo | null>(null);
   const [projetoNome, setProjetoNome] = useState("");
+  const [encerrandoPorMeta, setEncerrandoPorMeta] = useState<string | null>(null);
+  const { encerrarPorMeta } = useCicloActions();
 
   useEffect(() => {
     fetchCiclos();
@@ -251,13 +256,34 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
     setFecharConfirmOpen(true);
   };
 
+  // Encerra ciclo automaticamente por meta atingida
+  const handleEncerrarPorMeta = async (ciclo: Ciclo, valorAtual: number) => {
+    if (!ciclo.meta_volume) return;
+    
+    setEncerrandoPorMeta(ciclo.id);
+    try {
+      const result = await encerrarPorMeta(ciclo.id, valorAtual, ciclo.meta_volume);
+      if (result.success) {
+        fetchCiclos(); // Refresh
+      }
+    } finally {
+      setEncerrandoPorMeta(null);
+    }
+  };
 
-  const getStatusBadge = (status: string) => {
+
+  const getStatusBadge = (status: string, gatilhoFechamento?: string | null) => {
     switch (status) {
       case "EM_ANDAMENTO":
         return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30"><Play className="h-3 w-3 mr-1" />Em Andamento</Badge>;
       case "FECHADO":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30"><CheckCircle2 className="h-3 w-3 mr-1" />Fechado</Badge>;
+        const motivoLabel = gatilhoFechamento === "META" ? "por Meta" : gatilhoFechamento === "PRAZO" ? "por Prazo" : "";
+        return (
+          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Fechado {motivoLabel}
+          </Badge>
+        );
       case "CANCELADO":
         return <Badge className="bg-red-500/20 text-red-400 border-red-500/30"><XCircle className="h-3 w-3 mr-1" />Cancelado</Badge>;
       default:
@@ -420,6 +446,11 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                       <div className="flex items-center gap-2">
                           <CardTitle className="text-base">Ciclo {ciclo.numero_ciclo}</CardTitle>
                           {getTipoGatilhoBadge(ciclo.tipo_gatilho, temDataLimite)}
+                          {ciclo.auto_criado && (
+                            <Badge variant="outline" className="text-xs text-muted-foreground border-muted">
+                              Auto
+                            </Badge>
+                          )}
                         </div>
                         <CardDescription className="flex items-center gap-2">
                           <Calendar className="h-3 w-3" />
@@ -428,7 +459,7 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {getStatusBadge(ciclo.status)}
+                      {getStatusBadge(ciclo.status, ciclo.gatilho_fechamento)}
                       {ciclo.status === "EM_ANDAMENTO" && ciclo.tipo_gatilho === "TEMPO" && (
                         <Badge variant="outline" className={isAtrasado ? "text-amber-400 border-amber-500/50" : ""}>
                           <Clock className="h-3 w-3 mr-1" />
@@ -459,9 +490,27 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                         className={isMetaAtingida ? "bg-emerald-500/20" : isMetaProxima ? "bg-amber-500/20" : ""} 
                       />
                       {isMetaAtingida && (
-                        <div className="flex items-center gap-2 text-emerald-400 text-sm">
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span>Meta atingida! Ciclo pronto para fechamento.</span>
+                        <div className="flex items-center justify-between text-emerald-400 text-sm">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span>Meta atingida! Ciclo pronto para fechamento.</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+                            onClick={() => handleEncerrarPorMeta(ciclo, valorAtual)}
+                            disabled={encerrandoPorMeta === ciclo.id}
+                          >
+                            {encerrandoPorMeta === ciclo.id ? (
+                              "Encerrando..."
+                            ) : (
+                              <>
+                                <Target className="h-4 w-4 mr-1" />
+                                Encerrar por Meta
+                              </>
+                            )}
+                          </Button>
                         </div>
                       )}
                       {isMetaProxima && !isMetaAtingida && (
