@@ -265,14 +265,22 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
     }
   };
 
-  const getTipoGatilhoBadge = (tipo: string) => {
+  const getTipoGatilhoBadge = (tipo: string, temDataLimite?: boolean) => {
     switch (tipo) {
       case "TEMPO":
         return <Badge variant="outline" className="text-blue-400 border-blue-500/30"><Clock className="h-3 w-3 mr-1" />Tempo</Badge>;
+      case "META":
+        return (
+          <Badge variant="outline" className="text-purple-400 border-purple-500/30">
+            <Target className="h-3 w-3 mr-1" />
+            Meta{temDataLimite ? " + Prazo" : ""}
+          </Badge>
+        );
+      // Fallback para dados legados
       case "VOLUME":
-        return <Badge variant="outline" className="text-purple-400 border-purple-500/30"><Target className="h-3 w-3 mr-1" />Volume</Badge>;
+        return <Badge variant="outline" className="text-purple-400 border-purple-500/30"><Target className="h-3 w-3 mr-1" />Meta</Badge>;
       case "HIBRIDO":
-        return <Badge variant="outline" className="text-amber-400 border-amber-500/30"><Zap className="h-3 w-3 mr-1" />Híbrido</Badge>;
+        return <Badge variant="outline" className="text-amber-400 border-amber-500/30"><Zap className="h-3 w-3 mr-1" />Meta + Prazo</Badge>;
       default:
         return null;
     }
@@ -396,8 +404,9 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
             const isAtrasado = ciclo.status === "EM_ANDAMENTO" && diasRestantes < 0;
             const realTimeMetrics = cicloMetrics[ciclo.id];
             const { progresso: progressoVolume, valorAtual } = getProgressoVolume(ciclo, realTimeMetrics);
-            const isMetaProxima = ciclo.tipo_gatilho !== "TEMPO" && progressoVolume >= 90;
+            const isMetaProxima = ciclo.tipo_gatilho === "META" && progressoVolume >= 90;
             const isMetaAtingida = progressoVolume >= 100;
+            const temDataLimite = ciclo.data_fim_prevista && ciclo.data_fim_prevista !== ciclo.data_inicio;
 
             return (
               <Card key={ciclo.id} className={isAtrasado || isMetaProxima ? "border-amber-500/50" : isMetaAtingida ? "border-emerald-500/50" : ""}>
@@ -408,9 +417,9 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                         {ciclo.numero_ciclo}
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                           <CardTitle className="text-base">Ciclo {ciclo.numero_ciclo}</CardTitle>
-                          {getTipoGatilhoBadge(ciclo.tipo_gatilho)}
+                          {getTipoGatilhoBadge(ciclo.tipo_gatilho, temDataLimite)}
                         </div>
                         <CardDescription className="flex items-center gap-2">
                           <Calendar className="h-3 w-3" />
@@ -430,8 +439,8 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {/* Barra de progresso para ciclos volumétricos */}
-                  {ciclo.tipo_gatilho !== "TEMPO" && ciclo.meta_volume && ciclo.status === "EM_ANDAMENTO" && (
+                  {/* Barra de progresso para ciclos por meta */}
+                  {ciclo.tipo_gatilho === "META" && ciclo.meta_volume && ciclo.status === "EM_ANDAMENTO" && (
                     <div className="mb-4 space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">

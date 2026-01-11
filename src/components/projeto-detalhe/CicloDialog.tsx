@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { addMonths, addDays } from "date-fns";
-import { Clock, Target, Zap } from "lucide-react";
+import { Clock, Target } from "lucide-react";
 
 interface Ciclo {
   id: string;
@@ -63,9 +63,8 @@ interface CicloDialogProps {
 }
 
 const TIPOS_GATILHO = [
-  { value: "TEMPO", label: "Por Tempo", icon: Clock },
-  { value: "VOLUME", label: "Por Volume", icon: Target },
-  { value: "HIBRIDO", label: "Híbrido", icon: Zap },
+  { value: "TEMPO", label: "Por Tempo", icon: Clock, description: "Encerra quando a data limite chegar" },
+  { value: "META", label: "Por Meta", icon: Target, description: "Encerra quando atingir a meta de lucro/volume" },
 ];
 
 const METRICAS = [
@@ -196,21 +195,22 @@ export function CicloDialog({
       return;
     }
 
-    // Validar meta baseada no tipo de gatilho e métrica
-    if (formData.tipo_gatilho === "VOLUME") {
+    // Validar meta para tipo META
+    if (formData.tipo_gatilho === "META") {
       if (!formData.meta_volume) {
-        toast.error("Informe a meta de volume para ciclos por volume");
-        return;
-      }
-    } else if (formData.tipo_gatilho === "HIBRIDO") {
-      if (!formData.meta_volume) {
-        toast.error("Informe a meta para ciclos híbridos");
+        toast.error("Informe a meta de lucro/volume para ciclos por meta");
         return;
       }
     }
 
-    if (new Date(formData.data_fim_prevista) <= new Date(formData.data_inicio)) {
-      toast.error("Data fim deve ser posterior à data início");
+    // Data limite é obrigatória para TEMPO, opcional para META
+    if (formData.tipo_gatilho === "TEMPO" && !formData.data_fim_prevista) {
+      toast.error("Data limite é obrigatória para ciclos por tempo");
+      return;
+    }
+
+    if (formData.data_fim_prevista && new Date(formData.data_fim_prevista) <= new Date(formData.data_inicio)) {
+      toast.error("Data limite deve ser posterior à data início");
       return;
     }
 
@@ -303,7 +303,8 @@ export function CicloDialog({
     }
   };
 
-  const showVolumeFields = formData.tipo_gatilho === "VOLUME" || formData.tipo_gatilho === "HIBRIDO";
+  const showMetaFields = formData.tipo_gatilho === "META";
+  const showOptionalDate = formData.tipo_gatilho === "META";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -362,10 +363,13 @@ export function CicloDialog({
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              {TIPOS_GATILHO.find(t => t.value === formData.tipo_gatilho)?.description}
+            </p>
           </div>
 
-          {/* Campos de Volume/Meta */}
-          {showVolumeFields && (
+          {/* Campos de Meta */}
+          {showMetaFields && (
             <>
               <div className="space-y-2">
                 <Label>Métrica Acumuladora *</Label>
@@ -419,13 +423,18 @@ export function CicloDialog({
             </div>
             <div className="space-y-2">
               <Label>
-                {formData.tipo_gatilho === "VOLUME" ? "Data Limite" : "Data Fim Prevista"} *
+                {formData.tipo_gatilho === "TEMPO" ? "Data Limite *" : "Data Limite (opcional)"}
               </Label>
               <DatePicker
                 value={formData.data_fim_prevista}
                 onChange={(date) => setFormData({ ...formData, data_fim_prevista: date })}
                 disabled={ciclo?.status === "FECHADO"}
               />
+              {showOptionalDate && (
+                <p className="text-xs text-muted-foreground">
+                  Se definida, o ciclo também alerta quando o prazo estiver próximo
+                </p>
+              )}
             </div>
           </div>
 

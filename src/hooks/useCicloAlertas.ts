@@ -117,8 +117,12 @@ export function useCicloAlertas() {
         let mensagemVolume: string | null = null;
         let motivoAlerta: AlertaCiclo["motivo_alerta"] = "TEMPO_PROXIMO";
 
-        // Gatilho TEMPO ou HÍBRIDO: alertar quando vencido ou próximo (≤ 2 dias)
-        if (ciclo.tipo_gatilho === "TEMPO" || ciclo.tipo_gatilho === "HIBRIDO") {
+        // Gatilho TEMPO: sempre alerta por tempo
+        // Gatilho META com data: alerta por tempo E por meta (dual trigger)
+        // Gatilho META sem data: só alerta por meta
+        const temDataLimite = ciclo.data_fim_prevista && ciclo.data_fim_prevista !== ciclo.data_inicio;
+        
+        if (ciclo.tipo_gatilho === "TEMPO" || (ciclo.tipo_gatilho === "META" && temDataLimite)) {
           if (diasAtraso > 0) {
             deveAlertar = true;
             urgencia = diasAtraso >= 3 ? "CRITICA" : "ALTA";
@@ -132,8 +136,8 @@ export function useCicloAlertas() {
           }
         }
 
-        // Gatilho VOLUME ou HÍBRIDO: alertar quando atingir 90%+ da meta
-        if ((ciclo.tipo_gatilho === "VOLUME" || ciclo.tipo_gatilho === "HIBRIDO") && ciclo.meta_volume) {
+        // Gatilho META: alertar quando atingir 90%+ da meta
+        if (ciclo.tipo_gatilho === "META" && ciclo.meta_volume) {
           const metricaLabel = ciclo.metrica_acumuladora === "LUCRO" ? "Lucro" : "Volume";
           
           if (progressoVolume >= 100) {
@@ -145,7 +149,6 @@ export function useCicloAlertas() {
             deveAlertar = true;
             if (urgencia !== "CRITICA") urgencia = "ALTA";
             mensagemVolume = `${progressoVolume.toFixed(0)}% da meta de ${metricaLabel.toLowerCase()}`;
-            // Só atualizar motivo se não for algo mais urgente
             if (motivoAlerta === "TEMPO_PROXIMO") {
               motivoAlerta = "META_PROXIMA";
             }
