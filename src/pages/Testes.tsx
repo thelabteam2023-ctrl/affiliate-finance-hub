@@ -999,15 +999,7 @@ export default function Testes() {
         console.log(`✅ ${saquesPendentesIds.length} saques pendentes removidos`);
       }
 
-      // 7. Limpar parcerias (pagamentos a parceiros e comissões vêm daqui)
-      await supabase.from("parcerias").delete().eq("user_id", user.id);
-      console.log("✅ Parcerias removidas");
-
-      // 8. Limpar indicacoes (vínculos indicador-parceiro para comissões)
-      await supabase.from("indicacoes").delete().eq("user_id", user.id);
-      console.log("✅ Indicações removidas");
-
-      // 9. Recalcular saldos das bookmakers baseado no ledger
+      // 7. Recalcular saldos das bookmakers baseado no ledger
       const { data: bookmakers } = await supabase
         .from("bookmakers")
         .select("id, nome, moeda")
@@ -1087,10 +1079,10 @@ export default function Testes() {
       toast.success(
         `Reset completo executado!\n` +
         `• ${projetoIds.length} projetos apagados\n` +
-        `• Apostas, bônus, freebets e parcerias removidas\n` +
+        `• Apostas, bônus, freebets removidas\n` +
         `• Saques pendentes removidos\n` +
         `• Bookmakers: saldos recalculados, status resetado\n` +
-        `• Cash ledger confirmados preservado`
+        `• Parcerias e indicações preservadas`
       );
 
     } catch (error: any) {
@@ -1546,8 +1538,8 @@ export default function Testes() {
               <div className="flex-1">
                 <p className="font-medium text-destructive">Reset Completo para Testes</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Apaga TODOS os projetos e dados vinculados (apostas, bônus, freebets, ciclos, entregas, parcerias, indicações), 
-                  remove saques pendentes, recalcula saldos das bookmakers baseado apenas no cash ledger confirmado.
+                  Apaga TODOS os projetos e dados vinculados (apostas, bônus, freebets, ciclos, entregas), 
+                  remove saques pendentes, recalcula saldos das bookmakers. <strong>Mantém parcerias e indicações.</strong>
                 </p>
                 <div className="mt-3 p-3 bg-destructive/10 rounded-md">
                   <p className="text-xs text-destructive font-medium mb-2">⚠️ Esta ação irá:</p>
@@ -1555,7 +1547,6 @@ export default function Testes() {
                     <li>Apagar todos os projetos</li>
                     <li>Apagar todas as apostas, bônus, freebets e giros grátis</li>
                     <li>Apagar entregas e pagamentos de operadores</li>
-                    <li>Apagar parcerias e indicações (pagamentos pendentes e comissões)</li>
                     <li>Remover saques pendentes do cash ledger</li>
                     <li>Resetar saldos e status das bookmakers</li>
                   </ul>
@@ -1563,6 +1554,7 @@ export default function Testes() {
                   <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
                     <li>Cash ledger confirmado (depósitos e saques finalizados)</li>
                     <li>Parceiros, operadores, investidores, indicadores</li>
+                    <li>Parcerias e indicações (vínculos)</li>
                     <li>Contas bancárias e wallets</li>
                     <li>Registros de bookmakers (saldos recalculados, status resetado)</li>
                   </ul>
