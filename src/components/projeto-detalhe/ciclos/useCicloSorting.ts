@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-
+import { parseLocalDate } from "@/lib/dateUtils";
 export interface CicloBase {
   id: string;
   numero_ciclo?: number;
@@ -23,7 +23,7 @@ export function getCicloRealStatus(ciclo: CicloBase): CicloStatus {
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   
-  const dataInicio = new Date(ciclo.data_inicio);
+  const dataInicio = parseLocalDate(ciclo.data_inicio);
   dataInicio.setHours(0, 0, 0, 0);
   
   // Se ainda não começou, é futuro
@@ -95,11 +95,11 @@ export function calcularDuracaoReal(ciclo: CicloBase): {
   dias: number; 
   tipo: "concluido" | "em_andamento" | "previsto";
 } {
-  const dataInicio = new Date(ciclo.data_inicio);
+  const dataInicio = parseLocalDate(ciclo.data_inicio);
   
   if (ciclo.status === "FECHADO" && ciclo.data_fim_real) {
     // Ciclo fechado: usar data real de fechamento
-    const dataFim = new Date(ciclo.data_fim_real);
+    const dataFim = parseLocalDate(ciclo.data_fim_real);
     const dias = Math.ceil((dataFim.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24));
     return { dias: Math.max(1, dias), tipo: "concluido" };
   }
@@ -107,12 +107,13 @@ export function calcularDuracaoReal(ciclo: CicloBase): {
   if (ciclo.status === "EM_ANDAMENTO") {
     // Em andamento: dias até agora
     const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
     const dias = Math.ceil((hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24));
     return { dias: Math.max(0, dias), tipo: "em_andamento" };
   }
   
   // Futuro ou não iniciado: duração prevista
-  const dataFimPrevista = new Date(ciclo.data_fim_prevista);
+  const dataFimPrevista = parseLocalDate(ciclo.data_fim_prevista);
   const dias = Math.ceil((dataFimPrevista.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24));
   return { dias: Math.max(1, dias), tipo: "previsto" };
 }
@@ -133,10 +134,10 @@ export function calcularMetaDiaria(ciclo: CicloBase, valorAtual: number = 0): {
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   
-  const dataInicio = new Date(ciclo.data_inicio);
+  const dataInicio = parseLocalDate(ciclo.data_inicio);
   dataInicio.setHours(0, 0, 0, 0);
   
-  const dataFimPrevista = new Date(ciclo.data_fim_prevista);
+  const dataFimPrevista = parseLocalDate(ciclo.data_fim_prevista);
   dataFimPrevista.setHours(0, 0, 0, 0);
   
   const diasTotais = Math.ceil((dataFimPrevista.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24));

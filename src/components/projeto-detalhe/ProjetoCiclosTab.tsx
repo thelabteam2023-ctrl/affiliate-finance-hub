@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { CicloDialog } from "./CicloDialog";
 import { ComparativoCiclosTab } from "./ComparativoCiclosTab";
 import { FecharCicloConfirmDialog } from "./FecharCicloConfirmDialog";
@@ -396,8 +397,9 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
 // formatCurrency agora vem como prop
 
   const getDiasRestantes = (dataFim: string) => {
-    const fim = new Date(dataFim);
+    const fim = parseLocalDate(dataFim);
     const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
     return differenceInDays(fim, hoje);
   };
 
@@ -571,7 +573,7 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                         <CardDescription className="flex flex-wrap items-center gap-2">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {format(new Date(ciclo.data_inicio), "dd/MM/yyyy", { locale: ptBR })} - {format(new Date(ciclo.data_fim_prevista), "dd/MM/yyyy", { locale: ptBR })}
+                            {format(parseLocalDate(ciclo.data_inicio), "dd/MM/yyyy", { locale: ptBR })} - {format(parseLocalDate(ciclo.data_fim_prevista), "dd/MM/yyyy", { locale: ptBR })}
                           </span>
                           <CicloDuracao ciclo={ciclo} formatCurrency={formatCurrency} />
                         </CardDescription>

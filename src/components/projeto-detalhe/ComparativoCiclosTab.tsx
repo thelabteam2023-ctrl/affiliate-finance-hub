@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { AnalisePorCasaSection } from "./AnalisePorCasaSection";
 import { useBookmakerAnalise } from "@/hooks/useBookmakerAnalise";
 import { PerdaCicloTooltip } from "./ciclos/PerdaCicloTooltip";
@@ -239,7 +240,7 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
     const porMes: Record<string, { lucro: number; volume: number; apostas: number }> = {};
     
     ciclosFechados.forEach(ciclo => {
-      const mes = format(new Date(ciclo.data_inicio), "MMMM yyyy", { locale: ptBR });
+      const mes = format(parseLocalDate(ciclo.data_inicio), "MMMM yyyy", { locale: ptBR });
       if (!porMes[mes]) {
         porMes[mes] = { lucro: 0, volume: 0, apostas: 0 };
       }
@@ -496,7 +497,7 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
                   <tr key={ciclo.id} className="border-b hover:bg-muted/50">
                     <td className="p-2 font-medium">{ciclo.numero_ciclo}</td>
                     <td className="p-2 text-muted-foreground">
-                      {format(new Date(ciclo.data_inicio), "dd/MM")} - {format(new Date(ciclo.data_fim_prevista), "dd/MM")}
+                      {format(parseLocalDate(ciclo.data_inicio), "dd/MM")} - {format(parseLocalDate(ciclo.data_fim_prevista), "dd/MM")}
                     </td>
                     <td className="p-2 text-right">{ciclo.qtdApostas}</td>
                     <td className="p-2 text-right">{formatCurrency(ciclo.volume)}</td>
