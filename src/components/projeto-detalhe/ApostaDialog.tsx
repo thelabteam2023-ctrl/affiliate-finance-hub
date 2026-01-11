@@ -164,122 +164,142 @@ const incrementSportUsage = (sport: string) => {
   }
 };
 
+// ========================================================================
+// NOVO SISTEMA DE MERCADOS CANÔNICOS
+// ========================================================================
+// Over/Under e Handicap NUNCA são mercados sozinhos
+// Sempre: TIPO + DOMÍNIO (para TOTAL e HANDICAP)
+// ========================================================================
+
+import { 
+  getMarketOptionsForSport as getCanonicalMarketOptions,
+  isTotalMarket as isTotalMercado,
+  isHandicapMarket as isHandicapMercado,
+  MarketDomain,
+  DOMAIN_LABELS,
+  getDomainsForSport,
+} from "@/lib/marketTypes";
+
+import { parseOcrMarket, resolveOcrResultToOption } from "@/lib/marketOcrParser";
+
 const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   "Futebol": [
     "Moneyline / 1X2",
-    "Over (Gols)",
-    "Under (Gols)",
-    "Handicap Asiático",
-    "Handicap Europeu",
+    "1X2",
+    "Total de Gols",        // ANTES: "Over (Gols)" + "Under (Gols)"
+    "Total de Escanteios",
+    "Total de Cartões",
+    "Handicap de Gols",     // ANTES: "Handicap Asiático" + "Handicap Europeu"
     "Ambas Marcam (BTTS)",
-    "Resultado Exato",
     "Dupla Chance",
     "Draw No Bet",
-    "Primeiro/Último Gol",
-    "Total de Cantos",
+    "Resultado do 1º Tempo",
+    "Placar Exato",
     "Outro"
   ],
   "Basquete": [
     "Moneyline",
-    "Over (Pontos)",
-    "Under (Pontos)",
-    "Handicap",
+    "Total de Pontos",      // ANTES: "Over (Pontos)" + "Under (Pontos)"
+    "Handicap de Pontos",   // ANTES: "Handicap"
     "1º/2º Tempo",
     "Margem de Vitória",
     "Outro"
   ],
   "Tênis": [
     "Vencedor do Jogo",
+    "Total de Games",       // ANTES: "Over (Games)" + "Under (Games)"
+    "Total de Sets",
     "Handicap de Games",
-    "Over (Games)",
-    "Under (Games)",
+    "Handicap de Sets",
     "Vencedor do Set",
     "Resultado Exato (Sets)",
     "Outro"
   ],
   "Baseball": [
     "Moneyline",
-    "Run Line (+1.5 / -1.5)",
-    "Over (Runs)",
-    "Under (Runs)",
+    "Total de Runs",        // ANTES: "Over (Runs)" + "Under (Runs)"
+    "Run Line",
+    "Handicap de Runs",
     "1ª Metade (1st 5 Innings)",
-    "Handicap",
     "Outro"
   ],
   "Hockey": [
     "Moneyline",
-    "Puck Line (+1.5 / -1.5)",
-    "Over (Gols)",
-    "Under (Gols)",
+    "Total de Gols",        // ANTES: "Over (Gols)" + "Under (Gols)"
+    "Puck Line",
+    "Handicap de Gols",
     "1º/2º/3º Período",
-    "Handicap",
     "Outro"
   ],
   "Futebol Americano": [
     "Moneyline",
+    "Total de Pontos",      // ANTES: "Over (Pontos)" + "Under (Pontos)"
     "Spread",
-    "Over (Pontos)",
-    "Under (Pontos)",
+    "Handicap de Pontos",
     "1º/2º Tempo",
     "Margem de Vitória",
-    "Primeiro TD",
     "Outro"
   ],
   "Vôlei": [
     "Vencedor",
+    "Total de Pontos",      // ANTES: "Over (Pontos)" + "Under (Pontos)"
+    "Total de Sets",
+    "Handicap de Pontos",
     "Handicap de Sets",
-    "Over (Pontos)",
-    "Under (Pontos)",
     "Resultado Exato (Sets)",
     "Outro"
   ],
   "MMA/UFC": [
     "Vencedor",
     "Método de Vitória",
+    "Total de Rounds",      // ANTES: "Over (Rounds)" + "Under (Rounds)"
     "Round de Finalização",
     "Vai para Decisão?",
-    "Over (Rounds)",
-    "Under (Rounds)",
+    "Outro"
+  ],
+  "Boxe": [
+    "Vencedor",
+    "Método de Vitória",
+    "Total de Rounds",
+    "Round de Finalização",
     "Outro"
   ],
   "League of Legends": [
     "Vencedor do Mapa",
     "Vencedor da Série",
+    "Total de Mapas",       // ANTES: "Over (Mapas)" + "Under (Mapas)"
     "Handicap de Mapas",
-    "Over (Mapas)",
-    "Under (Mapas)",
+    "Total de Kills",
     "Outro"
   ],
   "Counter-Strike": [
     "Vencedor do Mapa",
     "Vencedor da Série",
-    "Handicap de Rounds",
-    "Over (Rounds)",
-    "Under (Rounds)",
+    "Total de Mapas",
+    "Total de Rounds",      // ANTES: "Over (Rounds)" + "Under (Rounds)"
     "Handicap de Mapas",
+    "Handicap de Rounds",
     "Outro"
   ],
   "Dota 2": [
     "Vencedor do Mapa",
     "Vencedor da Série",
+    "Total de Mapas",
     "Handicap de Mapas",
-    "Over (Mapas)",
-    "Under (Mapas)",
+    "Total de Kills",
     "Outro"
   ],
   "eFootball": [
     "Vencedor",
-    "Over (Gols)",
-    "Under (Gols)",
-    "Handicap",
+    "Total de Gols",        // ANTES: "Over (Gols)" + "Under (Gols)"
+    "Handicap de Gols",
     "Ambas Marcam",
     "Resultado Exato",
     "Outro"
   ],
   "Outro": [
     "Vencedor",
-    "Over",
-    "Under",
+    "Total",                // ANTES: "Over" + "Under"
     "Handicap",
     "Outro"
   ]
