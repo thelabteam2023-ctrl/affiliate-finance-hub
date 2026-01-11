@@ -8210,6 +8210,48 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      recalcular_saldo_bookmaker: {
+        Args: { p_bookmaker_id: string }
+        Returns: {
+          bookmaker_id: string
+          depositos: number
+          diferenca: number
+          lucro_apostas: number
+          nome: string
+          saldo_anterior: number
+          saldo_calculado: number
+          saques: number
+          transferencias_entrada: number
+          transferencias_saida: number
+        }[]
+      }
+      recalcular_saldos_projeto: {
+        Args: { p_aplicar?: boolean; p_projeto_id: string }
+        Returns: {
+          atualizado: boolean
+          bookmaker_id: string
+          depositos: number
+          diferenca: number
+          lucro_apostas: number
+          nome: string
+          saldo_anterior: number
+          saldo_calculado: number
+          saques: number
+          transferencias_entrada: number
+          transferencias_saida: number
+        }[]
+      }
+      recalcular_saldos_workspace: {
+        Args: { p_aplicar?: boolean; p_workspace_id: string }
+        Returns: {
+          atualizado: boolean
+          bookmaker_id: string
+          diferenca: number
+          nome: string
+          saldo_anterior: number
+          saldo_calculado: number
+        }[]
+      }
       record_login_attempt: {
         Args: { p_email: string; p_ip_address?: string; p_success: boolean }
         Returns: undefined
