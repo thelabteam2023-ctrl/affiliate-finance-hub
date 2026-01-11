@@ -46,6 +46,7 @@ import { ESTRATEGIAS_LIST, inferEstrategiaLegado, type ApostaEstrategia } from "
 import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { useOperationalFilters } from "@/contexts/OperationalFiltersContext";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { parsePernaFromJson } from "@/types/apostasUnificada";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 
@@ -98,6 +99,7 @@ interface Aposta {
   surebet_id?: string | null;
   contexto_operacional?: string | null;
   forma_registro?: string | null;
+  pernas?: unknown | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -248,6 +250,20 @@ function getSurebetContexto(
   return "NORMAL";
 }
 
+function getCasaLabelFromAposta(aposta: { bookmaker?: any; pernas?: unknown | null }): string {
+  const nome = (aposta.bookmaker?.nome as string | undefined)?.trim();
+  const parceiro = (aposta.bookmaker?.parceiro?.nome as string | undefined)?.trim();
+
+  if (nome && parceiro) return `${nome} • ${parceiro}`;
+  if (nome) return nome;
+  if (parceiro) return parceiro;
+
+  // Fallback: algumas apostas (ex.: registros com SUREBET) podem ter a casa apenas em JSON (pernas)
+  const pernas = parsePernaFromJson((aposta as any).pernas);
+  const pernaNome = (pernas[0]?.bookmaker_nome as string | undefined)?.trim();
+  return pernaNome || "—";
+}
+
 export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp }: ProjetoApostasTabProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [apostas, setApostas] = useState<Aposta[]>([]);
@@ -330,7 +346,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           status, resultado, valor_retorno, lucro_prejuizo, observacoes, bookmaker_id,
           modo_entrada, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
           back_comissao, back_em_exchange, gerou_freebet, valor_freebet_gerada,
-          tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro
+          tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro, pernas
         `)
         .eq("projeto_id", projetoId)
         .eq("forma_registro", "SIMPLES")
@@ -1081,11 +1097,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">{format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}</span>
                         {/* Nome da casa e parceiro */}
-                        {(aposta.bookmaker?.nome || aposta.bookmaker?.parceiro?.nome) && (
-                          <span className="text-[10px] text-muted-foreground/70 truncate max-w-[180px]" title={[aposta.bookmaker?.nome, aposta.bookmaker?.parceiro?.nome].filter(Boolean).join(" • ")}>
-                            {[aposta.bookmaker?.nome, aposta.bookmaker?.parceiro?.nome].filter(Boolean).join(" • ")}
-                          </span>
-                        )}
+                        <span
+                          className="text-[10px] text-muted-foreground/70 truncate max-w-[180px]"
+                          title={getCasaLabelFromAposta(aposta)}
+                        >
+                          {getCasaLabelFromAposta(aposta)}
+                        </span>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground">Stake: {formatCurrency(aposta.stake)}</p>
@@ -1158,11 +1175,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                         {format(parseLocalDateTime(multipla.data_aposta), "dd/MM/yy", { locale: ptBR })}
                       </span>
                       {/* Nome da casa e parceiro */}
-                      {(multipla.bookmaker?.nome || multipla.bookmaker?.parceiro?.nome) && (
-                        <span className="text-[10px] text-muted-foreground/70 truncate max-w-[180px]" title={[multipla.bookmaker?.nome, multipla.bookmaker?.parceiro?.nome].filter(Boolean).join(" • ")}>
-                          {[multipla.bookmaker?.nome, multipla.bookmaker?.parceiro?.nome].filter(Boolean).join(" • ")}
-                        </span>
-                      )}
+                      <span
+                        className="text-[10px] text-muted-foreground/70 truncate max-w-[180px]"
+                        title={getCasaLabelFromAposta(multipla)}
+                      >
+                        {getCasaLabelFromAposta(multipla)}
+                      </span>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">@{multipla.odd_final.toFixed(2)} · {formatCurrency(multipla.stake)}</p>
