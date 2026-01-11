@@ -25,6 +25,9 @@ export interface ParsedBetSlip {
   selecao: ParsedField;
   odd: ParsedField;
   stake: ParsedField;
+  retorno: ParsedField;      // NEW: Valor de retorno potencial
+  resultado: ParsedField;    // NEW: GREEN/RED/VOID ou null se pendente
+  bookmakerNome: ParsedField; // NEW: Nome da casa de apostas identificada
 }
 
 export type FieldsNeedingReview = {
@@ -35,6 +38,9 @@ export type FieldsNeedingReview = {
   selecao: boolean;
   odd: boolean;
   stake: boolean;
+  retorno: boolean;
+  resultado: boolean;
+  bookmakerNome: boolean;
 };
 
 // Store intended market value that may need to be resolved later
@@ -61,6 +67,9 @@ interface UseImportBetPrintReturn {
     selecao: string;
     odd: string;
     stake: string;
+    retorno: string;
+    resultado: string;
+    bookmakerNome: string;
   };
   resolveMarketForSport: (sport: string, availableOptions: string[]) => string;
 }
@@ -277,7 +286,10 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
         mercado: "",
         selecao: "",
         odd: "",
-        stake: ""
+        stake: "",
+        retorno: "",
+        resultado: "",
+        bookmakerNome: ""
       };
     }
 
@@ -290,7 +302,10 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       mercado: parsedData.mercado?.value || "",
       selecao: parsedData.selecao?.value || "",
       odd: parsedData.odd?.value || "",
-      stake: parsedData.stake?.value || ""
+      stake: parsedData.stake?.value || "",
+      retorno: parsedData.retorno?.value || "",
+      resultado: parsedData.resultado?.value || "",
+      bookmakerNome: parsedData.bookmakerNome?.value || ""
     };
   }, [parsedData]);
 
@@ -303,6 +318,9 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     selecao: (parsedData?.selecao?.confidence === "medium" || parsedData?.selecao?.confidence === "low") && !!parsedData?.selecao?.value,
     odd: (parsedData?.odd?.confidence === "medium" || parsedData?.odd?.confidence === "low") && !!parsedData?.odd?.value,
     stake: (parsedData?.stake?.confidence === "medium" || parsedData?.stake?.confidence === "low") && !!parsedData?.stake?.value,
+    retorno: (parsedData?.retorno?.confidence === "medium" || parsedData?.retorno?.confidence === "low") && !!parsedData?.retorno?.value,
+    resultado: (parsedData?.resultado?.confidence === "medium" || parsedData?.resultado?.confidence === "low") && !!parsedData?.resultado?.value,
+    bookmakerNome: (parsedData?.bookmakerNome?.confidence === "medium" || parsedData?.bookmakerNome?.confidence === "low") && !!parsedData?.bookmakerNome?.value,
   };
 
   return {
