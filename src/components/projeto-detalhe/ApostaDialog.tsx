@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +44,6 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useImportBetPrint } from "@/hooks/useImportBetPrint";
-import { BetPrintDetectedFields } from "./BetPrintDetectedFields";
 import { RegistroApostaFields, RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
 import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, isAbaEstrategiaFixa, getEstrategiaFromTab, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional } from "@/lib/apostaConstants";
 import { 
@@ -2249,13 +2249,57 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           </DialogHeader>
 
           <div className="grid gap-5 py-2">
-            {/* Detected fields from print */}
-            {printParsedData && !aposta && (
-              <BetPrintDetectedFields
-                parsedData={printParsedData}
-                imagePreview={printImagePreview}
-                onClear={clearPrintData}
-              />
+            {/* Estado: Processando print */}
+            {isPrintProcessing && !aposta && (
+              <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-primary/10">
+                <div className="h-3 w-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs text-primary font-medium">Analisando...</span>
+              </div>
+            )}
+            
+            {/* Estado: Print carregado - Compacto */}
+            {!isPrintProcessing && printParsedData && printImagePreview && !aposta && (
+              <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                {/* Miniatura - clicável para ampliar */}
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <div 
+                      className="relative w-8 h-8 flex-shrink-0 cursor-pointer rounded overflow-hidden hover:ring-2 hover:ring-primary transition-all"
+                      title="Clique para ampliar"
+                    >
+                      <img 
+                        src={printImagePreview} 
+                        alt="Print" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl p-2">
+                    <img 
+                      src={printImagePreview} 
+                      alt="Print do boletim" 
+                      className="w-full h-auto max-h-[80vh] object-contain rounded-md"
+                    />
+                  </DialogContent>
+                </Dialog>
+                
+                {/* Badge de sucesso */}
+                <div className="flex items-center gap-1 flex-1">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="text-[10px] text-emerald-400 font-medium">Print importado</span>
+                </div>
+                
+                {/* Botão limpar */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearPrintData}
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             )}
 
             {/* Campos de Registro Explícito (Prompt Oficial) */}
