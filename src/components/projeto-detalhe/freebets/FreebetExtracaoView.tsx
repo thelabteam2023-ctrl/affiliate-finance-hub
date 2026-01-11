@@ -284,7 +284,7 @@ export function FreebetExtracaoView({
             <Target className="h-4 w-4 text-primary" />
             Operações de Extração
             <Badge variant="secondary" className="ml-2">
-              Apenas EXTRACAO_FREEBET
+              Apenas para a estratégia Extração de Freebet
             </Badge>
           </CardTitle>
         </CardHeader>
