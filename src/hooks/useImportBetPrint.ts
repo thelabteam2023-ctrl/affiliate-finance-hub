@@ -253,10 +253,14 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     // Use the raw market for semantic analysis
     const marketRaw = pendingData.mercadoRaw || pendingData.mercadoIntencao || "";
     
-    // First, try semantic normalization with sport context
+    // Get the selection value for context (important for "Mais X.5" patterns)
+    const selectionValue = parsedData?.selecao?.value || "";
+    
+    // First, try semantic normalization with sport context AND selection
     const semanticResult = normalizeMarketSemantically({
       sport: sport,
-      marketLabel: marketRaw
+      marketLabel: marketRaw,
+      selections: selectionValue ? [selectionValue] : undefined
     });
     
     // If no available options provided, get them from sport
@@ -268,8 +272,29 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     if (semanticResult.canonicalType !== "OTHER") {
       // Check if semantic display name is in available options
       if (options.includes(semanticResult.displayName)) {
-        console.log(`[resolveMarketForSport] Semantic match: "${marketRaw}" → "${semanticResult.displayName}" for ${sport}`);
+        console.log(`[resolveMarketForSport] Semantic match: "${marketRaw}" (sel: "${selectionValue}") → "${semanticResult.displayName}" for ${sport}`);
         return semanticResult.displayName;
+      }
+      
+      // Try to find a similar option based on canonical type
+      const typeMapping: Record<string, string[]> = {
+        "OVER_UNDER": ["Over/Under", "Over (Gols)", "Under (Gols)", "Over/Under Games", "Over/Under Pontos", "Total de Gols", "Total de Pontos", "Total de Games"],
+        "MONEYLINE": ["Moneyline", "Vencedor da Partida", "Vencedor", "Winner"],
+        "HANDICAP": ["Handicap", "Handicap Asiático", "Handicap Europeu", "Spread"],
+        "1X2": ["1X2", "Resultado Final"],
+        "BTTS": ["Ambas Marcam", "Ambas Marcam (BTTS)", "BTTS"],
+        "CORRECT_SCORE": ["Placar Correto", "Resultado Exato", "Placar Exato"],
+        "FIRST_HALF": ["Resultado do 1º Tempo", "1º Tempo"],
+        "DOUBLE_CHANCE": ["Dupla Chance"],
+        "DNB": ["Draw No Bet"],
+      };
+      
+      const possibleNames = typeMapping[semanticResult.canonicalType] || [];
+      for (const name of possibleNames) {
+        if (options.includes(name)) {
+          console.log(`[resolveMarketForSport] Type-based match: "${marketRaw}" (sel: "${selectionValue}") → "${name}" for ${sport}`);
+          return name;
+        }
       }
     }
     
@@ -277,7 +302,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     const resolved = resolveMarketToOptions(marketRaw, options);
     console.log(`[resolveMarketForSport] Text match: "${marketRaw}" → "${resolved.normalized}" for ${sport}`);
     return resolved.normalized;
-  }, [pendingData]);
+  }, [pendingData, parsedData]);
 
   // Apply parsed data - ALWAYS fill fields, even with low confidence
   const applyParsedData = useCallback(() => {

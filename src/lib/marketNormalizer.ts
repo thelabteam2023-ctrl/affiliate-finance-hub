@@ -940,12 +940,41 @@ const SEMANTIC_RULES: SemanticRule[] = [
   // ==================== REGRAS GENÉRICAS (FALLBACK) ====================
   // Estas regras são aplicadas quando nenhuma regra específica do esporte corresponde
   
+  // REGRA CRÍTICA: "Mais X" / "Menos X" são SEMPRE Over/Under
+  // Esta regra DEVE vir antes de outras para capturar corretamente
   {
     sport: [],  // Qualquer esporte
-    patterns: [/over\s*\/?\s*under/i, /over\s*\d/i, /under\s*\d/i, /total\s*(de\s*)?\w+/i, /acima\s*\/?\s*abaixo/i, /mais\s*de\s*\d/i, /menos\s*de\s*\d/i],
+    patterns: [
+      /^mais\s+\d+[.,]?\d*/i,           // "Mais 21.5", "Mais 2.5"
+      /^menos\s+\d+[.,]?\d*/i,          // "Menos 21.5", "Menos 2.5"
+      /\bmais\s+\d+[.,]?\d*\b/i,        // "Total Mais 21.5"
+      /\bmenos\s+\d+[.,]?\d*\b/i,       // "Total Menos 21.5"
+      /\bover\s+\d+[.,]?\d*/i,          // "Over 21.5"
+      /\bunder\s+\d+[.,]?\d*/i,         // "Under 21.5"
+      /\b[+-]?\d+[.,]\d+\s*(mais|menos|over|under)/i,  // "21.5 Mais"
+      /\bacima\s+\d+[.,]?\d*/i,         // "Acima 21.5"
+      /\babaixo\s+\d+[.,]?\d*/i,        // "Abaixo 21.5"
+    ],
     result: "OVER_UNDER",
     displayName: "Over/Under"
   },
+  
+  // REGRA: Total de qualquer coisa (games, pontos, gols, sets, etc.)
+  {
+    sport: [],
+    patterns: [
+      /total\s*(de\s*)?(games?|pontos?|gols?|runs?|sets?|rounds?|kills?|mapas?|corners?|escanteios?)/i,
+      /total\s*\d+[.,]?\d*/i,           // "Total 21.5"
+      /over\s*\/?\s*under/i,
+      /acima\s*\/?\s*abaixo/i,
+      /mais\s*\/?\s*menos/i,            // "Mais/Menos"
+      /over.*total/i,
+      /under.*total/i,
+    ],
+    result: "OVER_UNDER",
+    displayName: "Over/Under"
+  },
+  
   {
     sport: [],
     patterns: [/handicap/i, /spread/i, /ah\s*[+-]?\d/i, /eh\s*[+-]?\d/i],
@@ -1003,6 +1032,29 @@ const SEMANTIC_RULES: SemanticRule[] = [
 ];
 
 /**
+ * Verifica se o texto indica Over/Under através de padrões comuns
+ * "Mais X", "Menos X", "Over X", "Under X", etc.
+ */
+function isOverUnderPattern(text: string): boolean {
+  if (!text) return false;
+  const patterns = [
+    /^mais\s+\d+[.,]?\d*/i,           // "Mais 21.5"
+    /^menos\s+\d+[.,]?\d*/i,          // "Menos 21.5"
+    /\bover\s+\d+[.,]?\d*/i,          // "Over 21.5"
+    /\bunder\s+\d+[.,]?\d*/i,         // "Under 21.5"
+    /\bacima\s+\d+[.,]?\d*/i,         // "Acima 21.5"
+    /\babaixo\s+\d+[.,]?\d*/i,        // "Abaixo 21.5"
+    /\b\+\s*\d+[.,]?\d*/,             // "+21.5"
+    /\b-\s*\d+[.,]?\d*/,              // "-21.5" (pode ser handicap, mas em contexto de total é over/under)
+    /\bover\b/i,
+    /\bunder\b/i,
+    /\bmais\b.*\d+/i,
+    /\bmenos\b.*\d+/i,
+  ];
+  return patterns.some(p => p.test(text));
+}
+
+/**
  * Normaliza um mercado semanticamente, considerando esporte e contexto
  */
 export function normalizeMarketSemantically(context: SemanticMarketContext): SemanticMarketResult {
@@ -1010,7 +1062,52 @@ export function normalizeMarketSemantically(context: SemanticMarketContext): Sem
   const normalizedLabel = normalizeText(marketLabel);
   const normalizedSport = normalizeText(sport);
   
-  // Verifica cada regra semântica
+  // PASSO 1: Verificar se a SELEÇÃO indica Over/Under
+  // Isso é CRÍTICO para casos como "Mais 21.5" onde o mercado pode estar genérico
+  if (selections && selections.length > 0) {
+    const firstSelection = selections[0];
+    if (isOverUnderPattern(firstSelection)) {
+      // Determinar o displayName baseado no esporte
+      let displayName = "Over/Under";
+      if (/tenis|tennis/i.test(sport)) {
+        displayName = "Over/Under Games";
+      } else if (/futebol|soccer/i.test(sport)) {
+        displayName = "Over/Under Gols";
+      } else if (/basquete|basketball|nba/i.test(sport)) {
+        displayName = "Over/Under Pontos";
+      } else if (/volei|volleyball/i.test(sport)) {
+        displayName = "Over/Under Pontos";
+      }
+      
+      return {
+        canonicalType: "OVER_UNDER",
+        displayName,
+        confidence: "high",
+        reason: `Selection "${firstSelection}" indicates Over/Under pattern`
+      };
+    }
+  }
+  
+  // PASSO 2: Verificar se o MERCADO indica Over/Under diretamente
+  if (isOverUnderPattern(marketLabel)) {
+    let displayName = "Over/Under";
+    if (/tenis|tennis/i.test(sport)) {
+      displayName = "Over/Under Games";
+    } else if (/futebol|soccer/i.test(sport)) {
+      displayName = "Over/Under Gols";
+    } else if (/basquete|basketball|nba/i.test(sport)) {
+      displayName = "Over/Under Pontos";
+    }
+    
+    return {
+      canonicalType: "OVER_UNDER",
+      displayName,
+      confidence: "high",
+      reason: `Market label "${marketLabel}" indicates Over/Under pattern`
+    };
+  }
+  
+  // PASSO 3: Verifica cada regra semântica
   for (const rule of SEMANTIC_RULES) {
     // Verifica se a regra se aplica ao esporte
     const sportList = Array.isArray(rule.sport) ? rule.sport : [rule.sport];
@@ -1019,8 +1116,16 @@ export function normalizeMarketSemantically(context: SemanticMarketContext): Sem
     
     if (!sportMatches) continue;
     
-    // Verifica se algum padrão corresponde
-    const patternMatches = rule.patterns.some(p => p.test(marketLabel));
+    // Verifica se algum padrão corresponde ao mercado OU às seleções
+    let patternMatches = rule.patterns.some(p => p.test(marketLabel));
+    
+    // Também verificar nas seleções
+    if (!patternMatches && selections && selections.length > 0) {
+      patternMatches = selections.some(sel => 
+        rule.patterns.some(p => p.test(sel))
+      );
+    }
+    
     if (!patternMatches) continue;
     
     // Verifica contagem de seleções se especificado
@@ -1039,7 +1144,7 @@ export function normalizeMarketSemantically(context: SemanticMarketContext): Sem
     };
   }
   
-  // Fallback: usa o normalizador de texto existente
+  // PASSO 4: Fallback - usa o normalizador de texto existente
   const textBasedResult = findCanonicalMarketFromEquivalences(marketLabel);
   
   return {
