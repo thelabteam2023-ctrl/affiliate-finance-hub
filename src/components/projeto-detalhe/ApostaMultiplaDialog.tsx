@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, Gift, Camera, CheckCircle2 } from "lucide-react";
+import { Loader2, Save, Trash2, Camera, CheckCircle2, Gift } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -54,6 +54,7 @@ import {
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 import { useImportMultiplaBetPrint } from "@/hooks/useImportMultiplaBetPrint";
+import { GerouFreebetInput } from "./GerouFreebetInput";
 
 interface Selecao {
   descricao: string;
@@ -832,6 +833,7 @@ export function ApostaMultiplaDialog({
     await updateBookmakerBalance(bkId, valor);
   };
 
+  // REGRA CRÍTICA: Freebet NÃO tem moeda própria - herda da bookmaker onde foi gerada
   const registrarFreebetGerada = async (
     bkId: string,
     valor: number,
@@ -852,31 +854,35 @@ export function ApostaMultiplaDialog({
         status = resultadoAposta === "VOID" ? "NAO_LIBERADA" : "LIBERADA";
       }
 
-      // Só incrementar saldo_freebet se a freebet for liberada (GREEN)
-      if (status === "LIBERADA") {
-        const { data: bookmaker } = await supabase
-          .from("bookmakers")
-          .select("saldo_freebet")
-          .eq("id", bkId)
-          .maybeSingle();
+      // Buscar a moeda da bookmaker - CRÍTICO para multimoeda
+      const { data: bookmaker } = await supabase
+        .from("bookmakers")
+        .select("saldo_freebet, moeda")
+        .eq("id", bkId)
+        .maybeSingle();
 
-        if (bookmaker) {
-          const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_freebet: novoSaldoFreebet })
-            .eq("id", bkId);
-        }
+      const moedaOperacao = bookmaker?.moeda || "BRL";
+
+      // Só incrementar saldo_freebet se a freebet for liberada
+      if (status === "LIBERADA" && bookmaker) {
+        const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
+        await supabase
+          .from("bookmakers")
+          .update({ saldo_freebet: novoSaldoFreebet })
+          .eq("id", bkId);
       }
 
-      // Registrar na tabela freebets_recebidas com status apropriado
+      // Registrar na tabela freebets_recebidas com status e MOEDA da bookmaker
       await supabase.from("freebets_recebidas").insert({
         bookmaker_id: bkId,
         projeto_id: projetoId,
         user_id: userId,
         workspace_id: workspaceId,
         valor: valor,
+        moeda_operacao: moedaOperacao, // CRÍTICO: herda moeda da bookmaker
         motivo: "Gerada por aposta múltipla",
+        origem: "QUALIFICADORA",
+        qualificadora_id: apostaMultiplaId || null,
         data_recebida: new Date().toISOString(),
         utilizada: false,
         aposta_multipla_id: apostaMultiplaId || null,
@@ -1481,37 +1487,15 @@ export function ApostaMultiplaDialog({
               </p>
             </div>
 
-            {/* Gerou Freebet - mutuamente exclusivo com Usar Freebet */}
+            {/* Gerou Freebet - Componente padronizado com suporte multimoeda */}
             {!usarFreebet && (
-              <Card className="border-emerald-500/30 bg-emerald-500/5">
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Gift className="h-4 w-4 text-emerald-400" />
-                      <span className="text-sm font-medium">
-                        Esta aposta gerou Freebet?
-                      </span>
-                    </div>
-                    <Switch
-                      checked={gerouFreebet}
-                      onCheckedChange={setGerouFreebet}
-                    />
-                  </div>
-                  {gerouFreebet && (
-                    <div className="mt-3">
-                      <Label className="text-xs">Valor da Freebet Gerada</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={valorFreebetGerada}
-                        onChange={(e) => setValorFreebetGerada(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <GerouFreebetInput
+                gerouFreebet={gerouFreebet}
+                onGerouFreebetChange={setGerouFreebet}
+                valorFreebetGerada={valorFreebetGerada}
+                onValorFreebetGeradaChange={setValorFreebetGerada}
+                moeda={bookmakerSaldo?.moeda || "BRL"}
+              />
             )}
           </div>
 
