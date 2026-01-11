@@ -16,6 +16,7 @@ export interface ParsedField {
 export interface ParsedBetSlip {
   mandante: ParsedField;
   visitante: ParsedField;
+  evento: ParsedField; // Campo unificado (mandante x visitante ou valor livre)
   dataHora: ParsedField;
   esporte: ParsedField;
   mercado: ParsedField;
@@ -25,8 +26,7 @@ export interface ParsedBetSlip {
 }
 
 export type FieldsNeedingReview = {
-  mandante: boolean;
-  visitante: boolean;
+  evento: boolean; // Campo unificado
   dataHora: boolean;
   esporte: boolean;
   mercado: boolean;
@@ -52,8 +52,7 @@ interface UseImportBetPrintReturn {
   processFromClipboard: (event: ClipboardEvent) => Promise<void>;
   clearParsedData: () => void;
   applyParsedData: () => {
-    mandante: string;
-    visitante: string;
+    evento: string; // Campo unificado
     dataHora: string;
     esporte: string;
     mercado: string;
@@ -123,6 +122,34 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
 
       if (data?.success && data?.data) {
         const rawData = data.data as ParsedBetSlip;
+        
+        // Criar campo evento unificado a partir de mandante/visitante
+        const mandanteVal = rawData.mandante?.value || "";
+        const visitanteVal = rawData.visitante?.value || "";
+        const mandanteConf = rawData.mandante?.confidence || "none";
+        const visitanteConf = rawData.visitante?.confidence || "none";
+        
+        // Calcular evento e sua confiança
+        let eventoValue = "";
+        let eventoConfidence: "high" | "medium" | "low" | "none" = "none";
+        
+        if (mandanteVal && visitanteVal) {
+          eventoValue = `${mandanteVal} x ${visitanteVal}`;
+          // Confiança do evento é a menor entre mandante e visitante
+          const confOrder = { high: 3, medium: 2, low: 1, none: 0 };
+          eventoConfidence = confOrder[mandanteConf] <= confOrder[visitanteConf] ? mandanteConf : visitanteConf;
+        } else if (mandanteVal) {
+          eventoValue = mandanteVal;
+          eventoConfidence = mandanteConf;
+        } else if (visitanteVal) {
+          eventoValue = visitanteVal;
+          eventoConfidence = visitanteConf;
+        }
+        
+        rawData.evento = {
+          value: eventoValue,
+          confidence: eventoConfidence
+        };
         
         // Normalize sport
         if (rawData.esporte?.value) {
@@ -216,8 +243,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
   const applyParsedData = useCallback(() => {
     if (!parsedData) {
       return {
-        mandante: "",
-        visitante: "",
+        evento: "",
         dataHora: "",
         esporte: "",
         mercado: "",
@@ -230,8 +256,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     // CRITICAL CHANGE: Always fill if there's a value, regardless of confidence
     // The "Revisar" indicator is now ONLY a visual warning, NOT a block
     return {
-      mandante: parsedData.mandante?.value || "",
-      visitante: parsedData.visitante?.value || "",
+      evento: parsedData.evento?.value || "",
       dataHora: parsedData.dataHora?.value || "",
       esporte: parsedData.esporte?.value || "",
       mercado: parsedData.mercado?.value || "",
@@ -243,8 +268,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
 
   // Calculate which fields need review (medium or low confidence, but still filled)
   const fieldsNeedingReview: FieldsNeedingReview = {
-    mandante: (parsedData?.mandante?.confidence === "medium" || parsedData?.mandante?.confidence === "low") && !!parsedData?.mandante?.value,
-    visitante: (parsedData?.visitante?.confidence === "medium" || parsedData?.visitante?.confidence === "low") && !!parsedData?.visitante?.value,
+    evento: (parsedData?.evento?.confidence === "medium" || parsedData?.evento?.confidence === "low") && !!parsedData?.evento?.value,
     dataHora: (parsedData?.dataHora?.confidence === "medium" || parsedData?.dataHora?.confidence === "low") && !!parsedData?.dataHora?.value,
     esporte: (parsedData?.esporte?.confidence === "medium" || parsedData?.esporte?.confidence === "low") && !!parsedData?.esporte?.value,
     mercado: (parsedData?.mercado?.confidence === "medium" || parsedData?.mercado?.confidence === "low") && !!parsedData?.mercado?.value,

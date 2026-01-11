@@ -155,11 +155,18 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
         // For 2-leg model, infer the other leg
         // For 3-leg model, only infer if there's a clear binary relationship
         if (prev.length === 2) {
+          // Construir evento a partir de mandante/visitante se disponível
+          const mandanteVal = parsedData.mandante?.value || "";
+          const visitanteVal = parsedData.visitante?.value || "";
+          const eventoVal = mandanteVal && visitanteVal ? `${mandanteVal} x ${visitanteVal}` : (mandanteVal || visitanteVal || "");
+          const eventoConf = parsedData.mandante?.confidence || parsedData.visitante?.confidence || "none";
+          
           return {
             ...leg,
             parsedData: {
               mandante: parsedData.mandante,
               visitante: parsedData.visitante,
+              evento: { value: eventoVal, confidence: eventoConf as "high" | "medium" | "low" | "none" },
               dataHora: parsedData.dataHora,
               esporte: parsedData.esporte,
               mercado: parsedData.mercado,
