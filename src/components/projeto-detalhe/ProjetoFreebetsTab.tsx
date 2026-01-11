@@ -20,7 +20,7 @@ import {
 import { 
   Gift, Search, Building2, Target, CheckCircle2, Clock, 
   TrendingUp, Percent, LayoutGrid, List, Minimize2, BarChart3,
-  LayoutDashboard, History, PanelLeft, LayoutList, Zap
+  LayoutDashboard, History, PanelLeft, LayoutList, Zap, Package
 } from "lucide-react";
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { useFreebetViewPreferences, FreebetSubTab } from "@/hooks/useFreebetViewPreferences";
@@ -31,6 +31,8 @@ import {
   FreebetApostasList, 
   FreebetResumoPorCasa,
   FreebetGraficos,
+  FreebetEstoqueView,
+  FreebetExtracaoView,
   ApostaOperacionalFreebet,
   FreebetRecebida,
   BookmakerComFreebet,
@@ -57,13 +59,13 @@ const defaultFormatCurrency = (value: number): string => {
 };
 
 type NavigationMode = "tabs" | "sidebar";
-type NavTabValue = "visao-geral" | "apostas" | "por-casa";
+type NavTabValue = "estoque" | "extracao" | "por-casa";
 
 const NAV_STORAGE_KEY = "freebets-nav-mode";
 
 const NAV_ITEMS = [
-  { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
-  { value: "apostas" as NavTabValue, label: "Apostas", icon: Target },
+  { value: "estoque" as NavTabValue, label: "Estoque", icon: Package },
+  { value: "extracao" as NavTabValue, label: "Extração", icon: TrendingUp },
   { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
 ];
 
@@ -85,7 +87,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
     const saved = localStorage.getItem(NAV_STORAGE_KEY);
     return (saved === "tabs" ? "tabs" : "sidebar") as NavigationMode;
   });
-  const [activeNavTab, setActiveNavTab] = useState<NavTabValue>("visao-geral");
+  const [activeNavTab, setActiveNavTab] = useState<NavTabValue>("estoque");
   const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Dialog states
@@ -660,11 +662,26 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
 
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
-        {activeNavTab === "visao-geral" && renderVisaoGeral()}
-        {activeNavTab === "apostas" && renderApostas()}
+        {activeNavTab === "estoque" && (
+          <FreebetEstoqueView
+            projetoId={projetoId}
+            formatCurrency={formatCurrency}
+            dateRange={dateRange}
+          />
+        )}
+        {activeNavTab === "extracao" && (
+          <FreebetExtracaoView
+            projetoId={projetoId}
+            apostas={apostasNoPeriodo}
+            freebets={freebetsNoPeriodo}
+            formatCurrency={formatCurrency}
+            dateRange={dateRange}
+            onResultadoUpdated={handleApostaUpdated}
+            onEditClick={handleEditClick}
+          />
+        )}
         {activeNavTab === "por-casa" && (
           <div className="space-y-4">
-            {/* Header com toggle */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-primary" />
