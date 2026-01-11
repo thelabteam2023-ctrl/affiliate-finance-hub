@@ -8,6 +8,7 @@ import {
   getMarketsForSport,
   normalizeMarketSemantically
 } from "@/lib/marketNormalizer";
+import { parseOcrMarket, resolveOcrResultToOption, formatSelectionFromOcrResult } from "@/lib/marketOcrParser";
 
 export interface ParsedField {
   value: string | null;
@@ -162,49 +163,45 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
           }
         }
         
-        // Normalize market using semantic normalization
+        // Normalize market using the NEW OCR parser (v2.0)
         if (rawData.mercado?.value) {
           const marketRaw = rawData.mercado.value;
           const sportDetected = rawData.esporte?.value || "Outro";
+          const selectionRaw = rawData.selecao?.value || "";
           
-          // Use semantic normalization which considers sport context
-          const semanticResult = normalizeMarketSemantically({
-            sport: sportDetected,
-            marketLabel: marketRaw,
-            // If we have selection info, we could pass it here
-            selections: rawData.selecao?.value ? [rawData.selecao.value] : undefined
-          });
-          
-          // Also get the canonical result for fallback
-          const canonicalResult = findCanonicalMarket(marketRaw);
-          
-          // Use semantic result display name if it's better than "Outro"
-          const resolvedMarket = semanticResult.canonicalType !== "OTHER" 
-            ? semanticResult.displayName 
-            : canonicalResult.normalized;
+          // Use the new OCR parser that extracts domain, side, line separately
+          const ocrResult = parseOcrMarket(marketRaw, selectionRaw, sportDetected);
           
           // Store the intention for later resolution
           setPendingData({
-            mercadoIntencao: resolvedMarket,
+            mercadoIntencao: ocrResult.displayName,
             mercadoRaw: marketRaw,
             esporteDetectado: sportDetected
           });
           
           // Set the normalized value
-          rawData.mercado.value = resolvedMarket;
+          rawData.mercado.value = ocrResult.displayName;
           
-          // Adjust confidence based on normalization
-          const effectiveConfidence = semanticResult.canonicalType !== "OTHER" 
-            ? semanticResult.confidence 
-            : canonicalResult.confidence;
-            
-          if (effectiveConfidence === "low") {
+          // Adjust confidence based on OCR result
+          if (ocrResult.confidence === "low") {
             rawData.mercado.confidence = "low";
-          } else if (effectiveConfidence === "medium" && rawData.mercado.confidence === "high") {
+          } else if (ocrResult.confidence === "medium" && rawData.mercado.confidence === "high") {
             rawData.mercado.confidence = "medium";
           }
           
-          console.log(`[OCR Market] Raw: "${marketRaw}" → Semantic: ${semanticResult.canonicalType} (${semanticResult.displayName}) for sport ${sportDetected}`);
+          // Format selection if TOTAL or HANDICAP detected
+          if ((ocrResult.type === "TOTAL" || ocrResult.type === "HANDICAP") && ocrResult.side && ocrResult.line !== undefined) {
+            const formattedSelection = formatSelectionFromOcrResult(ocrResult);
+            if (formattedSelection && rawData.selecao) {
+              rawData.selecao.value = formattedSelection;
+              // Improve confidence since we formatted it intelligently
+              if (rawData.selecao.confidence === "low") {
+                rawData.selecao.confidence = "medium";
+              }
+            }
+          }
+          
+          console.log(`[OCR Market v2.0] Raw: "${marketRaw}", Selection: "${selectionRaw}" → ${ocrResult.type} (${ocrResult.displayName}) for sport ${sportDetected}`);
         }
         
         setParsedData(rawData);
@@ -244,64 +241,30 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     setPendingData({ mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null });
   }, []);
 
-  // Resolve market for a specific sport and available options
+  // Resolve market for a specific sport and available options (using new OCR parser v2.0)
   const resolveMarketForSport = useCallback((sport: string, availableOptions: string[]): string => {
     if (!pendingData.mercadoIntencao && !pendingData.mercadoRaw) {
       return "";
     }
     
-    // Use the raw market for semantic analysis
+    // Use the raw market and selection for OCR analysis
     const marketRaw = pendingData.mercadoRaw || pendingData.mercadoIntencao || "";
-    
-    // Get the selection value for context (important for "Mais X.5" patterns)
     const selectionValue = parsedData?.selecao?.value || "";
     
-    // First, try semantic normalization with sport context AND selection
-    const semanticResult = normalizeMarketSemantically({
-      sport: sport,
-      marketLabel: marketRaw,
-      selections: selectionValue ? [selectionValue] : undefined
-    });
+    // Use the new OCR parser with sport context
+    const ocrResult = parseOcrMarket(marketRaw, selectionValue, sport);
     
     // If no available options provided, get them from sport
     const options = availableOptions.length > 0 
       ? availableOptions 
       : getMarketsForSport(sport);
     
-    // If semantic result is valid (not OTHER), try to find it in options
-    if (semanticResult.canonicalType !== "OTHER") {
-      // Check if semantic display name is in available options
-      if (options.includes(semanticResult.displayName)) {
-        console.log(`[resolveMarketForSport] Semantic match: "${marketRaw}" (sel: "${selectionValue}") → "${semanticResult.displayName}" for ${sport}`);
-        return semanticResult.displayName;
-      }
-      
-      // Try to find a similar option based on canonical type
-      const typeMapping: Record<string, string[]> = {
-        "OVER_UNDER": ["Over/Under", "Over (Gols)", "Under (Gols)", "Over/Under Games", "Over/Under Pontos", "Total de Gols", "Total de Pontos", "Total de Games"],
-        "MONEYLINE": ["Moneyline", "Vencedor da Partida", "Vencedor", "Winner"],
-        "HANDICAP": ["Handicap", "Handicap Asiático", "Handicap Europeu", "Spread"],
-        "1X2": ["1X2", "Resultado Final"],
-        "BTTS": ["Ambas Marcam", "Ambas Marcam (BTTS)", "BTTS"],
-        "CORRECT_SCORE": ["Placar Correto", "Resultado Exato", "Placar Exato"],
-        "FIRST_HALF": ["Resultado do 1º Tempo", "1º Tempo"],
-        "DOUBLE_CHANCE": ["Dupla Chance"],
-        "DNB": ["Draw No Bet"],
-      };
-      
-      const possibleNames = typeMapping[semanticResult.canonicalType] || [];
-      for (const name of possibleNames) {
-        if (options.includes(name)) {
-          console.log(`[resolveMarketForSport] Type-based match: "${marketRaw}" (sel: "${selectionValue}") → "${name}" for ${sport}`);
-          return name;
-        }
-      }
-    }
+    // Resolve OCR result to an available option
+    const resolved = resolveOcrResultToOption(ocrResult, options);
     
-    // Fallback to text-based resolution
-    const resolved = resolveMarketToOptions(marketRaw, options);
-    console.log(`[resolveMarketForSport] Text match: "${marketRaw}" → "${resolved.normalized}" for ${sport}`);
-    return resolved.normalized;
+    console.log(`[resolveMarketForSport v2.0] Raw: "${marketRaw}" (sel: "${selectionValue}") → ${ocrResult.type} → "${resolved}" for ${sport}`);
+    
+    return resolved;
   }, [pendingData, parsedData]);
 
   // Apply parsed data - ALWAYS fill fields, even with low confidence
