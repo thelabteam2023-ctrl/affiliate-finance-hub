@@ -515,9 +515,22 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
                       {ciclo.roi.toFixed(2)}%
                     </td>
                     <td className="p-2 text-center">
-                      <Badge variant={ciclo.status === "FECHADO" ? "secondary" : "default"} className="text-xs">
-                        {ciclo.status === "FECHADO" ? "Fechado" : "Em Andamento"}
-                      </Badge>
+                      {(() => {
+                        const hoje = new Date();
+                        hoje.setHours(0, 0, 0, 0);
+                        const dataInicio = parseLocalDate(ciclo.data_inicio);
+                        const dataFim = parseLocalDate(ciclo.data_fim_real || ciclo.data_fim_prevista);
+                        
+                        if (ciclo.status === "FECHADO") {
+                          return <Badge variant="secondary" className="text-xs">Fechado</Badge>;
+                        } else if (dataInicio > hoje) {
+                          return <Badge variant="outline" className="text-xs text-muted-foreground">Futuro</Badge>;
+                        } else if (dataFim < hoje) {
+                          return <Badge variant="secondary" className="text-xs">Concluído</Badge>;
+                        } else {
+                          return <Badge variant="default" className="text-xs">Em Andamento</Badge>;
+                        }
+                      })()}
                     </td>
                   </tr>
                 ))}
