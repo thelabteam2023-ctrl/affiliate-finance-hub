@@ -1078,7 +1078,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                       <span className="font-medium">@{aposta.odd.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t">
-                      <span className="text-xs text-muted-foreground">{format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}</span>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">{format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}</span>
+                        {/* Nome da casa e parceiro */}
+                        {(aposta.bookmaker?.nome || aposta.bookmaker?.parceiro?.nome) && (
+                          <span className="text-[10px] text-muted-foreground/70 truncate max-w-[180px]" title={[aposta.bookmaker?.nome, aposta.bookmaker?.parceiro?.nome].filter(Boolean).join(" • ")}>
+                            {[aposta.bookmaker?.nome, aposta.bookmaker?.parceiro?.nome].filter(Boolean).join(" • ")}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground">Stake: {formatCurrency(aposta.stake)}</p>
                         {aposta.lucro_prejuizo !== null && aposta.status === "LIQUIDADA" && (
@@ -1145,9 +1153,17 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   </div>
                   {/* Rodapé */}
                   <div className="flex justify-between items-center pt-2 border-t">
-                    <span className="text-xs text-muted-foreground">
-                      {format(parseLocalDateTime(multipla.data_aposta), "dd/MM/yy", { locale: ptBR })}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">
+                        {format(parseLocalDateTime(multipla.data_aposta), "dd/MM/yy", { locale: ptBR })}
+                      </span>
+                      {/* Nome da casa e parceiro */}
+                      {(multipla.bookmaker?.nome || multipla.bookmaker?.parceiro?.nome) && (
+                        <span className="text-[10px] text-muted-foreground/70 truncate max-w-[180px]" title={[multipla.bookmaker?.nome, multipla.bookmaker?.parceiro?.nome].filter(Boolean).join(" • ")}>
+                          {[multipla.bookmaker?.nome, multipla.bookmaker?.parceiro?.nome].filter(Boolean).join(" • ")}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">@{multipla.odd_final.toFixed(2)} · {formatCurrency(multipla.stake)}</p>
                       {multipla.lucro_prejuizo !== null && multipla.status === "LIQUIDADA" && (
@@ -1179,6 +1195,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   <tr className="border-b bg-muted/50">
                     <th className="text-left p-3 font-medium">Contexto</th>
                     <th className="text-left p-3 font-medium">Tipo</th>
+                    <th className="text-left p-3 font-medium">Casa</th>
                     <th className="text-left p-3 font-medium">Evento</th>
                     <th className="text-left p-3 font-medium">Seleção / Pernas</th>
                     <th className="text-right p-3 font-medium">Odds</th>
@@ -1242,6 +1259,30 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                               return <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-xs">Surebet</Badge>;
                             }
                           })()}
+                        </td>
+                        <td className="p-3 max-w-[150px]">
+                          {isSimples ? (
+                            <div className="truncate text-xs">
+                              <span className="font-medium">{data.bookmaker?.nome || "—"}</span>
+                              {data.bookmaker?.parceiro?.nome && (
+                                <span className="text-muted-foreground"> • {data.bookmaker.parceiro.nome}</span>
+                              )}
+                            </div>
+                          ) : isMultipla ? (
+                            <div className="truncate text-xs">
+                              <span className="font-medium">{data.bookmaker?.nome || "—"}</span>
+                              {data.bookmaker?.parceiro?.nome && (
+                                <span className="text-muted-foreground"> • {data.bookmaker.parceiro.nome}</span>
+                              )}
+                            </div>
+                          ) : (
+                            // Surebet: mostrar casas das pernas
+                            <div className="flex flex-col gap-0.5 text-xs">
+                              {(data as Surebet).pernas?.map((perna, idx) => (
+                                <span key={perna.id} className="truncate">{perna.bookmaker?.nome || "—"}</span>
+                              )) || <span className="text-muted-foreground">—</span>}
+                            </div>
+                          )}
                         </td>
                         <td className="p-3 max-w-[200px] truncate">
                           {isSimples ? data.evento : isMultipla ? `Múltipla ${data.tipo_multipla}` : data.evento}

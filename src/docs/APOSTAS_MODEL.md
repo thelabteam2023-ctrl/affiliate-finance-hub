@@ -58,9 +58,55 @@ Define a origem do saldo usado:
 2. Novo resultado é aplicado
 3. Delta = novoAjuste - antigoAjuste
 
-## Regras de Negócio
+## Regras de Negócio (OBRIGATÓRIAS)
 
-1. **TODA aposta deve aparecer na listagem geral**
+### Regras Absolutas - O sistema NUNCA pode violar:
+
+1. **TODA aposta registrada DEVE aparecer na listagem geral**
+   - Independente de `estrategia`, `contexto_operacional`, ou qualquer outro campo
+   - Filtros excludentes por estratégia são PROIBIDOS na query principal
+
 2. **Contexto ou estratégia NUNCA ocultam apostas**
-3. **Saldo é derivado e recalculável**
-4. **FreeBet é um modificador, não um tipo separado**
+   - `estrategia` é apenas classificação/agrupamento
+   - `contexto_operacional` é apenas origem do saldo
+   - Nenhum desses campos pode ser gate de persistência ou visibilidade
+
+3. **Saldo é DERIVADO e RECALCULÁVEL**
+   - `saldo_atual` = depósitos - saques + transferências ± lucro_apostas
+   - Função `recalcular_saldo_bookmaker()` sempre pode reconstruir o saldo
+   - Auditoria completa em `bookmaker_balance_audit`
+
+4. **FreeBet é um MODIFICADOR, não um tipo separado**
+   - Aposta com freebet = aposta normal + `contexto_operacional = FREEBET`
+   - Não existe tabela separada para apostas de freebet
+
+5. **Card de aposta DEVE mostrar informações completas**
+   - Casa(s) utilizada(s)
+   - Tipo de aposta / estratégia
+   - Stake e Odd
+   - Status / Resultado
+   - Data
+   - Parceiro/Vínculo (quando aplicável)
+
+6. **Aposta é ENTIDADE PRIMÁRIA**
+   - Estratégia é atributo, não entidade
+   - Aposta existe independente de estratégia definida
+   - Estratégia pode ser `null` e aposta continua válida
+
+## Diagnóstico de Problemas Comuns
+
+### Aposta não aparece na listagem
+1. Verificar `cancelled_at` - deve ser `NULL`
+2. Verificar `projeto_id` - deve corresponder ao projeto atual
+3. Verificar `forma_registro` - deve ser `SIMPLES`, `MULTIPLA`, ou `ARBITRAGEM`
+4. **NÃO verificar estrategia** - ela nunca deve filtrar
+
+### Saldo incorreto
+1. Executar `SELECT * FROM recalcular_saldo_bookmaker('UUID')`
+2. Comparar `saldo_anterior` com `saldo_calculado`
+3. Se diferente, executar com `p_aplicar = TRUE` para corrigir
+
+### Card sem nome da casa
+1. Verificar se `bookmaker_id` está preenchido
+2. Verificar se query faz JOIN com tabela `bookmakers`
+3. Verificar se `bookmaker.nome` está sendo passado para o componente
