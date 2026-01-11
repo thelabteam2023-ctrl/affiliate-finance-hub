@@ -69,6 +69,9 @@ interface CaixaTransacaoDialogProps {
   defaultTipoTransacao?: string;
   defaultOrigemBookmakerId?: string;
   defaultDestinoParceiroId?: string;
+  defaultTipoMoeda?: "FIAT" | "CRYPTO";
+  defaultMoeda?: string;
+  defaultCoin?: string;
 }
 
 interface ContaBancaria {
@@ -127,6 +130,9 @@ export function CaixaTransacaoDialog({
   defaultTipoTransacao,
   defaultOrigemBookmakerId,
   defaultDestinoParceiroId,
+  defaultTipoMoeda,
+  defaultMoeda,
+  defaultCoin,
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -183,9 +189,21 @@ export function CaixaTransacaoDialog({
         if (defaultDestinoParceiroId) {
           setDestinoParceiroId(defaultDestinoParceiroId);
         }
+        // Aplicar tipo de moeda e moeda/coin
+        if (defaultTipoMoeda) {
+          setTipoMoeda(defaultTipoMoeda);
+          prevTipoMoeda.current = defaultTipoMoeda;
+        }
+        if (defaultMoeda) {
+          setMoeda(defaultMoeda);
+          prevMoeda.current = defaultMoeda;
+        }
+        if (defaultCoin) {
+          setCoin(defaultCoin);
+        }
       }, 50);
     }
-  }, [open, defaultTipoTransacao, defaultOrigemBookmakerId, defaultDestinoParceiroId]);
+  }, [open, defaultTipoTransacao, defaultOrigemBookmakerId, defaultDestinoParceiroId, defaultTipoMoeda, defaultMoeda, defaultCoin]);
 
   // ============================================================================
   // FUNÇÃO CENTRALIZADA: Reset de contexto de transação

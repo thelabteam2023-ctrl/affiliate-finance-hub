@@ -675,7 +675,11 @@ export default function CentralOperacoes() {
   };
 
   const handleSaqueAction = (alerta: Alerta) => {
-    // Navegar para Caixa com dados pré-preenchidos para saque
+    // Determinar se é FIAT ou CRYPTO baseado na moeda
+    const moedaAlerta = alerta.moeda || "BRL";
+    const isCrypto = ["USDT", "USDC", "BTC", "ETH", "BNB", "TRX", "SOL", "MATIC", "ADA", "DOT", "AVAX", "LINK", "UNI", "LTC", "XRP"].includes(moedaAlerta);
+    
+    // Navegar para Caixa com dados pré-preenchidos para saque incluindo moeda
     navigate("/caixa", { 
       state: { 
         openDialog: true, 
@@ -683,6 +687,9 @@ export default function CentralOperacoes() {
         bookmakerNome: alerta.titulo,
         parceiroId: alerta.parceiro_id,
         parceiroNome: alerta.parceiro_nome,
+        tipoMoeda: isCrypto ? "CRYPTO" : "FIAT",
+        moeda: isCrypto ? undefined : moedaAlerta,
+        coin: isCrypto ? moedaAlerta : undefined,
       } 
     });
   };
