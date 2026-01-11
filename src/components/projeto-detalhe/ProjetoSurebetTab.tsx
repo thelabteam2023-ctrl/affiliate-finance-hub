@@ -88,6 +88,7 @@ interface Surebet {
   selecao?: string;
   bookmaker_id?: string;
   bookmaker_nome?: string;
+  parceiro_nome?: string;
 }
 
 interface Bookmaker {
@@ -256,7 +257,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         .from("apostas_unificada")
         .select(`
           *,
-          bookmaker:bookmakers(nome)
+          bookmaker:bookmakers(nome, parceiro:parceiros(nome))
         `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", "SUREBET")
@@ -327,6 +328,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             bookmaker_nome: isSimples 
               ? ((arb as any).bookmaker?.nome || "—")
               : (pernas[0]?.bookmaker_nome || "—"),
+            parceiro_nome: isSimples
+              ? ((arb as any).bookmaker?.parceiro?.nome || undefined)
+              : undefined,
           };
         });
         
@@ -1011,6 +1015,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                   lucro_prejuizo: operacao.lucro_real,
                   estrategia: "SUREBET",
                   bookmaker_nome: operacao.bookmaker_nome,
+                  parceiro_nome: operacao.parceiro_nome,
                 };
                 
                 return (
