@@ -8,23 +8,401 @@
  * 4. Preenche o Select com a opção encontrada
  */
 
+// Tipo canônico de mercado (classificação lógica do sistema)
+export type MarketCanonicalType = 
+  | "MONEYLINE"      // Vencedor (2 opções, sem empate)
+  | "1X2"            // Vencedor com empate (3 opções)
+  | "OVER_UNDER"     // Acima/Abaixo de um valor
+  | "HANDICAP"       // Spread/Handicap
+  | "BTTS"           // Ambas Marcam
+  | "CORRECT_SCORE"  // Placar exato
+  | "DOUBLE_CHANCE"  // Dupla chance
+  | "FIRST_HALF"     // Resultado 1º tempo
+  | "DNB"            // Draw No Bet
+  | "PROPS"          // Props de jogadores
+  | "OTHER";         // Outros
+
+// Interface para normalização semântica de mercados
+export interface SemanticMarketContext {
+  sport: string;
+  marketLabel: string;
+  selections?: string[];
+  hasDrawOption?: boolean;
+}
+
+// Interface para resultado da normalização semântica
+export interface SemanticMarketResult {
+  canonicalType: MarketCanonicalType;
+  displayName: string;
+  confidence: "exact" | "high" | "medium" | "low";
+  reason?: string;
+}
+
+// ========== REGRAS SEMÂNTICAS POR ESPORTE ==========
+// Regras que consideram contexto para classificar mercados corretamente
+
+interface SemanticRule {
+  sport: string | string[];
+  patterns: RegExp[];
+  selectionsCount?: number;
+  hasNoDrawOption?: boolean;
+  result: MarketCanonicalType;
+  displayName: string;
+}
+
+const SEMANTIC_RULES: SemanticRule[] = [
+  // FUTEBOL AMERICANO - Vencedor incluindo prorrogação = MONEYLINE (binário)
+  {
+    sport: ["Futebol Americano", "NFL"],
+    patterns: [
+      /vencedor.*prorrogacao/i,
+      /vencedor.*overtime/i,
+      /vencedor.*partida.*incluin/i,
+      /winner.*overtime/i,
+      /winner.*including.*ot/i,
+      /moneyline/i,
+      /money\s*line/i,
+    ],
+    selectionsCount: 2,
+    hasNoDrawOption: true,
+    result: "MONEYLINE",
+    displayName: "Moneyline"
+  },
+  
+  // BASQUETE - Vencedor (sempre binário, prorrogação decide)
+  {
+    sport: ["Basquete", "NBA", "Basketball"],
+    patterns: [
+      /vencedor/i,
+      /winner/i,
+      /moneyline/i,
+      /money\s*line/i,
+    ],
+    selectionsCount: 2,
+    hasNoDrawOption: true,
+    result: "MONEYLINE",
+    displayName: "Moneyline"
+  },
+  
+  // TÊNIS - Vencedor (sempre binário)
+  {
+    sport: ["Tênis", "Tennis"],
+    patterns: [
+      /vencedor/i,
+      /winner/i,
+      /match\s*winner/i,
+    ],
+    selectionsCount: 2,
+    hasNoDrawOption: true,
+    result: "MONEYLINE",
+    displayName: "Vencedor da Partida"
+  },
+  
+  // HOCKEY - Moneyline (com prorrogação)
+  {
+    sport: ["Hockey", "NHL"],
+    patterns: [
+      /moneyline/i,
+      /money\s*line/i,
+      /vencedor.*prorrogacao/i,
+      /vencedor.*overtime/i,
+    ],
+    selectionsCount: 2,
+    hasNoDrawOption: true,
+    result: "MONEYLINE",
+    displayName: "Moneyline"
+  },
+  
+  // BASEBALL - Moneyline
+  {
+    sport: ["Baseball", "MLB"],
+    patterns: [
+      /moneyline/i,
+      /money\s*line/i,
+      /vencedor/i,
+      /winner/i,
+    ],
+    selectionsCount: 2,
+    hasNoDrawOption: true,
+    result: "MONEYLINE",
+    displayName: "Moneyline"
+  },
+  
+  // MMA/UFC - Vencedor da Luta
+  {
+    sport: ["MMA/UFC", "MMA", "UFC"],
+    patterns: [
+      /vencedor/i,
+      /winner/i,
+      /moneyline/i,
+    ],
+    selectionsCount: 2,
+    hasNoDrawOption: true,
+    result: "MONEYLINE",
+    displayName: "Vencedor da Luta"
+  },
+  
+  // ESPORTS - Vencedor
+  {
+    sport: ["League of Legends", "Counter-Strike", "Dota 2", "LoL", "CS", "CS2"],
+    patterns: [
+      /vencedor/i,
+      /winner/i,
+      /moneyline/i,
+    ],
+    selectionsCount: 2,
+    hasNoDrawOption: true,
+    result: "MONEYLINE",
+    displayName: "Vencedor do Mapa"
+  },
+  
+  // VÔLEI - Vencedor (sets decidem)
+  {
+    sport: ["Vôlei", "Volleyball"],
+    patterns: [
+      /vencedor/i,
+      /winner/i,
+    ],
+    selectionsCount: 2,
+    hasNoDrawOption: true,
+    result: "MONEYLINE",
+    displayName: "Vencedor da Partida"
+  },
+  
+  // GENÉRICO - Over/Under
+  {
+    sport: [],  // Qualquer esporte
+    patterns: [
+      /over\s*\/?\s*under/i,
+      /over\s*\d/i,
+      /under\s*\d/i,
+      /total\s*(de\s*)?(gols|pontos|runs|goals)/i,
+      /acima\s*\/?\s*abaixo/i,
+      /mais\s*de\s*\d/i,
+      /menos\s*de\s*\d/i,
+    ],
+    result: "OVER_UNDER",
+    displayName: "Over/Under"
+  },
+  
+  // GENÉRICO - Handicap
+  {
+    sport: [],
+    patterns: [
+      /handicap/i,
+      /spread/i,
+      /run\s*line/i,
+      /puck\s*line/i,
+      /ah\s*[+-]?\d/i,
+      /eh\s*[+-]?\d/i,
+    ],
+    result: "HANDICAP",
+    displayName: "Handicap"
+  },
+  
+  // GENÉRICO - BTTS
+  {
+    sport: [],
+    patterns: [
+      /ambas?\s*marcam/i,
+      /btts/i,
+      /both\s*teams?\s*to\s*score/i,
+      /gol\s*gol/i,
+      /gg/i,
+    ],
+    result: "BTTS",
+    displayName: "Ambas Marcam"
+  },
+  
+  // GENÉRICO - Resultado Exato
+  {
+    sport: [],
+    patterns: [
+      /placar\s*(exato|correto)/i,
+      /resultado\s*exato/i,
+      /correct\s*score/i,
+      /exact\s*score/i,
+      /^\d+-\d+$/,  // Ex: "2-1"
+    ],
+    result: "CORRECT_SCORE",
+    displayName: "Placar Correto"
+  },
+  
+  // GENÉRICO - Dupla Chance
+  {
+    sport: [],
+    patterns: [
+      /dupla\s*chance/i,
+      /double\s*chance/i,
+      /1x\b/i,
+      /x2\b/i,
+      /12\b/i,
+      /casa\s*ou\s*empate/i,
+      /home\s*or\s*draw/i,
+    ],
+    result: "DOUBLE_CHANCE",
+    displayName: "Dupla Chance"
+  },
+  
+  // GENÉRICO - 1º Tempo
+  {
+    sport: [],
+    patterns: [
+      /1[ºo°]?\s*tempo/i,
+      /primeiro\s*tempo/i,
+      /1st\s*half/i,
+      /first\s*half/i,
+      /half\s*time/i,
+      /ht\s*result/i,
+      /intervalo/i,
+    ],
+    result: "FIRST_HALF",
+    displayName: "Resultado do 1º Tempo"
+  },
+  
+  // GENÉRICO - Draw No Bet
+  {
+    sport: [],
+    patterns: [
+      /draw\s*no\s*bet/i,
+      /dnb/i,
+      /empate\s*anula/i,
+      /empate\s*reembolsa/i,
+    ],
+    result: "DNB",
+    displayName: "Draw No Bet"
+  },
+];
+
+/**
+ * Normaliza um mercado semanticamente, considerando esporte e contexto
+ */
+export function normalizeMarketSemantically(context: SemanticMarketContext): SemanticMarketResult {
+  const { sport, marketLabel, selections, hasDrawOption } = context;
+  const normalizedLabel = normalizeText(marketLabel);
+  const normalizedSport = normalizeText(sport);
+  
+  // Verifica cada regra semântica
+  for (const rule of SEMANTIC_RULES) {
+    // Verifica se a regra se aplica ao esporte
+    const sportList = Array.isArray(rule.sport) ? rule.sport : [rule.sport];
+    const sportMatches = sportList.length === 0 || 
+      sportList.some(s => normalizeText(s) === normalizedSport || normalizedSport.includes(normalizeText(s)));
+    
+    if (!sportMatches) continue;
+    
+    // Verifica se algum padrão corresponde
+    const patternMatches = rule.patterns.some(p => p.test(marketLabel));
+    if (!patternMatches) continue;
+    
+    // Verifica contagem de seleções se especificado
+    if (rule.selectionsCount !== undefined && selections) {
+      if (selections.length !== rule.selectionsCount) continue;
+    }
+    
+    // Verifica se não tem opção de empate
+    if (rule.hasNoDrawOption && hasDrawOption === true) continue;
+    
+    return {
+      canonicalType: rule.result,
+      displayName: rule.displayName,
+      confidence: "high",
+      reason: `Matched rule for ${sport}: ${rule.patterns[0]}`
+    };
+  }
+  
+  // Fallback: usa o normalizador de texto existente
+  const textBasedResult = findCanonicalMarketFromEquivalences(marketLabel);
+  
+  return {
+    canonicalType: textBasedResult.canonicalType,
+    displayName: textBasedResult.displayName,
+    confidence: textBasedResult.confidence,
+    reason: "Text-based matching"
+  };
+}
+
+/**
+ * Busca mercado canônico baseado em equivalências de texto
+ */
+function findCanonicalMarketFromEquivalences(marketLabel: string): SemanticMarketResult {
+  const normalized = normalizeText(marketLabel);
+  
+  // Mapeamento de nomes canônicos para tipos
+  const canonicalMapping: Record<string, { type: MarketCanonicalType; display: string }> = {
+    "1X2": { type: "1X2", display: "1X2" },
+    "Over (Gols)": { type: "OVER_UNDER", display: "Over (Gols)" },
+    "Under (Gols)": { type: "OVER_UNDER", display: "Under (Gols)" },
+    "Handicap Asiático": { type: "HANDICAP", display: "Handicap Asiático" },
+    "Handicap Europeu": { type: "HANDICAP", display: "Handicap Europeu" },
+    "Ambas Marcam (BTTS)": { type: "BTTS", display: "Ambas Marcam" },
+    "Resultado Exato": { type: "CORRECT_SCORE", display: "Placar Correto" },
+    "Dupla Chance": { type: "DOUBLE_CHANCE", display: "Dupla Chance" },
+    "Resultado do 1º Tempo": { type: "FIRST_HALF", display: "Resultado do 1º Tempo" },
+    "Draw No Bet": { type: "DNB", display: "Draw No Bet" },
+  };
+  
+  for (const [key, value] of Object.entries(canonicalMapping)) {
+    if (normalizeText(key) === normalized) {
+      return { canonicalType: value.type, displayName: value.display, confidence: "exact" };
+    }
+  }
+  
+  // Busca em sinônimos
+  for (const [canonicalName, synonyms] of Object.entries(MARKET_EQUIVALENCES)) {
+    if (synonyms.some(s => normalizeText(s) === normalized || normalized.includes(normalizeText(s)))) {
+      const mapping = canonicalMapping[canonicalName];
+      if (mapping) {
+        return { canonicalType: mapping.type, displayName: mapping.display, confidence: "high" };
+      }
+    }
+  }
+  
+  return { canonicalType: "OTHER", displayName: "Outro", confidence: "low" };
+}
+
+/**
+ * Verifica se um mercado é semanticamente equivalente a MONEYLINE
+ * Considera esporte e contexto para determinar corretamente
+ */
+export function isMoneylineMarket(context: SemanticMarketContext): boolean {
+  const result = normalizeMarketSemantically(context);
+  return result.canonicalType === "MONEYLINE";
+}
+
+/**
+ * Obtém o nome de exibição do mercado para o select
+ */
+export function getMarketDisplayName(context: SemanticMarketContext): string {
+  const result = normalizeMarketSemantically(context);
+  return result.displayName;
+}
+
 // Mapeamento de equivalências: termo externo -> termo interno do sistema
 const MARKET_EQUIVALENCES: Record<string, string[]> = {
   // 1X2 - Principal mercado de futebol (3 vias)
   "1X2": [
     // Variações de 1X2
     "1x2", "1 x 2", "1-x-2", "1 - x - 2",
-    // Moneyline / Money Line
-    "moneyline", "money line", "ml", "money-line",
-    // Resultado final / Match result
+    // Moneyline / Money Line (para futebol, onde há empate)
     "resultado final", "resultado do jogo", "resultado da partida", "resultado",
     "final result", "match result", "full time result", "ftr", "ft result",
-    // Vencedor
+    // Vencedor com empate
     "match winner", "matchwinners", "winner", "vencedor", "ganhador", "quem vence",
     "vencedor da partida", "vencedor do jogo", "who wins",
     // Outras variações
     "home/draw/away", "casa empate fora", "moneyline / 1x2",
     "3 way", "3-way", "three way", "três vias", "tres vias"
+  ],
+  
+  // Moneyline binário (sem empate) - para esportes americanos
+  "Moneyline": [
+    "moneyline", "money line", "ml", "money-line",
+    "vencedor da partida – incluindo prorrogacao",
+    "vencedor da partida incluindo prorrogacao",
+    "winner including overtime",
+    "winner incl. ot",
+    "to win",
   ],
   
   // Over (Gols)
