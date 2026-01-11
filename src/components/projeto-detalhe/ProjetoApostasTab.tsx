@@ -320,7 +320,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   const fetchApostas = async () => {
     try {
-      // Usa tabela unificada para apostas simples (excluindo surebets/arbitragem)
+      // Usa tabela unificada para apostas simples
+      // NOTA: Apostas com estrategia=SUREBET e forma_registro=SIMPLES são pernas individuais
+      // de operações de surebet e DEVEM aparecer aqui para visualização completa
       let query = supabase
         .from("apostas_unificada")
         .select(`
@@ -332,7 +334,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         `)
         .eq("projeto_id", projetoId)
         .eq("forma_registro", "SIMPLES")
-        .neq("estrategia", "SUREBET") // Excluir surebets que são exibidas separadamente
+        // Todas as apostas SIMPLES aparecem aqui, incluindo SUREBET
+        // A separação visual é feita via badges, não via filtro excludente
         .is("cancelled_at", null)
         .order("data_aposta", { ascending: false });
       
