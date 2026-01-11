@@ -1,1159 +1,992 @@
 /**
- * Market Normalizer - Converte nomes de mercados externos para os internos do sistema
+ * Market Normalizer v2.0 - Sistema Completo de Normalização de Mercados
  * 
- * Fluxo:
- * 1. OCR detecta mercado_raw (texto do print)
- * 2. Normalizador transforma em uma categoria canônica (mercado_canon)
- * 3. Resolver tenta encontrar o melhor match dentro das opções disponíveis
- * 4. Preenche o Select com a opção encontrada
+ * Arquitetura:
+ * 1. market_raw_label: texto vindo do OCR/print (ex: "Mais 21.5", "TOTAL DE GAMES")
+ * 2. market_canonical_type: classificação lógica (ex: "TOTAL_GAMES_OVER", "MONEYLINE")
+ * 3. market_display_name: nome para exibição no UI (ex: "Over/Under Games")
+ * 
+ * O sistema usa regras semânticas por esporte para garantir classificação correta
  */
 
-// Tipo canônico de mercado (classificação lógica do sistema)
-export type MarketCanonicalType = 
-  | "MONEYLINE"      // Vencedor (2 opções, sem empate)
-  | "1X2"            // Vencedor com empate (3 opções)
-  | "OVER_UNDER"     // Acima/Abaixo de um valor
-  | "HANDICAP"       // Spread/Handicap
-  | "BTTS"           // Ambas Marcam
-  | "CORRECT_SCORE"  // Placar exato
-  | "DOUBLE_CHANCE"  // Dupla chance
-  | "FIRST_HALF"     // Resultado 1º tempo
-  | "DNB"            // Draw No Bet
-  | "PROPS"          // Props de jogadores
-  | "OTHER";         // Outros
+// ========================================================================
+// TIPOS CANÔNICOS EXPANDIDOS - Classificação lógica de mercados
+// ========================================================================
 
-// Interface para normalização semântica de mercados
+export type MarketCanonicalType = 
+  // === VENCEDOR ===
+  | "MONEYLINE"              // Vencedor (2 opções, sem empate)
+  | "1X2"                    // Vencedor com empate (3 opções)
+  | "DNB"                    // Draw No Bet
+  | "DOUBLE_CHANCE"          // Dupla chance (1X, X2, 12)
+  
+  // === TOTAIS (OVER/UNDER) ===
+  | "TOTAL_GOALS_OVER"       // Over gols (futebol)
+  | "TOTAL_GOALS_UNDER"      // Under gols (futebol)
+  | "TOTAL_POINTS_OVER"      // Over pontos (basquete, futebol americano)
+  | "TOTAL_POINTS_UNDER"     // Under pontos
+  | "TOTAL_GAMES_OVER"       // Over games (tênis)
+  | "TOTAL_GAMES_UNDER"      // Under games (tênis)
+  | "TOTAL_SETS_OVER"        // Over sets (tênis, vôlei)
+  | "TOTAL_SETS_UNDER"       // Under sets
+  | "TOTAL_RUNS_OVER"        // Over runs (baseball)
+  | "TOTAL_RUNS_UNDER"       // Under runs
+  | "TOTAL_ROUNDS_OVER"      // Over rounds (MMA, boxe, CS)
+  | "TOTAL_ROUNDS_UNDER"     // Under rounds
+  | "TOTAL_MAPS_OVER"        // Over mapas (eSports)
+  | "TOTAL_MAPS_UNDER"       // Under mapas
+  | "TOTAL_KILLS_OVER"       // Over kills (eSports)
+  | "TOTAL_KILLS_UNDER"      // Under kills
+  | "TOTAL_CORNERS_OVER"     // Over escanteios
+  | "TOTAL_CORNERS_UNDER"    // Under escanteios
+  | "TOTAL_CARDS_OVER"       // Over cartões
+  | "TOTAL_CARDS_UNDER"      // Under cartões
+  | "OVER_UNDER"             // Over/Under genérico (fallback)
+  
+  // === HANDICAPS ===
+  | "HANDICAP_ASIAN"         // Handicap asiático (futebol)
+  | "HANDICAP_EUROPEAN"      // Handicap europeu
+  | "HANDICAP_GAMES"         // Handicap de games (tênis)
+  | "HANDICAP_SETS"          // Handicap de sets (tênis, vôlei)
+  | "HANDICAP_POINTS"        // Handicap de pontos (basquete)
+  | "HANDICAP_ROUNDS"        // Handicap de rounds (MMA, CS)
+  | "HANDICAP_MAPS"          // Handicap de mapas (eSports)
+  | "HANDICAP_KILLS"         // Handicap de kills (eSports)
+  | "SPREAD"                 // Spread (futebol americano)
+  | "RUN_LINE"               // Run Line (baseball)
+  | "PUCK_LINE"              // Puck Line (hockey)
+  | "HANDICAP"               // Handicap genérico (fallback)
+  
+  // === PARCIAIS ===
+  | "FIRST_HALF"             // Resultado 1º tempo
+  | "SECOND_HALF"            // Resultado 2º tempo
+  | "FIRST_SET"              // Resultado 1º set
+  | "FIRST_PERIOD"           // Resultado 1º período
+  | "FIRST_QUARTER"          // Resultado 1º quarto
+  | "FIRST_INNING"           // Resultado 1º inning
+  | "FIRST_MAP"              // Resultado 1º mapa
+  
+  // === ESPECIAIS ===
+  | "BTTS"                   // Ambas Marcam
+  | "CORRECT_SCORE"          // Placar exato
+  | "ODD_EVEN"               // Ímpar/Par
+  | "FIRST_GOAL"             // Primeiro gol
+  | "LAST_GOAL"              // Último gol
+  | "CLEAN_SHEET"            // Clean Sheet
+  | "WINNING_MARGIN"         // Margem de vitória
+  
+  // === PROPS ===
+  | "PLAYER_PROPS"           // Props de jogadores
+  | "TEAM_PROPS"             // Props de time
+  | "SPECIAL_PROPS"          // Props especiais
+  
+  // === ESPORTES ESPECÍFICOS ===
+  | "METHOD_OF_VICTORY"      // Método de vitória (MMA/boxe)
+  | "ROUND_FINISH"           // Round da finalização (MMA/boxe)
+  | "GO_THE_DISTANCE"        // Vai até o fim (MMA/boxe)
+  | "FIRST_BLOOD"            // First Blood (eSports)
+  | "FIRST_TOWER"            // First Tower (LoL/Dota)
+  | "FIRST_DRAGON"           // First Dragon (LoL)
+  | "FIRST_BARON"            // First Baron (LoL)
+  | "FIRST_ROSHAN"           // First Roshan (Dota)
+  | "TIEBREAK"               // Haverá Tiebreak (tênis)
+  | "ACE"                    // Aces (tênis)
+  | "DOUBLE_FAULT"           // Dupla falta (tênis)
+  
+  // === TORNEIOS ===
+  | "OUTRIGHT"               // Vencedor do torneio
+  | "TOP_FINISH"             // Top 5/10/20
+  | "HEAD_TO_HEAD"           // Head-to-Head
+  | "MAKE_CUT"               // Fazer o cut (golfe)
+  
+  // === FALLBACK ===
+  | "OTHER";                 // Outros não mapeados
+
+// ========================================================================
+// INTERFACES
+// ========================================================================
+
 export interface SemanticMarketContext {
   sport: string;
   marketLabel: string;
+  selectionLabel?: string;
   selections?: string[];
+  selectionsCount?: number;
   hasDrawOption?: boolean;
 }
 
-// Interface para resultado da normalização semântica
 export interface SemanticMarketResult {
   canonicalType: MarketCanonicalType;
   displayName: string;
   confidence: "exact" | "high" | "medium" | "low";
   reason?: string;
+  subType?: string; // Para identificar especificidades (ex: "games", "sets")
 }
 
-// ========== REGRAS SEMÂNTICAS POR ESPORTE ==========
-// Regras que consideram contexto para classificar mercados corretamente
-
-interface SemanticRule {
-  sport: string | string[];
+interface CanonicalRule {
   patterns: RegExp[];
-  selectionsCount?: number;
-  hasNoDrawOption?: boolean;
-  result: MarketCanonicalType;
+  canonicalType: MarketCanonicalType;
   displayName: string;
+  priority?: number; // Maior = mais prioritário
 }
 
-const SEMANTIC_RULES: SemanticRule[] = [
+interface SportRules {
+  sport: string[];
+  rules: CanonicalRule[];
+}
+
+// ========================================================================
+// REGRAS DE DETECÇÃO DE SELEÇÃO (ANTES DO MERCADO)
+// ========================================================================
+// Estas regras analisam o TEXTO DA SELEÇÃO para identificar o tipo canônico
+// São aplicadas ANTES das regras de mercado
+
+interface SelectionPattern {
+  patterns: RegExp[];
+  canonicalType: MarketCanonicalType;
+  displayNameBySport: Record<string, string>;
+  defaultDisplayName: string;
+}
+
+const SELECTION_PATTERNS: SelectionPattern[] = [
+  // CRÍTICO: "Mais X" = OVER
+  {
+    patterns: [
+      /^mais\s+\d+[.,]?\d*/i,           // "Mais 21.5"
+      /^over\s+\d+[.,]?\d*/i,           // "Over 21.5"
+      /^acima\s+\d+[.,]?\d*/i,          // "Acima 21.5"
+      /^\+\s*\d+[.,]?\d*/,              // "+21.5"
+      /^o\s*\d+[.,]?\d*/i,              // "O 21.5"
+      /^>\s*\d+[.,]?\d*/,               // "> 21.5"
+    ],
+    canonicalType: "OVER_UNDER",
+    displayNameBySport: {
+      "Tênis": "Over/Under Games",
+      "Tennis": "Over/Under Games",
+      "Futebol": "Over/Under Gols",
+      "Soccer": "Over/Under Gols",
+      "Basquete": "Over/Under Pontos",
+      "Basketball": "Over/Under Pontos",
+      "NBA": "Over/Under Pontos",
+      "Vôlei": "Over/Under Pontos",
+      "Volleyball": "Over/Under Pontos",
+      "Hockey": "Over/Under Gols",
+      "NHL": "Over/Under Gols",
+      "Futebol Americano": "Over/Under Pontos",
+      "NFL": "Over/Under Pontos",
+      "Baseball": "Over/Under Runs",
+      "MLB": "Over/Under Runs",
+      "MMA/UFC": "Over/Under Rounds",
+      "MMA": "Over/Under Rounds",
+      "UFC": "Over/Under Rounds",
+      "Boxe": "Over/Under Rounds",
+      "Boxing": "Over/Under Rounds",
+    },
+    defaultDisplayName: "Over/Under"
+  },
+  // CRÍTICO: "Menos X" = UNDER
+  {
+    patterns: [
+      /^menos\s+\d+[.,]?\d*/i,          // "Menos 21.5"
+      /^under\s+\d+[.,]?\d*/i,          // "Under 21.5"
+      /^abaixo\s+\d+[.,]?\d*/i,         // "Abaixo 21.5"
+      /^-\s*\d+[.,]?\d*\s*$/,           // "-21.5" (fim da string, sem contexto de handicap)
+      /^u\s*\d+[.,]?\d*/i,              // "U 21.5"
+      /^<\s*\d+[.,]?\d*/,               // "< 21.5"
+    ],
+    canonicalType: "OVER_UNDER",
+    displayNameBySport: {
+      "Tênis": "Over/Under Games",
+      "Tennis": "Over/Under Games",
+      "Futebol": "Over/Under Gols",
+      "Soccer": "Over/Under Gols",
+      "Basquete": "Over/Under Pontos",
+      "Basketball": "Over/Under Pontos",
+      "NBA": "Over/Under Pontos",
+      "Vôlei": "Over/Under Pontos",
+      "Volleyball": "Over/Under Pontos",
+    },
+    defaultDisplayName: "Over/Under"
+  },
+  // Handicap na seleção: "Jogador -1.5", "Time +2.5"
+  {
+    patterns: [
+      /\s[+-]\d+[.,]?\d*\s*$/i,         // " -1.5" ou " +2.5" no fim
+      /\([+-]\d+[.,]?\d*\)/i,           // "(-1.5)" ou "(+2.5)"
+    ],
+    canonicalType: "HANDICAP",
+    displayNameBySport: {
+      "Tênis": "Handicap de Games",
+      "Tennis": "Handicap de Games",
+      "Basquete": "Handicap / Spread",
+      "Basketball": "Handicap / Spread",
+      "Vôlei": "Handicap de Sets",
+      "Volleyball": "Handicap de Sets",
+    },
+    defaultDisplayName: "Handicap"
+  }
+];
+
+// ========================================================================
+// REGRAS SEMÂNTICAS POR ESPORTE - MAPEAMENTO COMPLETO
+// ========================================================================
+
+const SPORT_RULES: SportRules[] = [
   // ==================== FUTEBOL ====================
   {
     sport: ["Futebol", "Soccer", "Football"],
-    patterns: [/1x2/i, /resultado\s*final/i, /match\s*result/i, /full\s*time/i, /vencedor/i, /winner/i, /tres\s*vias/i, /three\s*way/i],
-    result: "1X2",
-    displayName: "1X2"
-  },
-  {
-    sport: ["Futebol", "Soccer"],
-    patterns: [/dupla\s*chance/i, /double\s*chance/i, /1x\b/i, /x2\b/i, /12\b/i, /casa\s*ou\s*empate/i],
-    result: "DOUBLE_CHANCE",
-    displayName: "Dupla Chance"
-  },
-  {
-    sport: ["Futebol", "Soccer"],
-    patterns: [/ambas?\s*marcam/i, /btts/i, /both\s*teams?\s*to\s*score/i, /gol\s*gol/i, /gg\s*(sim|nao|yes|no)?/i],
-    result: "BTTS",
-    displayName: "Ambas Marcam"
-  },
-  {
-    sport: ["Futebol", "Soccer"],
-    patterns: [/over\s*\/?\s*under\s*gol/i, /total\s*(de\s*)?gol/i, /gols\s*(acima|abaixo)/i, /over\s*\d+\.?\d*\s*gol/i, /under\s*\d+\.?\d*\s*gol/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Gols"
-  },
-  {
-    sport: ["Futebol", "Soccer"],
-    patterns: [/handicap\s*asia/i, /asian\s*handicap/i, /ah\s*[+-]?\d/i],
-    result: "HANDICAP",
-    displayName: "Handicap Asiático"
-  },
-  {
-    sport: ["Futebol", "Soccer"],
-    patterns: [/1[ºo°]?\s*tempo/i, /primeiro\s*tempo/i, /1st\s*half/i, /first\s*half/i, /ht\s*result/i, /intervalo/i, /half\s*time/i],
-    result: "FIRST_HALF",
-    displayName: "Resultado do 1º Tempo"
-  },
-  {
-    sport: ["Futebol", "Soccer"],
-    patterns: [/escanteio/i, /corner/i, /cantos/i, /total\s*(de\s*)?corner/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Escanteios"
-  },
-  {
-    sport: ["Futebol", "Soccer"],
-    patterns: [/handicap\s*(de\s*)?gol/i, /goal\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Gols"
-  },
-  {
-    sport: ["Futebol", "Soccer"],
-    patterns: [/resultado.*gol/i, /resultado.*total/i, /1x2.*gol/i],
-    result: "1X2",
-    displayName: "Resultado Final + Gols"
-  },
-  {
-    sport: ["Futebol", "Soccer"],
-    patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i, /exact\s*score/i, /^\d+-\d+$/],
-    result: "CORRECT_SCORE",
-    displayName: "Placar Correto"
-  },
-  
-  // ==================== FUTEBOL AMERICANO / NFL ====================
-  {
-    sport: ["Futebol Americano", "NFL", "American Football"],
-    patterns: [/vencedor.*prorrogacao/i, /vencedor.*overtime/i, /winner.*ot/i, /moneyline/i, /money\s*line/i, /vencedor\s*(da\s*)?partida/i, /to\s*win/i],
-    result: "MONEYLINE",
-    displayName: "Moneyline"
-  },
-  {
-    sport: ["Futebol Americano", "NFL"],
-    patterns: [/spread/i, /handicap/i, /linha\s*de\s*pontos/i, /point\s*spread/i],
-    result: "HANDICAP",
-    displayName: "Spread"
-  },
-  {
-    sport: ["Futebol Americano", "NFL"],
-    patterns: [/total\s*(de\s*)?pontos/i, /over\s*\/?\s*under/i, /pontos\s*(acima|abaixo)/i, /total\s*points/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Pontos"
-  },
-  {
-    sport: ["Futebol Americano", "NFL"],
-    patterns: [/resultado\s*tempo\s*regulamentar/i, /regulation\s*time/i, /60\s*min/i],
-    result: "1X2",
-    displayName: "Resultado Tempo Regulamentar"
-  },
-  {
-    sport: ["Futebol Americano", "NFL"],
-    patterns: [/resultado\s*1[ºo°]?\s*tempo/i, /1st\s*half/i, /first\s*half/i, /1[ºo°]?\s*tempo/i],
-    result: "FIRST_HALF",
-    displayName: "Resultado 1º Tempo"
-  },
-  {
-    sport: ["Futebol Americano", "NFL"],
-    patterns: [/handicap\s*1[ºo°]?\s*tempo/i, /1st\s*half\s*spread/i],
-    result: "HANDICAP",
-    displayName: "Handicap 1º Tempo"
-  },
-  {
-    sport: ["Futebol Americano", "NFL"],
-    patterns: [/props?\s*(de\s*)?jogador/i, /player\s*props?/i, /yards/i, /touchdown.*jogador/i, /passing/i, /rushing/i, /receiving/i],
-    result: "PROPS",
-    displayName: "Props de Jogadores"
-  },
-  {
-    sport: ["Futebol Americano", "NFL"],
-    patterns: [/total\s*por\s*equipe/i, /team\s*total/i, /pontos.*equipe/i],
-    result: "OVER_UNDER",
-    displayName: "Total por Equipe"
-  },
-  {
-    sport: ["Futebol Americano", "NFL"],
-    patterns: [/touchdown/i, /td\s*(total|primeiro|anytime)/i, /primeiro\s*td/i, /anytime\s*td/i],
-    result: "PROPS",
-    displayName: "Touchdowns"
-  },
-  {
-    sport: ["Futebol Americano", "NFL"],
-    patterns: [/margem\s*(de\s*)?vitoria/i, /winning\s*margin/i],
-    result: "OTHER",
-    displayName: "Margem de Vitória"
-  },
-  {
-    sport: ["Futebol Americano", "NFL"],
-    patterns: [/same\s*game\s*parlay/i, /sgp/i],
-    result: "OTHER",
-    displayName: "Same Game Parlay"
-  },
-  
-  // ==================== BASQUETE / NBA ====================
-  {
-    sport: ["Basquete", "NBA", "Basketball", "NBB"],
-    patterns: [/vencedor/i, /winner/i, /moneyline/i, /money\s*line/i, /to\s*win/i],
-    result: "MONEYLINE",
-    displayName: "Moneyline"
-  },
-  {
-    sport: ["Basquete", "NBA", "Basketball"],
-    patterns: [/handicap/i, /spread/i, /linha\s*de\s*pontos/i, /point\s*spread/i],
-    result: "HANDICAP",
-    displayName: "Handicap / Spread"
-  },
-  {
-    sport: ["Basquete", "NBA", "Basketball"],
-    patterns: [/over\s*\/?\s*under/i, /total\s*(de\s*)?pontos/i, /pontos\s*(acima|abaixo)/i, /total\s*points/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Pontos"
-  },
-  {
-    sport: ["Basquete", "NBA", "Basketball"],
-    patterns: [/total\s*por\s*equipe/i, /team\s*total/i, /pontos.*equipe/i],
-    result: "OVER_UNDER",
-    displayName: "Total por Equipe"
-  },
-  {
-    sport: ["Basquete", "NBA", "Basketball"],
-    patterns: [/resultado\s*1[ºo°]?\s*tempo/i, /1st\s*half/i, /first\s*half/i, /1[ºo°]?\s*tempo/i],
-    result: "FIRST_HALF",
-    displayName: "Resultado 1º Tempo"
-  },
-  {
-    sport: ["Basquete", "NBA", "Basketball"],
-    patterns: [/resultado\s*tempo\s*regulamentar/i, /regulation\s*time/i, /48\s*min/i, /40\s*min/i],
-    result: "1X2",
-    displayName: "Resultado Tempo Regulamentar"
-  },
-  {
-    sport: ["Basquete", "NBA", "Basketball"],
-    patterns: [/resultado.*quarto/i, /quarter\s*result/i, /[1-4][ºo°]?\s*quarto/i, /\d(st|nd|rd|th)\s*quarter/i],
-    result: "FIRST_HALF",
-    displayName: "Resultado por Quarto"
-  },
-  {
-    sport: ["Basquete", "NBA", "Basketball"],
-    patterns: [/handicap\s*1[ºo°]?\s*tempo/i, /1st\s*half\s*spread/i],
-    result: "HANDICAP",
-    displayName: "Handicap 1º Tempo"
-  },
-  {
-    sport: ["Basquete", "NBA", "Basketball"],
-    patterns: [/over\s*\/?\s*under\s*1[ºo°]?\s*tempo/i, /1st\s*half\s*total/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under 1º Tempo"
-  },
-  {
-    sport: ["Basquete", "NBA", "Basketball"],
-    patterns: [/props?\s*(de\s*)?jogador/i, /player\s*props?/i, /pontos.*jogador/i, /rebounds?/i, /assists?/i, /triple\s*double/i, /double\s*double/i],
-    result: "PROPS",
-    displayName: "Props de Jogadores"
-  },
-  {
-    sport: ["Basquete", "NBA", "Basketball"],
-    patterns: [/same\s*game\s*parlay/i, /sgp/i],
-    result: "OTHER",
-    displayName: "Same Game Parlay"
+    rules: [
+      // Vencedor / 1X2
+      { patterns: [/1x2/i, /resultado\s*final/i, /match\s*result/i, /full\s*time/i, /tres\s*vias/i, /three\s*way/i], canonicalType: "1X2", displayName: "1X2", priority: 10 },
+      { patterns: [/vencedor\s*(da\s*)?partida/i, /winner/i, /match\s*winner/i], canonicalType: "1X2", displayName: "1X2" },
+      
+      // Dupla Chance
+      { patterns: [/dupla\s*chance/i, /double\s*chance/i], canonicalType: "DOUBLE_CHANCE", displayName: "Dupla Chance", priority: 10 },
+      { patterns: [/\b1x\b/i, /\bx2\b/i, /\b12\b/i, /casa\s*ou\s*empate/i, /fora\s*ou\s*empate/i], canonicalType: "DOUBLE_CHANCE", displayName: "Dupla Chance" },
+      
+      // DNB
+      { patterns: [/draw\s*no\s*bet/i, /\bdnb\b/i, /empate\s*anula/i, /empate\s*reembolsa/i], canonicalType: "DNB", displayName: "Draw No Bet", priority: 10 },
+      
+      // Ambas Marcam
+      { patterns: [/ambas?\s*marcam/i, /btts/i, /both\s*teams?\s*to\s*score/i, /gol\s*gol/i, /\bgg\b/i], canonicalType: "BTTS", displayName: "Ambas Marcam", priority: 10 },
+      
+      // Over/Under Gols
+      { patterns: [/over\s*\/?\s*under\s*(de\s*)?(gol|goal)/i, /total\s*(de\s*)?(gol|goal)/i], canonicalType: "OVER_UNDER", displayName: "Over/Under Gols", priority: 10 },
+      { patterns: [/gols?\s*(acima|abaixo|over|under)/i, /mais\s*de\s*\d+[.,]?\d*\s*gol/i, /menos\s*de\s*\d+[.,]?\d*\s*gol/i], canonicalType: "OVER_UNDER", displayName: "Over/Under Gols" },
+      { patterns: [/over\s*\d+[.,]?\d*\s*gol/i, /under\s*\d+[.,]?\d*\s*gol/i], canonicalType: "OVER_UNDER", displayName: "Over/Under Gols" },
+      
+      // Over/Under Escanteios
+      { patterns: [/escanteio/i, /corner/i, /cantos/i, /total\s*(de\s*)?corner/i], canonicalType: "TOTAL_CORNERS_OVER", displayName: "Over/Under Escanteios" },
+      
+      // Over/Under Cartões
+      { patterns: [/cart(ao|ão|oes|ões)/i, /card/i, /total\s*(de\s*)?cart/i], canonicalType: "TOTAL_CARDS_OVER", displayName: "Over/Under Cartões" },
+      
+      // Handicaps
+      { patterns: [/handicap\s*asia/i, /asian\s*handicap/i, /\bah\s*[+-]?\d/i], canonicalType: "HANDICAP_ASIAN", displayName: "Handicap Asiático", priority: 10 },
+      { patterns: [/handicap\s*europeu/i, /european\s*handicap/i, /\beh\s*[+-]?\d/i], canonicalType: "HANDICAP_EUROPEAN", displayName: "Handicap Europeu" },
+      { patterns: [/handicap\s*(de\s*)?gol/i, /goal\s*handicap/i, /\bhandicap\b/i], canonicalType: "HANDICAP", displayName: "Handicap de Gols" },
+      
+      // 1º Tempo
+      { patterns: [/1[ºo°]?\s*tempo/i, /primeiro\s*tempo/i, /1st\s*half/i, /first\s*half/i, /\bht\b/i, /half\s*time/i, /intervalo/i], canonicalType: "FIRST_HALF", displayName: "Resultado do 1º Tempo", priority: 10 },
+      { patterns: [/resultado.*1.*tempo/i, /1.*tempo.*resultado/i], canonicalType: "FIRST_HALF", displayName: "Resultado do 1º Tempo" },
+      
+      // 2º Tempo
+      { patterns: [/2[ºo°]?\s*tempo/i, /segundo\s*tempo/i, /2nd\s*half/i, /second\s*half/i], canonicalType: "SECOND_HALF", displayName: "Resultado do 2º Tempo" },
+      
+      // Placar Correto
+      { patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i, /exact\s*score/i, /resultado\s*exato/i], canonicalType: "CORRECT_SCORE", displayName: "Placar Correto", priority: 10 },
+      { patterns: [/^\d+-\d+$/], canonicalType: "CORRECT_SCORE", displayName: "Placar Correto" },
+      
+      // Primeiro/Último Gol
+      { patterns: [/primeiro\s*gol/i, /first\s*goal/i, /primeiro\s*a\s*marcar/i, /first\s*scorer/i], canonicalType: "FIRST_GOAL", displayName: "Primeiro Gol" },
+      { patterns: [/ultimo\s*gol/i, /last\s*goal/i, /ultimo\s*a\s*marcar/i], canonicalType: "LAST_GOAL", displayName: "Último Gol" },
+      
+      // Ímpar/Par
+      { patterns: [/gols?\s*(impar|par|odd|even)/i, /(impar|par|odd|even)\s*gols?/i], canonicalType: "ODD_EVEN", displayName: "Gols Ímpares/Pares" },
+      
+      // Clean Sheet
+      { patterns: [/clean\s*sheet/i, /n(ao|ão)\s*sofrer\s*gol/i, /sem\s*sofrer/i], canonicalType: "CLEAN_SHEET", displayName: "Clean Sheet" },
+      
+      // Margem de Vitória
+      { patterns: [/margem\s*(de\s*)?vitoria/i, /winning\s*margin/i], canonicalType: "WINNING_MARGIN", displayName: "Margem de Vitória" },
+    ]
   },
   
   // ==================== TÊNIS ====================
   {
     sport: ["Tênis", "Tennis"],
-    patterns: [/vencedor\s*(da\s*)?(partida)?/i, /winner/i, /match\s*winner/i, /to\s*win/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor da Partida"
+    rules: [
+      // Vencedor
+      { patterns: [/vencedor\s*(da\s*)?(partida)?/i, /winner/i, /match\s*winner/i, /to\s*win\s*match/i], canonicalType: "MONEYLINE", displayName: "Vencedor da Partida", priority: 10 },
+      
+      // *** TOTAL DE GAMES - CRÍTICO ***
+      { patterns: [/total\s*(de\s*)?games?/i, /games?\s*total/i], canonicalType: "TOTAL_GAMES_OVER", displayName: "Over/Under Games", priority: 20 },
+      { patterns: [/over\s*\/?\s*under\s*(de\s*)?games?/i, /games?\s*(over|under)/i], canonicalType: "TOTAL_GAMES_OVER", displayName: "Over/Under Games", priority: 20 },
+      { patterns: [/games?\s*(acima|abaixo|mais|menos)/i], canonicalType: "TOTAL_GAMES_OVER", displayName: "Over/Under Games", priority: 20 },
+      { patterns: [/(acima|abaixo|mais|menos)\s*\d+[.,]?\d*\s*games?/i], canonicalType: "TOTAL_GAMES_OVER", displayName: "Over/Under Games", priority: 20 },
+      
+      // *** TOTAL DE SETS ***
+      { patterns: [/total\s*(de\s*)?sets?/i, /sets?\s*total/i], canonicalType: "TOTAL_SETS_OVER", displayName: "Total de Sets", priority: 15 },
+      { patterns: [/sets?\s*(over|under)/i, /numero\s*de\s*sets?/i], canonicalType: "TOTAL_SETS_OVER", displayName: "Total de Sets" },
+      
+      // *** HANDICAP DE GAMES ***
+      { patterns: [/handicap\s*(de\s*)?games?/i, /games?\s*handicap/i, /spread\s*games?/i], canonicalType: "HANDICAP_GAMES", displayName: "Handicap de Games", priority: 15 },
+      { patterns: [/games?\s*[+-]\d+[.,]?\d*/i, /[+-]\d+[.,]?\d*\s*games?/i], canonicalType: "HANDICAP_GAMES", displayName: "Handicap de Games" },
+      
+      // *** HANDICAP DE SETS ***
+      { patterns: [/handicap\s*(de\s*)?sets?/i, /sets?\s*handicap/i, /spread\s*sets?/i], canonicalType: "HANDICAP_SETS", displayName: "Handicap de Sets", priority: 15 },
+      { patterns: [/sets?\s*[+-]\d+[.,]?\d*/i, /[+-]\d+[.,]?\d*\s*sets?/i], canonicalType: "HANDICAP_SETS", displayName: "Handicap de Sets" },
+      
+      // Vencedor do Set
+      { patterns: [/vencedor\s*(do\s*)?1[ºo°]?\s*set/i, /1st\s*set\s*winner/i, /primeiro\s*set\s*vencedor/i], canonicalType: "FIRST_SET", displayName: "Vencedor do 1º Set", priority: 10 },
+      { patterns: [/vencedor\s*(do\s*)?set/i, /set\s*winner/i], canonicalType: "MONEYLINE", displayName: "Vencedor do Set" },
+      { patterns: [/1[ºo°]?\s*set/i, /primeiro\s*set/i, /1st\s*set/i], canonicalType: "FIRST_SET", displayName: "Vencedor do 1º Set" },
+      
+      // Placar Exato de Sets
+      { patterns: [/placar\s*(exato|correto)\s*(de\s*)?sets?/i, /sets?\s*(exato|correto)/i], canonicalType: "CORRECT_SCORE", displayName: "Placar Exato (Sets)", priority: 10 },
+      { patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i], canonicalType: "CORRECT_SCORE", displayName: "Placar Exato" },
+      
+      // Tie-break
+      { patterns: [/tie\s*break/i, /tiebreak/i, /haver(a|á)\s*tie/i], canonicalType: "TIEBREAK", displayName: "Tie-break (Sim/Não)" },
+      
+      // Ímpar/Par
+      { patterns: [/(games?|sets?)\s*(impar|par|odd|even)/i, /(impar|par|odd|even)\s*(games?|sets?)/i], canonicalType: "ODD_EVEN", displayName: "Games Ímpares/Pares" },
+      
+      // Aces
+      { patterns: [/total\s*(de\s*)?aces?/i, /aces?\s*(over|under)/i], canonicalType: "OVER_UNDER", displayName: "Total de Aces" },
+      
+      // Dupla Falta
+      { patterns: [/dupla\s*falta/i, /double\s*fault/i], canonicalType: "OVER_UNDER", displayName: "Total Duplas Faltas" },
+    ]
   },
+  
+  // ==================== BASQUETE / NBA ====================
   {
-    sport: ["Tênis", "Tennis"],
-    patterns: [/handicap\s*(de\s*)?games?/i, /game\s*handicap/i, /spread\s*games?/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Games"
+    sport: ["Basquete", "NBA", "Basketball", "NBB", "Euroleague"],
+    rules: [
+      // Vencedor (Moneyline) - inclui prorrogação
+      { patterns: [/moneyline/i, /money\s*line/i, /\bml\b/i], canonicalType: "MONEYLINE", displayName: "Moneyline", priority: 10 },
+      { patterns: [/vencedor\s*(da\s*)?partida/i, /vencedor.*prorrogacao/i, /winner.*overtime/i, /to\s*win/i], canonicalType: "MONEYLINE", displayName: "Moneyline" },
+      
+      // Resultado Tempo Regulamentar (pode ter empate)
+      { patterns: [/resultado\s*tempo\s*regulamentar/i, /regulation\s*time/i, /48\s*min/i, /40\s*min/i], canonicalType: "1X2", displayName: "Resultado Tempo Regulamentar" },
+      
+      // *** HANDICAP / SPREAD ***
+      { patterns: [/\bspread\b/i, /point\s*spread/i], canonicalType: "SPREAD", displayName: "Spread", priority: 15 },
+      { patterns: [/handicap/i, /linha\s*de\s*pontos/i, /hcap/i], canonicalType: "HANDICAP_POINTS", displayName: "Handicap / Spread" },
+      
+      // *** TOTAL DE PONTOS ***
+      { patterns: [/total\s*(de\s*)?pontos/i, /pontos\s*total/i, /total\s*points/i], canonicalType: "TOTAL_POINTS_OVER", displayName: "Over/Under Pontos", priority: 15 },
+      { patterns: [/over\s*\/?\s*under/i, /pontos\s*(acima|abaixo|over|under)/i], canonicalType: "TOTAL_POINTS_OVER", displayName: "Over/Under Pontos" },
+      { patterns: [/mais\s*de\s*\d+.*pontos/i, /menos\s*de\s*\d+.*pontos/i], canonicalType: "TOTAL_POINTS_OVER", displayName: "Over/Under Pontos" },
+      
+      // Total por Equipe
+      { patterns: [/total\s*por\s*equipe/i, /team\s*total/i, /pontos.*equipe/i], canonicalType: "TEAM_PROPS", displayName: "Total por Equipe" },
+      
+      // Parciais
+      { patterns: [/resultado\s*1[ºo°]?\s*tempo/i, /1st\s*half/i, /first\s*half/i, /1[ºo°]?\s*tempo/i], canonicalType: "FIRST_HALF", displayName: "Resultado 1º Tempo", priority: 10 },
+      { patterns: [/resultado.*quarto/i, /quarter\s*result/i, /[1-4][ºo°]?\s*quarto/i, /\d(st|nd|rd|th)\s*quarter/i], canonicalType: "FIRST_QUARTER", displayName: "Resultado por Quarto" },
+      
+      // Handicap Parciais
+      { patterns: [/handicap\s*1[ºo°]?\s*tempo/i, /1st\s*half\s*spread/i], canonicalType: "HANDICAP", displayName: "Handicap 1º Tempo" },
+      { patterns: [/over\s*\/?\s*under\s*1[ºo°]?\s*tempo/i, /1st\s*half\s*total/i], canonicalType: "OVER_UNDER", displayName: "Over/Under 1º Tempo" },
+      
+      // Props de Jogadores
+      { patterns: [/props?\s*(de\s*)?jogador/i, /player\s*props?/i], canonicalType: "PLAYER_PROPS", displayName: "Props de Jogadores", priority: 10 },
+      { patterns: [/pontos.*jogador/i, /rebounds?/i, /assists?/i, /triple\s*double/i, /double\s*double/i], canonicalType: "PLAYER_PROPS", displayName: "Props de Jogadores" },
+      
+      // Ímpar/Par
+      { patterns: [/pontos\s*(impar|par|odd|even)/i, /(impar|par|odd|even)\s*pontos/i], canonicalType: "ODD_EVEN", displayName: "Pontos Ímpares/Pares" },
+      
+      // Margem de Vitória
+      { patterns: [/margem\s*(de\s*)?vitoria/i, /winning\s*margin/i], canonicalType: "WINNING_MARGIN", displayName: "Margem de Vitória" },
+    ]
   },
+  
+  // ==================== FUTEBOL AMERICANO / NFL ====================
   {
-    sport: ["Tênis", "Tennis"],
-    patterns: [/over\s*\/?\s*under\s*games?/i, /total\s*(de\s*)?games?/i, /games?\s*(acima|abaixo)/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Games"
-  },
-  {
-    sport: ["Tênis", "Tennis"],
-    patterns: [/vencedor\s*(do\s*)?set/i, /set\s*winner/i, /1[ºo°]?\s*set/i, /primeiro\s*set/i, /1st\s*set/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor do Set"
-  },
-  {
-    sport: ["Tênis", "Tennis"],
-    patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i, /sets?\s*exato/i],
-    result: "CORRECT_SCORE",
-    displayName: "Placar Exato"
-  },
-  {
-    sport: ["Tênis", "Tennis"],
-    patterns: [/total\s*(de\s*)?sets?/i, /sets?\s*(over|under)/i, /numero\s*de\s*sets?/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Sets"
-  },
-  {
-    sport: ["Tênis", "Tennis"],
-    patterns: [/handicap\s*(de\s*)?sets?/i, /set\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Sets"
-  },
-  {
-    sport: ["Tênis", "Tennis"],
-    patterns: [/vencedor\s*1[ºo°]?\s*set/i, /1st\s*set\s*winner/i, /primeiro\s*set/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor do 1º Set"
-  },
-  {
-    sport: ["Tênis", "Tennis"],
-    patterns: [/tie\s*break/i, /tiebreak/i, /havera\s*tie/i],
-    result: "OTHER",
-    displayName: "Tie-break (Sim/Não)"
-  },
-  {
-    sport: ["Tênis", "Tennis"],
-    patterns: [/sets?\s*(impar|par|odd|even)/i],
-    result: "OTHER",
-    displayName: "Sets Ímpares/Pares"
+    sport: ["Futebol Americano", "NFL", "American Football", "NCAAF", "College Football"],
+    rules: [
+      // Vencedor (Moneyline) - inclui prorrogação
+      { patterns: [/moneyline/i, /money\s*line/i, /\bml\b/i], canonicalType: "MONEYLINE", displayName: "Moneyline", priority: 10 },
+      { patterns: [/vencedor.*prorrogacao/i, /vencedor.*overtime/i, /winner.*ot/i, /to\s*win/i, /vencedor\s*(da\s*)?partida/i], canonicalType: "MONEYLINE", displayName: "Moneyline" },
+      
+      // Resultado Tempo Regulamentar (pode ter empate)
+      { patterns: [/resultado\s*tempo\s*regulamentar/i, /regulation\s*time/i, /60\s*min/i], canonicalType: "1X2", displayName: "Resultado Tempo Regulamentar" },
+      
+      // *** SPREAD ***
+      { patterns: [/\bspread\b/i, /point\s*spread/i], canonicalType: "SPREAD", displayName: "Spread", priority: 15 },
+      { patterns: [/handicap/i, /linha\s*de\s*pontos/i], canonicalType: "SPREAD", displayName: "Spread" },
+      
+      // *** TOTAL DE PONTOS ***
+      { patterns: [/total\s*(de\s*)?pontos/i, /total\s*points/i], canonicalType: "TOTAL_POINTS_OVER", displayName: "Total de Pontos", priority: 15 },
+      { patterns: [/over\s*\/?\s*under/i, /pontos\s*(acima|abaixo|over|under)/i], canonicalType: "TOTAL_POINTS_OVER", displayName: "Total de Pontos" },
+      
+      // Total por Equipe
+      { patterns: [/total\s*por\s*equipe/i, /team\s*total/i, /pontos.*equipe/i], canonicalType: "TEAM_PROPS", displayName: "Total por Equipe" },
+      
+      // Parciais
+      { patterns: [/resultado\s*1[ºo°]?\s*tempo/i, /1st\s*half/i, /first\s*half/i, /1[ºo°]?\s*tempo/i], canonicalType: "FIRST_HALF", displayName: "Resultado 1º Tempo", priority: 10 },
+      { patterns: [/resultado.*quarto/i, /quarter\s*result/i, /[1-4][ºo°]?\s*quarto/i], canonicalType: "FIRST_QUARTER", displayName: "Resultado por Quarto" },
+      
+      // Handicap Parciais
+      { patterns: [/handicap\s*1[ºo°]?\s*tempo/i, /1st\s*half\s*spread/i], canonicalType: "HANDICAP", displayName: "Handicap 1º Tempo" },
+      
+      // Props de Jogadores
+      { patterns: [/props?\s*(de\s*)?jogador/i, /player\s*props?/i], canonicalType: "PLAYER_PROPS", displayName: "Props de Jogadores", priority: 10 },
+      { patterns: [/yards/i, /passing/i, /rushing/i, /receiving/i], canonicalType: "PLAYER_PROPS", displayName: "Props de Jogadores" },
+      
+      // Touchdowns
+      { patterns: [/touchdown/i, /\btd\b/i, /primeiro\s*td/i, /anytime\s*td/i, /first\s*td/i], canonicalType: "PLAYER_PROPS", displayName: "Touchdowns" },
+      
+      // Margem de Vitória
+      { patterns: [/margem\s*(de\s*)?vitoria/i, /winning\s*margin/i], canonicalType: "WINNING_MARGIN", displayName: "Margem de Vitória" },
+    ]
   },
   
   // ==================== BASEBALL / MLB ====================
   {
     sport: ["Baseball", "MLB", "Beisebol"],
-    patterns: [/moneyline/i, /money\s*line/i, /vencedor/i, /winner/i, /to\s*win/i],
-    result: "MONEYLINE",
-    displayName: "Moneyline"
-  },
-  {
-    sport: ["Baseball", "MLB"],
-    patterns: [/run\s*line/i, /handicap/i, /spread/i, /rl\s*[+-]/i],
-    result: "HANDICAP",
-    displayName: "Run Line"
-  },
-  {
-    sport: ["Baseball", "MLB"],
-    patterns: [/total\s*(de\s*)?runs?/i, /over\s*\/?\s*under/i, /runs?\s*(over|under)/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Runs"
-  },
-  {
-    sport: ["Baseball", "MLB"],
-    patterns: [/total\s*por\s*equipe/i, /team\s*total/i, /runs?\s*equipe/i],
-    result: "OVER_UNDER",
-    displayName: "Total por Equipe"
-  },
-  {
-    sport: ["Baseball", "MLB"],
-    patterns: [/resultado\s*(apos|after)\s*9\s*innings?/i, /9\s*innings?/i, /regulamentar/i],
-    result: "1X2",
-    displayName: "Resultado após 9 Innings"
-  },
-  {
-    sport: ["Baseball", "MLB"],
-    patterns: [/resultado\s*5\s*innings?/i, /5\s*innings?/i, /first\s*5/i, /f5/i],
-    result: "1X2",
-    displayName: "Resultado 5 Innings"
-  },
-  {
-    sport: ["Baseball", "MLB"],
-    patterns: [/resultado.*inning/i, /inning\s*result/i, /[1-9][ºo°]?\s*inning/i],
-    result: "FIRST_HALF",
-    displayName: "Resultado por Inning"
-  },
-  {
-    sport: ["Baseball", "MLB"],
-    patterns: [/1[ªa]?\s*metade/i, /1st\s*half/i, /first\s*half/i, /primeiro\s*tempo/i],
-    result: "FIRST_HALF",
-    displayName: "1ª Metade"
-  },
-  {
-    sport: ["Baseball", "MLB"],
-    patterns: [/props?\s*(de\s*)?arremessador/i, /pitcher\s*props?/i, /strikeout/i],
-    result: "PROPS",
-    displayName: "Props de Arremessadores"
-  },
-  {
-    sport: ["Baseball", "MLB"],
-    patterns: [/runs?\s*(impar|par|odd|even)/i],
-    result: "OTHER",
-    displayName: "Odd/Even Runs"
-  },
-  {
-    sport: ["Baseball", "MLB"],
-    patterns: [/hits?\s*total/i, /total\s*(de\s*)?hits?/i],
-    result: "OVER_UNDER",
-    displayName: "Hits Totais"
+    rules: [
+      // Vencedor (Moneyline)
+      { patterns: [/moneyline/i, /money\s*line/i, /\bml\b/i, /vencedor/i, /winner/i, /to\s*win/i], canonicalType: "MONEYLINE", displayName: "Moneyline", priority: 10 },
+      
+      // *** RUN LINE ***
+      { patterns: [/run\s*line/i, /\brl\b/i], canonicalType: "RUN_LINE", displayName: "Run Line", priority: 15 },
+      { patterns: [/handicap/i, /spread/i], canonicalType: "RUN_LINE", displayName: "Run Line" },
+      
+      // *** TOTAL DE RUNS ***
+      { patterns: [/total\s*(de\s*)?runs?/i, /runs?\s*total/i], canonicalType: "TOTAL_RUNS_OVER", displayName: "Total de Runs", priority: 15 },
+      { patterns: [/over\s*\/?\s*under/i, /runs?\s*(over|under|acima|abaixo)/i], canonicalType: "TOTAL_RUNS_OVER", displayName: "Total de Runs" },
+      
+      // Total por Equipe
+      { patterns: [/total\s*por\s*equipe/i, /team\s*total/i, /runs?\s*equipe/i], canonicalType: "TEAM_PROPS", displayName: "Total por Equipe" },
+      
+      // Parciais
+      { patterns: [/resultado\s*(apos|after)\s*9\s*innings?/i, /9\s*innings?/i, /regulamentar/i], canonicalType: "1X2", displayName: "Resultado após 9 Innings" },
+      { patterns: [/resultado\s*5\s*innings?/i, /5\s*innings?/i, /first\s*5/i, /\bf5\b/i], canonicalType: "FIRST_HALF", displayName: "Resultado 5 Innings" },
+      { patterns: [/resultado.*inning/i, /inning\s*result/i, /[1-9][ºo°]?\s*inning/i], canonicalType: "FIRST_INNING", displayName: "Resultado por Inning" },
+      { patterns: [/1[ªa]?\s*metade/i, /1st\s*half/i, /first\s*half/i], canonicalType: "FIRST_HALF", displayName: "1ª Metade" },
+      
+      // Props de Arremessadores
+      { patterns: [/props?\s*(de\s*)?arremessador/i, /pitcher\s*props?/i, /strikeout/i], canonicalType: "PLAYER_PROPS", displayName: "Props de Arremessadores" },
+      
+      // Hits Totais
+      { patterns: [/hits?\s*total/i, /total\s*(de\s*)?hits?/i], canonicalType: "OVER_UNDER", displayName: "Hits Totais" },
+      
+      // Ímpar/Par
+      { patterns: [/runs?\s*(impar|par|odd|even)/i], canonicalType: "ODD_EVEN", displayName: "Runs Ímpares/Pares" },
+    ]
   },
   
   // ==================== HOCKEY / NHL ====================
   {
-    sport: ["Hockey", "NHL", "Hóquei"],
-    patterns: [/moneyline/i, /money\s*line/i, /vencedor.*overtime/i, /vencedor.*prorrogacao/i, /to\s*win/i],
-    result: "MONEYLINE",
-    displayName: "Moneyline"
-  },
-  {
-    sport: ["Hockey", "NHL"],
-    patterns: [/puck\s*line/i, /handicap/i, /spread/i, /pl\s*[+-]/i],
-    result: "HANDICAP",
-    displayName: "Puck Line"
-  },
-  {
-    sport: ["Hockey", "NHL"],
-    patterns: [/total\s*(de\s*)?gols?/i, /over\s*\/?\s*under/i, /gols?\s*(over|under)/i, /total\s*goals?/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Gols"
-  },
-  {
-    sport: ["Hockey", "NHL"],
-    patterns: [/resultado\s*tempo\s*regulamentar/i, /regulation\s*time/i, /60\s*min/i, /tres\s*vias/i, /3\s*way/i],
-    result: "1X2",
-    displayName: "Resultado Tempo Regulamentar"
-  },
-  {
-    sport: ["Hockey", "NHL"],
-    patterns: [/resultado.*periodo/i, /period\s*result/i, /[1-3][ºo°]?\s*periodo/i, /\d(st|nd|rd)\s*period/i],
-    result: "FIRST_HALF",
-    displayName: "Resultado por Período"
-  },
-  {
-    sport: ["Hockey", "NHL"],
-    patterns: [/total\s*por\s*equipe/i, /team\s*total/i, /gols?\s*equipe/i],
-    result: "OVER_UNDER",
-    displayName: "Total por Equipe"
-  },
-  {
-    sport: ["Hockey", "NHL"],
-    patterns: [/1[ºo°]?\s*periodo/i, /1st\s*period/i, /primeiro\s*periodo/i],
-    result: "FIRST_HALF",
-    displayName: "1º Período"
-  },
-  {
-    sport: ["Hockey", "NHL"],
-    patterns: [/margem\s*(de\s*)?vitoria/i, /winning\s*margin/i],
-    result: "OTHER",
-    displayName: "Margem de Vitória"
-  },
-  {
-    sport: ["Hockey", "NHL"],
-    patterns: [/over\s*\/?\s*under.*periodo/i, /period\s*total/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Períodos"
-  },
-  {
-    sport: ["Hockey", "NHL"],
-    patterns: [/gols?\s*(impar|par|odd|even)/i],
-    result: "OTHER",
-    displayName: "Gols Ímpares/Pares"
+    sport: ["Hockey", "NHL", "Hóquei", "Ice Hockey", "KHL"],
+    rules: [
+      // Vencedor (Moneyline) - inclui prorrogação/shootout
+      { patterns: [/moneyline/i, /money\s*line/i, /\bml\b/i], canonicalType: "MONEYLINE", displayName: "Moneyline", priority: 10 },
+      { patterns: [/vencedor.*overtime/i, /vencedor.*prorrogacao/i, /to\s*win/i, /winner/i], canonicalType: "MONEYLINE", displayName: "Moneyline" },
+      
+      // Resultado Tempo Regulamentar (pode ter empate)
+      { patterns: [/resultado\s*tempo\s*regulamentar/i, /regulation\s*time/i, /60\s*min/i, /tres\s*vias/i, /3\s*way/i], canonicalType: "1X2", displayName: "Resultado Tempo Regulamentar" },
+      
+      // *** PUCK LINE ***
+      { patterns: [/puck\s*line/i, /\bpl\b/i], canonicalType: "PUCK_LINE", displayName: "Puck Line", priority: 15 },
+      { patterns: [/handicap/i, /spread/i], canonicalType: "PUCK_LINE", displayName: "Puck Line" },
+      
+      // *** TOTAL DE GOLS ***
+      { patterns: [/total\s*(de\s*)?gols?/i, /gols?\s*total/i, /total\s*goals?/i], canonicalType: "TOTAL_GOALS_OVER", displayName: "Total de Gols", priority: 15 },
+      { patterns: [/over\s*\/?\s*under/i, /gols?\s*(over|under|acima|abaixo)/i], canonicalType: "TOTAL_GOALS_OVER", displayName: "Total de Gols" },
+      
+      // Parciais por Período
+      { patterns: [/resultado.*periodo/i, /period\s*result/i, /[1-3][ºo°]?\s*periodo/i, /\d(st|nd|rd)\s*period/i], canonicalType: "FIRST_PERIOD", displayName: "Resultado por Período" },
+      { patterns: [/1[ºo°]?\s*periodo/i, /1st\s*period/i, /primeiro\s*periodo/i], canonicalType: "FIRST_PERIOD", displayName: "1º Período" },
+      
+      // Total por Equipe
+      { patterns: [/total\s*por\s*equipe/i, /team\s*total/i, /gols?\s*equipe/i], canonicalType: "TEAM_PROPS", displayName: "Total por Equipe" },
+      
+      // Margem de Vitória
+      { patterns: [/margem\s*(de\s*)?vitoria/i, /winning\s*margin/i], canonicalType: "WINNING_MARGIN", displayName: "Margem de Vitória" },
+      
+      // Ímpar/Par
+      { patterns: [/gols?\s*(impar|par|odd|even)/i], canonicalType: "ODD_EVEN", displayName: "Gols Ímpares/Pares" },
+    ]
   },
   
   // ==================== VÔLEI ====================
   {
     sport: ["Vôlei", "Volleyball", "Voleibol"],
-    patterns: [/vencedor\s*(da\s*)?(partida)?/i, /winner/i, /match\s*winner/i, /to\s*win/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor da Partida"
-  },
-  {
-    sport: ["Vôlei", "Volleyball"],
-    patterns: [/handicap\s*(de\s*)?sets?/i, /set\s*handicap/i, /spread\s*sets?/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Sets"
-  },
-  {
-    sport: ["Vôlei", "Volleyball"],
-    patterns: [/over\s*\/?\s*under\s*sets?/i, /total\s*(de\s*)?sets?/i, /sets?\s*(over|under)/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Sets"
-  },
-  {
-    sport: ["Vôlei", "Volleyball"],
-    patterns: [/total\s*(de\s*)?pontos/i, /pontos\s*(over|under)/i, /over\s*\/?\s*under\s*pontos/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Pontos"
-  },
-  {
-    sport: ["Vôlei", "Volleyball"],
-    patterns: [/resultado.*set/i, /set\s*result/i, /[1-5][ºo°]?\s*set/i],
-    result: "FIRST_HALF",
-    displayName: "Resultado por Set"
-  },
-  {
-    sport: ["Vôlei", "Volleyball"],
-    patterns: [/placar\s*(exato|correto).*sets?/i, /sets?\s*exato/i, /correct\s*score/i],
-    result: "CORRECT_SCORE",
-    displayName: "Placar Exato (Sets)"
-  },
-  {
-    sport: ["Vôlei", "Volleyball"],
-    patterns: [/handicap\s*(de\s*)?pontos/i, /point\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Pontos"
-  },
-  {
-    sport: ["Vôlei", "Volleyball"],
-    patterns: [/primeiro\s*set/i, /1[ºo°]?\s*set/i, /1st\s*set/i, /vencedor.*1.*set/i],
-    result: "MONEYLINE",
-    displayName: "Primeiro Set"
-  },
-  {
-    sport: ["Vôlei", "Volleyball"],
-    patterns: [/over\s*\/?\s*under.*pontos.*set/i, /set\s*points?\s*total/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Pontos Set"
-  },
-  {
-    sport: ["Vôlei", "Volleyball"],
-    patterns: [/sets?\s*(impar|par|odd|even)/i],
-    result: "OTHER",
-    displayName: "Sets Ímpares/Pares"
+    rules: [
+      // Vencedor
+      { patterns: [/vencedor\s*(da\s*)?(partida)?/i, /winner/i, /match\s*winner/i, /to\s*win/i], canonicalType: "MONEYLINE", displayName: "Vencedor da Partida", priority: 10 },
+      
+      // *** HANDICAP DE SETS ***
+      { patterns: [/handicap\s*(de\s*)?sets?/i, /sets?\s*handicap/i, /spread\s*sets?/i], canonicalType: "HANDICAP_SETS", displayName: "Handicap de Sets", priority: 15 },
+      
+      // *** TOTAL DE SETS ***
+      { patterns: [/total\s*(de\s*)?sets?/i, /sets?\s*total/i], canonicalType: "TOTAL_SETS_OVER", displayName: "Over/Under Sets", priority: 15 },
+      { patterns: [/over\s*\/?\s*under\s*sets?/i, /sets?\s*(over|under)/i], canonicalType: "TOTAL_SETS_OVER", displayName: "Over/Under Sets" },
+      
+      // *** TOTAL DE PONTOS ***
+      { patterns: [/total\s*(de\s*)?pontos/i, /pontos\s*total/i], canonicalType: "TOTAL_POINTS_OVER", displayName: "Total de Pontos", priority: 15 },
+      { patterns: [/pontos\s*(over|under)/i, /over\s*\/?\s*under\s*pontos/i], canonicalType: "TOTAL_POINTS_OVER", displayName: "Total de Pontos" },
+      
+      // *** HANDICAP DE PONTOS ***
+      { patterns: [/handicap\s*(de\s*)?pontos/i, /point\s*handicap/i], canonicalType: "HANDICAP_POINTS", displayName: "Handicap de Pontos" },
+      
+      // Resultado por Set
+      { patterns: [/resultado.*set/i, /set\s*result/i, /[1-5][ºo°]?\s*set/i], canonicalType: "FIRST_SET", displayName: "Resultado por Set" },
+      { patterns: [/primeiro\s*set/i, /1[ºo°]?\s*set/i, /1st\s*set/i, /vencedor.*1.*set/i], canonicalType: "FIRST_SET", displayName: "Primeiro Set" },
+      
+      // Placar Exato (Sets)
+      { patterns: [/placar\s*(exato|correto).*sets?/i, /sets?\s*exato/i, /correct\s*score/i], canonicalType: "CORRECT_SCORE", displayName: "Placar Exato (Sets)" },
+      
+      // Over/Under Pontos Set
+      { patterns: [/over\s*\/?\s*under.*pontos.*set/i, /set\s*points?\s*total/i], canonicalType: "OVER_UNDER", displayName: "Over/Under Pontos Set" },
+      
+      // Ímpar/Par
+      { patterns: [/sets?\s*(impar|par|odd|even)/i], canonicalType: "ODD_EVEN", displayName: "Sets Ímpares/Pares" },
+    ]
   },
   
   // ==================== MMA / UFC ====================
   {
-    sport: ["MMA/UFC", "MMA", "UFC"],
-    patterns: [/vencedor\s*(da\s*)?(luta)?/i, /winner/i, /to\s*win/i, /moneyline/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor da Luta"
-  },
-  {
-    sport: ["MMA/UFC", "MMA", "UFC"],
-    patterns: [/metodo\s*(de\s*)?vitoria/i, /method\s*of\s*victory/i, /como\s*vence/i],
-    result: "OTHER",
-    displayName: "Método de Vitória"
-  },
-  {
-    sport: ["MMA/UFC", "MMA", "UFC"],
-    patterns: [/round\s*(da\s*)?finalizacao/i, /round.*termina/i, /em\s*qual\s*round/i],
-    result: "OTHER",
-    displayName: "Round da Finalização"
-  },
-  {
-    sport: ["MMA/UFC", "MMA", "UFC"],
-    patterns: [/over\s*\/?\s*under\s*rounds?/i, /total\s*(de\s*)?rounds?/i, /rounds?\s*(over|under)/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Rounds"
-  },
-  {
-    sport: ["MMA/UFC", "MMA", "UFC"],
-    patterns: [/luta\s*completa/i, /goes\s*the\s*distance/i, /vai\s*ate\s*o\s*fim/i, /full\s*fight/i],
-    result: "OTHER",
-    displayName: "Luta Completa (Sim/Não)"
-  },
-  {
-    sport: ["MMA/UFC", "MMA", "UFC"],
-    patterns: [/vitoria\s*por\s*ko/i, /ko\s*win/i, /nocaute/i, /knockout/i, /tko/i],
-    result: "OTHER",
-    displayName: "Vitória por KO"
-  },
-  {
-    sport: ["MMA/UFC", "MMA", "UFC"],
-    patterns: [/vitoria\s*por\s*decisao/i, /decision\s*win/i, /decisao/i],
-    result: "OTHER",
-    displayName: "Vitória por Decisão"
-  },
-  {
-    sport: ["MMA/UFC", "MMA", "UFC"],
-    patterns: [/handicap\s*(de\s*)?rounds?/i, /round\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Rounds"
-  },
-  {
-    sport: ["MMA/UFC", "MMA", "UFC"],
-    patterns: [/round\s*1.*vencedor/i, /1[ºo°]?\s*round.*winner/i, /vencedor.*round\s*1/i],
-    result: "MONEYLINE",
-    displayName: "Round 1 – Vencedor"
-  },
-  {
-    sport: ["MMA/UFC", "MMA", "UFC"],
-    patterns: [/prop\s*especial/i, /special\s*prop/i, /finalizacao/i, /submission/i],
-    result: "PROPS",
-    displayName: "Prop Especial"
+    sport: ["MMA/UFC", "MMA", "UFC", "Bellator", "ONE FC"],
+    rules: [
+      // Vencedor
+      { patterns: [/vencedor\s*(da\s*)?(luta)?/i, /winner/i, /to\s*win/i, /moneyline/i], canonicalType: "MONEYLINE", displayName: "Vencedor da Luta", priority: 10 },
+      
+      // Método de Vitória
+      { patterns: [/metodo\s*(de\s*)?vitoria/i, /method\s*of\s*victory/i, /como\s*vence/i], canonicalType: "METHOD_OF_VICTORY", displayName: "Método de Vitória", priority: 10 },
+      
+      // Round da Finalização
+      { patterns: [/round\s*(da\s*)?finalizacao/i, /round.*termina/i, /em\s*qual\s*round/i], canonicalType: "ROUND_FINISH", displayName: "Round da Finalização" },
+      
+      // *** TOTAL DE ROUNDS ***
+      { patterns: [/total\s*(de\s*)?rounds?/i, /rounds?\s*total/i], canonicalType: "TOTAL_ROUNDS_OVER", displayName: "Over/Under Rounds", priority: 15 },
+      { patterns: [/over\s*\/?\s*under\s*rounds?/i, /rounds?\s*(over|under)/i], canonicalType: "TOTAL_ROUNDS_OVER", displayName: "Over/Under Rounds" },
+      
+      // Luta Completa (Goes the Distance)
+      { patterns: [/luta\s*completa/i, /goes\s*the\s*distance/i, /vai\s*ate\s*o\s*fim/i, /full\s*fight/i], canonicalType: "GO_THE_DISTANCE", displayName: "Luta Completa (Sim/Não)" },
+      
+      // Vitória por KO/TKO
+      { patterns: [/vitoria\s*por\s*ko/i, /ko\s*win/i, /nocaute/i, /knockout/i, /\btko\b/i], canonicalType: "METHOD_OF_VICTORY", displayName: "Vitória por KO" },
+      
+      // Vitória por Decisão
+      { patterns: [/vitoria\s*por\s*decisao/i, /decision\s*win/i, /decisao/i], canonicalType: "METHOD_OF_VICTORY", displayName: "Vitória por Decisão" },
+      
+      // Vitória por Finalização
+      { patterns: [/vitoria\s*por\s*finalizacao/i, /submission\s*win/i, /finalizacao/i, /submission/i], canonicalType: "METHOD_OF_VICTORY", displayName: "Vitória por Finalização" },
+      
+      // Handicap de Rounds
+      { patterns: [/handicap\s*(de\s*)?rounds?/i, /rounds?\s*handicap/i], canonicalType: "HANDICAP_ROUNDS", displayName: "Handicap de Rounds" },
+      
+      // Round Específico
+      { patterns: [/round\s*1.*vencedor/i, /1[ºo°]?\s*round.*winner/i, /vencedor.*round\s*1/i], canonicalType: "MONEYLINE", displayName: "Round 1 – Vencedor" },
+    ]
   },
   
   // ==================== BOXE ====================
   {
     sport: ["Boxe", "Boxing"],
-    patterns: [/vencedor\s*(da\s*)?(luta)?/i, /winner/i, /to\s*win/i, /moneyline/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor da Luta"
-  },
-  {
-    sport: ["Boxe", "Boxing"],
-    patterns: [/metodo\s*(de\s*)?vitoria/i, /method\s*of\s*victory/i],
-    result: "OTHER",
-    displayName: "Método de Vitória"
-  },
-  {
-    sport: ["Boxe", "Boxing"],
-    patterns: [/round\s*(da\s*)?finalizacao/i, /round.*termina/i, /em\s*qual\s*round/i],
-    result: "OTHER",
-    displayName: "Round da Finalização"
-  },
-  {
-    sport: ["Boxe", "Boxing"],
-    patterns: [/over\s*\/?\s*under\s*rounds?/i, /total\s*(de\s*)?rounds?/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Rounds"
-  },
-  {
-    sport: ["Boxe", "Boxing"],
-    patterns: [/luta\s*completa/i, /goes\s*the\s*distance/i, /12\s*rounds/i],
-    result: "OTHER",
-    displayName: "Luta Completa (Sim/Não)"
-  },
-  {
-    sport: ["Boxe", "Boxing"],
-    patterns: [/vitoria\s*por\s*ko/i, /ko\s*win/i, /nocaute/i, /knockout/i, /tko/i],
-    result: "OTHER",
-    displayName: "Vitória por KO"
-  },
-  {
-    sport: ["Boxe", "Boxing"],
-    patterns: [/vitoria\s*por\s*decisao/i, /decision\s*win/i],
-    result: "OTHER",
-    displayName: "Vitória por Decisão"
-  },
-  {
-    sport: ["Boxe", "Boxing"],
-    patterns: [/handicap\s*(de\s*)?rounds?/i, /round\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Rounds"
-  },
-  {
-    sport: ["Boxe", "Boxing"],
-    patterns: [/round\s*1.*vencedor/i, /1[ºo°]?\s*round/i],
-    result: "MONEYLINE",
-    displayName: "Round 1 – Vencedor"
-  },
-  {
-    sport: ["Boxe", "Boxing"],
-    patterns: [/prop\s*especial/i, /special\s*prop/i],
-    result: "PROPS",
-    displayName: "Prop Especial"
+    rules: [
+      // Vencedor
+      { patterns: [/vencedor\s*(da\s*)?(luta)?/i, /winner/i, /to\s*win/i, /moneyline/i], canonicalType: "MONEYLINE", displayName: "Vencedor da Luta", priority: 10 },
+      
+      // Método de Vitória
+      { patterns: [/metodo\s*(de\s*)?vitoria/i, /method\s*of\s*victory/i], canonicalType: "METHOD_OF_VICTORY", displayName: "Método de Vitória", priority: 10 },
+      
+      // Round da Finalização
+      { patterns: [/round\s*(da\s*)?finalizacao/i, /round.*termina/i, /em\s*qual\s*round/i], canonicalType: "ROUND_FINISH", displayName: "Round da Finalização" },
+      
+      // *** TOTAL DE ROUNDS ***
+      { patterns: [/total\s*(de\s*)?rounds?/i, /rounds?\s*total/i], canonicalType: "TOTAL_ROUNDS_OVER", displayName: "Over/Under Rounds", priority: 15 },
+      { patterns: [/over\s*\/?\s*under\s*rounds?/i, /rounds?\s*(over|under)/i], canonicalType: "TOTAL_ROUNDS_OVER", displayName: "Over/Under Rounds" },
+      
+      // Luta Completa
+      { patterns: [/luta\s*completa/i, /goes\s*the\s*distance/i, /12\s*rounds/i], canonicalType: "GO_THE_DISTANCE", displayName: "Luta Completa (Sim/Não)" },
+      
+      // Vitória por KO
+      { patterns: [/vitoria\s*por\s*ko/i, /ko\s*win/i, /nocaute/i, /knockout/i, /\btko\b/i], canonicalType: "METHOD_OF_VICTORY", displayName: "Vitória por KO" },
+      
+      // Vitória por Decisão
+      { patterns: [/vitoria\s*por\s*decisao/i, /decision\s*win/i], canonicalType: "METHOD_OF_VICTORY", displayName: "Vitória por Decisão" },
+      
+      // Handicap de Rounds
+      { patterns: [/handicap\s*(de\s*)?rounds?/i, /rounds?\s*handicap/i], canonicalType: "HANDICAP_ROUNDS", displayName: "Handicap de Rounds" },
+    ]
   },
   
   // ==================== GOLFE ====================
   {
     sport: ["Golfe", "Golf"],
-    patterns: [/vencedor\s*(do\s*)?torneio/i, /tournament\s*winner/i, /outright/i, /campeao/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor do Torneio"
-  },
-  {
-    sport: ["Golfe", "Golf"],
-    patterns: [/top\s*[5|10|20]/i, /terminar.*top/i, /finish\s*top/i],
-    result: "OTHER",
-    displayName: "Top 5/10/20"
-  },
-  {
-    sport: ["Golfe", "Golf"],
-    patterns: [/head\s*to\s*head/i, /h2h/i, /confronto\s*direto/i, /matchup/i],
-    result: "MONEYLINE",
-    displayName: "Head-to-Head"
-  },
-  {
-    sport: ["Golfe", "Golf"],
-    patterns: [/melhor\s*round/i, /best\s*round/i, /low\s*round/i],
-    result: "OTHER",
-    displayName: "Melhor Round"
-  },
-  {
-    sport: ["Golfe", "Golf"],
-    patterns: [/nacionalidade.*vencedor/i, /winner.*nationality/i],
-    result: "OTHER",
-    displayName: "Nacionalidade do Vencedor"
-  },
-  {
-    sport: ["Golfe", "Golf"],
-    patterns: [/primeiro\s*lider/i, /first\s*round\s*leader/i, /lider.*round/i],
-    result: "MONEYLINE",
-    displayName: "Primeiro Líder"
-  },
-  {
-    sport: ["Golfe", "Golf"],
-    patterns: [/fazer\s*cut/i, /make\s*cut/i, /cut\s*(sim|nao|yes|no)/i],
-    result: "OTHER",
-    displayName: "Fazer Cut (Sim/Não)"
-  },
-  {
-    sport: ["Golfe", "Golf"],
-    patterns: [/over\s*\/?\s*under\s*score/i, /score\s*(over|under)/i, /total\s*strokes/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Score"
-  },
-  {
-    sport: ["Golfe", "Golf"],
-    patterns: [/hole\s*in\s*one/i, /ace/i],
-    result: "OTHER",
-    displayName: "Hole-in-One no Torneio"
-  },
-  {
-    sport: ["Golfe", "Golf"],
-    patterns: [/prop\s*especial/i, /special\s*prop/i],
-    result: "PROPS",
-    displayName: "Prop Especial"
+    rules: [
+      // Vencedor do Torneio
+      { patterns: [/vencedor\s*(do\s*)?torneio/i, /tournament\s*winner/i, /outright/i, /campeao/i], canonicalType: "OUTRIGHT", displayName: "Vencedor do Torneio", priority: 10 },
+      
+      // Top 5/10/20
+      { patterns: [/top\s*[5|10|20]/i, /terminar.*top/i, /finish\s*top/i], canonicalType: "TOP_FINISH", displayName: "Top 5/10/20" },
+      
+      // Head-to-Head
+      { patterns: [/head\s*to\s*head/i, /\bh2h\b/i, /confronto\s*direto/i, /matchup/i], canonicalType: "HEAD_TO_HEAD", displayName: "Head-to-Head", priority: 10 },
+      
+      // Melhor Round
+      { patterns: [/melhor\s*round/i, /best\s*round/i, /low\s*round/i], canonicalType: "SPECIAL_PROPS", displayName: "Melhor Round" },
+      
+      // Nacionalidade do Vencedor
+      { patterns: [/nacionalidade.*vencedor/i, /winner.*nationality/i], canonicalType: "SPECIAL_PROPS", displayName: "Nacionalidade do Vencedor" },
+      
+      // Primeiro Líder
+      { patterns: [/primeiro\s*lider/i, /first\s*round\s*leader/i, /lider.*round/i], canonicalType: "OUTRIGHT", displayName: "Primeiro Líder" },
+      
+      // Fazer Cut
+      { patterns: [/fazer\s*cut/i, /make\s*cut/i, /cut\s*(sim|nao|yes|no)/i], canonicalType: "MAKE_CUT", displayName: "Fazer Cut (Sim/Não)" },
+      
+      // Over/Under Score
+      { patterns: [/over\s*\/?\s*under\s*score/i, /score\s*(over|under)/i, /total\s*strokes/i], canonicalType: "OVER_UNDER", displayName: "Over/Under Score" },
+      
+      // Hole-in-One
+      { patterns: [/hole\s*in\s*one/i, /\bace\b/i], canonicalType: "SPECIAL_PROPS", displayName: "Hole-in-One no Torneio" },
+    ]
   },
   
   // ==================== LEAGUE OF LEGENDS ====================
   {
     sport: ["League of Legends", "LoL"],
-    patterns: [/vencedor\s*(do\s*)?mapa/i, /map\s*winner/i, /game\s*winner/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor do Mapa"
-  },
-  {
-    sport: ["League of Legends", "LoL"],
-    patterns: [/handicap\s*(de\s*)?mapas?/i, /map\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Mapas"
-  },
-  {
-    sport: ["League of Legends", "LoL"],
-    patterns: [/total\s*(de\s*)?mapas?/i, /over\s*\/?\s*under\s*mapas?/i, /mapas?\s*(over|under)/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Mapas"
-  },
-  {
-    sport: ["League of Legends", "LoL"],
-    patterns: [/vencedor\s*(da\s*)?serie/i, /series?\s*winner/i, /match\s*winner/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor da Série"
-  },
-  {
-    sport: ["League of Legends", "LoL"],
-    patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i, /mapas?\s*exato/i],
-    result: "CORRECT_SCORE",
-    displayName: "Placar Exato"
-  },
-  {
-    sport: ["League of Legends", "LoL"],
-    patterns: [/over\s*\/?\s*under\s*kills?/i, /total\s*(de\s*)?kills?/i, /kills?\s*(over|under)/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Kills"
-  },
-  {
-    sport: ["League of Legends", "LoL"],
-    patterns: [/primeiro\s*objetivo/i, /first\s*(blood|dragon|baron|tower|objective)/i, /primeiro\s*(sangue|dragao|barao|torre)/i],
-    result: "OTHER",
-    displayName: "Primeiro Objetivo"
-  },
-  {
-    sport: ["League of Legends", "LoL"],
-    patterns: [/total\s*(de\s*)?torres?/i, /towers?\s*(over|under)/i, /over\s*\/?\s*under\s*torres?/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Torres"
-  },
-  {
-    sport: ["League of Legends", "LoL"],
-    patterns: [/handicap\s*(de\s*)?kills?/i, /kills?\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Kills"
-  },
-  {
-    sport: ["League of Legends", "LoL"],
-    patterns: [/props?\s*especiais?/i, /special\s*props?/i],
-    result: "PROPS",
-    displayName: "Props Especiais"
+    rules: [
+      // Vencedor da Série
+      { patterns: [/vencedor\s*(da\s*)?serie/i, /series?\s*winner/i, /match\s*winner/i, /to\s*win/i], canonicalType: "MONEYLINE", displayName: "Vencedor da Série", priority: 10 },
+      
+      // Vencedor do Mapa
+      { patterns: [/vencedor\s*(do\s*)?mapa/i, /map\s*winner/i, /game\s*winner/i], canonicalType: "MONEYLINE", displayName: "Vencedor do Mapa" },
+      
+      // *** HANDICAP DE MAPAS ***
+      { patterns: [/handicap\s*(de\s*)?mapas?/i, /maps?\s*handicap/i], canonicalType: "HANDICAP_MAPS", displayName: "Handicap de Mapas", priority: 15 },
+      
+      // *** TOTAL DE MAPAS ***
+      { patterns: [/total\s*(de\s*)?mapas?/i, /mapas?\s*total/i], canonicalType: "TOTAL_MAPS_OVER", displayName: "Total de Mapas", priority: 15 },
+      { patterns: [/over\s*\/?\s*under\s*mapas?/i, /mapas?\s*(over|under)/i], canonicalType: "TOTAL_MAPS_OVER", displayName: "Total de Mapas" },
+      
+      // Placar Exato
+      { patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i, /mapas?\s*exato/i], canonicalType: "CORRECT_SCORE", displayName: "Placar Exato" },
+      
+      // *** TOTAL DE KILLS ***
+      { patterns: [/total\s*(de\s*)?kills?/i, /kills?\s*total/i], canonicalType: "TOTAL_KILLS_OVER", displayName: "Over/Under Kills", priority: 15 },
+      { patterns: [/over\s*\/?\s*under\s*kills?/i, /kills?\s*(over|under)/i], canonicalType: "TOTAL_KILLS_OVER", displayName: "Over/Under Kills" },
+      
+      // Handicap de Kills
+      { patterns: [/handicap\s*(de\s*)?kills?/i, /kills?\s*handicap/i], canonicalType: "HANDICAP_KILLS", displayName: "Handicap de Kills" },
+      
+      // Primeiro Objetivo
+      { patterns: [/primeiro\s*objetivo/i, /first\s*objective/i], canonicalType: "SPECIAL_PROPS", displayName: "Primeiro Objetivo" },
+      { patterns: [/first\s*blood/i, /primeiro\s*sangue/i], canonicalType: "FIRST_BLOOD", displayName: "First Blood" },
+      { patterns: [/first\s*dragon/i, /primeiro\s*dragao/i], canonicalType: "FIRST_DRAGON", displayName: "First Dragon" },
+      { patterns: [/first\s*baron/i, /primeiro\s*barao/i], canonicalType: "FIRST_BARON", displayName: "First Baron" },
+      { patterns: [/first\s*tower/i, /primeira\s*torre/i], canonicalType: "FIRST_TOWER", displayName: "First Tower" },
+      
+      // Total de Torres
+      { patterns: [/total\s*(de\s*)?torres?/i, /towers?\s*(over|under)/i], canonicalType: "OVER_UNDER", displayName: "Total de Torres" },
+    ]
   },
   
   // ==================== COUNTER-STRIKE ====================
   {
     sport: ["Counter-Strike", "CS", "CS2", "CSGO"],
-    patterns: [/vencedor\s*(do\s*)?mapa/i, /map\s*winner/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor do Mapa"
-  },
-  {
-    sport: ["Counter-Strike", "CS", "CS2"],
-    patterns: [/handicap\s*(de\s*)?mapas?/i, /map\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Mapas"
-  },
-  {
-    sport: ["Counter-Strike", "CS", "CS2"],
-    patterns: [/total\s*(de\s*)?mapas?/i, /over\s*\/?\s*under\s*mapas?/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Mapas"
-  },
-  {
-    sport: ["Counter-Strike", "CS", "CS2"],
-    patterns: [/vencedor\s*(da\s*)?serie/i, /series?\s*winner/i, /match\s*winner/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor da Série"
-  },
-  {
-    sport: ["Counter-Strike", "CS", "CS2"],
-    patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i],
-    result: "CORRECT_SCORE",
-    displayName: "Placar Exato"
-  },
-  {
-    sport: ["Counter-Strike", "CS", "CS2"],
-    patterns: [/over\s*\/?\s*under\s*rounds?/i, /total\s*(de\s*)?rounds?/i, /rounds?\s*(over|under)/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Rounds"
-  },
-  {
-    sport: ["Counter-Strike", "CS", "CS2"],
-    patterns: [/primeiro\s*a\s*10/i, /first\s*to\s*10/i, /race\s*to\s*10/i],
-    result: "OTHER",
-    displayName: "Primeiro a 10 Rounds"
-  },
-  {
-    sport: ["Counter-Strike", "CS", "CS2"],
-    patterns: [/total\s*(de\s*)?kills?/i, /kills?\s*(over|under)/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Kills"
-  },
-  {
-    sport: ["Counter-Strike", "CS", "CS2"],
-    patterns: [/handicap\s*(de\s*)?rounds?/i, /rounds?\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Rounds"
-  },
-  {
-    sport: ["Counter-Strike", "CS", "CS2"],
-    patterns: [/props?\s*especiais?/i, /special\s*props?/i],
-    result: "PROPS",
-    displayName: "Props Especiais"
+    rules: [
+      // Vencedor da Série
+      { patterns: [/vencedor\s*(da\s*)?serie/i, /series?\s*winner/i, /match\s*winner/i, /to\s*win/i], canonicalType: "MONEYLINE", displayName: "Vencedor da Série", priority: 10 },
+      
+      // Vencedor do Mapa
+      { patterns: [/vencedor\s*(do\s*)?mapa/i, /map\s*winner/i], canonicalType: "MONEYLINE", displayName: "Vencedor do Mapa" },
+      
+      // *** HANDICAP DE MAPAS ***
+      { patterns: [/handicap\s*(de\s*)?mapas?/i, /maps?\s*handicap/i], canonicalType: "HANDICAP_MAPS", displayName: "Handicap de Mapas", priority: 15 },
+      
+      // *** TOTAL DE MAPAS ***
+      { patterns: [/total\s*(de\s*)?mapas?/i, /mapas?\s*total/i], canonicalType: "TOTAL_MAPS_OVER", displayName: "Total de Mapas", priority: 15 },
+      { patterns: [/over\s*\/?\s*under\s*mapas?/i, /mapas?\s*(over|under)/i], canonicalType: "TOTAL_MAPS_OVER", displayName: "Total de Mapas" },
+      
+      // Placar Exato
+      { patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i], canonicalType: "CORRECT_SCORE", displayName: "Placar Exato" },
+      
+      // *** TOTAL DE ROUNDS ***
+      { patterns: [/total\s*(de\s*)?rounds?/i, /rounds?\s*total/i], canonicalType: "TOTAL_ROUNDS_OVER", displayName: "Over/Under Rounds", priority: 15 },
+      { patterns: [/over\s*\/?\s*under\s*rounds?/i, /rounds?\s*(over|under)/i], canonicalType: "TOTAL_ROUNDS_OVER", displayName: "Over/Under Rounds" },
+      
+      // Handicap de Rounds
+      { patterns: [/handicap\s*(de\s*)?rounds?/i, /rounds?\s*handicap/i], canonicalType: "HANDICAP_ROUNDS", displayName: "Handicap de Rounds" },
+      
+      // Primeiro a 10
+      { patterns: [/primeiro\s*a\s*10/i, /first\s*to\s*10/i, /race\s*to\s*10/i], canonicalType: "SPECIAL_PROPS", displayName: "Primeiro a 10 Rounds" },
+      
+      // Total de Kills
+      { patterns: [/total\s*(de\s*)?kills?/i, /kills?\s*(over|under)/i], canonicalType: "TOTAL_KILLS_OVER", displayName: "Total de Kills" },
+    ]
   },
   
   // ==================== DOTA 2 ====================
   {
     sport: ["Dota 2", "Dota"],
-    patterns: [/vencedor\s*(do\s*)?mapa/i, /map\s*winner/i, /game\s*winner/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor do Mapa"
-  },
-  {
-    sport: ["Dota 2", "Dota"],
-    patterns: [/handicap\s*(de\s*)?mapas?/i, /map\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Mapas"
-  },
-  {
-    sport: ["Dota 2", "Dota"],
-    patterns: [/total\s*(de\s*)?mapas?/i, /over\s*\/?\s*under\s*mapas?/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Mapas"
-  },
-  {
-    sport: ["Dota 2", "Dota"],
-    patterns: [/vencedor\s*(da\s*)?serie/i, /series?\s*winner/i, /match\s*winner/i],
-    result: "MONEYLINE",
-    displayName: "Vencedor da Série"
-  },
-  {
-    sport: ["Dota 2", "Dota"],
-    patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i],
-    result: "CORRECT_SCORE",
-    displayName: "Placar Exato"
-  },
-  {
-    sport: ["Dota 2", "Dota"],
-    patterns: [/over\s*\/?\s*under\s*kills?/i, /total\s*(de\s*)?kills?/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Kills"
-  },
-  {
-    sport: ["Dota 2", "Dota"],
-    patterns: [/primeiro\s*objetivo/i, /first\s*(blood|roshan|tower|objective)/i, /primeiro\s*(sangue|roshan|torre)/i],
-    result: "OTHER",
-    displayName: "Primeiro Objetivo"
-  },
-  {
-    sport: ["Dota 2", "Dota"],
-    patterns: [/total\s*(de\s*)?torres?/i, /towers?\s*(over|under)/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Torres"
-  },
-  {
-    sport: ["Dota 2", "Dota"],
-    patterns: [/handicap\s*(de\s*)?kills?/i, /kills?\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Kills"
-  },
-  {
-    sport: ["Dota 2", "Dota"],
-    patterns: [/props?\s*especiais?/i, /special\s*props?/i],
-    result: "PROPS",
-    displayName: "Props Especiais"
+    rules: [
+      // Vencedor da Série
+      { patterns: [/vencedor\s*(da\s*)?serie/i, /series?\s*winner/i, /match\s*winner/i, /to\s*win/i], canonicalType: "MONEYLINE", displayName: "Vencedor da Série", priority: 10 },
+      
+      // Vencedor do Mapa
+      { patterns: [/vencedor\s*(do\s*)?mapa/i, /map\s*winner/i, /game\s*winner/i], canonicalType: "MONEYLINE", displayName: "Vencedor do Mapa" },
+      
+      // *** HANDICAP DE MAPAS ***
+      { patterns: [/handicap\s*(de\s*)?mapas?/i, /maps?\s*handicap/i], canonicalType: "HANDICAP_MAPS", displayName: "Handicap de Mapas", priority: 15 },
+      
+      // *** TOTAL DE MAPAS ***
+      { patterns: [/total\s*(de\s*)?mapas?/i, /mapas?\s*total/i], canonicalType: "TOTAL_MAPS_OVER", displayName: "Total de Mapas", priority: 15 },
+      { patterns: [/over\s*\/?\s*under\s*mapas?/i, /mapas?\s*(over|under)/i], canonicalType: "TOTAL_MAPS_OVER", displayName: "Total de Mapas" },
+      
+      // Placar Exato
+      { patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i], canonicalType: "CORRECT_SCORE", displayName: "Placar Exato" },
+      
+      // *** TOTAL DE KILLS ***
+      { patterns: [/total\s*(de\s*)?kills?/i, /kills?\s*total/i], canonicalType: "TOTAL_KILLS_OVER", displayName: "Over/Under Kills", priority: 15 },
+      { patterns: [/over\s*\/?\s*under\s*kills?/i, /kills?\s*(over|under)/i], canonicalType: "TOTAL_KILLS_OVER", displayName: "Over/Under Kills" },
+      
+      // Handicap de Kills
+      { patterns: [/handicap\s*(de\s*)?kills?/i, /kills?\s*handicap/i], canonicalType: "HANDICAP_KILLS", displayName: "Handicap de Kills" },
+      
+      // Primeiro Objetivo
+      { patterns: [/primeiro\s*objetivo/i, /first\s*objective/i], canonicalType: "SPECIAL_PROPS", displayName: "Primeiro Objetivo" },
+      { patterns: [/first\s*blood/i, /primeiro\s*sangue/i], canonicalType: "FIRST_BLOOD", displayName: "First Blood" },
+      { patterns: [/first\s*roshan/i, /primeiro\s*roshan/i], canonicalType: "FIRST_ROSHAN", displayName: "First Roshan" },
+      { patterns: [/first\s*tower/i, /primeira\s*torre/i], canonicalType: "FIRST_TOWER", displayName: "First Tower" },
+      
+      // Total de Torres
+      { patterns: [/total\s*(de\s*)?torres?/i, /towers?\s*(over|under)/i], canonicalType: "OVER_UNDER", displayName: "Total de Torres" },
+    ]
   },
   
-  // ==================== eFOOTBALL (FIFA/PES) ====================
+  // ==================== eFOOTBALL (FIFA/EA FC) ====================
   {
-    sport: ["eFootball", "FIFA", "PES", "EA FC"],
-    patterns: [/vencedor\s*(da\s*)?(partida)?/i, /winner/i, /1x2/i, /resultado\s*final/i],
-    result: "1X2",
-    displayName: "Vencedor da Partida"
-  },
-  {
-    sport: ["eFootball", "FIFA", "PES"],
-    patterns: [/handicap\s*(de\s*)?gols?/i, /goal\s*handicap/i],
-    result: "HANDICAP",
-    displayName: "Handicap de Gols"
-  },
-  {
-    sport: ["eFootball", "FIFA", "PES"],
-    patterns: [/over\s*\/?\s*under\s*gols?/i, /total\s*(de\s*)?gols?/i, /gols?\s*(over|under)/i],
-    result: "OVER_UNDER",
-    displayName: "Over/Under Gols"
-  },
-  {
-    sport: ["eFootball", "FIFA", "PES"],
-    patterns: [/ambas?\s*marcam/i, /btts/i, /both\s*teams?\s*to\s*score/i],
-    result: "BTTS",
-    displayName: "Ambas Marcam"
-  },
-  {
-    sport: ["eFootball", "FIFA", "PES"],
-    patterns: [/resultado.*1[ºo°]?\s*tempo/i, /1st\s*half/i, /primeiro\s*tempo/i],
-    result: "FIRST_HALF",
-    displayName: "Resultado do 1º Tempo"
-  },
-  {
-    sport: ["eFootball", "FIFA", "PES"],
-    patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i],
-    result: "CORRECT_SCORE",
-    displayName: "Placar Correto"
-  },
-  {
-    sport: ["eFootball", "FIFA", "PES"],
-    patterns: [/dupla\s*chance/i, /double\s*chance/i],
-    result: "DOUBLE_CHANCE",
-    displayName: "Dupla Chance"
-  },
-  {
-    sport: ["eFootball", "FIFA", "PES"],
-    patterns: [/total\s*(de\s*)?escanteios?/i, /corners?/i],
-    result: "OVER_UNDER",
-    displayName: "Total de Escanteios"
-  },
-  {
-    sport: ["eFootball", "FIFA", "PES"],
-    patterns: [/margem\s*(de\s*)?vitoria/i, /winning\s*margin/i],
-    result: "OTHER",
-    displayName: "Margem de Vitória"
-  },
-  {
-    sport: ["eFootball", "FIFA", "PES"],
-    patterns: [/props?\s*especiais?/i, /special\s*props?/i],
-    result: "PROPS",
-    displayName: "Props Especiais"
-  },
-  
-  // ==================== REGRAS GENÉRICAS (FALLBACK) ====================
-  // Estas regras são aplicadas quando nenhuma regra específica do esporte corresponde
-  
-  // REGRA CRÍTICA: "Mais X" / "Menos X" são SEMPRE Over/Under
-  // Esta regra DEVE vir antes de outras para capturar corretamente
-  {
-    sport: [],  // Qualquer esporte
-    patterns: [
-      /^mais\s+\d+[.,]?\d*/i,           // "Mais 21.5", "Mais 2.5"
-      /^menos\s+\d+[.,]?\d*/i,          // "Menos 21.5", "Menos 2.5"
-      /\bmais\s+\d+[.,]?\d*\b/i,        // "Total Mais 21.5"
-      /\bmenos\s+\d+[.,]?\d*\b/i,       // "Total Menos 21.5"
-      /\bover\s+\d+[.,]?\d*/i,          // "Over 21.5"
-      /\bunder\s+\d+[.,]?\d*/i,         // "Under 21.5"
-      /\b[+-]?\d+[.,]\d+\s*(mais|menos|over|under)/i,  // "21.5 Mais"
-      /\bacima\s+\d+[.,]?\d*/i,         // "Acima 21.5"
-      /\babaixo\s+\d+[.,]?\d*/i,        // "Abaixo 21.5"
-    ],
-    result: "OVER_UNDER",
-    displayName: "Over/Under"
-  },
-  
-  // REGRA: Total de qualquer coisa (games, pontos, gols, sets, etc.)
-  {
-    sport: [],
-    patterns: [
-      /total\s*(de\s*)?(games?|pontos?|gols?|runs?|sets?|rounds?|kills?|mapas?|corners?|escanteios?)/i,
-      /total\s*\d+[.,]?\d*/i,           // "Total 21.5"
-      /over\s*\/?\s*under/i,
-      /acima\s*\/?\s*abaixo/i,
-      /mais\s*\/?\s*menos/i,            // "Mais/Menos"
-      /over.*total/i,
-      /under.*total/i,
-    ],
-    result: "OVER_UNDER",
-    displayName: "Over/Under"
-  },
-  
-  {
-    sport: [],
-    patterns: [/handicap/i, /spread/i, /ah\s*[+-]?\d/i, /eh\s*[+-]?\d/i],
-    result: "HANDICAP",
-    displayName: "Handicap"
-  },
-  {
-    sport: [],
-    patterns: [/ambas?\s*marcam/i, /btts/i, /both\s*teams?\s*to\s*score/i, /gol\s*gol/i],
-    result: "BTTS",
-    displayName: "Ambas Marcam"
-  },
-  {
-    sport: [],
-    patterns: [/placar\s*(exato|correto)/i, /resultado\s*exato/i, /correct\s*score/i, /exact\s*score/i],
-    result: "CORRECT_SCORE",
-    displayName: "Placar Correto"
-  },
-  {
-    sport: [],
-    patterns: [/dupla\s*chance/i, /double\s*chance/i, /1x\b/i, /x2\b/i, /12\b/i],
-    result: "DOUBLE_CHANCE",
-    displayName: "Dupla Chance"
-  },
-  {
-    sport: [],
-    patterns: [/1[ºo°]?\s*tempo/i, /primeiro\s*tempo/i, /1st\s*half/i, /first\s*half/i, /half\s*time/i, /ht\s*result/i, /intervalo/i],
-    result: "FIRST_HALF",
-    displayName: "Resultado do 1º Tempo"
-  },
-  {
-    sport: [],
-    patterns: [/draw\s*no\s*bet/i, /dnb/i, /empate\s*anula/i, /empate\s*reembolsa/i],
-    result: "DNB",
-    displayName: "Draw No Bet"
-  },
-  {
-    sport: [],
-    patterns: [/props?\s*(de\s*)?(jogador|player)/i, /player\s*props?/i],
-    result: "PROPS",
-    displayName: "Props de Jogadores"
-  },
-  {
-    sport: [],
-    patterns: [/moneyline/i, /money\s*line/i, /vencedor/i, /winner/i, /to\s*win/i],
-    result: "MONEYLINE",
-    displayName: "Moneyline"
-  },
-  {
-    sport: [],
-    patterns: [/1x2/i, /tres\s*vias/i, /three\s*way/i, /resultado\s*final/i],
-    result: "1X2",
-    displayName: "1X2"
+    sport: ["eFootball", "FIFA", "PES", "EA FC", "EA Sports FC"],
+    rules: [
+      // Vencedor / 1X2
+      { patterns: [/1x2/i, /resultado\s*final/i, /vencedor\s*(da\s*)?partida/i, /winner/i], canonicalType: "1X2", displayName: "1X2", priority: 10 },
+      
+      // Over/Under Gols
+      { patterns: [/over\s*\/?\s*under\s*(de\s*)?(gol|goal)/i, /total\s*(de\s*)?(gol|goal)/i], canonicalType: "OVER_UNDER", displayName: "Over/Under Gols" },
+      { patterns: [/gols?\s*(acima|abaixo|over|under)/i], canonicalType: "OVER_UNDER", displayName: "Over/Under Gols" },
+      
+      // Handicap
+      { patterns: [/handicap\s*(de\s*)?gols?/i, /goal\s*handicap/i], canonicalType: "HANDICAP", displayName: "Handicap de Gols" },
+      
+      // Ambas Marcam
+      { patterns: [/ambas?\s*marcam/i, /btts/i, /both\s*teams?\s*to\s*score/i], canonicalType: "BTTS", displayName: "Ambas Marcam" },
+      
+      // 1º Tempo
+      { patterns: [/resultado.*1[ºo°]?\s*tempo/i, /1st\s*half/i, /primeiro\s*tempo/i], canonicalType: "FIRST_HALF", displayName: "Resultado do 1º Tempo" },
+      
+      // Placar Correto
+      { patterns: [/placar\s*(exato|correto)/i, /correct\s*score/i], canonicalType: "CORRECT_SCORE", displayName: "Placar Correto" },
+      
+      // Dupla Chance
+      { patterns: [/dupla\s*chance/i, /double\s*chance/i], canonicalType: "DOUBLE_CHANCE", displayName: "Dupla Chance" },
+      
+      // Escanteios
+      { patterns: [/total\s*(de\s*)?escanteios?/i, /corners?/i], canonicalType: "OVER_UNDER", displayName: "Total de Escanteios" },
+      
+      // Margem de Vitória
+      { patterns: [/margem\s*(de\s*)?vitoria/i, /winning\s*margin/i], canonicalType: "WINNING_MARGIN", displayName: "Margem de Vitória" },
+    ]
   },
 ];
 
+// ========================================================================
+// REGRAS GENÉRICAS (FALLBACK)
+// ========================================================================
+
+const GENERIC_RULES: CanonicalRule[] = [
+  // === OVER/UNDER GENÉRICOS (ALTA PRIORIDADE) ===
+  { patterns: [/^mais\s+\d+[.,]?\d*/i, /^over\s+\d+[.,]?\d*/i, /^acima\s+\d+[.,]?\d*/i], canonicalType: "OVER_UNDER", displayName: "Over/Under", priority: 100 },
+  { patterns: [/^menos\s+\d+[.,]?\d*/i, /^under\s+\d+[.,]?\d*/i, /^abaixo\s+\d+[.,]?\d*/i], canonicalType: "OVER_UNDER", displayName: "Over/Under", priority: 100 },
+  { patterns: [/\bmais\s+\d+[.,]?\d*\b/i, /\bover\s+\d+[.,]?\d*\b/i], canonicalType: "OVER_UNDER", displayName: "Over/Under", priority: 90 },
+  { patterns: [/\bmenos\s+\d+[.,]?\d*\b/i, /\bunder\s+\d+[.,]?\d*\b/i], canonicalType: "OVER_UNDER", displayName: "Over/Under", priority: 90 },
+  { patterns: [/total\s*(de\s*)?\w+/i, /over\s*\/?\s*under/i, /acima\s*\/?\s*abaixo/i, /mais\s*\/?\s*menos/i], canonicalType: "OVER_UNDER", displayName: "Over/Under", priority: 50 },
+  
+  // === HANDICAPS GENÉRICOS ===
+  { patterns: [/\bhandicap\b/i, /\bspread\b/i], canonicalType: "HANDICAP", displayName: "Handicap", priority: 50 },
+  { patterns: [/\bah\s*[+-]?\d/i, /\beh\s*[+-]?\d/i], canonicalType: "HANDICAP", displayName: "Handicap" },
+  
+  // === ESPECIAIS ===
+  { patterns: [/ambas?\s*marcam/i, /\bbtts\b/i, /both\s*teams?\s*to\s*score/i, /gol\s*gol/i], canonicalType: "BTTS", displayName: "Ambas Marcam", priority: 80 },
+  { patterns: [/placar\s*(exato|correto)/i, /resultado\s*exato/i, /correct\s*score/i, /exact\s*score/i], canonicalType: "CORRECT_SCORE", displayName: "Placar Correto", priority: 80 },
+  { patterns: [/dupla\s*chance/i, /double\s*chance/i, /\b1x\b/i, /\bx2\b/i, /\b12\b/i], canonicalType: "DOUBLE_CHANCE", displayName: "Dupla Chance", priority: 80 },
+  { patterns: [/1[ºo°]?\s*tempo/i, /primeiro\s*tempo/i, /1st\s*half/i, /first\s*half/i, /half\s*time/i, /\bht\b/i, /intervalo/i], canonicalType: "FIRST_HALF", displayName: "Resultado do 1º Tempo", priority: 70 },
+  { patterns: [/draw\s*no\s*bet/i, /\bdnb\b/i, /empate\s*anula/i, /empate\s*reembolsa/i], canonicalType: "DNB", displayName: "Draw No Bet", priority: 80 },
+  { patterns: [/props?\s*(de\s*)?(jogador|player)/i, /player\s*props?/i], canonicalType: "PLAYER_PROPS", displayName: "Props de Jogadores", priority: 60 },
+  
+  // === VENCEDOR ===
+  { patterns: [/moneyline/i, /money\s*line/i], canonicalType: "MONEYLINE", displayName: "Moneyline", priority: 40 },
+  { patterns: [/vencedor/i, /winner/i, /to\s*win/i], canonicalType: "MONEYLINE", displayName: "Moneyline", priority: 30 },
+  { patterns: [/1x2/i, /tres\s*vias/i, /three\s*way/i, /resultado\s*final/i], canonicalType: "1X2", displayName: "1X2", priority: 40 },
+];
+
+// ========================================================================
+// FUNÇÕES AUXILIARES
+// ========================================================================
+
 /**
- * Verifica se o texto indica Over/Under através de padrões comuns
- * "Mais X", "Menos X", "Over X", "Under X", etc.
+ * Normaliza texto para comparação (lowercase, sem acentos, sem espaços extras)
  */
-function isOverUnderPattern(text: string): boolean {
-  if (!text) return false;
-  const patterns = [
-    /^mais\s+\d+[.,]?\d*/i,           // "Mais 21.5"
-    /^menos\s+\d+[.,]?\d*/i,          // "Menos 21.5"
-    /\bover\s+\d+[.,]?\d*/i,          // "Over 21.5"
-    /\bunder\s+\d+[.,]?\d*/i,         // "Under 21.5"
-    /\bacima\s+\d+[.,]?\d*/i,         // "Acima 21.5"
-    /\babaixo\s+\d+[.,]?\d*/i,        // "Abaixo 21.5"
-    /\b\+\s*\d+[.,]?\d*/,             // "+21.5"
-    /\b-\s*\d+[.,]?\d*/,              // "-21.5" (pode ser handicap, mas em contexto de total é over/under)
-    /\bover\b/i,
-    /\bunder\b/i,
-    /\bmais\b.*\d+/i,
-    /\bmenos\b.*\d+/i,
-  ];
-  return patterns.some(p => p.test(text));
+function normalizeText(text: string): string {
+  if (!text) return "";
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
+ * Verifica se um esporte corresponde a uma lista de esportes
+ */
+function matchesSport(sport: string, sportList: string[]): boolean {
+  if (sportList.length === 0) return true; // Regra genérica
+  
+  const normalizedSport = normalizeText(sport);
+  return sportList.some(s => {
+    const normalizedS = normalizeText(s);
+    return normalizedSport === normalizedS || 
+           normalizedSport.includes(normalizedS) ||
+           normalizedS.includes(normalizedSport);
+  });
+}
+
+/**
+ * Obtém o displayName apropriado para o esporte
+ */
+function getDisplayNameForSport(pattern: SelectionPattern, sport: string): string {
+  const normalized = normalizeText(sport);
+  
+  for (const [key, displayName] of Object.entries(pattern.displayNameBySport)) {
+    if (normalizeText(key) === normalized || normalized.includes(normalizeText(key))) {
+      return displayName;
+    }
+  }
+  
+  return pattern.defaultDisplayName;
+}
+
+// ========================================================================
+// FUNÇÃO PRINCIPAL DE NORMALIZAÇÃO
+// ========================================================================
+
+/**
  * Normaliza um mercado semanticamente, considerando esporte e contexto
+ * Esta é a função principal que deve ser usada
  */
 export function normalizeMarketSemantically(context: SemanticMarketContext): SemanticMarketResult {
-  const { sport, marketLabel, selections, hasDrawOption } = context;
-  const normalizedLabel = normalizeText(marketLabel);
-  const normalizedSport = normalizeText(sport);
+  const { sport, marketLabel, selectionLabel, selections } = context;
   
-  // PASSO 1: Verificar se a SELEÇÃO indica Over/Under
+  // ========== PASSO 1: Verificar SELEÇÃO primeiro ==========
   // Isso é CRÍTICO para casos como "Mais 21.5" onde o mercado pode estar genérico
-  if (selections && selections.length > 0) {
-    const firstSelection = selections[0];
-    if (isOverUnderPattern(firstSelection)) {
-      // Determinar o displayName baseado no esporte
-      let displayName = "Over/Under";
-      if (/tenis|tennis/i.test(sport)) {
-        displayName = "Over/Under Games";
-      } else if (/futebol|soccer/i.test(sport)) {
-        displayName = "Over/Under Gols";
-      } else if (/basquete|basketball|nba/i.test(sport)) {
-        displayName = "Over/Under Pontos";
-      } else if (/volei|volleyball/i.test(sport)) {
-        displayName = "Over/Under Pontos";
+  const selectionToCheck = selectionLabel || (selections && selections[0]) || "";
+  
+  if (selectionToCheck) {
+    for (const pattern of SELECTION_PATTERNS) {
+      if (pattern.patterns.some(p => p.test(selectionToCheck))) {
+        return {
+          canonicalType: pattern.canonicalType,
+          displayName: getDisplayNameForSport(pattern, sport),
+          confidence: "high",
+          reason: `Selection "${selectionToCheck}" matches pattern`
+        };
+      }
+    }
+  }
+  
+  // ========== PASSO 2: Verificar regras específicas do esporte ==========
+  const sportRules = SPORT_RULES.find(sr => matchesSport(sport, sr.sport));
+  
+  if (sportRules) {
+    // Ordenar regras por prioridade (maior primeiro)
+    const sortedRules = [...sportRules.rules].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    
+    for (const rule of sortedRules) {
+      if (rule.patterns.some(p => p.test(marketLabel))) {
+        return {
+          canonicalType: rule.canonicalType,
+          displayName: rule.displayName,
+          confidence: "high",
+          reason: `Sport-specific rule matched for ${sport}`
+        };
       }
       
+      // Também verificar na seleção
+      if (selectionToCheck && rule.patterns.some(p => p.test(selectionToCheck))) {
+        return {
+          canonicalType: rule.canonicalType,
+          displayName: rule.displayName,
+          confidence: "high",
+          reason: `Sport-specific rule matched in selection for ${sport}`
+        };
+      }
+    }
+  }
+  
+  // ========== PASSO 3: Verificar regras genéricas ==========
+  const sortedGenericRules = [...GENERIC_RULES].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+  
+  for (const rule of sortedGenericRules) {
+    if (rule.patterns.some(p => p.test(marketLabel))) {
       return {
-        canonicalType: "OVER_UNDER",
-        displayName,
-        confidence: "high",
-        reason: `Selection "${firstSelection}" indicates Over/Under pattern`
+        canonicalType: rule.canonicalType,
+        displayName: rule.displayName,
+        confidence: "medium",
+        reason: `Generic rule matched`
+      };
+    }
+    
+    // Também verificar na seleção
+    if (selectionToCheck && rule.patterns.some(p => p.test(selectionToCheck))) {
+      return {
+        canonicalType: rule.canonicalType,
+        displayName: rule.displayName,
+        confidence: "medium",
+        reason: `Generic rule matched in selection`
       };
     }
   }
   
-  // PASSO 2: Verificar se o MERCADO indica Over/Under diretamente
-  if (isOverUnderPattern(marketLabel)) {
-    let displayName = "Over/Under";
-    if (/tenis|tennis/i.test(sport)) {
-      displayName = "Over/Under Games";
-    } else if (/futebol|soccer/i.test(sport)) {
-      displayName = "Over/Under Gols";
-    } else if (/basquete|basketball|nba/i.test(sport)) {
-      displayName = "Over/Under Pontos";
-    }
-    
-    return {
-      canonicalType: "OVER_UNDER",
-      displayName,
-      confidence: "high",
-      reason: `Market label "${marketLabel}" indicates Over/Under pattern`
-    };
-  }
-  
-  // PASSO 3: Verifica cada regra semântica
-  for (const rule of SEMANTIC_RULES) {
-    // Verifica se a regra se aplica ao esporte
-    const sportList = Array.isArray(rule.sport) ? rule.sport : [rule.sport];
-    const sportMatches = sportList.length === 0 || 
-      sportList.some(s => normalizeText(s) === normalizedSport || normalizedSport.includes(normalizeText(s)));
-    
-    if (!sportMatches) continue;
-    
-    // Verifica se algum padrão corresponde ao mercado OU às seleções
-    let patternMatches = rule.patterns.some(p => p.test(marketLabel));
-    
-    // Também verificar nas seleções
-    if (!patternMatches && selections && selections.length > 0) {
-      patternMatches = selections.some(sel => 
-        rule.patterns.some(p => p.test(sel))
-      );
-    }
-    
-    if (!patternMatches) continue;
-    
-    // Verifica contagem de seleções se especificado
-    if (rule.selectionsCount !== undefined && selections) {
-      if (selections.length !== rule.selectionsCount) continue;
-    }
-    
-    // Verifica se não tem opção de empate
-    if (rule.hasNoDrawOption && hasDrawOption === true) continue;
-    
-    return {
-      canonicalType: rule.result,
-      displayName: rule.displayName,
-      confidence: "high",
-      reason: `Matched rule for ${sport}: ${rule.patterns[0]}`
-    };
-  }
-  
-  // PASSO 4: Fallback - usa o normalizador de texto existente
+  // ========== PASSO 4: Fallback para equivalências de texto ==========
   const textBasedResult = findCanonicalMarketFromEquivalences(marketLabel);
+  if (textBasedResult.canonicalType !== "OTHER") {
+    return textBasedResult;
+  }
   
+  // ========== PASSO 5: Retornar OTHER como último recurso ==========
   return {
-    canonicalType: textBasedResult.canonicalType,
-    displayName: textBasedResult.displayName,
-    confidence: textBasedResult.confidence,
-    reason: "Text-based matching"
+    canonicalType: "OTHER",
+    displayName: "Outro",
+    confidence: "low",
+    reason: "No matching rule found"
   };
 }
+
+// ========================================================================
+// MAPEAMENTO DE EQUIVALÊNCIAS (TEXTO LEGADO)
+// ========================================================================
+
+const MARKET_EQUIVALENCES: Record<string, string[]> = {
+  "1X2": [
+    "1x2", "1 x 2", "resultado final", "match result", "full time result",
+    "match winner", "vencedor", "winner", "três vias", "tres vias", "3 way"
+  ],
+  "Moneyline": [
+    "moneyline", "money line", "ml", "to win", "vencedor da partida incluindo prorrogação"
+  ],
+  "Over/Under": [
+    "over", "under", "acima", "abaixo", "mais de", "menos de", "total"
+  ],
+  "Handicap Asiático": [
+    "asian handicap", "ah", "handicap asiático", "handicap asiatico"
+  ],
+  "Handicap": [
+    "handicap", "spread", "linha de pontos", "point spread"
+  ],
+  "Ambas Marcam": [
+    "btts", "ambas marcam", "both teams to score", "gol gol", "gg"
+  ],
+  "Placar Correto": [
+    "resultado exato", "correct score", "placar exato", "exact score", "placar correto"
+  ],
+  "Dupla Chance": [
+    "dupla chance", "double chance", "dc", "casa ou empate", "fora ou empate"
+  ],
+  "Resultado do 1º Tempo": [
+    "resultado do 1º tempo", "primeiro tempo", "1st half", "first half", "ht", "half time"
+  ],
+  "Draw No Bet": [
+    "draw no bet", "dnb", "empate anula", "empate reembolsa"
+  ],
+};
 
 /**
  * Busca mercado canônico baseado em equivalências de texto
@@ -1161,27 +994,19 @@ export function normalizeMarketSemantically(context: SemanticMarketContext): Sem
 function findCanonicalMarketFromEquivalences(marketLabel: string): SemanticMarketResult {
   const normalized = normalizeText(marketLabel);
   
-  // Mapeamento de nomes canônicos para tipos
   const canonicalMapping: Record<string, { type: MarketCanonicalType; display: string }> = {
     "1X2": { type: "1X2", display: "1X2" },
-    "Over (Gols)": { type: "OVER_UNDER", display: "Over (Gols)" },
-    "Under (Gols)": { type: "OVER_UNDER", display: "Under (Gols)" },
-    "Handicap Asiático": { type: "HANDICAP", display: "Handicap Asiático" },
-    "Handicap Europeu": { type: "HANDICAP", display: "Handicap Europeu" },
-    "Ambas Marcam (BTTS)": { type: "BTTS", display: "Ambas Marcam" },
-    "Resultado Exato": { type: "CORRECT_SCORE", display: "Placar Correto" },
+    "Moneyline": { type: "MONEYLINE", display: "Moneyline" },
+    "Over/Under": { type: "OVER_UNDER", display: "Over/Under" },
+    "Handicap Asiático": { type: "HANDICAP_ASIAN", display: "Handicap Asiático" },
+    "Handicap": { type: "HANDICAP", display: "Handicap" },
+    "Ambas Marcam": { type: "BTTS", display: "Ambas Marcam" },
+    "Placar Correto": { type: "CORRECT_SCORE", display: "Placar Correto" },
     "Dupla Chance": { type: "DOUBLE_CHANCE", display: "Dupla Chance" },
     "Resultado do 1º Tempo": { type: "FIRST_HALF", display: "Resultado do 1º Tempo" },
     "Draw No Bet": { type: "DNB", display: "Draw No Bet" },
   };
   
-  for (const [key, value] of Object.entries(canonicalMapping)) {
-    if (normalizeText(key) === normalized) {
-      return { canonicalType: value.type, displayName: value.display, confidence: "exact" };
-    }
-  }
-  
-  // Busca em sinônimos
   for (const [canonicalName, synonyms] of Object.entries(MARKET_EQUIVALENCES)) {
     if (synonyms.some(s => normalizeText(s) === normalized || normalized.includes(normalizeText(s)))) {
       const mapping = canonicalMapping[canonicalName];
@@ -1194,684 +1019,208 @@ function findCanonicalMarketFromEquivalences(marketLabel: string): SemanticMarke
   return { canonicalType: "OTHER", displayName: "Outro", confidence: "low" };
 }
 
-/**
- * Verifica se um mercado é semanticamente equivalente a MONEYLINE
- * Considera esporte e contexto para determinar corretamente
- */
-export function isMoneylineMarket(context: SemanticMarketContext): boolean {
-  const result = normalizeMarketSemantically(context);
-  return result.canonicalType === "MONEYLINE";
-}
+// ========================================================================
+// FUNÇÕES DE RESOLUÇÃO PARA UI
+// ========================================================================
 
 /**
- * Obtém o nome de exibição do mercado para o select
+ * Mapeia tipo canônico para opções de display disponíveis no sistema
  */
-export function getMarketDisplayName(context: SemanticMarketContext): string {
-  const result = normalizeMarketSemantically(context);
-  return result.displayName;
-}
-
-// Mapeamento de equivalências: termo externo -> termo interno do sistema
-const MARKET_EQUIVALENCES: Record<string, string[]> = {
-  // 1X2 - Principal mercado de futebol (3 vias)
-  "1X2": [
-    // Variações de 1X2
-    "1x2", "1 x 2", "1-x-2", "1 - x - 2",
-    // Moneyline / Money Line (para futebol, onde há empate)
-    "resultado final", "resultado do jogo", "resultado da partida", "resultado",
-    "final result", "match result", "full time result", "ftr", "ft result",
-    // Vencedor com empate
-    "match winner", "matchwinners", "winner", "vencedor", "ganhador", "quem vence",
-    "vencedor da partida", "vencedor do jogo", "who wins",
-    // Outras variações
-    "home/draw/away", "casa empate fora", "moneyline / 1x2",
-    "3 way", "3-way", "three way", "três vias", "tres vias"
-  ],
+const CANONICAL_TO_DISPLAY_OPTIONS: Record<MarketCanonicalType, string[]> = {
+  // Vencedor
+  "MONEYLINE": ["Moneyline", "Vencedor", "Vencedor da Partida", "Vencedor da Luta", "Vencedor da Série", "Vencedor do Mapa", "Winner"],
+  "1X2": ["1X2", "Resultado Final", "1x2"],
+  "DNB": ["Draw No Bet", "DNB", "Empate Anula"],
+  "DOUBLE_CHANCE": ["Dupla Chance", "Double Chance"],
   
-  // Moneyline binário (sem empate) - para esportes americanos
-  "Moneyline": [
-    "moneyline", "money line", "ml", "money-line",
-    "vencedor da partida – incluindo prorrogacao",
-    "vencedor da partida incluindo prorrogacao",
-    "winner including overtime",
-    "winner incl. ot",
-    "to win",
-  ],
+  // Totais
+  "TOTAL_GOALS_OVER": ["Over/Under Gols", "Over/Under", "Total de Gols"],
+  "TOTAL_GOALS_UNDER": ["Over/Under Gols", "Over/Under", "Total de Gols"],
+  "TOTAL_POINTS_OVER": ["Over/Under Pontos", "Over/Under", "Total de Pontos"],
+  "TOTAL_POINTS_UNDER": ["Over/Under Pontos", "Over/Under", "Total de Pontos"],
+  "TOTAL_GAMES_OVER": ["Over/Under Games", "Over/Under", "Total de Games"],
+  "TOTAL_GAMES_UNDER": ["Over/Under Games", "Over/Under", "Total de Games"],
+  "TOTAL_SETS_OVER": ["Over/Under Sets", "Over/Under", "Total de Sets"],
+  "TOTAL_SETS_UNDER": ["Over/Under Sets", "Over/Under", "Total de Sets"],
+  "TOTAL_RUNS_OVER": ["Total de Runs", "Over/Under", "Over/Under Runs"],
+  "TOTAL_RUNS_UNDER": ["Total de Runs", "Over/Under", "Over/Under Runs"],
+  "TOTAL_ROUNDS_OVER": ["Over/Under Rounds", "Over/Under", "Total de Rounds"],
+  "TOTAL_ROUNDS_UNDER": ["Over/Under Rounds", "Over/Under", "Total de Rounds"],
+  "TOTAL_MAPS_OVER": ["Total de Mapas", "Over/Under", "Over/Under Mapas"],
+  "TOTAL_MAPS_UNDER": ["Total de Mapas", "Over/Under", "Over/Under Mapas"],
+  "TOTAL_KILLS_OVER": ["Over/Under Kills", "Over/Under", "Total de Kills"],
+  "TOTAL_KILLS_UNDER": ["Over/Under Kills", "Over/Under", "Total de Kills"],
+  "TOTAL_CORNERS_OVER": ["Over/Under Escanteios", "Over/Under", "Total de Escanteios"],
+  "TOTAL_CORNERS_UNDER": ["Over/Under Escanteios", "Over/Under", "Total de Escanteios"],
+  "TOTAL_CARDS_OVER": ["Over/Under Cartões", "Over/Under", "Total de Cartões"],
+  "TOTAL_CARDS_UNDER": ["Over/Under Cartões", "Over/Under", "Total de Cartões"],
+  "OVER_UNDER": ["Over/Under", "Over/Under Gols", "Over/Under Pontos", "Over/Under Games", "Total"],
   
-  // Over (Gols)
-  "Over (Gols)": [
-    "over", "acima", "mais de", "over goals", "total over",
-    "over 0.5", "over 1.5", "over 2.5", "over 3.5", "over 4.5",
-    "o0.5", "o1.5", "o2.5", "o3.5", "o4.5",
-    "+0.5 gols", "+1.5 gols", "+2.5 gols", "+3.5 gols"
-  ],
+  // Handicaps
+  "HANDICAP_ASIAN": ["Handicap Asiático", "Handicap", "Asian Handicap"],
+  "HANDICAP_EUROPEAN": ["Handicap Europeu", "Handicap", "European Handicap"],
+  "HANDICAP_GAMES": ["Handicap de Games", "Handicap", "Games Handicap"],
+  "HANDICAP_SETS": ["Handicap de Sets", "Handicap", "Sets Handicap"],
+  "HANDICAP_POINTS": ["Handicap / Spread", "Handicap", "Spread", "Point Spread"],
+  "HANDICAP_ROUNDS": ["Handicap de Rounds", "Handicap", "Rounds Handicap"],
+  "HANDICAP_MAPS": ["Handicap de Mapas", "Handicap", "Maps Handicap"],
+  "HANDICAP_KILLS": ["Handicap de Kills", "Handicap", "Kills Handicap"],
+  "SPREAD": ["Spread", "Handicap / Spread", "Handicap", "Point Spread"],
+  "RUN_LINE": ["Run Line", "Handicap", "Spread"],
+  "PUCK_LINE": ["Puck Line", "Handicap", "Spread"],
+  "HANDICAP": ["Handicap", "Spread", "Handicap de Gols"],
   
-  // Under (Gols)
-  "Under (Gols)": [
-    "under", "abaixo", "menos de", "under goals", "total under",
-    "under 0.5", "under 1.5", "under 2.5", "under 3.5", "under 4.5",
-    "u0.5", "u1.5", "u2.5", "u3.5", "u4.5",
-    "-0.5 gols", "-1.5 gols", "-2.5 gols", "-3.5 gols"
-  ],
+  // Parciais
+  "FIRST_HALF": ["Resultado do 1º Tempo", "1º Tempo", "Resultado 1º Tempo", "1ª Metade", "First Half"],
+  "SECOND_HALF": ["Resultado do 2º Tempo", "2º Tempo", "Second Half"],
+  "FIRST_SET": ["Vencedor do 1º Set", "Primeiro Set", "1º Set", "First Set"],
+  "FIRST_PERIOD": ["1º Período", "Primeiro Período", "Resultado por Período"],
+  "FIRST_QUARTER": ["Resultado por Quarto", "1º Quarto", "First Quarter"],
+  "FIRST_INNING": ["Resultado por Inning", "1º Inning"],
+  "FIRST_MAP": ["Vencedor do Mapa", "1º Mapa", "First Map"],
   
-  // Handicap Asiático
-  "Handicap Asiático": [
-    "asian handicap", "ah", "handicap asiático", "handicap asiatico",
-    "asian hcap", "ah 0", "ah -1", "ah +1", "ah -0.5", "ah +0.5",
-    "ah -1.5", "ah +1.5", "spread asiático"
-  ],
+  // Especiais
+  "BTTS": ["Ambas Marcam", "BTTS", "Ambas Marcam (BTTS)"],
+  "CORRECT_SCORE": ["Placar Correto", "Placar Exato", "Placar Exato (Sets)", "Resultado Exato", "Correct Score"],
+  "ODD_EVEN": ["Ímpares/Pares", "Odd/Even", "Gols Ímpares/Pares", "Pontos Ímpares/Pares"],
+  "FIRST_GOAL": ["Primeiro Gol", "First Goal", "Primeiro a Marcar"],
+  "LAST_GOAL": ["Último Gol", "Last Goal", "Último a Marcar"],
+  "CLEAN_SHEET": ["Clean Sheet", "Sem Sofrer Gol"],
+  "WINNING_MARGIN": ["Margem de Vitória", "Winning Margin"],
   
-  // Handicap Europeu
-  "Handicap Europeu": [
-    "european handicap", "eh", "handicap europeu", "handicap",
-    "hcap", "eh 0", "spread europeu"
-  ],
+  // Props
+  "PLAYER_PROPS": ["Props de Jogadores", "Player Props", "Props de Arremessadores", "Touchdowns"],
+  "TEAM_PROPS": ["Total por Equipe", "Team Total", "Props de Time"],
+  "SPECIAL_PROPS": ["Props Especiais", "Special Props", "Prop Especial"],
   
-  // Ambas Marcam (BTTS)
-  "Ambas Marcam (BTTS)": [
-    "btts", "ambas marcam", "both teams to score", "both score",
-    "gol gol", "gg", "ambas equipes marcam", "sim/não",
-    "btts yes", "btts no", "btts sim", "btts não"
-  ],
+  // Esportes específicos
+  "METHOD_OF_VICTORY": ["Método de Vitória", "Method of Victory"],
+  "ROUND_FINISH": ["Round da Finalização", "Round Finish"],
+  "GO_THE_DISTANCE": ["Luta Completa (Sim/Não)", "Goes the Distance"],
+  "FIRST_BLOOD": ["First Blood", "Primeiro Sangue"],
+  "FIRST_TOWER": ["First Tower", "Primeira Torre"],
+  "FIRST_DRAGON": ["First Dragon", "Primeiro Dragão"],
+  "FIRST_BARON": ["First Baron", "Primeiro Barão"],
+  "FIRST_ROSHAN": ["First Roshan", "Primeiro Roshan"],
+  "TIEBREAK": ["Tie-break (Sim/Não)", "Tiebreak"],
+  "ACE": ["Aces", "Total de Aces"],
+  "DOUBLE_FAULT": ["Dupla Falta", "Double Fault"],
   
-  // Resultado Exato
-  "Resultado Exato": [
-    "resultado exato", "correct score", "placar exato", "exact score",
-    "placar correto", "score exato", "1-0", "2-1", "0-0"
-  ],
+  // Torneios
+  "OUTRIGHT": ["Vencedor do Torneio", "Outright", "Campeão"],
+  "TOP_FINISH": ["Top 5/10/20", "Top Finish"],
+  "HEAD_TO_HEAD": ["Head-to-Head", "H2H", "Confronto Direto"],
+  "MAKE_CUT": ["Fazer Cut (Sim/Não)", "Make Cut"],
   
-  // Dupla Chance
-  "Dupla Chance": [
-    // Português
-    "dupla chance", "chance dupla", "duas chances",
-    // Inglês
-    "double chance", "dc",
-    // Combinações específicas
-    "1x", "x2", "12", "1 ou x", "x ou 2", "1 ou 2",
-    "casa ou empate", "fora ou empate", "casa ou fora",
-    "home or draw", "away or draw", "home or away",
-    "double chance 1x", "double chance x2", "double chance 12",
-    "1x (dupla chance)", "x2 (dupla chance)", "12 (dupla chance)"
-  ],
-  
-  // Resultado do 1º Tempo
-  "Resultado do 1º Tempo": [
-    // Português
-    "resultado do 1º tempo", "resultado 1º tempo", "resultado 1 tempo",
-    "resultado do primeiro tempo", "resultado primeiro tempo",
-    "1º tempo", "primeiro tempo", "1t", "1º t", "1o tempo",
-    "intervalo", "resultado intervalo", "resultado ao intervalo",
-    // Inglês
-    "1st half result", "first half result", "first half",
-    "ht result", "half time result", "half-time result",
-    "half time", "half-time", "ht", "h.t.", "1h", "1st half",
-    // Variações
-    "resultado ht", "ht", "halftime"
-  ],
-  
-  // Draw No Bet
-  "Draw No Bet": [
-    "draw no bet", "dnb", "empate anula", "empate reembolsa",
-    "devolução empate", "no draw", "sem empate"
-  ],
-  
-  // Primeiro/Último Gol
-  "Primeiro/Último Gol": [
-    "primeiro gol", "último gol", "first goal", "last goal",
-    "first scorer", "last scorer", "primeiro a marcar", "último a marcar",
-    "anytime scorer", "primeiro golo"
-  ],
-  
-  // Total de Cantos
-  "Total de Cantos": [
-    "cantos", "corners", "escanteios", "total corners",
-    "over corners", "under corners", "total cantos"
-  ],
-  
-  // Outro (genérico)
-  "Outro": []
-};
-
-// ========== MATRIZ DE COMPATIBILIDADE MODELO × MERCADO POR ESPORTE ==========
-// Define quais mercados ADMITEM EMPATE em cada esporte
-// Isso determina se o mercado é compatível com modelo 1-X-2 (3 pernas)
-
-// Mercados que admitem empate, POR ESPORTE
-// Estes mercados são compatíveis com modelo 1-X-2
-export const MERCADOS_COM_EMPATE_POR_ESPORTE: Record<string, string[]> = {
-  // Futebol: praticamente todos os mercados de resultado admitem empate
-  "Futebol": [
-    "1X2",
-    "Resultado Final",
-    "Dupla Chance",
-    "Resultado do 1º Tempo",
-  ],
-  
-  // Basquete: apenas tempo regulamentar e parciais admitem empate
-  // Resultado final com prorrogação NÃO admite empate
-  "Basquete": [
-    "Resultado Tempo Regulamentar",
-    "Resultado 1º Tempo",
-    "Resultado por Quarto",
-  ],
-  
-  // Hockey: tempo regulamentar pode ter empate (OT/shootout depois)
-  "Hockey": [
-    "Resultado Tempo Regulamentar",
-    "Resultado por Período",
-  ],
-  
-  // Baseball: apenas parciais admitem empate
-  // Após 9 innings pode haver extra innings
-  "Baseball": [
-    "Resultado após 9 Innings",
-    "Resultado 5 Innings",
-    "Resultado por Inning",
-  ],
-  
-  // Futebol Americano: parciais podem empatar
-  "Futebol Americano": [
-    "Resultado Tempo Regulamentar",
-    "Resultado 1º Tempo",
-  ],
-  
-  // eFootball: segue regras do futebol tradicional
-  "eFootball": [
-    "1X2",
-    "Resultado do 1º Tempo",
-    "Dupla Chance",
-  ],
-  
-  // Esportes que NUNCA têm empate em resultado final
-  "Tênis": [], // Sets decidem sempre
-  "Vôlei": [], // Sets decidem sempre
-  "MMA/UFC": [], // Empate técnico é raríssimo, não consideramos
-  "Boxe": [], // Empate técnico é raríssimo, não consideramos
-  "Golfe": [], // Playoffs decidem
-  "League of Legends": [], // BO decidem sempre
-  "Counter-Strike": [], // BO decidem sempre
-  "Dota 2": [], // BO decidem sempre
-  "Outro": [],
-};
-
-// Tipo para modelo de aposta
-export type ModeloAposta = "1-2" | "1-X-2";
-
-/**
- * Verifica se um mercado admite empate para um esporte específico
- */
-export function mercadoAdmiteEmpate(mercado: string, esporte: string): boolean {
-  const mercadosComEmpate = MERCADOS_COM_EMPATE_POR_ESPORTE[esporte] || [];
-  return mercadosComEmpate.includes(mercado);
-}
-
-/**
- * Verifica se um mercado é compatível com o modelo selecionado para um esporte
- * @param mercado - Nome do mercado
- * @param modelo - "1-2" (binário) ou "1-X-2" (3 pernas)
- * @param esporte - Nome do esporte (usado para determinar se mercado admite empate)
- */
-export function isMercadoCompativelComModelo(
-  mercado: string, 
-  modelo: ModeloAposta, 
-  esporte: string = "Futebol"
-): boolean {
-  if (!mercado) return true; // Mercado vazio é sempre compatível
-  
-  const admiteEmpate = mercadoAdmiteEmpate(mercado, esporte);
-  
-  if (modelo === "1-X-2") {
-    // Modelo 3-way: apenas mercados que admitem empate nesse esporte
-    return admiteEmpate;
-  }
-  
-  // Modelo binário: apenas mercados que NÃO admitem empate nesse esporte
-  return !admiteEmpate;
-}
-
-/**
- * Filtra mercados compatíveis com o modelo selecionado para um esporte
- * SEMPRE inclui "Outro" como opção para mercados não mapeados
- */
-export function getMarketsForSportAndModel(esporte: string, modelo: ModeloAposta): string[] {
-  const mercadosEsporte = getMarketsForSport(esporte);
-  const mercadosComEmpate = MERCADOS_COM_EMPATE_POR_ESPORTE[esporte] || [];
-  
-  const mercadosFiltrados = mercadosEsporte.filter(mercado => {
-    // "Outro" sempre passa - é compatível com qualquer modelo
-    if (mercado === "Outro") return true;
-    
-    const admiteEmpate = mercadosComEmpate.includes(mercado);
-    
-    if (modelo === "1-X-2") {
-      // Para 1-X-2, mostrar apenas mercados que admitem empate
-      return admiteEmpate;
-    }
-    // Para 1-2, mostrar mercados que NÃO admitem empate
-    return !admiteEmpate;
-  });
-  
-  // Garantir que "Outro" esteja sempre presente
-  if (!mercadosFiltrados.includes("Outro")) {
-    mercadosFiltrados.push("Outro");
-  }
-  
-  return mercadosFiltrados;
-}
-
-/**
- * Determina o modelo apropriado para um mercado em um esporte
- * Retorna null se o mercado for compatível com ambos (raro)
- */
-export function getModeloParaMercado(mercado: string, esporte: string = "Futebol"): ModeloAposta | null {
-  const admiteEmpate = mercadoAdmiteEmpate(mercado, esporte);
-  
-  if (admiteEmpate) {
-    return "1-X-2";
-  }
-  // Se não admite empate, é binário
-  return "1-2";
-}
-
-// Mercados por esporte - TOP 10 mais populares por modalidade
-export const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
-  "Futebol": [
-    "1X2",
-    "Dupla Chance",
-    "Ambas Marcam",
-    "Over/Under Gols",
-    "Handicap Asiático",
-    "Resultado do 1º Tempo",
-    "Over/Under Escanteios",
-    "Handicap de Gols",
-    "Resultado Final + Gols",
-    "Placar Correto",
-    "Outro"
-  ],
-  "Basquete": [
-    "Moneyline",
-    "Handicap / Spread",
-    "Over/Under Pontos",
-    "Total por Equipe",
-    "Resultado 1º Tempo",
-    "Resultado Tempo Regulamentar", // NOVO: admite empate (1-X-2)
-    "Resultado por Quarto", // Pode admitir empate em parciais
-    "Handicap 1º Tempo",
-    "Over/Under 1º Tempo",
-    "Props de Jogadores",
-    "Same Game Parlay",
-    "Outro"
-  ],
-  "Tênis": [
-    "Vencedor da Partida",
-    "Handicap de Games",
-    "Over/Under Games",
-    "Vencedor do Set",
-    "Placar Exato",
-    "Total de Sets",
-    "Handicap de Sets",
-    "Vencedor do 1º Set",
-    "Tie-break (Sim/Não)",
-    "Sets Ímpares/Pares",
-    "Outro"
-  ],
-  "Baseball": [
-    "Moneyline",
-    "Run Line",
-    "Total de Runs",
-    "Total por Equipe",
-    "Resultado após 9 Innings", // NOVO: admite empate (1-X-2)
-    "Resultado 5 Innings", // NOVO: admite empate (1-X-2)
-    "Resultado por Inning", // Pode admitir empate
-    "1ª Metade",
-    "Handicap",
-    "Props de Arremessadores",
-    "Odd/Even Runs",
-    "Hits Totais",
-    "Outro"
-  ],
-  "Hockey": [
-    "Moneyline",
-    "Puck Line",
-    "Total de Gols",
-    "Resultado Tempo Regulamentar", // NOVO: admite empate (1-X-2)
-    "Resultado por Período", // Pode admitir empate
-    "Handicap",
-    "Total por Equipe",
-    "1º Período",
-    "Margem de Vitória",
-    "Over/Under Períodos",
-    "Gols Ímpares/Pares",
-    "Outro"
-  ],
-  "Futebol Americano": [
-    "Moneyline",
-    "Spread",
-    "Total de Pontos",
-    "Resultado Tempo Regulamentar", // NOVO: admite empate (1-X-2)
-    "Resultado 1º Tempo", // Pode admitir empate
-    "Handicap 1º Tempo",
-    "Props de Jogadores",
-    "Total por Equipe",
-    "Touchdowns",
-    "Margem de Vitória",
-    "Same Game Parlay",
-    "Outro"
-  ],
-  "Vôlei": [
-    "Vencedor da Partida",
-    "Handicap de Sets",
-    "Over/Under Sets",
-    "Total de Pontos",
-    "Resultado por Set",
-    "Placar Exato (Sets)",
-    "Handicap de Pontos",
-    "Primeiro Set",
-    "Over/Under Pontos Set",
-    "Sets Ímpares/Pares",
-    "Outro"
-  ],
-  "MMA/UFC": [
-    "Vencedor da Luta",
-    "Método de Vitória",
-    "Round da Finalização",
-    "Over/Under Rounds",
-    "Luta Completa (Sim/Não)",
-    "Vitória por KO",
-    "Vitória por Decisão",
-    "Handicap de Rounds",
-    "Round 1 – Vencedor",
-    "Prop Especial",
-    "Outro"
-  ],
-  "Boxe": [
-    "Vencedor da Luta",
-    "Método de Vitória",
-    "Round da Finalização",
-    "Over/Under Rounds",
-    "Luta Completa (Sim/Não)",
-    "Vitória por KO",
-    "Vitória por Decisão",
-    "Handicap de Rounds",
-    "Round 1 – Vencedor",
-    "Prop Especial",
-    "Outro"
-  ],
-  "Golfe": [
-    "Vencedor do Torneio",
-    "Top 5/10/20",
-    "Head-to-Head",
-    "Melhor Round",
-    "Nacionalidade do Vencedor",
-    "Primeiro Líder",
-    "Fazer Cut (Sim/Não)",
-    "Over/Under Score",
-    "Hole-in-One no Torneio",
-    "Prop Especial",
-    "Outro"
-  ],
-  "League of Legends": [
-    "Vencedor do Mapa",
-    "Handicap de Mapas",
-    "Total de Mapas",
-    "Vencedor da Série",
-    "Placar Exato",
-    "Over/Under Kills",
-    "Primeiro Objetivo",
-    "Total de Torres",
-    "Handicap de Kills",
-    "Props Especiais",
-    "Outro"
-  ],
-  "Counter-Strike": [
-    "Vencedor do Mapa",
-    "Handicap de Mapas",
-    "Total de Mapas",
-    "Vencedor da Série",
-    "Placar Exato",
-    "Over/Under Rounds",
-    "Primeiro a 10 Rounds",
-    "Total de Kills",
-    "Handicap de Rounds",
-    "Props Especiais",
-    "Outro"
-  ],
-  "Dota 2": [
-    "Vencedor do Mapa",
-    "Handicap de Mapas",
-    "Total de Mapas",
-    "Vencedor da Série",
-    "Placar Exato",
-    "Over/Under Kills",
-    "Primeiro Objetivo",
-    "Total de Torres",
-    "Handicap de Kills",
-    "Props Especiais",
-    "Outro"
-  ],
-  "eFootball": [
-    "Vencedor da Partida",
-    "Handicap de Gols",
-    "Over/Under Gols",
-    "Ambas Marcam",
-    "Resultado do 1º Tempo",
-    "Placar Correto",
-    "Dupla Chance",
-    "Total de Escanteios",
-    "Margem de Vitória",
-    "Props Especiais",
-    "Outro"
-  ],
-  "Outro": [
-    "Vencedor",
-    "Over",
-    "Under",
-    "Handicap",
-    "Outro"
-  ]
+  // Fallback
+  "OTHER": ["Outro", "Other"],
 };
 
 /**
- * Normaliza um texto para comparação (lowercase, sem acentos, sem espaços extras)
+ * Resolve o tipo canônico para uma opção disponível no select
  */
-function normalizeText(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/**
- * Calcula similaridade entre duas strings (0-1)
- */
-function calculateSimilarity(str1: string, str2: string): number {
-  const s1 = normalizeText(str1);
-  const s2 = normalizeText(str2);
+export function resolveCanonicalToAvailableOption(
+  canonicalType: MarketCanonicalType,
+  availableOptions: string[]
+): string | null {
+  const possibleMatches = CANONICAL_TO_DISPLAY_OPTIONS[canonicalType] || [];
   
-  if (s1 === s2) return 1;
-  if (s1.includes(s2) || s2.includes(s1)) return 0.8;
-  
-  // Jaccard similarity baseado em palavras
-  const words1 = new Set(s1.split(" "));
-  const words2 = new Set(s2.split(" "));
-  const intersection = new Set([...words1].filter(x => words2.has(x)));
-  const union = new Set([...words1, ...words2]);
-  
-  return intersection.size / union.size;
-}
-
-export interface NormalizedMarket {
-  original: string;
-  normalized: string;
-  confidence: "exact" | "high" | "medium" | "low" | "none";
-  matchedKeyword?: string;
-}
-
-/**
- * Encontra o mercado canônico a partir de um texto raw
- */
-export function findCanonicalMarket(rawMarket: string): NormalizedMarket {
-  if (!rawMarket || rawMarket.trim() === "") {
-    return { original: rawMarket, normalized: "", confidence: "none" };
-  }
-  
-  const normalizedRaw = normalizeText(rawMarket);
-  
-  // Busca exata nos valores canônicos
-  for (const canonicalMarket of Object.keys(MARKET_EQUIVALENCES)) {
-    if (normalizeText(canonicalMarket) === normalizedRaw) {
-      return {
-        original: rawMarket,
-        normalized: canonicalMarket,
-        confidence: "exact"
-      };
-    }
-  }
-  
-  // Busca nos sinônimos/equivalências
-  for (const [canonicalMarket, synonyms] of Object.entries(MARKET_EQUIVALENCES)) {
-    for (const synonym of synonyms) {
-      const normalizedSynonym = normalizeText(synonym);
-      
-      // Match exato com sinônimo
-      if (normalizedSynonym === normalizedRaw) {
-        return {
-          original: rawMarket,
-          normalized: canonicalMarket,
-          confidence: "exact",
-          matchedKeyword: synonym
-        };
-      }
-      
-      // Match parcial (sinônimo contido no raw ou vice-versa)
-      if (normalizedRaw.includes(normalizedSynonym) || normalizedSynonym.includes(normalizedRaw)) {
-        return {
-          original: rawMarket,
-          normalized: canonicalMarket,
-          confidence: "high",
-          matchedKeyword: synonym
-        };
-      }
+  // Busca exata primeiro
+  for (const match of possibleMatches) {
+    if (availableOptions.includes(match)) {
+      return match;
     }
   }
   
   // Busca por similaridade
-  let bestMatch = { market: "", similarity: 0, keyword: "" };
-  
-  for (const [canonicalMarket, synonyms] of Object.entries(MARKET_EQUIVALENCES)) {
-    // Compara com o nome canônico
-    const simCanonical = calculateSimilarity(rawMarket, canonicalMarket);
-    if (simCanonical > bestMatch.similarity) {
-      bestMatch = { market: canonicalMarket, similarity: simCanonical, keyword: canonicalMarket };
-    }
-    
-    // Compara com cada sinônimo
-    for (const synonym of synonyms) {
-      const sim = calculateSimilarity(rawMarket, synonym);
-      if (sim > bestMatch.similarity) {
-        bestMatch = { market: canonicalMarket, similarity: sim, keyword: synonym };
-      }
+  const normalized = possibleMatches.map(m => normalizeText(m));
+  for (const option of availableOptions) {
+    const normalizedOption = normalizeText(option);
+    if (normalized.some(n => n === normalizedOption || normalizedOption.includes(n) || n.includes(normalizedOption))) {
+      return option;
     }
   }
   
-  if (bestMatch.similarity >= 0.6) {
-    return {
-      original: rawMarket,
-      normalized: bestMatch.market,
-      confidence: bestMatch.similarity >= 0.8 ? "high" : "medium",
-      matchedKeyword: bestMatch.keyword
-    };
-  }
-  
-  if (bestMatch.similarity >= 0.4) {
-    return {
-      original: rawMarket,
-      normalized: bestMatch.market,
-      confidence: "low",
-      matchedKeyword: bestMatch.keyword
-    };
-  }
-  
-  // Não encontrou match - retorna "Outro" se disponível
-  return {
-    original: rawMarket,
-    normalized: "Outro",
-    confidence: "low"
-  };
+  return null;
 }
 
-/**
- * Resolve o melhor match dentro de uma lista de opções disponíveis
- */
-export function resolveMarketToOptions(
-  rawMarket: string,
-  availableOptions: string[]
-): NormalizedMarket {
-  if (!rawMarket || !availableOptions.length) {
-    return { original: rawMarket, normalized: "", confidence: "none" };
-  }
-  
-  const normalizedRaw = normalizeText(rawMarket);
-  
-  // Primeiro, tenta encontrar o mercado canônico
-  const canonical = findCanonicalMarket(rawMarket);
-  
-  // Verifica se o canônico está nas opções
-  if (canonical.normalized && availableOptions.includes(canonical.normalized)) {
-    return canonical;
-  }
-  
-  // Busca direta nas opções disponíveis
-  for (const option of availableOptions) {
-    if (normalizeText(option) === normalizedRaw) {
-      return { original: rawMarket, normalized: option, confidence: "exact" };
-    }
-  }
-  
-  // Busca por similaridade nas opções disponíveis
-  let bestMatch = { option: "", similarity: 0 };
-  
-  for (const option of availableOptions) {
-    const sim = calculateSimilarity(rawMarket, option);
-    if (sim > bestMatch.similarity) {
-      bestMatch = { option, similarity: sim };
-    }
-    
-    // Também compara com o canônico
-    if (canonical.normalized) {
-      const simCanonical = calculateSimilarity(canonical.normalized, option);
-      if (simCanonical > bestMatch.similarity) {
-        bestMatch = { option, similarity: simCanonical };
-      }
-    }
-  }
-  
-  if (bestMatch.similarity >= 0.6) {
-    return {
-      original: rawMarket,
-      normalized: bestMatch.option,
-      confidence: bestMatch.similarity >= 0.8 ? "high" : "medium"
-    };
-  }
-  
-  // Fallback: retorna "Outro" se existir nas opções
-  if (availableOptions.includes("Outro")) {
-    return {
-      original: rawMarket,
-      normalized: "Outro",
-      confidence: "low"
-    };
-  }
-  
-  // Último recurso: retorna a primeira opção
-  return {
-    original: rawMarket,
-    normalized: availableOptions[0] || "",
-    confidence: "low"
-  };
-}
+// ========================================================================
+// MERCADOS POR ESPORTE (PARA UI)
+// ========================================================================
+
+export const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
+  "Futebol": [
+    "1X2", "Dupla Chance", "Ambas Marcam", "Over/Under Gols", "Handicap Asiático",
+    "Resultado do 1º Tempo", "Over/Under Escanteios", "Handicap de Gols",
+    "Resultado Final + Gols", "Placar Correto", "Draw No Bet", "Outro"
+  ],
+  "Basquete": [
+    "Moneyline", "Handicap / Spread", "Over/Under Pontos", "Total por Equipe",
+    "Resultado 1º Tempo", "Resultado Tempo Regulamentar", "Resultado por Quarto",
+    "Handicap 1º Tempo", "Over/Under 1º Tempo", "Props de Jogadores", "Outro"
+  ],
+  "Tênis": [
+    "Vencedor da Partida", "Handicap de Games", "Over/Under Games", "Vencedor do Set",
+    "Placar Exato", "Total de Sets", "Handicap de Sets", "Vencedor do 1º Set",
+    "Tie-break (Sim/Não)", "Sets Ímpares/Pares", "Outro"
+  ],
+  "Baseball": [
+    "Moneyline", "Run Line", "Total de Runs", "Total por Equipe",
+    "Resultado após 9 Innings", "Resultado 5 Innings", "Resultado por Inning",
+    "1ª Metade", "Handicap", "Props de Arremessadores", "Outro"
+  ],
+  "Hockey": [
+    "Moneyline", "Puck Line", "Total de Gols", "Resultado Tempo Regulamentar",
+    "Resultado por Período", "Handicap", "Total por Equipe", "1º Período",
+    "Margem de Vitória", "Outro"
+  ],
+  "Futebol Americano": [
+    "Moneyline", "Spread", "Total de Pontos", "Resultado Tempo Regulamentar",
+    "Resultado 1º Tempo", "Handicap 1º Tempo", "Props de Jogadores",
+    "Total por Equipe", "Touchdowns", "Outro"
+  ],
+  "Vôlei": [
+    "Vencedor da Partida", "Handicap de Sets", "Over/Under Sets", "Total de Pontos",
+    "Resultado por Set", "Placar Exato (Sets)", "Handicap de Pontos",
+    "Primeiro Set", "Outro"
+  ],
+  "MMA/UFC": [
+    "Vencedor da Luta", "Método de Vitória", "Round da Finalização",
+    "Over/Under Rounds", "Luta Completa (Sim/Não)", "Vitória por KO",
+    "Vitória por Decisão", "Handicap de Rounds", "Outro"
+  ],
+  "Boxe": [
+    "Vencedor da Luta", "Método de Vitória", "Round da Finalização",
+    "Over/Under Rounds", "Luta Completa (Sim/Não)", "Vitória por KO",
+    "Vitória por Decisão", "Handicap de Rounds", "Outro"
+  ],
+  "Golfe": [
+    "Vencedor do Torneio", "Top 5/10/20", "Head-to-Head", "Melhor Round",
+    "Nacionalidade do Vencedor", "Primeiro Líder", "Fazer Cut (Sim/Não)",
+    "Over/Under Score", "Outro"
+  ],
+  "League of Legends": [
+    "Vencedor do Mapa", "Handicap de Mapas", "Total de Mapas", "Vencedor da Série",
+    "Placar Exato", "Over/Under Kills", "Primeiro Objetivo", "Total de Torres",
+    "Handicap de Kills", "Outro"
+  ],
+  "Counter-Strike": [
+    "Vencedor do Mapa", "Handicap de Mapas", "Total de Mapas", "Vencedor da Série",
+    "Placar Exato", "Over/Under Rounds", "Primeiro a 10 Rounds",
+    "Total de Kills", "Handicap de Rounds", "Outro"
+  ],
+  "Dota 2": [
+    "Vencedor do Mapa", "Handicap de Mapas", "Total de Mapas", "Vencedor da Série",
+    "Placar Exato", "Over/Under Kills", "Primeiro Objetivo", "Total de Torres",
+    "Handicap de Kills", "Outro"
+  ],
+  "eFootball": [
+    "1X2", "Handicap de Gols", "Over/Under Gols", "Ambas Marcam",
+    "Resultado do 1º Tempo", "Placar Correto", "Dupla Chance",
+    "Total de Escanteios", "Outro"
+  ],
+  "Outro": ["Vencedor", "Over/Under", "Handicap", "Outro"]
+};
 
 /**
  * Obtém os mercados disponíveis para um esporte
@@ -1880,18 +1229,129 @@ export function getMarketsForSport(sport: string): string[] {
   return MERCADOS_POR_ESPORTE[sport] || MERCADOS_POR_ESPORTE["Outro"];
 }
 
-/**
- * Normaliza um esporte para o nome canônico do sistema
- */
+// ========================================================================
+// COMPATIBILIDADE COM MODELOS (1-2 vs 1-X-2)
+// ========================================================================
+
+export const MERCADOS_COM_EMPATE_POR_ESPORTE: Record<string, string[]> = {
+  "Futebol": ["1X2", "Resultado Final", "Dupla Chance", "Resultado do 1º Tempo"],
+  "Basquete": ["Resultado Tempo Regulamentar", "Resultado 1º Tempo", "Resultado por Quarto"],
+  "Hockey": ["Resultado Tempo Regulamentar", "Resultado por Período"],
+  "Baseball": ["Resultado após 9 Innings", "Resultado 5 Innings", "Resultado por Inning"],
+  "Futebol Americano": ["Resultado Tempo Regulamentar", "Resultado 1º Tempo"],
+  "eFootball": ["1X2", "Resultado do 1º Tempo", "Dupla Chance"],
+  "Tênis": [],
+  "Vôlei": [],
+  "MMA/UFC": [],
+  "Boxe": [],
+  "Golfe": [],
+  "League of Legends": [],
+  "Counter-Strike": [],
+  "Dota 2": [],
+  "Outro": [],
+};
+
+export type ModeloAposta = "1-2" | "1-X-2";
+
+export function mercadoAdmiteEmpate(mercado: string, esporte: string): boolean {
+  const mercadosComEmpate = MERCADOS_COM_EMPATE_POR_ESPORTE[esporte] || [];
+  return mercadosComEmpate.includes(mercado);
+}
+
+export function isMercadoCompativelComModelo(
+  mercado: string, 
+  modelo: ModeloAposta, 
+  esporte: string = "Futebol"
+): boolean {
+  if (!mercado) return true;
+  const admiteEmpate = mercadoAdmiteEmpate(mercado, esporte);
+  if (modelo === "1-X-2") return admiteEmpate;
+  return !admiteEmpate;
+}
+
+export function getMarketsForSportAndModel(esporte: string, modelo: ModeloAposta): string[] {
+  const mercadosEsporte = getMarketsForSport(esporte);
+  const mercadosComEmpate = MERCADOS_COM_EMPATE_POR_ESPORTE[esporte] || [];
+  
+  const mercadosFiltrados = mercadosEsporte.filter(mercado => {
+    if (mercado === "Outro") return true;
+    const admiteEmpate = mercadosComEmpate.includes(mercado);
+    if (modelo === "1-X-2") return admiteEmpate;
+    return !admiteEmpate;
+  });
+  
+  if (!mercadosFiltrados.includes("Outro")) {
+    mercadosFiltrados.push("Outro");
+  }
+  
+  return mercadosFiltrados;
+}
+
+export function getModeloParaMercado(mercado: string, esporte: string = "Futebol"): ModeloAposta | null {
+  const admiteEmpate = mercadoAdmiteEmpate(mercado, esporte);
+  return admiteEmpate ? "1-X-2" : "1-2";
+}
+
+// ========================================================================
+// FUNÇÕES LEGADAS (MANTIDAS PARA COMPATIBILIDADE)
+// ========================================================================
+
+export interface NormalizedMarket {
+  original: string;
+  normalized: string;
+  confidence: "exact" | "high" | "medium" | "low" | "none";
+  matchedKeyword?: string;
+}
+
+export function findCanonicalMarket(rawMarket: string): NormalizedMarket {
+  if (!rawMarket || rawMarket.trim() === "") {
+    return { original: rawMarket, normalized: "", confidence: "none" };
+  }
+  
+  // Usa o novo normalizador
+  const result = normalizeMarketSemantically({ sport: "", marketLabel: rawMarket });
+  
+  return {
+    original: rawMarket,
+    normalized: result.displayName,
+    confidence: result.confidence
+  };
+}
+
+export function resolveMarketToOptions(
+  rawMarket: string,
+  availableOptions: string[]
+): NormalizedMarket {
+  if (!rawMarket || !availableOptions.length) {
+    return { original: rawMarket, normalized: "", confidence: "none" };
+  }
+  
+  // Usa o novo normalizador
+  const result = normalizeMarketSemantically({ sport: "", marketLabel: rawMarket });
+  
+  // Tenta encontrar nas opções disponíveis
+  const resolved = resolveCanonicalToAvailableOption(result.canonicalType, availableOptions);
+  
+  if (resolved) {
+    return {
+      original: rawMarket,
+      normalized: resolved,
+      confidence: result.confidence
+    };
+  }
+  
+  // Fallback para "Outro"
+  if (availableOptions.includes("Outro")) {
+    return { original: rawMarket, normalized: "Outro", confidence: "low" };
+  }
+  
+  return { original: rawMarket, normalized: availableOptions[0] || "", confidence: "low" };
+}
+
 export function normalizeSport(rawSport: string): { normalized: string; confidence: "exact" | "high" | "low" | "none" } {
   if (!rawSport) return { normalized: "", confidence: "none" };
   
-  const SPORTS = [
-    "Futebol", "Basquete", "Tênis", "Baseball", "Hockey",
-    "Futebol Americano", "Vôlei", "MMA/UFC", "League of Legends",
-    "Counter-Strike", "Dota 2", "eFootball", "Outro"
-  ];
-  
+  const SPORTS = Object.keys(MERCADOS_POR_ESPORTE);
   const normalizedRaw = normalizeText(rawSport);
   
   // Busca exata
@@ -1907,14 +1367,16 @@ export function normalizeSport(rawSport: string): { normalized: string; confiden
     "Basquete": ["basketball", "nba", "basquete"],
     "Tênis": ["tennis", "tenis"],
     "Baseball": ["mlb", "baseball", "beisebol"],
-    "Hockey": ["nhl", "ice hockey", "hoquei"],
-    "Futebol Americano": ["nfl", "american football"],
+    "Hockey": ["nhl", "ice hockey", "hoquei", "khl"],
+    "Futebol Americano": ["nfl", "american football", "ncaaf"],
     "Vôlei": ["volleyball", "volei", "voleibol"],
-    "MMA/UFC": ["mma", "ufc", "luta", "fight"],
+    "MMA/UFC": ["mma", "ufc", "luta", "fight", "bellator"],
+    "Boxe": ["boxing", "boxe"],
+    "Golfe": ["golf", "golfe"],
     "League of Legends": ["lol", "league"],
     "Counter-Strike": ["cs", "csgo", "cs2", "counter strike"],
     "Dota 2": ["dota"],
-    "eFootball": ["efootball", "pes", "fifa"]
+    "eFootball": ["efootball", "pes", "fifa", "ea fc", "ea sports fc"]
   };
   
   for (const [sport, aliases] of Object.entries(sportAliases)) {
@@ -1926,4 +1388,28 @@ export function normalizeSport(rawSport: string): { normalized: string; confiden
   }
   
   return { normalized: "Outro", confidence: "low" };
+}
+
+// ========================================================================
+// FUNÇÕES AUXILIARES EXPORTADAS
+// ========================================================================
+
+export function isMoneylineMarket(context: SemanticMarketContext): boolean {
+  const result = normalizeMarketSemantically(context);
+  return result.canonicalType === "MONEYLINE";
+}
+
+export function getMarketDisplayName(context: SemanticMarketContext): string {
+  const result = normalizeMarketSemantically(context);
+  return result.displayName;
+}
+
+// Para compatibilidade com código legado
+export interface SemanticMarketContext {
+  sport: string;
+  marketLabel: string;
+  selectionLabel?: string;
+  selections?: string[];
+  selectionsCount?: number;
+  hasDrawOption?: boolean;
 }
