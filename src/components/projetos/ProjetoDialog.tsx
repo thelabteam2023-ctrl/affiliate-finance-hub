@@ -66,6 +66,7 @@ import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjectPostCreateWizard } from "@/components/projetos/ProjectPostCreateWizard";
 import { ProjectModulesStep } from "@/components/projetos/ProjectModulesStep";
 import { ProjectCreationWizard } from "@/components/projetos/wizard/ProjectCreationWizard";
+import { ProjectEditWizard } from "@/components/projetos/wizard/ProjectEditWizard";
 
 interface Projeto {
   id?: string;
@@ -448,11 +449,36 @@ export function ProjetoDialog({
         onOpenChange={onOpenChange}
         onSuccess={(projectId) => {
           onSuccess();
-          // Navigate to project page after creation
           if (projectId) {
             window.location.href = `/projeto/${projectId}`;
           }
         }}
+      />
+    );
+  }
+
+  // Use edit wizard for edit mode - unified layout with creation wizard
+  if (mode === "edit" && projeto?.id) {
+    return (
+      <ProjectEditWizard
+        open={open}
+        onOpenChange={onOpenChange}
+        projeto={{
+          id: projeto.id,
+          nome: formData.nome,
+          descricao: formData.descricao,
+          status: formData.status,
+          data_inicio: formData.data_inicio,
+          data_fim_prevista: formData.data_fim_prevista,
+          data_fim_real: formData.data_fim_real,
+          tem_investimento_crypto: formData.tem_investimento_crypto,
+          investidor_id: formData.investidor_id,
+          percentual_investidor: formData.percentual_investidor,
+          base_calculo_investidor: formData.base_calculo_investidor,
+          modelo_absorcao_taxas: formData.modelo_absorcao_taxas,
+          conciliado: formData.conciliado,
+        }}
+        onSuccess={onSuccess}
       />
     );
   }
