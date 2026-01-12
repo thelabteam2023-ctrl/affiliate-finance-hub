@@ -95,9 +95,9 @@ function ResultadoBadge({ resultado }: { resultado: string | null | undefined })
   );
 }
 
-// Tamanho padrão do logo (aumentado ~20%)
-const LOGO_SIZE = "h-7 w-7"; // era h-6 w-6
-const LOGO_COLUMN_WIDTH = "w-9"; // largura fixa da coluna de logos
+// Tamanho padrão do logo - igual ao ApostaCard (h-10 w-10)
+const LOGO_SIZE = "h-10 w-10";
+const LOGO_COLUMN_WIDTH = "w-12"; // largura fixa da coluna de logos (3rem)
 
 // Componente helper para exibir logo da casa com tamanho padronizado
 function BookmakerLogo({ 
@@ -114,15 +114,15 @@ function BookmakerLogo({
       <img 
         src={logoUrl} 
         alt={nome} 
-        className={cn(LOGO_SIZE, "rounded-md object-contain bg-white/10 p-0.5")}
+        className={cn(LOGO_SIZE, "rounded-lg object-contain bg-white/10 p-1")}
         onError={(e) => { e.currentTarget.style.display = 'none'; }}
       />
     );
   }
   
   return (
-    <div className={cn(LOGO_SIZE, "rounded-md bg-muted/30 flex items-center justify-center")}>
-      <Building2 className="h-4 w-4 text-muted-foreground" />
+    <div className={cn(LOGO_SIZE, "rounded-lg bg-muted/30 flex items-center justify-center")}>
+      <Building2 className="h-5 w-5 text-muted-foreground" />
     </div>
   );
 }
@@ -147,7 +147,7 @@ function PernaItem({
   if (!hasMultipleEntries) {
     // Layout de grid: [Logo Fixa] [Badge] [Nome Casa] [Odd + Stake]
     return (
-      <div className="grid grid-cols-[2.25rem_auto_1fr_auto] gap-2 items-center text-xs">
+      <div className="grid grid-cols-[3rem_auto_1fr_auto] gap-2 items-center text-xs">
         {/* Coluna 1: Logo - largura fixa */}
         <div className={cn(LOGO_COLUMN_WIDTH, "flex justify-center")}>
           <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
@@ -172,18 +172,17 @@ function PernaItem({
     );
   }
   
-  // Exibição expandível para múltiplas entradas - mesmo grid
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
         <button 
-          className="w-full grid grid-cols-[2.25rem_auto_1fr_auto_auto] gap-2 items-center text-xs hover:bg-muted/30 rounded-md py-1 transition-colors"
+          className="w-full grid grid-cols-[3rem_auto_1fr_auto_auto] gap-2 items-center text-xs hover:bg-muted/30 rounded-md py-1 transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Coluna 1: Espaço reservado para logo (vazio no header) */}
           <div className={cn(LOGO_COLUMN_WIDTH, "flex justify-center")}>
-            <div className={cn(LOGO_SIZE, "rounded-md bg-gradient-to-br from-primary/20 to-amber-500/20 flex items-center justify-center")}>
-              <Layers className="h-3.5 w-3.5 text-primary" />
+            <div className={cn(LOGO_SIZE, "rounded-lg bg-gradient-to-br from-primary/20 to-amber-500/20 flex items-center justify-center")}>
+              <Layers className="h-5 w-5 text-primary" />
             </div>
           </div>
           
@@ -215,12 +214,14 @@ function PernaItem({
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="animate-in slide-in-from-top-1 duration-200">
-        <div className="mt-1 space-y-1.5 ml-1 pl-3 border-l-2 border-primary/20">
+        <div className="mt-1 space-y-1.5 ml-2 pl-4 border-l-2 border-primary/20">
           {perna.entries?.map((entry, idx) => (
-            <div key={idx} className="grid grid-cols-[2rem_1fr_auto] gap-2 items-center text-[10px] text-muted-foreground">
-              {/* Coluna 1: Logo menor */}
-              <div className="w-8 flex justify-center">
-                <BookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
+            <div key={idx} className="grid grid-cols-[2.5rem_1fr_auto] gap-2 items-center text-[11px] text-muted-foreground">
+              {/* Coluna 1: Logo menor nas sub-entradas */}
+              <div className="w-10 flex justify-center">
+                <div className="h-8 w-8">
+                  <BookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
+                </div>
               </div>
               
               {/* Coluna 2: Nome + linha opcional */}
