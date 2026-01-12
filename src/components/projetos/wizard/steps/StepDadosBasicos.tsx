@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjectFormData } from "../ProjectCreationWizardTypes";
+import { cn } from "@/lib/utils";
 
 interface StepDadosBasicosProps {
   formData: ProjectFormData;
@@ -27,6 +28,20 @@ interface StepDadosBasicosProps {
 }
 
 export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) {
+  // Derived state: investidor is "active" when an investor is selected
+  const hasInvestidor = !!formData.investidor_id;
+
+  const handleToggleInvestidor = (checked: boolean) => {
+    if (!checked) {
+      // Clear investor data when deactivating
+      onChange({
+        investidor_id: null,
+        percentual_investidor: 0,
+        base_calculo_investidor: "LUCRO_LIQUIDO",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -93,8 +108,11 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
 
       {/* Cards opcionais em grid 2 colunas (desktop) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Investimento Crypto */}
-        <Card className={formData.tem_investimento_crypto ? "border-orange-500/30" : ""}>
+        {/* Investimento Crypto - Card compacto */}
+        <Card className={cn(
+          "transition-colors",
+          formData.tem_investimento_crypto && "border-orange-500/30"
+        )}>
           <CardContent className="pt-4">
             <div className="flex items-start gap-3">
               <Checkbox
@@ -118,112 +136,113 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
           </CardContent>
         </Card>
 
-        {/* Participação de Investidor */}
-        <Card className={formData.investidor_id ? "border-purple-500/30" : ""}>
+        {/* Participação de Investidor - Card com expansão interna */}
+        <Card className={cn(
+          "transition-colors",
+          hasInvestidor && "border-purple-500/30"
+        )}>
           <CardContent className="pt-4">
-            <div className="flex items-start gap-3">
-              <Briefcase className="h-4 w-4 text-purple-500 mt-0.5" />
-              <div className="space-y-1 flex-1">
-                <Label className="flex items-center gap-2">
-                  Participação de Investidor
-                  <Badge variant="secondary" className="text-xs ml-auto">Opcional</Badge>
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Vincule para dividir lucros
-                </p>
+            <div className="space-y-4">
+              {/* Header do card */}
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="tem_investidor"
+                  checked={hasInvestidor}
+                  onCheckedChange={handleToggleInvestidor}
+                />
+                <div className="space-y-1 flex-1">
+                  <Label htmlFor="tem_investidor" className="flex items-center gap-2 cursor-pointer">
+                    <Briefcase className="h-4 w-4 text-purple-500" />
+                    Participação de Investidor
+                    <Badge variant="secondary" className="text-xs ml-auto">Opcional</Badge>
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Vincule para dividir lucros
+                  </p>
+                </div>
               </div>
+
+              {/* Seletor de investidor - sempre visível para permitir ativação */}
+              <div className="space-y-2">
+                <InvestidorSelect
+                  value={formData.investidor_id || ""}
+                  onValueChange={(value) => onChange({ 
+                    investidor_id: value || null,
+                  })}
+                />
+              </div>
+
+              {/* Campos de configuração - só aparecem quando há investidor selecionado */}
+              {hasInvestidor && (
+                <div className="space-y-4 pt-2 border-t border-border">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1 text-sm">
+                        <Percent className="h-3 w-3" />
+                        Percentual *
+                      </Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={formData.percentual_investidor || ""}
+                        onChange={(e) =>
+                          onChange({
+                            percentual_investidor: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                        placeholder="Ex: 50"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm">Base de Cálculo *</Label>
+                      <RadioGroup
+                        value={formData.base_calculo_investidor || "LUCRO_LIQUIDO"}
+                        onValueChange={(value) =>
+                          onChange({ base_calculo_investidor: value })
+                        }
+                        className="flex flex-col gap-1"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="LUCRO_LIQUIDO" id="lucro_liquido" />
+                          <label htmlFor="lucro_liquido" className="text-xs cursor-pointer">
+                            Lucro Líquido
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="LUCRO_BRUTO" id="lucro_bruto" />
+                          <label htmlFor="lucro_bruto" className="text-xs cursor-pointer">
+                            Lucro Bruto
+                          </label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-3 w-3 text-purple-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-muted-foreground">
+                        Receberá{" "}
+                        <strong className="text-purple-400">
+                          {formData.percentual_investidor || 0}%
+                        </strong>{" "}
+                        do{" "}
+                        <strong className="text-purple-400">
+                          {formData.base_calculo_investidor === "LUCRO_BRUTO"
+                            ? "lucro bruto"
+                            : "lucro líquido"}
+                        </strong>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Seleção de investidor (aparece se o card de investidor estiver no contexto) */}
-      <Card className={formData.investidor_id ? "border-purple-500/30" : ""}>
-        <CardContent className="pt-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Investidor</Label>
-              <InvestidorSelect
-                value={formData.investidor_id || ""}
-                onValueChange={(value) => onChange({ 
-                  investidor_id: value || null,
-                  // Reset related fields when no investor is selected
-                  percentual_investidor: value ? formData.percentual_investidor : 0,
-                  base_calculo_investidor: value ? formData.base_calculo_investidor : "LUCRO_LIQUIDO",
-                })}
-              />
-            </div>
-
-            {formData.investidor_id && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <Percent className="h-3 w-3" />
-                      Percentual de Participação *
-                    </Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={formData.percentual_investidor || ""}
-                      onChange={(e) =>
-                        onChange({
-                          percentual_investidor: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      placeholder="Ex: 50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Base de Cálculo *</Label>
-                    <RadioGroup
-                      value={formData.base_calculo_investidor || "LUCRO_LIQUIDO"}
-                      onValueChange={(value) =>
-                        onChange({ base_calculo_investidor: value })
-                      }
-                      className="flex flex-col gap-2"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="LUCRO_LIQUIDO" id="lucro_liquido" />
-                        <label htmlFor="lucro_liquido" className="text-sm cursor-pointer">
-                          Lucro Líquido
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="LUCRO_BRUTO" id="lucro_bruto" />
-                        <label htmlFor="lucro_bruto" className="text-sm cursor-pointer">
-                          Lucro Bruto
-                        </label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                  <div className="flex items-start gap-2">
-                    <Info className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-muted-foreground">
-                      O investidor receberá{" "}
-                      <strong className="text-purple-400">
-                        {formData.percentual_investidor || 0}%
-                      </strong>{" "}
-                      do{" "}
-                      <strong className="text-purple-400">
-                        {formData.base_calculo_investidor === "LUCRO_BRUTO"
-                          ? "lucro bruto"
-                          : "lucro líquido"}
-                      </strong>{" "}
-                      de cada ciclo fechado deste projeto.
-                    </p>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
