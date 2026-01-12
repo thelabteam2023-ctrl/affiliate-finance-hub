@@ -127,22 +127,8 @@ function BookmakerLogo({
   );
 }
 
-// Helper para obter estilo do badge baseado no resultado (estilo translúcido)
-function getSelecaoBadgeStyle(resultado: string | null | undefined) {
-  switch (resultado) {
-    case "GREEN":
-    case "MEIO_GREEN":
-      return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-    case "RED":
-    case "MEIO_RED":
-      return "bg-red-500/20 text-red-400 border-red-500/30";
-    case "VOID":
-    case "EMPATE":
-      return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-    default:
-      return "border-primary/30 text-primary bg-primary/10";
-  }
-}
+// Cor neutra para badge de seleção - informativo, sem conotação de resultado
+const NEUTRAL_SELECTION_STYLE = "bg-slate-600/25 text-slate-300 border-slate-500/40";
 
 // Componente para exibir uma perna com layout de grid fixo
 function PernaItem({ 
@@ -173,17 +159,17 @@ function PernaItem({
     return nomeCompleto;
   };
   
+  
   const bookmakerDisplay = formatBookmakerDisplay(perna.bookmaker_nome);
-  const selecaoBadgeStyle = getSelecaoBadgeStyle(perna.resultado);
   
   if (!hasMultipleEntries) {
     // Layout: [Badge Seleção Fixa] [Logo] [Nome Casa] [Odd + Stake à direita]
     return (
       <div className="flex items-center gap-3">
-        {/* Badge de seleção - largura fixa para alinhamento perfeito */}
+        {/* Badge de seleção - cor neutra informativa */}
         <div className="w-[120px] shrink-0">
           <SelectionBadge 
-            colorClassName={selecaoBadgeStyle}
+            colorClassName={NEUTRAL_SELECTION_STYLE}
             minWidth={100}
             maxWidth={116}
           >
@@ -217,10 +203,10 @@ function PernaItem({
           className="w-full flex items-center gap-3 hover:bg-muted/30 rounded-md py-1 transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Badge de seleção - largura fixa */}
+          {/* Badge de seleção - cor neutra informativa */}
           <div className="w-[120px] shrink-0">
             <SelectionBadge 
-              colorClassName={selecaoBadgeStyle}
+              colorClassName={NEUTRAL_SELECTION_STYLE}
               minWidth={100}
               maxWidth={116}
             >
