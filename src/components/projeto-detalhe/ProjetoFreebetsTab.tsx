@@ -98,7 +98,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   const [bookmakers, setBookmakers] = useState<any[]>([]);
   
   // View mode for "Por Casa" tab
-  const [porCasaViewMode, setPorCasaViewMode] = useState<'card' | 'list'>('card');
+  const [porCasaViewMode, setPorCasaViewMode] = useState<'card' | 'list'>('list');
 
   // Preferências de visualização (persistidas)
   const { 
@@ -449,6 +449,13 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   // Apostas por status
   const apostasAtivas = apostasFiltradas.filter(ap => ap.status === "PENDENTE" || ap.resultado === "PENDENTE");
   const apostasHistorico = apostasFiltradas.filter(ap => ap.status === "LIQUIDADA" && ap.resultado !== "PENDENTE");
+
+  // Auto-switch to history tab when no active operations (only on initial load)
+  useEffect(() => {
+    if (!loading && apostasAtivas.length === 0 && apostasHistorico.length > 0 && subTab === 'ativas') {
+      setSubTab('historico');
+    }
+  }, [loading, apostasAtivas.length, apostasHistorico.length]);
 
   // Métricas globais - separar EXTRAÇÕES de QUALIFICADORAS
   const metricas = useMemo(() => {

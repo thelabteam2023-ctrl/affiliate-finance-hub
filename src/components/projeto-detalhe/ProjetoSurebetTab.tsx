@@ -706,6 +706,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   // Separar surebets em abertas e histórico (usando filteredSurebets)
   const surebetsAbertas = useMemo(() => filteredSurebets.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE"), [filteredSurebets]);
   const surebetsHistorico = useMemo(() => filteredSurebets.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE"), [filteredSurebets]);
+
+  // Auto-switch to history tab when no open operations
+  useEffect(() => {
+    if (!loading && surebetsAbertas.length === 0 && surebetsHistorico.length > 0 && operacoesSubTab === 'abertas') {
+      setOperacoesSubTab('historico');
+    }
+  }, [loading, surebetsAbertas.length, surebetsHistorico.length]);
   
   // Lista baseada na sub-aba selecionada
   const surebetsListaAtual = operacoesSubTab === "abertas" ? surebetsAbertas : surebetsHistorico;
