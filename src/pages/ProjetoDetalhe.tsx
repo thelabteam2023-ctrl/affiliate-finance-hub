@@ -117,6 +117,7 @@ export default function ProjetoDetalhe() {
   const [resumo, setResumo] = useState<ProjetoResumo | null>(null);
   const [apostasResumo, setApostasResumo] = useState<ApostasResumo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [entregaAtiva, setEntregaAtiva] = useState<{ data_fim_prevista: string | null } | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Project favorites
@@ -366,6 +367,18 @@ export default function ProjetoDetalhe() {
       // Fetch apostas summary (will use period filter)
       await fetchApostasResumo();
 
+      // Fetch entrega ativa (ciclo em andamento)
+      const { data: entregaData } = await supabase
+        .from("entregas")
+        .select("data_fim_prevista, operador_projetos!inner(projeto_id)")
+        .eq("operador_projetos.projeto_id", id)
+        .eq("status", "em_andamento")
+        .order("numero_entrega", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setEntregaAtiva(entregaData);
+
     } catch (error: any) {
       toast.error("Erro ao carregar projeto: " + error.message);
     } finally {
@@ -397,11 +410,11 @@ export default function ProjetoDetalhe() {
     }
   };
 
-  const getDiasAtivos = () => {
-    if (!projeto?.data_inicio) return 0;
-    const inicio = new Date(projeto.data_inicio);
-    const fim = projeto.data_fim_real ? new Date(projeto.data_fim_real) : new Date();
-    return differenceInDays(fim, inicio);
+  const getDiasAteFimCiclo = (): number | null => {
+    if (!entregaAtiva?.data_fim_prevista) return null;
+    const hoje = new Date();
+    const fimCiclo = new Date(entregaAtiva.data_fim_prevista);
+    return differenceInDays(fimCiclo, hoje);
   };
 
   if (loading) {
@@ -441,10 +454,10 @@ export default function ProjetoDetalhe() {
                 <Badge className={`${getStatusColor(projeto.status)} text-xs`}>
                   {getStatusLabel(projeto.status)}
                 </Badge>
-                {projeto.data_inicio && (
+                {getDiasAteFimCiclo() !== null && (
                   <span className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {getDiasAtivos()} {getDiasAtivos() === 1 ? 'dia' : 'dias'}
+                    {getDiasAteFimCiclo()} {getDiasAteFimCiclo() === 1 ? 'dia' : 'dias'} até fim do ciclo
                   </span>
                 )}
               </div>
