@@ -5,7 +5,6 @@
 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -72,18 +71,6 @@ export function StepDadosBasicosEdit({
             onChange={(date) => onChange({ data_fim_prevista: date })}
           />
         </div>
-      </div>
-
-
-      {/* Descrição - Opcional */}
-      <div className="space-y-2">
-        <Label>Descrição</Label>
-        <Textarea
-          value={formData.descricao || ""}
-          onChange={(e) => onChange({ descricao: e.target.value || null })}
-          placeholder="Descrição do projeto (opcional)..."
-          rows={2}
-        />
       </div>
 
       {/* Cards opcionais em grid 2 colunas */}
