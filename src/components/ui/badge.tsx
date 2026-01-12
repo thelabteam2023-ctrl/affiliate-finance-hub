@@ -38,17 +38,17 @@ interface SelectionBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   /** Classes de cor/estilo (ex: "border-primary/30 text-primary bg-primary/10") */
   colorClassName?: string;
-  /** Largura máxima em pixels (padrão: 180) */
+  /** Largura máxima em pixels (padrão: 200) */
   maxWidth?: number;
-  /** Largura mínima em pixels (padrão: 48) */
+  /** Largura mínima em pixels (padrão: 72) */
   minWidth?: number;
 }
 
 function SelectionBadge({ 
   children, 
   colorClassName = "border-primary/30 text-primary bg-primary/10",
-  maxWidth = 180,
-  minWidth = 48,
+  maxWidth = 200,
+  minWidth = 72,
   className,
   title,
   ...props 
@@ -62,14 +62,14 @@ function SelectionBadge({
       className={cn(
         // Base: inline-flex para adaptar ao conteúdo
         "inline-flex items-center justify-center",
-        // Altura fixa para alinhamento vertical perfeito
-        "h-5",
+        // Altura fixa para alinhamento vertical perfeito (50% maior: de h-5 para h-7)
+        "h-7",
         // Padding consistente (horizontal > vertical)
-        "px-2 py-0",
+        "px-2.5 py-0.5",
         // Borda e arredondamento
         "rounded-md border",
-        // Texto
-        "text-[10px] font-medium",
+        // Texto (50% maior: de text-[10px] para text-xs)
+        "text-xs font-medium",
         // Truncamento
         "whitespace-nowrap overflow-hidden text-ellipsis",
         // Cores
