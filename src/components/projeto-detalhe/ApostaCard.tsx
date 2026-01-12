@@ -339,11 +339,11 @@ export function ApostaCard({
           <div className="flex items-center gap-3">
             {/* Para apostas simples: Badge de seleção antes do logo */}
             {isSimples && aposta.selecao && (
-              <div className="w-[100px] shrink-0">
+              <div className="w-[120px] shrink-0">
                 <SelectionBadge 
                   colorClassName="border-primary/30 text-primary bg-primary/10"
-                  minWidth={88}
-                  maxWidth={96}
+                  minWidth={100}
+                  maxWidth={116}
                 >
                   {aposta.selecao}
                 </SelectionBadge>
