@@ -41,6 +41,7 @@ import {
   isMetaPrazo
 } from "./ciclos/useCicloSorting";
 import { CicloDuracao, CicloMetaDiaria } from "./ciclos/CicloDuracaoMetaDiaria";
+import { CicloCardCompact } from "./ciclos/CicloCardCompact";
 
 interface Ciclo {
   id: string;
@@ -542,17 +543,20 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
         </Card>
       ) : (
         <div className="space-y-4">
-          <div className="grid gap-4">
-          {ciclosParaExibir.map((ciclo) => {
-            const diasRestantes = getDiasRestantes(ciclo.data_fim_prevista);
-            const isAtrasado = ciclo.status === "EM_ANDAMENTO" && diasRestantes < 0;
-            const realTimeMetrics = cicloMetrics[ciclo.id];
-            const { progresso: progressoVolume, valorAtual } = getProgressoVolume(ciclo, realTimeMetrics);
-            const isMetaProxima = ciclo.tipo_gatilho === "META" && progressoVolume >= 90;
-            const isMetaAtingida = progressoVolume >= 100;
-            const temDataLimite = ciclo.data_fim_prevista && ciclo.data_fim_prevista !== ciclo.data_inicio;
+          {/* Layout híbrido: Ativos full-width, Concluídos/Futuros em 2 colunas */}
+          {statusFilter === "ATIVO" ? (
+            // Ciclos Ativos - Full width
+            <div className="grid gap-4">
+              {ciclosParaExibir.map((ciclo) => {
+                const diasRestantes = getDiasRestantes(ciclo.data_fim_prevista);
+                const isAtrasado = ciclo.status === "EM_ANDAMENTO" && diasRestantes < 0;
+                const realTimeMetrics = cicloMetrics[ciclo.id];
+                const { progresso: progressoVolume, valorAtual } = getProgressoVolume(ciclo, realTimeMetrics);
+                const isMetaProxima = ciclo.tipo_gatilho === "META" && progressoVolume >= 90;
+                const isMetaAtingida = progressoVolume >= 100;
+                const temDataLimite = ciclo.data_fim_prevista && ciclo.data_fim_prevista !== ciclo.data_inicio;
 
-            return (
+                return (
               <Card key={ciclo.id} className={isAtrasado || isMetaProxima ? "border-amber-500/50" : isMetaAtingida ? "border-emerald-500/50" : ""}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
@@ -925,12 +929,26 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                   )}
                 </CardContent>
               </Card>
-            );
-          })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            // Ciclos Concluídos ou Futuros - Grid 2 colunas (cards compactos)
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {ciclosParaExibir.map((ciclo) => (
+                <CicloCardCompact
+                  key={ciclo.id}
+                  ciclo={ciclo}
+                  formatCurrency={formatCurrency}
+                  onViewDetails={() => handleEditCiclo(ciclo)}
+                  parseLocalDate={parseLocalDate}
+                />
+              ))}
+            </div>
+          )}
           
           {/* Botão Ver mais/menos ciclos */}
-          {hasMoreCycles && (
+          {hasMoreCycles && statusFilter === "ATIVO" && (
             <div className="flex justify-center">
               <Button
                 variant="ghost"
