@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getFirstLastName } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { parseLocalDateTime } from "@/utils/dateUtils";
@@ -144,6 +144,20 @@ function PernaItem({
   const displayOdd = perna.odd_media || perna.odd;
   const displayStake = perna.stake_total || perna.stake;
   
+  // Formatar nome da casa com vínculo abreviado
+  const formatBookmakerDisplay = (nomeCompleto: string) => {
+    const separatorIdx = nomeCompleto.indexOf(" - ");
+    if (separatorIdx > 0) {
+      const casa = nomeCompleto.substring(0, separatorIdx).trim();
+      const vinculoRaw = nomeCompleto.substring(separatorIdx + 3).trim();
+      const vinculoAbreviado = getFirstLastName(vinculoRaw);
+      return `${casa} - ${vinculoAbreviado}`;
+    }
+    return nomeCompleto;
+  };
+  
+  const bookmakerDisplay = formatBookmakerDisplay(perna.bookmaker_nome);
+  
   if (!hasMultipleEntries) {
     // Layout: [Badge Seleção Fixa] [Logo] [Nome Casa] [Odd + Stake à direita]
     return (
@@ -160,9 +174,9 @@ function PernaItem({
           <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
         </div>
         
-        {/* Nome da casa - flex-1 para ocupar espaço restante */}
+        {/* Nome da casa + vínculo abreviado - flex-1 para ocupar espaço restante */}
         <span className="text-sm text-muted-foreground truncate flex-1 uppercase">
-          {perna.bookmaker_nome}
+          {bookmakerDisplay}
         </span>
         
         {/* Odd e Stake à direita */}
@@ -226,9 +240,9 @@ function PernaItem({
                 <BookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
               </div>
               
-              {/* Nome + linha opcional */}
+              {/* Nome + linha opcional - com vínculo abreviado */}
               <div className="flex items-center gap-1.5 flex-1 min-w-0 text-muted-foreground">
-                <span className="truncate uppercase">{entry.bookmaker_nome}</span>
+                <span className="truncate uppercase">{formatBookmakerDisplay(entry.bookmaker_nome)}</span>
                 {entry.selecao_livre && (
                   <span className="text-primary/70 text-[9px] shrink-0">({entry.selecao_livre})</span>
                 )}
