@@ -486,6 +486,7 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
                   <th className="text-left p-2">Período</th>
                   <th className="text-right p-2">Apostas</th>
                   <th className="text-right p-2">Volume</th>
+                  <th className="text-right p-2">Meta</th>
                   <th className="text-right p-2">Lucro</th>
                   <th className="text-right p-2">Perdas</th>
                   <th className="text-right p-2">ROI</th>
@@ -501,6 +502,9 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
                     </td>
                     <td className="p-2 text-right">{ciclo.qtdApostas}</td>
                     <td className="p-2 text-right">{formatCurrency(ciclo.volume)}</td>
+                    <td className="p-2 text-right text-muted-foreground">
+                      {ciclo.meta_volume ? formatCurrency(ciclo.meta_volume) : "—"}
+                    </td>
                     <td className={`p-2 text-right font-medium ${ciclo.lucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                       {formatCurrency(ciclo.lucro)}
                     </td>
@@ -537,6 +541,81 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
               </tbody>
             </table>
           </div>
+          
+          {/* KPIs Resumo */}
+          {(() => {
+            const totalMetas = ciclos.reduce((acc, c) => acc + (c.meta_volume || 0), 0);
+            const totalLucro = ciclos.reduce((acc, c) => acc + c.lucro, 0);
+            const totalApostas = ciclos.reduce((acc, c) => acc + c.qtdApostas, 0);
+            const totalVolume = ciclos.reduce((acc, c) => acc + c.volume, 0);
+            const progressoMeta = totalMetas > 0 ? Math.min((totalLucro / totalMetas) * 100, 100) : 0;
+            const roiGeral = totalVolume > 0 ? (totalLucro / totalVolume) * 100 : 0;
+            
+            return (
+              <div className="mt-4 pt-4 border-t">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* Total Metas */}
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Target className="h-3 w-3" />
+                      Total de Metas
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {totalMetas > 0 ? formatCurrency(totalMetas) : "—"}
+                    </p>
+                  </div>
+                  
+                  {/* Total Atingido */}
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      Total Atingido
+                    </p>
+                    <p className={`text-sm font-semibold ${totalLucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                      {formatCurrency(totalLucro)}
+                    </p>
+                  </div>
+                  
+                  {/* ROI Geral */}
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">ROI Geral</p>
+                    <p className={`text-sm font-semibold ${roiGeral >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                      {roiGeral.toFixed(2)}%
+                    </p>
+                  </div>
+                  
+                  {/* Progresso das Metas */}
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Progresso</p>
+                    {totalMetas > 0 ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm font-semibold ${progressoMeta >= 100 ? "text-emerald-500" : "text-primary"}`}>
+                            {progressoMeta.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-500 ${
+                              progressoMeta >= 100 ? "bg-emerald-500" : "bg-primary"
+                            }`}
+                            style={{ width: `${Math.min(progressoMeta, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">—</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Resumo textual */}
+                <p className="text-xs text-muted-foreground mt-3 text-center">
+                  {totalApostas} apostas • Volume total: {formatCurrency(totalVolume)}
+                </p>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
