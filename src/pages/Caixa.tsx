@@ -5,15 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal, RefreshCw, Scale } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench } from "lucide-react";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -486,65 +478,16 @@ export default function Caixa() {
             <div className="flex items-center gap-2">
               <SaldosParceirosSheet />
               
-              {/* Menu Ações Avançadas - apenas para admins/owners */}
+              {/* Ajuste Manual - única forma de correção permitida */}
               {(isOwnerOrAdmin || isSystemOwner) && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      className="h-9 w-9 border-border/50"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Ações Avançadas</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64">
-                    <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-                      Ações Avançadas
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    
-                    <DropdownMenuItem 
-                      onClick={() => setAjusteDialogOpen(true)}
-                      className="flex flex-col items-start gap-1 py-3 cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Wrench className="h-4 w-4 text-amber-500" />
-                        <span className="font-medium">Ajuste Manual</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground pl-6">
-                        Corrigir saldo para conciliação bancária
-                      </span>
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuItem 
-                      disabled
-                      className="flex flex-col items-start gap-1 py-3 cursor-not-allowed opacity-50"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Scale className="h-4 w-4 text-blue-500" />
-                        <span className="font-medium">Correção de Saldo</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground pl-6">
-                        Em breve: reconciliação automática
-                      </span>
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuItem 
-                      disabled
-                      className="flex flex-col items-start gap-1 py-3 cursor-not-allowed opacity-50"
-                    >
-                      <div className="flex items-center gap-2">
-                        <RefreshCw className="h-4 w-4 text-purple-500" />
-                        <span className="font-medium">Reprocessar Evento</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground pl-6">
-                        Em breve: reprocessar transação com erro
-                      </span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setAjusteDialogOpen(true)} 
+                  className="gap-2 border-amber-500/30 hover:bg-amber-500/10"
+                >
+                  <Wrench className="h-4 w-4 text-amber-500" />
+                  Ajuste Manual
+                </Button>
               )}
               
               {/* Botão primário - Nova Transação */}
