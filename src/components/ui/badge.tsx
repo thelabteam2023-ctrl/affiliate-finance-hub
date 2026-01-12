@@ -29,16 +29,16 @@ function Badge({ className, variant, ...props }: BadgeProps) {
 /**
  * Badge especializado para exibir mercado/seleção com comportamento consistente.
  * - Largura adaptável ao conteúdo (fit-content)
- * - Altura fixa para alinhamento vertical
+ * - Altura mínima para alinhamento, mas cresce com quebra de linha
  * - Largura mínima e máxima definidas
- * - Truncamento com ellipsis e tooltip para textos longos
+ * - Texto quebra em múltiplas linhas quando excede o limite
  */
 interface SelectionBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Texto a ser exibido no badge */
   children: React.ReactNode;
   /** Classes de cor/estilo - padrão: azul neutro informativo */
   colorClassName?: string;
-  /** Largura máxima em pixels (padrão: 200) */
+  /** Largura máxima em pixels (padrão: 140) */
   maxWidth?: number;
   /** Largura mínima em pixels (padrão: 72) */
   minWidth?: number;
@@ -50,31 +50,26 @@ const SELECTION_BADGE_DEFAULT_COLOR = "bg-slate-600/25 text-slate-300 border-sla
 function SelectionBadge({ 
   children, 
   colorClassName = SELECTION_BADGE_DEFAULT_COLOR,
-  maxWidth = 200,
+  maxWidth = 140,
   minWidth = 72,
   className,
-  title,
   ...props 
 }: SelectionBadgeProps) {
-  // Extrair texto para tooltip
-  const textContent = typeof children === 'string' ? children : 
-    React.Children.toArray(children).find(child => typeof child === 'string') as string | undefined;
-  
   return (
     <div 
       className={cn(
         // Base: inline-flex para adaptar ao conteúdo
         "inline-flex items-center justify-center",
-        // Altura original compacta
-        "h-5",
-        // Padding consistente (horizontal > vertical)
-        "px-2 py-0",
+        // Altura mínima mas permite crescer
+        "min-h-5",
+        // Padding consistente
+        "px-2 py-0.5",
         // Borda e arredondamento
         "rounded-md border",
-        // Texto compacto
-        "text-[10px] font-medium",
-        // Truncamento
-        "whitespace-nowrap overflow-hidden text-ellipsis",
+        // Texto compacto e centralizado
+        "text-[10px] font-medium text-center leading-tight",
+        // Permite quebra de linha
+        "break-words",
         // Cores
         colorClassName,
         className
@@ -83,10 +78,9 @@ function SelectionBadge({
         maxWidth: `${maxWidth}px`,
         minWidth: `${minWidth}px`
       }}
-      title={title || textContent}
       {...props}
     >
-      <span className="truncate">{children}</span>
+      {children}
     </div>
   );
 }
