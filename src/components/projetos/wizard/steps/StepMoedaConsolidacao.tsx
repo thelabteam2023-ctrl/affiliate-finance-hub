@@ -6,18 +6,16 @@ import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
-  AlertCircle,
   DollarSign,
   Banknote,
   RefreshCw,
   TrendingUp,
   TrendingDown,
-  ShieldAlert,
   CheckCircle2,
+  Calculator,
+  Building2,
 } from "lucide-react";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { cn } from "@/lib/utils";
@@ -61,104 +59,87 @@ export function StepMoedaConsolidacao({ formData, onChange }: StepMoedaConsolida
 
   return (
     <div className="space-y-6">
+      {/* Header com microcopy */}
       <div>
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-2">
           <h2 className="text-xl font-semibold">Moeda de Consolidação</h2>
           <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Esta moeda será usada para ciclos, metas, lucro, ROI e todos os comparativos do projeto.
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Essa escolha define a base contábil do projeto (ciclos, metas, lucro e ROI).
+          <br />
+          <span className="text-muted-foreground/70">
+            Valores originais das casas não são alterados — a conversão é apenas analítica.
+          </span>
         </p>
       </div>
 
-      {/* Moeda de Consolidação */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">Moeda oficial de consolidação</Label>
-        <RadioGroup
-          value={formData.moeda_consolidacao}
-          onValueChange={(v) => onChange({ moeda_consolidacao: v as "BRL" | "USD" })}
-          className="grid grid-cols-2 gap-4"
+      {/* Seleção de Moeda - Grid 2 colunas */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* BRL - Primeiro (pré-selecionado) */}
+        <button
+          type="button"
+          onClick={() => onChange({ moeda_consolidacao: "BRL" })}
+          className={cn(
+            "flex items-center gap-3 p-4 rounded-lg border-2 text-left transition-all",
+            formData.moeda_consolidacao === "BRL"
+              ? "border-emerald-500 bg-emerald-500/10"
+              : "border-border hover:border-emerald-500/50"
+          )}
         >
-          <Label
-            htmlFor="usd"
+          <Banknote
             className={cn(
-              "flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
-              formData.moeda_consolidacao === "USD"
-                ? "border-blue-500 bg-blue-500/10"
-                : "border-border hover:border-blue-500/50"
-            )}
-          >
-            <RadioGroupItem value="USD" id="usd" className="sr-only" />
-            <DollarSign
-              className={cn(
-                "h-8 w-8",
-                formData.moeda_consolidacao === "USD"
-                  ? "text-blue-400"
-                  : "text-muted-foreground"
-              )}
-            />
-            <div>
-              <div className="font-medium">USD (Dólar)</div>
-              <div className="text-xs text-muted-foreground">
-                Recomendado para operações internacionais
-              </div>
-            </div>
-          </Label>
-
-          <Label
-            htmlFor="brl"
-            className={cn(
-              "flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
+              "h-8 w-8 flex-shrink-0",
               formData.moeda_consolidacao === "BRL"
-                ? "border-emerald-500 bg-emerald-500/10"
-                : "border-border hover:border-emerald-500/50"
+                ? "text-emerald-400"
+                : "text-muted-foreground"
             )}
-          >
-            <RadioGroupItem value="BRL" id="brl" className="sr-only" />
-            <Banknote
-              className={cn(
-                "h-8 w-8",
-                formData.moeda_consolidacao === "BRL"
-                  ? "text-emerald-400"
-                  : "text-muted-foreground"
-              )}
-            />
-            <div>
-              <div className="font-medium">BRL (Real)</div>
-              <div className="text-xs text-muted-foreground">
-                Para operações predominantemente nacionais
-              </div>
+          />
+          <div className="min-w-0">
+            <div className="font-medium">BRL (Real)</div>
+            <div className="text-xs text-muted-foreground">
+              Operações nacionais
             </div>
-          </Label>
-        </RadioGroup>
+          </div>
+        </button>
+
+        {/* USD */}
+        <button
+          type="button"
+          onClick={() => onChange({ moeda_consolidacao: "USD" })}
+          className={cn(
+            "flex items-center gap-3 p-4 rounded-lg border-2 text-left transition-all",
+            formData.moeda_consolidacao === "USD"
+              ? "border-blue-500 bg-blue-500/10"
+              : "border-border hover:border-blue-500/50"
+          )}
+        >
+          <DollarSign
+            className={cn(
+              "h-8 w-8 flex-shrink-0",
+              formData.moeda_consolidacao === "USD"
+                ? "text-blue-400"
+                : "text-muted-foreground"
+            )}
+          />
+          <div className="min-w-0">
+            <div className="font-medium">USD (Dólar)</div>
+            <div className="text-xs text-muted-foreground">
+              Operações internacionais
+            </div>
+          </div>
+        </button>
       </div>
 
       {/* Seção de Conversão - APENAS quando moeda ≠ BRL */}
       {needsConversion ? (
         <>
-          <Separator />
-
-          {/* Alerta de Importância - apenas para conversão */}
-          <div className="flex gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
-            <ShieldAlert className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <div className="font-medium text-amber-500">Decisão Estrutural</div>
-              <p className="text-sm text-muted-foreground">
-                Esta escolha define a base contábil de <strong>todo o projeto</strong>. 
-                Valores originais nas casas nunca são alterados — a conversão é apenas analítica.
-              </p>
-            </div>
-          </div>
-
-          {/* Fonte de Cotação */}
+          {/* Fonte de Cotação - Cards lado a lado */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Fonte de cotação para conversões</Label>
-            <RadioGroup
-              value={formData.fonte_cotacao}
-              onValueChange={(v) => onChange({ fonte_cotacao: v as "TRABALHO" | "PTAX" })}
-              className="space-y-3"
-            >
-              {/* Opção 1 - Cotação de Trabalho (com campo condicional integrado) */}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Card - Cotação de Trabalho */}
               <div
                 className={cn(
                   "rounded-lg border-2 transition-all",
@@ -167,23 +148,35 @@ export function StepMoedaConsolidacao({ formData, onChange }: StepMoedaConsolida
                     : "border-border hover:border-primary/50"
                 )}
               >
-                <Label
-                  htmlFor="trabalho"
-                  className="flex items-center gap-3 p-3 cursor-pointer"
+                <button
+                  type="button"
+                  onClick={() => onChange({ fonte_cotacao: "TRABALHO" })}
+                  className="flex items-start gap-3 p-4 w-full text-left"
                 >
-                  <RadioGroupItem value="TRABALHO" id="trabalho" />
-                  <div className="flex-1">
-                    <div className="font-medium">Cotação de Trabalho</div>
-                    <div className="text-xs text-muted-foreground">
-                      Cotação editável manualmente. Flexível para ajustes operacionais.
+                  <Calculator
+                    className={cn(
+                      "h-5 w-5 mt-0.5 flex-shrink-0",
+                      formData.fonte_cotacao === "TRABALHO"
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    )}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Cotação de Trabalho</span>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        Recomendado
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Cotação editável manualmente
                     </div>
                   </div>
-                  <Badge variant="secondary" className="text-xs">Recomendado</Badge>
-                </Label>
+                </button>
 
-                {/* Campo de cotação manual - aparece apenas quando selecionado */}
+                {/* Campo expandido - apenas quando selecionado */}
                 {formData.fonte_cotacao === "TRABALHO" && (
-                  <div className="px-3 pb-3 pt-0 space-y-3 border-t border-border/50 mt-1">
+                  <div className="px-4 pb-4 pt-0 space-y-3 border-t border-border/50">
                     <div className="flex gap-2 pt-3">
                       <div className="relative flex-1">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
@@ -195,7 +188,7 @@ export function StepMoedaConsolidacao({ formData, onChange }: StepMoedaConsolida
                           value={localCotacao}
                           onChange={(e) => handleCotacaoChange(e.target.value)}
                           placeholder={cotacaoUSD.toFixed(4)}
-                          className="pl-9 font-mono"
+                          className="pl-9 font-mono h-9"
                         />
                       </div>
                       <Button
@@ -204,22 +197,22 @@ export function StepMoedaConsolidacao({ formData, onChange }: StepMoedaConsolida
                         size="sm"
                         onClick={handleUsePtax}
                         disabled={loadingCotacao}
-                        className="gap-1.5 text-xs"
+                        className="gap-1.5 text-xs h-9"
                       >
                         <RefreshCw className={cn("h-3.5 w-3.5", loadingCotacao && "animate-spin")} />
-                        Usar PTAX
+                        PTAX
                       </Button>
                     </div>
 
                     {/* Comparação com PTAX */}
-                    <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-3 text-xs flex-wrap">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-muted-foreground">PTAX atual:</span>
+                        <span className="text-muted-foreground">PTAX:</span>
                         <span className="font-mono">{cotacaoUSD.toFixed(4)}</span>
                       </div>
                       {localCotacao && (
                         <div className="flex items-center gap-1">
-                          <span className="text-muted-foreground">Delta:</span>
+                          <span className="text-muted-foreground">Δ</span>
                           <span
                             className={cn(
                               "flex items-center gap-0.5 font-mono",
@@ -241,62 +234,65 @@ export function StepMoedaConsolidacao({ formData, onChange }: StepMoedaConsolida
                 )}
               </div>
 
-              {/* Opção 2 - PTAX */}
-              <Label
-                htmlFor="ptax"
+              {/* Card - PTAX */}
+              <button
+                type="button"
+                onClick={() => onChange({ fonte_cotacao: "PTAX" })}
                 className={cn(
-                  "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                  "flex items-start gap-3 p-4 rounded-lg border-2 text-left transition-all h-fit",
                   formData.fonte_cotacao === "PTAX"
                     ? "border-primary bg-primary/5"
                     : "border-border hover:border-primary/50"
                 )}
               >
-                <RadioGroupItem value="PTAX" id="ptax" />
-                <div className="flex-1">
+                <Building2
+                  className={cn(
+                    "h-5 w-5 mt-0.5 flex-shrink-0",
+                    formData.fonte_cotacao === "PTAX"
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                  )}
+                />
+                <div className="flex-1 min-w-0">
                   <div className="font-medium">PTAX (Banco Central)</div>
-                  <div className="text-xs text-muted-foreground">
-                    Cotação oficial automática, atualizada diariamente.
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Cotação oficial automática
                   </div>
+                  {formData.fonte_cotacao === "PTAX" && (
+                    <div className="text-xs text-primary mt-2 font-mono">
+                      Atual: R$ {cotacaoUSD.toFixed(4)}
+                    </div>
+                  )}
                 </div>
-              </Label>
-            </RadioGroup>
+              </button>
+            </div>
           </div>
 
-          {/* Resumo da Configuração */}
-          <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <div className="font-medium text-primary">Configuração Atual</div>
-                <p className="text-sm text-muted-foreground">
-                  Consolidação em{" "}
-                  <strong className="text-blue-400">
-                    {formData.moeda_consolidacao}
-                  </strong>{" "}
-                  usando{" "}
-                  <strong>
-                    {formData.fonte_cotacao === "TRABALHO"
-                      ? `cotação de trabalho (${localCotacao || "pendente"})`
-                      : "PTAX automática"}
-                  </strong>
-                  .
-                </p>
-              </div>
-            </div>
+          {/* Resumo da Configuração - Discreto */}
+          <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground/80">Configuração:</span>{" "}
+              Consolidação em{" "}
+              <span className="text-blue-400 font-medium">
+                {formData.moeda_consolidacao}
+              </span>{" "}
+              usando{" "}
+              <span className="font-medium text-foreground/80">
+                {formData.fonte_cotacao === "TRABALHO"
+                  ? `cotação de trabalho (${localCotacao || "—"})`
+                  : "PTAX automática"}
+              </span>
+            </p>
           </div>
         </>
       ) : (
         /* Mensagem simples para BRL - sem conversão necessária */
-        <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <div className="font-medium text-emerald-500">Configuração Simples</div>
-              <p className="text-sm text-muted-foreground">
-                Como a moeda do projeto é <strong className="text-emerald-400">BRL</strong>, 
-                não há necessidade de configurar conversão cambial.
-              </p>
-            </div>
+        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              Moeda <span className="text-emerald-400 font-medium">BRL</span> selecionada — sem conversão cambial.
+            </p>
           </div>
         </div>
       )}
