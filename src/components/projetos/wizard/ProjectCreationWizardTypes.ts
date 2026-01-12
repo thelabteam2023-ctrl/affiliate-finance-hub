@@ -6,14 +6,16 @@ export type WizardStep =
   | "dados"      // Etapa 1 - Dados Básicos
   | "moeda"      // Etapa 2 - Moeda e Consolidação (Obrigatória)
   | "estrutura"  // Etapa 3 - Estrutura Operacional
-  | "ciclos"     // Etapa 4 - Ciclos (Opcional)
-  | "modulos"    // Etapa 5 - Módulos
-  | "revisao";   // Etapa 6 - Revisão Final
+  | "operador"   // Etapa 4 - Operador (Opcional)
+  | "ciclos"     // Etapa 5 - Ciclos (Opcional)
+  | "modulos"    // Etapa 6 - Módulos
+  | "revisao";   // Etapa 7 - Revisão Final
 
 export const WIZARD_STEPS: WizardStep[] = [
   "dados",
   "moeda",
   "estrutura",
+  "operador",
   "ciclos",
   "modulos",
   "revisao",
@@ -38,6 +40,11 @@ export const STEP_CONFIG: Record<WizardStep, {
     label: "Estrutura",
     description: "Configuração operacional",
     required: true,
+  },
+  operador: {
+    label: "Operador",
+    description: "Vincular operador (opcional)",
+    required: false,
   },
   ciclos: {
     label: "Ciclos",
@@ -76,7 +83,16 @@ export interface ProjectFormData {
   // Etapa 3 - Estrutura
   modelo_absorcao_taxas: string;
   
-  // Etapa 4 - Ciclo (opcional)
+  // Etapa 4 - Operador (opcional)
+  vincular_operador: boolean;
+  operador_user_id: string;
+  operador_modelo_pagamento: string;
+  operador_percentual: number | null;
+  operador_valor_fixo: number | null;
+  operador_base_calculo: string;
+  operador_resumo_acordo: string;
+  
+  // Etapa 5 - Ciclo (opcional)
   criar_ciclo: boolean;
   ciclo_nome: string;
   ciclo_data_inicio: string | null;
@@ -113,7 +129,16 @@ export const DEFAULT_FORM_DATA: ProjectFormData = {
   // Etapa 3
   modelo_absorcao_taxas: "EMPRESA_100",
   
-  // Etapa 4
+  // Etapa 4 - Operador
+  vincular_operador: false,
+  operador_user_id: "",
+  operador_modelo_pagamento: "PORCENTAGEM",
+  operador_percentual: 50,
+  operador_valor_fixo: null,
+  operador_base_calculo: "LUCRO_PROJETO",
+  operador_resumo_acordo: "",
+  
+  // Etapa 5
   criar_ciclo: false,
   ciclo_nome: "",
   ciclo_data_inicio: null,
