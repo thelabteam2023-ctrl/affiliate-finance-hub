@@ -87,6 +87,10 @@ export function ProjectCreationWizard({
       case "dados":
         return !!formData.nome.trim() && !!formData.data_inicio;
       case "moeda":
+        // BRL não precisa de cotação, USD precisa
+        if (formData.moeda_consolidacao === "BRL") {
+          return true;
+        }
         return (
           !!formData.moeda_consolidacao &&
           (formData.fonte_cotacao === "PTAX" || formData.cotacao_trabalho !== null)

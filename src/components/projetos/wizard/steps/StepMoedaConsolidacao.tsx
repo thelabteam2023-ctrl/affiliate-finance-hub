@@ -17,6 +17,7 @@ import {
   TrendingUp,
   TrendingDown,
   ShieldAlert,
+  CheckCircle2,
 } from "lucide-react";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,9 @@ export function StepMoedaConsolidacao({ formData, onChange }: StepMoedaConsolida
   const [localCotacao, setLocalCotacao] = useState<string>(
     formData.cotacao_trabalho?.toString() || ""
   );
+
+  // Derived: precisa conversão apenas se moeda ≠ BRL
+  const needsConversion = formData.moeda_consolidacao !== "BRL";
 
   // Sincronizar localCotacao com formData
   useEffect(() => {
@@ -65,18 +69,6 @@ export function StepMoedaConsolidacao({ formData, onChange }: StepMoedaConsolida
         <p className="text-sm text-muted-foreground">
           Esta moeda será usada para ciclos, metas, lucro, ROI e todos os comparativos do projeto.
         </p>
-      </div>
-
-      {/* Alerta de Importância */}
-      <div className="flex gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
-        <ShieldAlert className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <div className="font-medium text-amber-500">Decisão Estrutural</div>
-          <p className="text-sm text-muted-foreground">
-            Esta escolha define a base contábil de <strong>todo o projeto</strong>. 
-            Valores originais nas casas nunca são alterados — a conversão é apenas analítica.
-          </p>
-        </div>
       </div>
 
       {/* Moeda de Consolidação */}
@@ -141,142 +133,173 @@ export function StepMoedaConsolidacao({ formData, onChange }: StepMoedaConsolida
         </RadioGroup>
       </div>
 
-      <Separator />
+      {/* Seção de Conversão - APENAS quando moeda ≠ BRL */}
+      {needsConversion ? (
+        <>
+          <Separator />
 
-      {/* Fonte de Cotação */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">Fonte de cotação para conversões</Label>
-        <RadioGroup
-          value={formData.fonte_cotacao}
-          onValueChange={(v) => onChange({ fonte_cotacao: v as "TRABALHO" | "PTAX" })}
-          className="space-y-3"
-        >
-          {/* Opção 1 - Cotação de Trabalho (com campo condicional integrado) */}
-          <div
-            className={cn(
-              "rounded-lg border-2 transition-all",
-              formData.fonte_cotacao === "TRABALHO"
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50"
-            )}
-          >
-            <Label
-              htmlFor="trabalho"
-              className="flex items-center gap-3 p-3 cursor-pointer"
-            >
-              <RadioGroupItem value="TRABALHO" id="trabalho" />
-              <div className="flex-1">
-                <div className="font-medium">Cotação de Trabalho</div>
-                <div className="text-xs text-muted-foreground">
-                  Cotação editável manualmente. Flexível para ajustes operacionais.
-                </div>
-              </div>
-              <Badge variant="secondary" className="text-xs">Recomendado</Badge>
-            </Label>
-
-            {/* Campo de cotação manual - aparece apenas quando selecionado */}
-            {formData.fonte_cotacao === "TRABALHO" && (
-              <div className="px-3 pb-3 pt-0 space-y-3 border-t border-border/50 mt-1">
-                <div className="flex gap-2 pt-3">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                      R$
-                    </span>
-                    <Input
-                      type="number"
-                      step="0.0001"
-                      value={localCotacao}
-                      onChange={(e) => handleCotacaoChange(e.target.value)}
-                      placeholder={cotacaoUSD.toFixed(4)}
-                      className="pl-9 font-mono"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleUsePtax}
-                    disabled={loadingCotacao}
-                    className="gap-1.5 text-xs"
-                  >
-                    <RefreshCw className={cn("h-3.5 w-3.5", loadingCotacao && "animate-spin")} />
-                    Usar PTAX
-                  </Button>
-                </div>
-
-                {/* Comparação com PTAX */}
-                <div className="flex items-center gap-4 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-muted-foreground">PTAX atual:</span>
-                    <span className="font-mono">{cotacaoUSD.toFixed(4)}</span>
-                  </div>
-                  {localCotacao && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground">Delta:</span>
-                      <span
-                        className={cn(
-                          "flex items-center gap-0.5 font-mono",
-                          delta > 0 ? "text-amber-400" : "text-emerald-400"
-                        )}
-                      >
-                        {delta > 0 ? (
-                          <TrendingUp className="h-3 w-3" />
-                        ) : (
-                          <TrendingDown className="h-3 w-3" />
-                        )}
-                        {delta > 0 ? "+" : ""}
-                        {delta.toFixed(2)}%
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+          {/* Alerta de Importância - apenas para conversão */}
+          <div className="flex gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+            <ShieldAlert className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <div className="font-medium text-amber-500">Decisão Estrutural</div>
+              <p className="text-sm text-muted-foreground">
+                Esta escolha define a base contábil de <strong>todo o projeto</strong>. 
+                Valores originais nas casas nunca são alterados — a conversão é apenas analítica.
+              </p>
+            </div>
           </div>
 
-          {/* Opção 2 - PTAX */}
-          <Label
-            htmlFor="ptax"
-            className={cn(
-              "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
-              formData.fonte_cotacao === "PTAX"
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50"
-            )}
-          >
-            <RadioGroupItem value="PTAX" id="ptax" />
-            <div className="flex-1">
-              <div className="font-medium">PTAX (Banco Central)</div>
-              <div className="text-xs text-muted-foreground">
-                Cotação oficial automática, atualizada diariamente.
+          {/* Fonte de Cotação */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Fonte de cotação para conversões</Label>
+            <RadioGroup
+              value={formData.fonte_cotacao}
+              onValueChange={(v) => onChange({ fonte_cotacao: v as "TRABALHO" | "PTAX" })}
+              className="space-y-3"
+            >
+              {/* Opção 1 - Cotação de Trabalho (com campo condicional integrado) */}
+              <div
+                className={cn(
+                  "rounded-lg border-2 transition-all",
+                  formData.fonte_cotacao === "TRABALHO"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
+                )}
+              >
+                <Label
+                  htmlFor="trabalho"
+                  className="flex items-center gap-3 p-3 cursor-pointer"
+                >
+                  <RadioGroupItem value="TRABALHO" id="trabalho" />
+                  <div className="flex-1">
+                    <div className="font-medium">Cotação de Trabalho</div>
+                    <div className="text-xs text-muted-foreground">
+                      Cotação editável manualmente. Flexível para ajustes operacionais.
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">Recomendado</Badge>
+                </Label>
+
+                {/* Campo de cotação manual - aparece apenas quando selecionado */}
+                {formData.fonte_cotacao === "TRABALHO" && (
+                  <div className="px-3 pb-3 pt-0 space-y-3 border-t border-border/50 mt-1">
+                    <div className="flex gap-2 pt-3">
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                          R$
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.0001"
+                          value={localCotacao}
+                          onChange={(e) => handleCotacaoChange(e.target.value)}
+                          placeholder={cotacaoUSD.toFixed(4)}
+                          className="pl-9 font-mono"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleUsePtax}
+                        disabled={loadingCotacao}
+                        className="gap-1.5 text-xs"
+                      >
+                        <RefreshCw className={cn("h-3.5 w-3.5", loadingCotacao && "animate-spin")} />
+                        Usar PTAX
+                      </Button>
+                    </div>
+
+                    {/* Comparação com PTAX */}
+                    <div className="flex items-center gap-4 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted-foreground">PTAX atual:</span>
+                        <span className="font-mono">{cotacaoUSD.toFixed(4)}</span>
+                      </div>
+                      {localCotacao && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">Delta:</span>
+                          <span
+                            className={cn(
+                              "flex items-center gap-0.5 font-mono",
+                              delta > 0 ? "text-amber-400" : "text-emerald-400"
+                            )}
+                          >
+                            {delta > 0 ? (
+                              <TrendingUp className="h-3 w-3" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3" />
+                            )}
+                            {delta > 0 ? "+" : ""}
+                            {delta.toFixed(2)}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Opção 2 - PTAX */}
+              <Label
+                htmlFor="ptax"
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                  formData.fonte_cotacao === "PTAX"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
+                )}
+              >
+                <RadioGroupItem value="PTAX" id="ptax" />
+                <div className="flex-1">
+                  <div className="font-medium">PTAX (Banco Central)</div>
+                  <div className="text-xs text-muted-foreground">
+                    Cotação oficial automática, atualizada diariamente.
+                  </div>
+                </div>
+              </Label>
+            </RadioGroup>
+          </div>
+
+          {/* Resumo da Configuração */}
+          <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="font-medium text-primary">Configuração Atual</div>
+                <p className="text-sm text-muted-foreground">
+                  Consolidação em{" "}
+                  <strong className="text-blue-400">
+                    {formData.moeda_consolidacao}
+                  </strong>{" "}
+                  usando{" "}
+                  <strong>
+                    {formData.fonte_cotacao === "TRABALHO"
+                      ? `cotação de trabalho (${localCotacao || "pendente"})`
+                      : "PTAX automática"}
+                  </strong>
+                  .
+                </p>
               </div>
             </div>
-          </Label>
-        </RadioGroup>
-      </div>
-
-      {/* Resumo da Configuração */}
-      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <div className="font-medium text-primary">Configuração Atual</div>
-            <p className="text-sm text-muted-foreground">
-              Consolidação em{" "}
-              <strong className={formData.moeda_consolidacao === "USD" ? "text-blue-400" : "text-emerald-400"}>
-                {formData.moeda_consolidacao}
-              </strong>{" "}
-              usando{" "}
-              <strong>
-                {formData.fonte_cotacao === "TRABALHO"
-                  ? `cotação de trabalho (${localCotacao || "pendente"})`
-                  : "PTAX automática"}
-              </strong>
-              .
-            </p>
+          </div>
+        </>
+      ) : (
+        /* Mensagem simples para BRL - sem conversão necessária */
+        <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <div className="font-medium text-emerald-500">Configuração Simples</div>
+              <p className="text-sm text-muted-foreground">
+                Como a moeda do projeto é <strong className="text-emerald-400">BRL</strong>, 
+                não há necessidade de configurar conversão cambial.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
