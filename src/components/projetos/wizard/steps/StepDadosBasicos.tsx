@@ -79,16 +79,6 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label>Descrição</Label>
-        <Textarea
-          value={formData.descricao || ""}
-          onChange={(e) => onChange({ descricao: e.target.value || null })}
-          placeholder="Descrição do projeto..."
-          rows={3}
-        />
-      </div>
-
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Data de Início *</Label>
