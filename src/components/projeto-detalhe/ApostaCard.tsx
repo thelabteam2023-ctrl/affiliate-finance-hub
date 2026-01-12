@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash } from "lucide-react";
@@ -339,10 +339,14 @@ export function ApostaCard({
           <div className="flex items-center gap-3">
             {/* Para apostas simples: Badge de seleção antes do logo */}
             {isSimples && aposta.selecao && (
-              <div className="w-16 shrink-0">
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-full">
+              <div className="w-[76px] shrink-0">
+                <SelectionBadge 
+                  colorClassName="border-primary/30 text-primary bg-primary/10"
+                  minWidth={64}
+                  maxWidth={72}
+                >
                   {aposta.selecao}
-                </Badge>
+                </SelectionBadge>
               </div>
             )}
             

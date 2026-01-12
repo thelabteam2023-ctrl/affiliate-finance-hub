@@ -26,4 +26,66 @@ function Badge({ className, variant, ...props }: BadgeProps) {
   return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
 
-export { Badge, badgeVariants };
+/**
+ * Badge especializado para exibir mercado/seleção com comportamento consistente.
+ * - Largura adaptável ao conteúdo (fit-content)
+ * - Altura fixa para alinhamento vertical
+ * - Largura mínima e máxima definidas
+ * - Truncamento com ellipsis e tooltip para textos longos
+ */
+interface SelectionBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Texto a ser exibido no badge */
+  children: React.ReactNode;
+  /** Classes de cor/estilo (ex: "border-primary/30 text-primary bg-primary/10") */
+  colorClassName?: string;
+  /** Largura máxima em pixels (padrão: 180) */
+  maxWidth?: number;
+  /** Largura mínima em pixels (padrão: 48) */
+  minWidth?: number;
+}
+
+function SelectionBadge({ 
+  children, 
+  colorClassName = "border-primary/30 text-primary bg-primary/10",
+  maxWidth = 180,
+  minWidth = 48,
+  className,
+  title,
+  ...props 
+}: SelectionBadgeProps) {
+  // Extrair texto para tooltip
+  const textContent = typeof children === 'string' ? children : 
+    React.Children.toArray(children).find(child => typeof child === 'string') as string | undefined;
+  
+  return (
+    <div 
+      className={cn(
+        // Base: inline-flex para adaptar ao conteúdo
+        "inline-flex items-center justify-center",
+        // Altura fixa para alinhamento vertical perfeito
+        "h-5",
+        // Padding consistente (horizontal > vertical)
+        "px-2 py-0",
+        // Borda e arredondamento
+        "rounded-md border",
+        // Texto
+        "text-[10px] font-medium",
+        // Truncamento
+        "whitespace-nowrap overflow-hidden text-ellipsis",
+        // Cores
+        colorClassName,
+        className
+      )}
+      style={{ 
+        maxWidth: `${maxWidth}px`,
+        minWidth: `${minWidth}px`
+      }}
+      title={title || textContent}
+      {...props}
+    >
+      <span className="truncate">{children}</span>
+    </div>
+  );
+}
+
+export { Badge, badgeVariants, SelectionBadge };
