@@ -58,8 +58,13 @@ export function InvestidorSelect({ value, onValueChange, disabled }: InvestidorS
 
   const selectedInvestidor = investidores.find((inv) => inv.id === value);
 
+  // Handle value normalization (convert __none__ back to empty)
+  const handleValueChange = (newValue: string) => {
+    onValueChange(newValue === "__none__" ? "" : newValue);
+  };
+
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+    <Select value={value || "__none__"} onValueChange={handleValueChange} disabled={disabled}>
       <SelectTrigger>
         <SelectValue placeholder={loading ? "Carregando..." : "Selecione um investidor"}>
           {selectedInvestidor ? (
@@ -67,7 +72,7 @@ export function InvestidorSelect({ value, onValueChange, disabled }: InvestidorS
               {selectedInvestidor.nome} - {formatCPF(selectedInvestidor.cpf)}
             </span>
           ) : (
-            "Selecione um investidor"
+            <span className="text-muted-foreground">Nenhum investidor</span>
           )}
         </SelectValue>
       </SelectTrigger>
@@ -83,6 +88,10 @@ export function InvestidorSelect({ value, onValueChange, disabled }: InvestidorS
             />
           </div>
         </div>
+        {/* Opção para remover investidor */}
+        <SelectItem value="__none__">
+          <span className="text-muted-foreground">Nenhum investidor</span>
+        </SelectItem>
         {filteredInvestidores.length === 0 ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             {searchTerm ? "Nenhum investidor encontrado" : "Nenhum investidor ativo"}
