@@ -349,10 +349,15 @@ export function ProjectCreationWizard({
         <ScrollArea className="h-[450px] pr-4">{renderStep()}</ScrollArea>
 
         <div className="flex justify-between pt-4 border-t">
-          <Button variant="outline" onClick={goBack} disabled={currentIndex === 0}>
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
+          {/* Voltar só aparece a partir da etapa 2 */}
+          {currentIndex > 0 ? (
+            <Button variant="outline" onClick={goBack}>
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Voltar
+            </Button>
+          ) : (
+            <div /> /* Placeholder para manter o layout */
+          )}
 
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}>
