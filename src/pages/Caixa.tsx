@@ -5,8 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench } from "lucide-react";
 import { useActionAccess } from "@/hooks/useModuleAccess";
+import { usePermissions } from "@/contexts/PermissionsContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
@@ -14,6 +15,7 @@ import { CaixaTabsContainer } from "@/components/caixa/CaixaTabsContainer";
 import { SaldosParceirosSheet } from "@/components/caixa/SaldosParceirosSheet";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
+import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
 import { subDays, startOfDay, endOfDay } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -85,10 +87,14 @@ export default function Caixa() {
   const [saldoWalletsParceiros, setSaldoWalletsParceiros] = useState(0);
   const [loading, setLoading] = useState(true);
   const { canCreate } = useActionAccess();
+  const { isOwnerOrAdmin, isSystemOwner } = usePermissions();
   
   // Estado para confirmação de saque
   const [saqueParaConfirmar, setSaqueParaConfirmar] = useState<any>(null);
   const [confirmSaqueDialogOpen, setConfirmSaqueDialogOpen] = useState(false);
+  
+  // Estado para ajuste manual
+  const [ajusteDialogOpen, setAjusteDialogOpen] = useState(false);
 
   // Estado para pré-preenchimento do dialog de transação (vindo de navegação)
   const [dialogDefaultData, setDialogDefaultData] = useState<{
@@ -314,6 +320,7 @@ export default function Caixa() {
       BONUS_INDICADOR: "Bônus Indicador",
       DESPESA_ADMINISTRATIVA: "Despesa Admin.",
       PAGTO_OPERADOR: "Pagto. Operador",
+      AJUSTE_MANUAL: "Ajuste Manual",
     };
     return labels[tipo] || tipo;
   };
@@ -343,6 +350,7 @@ export default function Caixa() {
       BONUS_INDICADOR: "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30",
       DESPESA_ADMINISTRATIVA: "bg-red-500/20 text-red-400 border-red-500/30",
       PAGTO_OPERADOR: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+      AJUSTE_MANUAL: "bg-amber-600/20 text-amber-500 border-amber-600/30",
     };
     return colors[tipo] || "bg-muted text-muted-foreground";
   };
@@ -469,6 +477,16 @@ export default function Caixa() {
           actions={
             <div className="flex items-center gap-2">
               <SaldosParceirosSheet />
+              {(isOwnerOrAdmin || isSystemOwner) && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setAjusteDialogOpen(true)} 
+                  className="gap-2 border-amber-500/30 hover:bg-amber-500/10"
+                >
+                  <Wrench className="h-4 w-4 text-amber-500" />
+                  Ajuste Manual
+                </Button>
+              )}
               {canCreate('caixa', 'caixa.transactions.create') && (
                 <Button onClick={() => setDialogOpen(true)} className="gap-2">
                   <Plus className="h-4 w-4" />
@@ -659,6 +677,17 @@ export default function Caixa() {
           parceiro_nome: parceiros[saqueParaConfirmar.destino_parceiro_id],
           banco_nome: contasBancarias.find(c => c.id === saqueParaConfirmar.destino_conta_bancaria_id)?.banco,
         } : null}
+      />
+
+      {/* Dialog Ajuste Manual */}
+      <AjusteManualDialog
+        open={ajusteDialogOpen}
+        onClose={() => setAjusteDialogOpen(false)}
+        onSuccess={async () => {
+          setAjusteDialogOpen(false);
+          await new Promise(resolve => setTimeout(resolve, 300));
+          fetchData();
+        }}
       />
     </div>
   );
