@@ -27,7 +27,7 @@
 ### Operator (Operador)
 | Módulo | Permissões Base |
 |--------|-----------------|
-| Bookmakers | `bookmakers.accounts.read_project` |
+| Bookmakers | `bookmakers.accounts.read_project`, `bookmakers.accounts.status` |
 | Operadores | `operadores.pagamentos.read_self`, `operadores.read_self` |
 | Projetos | `projeto.apostas.cancel`, `projeto.apostas.create`, `projeto.apostas.edit`, `projeto.apostas.read`, `projeto.ciclos.read`, `projeto.dashboard.read`, `projeto.perdas.create`, `projeto.perdas.read`, `projeto.vinculos.read`, `projetos.read_vinculados` |
 
