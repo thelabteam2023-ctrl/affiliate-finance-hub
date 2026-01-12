@@ -115,7 +115,7 @@ export const DEFAULT_FORM_DATA: ProjectFormData = {
   // Etapa 1
   nome: "",
   descricao: null,
-  status: "PLANEJADO",
+  status: "ATIVO",
   data_inicio: null,
   data_fim_prevista: null,
   tem_investimento_crypto: false,
