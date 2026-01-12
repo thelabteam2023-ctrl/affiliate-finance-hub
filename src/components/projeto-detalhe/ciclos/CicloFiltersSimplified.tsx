@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Play, CheckCircle2, Clock } from "lucide-react";
 
 export type CicloStatusFilter = "ATIVO" | "CONCLUIDO" | "FUTURO";
@@ -69,45 +70,21 @@ export function CicloFiltersSimplified({
       {/* Separador visual */}
       <div className="h-6 w-px bg-border" />
 
-      {/* Filtro Tipo - Opcional */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs text-muted-foreground font-medium mr-1">Tipo:</span>
+      {/* Filtro Tipo - Select */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground font-medium">Tipo:</span>
         
-        <Button
-          variant={activeTipo === "TODOS" ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => onTipoChange("TODOS")}
-        >
-          Todos
-        </Button>
-        
-        <Button
-          variant={activeTipo === "META" ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => onTipoChange("META")}
-        >
-          Por Meta
-        </Button>
-        
-        <Button
-          variant={activeTipo === "PRAZO" ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => onTipoChange("PRAZO")}
-        >
-          Por Prazo
-        </Button>
-        
-        <Button
-          variant={activeTipo === "META_PRAZO" ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => onTipoChange("META_PRAZO")}
-        >
-          Meta + Prazo
-        </Button>
+        <Select value={activeTipo} onValueChange={(value) => onTipoChange(value as CicloTipoFilter)}>
+          <SelectTrigger className="h-8 w-[130px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TODOS">Todos</SelectItem>
+            <SelectItem value="META">Por Meta</SelectItem>
+            <SelectItem value="PRAZO">Por Prazo</SelectItem>
+            <SelectItem value="META_PRAZO">Meta + Prazo</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
