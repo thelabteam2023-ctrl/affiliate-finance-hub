@@ -79,6 +79,8 @@ interface Aposta {
   observacoes: string | null;
   bookmaker_id: string;
   bookmaker_nome?: string;
+  parceiro_nome?: string;
+  logo_url?: string | null;
   operador_nome?: string;
   modo_entrada?: string;
   gerou_freebet?: boolean;
@@ -151,7 +153,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   
   // Hook de formatação de moeda do projeto
   const { formatCurrency } = useProjetoCurrency(projetoId);
@@ -243,17 +245,21 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       if (error) throw error;
       
       const bookmakerIds = [...new Set((data || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
-      let bookmakerMap = new Map<string, { nome: string; parceiroNome: string | null }>();
+      let bookmakerMap = new Map<string, { nome: string; parceiroNome: string | null; logoUrl: string | null }>();
       if (bookmakerIds.length > 0) {
         const { data: bks } = await supabase
           .from("bookmakers")
-          .select("id, nome, parceiro:parceiros(nome)")
+          .select("id, nome, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)")
           .in("id", bookmakerIds);
 
         bookmakerMap = new Map(
           (bks || []).map((b: any) => [
             b.id,
-            { nome: b.nome, parceiroNome: b.parceiro?.nome ?? null },
+            { 
+              nome: b.nome, 
+              parceiroNome: b.parceiro?.nome ?? null,
+              logoUrl: b.bookmakers_catalogo?.logo_url ?? null,
+            },
           ])
         );
       }
@@ -264,6 +270,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           return {
             ...a,
             bookmaker_nome: bkInfo?.nome ?? "Desconhecida",
+            parceiro_nome: bkInfo?.parceiroNome ?? undefined,
+            logo_url: bkInfo?.logoUrl ?? null,
             operador_nome: bkInfo?.parceiroNome ?? undefined,
           };
         })

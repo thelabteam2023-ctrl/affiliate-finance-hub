@@ -1009,6 +1009,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               
               if (isSimples) {
                 // Converter para formato ApostaCardData
+                const bookmakerBase = operacao.bookmaker_nome?.split(" - ")[0] || operacao.bookmaker_nome;
                 const apostaData: ApostaCardData = {
                   id: operacao.id,
                   evento: operacao.evento,
@@ -1023,6 +1024,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                   estrategia: "SUREBET",
                   bookmaker_nome: operacao.bookmaker_nome,
                   parceiro_nome: operacao.parceiro_nome,
+                  logo_url: getLogoUrl(bookmakerBase || ""),
                 };
                 
                 return (

@@ -184,7 +184,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
   const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas" | "surebets">("todas");
-  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
   const [dialogSurebetOpen, setDialogSurebetOpen] = useState(false);

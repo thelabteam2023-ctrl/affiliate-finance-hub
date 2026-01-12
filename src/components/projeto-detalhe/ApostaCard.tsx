@@ -56,6 +56,7 @@ export interface ApostaCardData {
   parceiro_nome?: string;
   operador_nome?: string;
   moeda?: string; // Moeda da operação
+  logo_url?: string | null; // URL do logo da bookmaker
 }
 
 interface ApostaCardProps {
@@ -265,6 +266,11 @@ export function ApostaCard({
   const hoverBorderColor = accentColor ? `hover:border-[${accentColor}]/30` : "hover:border-primary/30";
 
   if (variant === "list") {
+    // Extrair nome base da casa (antes do " - ") para exibição limpa
+    const bookmakerDisplay = aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome;
+    // Extrair vínculo (parceiro) - pode vir do parceiro_nome ou da parte após " - " no bookmaker_nome
+    const vinculoDisplay = aposta.parceiro_nome || aposta.bookmaker_nome?.split(" - ")[1]?.trim();
+    
     return (
       <div 
         className={cn(
@@ -315,6 +321,26 @@ export function ApostaCard({
           <div className="text-xs text-muted-foreground w-20 shrink-0">
             {format(new Date(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
           </div>
+          
+          {/* Bookmaker com Logo e Vínculo */}
+          {bookmakerDisplay && (
+            <div className="flex items-center gap-2 shrink-0 min-w-[140px] max-w-[180px]">
+              {aposta.logo_url && (
+                <img 
+                  src={aposta.logo_url} 
+                  alt={bookmakerDisplay} 
+                  className="h-5 w-5 rounded object-contain bg-white/10 p-0.5"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              )}
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-medium truncate">{bookmakerDisplay}</span>
+                {vinculoDisplay && (
+                  <span className="text-[10px] text-muted-foreground truncate">{vinculoDisplay}</span>
+                )}
+              </div>
+            </div>
+          )}
           
           {/* Evento e Seleção */}
           <div className="flex-1 min-w-0">
