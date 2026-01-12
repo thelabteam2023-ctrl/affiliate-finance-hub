@@ -74,26 +74,6 @@ export function StepDadosBasicosEdit({
         </div>
       </div>
 
-      {/* Status - Apenas em modo edição */}
-      {isEditMode && (
-        <div className="space-y-2">
-          <Label>Status</Label>
-          <Select
-            value={formData.status}
-            onValueChange={(value) => onChange({ status: value })}
-          >
-            <SelectTrigger className="w-full md:w-64">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="PLANEJADO">Planejado</SelectItem>
-              <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
-              <SelectItem value="PAUSADO">Pausado</SelectItem>
-              <SelectItem value="FINALIZADO">Finalizado</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
 
       {/* Descrição - Opcional */}
       <div className="space-y-2">
