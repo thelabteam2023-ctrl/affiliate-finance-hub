@@ -325,9 +325,18 @@ export function AjusteManualDialog({
             Ajuste Manual
           </DialogTitle>
           <DialogDescription>
-            Correção de saldos para ajustar discrepâncias. Esta ação é auditável.
+            Correção contábil para conciliação de saldos.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Aviso de imutabilidade */}
+        <Alert className="border-amber-500/30 bg-amber-500/5">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertDescription className="text-xs text-muted-foreground">
+            Este lançamento é contábil, auditável e <strong>não poderá ser editado ou removido</strong>. 
+            Toda correção gera um novo registro permanente no histórico financeiro.
+          </AlertDescription>
+        </Alert>
 
         <div className="space-y-4">
           {/* Direção */}
