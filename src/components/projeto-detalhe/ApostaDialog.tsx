@@ -1005,6 +1005,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  /**
+   * Converte uma data local (sem timezone) para timestamp com timezone correto
+   * Resolve o problema de datas sendo salvas com offset incorreto
+   */
+  const toLocalISOString = (localDateTime: string): string => {
+    if (!localDateTime) return new Date().toISOString();
+    
+    // Se já tem timezone info, retornar como está
+    if (localDateTime.includes('+') || localDateTime.includes('Z')) {
+      return localDateTime;
+    }
+    
+    // Criar Date a partir do valor local (browser interpreta como local)
+    const date = new Date(localDateTime);
+    
+    // Usar toISOString que converte para UTC corretamente
+    return date.toISOString();
+  };
+
   const resetForm = () => {
     setTipoAposta("bookmaker");
     setDataAposta(getLocalDateTimeString());
@@ -1322,7 +1341,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         user_id: userData.user.id,
         workspace_id: workspaceId,
         projeto_id: projetoId,
-        data_aposta: dataAposta,
+        data_aposta: toLocalISOString(dataAposta),
         esporte,
         evento,
         mercado: mercado || null,
