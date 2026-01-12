@@ -441,6 +441,12 @@ export default function ProjetoDetalhe() {
                 <Badge className={`${getStatusColor(projeto.status)} text-xs`}>
                   {getStatusLabel(projeto.status)}
                 </Badge>
+                {projeto.data_inicio && (
+                  <span className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {getDiasAtivos()} {getDiasAtivos() === 1 ? 'dia' : 'dias'}
+                  </span>
+                )}
               </div>
               {projeto.descricao && (
                 <p className="text-muted-foreground text-sm truncate hidden sm:block">{projeto.descricao}</p>
