@@ -127,6 +127,23 @@ function BookmakerLogo({
   );
 }
 
+// Helper para obter estilo do badge baseado no resultado
+function getSelecaoBadgeStyle(resultado: string | null | undefined) {
+  switch (resultado) {
+    case "GREEN":
+    case "MEIO_GREEN":
+      return "bg-emerald-500 text-white border-emerald-600";
+    case "RED":
+    case "MEIO_RED":
+      return "bg-red-500 text-white border-red-600";
+    case "VOID":
+    case "EMPATE":
+      return "bg-gray-500 text-white border-gray-600";
+    default:
+      return "border-primary/30 text-primary bg-primary/10";
+  }
+}
+
 // Componente para exibir uma perna com layout de grid fixo
 function PernaItem({ 
   perna, 
@@ -157,6 +174,7 @@ function PernaItem({
   };
   
   const bookmakerDisplay = formatBookmakerDisplay(perna.bookmaker_nome);
+  const selecaoBadgeStyle = getSelecaoBadgeStyle(perna.resultado);
   
   if (!hasMultipleEntries) {
     // Layout: [Badge Seleção Fixa] [Logo] [Nome Casa] [Odd + Stake à direita]
@@ -164,7 +182,7 @@ function PernaItem({
       <div className="flex items-center gap-3">
         {/* Badge de seleção - largura fixa para alinhamento perfeito */}
         <div className="w-16 shrink-0">
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-full">
+          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 truncate max-w-full", selecaoBadgeStyle)}>
             {perna.selecao_livre || perna.selecao}
           </Badge>
         </div>
@@ -197,7 +215,7 @@ function PernaItem({
         >
           {/* Badge de seleção - largura fixa */}
           <div className="w-16 shrink-0">
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-full">
+            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 truncate max-w-full", selecaoBadgeStyle)}>
               {perna.selecao_livre || perna.selecao}
             </Badge>
           </div>
