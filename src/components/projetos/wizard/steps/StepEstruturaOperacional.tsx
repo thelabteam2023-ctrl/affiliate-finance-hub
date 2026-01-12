@@ -5,14 +5,7 @@
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Info } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Info, CheckCircle2 } from "lucide-react";
 import { ProjectFormData } from "../ProjectCreationWizardTypes";
 
 const MODELOS_ABSORCAO = [
@@ -42,6 +35,11 @@ export function StepEstruturaOperacional({
   formData,
   onChange,
 }: StepEstruturaOperacionalProps) {
+  // Lógica condicional: taxas só fazem sentido em USD ou com crypto
+  const showTaxasSection = 
+    formData.moeda_consolidacao === "USD" || 
+    formData.tem_investimento_crypto === true;
+
   return (
     <div className="space-y-6">
       <div>
@@ -51,41 +49,54 @@ export function StepEstruturaOperacional({
         </p>
       </div>
 
-      {/* Modelo de Absorção de Taxas */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">Modelo de Absorção de Taxas</Label>
-        <p className="text-xs text-muted-foreground">
-          Define quem paga as perdas friccionais (slippage, taxas de conversão)
-        </p>
-        
-        <div className="grid gap-3">
-          {MODELOS_ABSORCAO.map((modelo) => (
-            <Card
-              key={modelo.value}
-              className={`cursor-pointer transition-all ${
-                formData.modelo_absorcao_taxas === modelo.value
-                  ? "border-primary bg-primary/5"
-                  : "hover:border-primary/50"
-              }`}
-              onClick={() => onChange({ modelo_absorcao_taxas: modelo.value })}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">{modelo.label}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {modelo.description}
-                    </p>
+      {/* Modelo de Absorção de Taxas - CONDICIONAL */}
+      {showTaxasSection ? (
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Modelo de Absorção de Taxas</Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Define quem absorve os custos operacionais de conversão, transferências 
+            e taxas associadas a operações internacionais ou cripto.
+          </p>
+          
+          <div className="grid gap-3">
+            {MODELOS_ABSORCAO.map((modelo) => (
+              <Card
+                key={modelo.value}
+                className={`cursor-pointer transition-all ${
+                  formData.modelo_absorcao_taxas === modelo.value
+                    ? "border-primary bg-primary/5"
+                    : "hover:border-primary/50"
+                }`}
+                onClick={() => onChange({ modelo_absorcao_taxas: modelo.value })}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{modelo.label}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {modelo.description}
+                      </p>
+                    </div>
+                    {formData.modelo_absorcao_taxas === modelo.value && (
+                      <Badge>Selecionado</Badge>
+                    )}
                   </div>
-                  {formData.modelo_absorcao_taxas === modelo.value && (
-                    <Badge>Selecionado</Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Mensagem simples para BRL sem crypto */
+        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              Projeto em <span className="text-emerald-400 font-medium">BRL</span> — sem taxas de conversão aplicáveis.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Info de operadores (será configurado após criação) */}
       <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
@@ -113,16 +124,18 @@ export function StepEstruturaOperacional({
             <span className="text-muted-foreground">Moeda:</span>{" "}
             <span className="font-medium">{formData.moeda_consolidacao}</span>
           </div>
-          <div>
-            <span className="text-muted-foreground">Cotação:</span>{" "}
-            <span className="font-medium">
-              {formData.fonte_cotacao === "PTAX" 
-                ? "PTAX automática" 
-                : formData.cotacao_trabalho 
-                  ? `R$ ${formData.cotacao_trabalho}` 
-                  : "Pendente"}
-            </span>
-          </div>
+          {formData.moeda_consolidacao === "USD" && (
+            <div>
+              <span className="text-muted-foreground">Cotação:</span>{" "}
+              <span className="font-medium">
+                {formData.fonte_cotacao === "PTAX" 
+                  ? "PTAX automática" 
+                  : formData.cotacao_trabalho 
+                    ? `R$ ${formData.cotacao_trabalho}` 
+                    : "Pendente"}
+              </span>
+            </div>
+          )}
           <div>
             <span className="text-muted-foreground">Crypto:</span>{" "}
             <span className="font-medium">
