@@ -168,7 +168,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const [surebets, setSurebets] = useState<Surebet[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSurebet, setSelectedSurebet] = useState<Surebet | null>(null);
   
