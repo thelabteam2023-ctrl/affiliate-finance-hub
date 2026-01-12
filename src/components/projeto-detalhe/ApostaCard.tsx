@@ -224,7 +224,21 @@ function defaultFormatCurrency(value: number, moeda: string = "BRL"): string {
   return `${symbol} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function ApostaCard({ 
+/**
+ * Converte string de data do banco para Date local sem conversão de timezone
+ * Resolve o problema de datas sendo exibidas com offset incorreto
+ */
+const parseLocalDateTime = (dateString: string): Date => {
+  if (!dateString) return new Date();
+  // Remove timezone info para interpretar como hora local
+  const cleanDate = dateString.replace(/\+00:00$/, '').replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
+  const [datePart, timePart] = cleanDate.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
+  return new Date(year, month - 1, day, hours || 0, minutes || 0);
+};
+
+export function ApostaCard({
   aposta, 
   estrategia, 
   onClick,
@@ -392,7 +406,7 @@ export function ApostaCard({
           <div className="flex items-center justify-between pt-2 border-t border-border/50">
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">
-                {format(new Date(aposta.data_aposta), "dd/MM/yy HH:mm", { locale: ptBR })}
+                {format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy HH:mm", { locale: ptBR })}
               </span>
               {isForeignCurrency && (
                 <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
@@ -497,7 +511,7 @@ export function ApostaCard({
         <div className="flex justify-between items-center pt-2 border-t">
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground">
-              {format(new Date(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
+              {format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
             </span>
             {/* Só mostra casa/vínculo para apostas simples (sem pernas) */}
             {!hasPernas && (aposta.bookmaker_nome || aposta.parceiro_nome || aposta.operador_nome) && (
