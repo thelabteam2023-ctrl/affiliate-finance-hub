@@ -143,7 +143,8 @@ export function calcularMetaDiaria(ciclo: CicloBase, valorAtual: number = 0): {
   const dataFimPrevista = parseLocalDate(ciclo.data_fim_prevista);
   dataFimPrevista.setHours(0, 0, 0, 0);
   
-  const diasTotais = Math.ceil((dataFimPrevista.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24));
+  // +1 para incluir tanto o dia inicial quanto o final (cálculo inclusivo)
+  const diasTotais = Math.ceil((dataFimPrevista.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const diasDecorridos = Math.max(0, Math.ceil((hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)));
   const diasRestantes = Math.max(0, diasTotais - diasDecorridos);
   
