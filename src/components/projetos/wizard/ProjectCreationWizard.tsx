@@ -252,7 +252,7 @@ export function ProjectCreationWizard({
           meta_volume: formData.ciclo_meta_volume || null,
           metrica_acumuladora: formData.ciclo_metrica || "LUCRO",
           status: "EM_ANDAMENTO", // Status válido conforme default do banco
-          tipo_gatilho: formData.ciclo_metrica === "VOLUME" ? "META" : "TEMPO",
+          tipo_gatilho: formData.ciclo_meta_volume ? "META" : "TEMPO", // Se tem meta definida, é por META
           user_id: session.session.user.id,
           workspace_id: workspaceId!,
         });
