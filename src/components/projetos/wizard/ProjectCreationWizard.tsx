@@ -243,18 +243,24 @@ export function ProjectCreationWizard({
       }
 
       // Create cycle if requested
-      if (formData.criar_ciclo && formData.ciclo_nome) {
-        await supabase.from("projeto_ciclos").insert({
+      if (formData.criar_ciclo && formData.ciclo_data_inicio && formData.ciclo_data_fim) {
+        const { error: cicloError } = await supabase.from("projeto_ciclos").insert({
           projeto_id: projectId,
-          nome: formData.ciclo_nome,
+          observacoes: formData.ciclo_nome || null, // tabela usa "observacoes" não "nome"
           data_inicio: formData.ciclo_data_inicio,
           data_fim_prevista: formData.ciclo_data_fim,
-          meta_volume: formData.ciclo_meta_volume,
-          metrica_acumuladora: formData.ciclo_metrica,
-          status: "ATIVO",
+          meta_volume: formData.ciclo_meta_volume || null,
+          metrica_acumuladora: formData.ciclo_metrica || "LUCRO",
+          status: "EM_ANDAMENTO", // Status válido conforme default do banco
+          tipo_gatilho: formData.ciclo_metrica === "VOLUME" ? "META" : "TEMPO",
           user_id: session.session.user.id,
           workspace_id: workspaceId!,
         });
+
+        if (cicloError) {
+          console.error("Erro ao criar ciclo:", cicloError);
+          toast.warning("Projeto criado, mas houve erro ao criar o ciclo inicial");
+        }
       }
 
       // Activate selected modules
