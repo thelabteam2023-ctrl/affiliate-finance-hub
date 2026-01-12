@@ -95,7 +95,11 @@ function ResultadoBadge({ resultado }: { resultado: string | null | undefined })
   );
 }
 
-// Componente helper para exibir logo da casa
+// Tamanho padrão do logo (aumentado ~20%)
+const LOGO_SIZE = "h-7 w-7"; // era h-6 w-6
+const LOGO_COLUMN_WIDTH = "w-9"; // largura fixa da coluna de logos
+
+// Componente helper para exibir logo da casa com tamanho padronizado
 function BookmakerLogo({ 
   nome, 
   getLogoUrl 
@@ -110,20 +114,20 @@ function BookmakerLogo({
       <img 
         src={logoUrl} 
         alt={nome} 
-        className="h-6 w-6 rounded object-contain bg-white/10 p-0.5 shrink-0"
+        className={cn(LOGO_SIZE, "rounded-md object-contain bg-white/10 p-0.5")}
         onError={(e) => { e.currentTarget.style.display = 'none'; }}
       />
     );
   }
   
   return (
-    <div className="h-6 w-6 rounded bg-muted/30 flex items-center justify-center shrink-0">
-      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+    <div className={cn(LOGO_SIZE, "rounded-md bg-muted/30 flex items-center justify-center")}>
+      <Building2 className="h-4 w-4 text-muted-foreground" />
     </div>
   );
 }
 
-// Componente para exibir uma perna com suporte a múltiplas entradas
+// Componente para exibir uma perna com layout de grid fixo
 function PernaItem({ 
   perna, 
   formatValue,
@@ -141,61 +145,97 @@ function PernaItem({
   const displayStake = perna.stake_total || perna.stake;
   
   if (!hasMultipleEntries) {
-    // Exibição simples para entrada única
+    // Layout de grid: [Logo Fixa] [Badge] [Nome Casa] [Odd + Stake]
     return (
-      <div className="flex items-center gap-2 text-xs">
-        <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10">
+      <div className="grid grid-cols-[2.25rem_auto_1fr_auto] gap-2 items-center text-xs">
+        {/* Coluna 1: Logo - largura fixa */}
+        <div className={cn(LOGO_COLUMN_WIDTH, "flex justify-center")}>
+          <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
+        </div>
+        
+        {/* Coluna 2: Badge de seleção */}
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10 w-fit">
           {perna.selecao_livre || perna.selecao}
         </Badge>
-        <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
-        <span className="text-muted-foreground truncate flex-1 uppercase">
+        
+        {/* Coluna 3: Nome da casa */}
+        <span className="text-muted-foreground truncate uppercase">
           {perna.bookmaker_nome}
         </span>
-        <span className="font-medium shrink-0">@{perna.odd.toFixed(2)}</span>
-        <span className="text-muted-foreground shrink-0">• {formatValue(perna.stake)}</span>
+        
+        {/* Coluna 4: Odd e Stake */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="font-medium">@{perna.odd.toFixed(2)}</span>
+          <span className="text-muted-foreground">• {formatValue(perna.stake)}</span>
+        </div>
       </div>
     );
   }
   
-  // Exibição expandível para múltiplas entradas
+  // Exibição expandível para múltiplas entradas - mesmo grid
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
         <button 
-          className="w-full flex items-center gap-2 text-xs hover:bg-muted/30 rounded-md p-1 -mx-1 transition-colors"
+          className="w-full grid grid-cols-[2.25rem_auto_1fr_auto_auto] gap-2 items-center text-xs hover:bg-muted/30 rounded-md py-1 transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10">
+          {/* Coluna 1: Espaço reservado para logo (vazio no header) */}
+          <div className={cn(LOGO_COLUMN_WIDTH, "flex justify-center")}>
+            <div className={cn(LOGO_SIZE, "rounded-md bg-gradient-to-br from-primary/20 to-amber-500/20 flex items-center justify-center")}>
+              <Layers className="h-3.5 w-3.5 text-primary" />
+            </div>
+          </div>
+          
+          {/* Coluna 2: Badge de seleção */}
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10 w-fit">
             {perna.selecao_livre || perna.selecao}
           </Badge>
-          <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/30 text-amber-400 bg-amber-500/10 flex items-center gap-0.5">
-            <Layers className="h-2.5 w-2.5" />
-            {perna.entries?.length}
-          </Badge>
-          <span className="text-muted-foreground flex-1 text-left">
-            <span className="text-[9px]">média:</span>
-          </span>
-          <span className="font-medium shrink-0">@{displayOdd.toFixed(2)}</span>
-          <span className="text-muted-foreground shrink-0">• {formatValue(displayStake)}</span>
+          
+          {/* Coluna 3: Indicador de múltiplas entradas */}
+          <div className="flex items-center gap-1.5 text-left">
+            <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/30 text-amber-400 bg-amber-500/10 flex items-center gap-0.5">
+              {perna.entries?.length} casas
+            </Badge>
+            <span className="text-muted-foreground text-[9px]">média:</span>
+          </div>
+          
+          {/* Coluna 4: Odd e Stake */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="font-medium">@{displayOdd.toFixed(2)}</span>
+            <span className="text-muted-foreground">• {formatValue(displayStake)}</span>
+          </div>
+          
+          {/* Coluna 5: Chevron */}
           {isOpen ? (
-            <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
+            <ChevronUp className="h-3 w-3 text-muted-foreground" />
           ) : (
-            <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+            <ChevronDown className="h-3 w-3 text-muted-foreground" />
           )}
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="animate-in slide-in-from-top-1 duration-200">
-        <div className="pl-4 border-l-2 border-primary/20 ml-2 mt-1 space-y-1">
+        <div className="mt-1 space-y-1.5 ml-1 pl-3 border-l-2 border-primary/20">
           {perna.entries?.map((entry, idx) => (
-            <div key={idx} className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <BookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
-              <span className="truncate flex-1 uppercase">{entry.bookmaker_nome}</span>
-              {/* Mostrar linha se diferente entre entradas */}
-              {entry.selecao_livre && (
-                <span className="text-primary/70 text-[9px] shrink-0">({entry.selecao_livre})</span>
-              )}
-              <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
-              <span>• {formatValue(entry.stake)}</span>
+            <div key={idx} className="grid grid-cols-[2rem_1fr_auto] gap-2 items-center text-[10px] text-muted-foreground">
+              {/* Coluna 1: Logo menor */}
+              <div className="w-8 flex justify-center">
+                <BookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
+              </div>
+              
+              {/* Coluna 2: Nome + linha opcional */}
+              <div className="flex items-center gap-1.5 truncate">
+                <span className="truncate uppercase">{entry.bookmaker_nome}</span>
+                {entry.selecao_livre && (
+                  <span className="text-primary/70 text-[9px] shrink-0">({entry.selecao_livre})</span>
+                )}
+              </div>
+              
+              {/* Coluna 3: Odd + Stake */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
+                <span>• {formatValue(entry.stake)}</span>
+              </div>
             </div>
           ))}
         </div>
