@@ -15,7 +15,7 @@
 ### Finance (Financeiro)
 | Módulo | Permissões Base |
 |--------|-----------------|
-| Bookmakers | `bookmakers.accounts.read`, `bookmakers.accounts.create`, `bookmakers.accounts.edit`, `bookmakers.catalog.read`, `bookmakers.transactions.create`, `bookmakers.transactions.read` |
+| Bookmakers | `bookmakers.accounts.read`, `bookmakers.accounts.create`, `bookmakers.accounts.edit`, `bookmakers.accounts.status`, `bookmakers.catalog.read`, `bookmakers.transactions.create`, `bookmakers.transactions.read` |
 | Caixa | `caixa.read`, `caixa.reports.read`, `caixa.transactions.confirm`, `caixa.transactions.create` |
 | Captação | `captacao.pagamentos.create`, `captacao.read` |
 | Financeiro | `financeiro.despesas.create`, `financeiro.despesas.edit`, `financeiro.participacoes.read`, `financeiro.read` |
