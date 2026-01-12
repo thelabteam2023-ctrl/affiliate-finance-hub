@@ -1007,6 +1007,9 @@ export type Database = {
       }
       cash_ledger: {
         Row: {
+          ajuste_direcao: string | null
+          ajuste_motivo: string | null
+          auditoria_metadata: Json | null
           coin: string | null
           cotacao: number | null
           cotacao_implicita: number | null
@@ -1031,6 +1034,7 @@ export type Database = {
           origem_tipo: string | null
           origem_wallet_id: string | null
           qtd_coin: number | null
+          referencia_transacao_id: string | null
           status: string
           status_valor: string | null
           tipo_moeda: string
@@ -1045,6 +1049,9 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          ajuste_direcao?: string | null
+          ajuste_motivo?: string | null
+          auditoria_metadata?: Json | null
           coin?: string | null
           cotacao?: number | null
           cotacao_implicita?: number | null
@@ -1069,6 +1076,7 @@ export type Database = {
           origem_tipo?: string | null
           origem_wallet_id?: string | null
           qtd_coin?: number | null
+          referencia_transacao_id?: string | null
           status?: string
           status_valor?: string | null
           tipo_moeda: string
@@ -1083,6 +1091,9 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          ajuste_direcao?: string | null
+          ajuste_motivo?: string | null
+          auditoria_metadata?: Json | null
           coin?: string | null
           cotacao?: number | null
           cotacao_implicita?: number | null
@@ -1107,6 +1118,7 @@ export type Database = {
           origem_tipo?: string | null
           origem_wallet_id?: string | null
           qtd_coin?: number | null
+          referencia_transacao_id?: string | null
           status?: string
           status_valor?: string | null
           tipo_moeda?: string
@@ -1325,6 +1337,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_ledger_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -1440,6 +1466,13 @@ export type Database = {
             columns: ["cash_ledger_id"]
             isOneToOne: false
             referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_registros_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
             referencedColumns: ["id"]
           },
           {
@@ -2310,6 +2343,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "exchange_adjustments_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "exchange_adjustments_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
@@ -2605,6 +2645,13 @@ export type Database = {
             columns: ["cash_ledger_id"]
             isOneToOne: false
             referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
             referencedColumns: ["id"]
           },
           {
@@ -3679,6 +3726,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pagamentos_operador_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pagamentos_operador_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
@@ -4271,6 +4325,13 @@ export type Database = {
             columns: ["pagamento_ledger_id"]
             isOneToOne: false
             referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_pagamento_ledger_id_fkey"
+            columns: ["pagamento_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
             referencedColumns: ["id"]
           },
           {
@@ -6344,6 +6405,88 @@ export type Database = {
       }
     }
     Views: {
+      v_ajustes_auditoria: {
+        Row: {
+          ajuste_direcao: string | null
+          ajuste_motivo: string | null
+          auditoria_metadata: Json | null
+          created_at: string | null
+          data_transacao: string | null
+          descricao: string | null
+          destino_tipo: string | null
+          entidade_afetada_id: string | null
+          entidade_afetada_tipo: string | null
+          id: string | null
+          moeda: string | null
+          origem_tipo: string | null
+          referencia_transacao_id: string | null
+          tipo_transacao: string | null
+          user_id: string | null
+          valor: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          ajuste_direcao?: string | null
+          ajuste_motivo?: string | null
+          auditoria_metadata?: Json | null
+          created_at?: string | null
+          data_transacao?: string | null
+          descricao?: string | null
+          destino_tipo?: string | null
+          entidade_afetada_id?: never
+          entidade_afetada_tipo?: never
+          id?: string | null
+          moeda?: string | null
+          origem_tipo?: string | null
+          referencia_transacao_id?: string | null
+          tipo_transacao?: string | null
+          user_id?: string | null
+          valor?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          ajuste_direcao?: string | null
+          ajuste_motivo?: string | null
+          auditoria_metadata?: Json | null
+          created_at?: string | null
+          data_transacao?: string | null
+          descricao?: string | null
+          destino_tipo?: string | null
+          entidade_afetada_id?: never
+          entidade_afetada_tipo?: never
+          id?: string | null
+          moeda?: string | null
+          origem_tipo?: string | null
+          referencia_transacao_id?: string | null
+          tipo_transacao?: string | null
+          user_id?: string | null
+          valor?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_alertas_parcerias: {
         Row: {
           data_fim_prevista: string | null
