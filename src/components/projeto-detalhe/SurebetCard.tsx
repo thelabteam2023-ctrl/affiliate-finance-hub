@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2 } from "lucide-react";
@@ -181,10 +181,14 @@ function PernaItem({
     return (
       <div className="flex items-center gap-3">
         {/* Badge de seleção - largura fixa para alinhamento perfeito */}
-        <div className="w-16 shrink-0">
-          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 truncate max-w-full", selecaoBadgeStyle)}>
+        <div className="w-[76px] shrink-0">
+          <SelectionBadge 
+            colorClassName={selecaoBadgeStyle}
+            minWidth={64}
+            maxWidth={72}
+          >
             {perna.selecao_livre || perna.selecao}
-          </Badge>
+          </SelectionBadge>
         </div>
         
         {/* Logo */}
@@ -214,10 +218,14 @@ function PernaItem({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Badge de seleção - largura fixa */}
-          <div className="w-16 shrink-0">
-            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 truncate max-w-full", selecaoBadgeStyle)}>
+          <div className="w-[76px] shrink-0">
+            <SelectionBadge 
+              colorClassName={selecaoBadgeStyle}
+              minWidth={64}
+              maxWidth={72}
+            >
               {perna.selecao_livre || perna.selecao}
-            </Badge>
+            </SelectionBadge>
           </div>
           
           {/* Ícone de múltiplas entradas */}
