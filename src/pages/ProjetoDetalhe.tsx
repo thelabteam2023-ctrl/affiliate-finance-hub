@@ -367,17 +367,20 @@ export default function ProjetoDetalhe() {
       // Fetch apostas summary (will use period filter)
       await fetchApostasResumo();
 
-      // Fetch entrega ativa (ciclo em andamento)
-      const { data: entregaData } = await supabase
-        .from("entregas")
-        .select("data_fim_prevista, operador_projetos!inner(projeto_id)")
-        .eq("operador_projetos.projeto_id", id)
-        .eq("status", "em_andamento")
-        .order("numero_entrega", { ascending: false })
+      // Fetch ciclo ativo (vigente - com data_inicio <= hoje e data_fim_prevista >= hoje)
+      const hoje = new Date().toISOString().split('T')[0];
+      const { data: cicloData } = await supabase
+        .from("projeto_ciclos")
+        .select("data_fim_prevista")
+        .eq("projeto_id", id)
+        .eq("status", "EM_ANDAMENTO")
+        .lte("data_inicio", hoje)
+        .gte("data_fim_prevista", hoje)
+        .order("numero_ciclo", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      setEntregaAtiva(entregaData);
+      setEntregaAtiva(cicloData);
 
     } catch (error: any) {
       toast.error("Erro ao carregar projeto: " + error.message);
