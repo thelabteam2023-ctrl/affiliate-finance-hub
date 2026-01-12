@@ -552,49 +552,47 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
             const roiGeral = totalVolume > 0 ? (totalLucro / totalVolume) * 100 : 0;
             
             return (
-              <div className="mt-4 pt-4 border-t">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="mt-3 pt-3 border-t">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {/* Total Metas */}
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                      <Target className="h-3 w-3" />
+                  <div className="bg-muted/30 rounded-md p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground mb-0.5 flex items-center justify-center gap-1">
+                      <Target className="h-2.5 w-2.5" />
                       Total de Metas
                     </p>
-                    <p className="text-sm font-semibold">
+                    <p className="text-xs font-semibold">
                       {totalMetas > 0 ? formatCurrency(totalMetas) : "—"}
                     </p>
                   </div>
                   
                   {/* Total Atingido */}
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />
+                  <div className="bg-muted/30 rounded-md p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground mb-0.5 flex items-center justify-center gap-1">
+                      <TrendingUp className="h-2.5 w-2.5" />
                       Total Atingido
                     </p>
-                    <p className={`text-sm font-semibold ${totalLucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    <p className={`text-xs font-semibold ${totalLucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                       {formatCurrency(totalLucro)}
                     </p>
                   </div>
                   
                   {/* ROI Geral */}
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-1">ROI Geral</p>
-                    <p className={`text-sm font-semibold ${roiGeral >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                  <div className="bg-muted/30 rounded-md p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">ROI Geral</p>
+                    <p className={`text-xs font-semibold ${roiGeral >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                       {roiGeral.toFixed(2)}%
                     </p>
                   </div>
                   
                   {/* Progresso das Metas */}
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Progresso</p>
+                  <div className="bg-muted/30 rounded-md p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Progresso</p>
                     {totalMetas > 0 ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className={`text-sm font-semibold ${progressoMeta >= 100 ? "text-emerald-500" : "text-primary"}`}>
-                            {progressoMeta.toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                      <div className="space-y-0.5">
+                        <span className={`text-xs font-semibold ${progressoMeta >= 100 ? "text-emerald-500" : "text-primary"}`}>
+                          {progressoMeta.toFixed(1)}%
+                        </span>
+                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                           <div 
                             className={`h-full transition-all duration-500 ${
                               progressoMeta >= 100 ? "bg-emerald-500" : "bg-primary"
@@ -604,13 +602,13 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">—</p>
+                      <p className="text-xs text-muted-foreground">—</p>
                     )}
                   </div>
                 </div>
                 
                 {/* Resumo textual */}
-                <p className="text-xs text-muted-foreground mt-3 text-center">
+                <p className="text-[10px] text-muted-foreground mt-2 text-center">
                   {totalApostas} apostas • Volume total: {formatCurrency(totalVolume)}
                 </p>
               </div>
