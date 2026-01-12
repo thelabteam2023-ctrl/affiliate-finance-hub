@@ -119,12 +119,15 @@ export function calcularDuracaoReal(ciclo: CicloBase): {
 }
 
 /**
- * Calcula a meta diária necessária para atingir o objetivo
+ * Calcula a meta diária do ciclo
+ * Meta diária = meta_volume / dias totais do ciclo (valor fixo original)
  */
 export function calcularMetaDiaria(ciclo: CicloBase, valorAtual: number = 0): {
   metaDiaria: number;
+  metaDiariaRestante: number;
   diasRestantes: number;
   diasTotais: number;
+  diasDecorridos: number;
   atrasado: boolean;
   projecao: number;
 } | null {
@@ -141,24 +144,29 @@ export function calcularMetaDiaria(ciclo: CicloBase, valorAtual: number = 0): {
   dataFimPrevista.setHours(0, 0, 0, 0);
   
   const diasTotais = Math.ceil((dataFimPrevista.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24));
-  const diasDecorridos = Math.ceil((hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24));
+  const diasDecorridos = Math.max(0, Math.ceil((hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)));
   const diasRestantes = Math.max(0, diasTotais - diasDecorridos);
+  
+  // Meta diária ORIGINAL = meta total / dias totais do ciclo (valor fixo)
+  const metaDiaria = diasTotais > 0 ? ciclo.meta_volume / diasTotais : 0;
   
   const faltaAtingir = ciclo.meta_volume - valorAtual;
   
   // Se já atingiu a meta
   if (faltaAtingir <= 0) {
     return {
-      metaDiaria: 0,
+      metaDiaria,
+      metaDiariaRestante: 0,
       diasRestantes,
       diasTotais,
+      diasDecorridos,
       atrasado: false,
       projecao: valorAtual,
     };
   }
   
-  // Meta diária = quanto falta / dias restantes
-  const metaDiaria = diasRestantes > 0 ? faltaAtingir / diasRestantes : faltaAtingir;
+  // Meta diária restante = quanto falta / dias restantes (para acompanhamento)
+  const metaDiariaRestante = diasRestantes > 0 ? faltaAtingir / diasRestantes : faltaAtingir;
   
   // Projeção: se continuar no ritmo atual
   const mediaAtual = diasDecorridos > 0 ? valorAtual / diasDecorridos : 0;
@@ -169,8 +177,10 @@ export function calcularMetaDiaria(ciclo: CicloBase, valorAtual: number = 0): {
   
   return {
     metaDiaria,
+    metaDiariaRestante,
     diasRestantes,
     diasTotais,
+    diasDecorridos,
     atrasado,
     projecao,
   };

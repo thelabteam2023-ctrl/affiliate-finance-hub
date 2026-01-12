@@ -69,8 +69,10 @@ export function CicloMetaDiaria({ ciclo, valorAtual, formatCurrency }: CicloMeta
   
   if (!metaDiaria) return null;
   
+  const faltaAtingir = (ciclo.meta_volume || 0) - valorAtual;
+  
   // Se já atingiu a meta
-  if (metaDiaria.metaDiaria <= 0) {
+  if (faltaAtingir <= 0) {
     return (
       <Badge variant="outline" className="text-xs gap-1 bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
         <Target className="h-3 w-3" />
@@ -100,44 +102,64 @@ export function CicloMetaDiaria({ ciclo, valorAtual, formatCurrency }: CicloMeta
         </TooltipTrigger>
         <TooltipContent side="bottom" className="max-w-xs">
           <div className="space-y-2 text-xs">
-            <p className="font-medium">Meta Diária Necessária</p>
+            <p className="font-medium">Meta Diária do Ciclo</p>
             <div className="space-y-1">
               <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Meta total:</span>
                 <span>{formatCurrency(ciclo.meta_volume || 0)}</span>
               </div>
               <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Duração:</span>
+                <span>{metaDiaria.diasTotais} dias</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Meta diária:</span>
+                <span className="font-medium">{formatCurrency(metaDiaria.metaDiaria)}/dia</span>
+              </div>
+            </div>
+            <div className="pt-2 border-t space-y-1">
+              <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">{metricaLabel.charAt(0).toUpperCase() + metricaLabel.slice(1)} atual:</span>
                 <span>{formatCurrency(valorAtual)}</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Falta atingir:</span>
-                <span>{formatCurrency((ciclo.meta_volume || 0) - valorAtual)}</span>
+                <span>{formatCurrency(faltaAtingir)}</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Dias restantes:</span>
                 <span>{metaDiaria.diasRestantes} de {metaDiaria.diasTotais}</span>
               </div>
+              {metaDiaria.diasRestantes > 0 && metaDiaria.diasDecorridos > 0 && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Precisa agora:</span>
+                  <span className={metaDiaria.atrasado ? "text-amber-400" : "text-emerald-400"}>
+                    {formatCurrency(metaDiaria.metaDiariaRestante)}/dia
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="pt-2 border-t">
-              <div className="flex items-center gap-2">
-                {metaDiaria.projecao >= (ciclo.meta_volume || 0) ? (
-                  <>
-                    <TrendingUp className="h-3 w-3 text-emerald-400" />
-                    <span className="text-emerald-400">
-                      Projeção: {formatCurrency(metaDiaria.projecao)} (no ritmo)
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <TrendingDown className="h-3 w-3 text-amber-400" />
-                    <span className="text-amber-400">
-                      Projeção: {formatCurrency(metaDiaria.projecao)} (abaixo)
-                    </span>
-                  </>
-                )}
+            {metaDiaria.diasDecorridos > 0 && (
+              <div className="pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  {metaDiaria.projecao >= (ciclo.meta_volume || 0) ? (
+                    <>
+                      <TrendingUp className="h-3 w-3 text-emerald-400" />
+                      <span className="text-emerald-400">
+                        Projeção: {formatCurrency(metaDiaria.projecao)} (no ritmo)
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <TrendingDown className="h-3 w-3 text-amber-400" />
+                      <span className="text-amber-400">
+                        Projeção: {formatCurrency(metaDiaria.projecao)} (abaixo)
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </TooltipContent>
       </Tooltip>
