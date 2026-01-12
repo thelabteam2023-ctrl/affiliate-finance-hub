@@ -75,7 +75,7 @@ export function CicloFiltersSimplified({
         <span className="text-xs text-muted-foreground font-medium">Tipo:</span>
         
         <Select value={activeTipo} onValueChange={(value) => onTipoChange(value as CicloTipoFilter)}>
-          <SelectTrigger className="h-8 w-[130px] text-xs">
+          <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
