@@ -195,7 +195,7 @@ export function CicloCardCompact({ ciclo, formatCurrency, onEdit, parseLocalDate
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2 pt-2 border-t">
-              <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap text-center">
                 {observacoes}
               </p>
             </CollapsibleContent>
