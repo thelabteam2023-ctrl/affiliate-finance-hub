@@ -441,26 +441,15 @@ export default function ProjetoDetalhe() {
                 <Badge className={`${getStatusColor(projeto.status)} text-xs`}>
                   {getStatusLabel(projeto.status)}
                 </Badge>
-                {projeto.data_inicio && (
-                  <span className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {getDiasAtivos()} dias
-                  </span>
-                )}
               </div>
               {projeto.descricao && (
                 <p className="text-muted-foreground text-sm truncate hidden sm:block">{projeto.descricao}</p>
               )}
               {projeto.tem_investimento_crypto && (
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-xs">
-                    <Coins className="h-3 w-3 mr-1" />
-                    Crypto
-                  </Badge>
-                  <Badge className={`${projeto.conciliado ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"} text-xs`}>
-                    {projeto.conciliado ? "Conciliado" : "Pendente"}
-                  </Badge>
-                </div>
+                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-xs mt-1">
+                  <Coins className="h-3 w-3 mr-1" />
+                  Crypto
+                </Badge>
               )}
             </div>
           </div>
