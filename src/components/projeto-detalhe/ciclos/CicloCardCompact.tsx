@@ -188,7 +188,7 @@ export function CicloCardCompact({ ciclo, formatCurrency, onEdit, parseLocalDate
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="w-full text-xs justify-between"
+                className="w-full text-xs justify-center gap-1.5"
               >
                 <span>Ver detalhes</span>
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
