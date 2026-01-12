@@ -660,18 +660,23 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           </Tooltip>
         </TooltipProvider>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bônus Ativo</CardTitle>
-            <Gift className="h-4 w-4 text-purple-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-400">{formatCurrency(consolidatedTotals.totalBonusBRL, "BRL")}</div>
-            <p className="text-xs text-muted-foreground">
-              {bonusSummary.bookmakers_with_active_bonus} casa{bonusSummary.bookmakers_with_active_bonus !== 1 ? 's' : ''} com bônus
-            </p>
-          </CardContent>
-        </Card>
+        {/* Bônus em Conversão - Só exibe se houver bônus ativo */}
+        {consolidatedTotals.totalBonusBRL > 0 && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Bônus em Conversão</CardTitle>
+              <Gift className="h-4 w-4 text-purple-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-400">
+                {formatCurrency(consolidatedTotals.totalBonusBRL, "BRL")}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {bonusSummary.bookmakers_with_active_bonus} casa{bonusSummary.bookmakers_with_active_bonus !== 1 ? 's' : ''} com bônus
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
