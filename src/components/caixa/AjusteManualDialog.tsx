@@ -200,8 +200,10 @@ export function AjusteManualDialog({
       };
 
       // Definir origem/destino baseado na direção
+      // Para ajustes manuais, usamos CAIXA_OPERACIONAL como contraparte padrão
       if (direcao === "ENTRADA") {
-        transactionData.origem_tipo = "AJUSTE";
+        // Entrada: origem é CAIXA_OPERACIONAL (ajuste), destino é onde o valor entra
+        transactionData.origem_tipo = "CAIXA_OPERACIONAL";
         if (tipoDestino === "CAIXA_OPERACIONAL") {
           transactionData.destino_tipo = "CAIXA_OPERACIONAL";
         } else if (tipoDestino === "BOOKMAKER") {
@@ -215,7 +217,8 @@ export function AjusteManualDialog({
           transactionData.destino_wallet_id = walletId;
         }
       } else {
-        transactionData.destino_tipo = "AJUSTE";
+        // Saída: origem é de onde sai o valor, destino é CAIXA_OPERACIONAL (ajuste)
+        transactionData.destino_tipo = "CAIXA_OPERACIONAL";
         if (tipoDestino === "CAIXA_OPERACIONAL") {
           transactionData.origem_tipo = "CAIXA_OPERACIONAL";
         } else if (tipoDestino === "BOOKMAKER") {
