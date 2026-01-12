@@ -80,34 +80,6 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
 
       {/* Cards opcionais em grid 2 colunas (desktop) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Investimento Crypto - Card compacto */}
-        <Card className={cn(
-          "transition-colors",
-          formData.tem_investimento_crypto && "border-orange-500/30"
-        )}>
-          <CardContent className="pt-4">
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="tem_crypto"
-                checked={formData.tem_investimento_crypto}
-                onCheckedChange={(checked) =>
-                  onChange({ tem_investimento_crypto: checked as boolean })
-                }
-              />
-              <div className="space-y-1 flex-1">
-                <Label htmlFor="tem_crypto" className="flex items-center gap-2 cursor-pointer">
-                  <Coins className="h-4 w-4 text-orange-500" />
-                  Investimento Crypto
-                  <Badge variant="secondary" className="text-xs ml-auto">Opcional</Badge>
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Ativa conciliação patrimonial obrigatória
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Participação de Investidor - Card com expansão interna */}
         <Card className={cn(
           "transition-colors",
@@ -211,6 +183,34 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
                   </div>
                 </div>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Investimento Crypto - Card compacto */}
+        <Card className={cn(
+          "transition-colors",
+          formData.tem_investimento_crypto && "border-orange-500/30"
+        )}>
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="tem_crypto"
+                checked={formData.tem_investimento_crypto}
+                onCheckedChange={(checked) =>
+                  onChange({ tem_investimento_crypto: checked as boolean })
+                }
+              />
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="tem_crypto" className="flex items-center gap-2 cursor-pointer">
+                  <Coins className="h-4 w-4 text-orange-500" />
+                  Investimento Crypto
+                  <Badge variant="secondary" className="text-xs ml-auto">Opcional</Badge>
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Ativa conciliação patrimonial obrigatória
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
