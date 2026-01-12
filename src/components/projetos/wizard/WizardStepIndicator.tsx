@@ -4,7 +4,7 @@
  * Suporta etapas puladas (auto-resolvidas)
  */
 
-import { Check, Minus } from "lucide-react";
+import { Check, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WizardStep, WIZARD_STEPS, STEP_CONFIG } from "./ProjectCreationWizardTypes";
 import {
@@ -49,9 +49,11 @@ export function WizardStepIndicator({
                 key={`line-${step}`}
                 className={cn(
                   "flex-1 h-0.5 transition-colors duration-300",
-                  isPast || isCompleted || isSkipped 
-                    ? isSkipped ? "bg-muted-foreground/40" : "bg-primary" 
-                    : "bg-muted-foreground/20"
+                  isSkipped 
+                    ? "bg-amber-500/50" 
+                    : isPast || isCompleted 
+                      ? "bg-primary" 
+                      : "bg-muted-foreground/20"
                 )}
               />
             );
@@ -75,23 +77,23 @@ export function WizardStepIndicator({
                 return (
                   <Tooltip key={step}>
                     <TooltipTrigger asChild>
-                      <div className="flex flex-col items-center cursor-not-allowed opacity-60">
-                        {/* Círculo - etapa pulada */}
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-muted-foreground/30 bg-muted/30">
-                          <Minus className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex flex-col items-center">
+                        {/* Círculo - etapa pulada (amarelo warning) */}
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-amber-500/60 bg-amber-500/15">
+                          <SkipForward className="h-4 w-4 text-amber-500" />
                         </div>
 
                         {/* Label */}
                         <div className="mt-2 text-center">
-                          <p className="text-xs font-medium text-muted-foreground/60 line-through">
+                          <p className="text-xs font-medium text-amber-500/80">
                             {config.label}
                           </p>
-                          <span className="text-[10px] text-muted-foreground/50">Pulada</span>
+                          <span className="text-[10px] text-amber-500/60">Pulada</span>
                         </div>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="text-xs">
-                      Etapa não aplicável para BRL
+                      Não aplicável para projeto em BRL sem crypto
                     </TooltipContent>
                   </Tooltip>
                 );
