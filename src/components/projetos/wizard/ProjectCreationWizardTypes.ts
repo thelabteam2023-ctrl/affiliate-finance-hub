@@ -122,7 +122,7 @@ export const DEFAULT_FORM_DATA: ProjectFormData = {
   base_calculo_investidor: "LUCRO_LIQUIDO",
   
   // Etapa 2
-  moeda_consolidacao: "USD",
+  moeda_consolidacao: "BRL",
   fonte_cotacao: "TRABALHO",
   cotacao_trabalho: null,
   
