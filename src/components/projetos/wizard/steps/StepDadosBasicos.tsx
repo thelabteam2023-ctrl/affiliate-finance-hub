@@ -51,17 +51,17 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label>Nome *</Label>
-        <Input
-          value={formData.nome}
-          onChange={(e) => onChange({ nome: e.target.value.toUpperCase() })}
-          placeholder="NOME DO PROJETO"
-          className="uppercase"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
+      {/* Grid responsivo: 3 colunas desktop (50%/25%/25%), 2 colunas tablet, stack mobile */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr] gap-4">
+        <div className="space-y-2 md:col-span-2 lg:col-span-1">
+          <Label>Nome *</Label>
+          <Input
+            value={formData.nome}
+            onChange={(e) => onChange({ nome: e.target.value.toUpperCase() })}
+            placeholder="NOME DO PROJETO"
+            className="uppercase"
+          />
+        </div>
         <div className="space-y-2">
           <Label>Data de Início *</Label>
           <DatePicker
