@@ -37,9 +37,9 @@ export const STEP_CONFIG: Record<WizardStep, {
     required: true,
   },
   estrutura: {
-    label: "Estrutura",
-    description: "Configuração operacional",
-    required: true,
+    label: "Taxas",
+    description: "Absorção de taxas",
+    required: false,
   },
   operador: {
     label: "Operador",
