@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoricoVinculosTab } from "./HistoricoVinculosTab";
 import { HistoricoConciliacoesTab } from "./HistoricoConciliacoesTab";
 import { VinculoBonusDrawer } from "./VinculoBonusDrawer";
+import { BalanceDiscrepancyAlert } from "./BalanceDiscrepancyAlert";
 import { DeltaCambialCard } from "./DeltaCambialCard";
 import { ConciliacaoVinculoDialog } from "./ConciliacaoVinculoDialog";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
@@ -718,6 +719,14 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           />
         )}
       </div>
+      
+      {/* Alerta de discrepância de saldo */}
+      <BalanceDiscrepancyAlert
+        projetoId={projetoId}
+        formatCurrency={(val, moeda) => formatCurrency(val, moeda || "BRL")}
+        onFixed={fetchVinculos}
+      />
+      
       <div className="flex items-center gap-4 flex-wrap">
         {/* Botão Adicionar Vínculos - com controle de responsabilidade */}
         <TooltipProvider>
