@@ -71,6 +71,9 @@ interface EvolucaoData {
   acumulado: number;
   impacto: number;
   resultado: string;
+  // Campos extras para modo consolidado diário
+  isConsolidated?: boolean;
+  apostasNoDia?: number;
 }
 
 interface VisaoGeralChartsProps {
@@ -116,13 +119,37 @@ interface EvolucaoLucroChartProps {
 }
 
 // Tooltip customizado para mostrar detalhes da entrada
-const createCustomTooltip = (formatCurrency: (value: number) => string) => {
+const createCustomTooltip = (formatCurrency: (value: number) => string, isSingleDayPeriod: boolean) => {
   return ({ active, payload }: any) => {
     if (!active || !payload || !payload.length) return null;
     
     const data = payload[0].payload as EvolucaoData;
     const isPositive = data.impacto >= 0;
     
+    // Modo consolidado (período > 1 dia)
+    if (data.isConsolidated) {
+      return (
+        <div className="bg-popover border border-border rounded-lg p-3 shadow-lg text-sm space-y-1.5">
+          <div className="font-semibold text-foreground border-b border-border pb-1.5 mb-1.5">
+            {data.data}
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <span className="text-muted-foreground">Apostas:</span>
+            <span className="text-foreground font-medium">{data.apostasNoDia}</span>
+            <span className="text-muted-foreground">Lucro do dia:</span>
+            <span className={`font-semibold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+              {isPositive ? '+' : ''}{formatCurrency(data.impacto)}
+            </span>
+            <span className="text-muted-foreground">Acumulado:</span>
+            <span className={`font-bold ${data.acumulado >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              {formatCurrency(data.acumulado)}
+            </span>
+          </div>
+        </div>
+      );
+    }
+    
+    // Modo entrada por entrada (período 1 dia)
     return (
       <div className="bg-popover border border-border rounded-lg p-3 shadow-lg text-sm space-y-1.5">
         <div className="font-semibold text-foreground border-b border-border pb-1.5 mb-1.5">
@@ -209,7 +236,7 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurren
           width={60}
           tickFormatter={(v) => formatChartAxis(v)}
         />
-        <RechartsTooltip content={createCustomTooltip(formatCurrency)} />
+        <RechartsTooltip content={createCustomTooltip(formatCurrency, isSingleDayPeriod)} />
         <Area
           type="monotone"
           dataKey="acumulado"
@@ -455,41 +482,78 @@ export function VisaoGeralCharts({
       (a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
     );
     
-    let acumulado = 0;
-    let lastDateLabel = "";
+    // MODO 1: Período de 1 dia → entrada por entrada
+    if (isSingleDayPeriod) {
+      let acumulado = 0;
+      return sorted.map((a, index) => {
+        const impacto = a.lucro_prejuizo || 0;
+        acumulado += impacto;
+        const date = new Date(a.data_aposta);
+        const dataFormatada = format(date, "dd/MM", { locale: ptBR });
+        const horaFormatada = format(date, "HH:mm", { locale: ptBR });
+        
+        return {
+          entrada: index + 1,
+          data: dataFormatada,
+          hora: horaFormatada,
+          xLabel: horaFormatada,
+          acumulado,
+          impacto,
+          resultado: impacto >= 0 ? 'GREEN' : 'RED',
+          isConsolidated: false,
+          apostasNoDia: 1,
+        };
+      });
+    }
     
-    return sorted.map((a, index) => {
-      const impacto = a.lucro_prejuizo || 0;
-      acumulado += impacto;
+    // MODO 2: Período > 1 dia → consolidado diário (um ponto por data)
+    // Agrupa apostas por data e soma os lucros
+    const dailyMap = new Map<string, { 
+      lucroTotal: number; 
+      apostasCount: number; 
+      dateKey: string;
+      dataFormatada: string;
+    }>();
+    
+    sorted.forEach((a) => {
       const date = new Date(a.data_aposta);
-      
+      const dateKey = format(date, "yyyy-MM-dd"); // Chave única por dia
       const dataFormatada = format(date, "dd/MM", { locale: ptBR });
-      const horaFormatada = format(date, "HH:mm", { locale: ptBR });
+      const impacto = a.lucro_prejuizo || 0;
       
-      // Eixo X: hora para período de 1 dia, data para períodos maiores
-      // Mostra o label apenas na primeira ocorrência de cada data/hora
-      let xLabel: string;
-      if (isSingleDayPeriod) {
-        // Para 1 dia: sempre mostra hora (pode repetir se houver mesmo horário)
-        xLabel = horaFormatada;
+      const existing = dailyMap.get(dateKey);
+      if (existing) {
+        existing.lucroTotal += impacto;
+        existing.apostasCount += 1;
       } else {
-        // Para múltiplos dias: mostra data apenas na primeira entrada do dia
-        if (dataFormatada !== lastDateLabel) {
-          xLabel = dataFormatada;
-          lastDateLabel = dataFormatada;
-        } else {
-          xLabel = ""; // Oculta label para entradas subsequentes do mesmo dia
-        }
+        dailyMap.set(dateKey, {
+          lucroTotal: impacto,
+          apostasCount: 1,
+          dateKey,
+          dataFormatada,
+        });
       }
+    });
+    
+    // Converte para array ordenado e calcula acumulado
+    const dailyEntries = Array.from(dailyMap.values()).sort(
+      (a, b) => a.dateKey.localeCompare(b.dateKey)
+    );
+    
+    let acumulado = 0;
+    return dailyEntries.map((day, index) => {
+      acumulado += day.lucroTotal;
       
       return {
         entrada: index + 1,
-        data: dataFormatada,
-        hora: horaFormatada,
-        xLabel,
+        data: day.dataFormatada,
+        hora: "",
+        xLabel: day.dataFormatada,
         acumulado,
-        impacto,
-        resultado: impacto >= 0 ? 'GREEN' : 'RED',
+        impacto: day.lucroTotal,
+        resultado: day.lucroTotal >= 0 ? 'GREEN' : 'RED',
+        isConsolidated: true,
+        apostasNoDia: day.apostasCount,
       };
     });
   }, [apostas, isSingleDayPeriod]);
@@ -667,7 +731,12 @@ export function VisaoGeralCharts({
               </Badge>
             </div>
           </div>
-          <CardDescription className="text-xs">{isSingleDayPeriod ? "Evolução por horário" : "Evolução por data"} ({evolucaoData.length} apostas)</CardDescription>
+          <CardDescription className="text-xs">
+            {isSingleDayPeriod 
+              ? `Evolução por entrada (${apostas.length} apostas)` 
+              : `Acumulado diário (${evolucaoData.length} dias • ${apostas.length} apostas)`
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
@@ -724,7 +793,12 @@ export function VisaoGeralCharts({
               </Badge>
             </div>
           </div>
-          <CardDescription className="text-xs">{isSingleDayPeriod ? "Evolução por horário" : "Evolução por data"} ({evolucaoData.length} apostas)</CardDescription>
+          <CardDescription className="text-xs">
+            {isSingleDayPeriod 
+              ? `Evolução por entrada (${apostas.length} apostas)` 
+              : `Acumulado diário (${evolucaoData.length} dias • ${apostas.length} apostas)`
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
