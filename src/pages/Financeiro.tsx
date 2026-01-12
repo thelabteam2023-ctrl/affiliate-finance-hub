@@ -1256,8 +1256,8 @@ export default function Financeiro() {
                               <td className="py-3 px-4 w-[120px]">
                                 {format(parseISO(despesa.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
                               </td>
-                              <td className="py-3 px-4 w-[140px]">
-                                <Badge variant="outline">{despesa.categoria}</Badge>
+                              <td className="py-3 px-4">
+                                <Badge variant="outline" className="whitespace-nowrap">{despesa.categoria}</Badge>
                               </td>
                               <td className="py-3 px-4 text-muted-foreground">
                                 {despesa.descricao || "—"}
