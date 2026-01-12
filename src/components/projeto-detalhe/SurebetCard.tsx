@@ -127,18 +127,18 @@ function BookmakerLogo({
   );
 }
 
-// Helper para obter estilo do badge baseado no resultado
+// Helper para obter estilo do badge baseado no resultado (estilo translúcido)
 function getSelecaoBadgeStyle(resultado: string | null | undefined) {
   switch (resultado) {
     case "GREEN":
     case "MEIO_GREEN":
-      return "bg-emerald-500 text-white border-emerald-600";
+      return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
     case "RED":
     case "MEIO_RED":
-      return "bg-red-500 text-white border-red-600";
+      return "bg-red-500/20 text-red-400 border-red-500/30";
     case "VOID":
     case "EMPATE":
-      return "bg-gray-500 text-white border-gray-600";
+      return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     default:
       return "border-primary/30 text-primary bg-primary/10";
   }
