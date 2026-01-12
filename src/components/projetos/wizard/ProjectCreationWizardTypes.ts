@@ -82,6 +82,8 @@ export interface ProjectFormData {
   
   // Etapa 3 - Estrutura
   modelo_absorcao_taxas: string;
+  divisao_empresa_percentual: number;
+  divisao_operador_percentual: number;
   
   // Etapa 4 - Operador (opcional)
   vincular_operador: boolean;
@@ -128,6 +130,8 @@ export const DEFAULT_FORM_DATA: ProjectFormData = {
   
   // Etapa 3
   modelo_absorcao_taxas: "EMPRESA_100",
+  divisao_empresa_percentual: 50,
+  divisao_operador_percentual: 50,
   
   // Etapa 4 - Operador
   vincular_operador: false,
