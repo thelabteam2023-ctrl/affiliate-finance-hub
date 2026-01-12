@@ -89,14 +89,11 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
             <div className="space-y-4">
               {/* Header do card */}
               <div className="flex items-start gap-3">
-                <Checkbox
-                  id="tem_investidor"
-                  checked={hasInvestidor}
-                  onCheckedChange={handleToggleInvestidor}
-                />
+                <div className="p-1.5 rounded-md bg-purple-500/10">
+                  <Briefcase className="h-4 w-4 text-purple-500" />
+                </div>
                 <div className="space-y-1 flex-1">
-                  <Label htmlFor="tem_investidor" className="flex items-center gap-2 cursor-pointer">
-                    <Briefcase className="h-4 w-4 text-purple-500" />
+                  <Label className="flex items-center gap-2">
                     Participação de Investidor
                     <Badge variant="secondary" className="text-xs ml-auto">Opcional</Badge>
                   </Label>
