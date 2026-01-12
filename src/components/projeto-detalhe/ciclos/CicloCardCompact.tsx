@@ -30,7 +30,9 @@ interface CicloCardCompactProps {
 }
 
 export function CicloCardCompact({ ciclo, formatCurrency, onEdit, parseLocalDate }: CicloCardCompactProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  // Se há observações, inicia aberto
+  const hasObservacoes = Boolean(ciclo.observacoes?.split("\n\n📊")[0]?.trim());
+  const [isOpen, setIsOpen] = useState(hasObservacoes);
 
   const getTipoGatilhoBadge = () => {
     const temDataLimite = ciclo.data_fim_prevista && ciclo.data_fim_prevista !== ciclo.data_inicio;
@@ -190,7 +192,7 @@ export function CicloCardCompact({ ciclo, formatCurrency, onEdit, parseLocalDate
                 size="sm" 
                 className="w-full text-xs justify-center gap-1.5"
               >
-                <span>Ver detalhes</span>
+                <span>{isOpen ? 'Ocultar detalhes' : 'Ver detalhes'}</span>
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
               </Button>
             </CollapsibleTrigger>
