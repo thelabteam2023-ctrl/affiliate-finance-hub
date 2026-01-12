@@ -3,9 +3,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers } from "lucide-react";
+import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 
 // Estrutura de entrada individual (para múltiplas entradas)
 export interface SurebetPernaEntry {
@@ -94,13 +95,43 @@ function ResultadoBadge({ resultado }: { resultado: string | null | undefined })
   );
 }
 
+// Componente helper para exibir logo da casa
+function BookmakerLogo({ 
+  nome, 
+  getLogoUrl 
+}: { 
+  nome: string; 
+  getLogoUrl: (name: string) => string | null;
+}) {
+  const logoUrl = getLogoUrl(nome);
+  
+  if (logoUrl) {
+    return (
+      <img 
+        src={logoUrl} 
+        alt={nome} 
+        className="h-6 w-6 rounded object-contain bg-white/10 p-0.5 shrink-0"
+        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+      />
+    );
+  }
+  
+  return (
+    <div className="h-6 w-6 rounded bg-muted/30 flex items-center justify-center shrink-0">
+      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+    </div>
+  );
+}
+
 // Componente para exibir uma perna com suporte a múltiplas entradas
 function PernaItem({ 
   perna, 
-  formatValue 
+  formatValue,
+  getLogoUrl
 }: { 
   perna: SurebetPerna; 
   formatValue: (value: number) => string;
+  getLogoUrl: (name: string) => string | null;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const hasMultipleEntries = perna.entries && perna.entries.length > 1;
@@ -116,6 +147,7 @@ function PernaItem({
         <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10">
           {perna.selecao_livre || perna.selecao}
         </Badge>
+        <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
         <span className="text-muted-foreground truncate flex-1 uppercase">
           {perna.bookmaker_nome}
         </span>
@@ -156,6 +188,7 @@ function PernaItem({
         <div className="pl-4 border-l-2 border-primary/20 ml-2 mt-1 space-y-1">
           {perna.entries?.map((entry, idx) => (
             <div key={idx} className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <BookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
               <span className="truncate flex-1 uppercase">{entry.bookmaker_nome}</span>
               {/* Mostrar linha se diferente entre entradas */}
               {entry.selecao_livre && (
@@ -172,6 +205,9 @@ function PernaItem({
 }
 
 export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonusContext }: SurebetCardProps) {
+  // Hook para buscar logos das casas
+  const { getLogoUrl } = useBookmakerLogoMap();
+  
   // Usa formatCurrency do projeto ou fallback para BRL
   const formatValue = formatCurrency || defaultFormatCurrency;
   const isDuploGreen = surebet.estrategia === "DUPLO_GREEN";
@@ -263,7 +299,8 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
               <PernaItem 
                 key={perna.id} 
                 perna={perna} 
-                formatValue={formatValue} 
+                formatValue={formatValue}
+                getLogoUrl={getLogoUrl}
               />
             ))}
           </div>
