@@ -274,7 +274,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
   const [contextoFilter, setContextoFilter] = useState<ApostaContexto | "all">("all");
   const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas" | "surebets">("todas");
-  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [apostasSubTab, setApostasSubTab] = useState<HistorySubTab>("abertas");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
@@ -719,6 +719,13 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   // Separar apostas em abertas e histórico
   const apostasAbertasList = useMemo(() => apostasUnificadasBase.filter(isItemPendente), [apostasUnificadasBase]);
   const apostasHistoricoList = useMemo(() => apostasUnificadasBase.filter(item => !isItemPendente(item)), [apostasUnificadasBase]);
+
+  // Auto-switch to history tab when no open operations
+  useEffect(() => {
+    if (!loading && apostasAbertasList.length === 0 && apostasHistoricoList.length > 0 && apostasSubTab === 'abertas') {
+      setApostasSubTab('historico');
+    }
+  }, [loading, apostasAbertasList.length, apostasHistoricoList.length]);
   
   // Lista final baseada na sub-aba selecionada
   const apostasUnificadas = apostasSubTab === "abertas" ? apostasAbertasList : apostasHistoricoList;

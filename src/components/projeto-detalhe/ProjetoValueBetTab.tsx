@@ -532,6 +532,13 @@ export function ProjetoValueBetTab({
   // Separar apostas em abertas e histórico
   const apostasAbertas = useMemo(() => apostas.filter(a => !a.resultado || a.resultado === "PENDENTE"), [apostas]);
   const apostasHistorico = useMemo(() => apostas.filter(a => a.resultado && a.resultado !== "PENDENTE"), [apostas]);
+
+  // Auto-switch to history tab when no open operations
+  useEffect(() => {
+    if (!loading && apostasAbertas.length === 0 && apostasHistorico.length > 0 && apostasSubTab === 'abertas') {
+      setApostasSubTab('historico');
+    }
+  }, [loading, apostasAbertas.length, apostasHistorico.length]);
   
   // Aplicar filtros na lista atual (abertas ou histórico)
   const apostasListaAtual = apostasSubTab === "abertas" ? apostasAbertas : apostasHistorico;

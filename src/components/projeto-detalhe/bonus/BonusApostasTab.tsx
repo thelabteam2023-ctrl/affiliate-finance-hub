@@ -496,6 +496,13 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     return false;
   });
 
+  // Auto-switch to history tab when no open operations
+  useEffect(() => {
+    if (!loading && apostasAbertas.length === 0 && (apostasHistorico.length > 0 || bonuses.some(b => b.status === 'finalized')) && subTab === 'abertas') {
+      setSubTab('historico');
+    }
+  }, [loading, apostasAbertas.length, apostasHistorico.length, bonuses]);
+
   // Finalized bonuses for "Histórico" sub-tab
   const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
 

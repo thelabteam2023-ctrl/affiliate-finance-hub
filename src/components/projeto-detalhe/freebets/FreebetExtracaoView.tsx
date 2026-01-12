@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -148,6 +148,13 @@ export function FreebetExtracaoView({
   const apostasHistorico = apostasExtracao.filter(
     (ap) => ap.status === "LIQUIDADA" && ap.resultado !== "PENDENTE"
   );
+
+  // Auto-switch to history tab when no active operations
+  useEffect(() => {
+    if (apostasAtivas.length === 0 && apostasHistorico.length > 0 && subTab === 'abertas') {
+      setSubTab('historico');
+    }
+  }, [apostasAtivas.length, apostasHistorico.length]);
 
   return (
     <div className="space-y-6">

@@ -12,7 +12,7 @@ interface FreebetViewPreferences {
 const STORAGE_KEY = 'freebet-view-preferences';
 
 const defaultPreferences: FreebetViewPreferences = {
-  viewMode: 'card',
+  viewMode: 'list',
   compactMode: false,
   subTab: 'ativas',
 };

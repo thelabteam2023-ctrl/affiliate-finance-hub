@@ -37,7 +37,7 @@ export interface UseOperationsHistoryReturn {
 export function useOperationsHistory({
   storageKey,
   initialSubTab = "abertas",
-  initialViewMode = "cards",
+  initialViewMode = "list",
 }: UseOperationsHistoryOptions): UseOperationsHistoryReturn {
   // Sub-tab state
   const [subTab, setSubTab] = useState<HistorySubTab>(initialSubTab);
