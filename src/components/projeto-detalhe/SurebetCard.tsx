@@ -97,7 +97,6 @@ function ResultadoBadge({ resultado }: { resultado: string | null | undefined })
 
 // Tamanho padrão do logo - igual ao ApostaCard (h-10 w-10)
 const LOGO_SIZE = "h-10 w-10";
-const LOGO_COLUMN_WIDTH = "w-12"; // largura fixa da coluna de logos (3rem)
 
 // Componente helper para exibir logo da casa com tamanho padronizado
 function BookmakerLogo({ 
@@ -145,30 +144,30 @@ function PernaItem({
   const displayStake = perna.stake_total || perna.stake;
   
   if (!hasMultipleEntries) {
-    // Layout de grid: [Logo Fixa] [Badge Fixa] [Nome Casa] [Odd + Stake]
+    // Layout: [Badge Seleção Fixa] [Logo] [Nome Casa] [Odd + Stake à direita]
     return (
-      <div className="grid grid-cols-[3rem_4rem_1fr_auto] gap-2 items-center text-xs">
-        {/* Coluna 1: Logo - largura fixa */}
-        <div className={cn(LOGO_COLUMN_WIDTH, "flex justify-center")}>
-          <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
-        </div>
-        
-        {/* Coluna 2: Badge de seleção - largura fixa para alinhamento */}
-        <div className="w-16 flex justify-start">
+      <div className="flex items-center gap-3">
+        {/* Badge de seleção - largura fixa para alinhamento perfeito */}
+        <div className="w-16 shrink-0">
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-full">
             {perna.selecao_livre || perna.selecao}
           </Badge>
         </div>
         
-        {/* Coluna 3: Nome da casa - sempre alinhado */}
-        <span className="text-muted-foreground truncate uppercase">
+        {/* Logo */}
+        <div className="shrink-0">
+          <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
+        </div>
+        
+        {/* Nome da casa - flex-1 para ocupar espaço restante */}
+        <span className="text-sm text-muted-foreground truncate flex-1 uppercase">
           {perna.bookmaker_nome}
         </span>
         
-        {/* Coluna 4: Odd e Stake */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="font-medium">@{perna.odd.toFixed(2)}</span>
-          <span className="text-muted-foreground">• {formatValue(perna.stake)}</span>
+        {/* Odd e Stake à direita */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-sm font-medium">@{perna.odd.toFixed(2)}</span>
+          <span className="text-xs text-muted-foreground">{formatValue(perna.stake)}</span>
         </div>
       </div>
     );
@@ -178,68 +177,66 @@ function PernaItem({
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
         <button 
-          className="w-full grid grid-cols-[3rem_4rem_1fr_auto_auto] gap-2 items-center text-xs hover:bg-muted/30 rounded-md py-1 transition-colors"
+          className="w-full flex items-center gap-3 hover:bg-muted/30 rounded-md py-1 transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Coluna 1: Ícone de múltiplas entradas */}
-          <div className={cn(LOGO_COLUMN_WIDTH, "flex justify-center")}>
-            <div className={cn(LOGO_SIZE, "rounded-lg bg-gradient-to-br from-primary/20 to-amber-500/20 flex items-center justify-center")}>
-              <Layers className="h-5 w-5 text-primary" />
-            </div>
-          </div>
-          
-          {/* Coluna 2: Badge de seleção - largura fixa */}
-          <div className="w-16 flex justify-start">
+          {/* Badge de seleção - largura fixa */}
+          <div className="w-16 shrink-0">
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-full">
               {perna.selecao_livre || perna.selecao}
             </Badge>
           </div>
           
-          {/* Coluna 3: Indicador de múltiplas entradas */}
-          <div className="flex items-center gap-1.5 text-left">
-            <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/30 text-amber-400 bg-amber-500/10 flex items-center gap-0.5">
+          {/* Ícone de múltiplas entradas */}
+          <div className="shrink-0">
+            <div className={cn(LOGO_SIZE, "rounded-lg bg-gradient-to-br from-primary/20 to-amber-500/20 flex items-center justify-center")}>
+              <Layers className="h-5 w-5 text-primary" />
+            </div>
+          </div>
+          
+          {/* Indicador de múltiplas entradas */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/30 text-amber-400 bg-amber-500/10">
               {perna.entries?.length} casas
             </Badge>
-            <span className="text-muted-foreground text-[9px]">média:</span>
+            <span className="text-xs text-muted-foreground">média:</span>
           </div>
           
-          {/* Coluna 4: Odd e Stake */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="font-medium">@{displayOdd.toFixed(2)}</span>
-            <span className="text-muted-foreground">• {formatValue(displayStake)}</span>
+          {/* Odd e Stake */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
+            <span className="text-xs text-muted-foreground">{formatValue(displayStake)}</span>
           </div>
           
-          {/* Coluna 5: Chevron */}
+          {/* Chevron */}
           {isOpen ? (
-            <ChevronUp className="h-3 w-3 text-muted-foreground" />
+            <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
           ) : (
-            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+            <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
           )}
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="animate-in slide-in-from-top-1 duration-200">
-        <div className="mt-1 space-y-1.5 ml-2 pl-4 border-l-2 border-primary/20">
+        <div className="mt-2 space-y-2 ml-[4.75rem] pl-4 border-l-2 border-primary/20">
           {perna.entries?.map((entry, idx) => (
-            <div key={idx} className="grid grid-cols-[2.5rem_1fr_auto] gap-2 items-center text-[11px] text-muted-foreground">
-              {/* Coluna 1: Logo menor nas sub-entradas */}
-              <div className="w-10 flex justify-center">
-                <div className="h-8 w-8">
-                  <BookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
-                </div>
+            <div key={idx} className="flex items-center gap-3 text-xs">
+              {/* Logo menor */}
+              <div className="h-8 w-8 shrink-0">
+                <BookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
               </div>
               
-              {/* Coluna 2: Nome + linha opcional */}
-              <div className="flex items-center gap-1.5 truncate">
+              {/* Nome + linha opcional */}
+              <div className="flex items-center gap-1.5 flex-1 min-w-0 text-muted-foreground">
                 <span className="truncate uppercase">{entry.bookmaker_nome}</span>
                 {entry.selecao_livre && (
                   <span className="text-primary/70 text-[9px] shrink-0">({entry.selecao_livre})</span>
                 )}
               </div>
               
-              {/* Coluna 3: Odd + Stake */}
-              <div className="flex items-center gap-1.5 shrink-0">
+              {/* Odd + Stake */}
+              <div className="flex items-center gap-2 shrink-0">
                 <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
-                <span>• {formatValue(entry.stake)}</span>
+                <span className="text-muted-foreground">{formatValue(entry.stake)}</span>
               </div>
             </div>
           ))}
@@ -317,29 +314,34 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
       onClick={() => onEdit?.(surebet)}
     >
       <CardContent className="p-4">
-        {/* Header: Badges */}
-        <div className="flex items-center gap-1 mb-2 flex-wrap">
-          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", estrategiaConfig.bgColor, estrategiaConfig.color, estrategiaConfig.borderColor)}>
-            <Icon className="h-2.5 w-2.5" />
-            {estrategiaConfig.label}
-          </Badge>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
-            {surebet.modelo}
-          </Badge>
-          <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
+        {/* LINHA 1: Evento + Esporte + Badges */}
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <p className="text-sm font-medium truncate uppercase">{surebet.evento || 'Operação'}</p>
+            {surebet.esporte && (
+              <span className="text-xs text-muted-foreground shrink-0">• {surebet.esporte}</span>
+            )}
+            {surebet.mercado && (
+              <span className="text-xs text-muted-foreground shrink-0">• {surebet.mercado}</span>
+            )}
+          </div>
+          
+          {/* Badges à direita */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", estrategiaConfig.bgColor, estrategiaConfig.color, estrategiaConfig.borderColor)}>
+              <Icon className="h-2.5 w-2.5" />
+              {estrategiaConfig.label}
+            </Badge>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
+              {surebet.modelo}
+            </Badge>
+            <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
+          </div>
         </div>
         
-        {/* Identificação: Evento e Esporte */}
-        <div className="mb-2">
-          <p className="font-medium text-sm truncate uppercase">{surebet.evento || 'Operação'}</p>
-          <p className="text-xs text-muted-foreground">
-            {surebet.esporte}{surebet.mercado ? ` • ${surebet.mercado}` : ''}
-          </p>
-        </div>
-        
-        {/* Detalhamento: Pernas com suporte a múltiplas entradas */}
+        {/* LINHA 2+: Pernas - Grid alinhado com coluna de seleção fixa */}
         {surebet.pernas && surebet.pernas.length > 0 && (
-          <div className="space-y-1.5 mb-2">
+          <div className="space-y-2 mb-3">
             {surebet.pernas.map((perna) => (
               <PernaItem 
                 key={perna.id} 
@@ -351,17 +353,19 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
           </div>
         )}
         
-        {/* Rodapé: Data, Stake, Lucro, ROI */}
-        <div className="flex justify-between items-center pt-2 border-t">
-          <div className="flex flex-col">
+        {/* LINHA FINAL: Data/Hora + Stake + Lucro/ROI */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+          <span className="text-xs text-muted-foreground">
+            {formatDate(parseLocalDateTime(surebet.data_operacao), "dd/MM/yy HH:mm", { locale: ptBR })}
+          </span>
+          
+          <div className="flex items-center gap-4">
             <span className="text-xs text-muted-foreground">
-              {formatDate(parseLocalDateTime(surebet.data_operacao), "dd/MM/yy", { locale: ptBR })}
+              Stake: {formatValue(surebet.stake_total)}
             </span>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Stake: {formatValue(surebet.stake_total)}</p>
-          {lucroExibir !== null && lucroExibir !== undefined && (
-              <div className="flex items-center gap-2 justify-end">
+            
+            {lucroExibir !== null && lucroExibir !== undefined && (
+              <div className="flex items-center gap-1">
                 <span className={cn(
                   "text-sm font-medium",
                   lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
@@ -371,7 +375,7 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
                 </span>
                 {roiExibir !== null && roiExibir !== undefined && (
                   <span className={cn(
-                    "text-xs",
+                    "text-[10px]",
                     roiExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
                     !isLiquidada && 'opacity-30'
                   )}>

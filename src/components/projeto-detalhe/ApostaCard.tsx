@@ -283,12 +283,52 @@ export function ApostaCard({
         )}
         onClick={onClick}
       >
-        {/* Layout Principal - Horizontal em desktop, adapta em mobile */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        {/* Layout Padronizado: Evento/Esporte em cima, Casa e detalhes embaixo */}
+        <div className="flex flex-col gap-2">
           
-          {/* Coluna 1: Logo + Info da Casa */}
-          <div className="flex items-center gap-3 shrink-0">
-            {/* Logo maior */}
+          {/* LINHA 1: Evento + Esporte + Badges */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <p className="text-sm font-medium truncate uppercase">{displayEvento || 'Aposta'}</p>
+              {aposta.esporte && (
+                <span className="text-xs text-muted-foreground shrink-0">• {aposta.esporte}</span>
+              )}
+            </div>
+            
+            {/* Badges alinhadas à direita */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
+                <Icon className="h-2.5 w-2.5" />
+                {config.label}
+              </Badge>
+              {isMultipla && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
+                  <Layers className="h-2.5 w-2.5" />
+                  {tipoMultiplaLabel}
+                </Badge>
+              )}
+              {isSimples && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-400 bg-blue-500/20">
+                  SIMPLES
+                </Badge>
+              )}
+              {hasPernas && aposta.modelo && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
+                  {aposta.modelo}
+                </Badge>
+              )}
+              {hasPernas && !aposta.modelo && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
+                  {getModeloOperacao(aposta.pernas as Perna[])}
+                </Badge>
+              )}
+              <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+            </div>
+          </div>
+          
+          {/* LINHA 2: Logo + Casa + Seleção/Pernas + Odd + Stake */}
+          <div className="flex items-center gap-3">
+            {/* Logo */}
             {aposta.logo_url ? (
               <img 
                 src={aposta.logo_url} 
@@ -302,108 +342,67 @@ export function ApostaCard({
               </div>
             )}
             
-            {/* Nome da casa + Vínculo */}
-            <div className="flex flex-col min-w-0 w-28">
-              <span className="text-sm font-medium truncate">{bookmakerDisplay || 'Casa'}</span>
+            {/* Nome da casa + Vínculo - largura fixa para alinhamento */}
+            <div className="flex flex-col min-w-0 w-32 shrink-0">
+              <span className="text-sm font-medium truncate uppercase">{bookmakerDisplay || 'Casa'}</span>
               {vinculoDisplay && (
                 <span className="text-[11px] text-muted-foreground truncate">{vinculoDisplay}</span>
               )}
             </div>
-          </div>
-          
-          {/* Coluna 2: Badges + Data */}
-          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
-              <Icon className="h-2.5 w-2.5" />
-              {config.label}
-            </Badge>
-            {isMultipla && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
-                <Layers className="h-2.5 w-2.5" />
-                {tipoMultiplaLabel}
-              </Badge>
-            )}
-            {isSimples && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-400 bg-blue-500/20">
-                SIMPLES
-              </Badge>
-            )}
-            {hasPernas && aposta.modelo && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
-                {aposta.modelo}
-              </Badge>
-            )}
-            {hasPernas && !aposta.modelo && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
-                {getModeloOperacao(aposta.pernas as Perna[])}
-              </Badge>
-            )}
-            <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
-            {isForeignCurrency && (
-              <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
-                {moeda}
-              </Badge>
-            )}
-            <span className="text-xs text-muted-foreground ml-1">
-              {format(new Date(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
-            </span>
-          </div>
-          
-          {/* Coluna 3: Evento e Seleções */}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate uppercase">{displayEvento || 'Aposta'}</p>
             
-            {/* Pernas - Layout vertical para 3+ pernas */}
-            {hasPernas && hasMultipleLegs ? (
-              <div className="mt-1.5 space-y-1">
-                {aposta.pernas!.map((perna, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs bg-muted/20 rounded px-2 py-1">
-                    <span className="truncate flex-1">{perna.selecao}</span>
-                    <span className="font-medium shrink-0">@{Number(perna.odd).toFixed(2)}</span>
-                    {(perna.bookmaker_nome || perna.bookmaker) && (
-                      <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:inline">
-                        {perna.bookmaker_nome || perna.bookmaker}
-                      </span>
-                    )}
-                    {perna.stake && (
-                      <span className="text-[10px] text-muted-foreground shrink-0">{formatValue(perna.stake)}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : hasPernas ? (
-              <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" />
-            ) : hasSelecoes ? (
-              <p className="text-xs text-muted-foreground truncate uppercase">
-                {aposta.selecoes!.map(s => `${s.descricao} @${Number(s.odd).toFixed(2)}`).join(' + ')}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground truncate uppercase">
-                {aposta.selecao} @{displayOdd.toFixed(2)}
-              </p>
-            )}
+            {/* Seleção/Pernas - flex-1 para ocupar espaço restante */}
+            <div className="flex-1 min-w-0">
+              {hasPernas && hasMultipleLegs ? (
+                <div className="space-y-1">
+                  {aposta.pernas!.map((perna, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs">
+                      <span className="truncate">{perna.selecao}</span>
+                      <span className="font-medium shrink-0">@{Number(perna.odd).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : hasPernas ? (
+                <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" />
+              ) : hasSelecoes ? (
+                <p className="text-xs text-muted-foreground truncate uppercase">
+                  {aposta.selecoes!.map(s => `${s.descricao} @${Number(s.odd).toFixed(2)}`).join(' + ')}
+                </p>
+              ) : (
+                <p className="text-sm truncate uppercase">
+                  {aposta.selecao} <span className="font-medium">@{displayOdd.toFixed(2)}</span>
+                </p>
+              )}
+            </div>
+            
+            {/* Stake à direita */}
+            <div className="text-right shrink-0">
+              <p className="text-sm font-medium">{formatValue(stake)}</p>
+            </div>
           </div>
           
-          {/* Coluna 4: Stake + Lucro */}
-          <div className="flex items-center gap-4 shrink-0 sm:ml-auto">
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">Stake</p>
-              <p className="text-sm font-medium">{formatValue(stake)}</p>
+          {/* LINHA 3: Data/Hora + Lucro/ROI */}
+          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {format(new Date(aposta.data_aposta), "dd/MM/yy HH:mm", { locale: ptBR })}
+              </span>
+              {isForeignCurrency && (
+                <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
+                  {moeda}
+                </Badge>
+              )}
             </div>
             
             {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
-              <div className="text-right min-w-[80px]">
-                <p className="text-xs text-muted-foreground">Lucro</p>
-                <div className="flex items-center justify-end gap-1">
-                  <span className={cn("text-sm font-semibold", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                    {formatValue(aposta.lucro_prejuizo)}
+              <div className="flex items-center gap-1">
+                <span className={cn("text-sm font-semibold", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                  {formatValue(aposta.lucro_prejuizo)}
+                </span>
+                {roi !== null && (
+                  <span className={cn("text-[10px]", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                    ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
                   </span>
-                  {roi !== null && (
-                    <span className={cn("text-[10px]", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                      ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
-                    </span>
-                  )}
-                </div>
+                )}
               </div>
             )}
           </div>
