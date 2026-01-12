@@ -181,11 +181,11 @@ function PernaItem({
     return (
       <div className="flex items-center gap-3">
         {/* Badge de seleção - largura fixa para alinhamento perfeito */}
-        <div className="w-[76px] shrink-0">
+        <div className="w-[100px] shrink-0">
           <SelectionBadge 
             colorClassName={selecaoBadgeStyle}
-            minWidth={64}
-            maxWidth={72}
+            minWidth={88}
+            maxWidth={96}
           >
             {perna.selecao_livre || perna.selecao}
           </SelectionBadge>
@@ -218,11 +218,11 @@ function PernaItem({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Badge de seleção - largura fixa */}
-          <div className="w-[76px] shrink-0">
+          <div className="w-[100px] shrink-0">
             <SelectionBadge 
               colorClassName={selecaoBadgeStyle}
-              minWidth={64}
-              maxWidth={72}
+              minWidth={88}
+              maxWidth={96}
             >
               {perna.selecao_livre || perna.selecao}
             </SelectionBadge>
