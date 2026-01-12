@@ -269,7 +269,11 @@ export function ApostaCard({
     // Extrair nome base da casa (antes do " - ") para exibição limpa
     const bookmakerDisplay = aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome;
     // Extrair vínculo (parceiro) - pode vir do parceiro_nome ou da parte após " - " no bookmaker_nome
-    const vinculoDisplay = aposta.parceiro_nome || aposta.bookmaker_nome?.split(" - ")[1]?.trim();
+    const vinculoFull = aposta.parceiro_nome || aposta.bookmaker_nome?.split(" - ")[1]?.trim();
+    // Abreviar vínculo: pegar apenas primeiro nome ou até 12 caracteres
+    const vinculoDisplay = vinculoFull 
+      ? (vinculoFull.split(" ")[0].length > 12 ? vinculoFull.substring(0, 12) + "..." : vinculoFull.split(" ")[0])
+      : undefined;
     
     // Para operações com múltiplas pernas (3+), usa layout vertical
     const hasMultipleLegs = hasPernas && (aposta.pernas?.length || 0) >= 3;
@@ -342,7 +346,7 @@ export function ApostaCard({
               </div>
             )}
             
-            {/* Nome da casa + Vínculo - largura fixa para alinhamento */}
+            {/* Nome da casa + Vínculo abreviado - largura fixa para alinhamento */}
             <div className="flex flex-col min-w-0 w-32 shrink-0">
               <span className="text-sm font-medium truncate uppercase">{bookmakerDisplay || 'Casa'}</span>
               {vinculoDisplay && (
@@ -369,14 +373,17 @@ export function ApostaCard({
                 </p>
               ) : (
                 <p className="text-sm truncate uppercase">
-                  {aposta.selecao} <span className="font-medium">@{displayOdd.toFixed(2)}</span>
+                  {aposta.selecao}
                 </p>
               )}
             </div>
             
-            {/* Stake à direita */}
-            <div className="text-right shrink-0">
-              <p className="text-sm font-medium">{formatValue(stake)}</p>
+            {/* Odd + Stake à direita - grudados */}
+            <div className="flex items-center gap-2 shrink-0">
+              {isSimples && (
+                <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
+              )}
+              <span className="text-sm font-medium">{formatValue(stake)}</span>
             </div>
           </div>
           
