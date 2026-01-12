@@ -18,14 +18,22 @@ interface WizardStepIndicatorProps {
   currentStep: WizardStep;
   completedSteps: WizardStep[];
   skippedSteps?: WizardStep[];
+  /** Optional: override which steps to display (for edit mode) */
+  steps?: WizardStep[];
+  /** Optional: callback when step is clicked (for navigation) */
+  onStepClick?: (step: WizardStep) => void;
 }
 
 export function WizardStepIndicator({ 
   currentStep, 
   completedSteps,
-  skippedSteps = [] 
+  skippedSteps = [],
+  steps,
+  onStepClick,
 }: WizardStepIndicatorProps) {
-  const currentIndex = WIZARD_STEPS.indexOf(currentStep);
+  // Use provided steps or default to all wizard steps
+  const displaySteps = steps || WIZARD_STEPS;
+  const currentIndex = displaySteps.indexOf(currentStep);
 
   return (
     <div className="w-full mb-8">
@@ -35,11 +43,11 @@ export function WizardStepIndicator({
         <div 
           className="absolute top-5 left-0 right-0 flex items-center"
           style={{ 
-            paddingLeft: 'calc(100% / 14)',
-            paddingRight: 'calc(100% / 14)' 
+            paddingLeft: `calc(100% / ${displaySteps.length * 2})`,
+            paddingRight: `calc(100% / ${displaySteps.length * 2})` 
           }}
         >
-          {WIZARD_STEPS.slice(0, -1).map((step, index) => {
+          {displaySteps.slice(0, -1).map((step, index) => {
             const isCompleted = completedSteps.includes(step);
             const isSkipped = skippedSteps.includes(step);
             const isPast = index < currentIndex;
@@ -63,14 +71,22 @@ export function WizardStepIndicator({
         {/* Camada 2: Círculos e labels (grid uniforme) */}
         <div 
           className="relative grid"
-          style={{ gridTemplateColumns: `repeat(${WIZARD_STEPS.length}, 1fr)` }}
+          style={{ gridTemplateColumns: `repeat(${displaySteps.length}, 1fr)` }}
         >
           <TooltipProvider delayDuration={200}>
-            {WIZARD_STEPS.map((step, index) => {
+            {displaySteps.map((step, index) => {
               const config = STEP_CONFIG[step];
               const isCompleted = completedSteps.includes(step);
               const isSkipped = skippedSteps.includes(step);
               const isCurrent = step === currentStep;
+              const isClickable = !!onStepClick && (isCompleted || index <= currentIndex);
+
+              // Handler para clique
+              const handleClick = () => {
+                if (isClickable && onStepClick) {
+                  onStepClick(step);
+                }
+              };
 
               // Etapa pulada - visual diferenciado
               if (isSkipped) {
@@ -100,14 +116,22 @@ export function WizardStepIndicator({
               }
 
               return (
-                <div key={step} className="flex flex-col items-center">
+                <div
+                  key={step}
+                  className={cn(
+                    "flex flex-col items-center",
+                    isClickable && "cursor-pointer"
+                  )}
+                  onClick={handleClick}
+                >
                   {/* Círculo */}
                   <div
                     className={cn(
                       "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 bg-background",
                       isCompleted && "bg-primary border-primary",
                       isCurrent && !isCompleted && "border-primary bg-primary/10",
-                      !isCurrent && !isCompleted && "border-muted-foreground/30 bg-muted/50"
+                      !isCurrent && !isCompleted && "border-muted-foreground/30 bg-muted/50",
+                      isClickable && "hover:scale-105"
                     )}
                   >
                     {isCompleted ? (
