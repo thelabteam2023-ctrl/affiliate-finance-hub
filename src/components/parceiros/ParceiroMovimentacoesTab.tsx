@@ -2,8 +2,14 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
+import { ArrowRight, AlertCircle, RefreshCw, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Transacao {
   id: string;
@@ -26,14 +32,31 @@ interface Transacao {
   origem_wallet_id: string | null;
   destino_wallet_id: string | null;
   nome_investidor: string | null;
+  ajuste_direcao: string | null;
+  ajuste_motivo: string | null;
+}
+
+interface ContaBancaria {
+  id: string;
+  banco: string;
+  titular: string;
+  parceiro_id: string;
+}
+
+interface WalletCrypto {
+  id: string;
+  exchange: string;
+  endereco: string;
+  network?: string;
+  parceiro_id: string;
 }
 
 interface MovimentacoesData {
   transacoes: Transacao[];
   bookmakerNames: Map<string, string>;
   parceiroNames: Map<string, string>;
-  contasBancarias: Array<{ id: string; banco: string; titular: string; parceiro_id: string }>;
-  walletsCrypto: Array<{ id: string; exchange: string; endereco: string; parceiro_id: string }>;
+  contasBancarias: ContaBancaria[];
+  walletsCrypto: WalletCrypto[];
 }
 
 interface ParceiroMovimentacoesTabProps {
@@ -41,16 +64,6 @@ interface ParceiroMovimentacoesTabProps {
   showSensitiveData: boolean;
 }
 
-/*
- * ARQUITETURA: Tab de Movimentações
- * 
- * Este componente APENAS retorna conteúdo.
- * O layout (altura, scroll) é controlado pelo container pai (TabViewport).
- * 
- * Retorna:
- * - Estados de loading/erro/vazio: centralizados verticalmente
- * - Conteúdo real: lista com overflow-y-auto
- */
 export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: ParceiroMovimentacoesTabProps) {
   const [data, setData] = useState<MovimentacoesData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,7 +141,7 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
         parceirosData?.forEach((p) => pNames.set(p.id, p.nome));
       }
 
-      let contasBancariasResult: Array<{ id: string; banco: string; titular: string; parceiro_id: string }> = [];
+      let contasBancariasResult: ContaBancaria[] = [];
       if (contaIdsSet.size > 0) {
         const { data: contasData } = await supabase
           .from("contas_bancarias")
@@ -137,11 +150,11 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
         contasBancariasResult = contasData || [];
       }
 
-      let walletsCryptoResult: Array<{ id: string; exchange: string; endereco: string; parceiro_id: string }> = [];
+      let walletsCryptoResult: WalletCrypto[] = [];
       if (walletIdsSet.size > 0) {
         const { data: walletsData } = await supabase
           .from("wallets_crypto")
-          .select("id, exchange, endereco, parceiro_id")
+          .select("id, exchange, endereco, network, parceiro_id")
           .in("id", Array.from(walletIdsSet));
         walletsCryptoResult = walletsData || [];
       }
@@ -215,12 +228,17 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
     });
   };
 
-  const getTipoLabel = (tipo: string, transacao?: Transacao) => {
+  // Mapeamento de tipos para labels amigáveis
+  const getTipoLabel = (tipo: string, transacao?: Transacao): string => {
+    // Transferência: diferencia enviada/recebida
     if (tipo === "TRANSFERENCIA" && transacao) {
-      const isOrigem = transacao.origem_parceiro_id === parceiroId;
+      const isOrigem = transacao.origem_parceiro_id === parceiroId ||
+        data?.contasBancarias.some(c => c.id === transacao.origem_conta_bancaria_id && c.parceiro_id === parceiroId) ||
+        data?.walletsCrypto.some(w => w.id === transacao.origem_wallet_id && w.parceiro_id === parceiroId);
       return isOrigem ? "Transferência Enviada" : "Transferência Recebida";
     }
 
+    // Status recusado
     if (transacao?.status === "RECUSADO") {
       const labels: Record<string, string> = {
         DEPOSITO: "Depósito Recusado",
@@ -228,7 +246,7 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
         TRANSFERENCIA: "Transferência Recusada",
         APORTE_FINANCEIRO: "Aporte Recusado",
       };
-      return labels[tipo] || `${tipo} Recusado`;
+      return labels[tipo] || `${tipo.replace(/_/g, " ")} Recusado`;
     }
 
     const labels: Record<string, string> = {
@@ -236,65 +254,194 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
       SAQUE: "Saque",
       TRANSFERENCIA: "Transferência",
       APORTE_FINANCEIRO: "Aporte",
+      DESPESA_ADMINISTRATIVA: "Despesa Admin.",
+      AJUSTE_MANUAL: "Ajuste Manual",
+      AJUSTE_SALDO: "Ajuste de Saldo",
+      COMISSAO_INDICADOR: "Comissão Indicador",
+      PAGTO_PARCEIRO: "Pagamento Parceiro",
+      CREDITO_GIRO: "Crédito de Giro",
+      ESTORNO: "Estorno",
     };
-    return labels[tipo] || tipo;
+    return labels[tipo] || tipo.replace(/_/g, " ");
   };
 
-  const getTipoBadgeColor = (tipo: string, status?: string) => {
+  // Cores para badges de tipo
+  const getTipoBadgeColor = (tipo: string, status?: string): string => {
     if (status === "RECUSADO") {
-      return "bg-muted text-muted-foreground border-muted";
+      return "bg-muted text-muted-foreground border-muted line-through";
     }
 
-    if (tipo === "DEPOSITO") return "bg-red-500/20 text-red-500 border-red-500/30";
-    if (tipo === "SAQUE") return "bg-green-500/20 text-green-500 border-green-500/30";
-    if (tipo === "TRANSFERENCIA") return "bg-blue-500/20 text-blue-500 border-blue-500/30";
-    if (tipo === "APORTE_FINANCEIRO") return "bg-emerald-500/20 text-emerald-500 border-emerald-500/30";
-    return "bg-muted text-muted-foreground border-muted";
+    const colors: Record<string, string> = {
+      DEPOSITO: "bg-red-500/20 text-red-500 border-red-500/30",
+      SAQUE: "bg-green-500/20 text-green-500 border-green-500/30",
+      TRANSFERENCIA: "bg-blue-500/20 text-blue-500 border-blue-500/30",
+      APORTE_FINANCEIRO: "bg-emerald-500/20 text-emerald-500 border-emerald-500/30",
+      DESPESA_ADMINISTRATIVA: "bg-orange-500/20 text-orange-500 border-orange-500/30",
+      AJUSTE_MANUAL: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30",
+      AJUSTE_SALDO: "bg-purple-500/20 text-purple-500 border-purple-500/30",
+      COMISSAO_INDICADOR: "bg-cyan-500/20 text-cyan-500 border-cyan-500/30",
+      PAGTO_PARCEIRO: "bg-pink-500/20 text-pink-500 border-pink-500/30",
+      CREDITO_GIRO: "bg-indigo-500/20 text-indigo-500 border-indigo-500/30",
+      ESTORNO: "bg-rose-500/20 text-rose-500 border-rose-500/30",
+    };
+    return colors[tipo] || "bg-muted text-muted-foreground border-muted";
   };
 
-  const getOrigemLabel = (transacao: Transacao) => {
-    if (transacao.origem_tipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
-    if (transacao.origem_tipo === "INVESTIDOR" && transacao.nome_investidor) return `Investidor: ${transacao.nome_investidor}`;
-    if (transacao.origem_bookmaker_id) return `Casa: ${data?.bookmakerNames.get(transacao.origem_bookmaker_id) || "..."}`;
+  // Formatar label de conta bancária com banco + titular
+  const formatContaBancaria = (conta: ContaBancaria | undefined, parceiroNome?: string): string => {
+    if (!conta) return "Conta Bancária";
+    const parts = [conta.banco];
+    if (conta.titular) parts.push(conta.titular);
+    return parts.join("\n");
+  };
+
+  // Formatar label de wallet
+  const formatWallet = (wallet: WalletCrypto | undefined): string => {
+    if (!wallet) return "Wallet Crypto";
+    const parts = [wallet.exchange];
+    if (wallet.network) parts.push(`(${wallet.network})`);
+    return parts.join(" ");
+  };
+
+  // Gera label de origem com informações completas
+  const getOrigemLabel = (transacao: Transacao): { principal: string; secundario?: string } => {
+    // Caixa Operacional
+    if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
+      return { principal: "Caixa Operacional" };
+    }
+
+    // Investidor
+    if (transacao.origem_tipo === "INVESTIDOR" && transacao.nome_investidor) {
+      return { principal: "Investidor", secundario: transacao.nome_investidor };
+    }
+
+    // Bookmaker/Casa
+    if (transacao.origem_bookmaker_id) {
+      const nome = data?.bookmakerNames.get(transacao.origem_bookmaker_id);
+      return { principal: nome || "Casa de Apostas" };
+    }
+
+    // Conta Bancária
     if (transacao.origem_conta_bancaria_id) {
       const conta = data?.contasBancarias.find((c) => c.id === transacao.origem_conta_bancaria_id);
-      return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+      const parceiroNome = transacao.origem_parceiro_id 
+        ? data?.parceiroNames.get(transacao.origem_parceiro_id) 
+        : undefined;
+      
+      if (conta) {
+        return { 
+          principal: conta.banco, 
+          secundario: parceiroNome || conta.titular 
+        };
+      }
+      return { principal: "Conta Bancária" };
     }
+
+    // Wallet Crypto
     if (transacao.origem_wallet_id) {
       const wallet = data?.walletsCrypto.find((w) => w.id === transacao.origem_wallet_id);
-      return wallet ? `${wallet.exchange}` : "Wallet Crypto";
+      if (wallet) {
+        return { 
+          principal: formatWallet(wallet),
+          secundario: wallet.endereco ? `${wallet.endereco.slice(0, 8)}...` : undefined
+        };
+      }
+      return { principal: "Wallet Crypto" };
     }
-    if (transacao.origem_parceiro_id) return data?.parceiroNames.get(transacao.origem_parceiro_id) || "Parceiro";
-    return "-";
+
+    // Parceiro direto
+    if (transacao.origem_parceiro_id) {
+      const nome = data?.parceiroNames.get(transacao.origem_parceiro_id);
+      return { principal: nome || "Parceiro" };
+    }
+
+    return { principal: "-" };
   };
 
-  const getDestinoLabel = (transacao: Transacao) => {
-    if (transacao.destino_tipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
-    if (transacao.destino_bookmaker_id) return `Casa: ${data?.bookmakerNames.get(transacao.destino_bookmaker_id) || "..."}`;
+  // Gera label de destino com informações completas
+  const getDestinoLabel = (transacao: Transacao): { principal: string; secundario?: string } => {
+    // Despesas administrativas → destino é "Despesa Externa"
+    if (transacao.tipo_transacao === "DESPESA_ADMINISTRATIVA") {
+      return { principal: "Despesa Externa" };
+    }
+
+    // Caixa Operacional
+    if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
+      return { principal: "Caixa Operacional" };
+    }
+
+    // Bookmaker/Casa
+    if (transacao.destino_bookmaker_id) {
+      const nome = data?.bookmakerNames.get(transacao.destino_bookmaker_id);
+      return { principal: nome || "Casa de Apostas" };
+    }
+
+    // Conta Bancária
     if (transacao.destino_conta_bancaria_id) {
       const conta = data?.contasBancarias.find((c) => c.id === transacao.destino_conta_bancaria_id);
-      return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+      const parceiroNome = transacao.destino_parceiro_id 
+        ? data?.parceiroNames.get(transacao.destino_parceiro_id) 
+        : undefined;
+      
+      if (conta) {
+        return { 
+          principal: conta.banco, 
+          secundario: parceiroNome || conta.titular 
+        };
+      }
+      return { principal: "Conta Bancária" };
     }
+
+    // Wallet Crypto
     if (transacao.destino_wallet_id) {
       const wallet = data?.walletsCrypto.find((w) => w.id === transacao.destino_wallet_id);
-      return wallet ? `${wallet.exchange}` : "Wallet Crypto";
+      if (wallet) {
+        return { 
+          principal: formatWallet(wallet),
+          secundario: wallet.endereco ? `${wallet.endereco.slice(0, 8)}...` : undefined
+        };
+      }
+      return { principal: "Wallet Crypto" };
     }
-    if (transacao.destino_parceiro_id) return data?.parceiroNames.get(transacao.destino_parceiro_id) || "Parceiro";
-    return "-";
+
+    // Parceiro direto
+    if (transacao.destino_parceiro_id) {
+      const nome = data?.parceiroNames.get(transacao.destino_parceiro_id);
+      return { principal: nome || "Parceiro" };
+    }
+
+    return { principal: "-" };
   };
 
-  // LOADING: centralizado no container pai
+  // Componente para exibir origem/destino com duas linhas
+  const FlowLabel = ({ label, align = "left" }: { label: { principal: string; secundario?: string }; align?: "left" | "right" }) => {
+    const alignClass = align === "right" ? "text-right items-end" : "text-left items-start";
+    return (
+      <div className={`flex flex-col ${alignClass} min-w-0`}>
+        <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
+          {label.principal}
+        </span>
+        {label.secundario && (
+          <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">
+            {label.secundario}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  // LOADING
   if (loading) {
     return (
       <div className="h-full flex flex-col gap-2 overflow-y-auto p-1">
         {[...Array(5)].map((_, i) => (
-          <Skeleton key={i} className="h-16 shrink-0" />
+          <Skeleton key={i} className="h-20 shrink-0" />
         ))}
       </div>
     );
   }
 
-  // ERROR: centralizado no container pai
+  // ERROR
   if (error) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-destructive gap-3">
@@ -310,7 +457,7 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
 
   const transacoes = data?.transacoes || [];
 
-  // EMPTY: centralizado no container pai
+  // EMPTY
   if (transacoes.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
@@ -320,40 +467,76 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
     );
   }
 
-  // CONTENT: lista com scroll próprio (h-full + overflow-y-auto)
+  // CONTENT
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="space-y-2 pr-1">
-        {transacoes.map((transacao) => (
-          <div
-            key={transacao.id}
-            className="p-3 border border-border rounded-lg hover:bg-muted/20 transition-colors"
-          >
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <Badge variant="outline" className={`text-xs ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}>
-                {getTipoLabel(transacao.tipo_transacao, transacao)}
-              </Badge>
-              <span className="text-xs text-muted-foreground">{formatDate(transacao.data_transacao)}</span>
-            </div>
+    <TooltipProvider>
+      <div className="h-full overflow-y-auto">
+        <div className="space-y-2 pr-1">
+          {transacoes.map((transacao) => {
+            const origem = getOrigemLabel(transacao);
+            const destino = getDestinoLabel(transacao);
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-              <span className="truncate max-w-[120px]">{getOrigemLabel(transacao)}</span>
-              <ArrowRight className="h-3 w-3 shrink-0" />
-              <span className="truncate max-w-[120px]">{getDestinoLabel(transacao)}</span>
-            </div>
+            return (
+              <div
+                key={transacao.id}
+                className="p-3 border border-border rounded-lg hover:bg-muted/20 transition-colors"
+              >
+                {/* Header: Badge + Data */}
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs font-medium ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}
+                  >
+                    {getTipoLabel(transacao.tipo_transacao, transacao)}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {formatDate(transacao.data_transacao)}
+                  </span>
+                </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold flex items-center">
-                {maskCurrency(transacao)}
-                {getMoedaBadge(transacao)}
-              </span>
-              {transacao.descricao && (
-                <span className="text-xs text-muted-foreground truncate max-w-[150px]">{transacao.descricao}</span>
-              )}
-            </div>
-          </div>
-        ))}
+                {/* Flow: Origem → Destino */}
+                <div className="flex items-center gap-2 mb-3">
+                  <FlowLabel label={origem} align="left" />
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <FlowLabel label={destino} align="left" />
+                  
+                  {/* Info icon para despesas administrativas */}
+                  {transacao.tipo_transacao === "DESPESA_ADMINISTRATIVA" && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[250px]">
+                        <p className="text-xs">Despesa administrativa registrada nesta conta</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+
+                {/* Footer: Valor + Descrição */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold flex items-center">
+                    {maskCurrency(transacao)}
+                    {getMoedaBadge(transacao)}
+                  </span>
+                  {transacao.descricao && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-xs text-muted-foreground truncate max-w-[180px] cursor-help">
+                          {transacao.descricao}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[300px]">
+                        <p className="text-xs">{transacao.descricao}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
