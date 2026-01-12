@@ -5,7 +5,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -478,24 +485,38 @@ export default function Caixa() {
             <div className="flex items-center gap-2">
               <SaldosParceirosSheet />
               
-              {/* Ajuste Manual - única forma de correção permitida */}
-              {(isOwnerOrAdmin || isSystemOwner) && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => setAjusteDialogOpen(true)} 
-                  className="gap-2 border-amber-500/30 hover:bg-amber-500/10"
-                >
-                  <Wrench className="h-4 w-4 text-amber-500" />
-                  Ajuste Manual
-                </Button>
-              )}
-              
               {/* Botão primário - Nova Transação */}
               {canCreate('caixa', 'caixa.transactions.create') && (
                 <Button onClick={() => setDialogOpen(true)} className="gap-2">
                   <Plus className="h-4 w-4" />
                   Nova Transação
                 </Button>
+              )}
+
+              {/* Menu overflow - ações sensíveis */}
+              {(isOwnerOrAdmin || isSystemOwner) && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-9 w-9"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">Mais ações</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-popover">
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => setAjusteDialogOpen(true)}
+                      className="flex items-center gap-2 text-muted-foreground cursor-pointer"
+                    >
+                      <Wrench className="h-4 w-4" />
+                      <span>Ajuste Manual</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           }
