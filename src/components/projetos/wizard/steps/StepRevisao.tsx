@@ -196,14 +196,23 @@ export function StepRevisao({ formData, selectedModules, modulesNames }: StepRev
             <CheckCircle2 className="h-4 w-4 text-emerald-500 ml-auto" />
           </div>
           <div className="text-sm">
-            <span className="text-muted-foreground">Absorção de Taxas:</span>{" "}
-            <span className="font-medium">
-              {formData.modelo_absorcao_taxas === "EMPRESA_100"
-                ? "Empresa absorve 100%"
-                : formData.modelo_absorcao_taxas === "OPERADOR_100"
-                ? "Operador absorve 100%"
-                : "Divisão proporcional (50/50)"}
-            </span>
+            {/* Taxas só aparecem em USD ou com crypto */}
+            {(formData.moeda_consolidacao === "USD" || formData.tem_investimento_crypto) ? (
+              <>
+                <span className="text-muted-foreground">Absorção de Taxas:</span>{" "}
+                <span className="font-medium">
+                  {formData.modelo_absorcao_taxas === "EMPRESA_100"
+                    ? "Empresa absorve 100%"
+                    : formData.modelo_absorcao_taxas === "OPERADOR_100"
+                    ? "Operador absorve 100%"
+                    : "Divisão proporcional (50/50)"}
+                </span>
+              </>
+            ) : (
+              <span className="text-muted-foreground">
+                Sem taxas de conversão (projeto BRL)
+              </span>
+            )}
           </div>
         </CardContent>
       </Card>
