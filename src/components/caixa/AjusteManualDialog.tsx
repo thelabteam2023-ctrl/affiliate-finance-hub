@@ -186,7 +186,7 @@ export function AjusteManualDialog({
       const valorNumerico = parseFloat(valor);
       const valorFinal = direcao === "SAIDA" ? -valorNumerico : valorNumerico;
 
-      // Criar transação no cash_ledger
+      // Criar transação no cash_ledger com campos de auditoria obrigatórios
       const transactionData: any = {
         user_id: user.id,
         workspace_id: workspaceId,
@@ -194,9 +194,17 @@ export function AjusteManualDialog({
         tipo_moeda: "FIAT",
         moeda: moeda,
         valor: Math.abs(valorNumerico),
-        descricao: `[${direcao === "ENTRADA" ? "+" : "-"}] ${motivo}`,
+        descricao: `[AJUSTE ${direcao}] ${motivo}`,
         status: "CONFIRMADO",
         data_transacao: new Date().toISOString(),
+        // Campos obrigatórios para ajustes (trigger validará)
+        ajuste_motivo: motivo.trim(),
+        ajuste_direcao: direcao,
+        auditoria_metadata: {
+          registrado_em: new Date().toISOString(),
+          tipo_destino_selecionado: tipoDestino,
+          user_agent: navigator.userAgent,
+        },
       };
 
       // Definir origem/destino baseado na direção
@@ -267,9 +275,22 @@ export function AjusteManualDialog({
       onSuccess();
     } catch (error: any) {
       console.error("Erro ao registrar ajuste:", error);
+      
+      // Traduzir erros de domínio do banco para mensagens claras
+      let errorMessage = error.message;
+      if (error.message?.includes("Ajustes manuais requerem um motivo")) {
+        errorMessage = "O motivo do ajuste é obrigatório. Por favor, descreva a razão da correção.";
+      } else if (error.message?.includes("Ajustes manuais requerem direção")) {
+        errorMessage = "Selecione se o ajuste é uma entrada ou saída de valores.";
+      } else if (error.code === "23503") {
+        errorMessage = "A entidade selecionada não existe mais. Atualize a página e tente novamente.";
+      } else if (error.code === "23514") {
+        errorMessage = "Valor inválido. Verifique os dados e tente novamente.";
+      }
+      
       toast({
         title: "Erro ao registrar ajuste",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
