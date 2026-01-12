@@ -337,11 +337,10 @@ export function ApostaCard({
           
           {/* LINHA 2: Badge Seleção + Logo + Casa + Odd + Stake (igual SurebetCard) */}
           <div className="flex items-center gap-3">
-            {/* Para apostas simples: Badge de seleção antes do logo */}
+            {/* Para apostas simples: Badge de seleção antes do logo - cor neutra informativa */}
             {isSimples && aposta.selecao && (
               <div className="w-[120px] shrink-0">
                 <SelectionBadge 
-                  colorClassName="border-primary/30 text-primary bg-primary/10"
                   minWidth={100}
                   maxWidth={116}
                 >

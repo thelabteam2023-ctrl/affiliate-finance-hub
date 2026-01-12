@@ -36,7 +36,7 @@ function Badge({ className, variant, ...props }: BadgeProps) {
 interface SelectionBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Texto a ser exibido no badge */
   children: React.ReactNode;
-  /** Classes de cor/estilo (ex: "border-primary/30 text-primary bg-primary/10") */
+  /** Classes de cor/estilo - padrão: azul neutro informativo */
   colorClassName?: string;
   /** Largura máxima em pixels (padrão: 200) */
   maxWidth?: number;
@@ -44,9 +44,12 @@ interface SelectionBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   minWidth?: number;
 }
 
+/** Cor padrão: Azul neutro/steel blue - informativo, sem conotação de P&L */
+const SELECTION_BADGE_DEFAULT_COLOR = "bg-slate-600/25 text-slate-300 border-slate-500/40";
+
 function SelectionBadge({ 
   children, 
-  colorClassName = "border-primary/30 text-primary bg-primary/10",
+  colorClassName = SELECTION_BADGE_DEFAULT_COLOR,
   maxWidth = 200,
   minWidth = 72,
   className,
