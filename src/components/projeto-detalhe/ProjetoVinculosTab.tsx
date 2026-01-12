@@ -139,6 +139,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [cotacaoTrabalho, setCotacaoTrabalho] = useState<number | null>(null);
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
   const [vinculoParaConciliar, setVinculoParaConciliar] = useState<Vinculo | null>(null);
+  const [selectedCasas, setSelectedCasas] = useState<string[]>([]);
+  const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
 
@@ -503,7 +505,12 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     
     const matchesBonusFilter = filterBonusOnly ? bookmakersWithBonus.includes(v.id) : true;
     
-    return matchesSearch && matchesBonusFilter;
+    const matchesCasaFilter = selectedCasas.length === 0 || selectedCasas.includes(v.nome);
+    
+    const matchesParceiroFilter = selectedParceiros.length === 0 || 
+      (v.parceiro_nome && selectedParceiros.includes(v.parceiro_nome));
+    
+    return matchesSearch && matchesBonusFilter && matchesCasaFilter && matchesParceiroFilter;
   });
 
   const toggleSelection = (id: string) => {
@@ -514,6 +521,15 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
   const vinculosAtivos = vinculos.filter((v) => v.bookmaker_status.toUpperCase() === "ATIVO").length;
   const vinculosLimitados = vinculos.filter((v) => v.bookmaker_status.toUpperCase() === "LIMITADA").length;
+
+  // Listas únicas para filtros
+  const uniqueCasas = useMemo(() => {
+    return [...new Set(vinculos.map(v => v.nome))].sort();
+  }, [vinculos]);
+  
+  const uniqueParceiros = useMemo(() => {
+    return [...new Set(vinculos.map(v => v.parceiro_nome).filter(Boolean) as string[])].sort();
+  }, [vinculos]);
 
   if (loading) {
     return (
@@ -747,7 +763,126 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           )}
         </Toggle>
         
-        
+        {/* Filtro por Casas */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Building2 className="h-4 w-4" />
+              Casas
+              {selectedCasas.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  {selectedCasas.length}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-2" align="start">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-2 pb-2 border-b">
+                <span className="text-sm font-medium">Filtrar Casas</span>
+                {selectedCasas.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs"
+                    onClick={() => setSelectedCasas([])}
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
+              <ScrollArea className="h-48">
+                <div className="space-y-1">
+                  {uniqueCasas.map((casa) => (
+                    <div
+                      key={casa}
+                      className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                      onClick={() => {
+                        setSelectedCasas(prev =>
+                          prev.includes(casa)
+                            ? prev.filter(c => c !== casa)
+                            : [...prev, casa]
+                        );
+                      }}
+                    >
+                      <Checkbox
+                        checked={selectedCasas.includes(casa)}
+                        className="pointer-events-none"
+                      />
+                      <span className="text-sm truncate">{casa}</span>
+                    </div>
+                  ))}
+                  {uniqueCasas.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      Nenhuma casa vinculada
+                    </p>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Filtro por Parceiros */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <User className="h-4 w-4" />
+              Parceiros
+              {selectedParceiros.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  {selectedParceiros.length}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-2" align="start">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-2 pb-2 border-b">
+                <span className="text-sm font-medium">Filtrar Parceiros</span>
+                {selectedParceiros.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs"
+                    onClick={() => setSelectedParceiros([])}
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
+              <ScrollArea className="h-48">
+                <div className="space-y-1">
+                  {uniqueParceiros.map((parceiro) => (
+                    <div
+                      key={parceiro}
+                      className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                      onClick={() => {
+                        setSelectedParceiros(prev =>
+                          prev.includes(parceiro)
+                            ? prev.filter(p => p !== parceiro)
+                            : [...prev, parceiro]
+                        );
+                      }}
+                    >
+                      <Checkbox
+                        checked={selectedParceiros.includes(parceiro)}
+                        className="pointer-events-none"
+                      />
+                      <span className="text-sm truncate">{parceiro}</span>
+                    </div>
+                  ))}
+                  {uniqueParceiros.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      Nenhum parceiro vinculado
+                    </p>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </PopoverContent>
+        </Popover>
+
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
