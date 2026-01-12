@@ -165,7 +165,9 @@ export default function ProjetoDetalhe() {
     
     // Safe check - only add if isModuleActive function works
     try {
-      if (isModuleActive("freebets")) {
+      // Promoções tab appears when EITHER freebets OR giros_gratis is active
+      const hasPromocoes = isModuleActive("freebets") || isModuleActive("giros_gratis");
+      if (hasPromocoes) {
         moduleTabs.push({ value: "promocoes", label: "Promoções", icon: <Gift className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
       }
       if (isModuleActive("bonus")) {
