@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Gift, Target, TrendingUp, Shield, CheckCircle2, BarChart3 } from "lucide-react";
 import { ApostaOperacionalFreebet } from "./types";
 import { ResultadoPill } from "../ResultadoPill";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface FreebetApostaCardProps {
   aposta: ApostaOperacionalFreebet;
@@ -13,13 +14,6 @@ interface FreebetApostaCardProps {
   formatCurrency: (value: number) => string;
   onResultadoUpdated: () => void;
   onEditClick: (aposta: ApostaOperacionalFreebet) => void;
-}
-
-// Parse local datetime without timezone conversion
-function parseLocalDateTime(dateString: string): Date {
-  if (!dateString) return new Date();
-  const date = new Date(dateString);
-  return date;
 }
 
 // Badge de estratégia (prioridade máxima quando gera freebet = Qualificadora)

@@ -12,6 +12,7 @@ import {
   Percent
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface Aposta {
   id: string;
@@ -159,7 +160,7 @@ export function DuploGreenStatisticsCard({ apostas, formatCurrency }: DuploGreen
       : "-";
     
     // Dias operados e frequência temporal
-    const datasUnicas = new Set(apostas.map(a => format(new Date(a.data_aposta), "yyyy-MM-dd")));
+    const datasUnicas = new Set(apostas.map(a => format(parseLocalDateTime(a.data_aposta), "yyyy-MM-dd")));
     const diasOperados = datasUnicas.size;
     const duploACadaXDias = diasOperados > 0 && totalDuplos > 0 
       ? (diasOperados / totalDuplos).toFixed(1) 
@@ -168,7 +169,7 @@ export function DuploGreenStatisticsCard({ apostas, formatCurrency }: DuploGreen
     // Calcular maior sequência sem duplo (entradas seguidas sem GREEN/MEIO_GREEN)
     // Ordenar por data
     const sortedLiquidadas = [...liquidadas].sort(
-      (a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
+      (a, b) => parseLocalDateTime(a.data_aposta).getTime() - parseLocalDateTime(b.data_aposta).getTime()
     );
     
     let maxSemDuplo = 0;
@@ -185,7 +186,7 @@ export function DuploGreenStatisticsCard({ apostas, formatCurrency }: DuploGreen
     
     // Calcular maior período sem duplo (em dias)
     // Agrupar duplos por data e encontrar maior gap
-    const duplosPorData = duplos.map(d => new Date(d.data_aposta).getTime()).sort((a, b) => a - b);
+    const duplosPorData = duplos.map(d => parseLocalDateTime(d.data_aposta).getTime()).sort((a, b) => a - b);
     let maxPeriodoSemDuplo = 0;
     
     if (duplosPorData.length >= 2) {
@@ -195,7 +196,7 @@ export function DuploGreenStatisticsCard({ apostas, formatCurrency }: DuploGreen
       }
     } else if (apostas.length > 0 && totalDuplos <= 1) {
       // Se há apostas mas só 1 ou nenhum duplo, calcular do início ao fim
-      const datasApostas = apostas.map(a => new Date(a.data_aposta).getTime()).sort((a, b) => a - b);
+      const datasApostas = apostas.map(a => parseLocalDateTime(a.data_aposta).getTime()).sort((a, b) => a - b);
       if (datasApostas.length >= 2) {
         maxPeriodoSemDuplo = differenceInDays(new Date(datasApostas[datasApostas.length - 1]), new Date(datasApostas[0]));
       }

@@ -7,6 +7,7 @@ import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 // Estrutura de entrada individual (para múltiplas entradas)
 export interface SurebetPernaEntry {
@@ -299,14 +300,6 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
   
   const Icon = estrategiaConfig.icon;
 
-  const parseLocalDateTime = (dateString: string): Date => {
-    if (!dateString) return new Date();
-    const cleanDate = dateString.replace(/\+00:00$/, '').replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
-    const [datePart, timePart] = cleanDate.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
-    return new Date(year, month - 1, day, hours || 0, minutes || 0);
-  };
 
   return (
     <Card 

@@ -5,6 +5,7 @@ import { ptBR } from "date-fns/locale";
 import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash } from "lucide-react";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { cn } from "@/lib/utils";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -224,19 +225,6 @@ function defaultFormatCurrency(value: number, moeda: string = "BRL"): string {
   return `${symbol} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-/**
- * Converte string de data do banco para Date local sem conversão de timezone
- * Resolve o problema de datas sendo exibidas com offset incorreto
- */
-const parseLocalDateTime = (dateString: string): Date => {
-  if (!dateString) return new Date();
-  // Remove timezone info para interpretar como hora local
-  const cleanDate = dateString.replace(/\+00:00$/, '').replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
-  const [datePart, timePart] = cleanDate.split('T');
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
-  return new Date(year, month - 1, day, hours || 0, minutes || 0);
-};
 
 export function ApostaCard({
   aposta, 

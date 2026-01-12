@@ -13,10 +13,10 @@ import {
   subMonths,
   startOfWeek,
   endOfWeek,
-  getDay
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface ApostaData {
   data_aposta: string;
@@ -74,7 +74,7 @@ export function CalendarioLucros({
       
       if (!isLiquidada) return;
       
-      const dataKey = format(new Date(aposta.data_aposta), "yyyy-MM-dd");
+      const dataKey = format(parseLocalDateTime(aposta.data_aposta), "yyyy-MM-dd");
       const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
       
       mapa.set(dataKey, {
@@ -105,7 +105,7 @@ export function CalendarioLucros({
     let totalApostas = 0;
     
     apostas.forEach((aposta) => {
-      const dataAposta = new Date(aposta.data_aposta);
+      const dataAposta = parseLocalDateTime(aposta.data_aposta);
       if (isSameMonth(dataAposta, currentMonth)) {
         const isLiquidada = aposta.resultado 
           ? aposta.resultado !== "PENDENTE" 

@@ -9,6 +9,7 @@ import {
   Zap
 } from "lucide-react";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface Aposta {
   id: string;
@@ -259,7 +260,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     // Séries
     let maxVitorias = 0, maxDerrotas = 0, currentVitorias = 0, currentDerrotas = 0;
     const sorted = [...liquidadas].sort((a, b) => 
-      new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
+      parseLocalDateTime(a.data_aposta).getTime() - parseLocalDateTime(b.data_aposta).getTime()
     );
     sorted.forEach(a => {
       if (a.resultado === "GREEN" || a.resultado === "MEIO_GREEN") {
