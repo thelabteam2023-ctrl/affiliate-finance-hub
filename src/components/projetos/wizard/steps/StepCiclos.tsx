@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
-import { AlertCircle, Calendar, Target, TrendingUp } from "lucide-react";
+import { Calendar, Target, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -66,14 +66,6 @@ export function StepCiclos({ formData, onChange }: StepCiclosProps) {
 
       {formData.criar_ciclo && (
         <div className="space-y-4 p-4 rounded-lg border bg-muted/20">
-          {/* Aviso sobre moeda */}
-          <div className="flex items-start gap-2 p-3 rounded-md bg-amber-500/10 border border-amber-500/30">
-            <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-200">
-              Este ciclo será registrado em <strong>{formData.moeda_consolidacao}</strong>. 
-              A meta e todos os valores herdam a moeda de consolidação do projeto.
-            </p>
-          </div>
 
           {/* Linha principal: Nome + Datas */}
           <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_1fr] gap-4">
@@ -102,8 +94,9 @@ export function StepCiclos({ formData, onChange }: StepCiclosProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+          {/* Linha: Métrica + Meta */}
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-4">
+            <div className="space-y-1.5">
               <Label>Métrica do Ciclo</Label>
               <Select
                 value={formData.ciclo_metrica}
@@ -130,12 +123,9 @@ export function StepCiclos({ formData, onChange }: StepCiclosProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                Meta de {formData.ciclo_metrica === "LUCRO" ? "Lucro" : "Volume"} ({currencySymbol})
-                <span className="text-xs text-muted-foreground font-normal">
-                  ({formData.moeda_consolidacao})
-                </span>
+            <div className="space-y-1.5">
+              <Label>
+                Meta de {formData.ciclo_metrica === "LUCRO" ? "Lucro" : "Volume"} ({formData.moeda_consolidacao})
               </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
