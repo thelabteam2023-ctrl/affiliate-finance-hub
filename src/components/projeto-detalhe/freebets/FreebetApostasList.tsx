@@ -1,11 +1,11 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Gift, Target, TrendingUp, Shield, CheckCircle2, BarChart3 } from "lucide-react";
+import { Gift, Target, TrendingUp, Shield, CheckCircle2, BarChart3, Layers } from "lucide-react";
 import { ApostaOperacionalFreebet } from "./types";
 import { ResultadoPill } from "../ResultadoPill";
 import { parseLocalDateTime } from "@/utils/dateUtils";
+import { cn } from "@/lib/utils";
 
 interface FreebetApostasListProps {
   apostas: ApostaOperacionalFreebet[];
@@ -151,104 +151,149 @@ export function FreebetApostasList({
     );
   }
 
+  // Usar layout de cards em lista (igual ApostaCard variant="list")
   return (
-    <Card>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left p-3 font-medium">Tipo</th>
-                <th className="text-left p-3 font-medium">Evento</th>
-                <th className="text-left p-3 font-medium">Seleção</th>
-                <th className="text-right p-3 font-medium">Odd</th>
-                <th className="text-right p-3 font-medium">Stake</th>
-                <th className="text-right p-3 font-medium">P/L</th>
-                <th className="text-left p-3 font-medium">Casa</th>
-                <th className="text-center p-3 font-medium">Status</th>
-                <th className="text-left p-3 font-medium">Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {apostas.map((aposta) => {
-                const operationType = getOperationType(aposta);
+    <div className="space-y-2">
+      {apostas.map((aposta) => {
+        const operationType = getOperationType(aposta);
+        const isMultipla = aposta.tipo === "multipla";
+        
+        return (
+          <div 
+            key={aposta.id}
+            className="rounded-lg border cursor-pointer transition-colors p-3 hover:border-primary/30"
+            onClick={() => onEditClick(aposta)}
+          >
+            {/* Layout Padronizado: 3 linhas igual ApostaCard */}
+            <div className="flex flex-col gap-2">
+              
+              {/* LINHA 1: Evento + Badges */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate uppercase">{aposta.evento || 'Aposta'}</p>
+                  {aposta.esporte && (
+                    <span className="text-xs text-muted-foreground shrink-0">• {aposta.esporte}</span>
+                  )}
+                </div>
                 
-                return (
-                  <tr 
-                    key={aposta.id} 
-                    className="border-b hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="p-3">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {/* Badge de estratégia (prioridade) ou contexto (fallback) */}
-                        {getEstrategiaBadge(aposta) || getContextoBadge(aposta)}
-                        {/* Badge de tipo operacional */}
-                        {getTipoOperacionalBadge(aposta)}
-                        {/* Badge múltipla */}
-                        {aposta.tipo === "multipla" && (
-                          <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px] px-1.5 py-0">
-                            MULT
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-3 max-w-[200px] truncate uppercase" title={aposta.evento}>
-                      {aposta.evento}
-                    </td>
-                    <td className="p-3 max-w-[150px] truncate" title={aposta.selecao}>
-                      {aposta.selecao}
-                    </td>
-                    <td className="p-3 text-right font-medium">
-                      @{aposta.odd.toFixed(2)}
-                    </td>
-                    <td className="p-3 text-right text-amber-400 font-medium">
-                      {formatCurrency(aposta.stake)}
-                    </td>
-                    <td className="p-3 text-right">
-                      {aposta.status === "LIQUIDADA" && aposta.lucro_prejuizo !== null ? (
-                        <span className={`font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {formatCurrency(aposta.lucro_prejuizo)}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </td>
-                    <td className="p-3 max-w-[120px] truncate" title={aposta.bookmaker_nome}>
-                      {aposta.bookmaker_nome}
-                    </td>
-                    <td className="p-3 text-center">
-                      <ResultadoPill
-                        apostaId={aposta.id}
-                        projetoId={projetoId}
-                        bookmarkerId={aposta.bookmaker_id}
-                        layExchangeBookmakerId={operationType === "cobertura" ? aposta.lay_exchange : undefined}
-                        resultado={aposta.resultado}
-                        status={aposta.status}
-                        stake={aposta.stake}
-                        odd={aposta.odd}
-                        operationType={operationType}
-                        layLiability={aposta.lay_liability || undefined}
-                        layOdd={aposta.lay_odd || undefined}
-                        layStake={aposta.lay_stake || undefined}
-                        layComissao={aposta.lay_comissao || undefined}
-                        gerouFreebet={aposta.gerou_freebet || false}
-                        valorFreebetGerada={aposta.valor_freebet_gerada || undefined}
-                        contextoOperacional={aposta.contexto_operacional}
-                        estrategia={aposta.estrategia}
-                        onResultadoUpdated={onResultadoUpdated}
-                        onEditClick={() => onEditClick(aposta)}
-                      />
-                    </td>
-                    <td className="p-3 text-muted-foreground text-xs">
-                      {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+                {/* Badges alinhadas à direita */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Badge de estratégia (prioridade) ou contexto (fallback) */}
+                  {getEstrategiaBadge(aposta) || getContextoBadge(aposta)}
+                  {/* Badge de tipo operacional */}
+                  {getTipoOperacionalBadge(aposta)}
+                  {/* Badge múltipla */}
+                  {isMultipla && (
+                    <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0 flex items-center gap-0.5">
+                      <Layers className="h-2.5 w-2.5" />
+                      MULT
+                    </Badge>
+                  )}
+                  {!isMultipla && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-400 bg-blue-500/20">
+                      SIMPLES
+                    </Badge>
+                  )}
+                  <ResultadoPill
+                    apostaId={aposta.id}
+                    projetoId={projetoId}
+                    bookmarkerId={aposta.bookmaker_id}
+                    layExchangeBookmakerId={operationType === "cobertura" ? aposta.lay_exchange : undefined}
+                    resultado={aposta.resultado}
+                    status={aposta.status}
+                    stake={aposta.stake}
+                    odd={aposta.odd}
+                    operationType={operationType}
+                    layLiability={aposta.lay_liability || undefined}
+                    layOdd={aposta.lay_odd || undefined}
+                    layStake={aposta.lay_stake || undefined}
+                    layComissao={aposta.lay_comissao || undefined}
+                    gerouFreebet={aposta.gerou_freebet || false}
+                    valorFreebetGerada={aposta.valor_freebet_gerada || undefined}
+                    contextoOperacional={aposta.contexto_operacional}
+                    estrategia={aposta.estrategia}
+                    onResultadoUpdated={onResultadoUpdated}
+                    onEditClick={() => onEditClick(aposta)}
+                  />
+                </div>
+              </div>
+              
+              {/* LINHA 2: Badge Seleção + Logo + Casa + Odd + Stake */}
+              <div className="flex items-center gap-3">
+                {/* Badge de seleção */}
+                {aposta.selecao && !isMultipla && (
+                  <div className="w-16 shrink-0">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-full">
+                      {aposta.selecao.length > 8 ? aposta.selecao.substring(0, 8) + '...' : aposta.selecao}
+                    </Badge>
+                  </div>
+                )}
+                
+                {/* Logo */}
+                {aposta.logo_url ? (
+                  <img 
+                    src={aposta.logo_url} 
+                    alt={aposta.bookmaker_nome || ''} 
+                    className="h-10 w-10 rounded-lg object-contain bg-white/10 p-1 shrink-0"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
+                    <Target className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                )}
+                
+                {/* Nome da casa */}
+                <span className="text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
+                  {aposta.bookmaker_nome || 'Casa'}
+                </span>
+                
+                {/* Múltipla - exibe seleções inline */}
+                {isMultipla && aposta.selecao && (
+                  <p className="text-xs text-muted-foreground truncate uppercase flex-1">
+                    {aposta.selecao}
+                  </p>
+                )}
+                
+                {/* Odd + Stake à direita */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-sm font-medium">@{aposta.odd.toFixed(2)}</span>
+                  <span className="text-xs text-muted-foreground">{formatCurrency(aposta.stake)}</span>
+                </div>
+              </div>
+              
+              {/* LINHA 3: Data/Hora + Lucro/ROI */}
+              <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy HH:mm", { locale: ptBR })}
+                  </span>
+                  {/* Badge Gerou Freebet */}
+                  {aposta.gerou_freebet && aposta.valor_freebet_gerada && (
+                    <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0 flex items-center gap-0.5">
+                      <Gift className="h-2.5 w-2.5" />
+                      +{formatCurrency(aposta.valor_freebet_gerada)}
+                    </Badge>
+                  )}
+                </div>
+                
+                {aposta.lucro_prejuizo !== null && aposta.status === "LIQUIDADA" && (
+                  <div className="flex items-center gap-1">
+                    <span className={cn("text-sm font-semibold", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                      {formatCurrency(aposta.lucro_prejuizo)}
+                    </span>
+                    {aposta.stake > 0 && (
+                      <span className={cn("text-[10px]", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                        ({aposta.lucro_prejuizo >= 0 ? '+' : ''}{((aposta.lucro_prejuizo / aposta.stake) * 100).toFixed(1)}%)
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
