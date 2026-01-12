@@ -107,12 +107,6 @@ export function StepRevisao({ formData, selectedModules, modulesNames }: StepRev
               </span>
             </div>
             <div>
-              <span className="text-muted-foreground">Status:</span>{" "}
-              <Badge variant="outline" className="text-xs ml-1">
-                {formData.status}
-              </Badge>
-            </div>
-            <div>
               <span className="text-muted-foreground">Início:</span>{" "}
               <span className={cn("font-medium", !formData.data_inicio && "text-amber-500")}>
                 {formatDate(formData.data_inicio)}
