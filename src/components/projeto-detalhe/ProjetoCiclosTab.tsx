@@ -940,7 +940,7 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                   key={ciclo.id}
                   ciclo={ciclo}
                   formatCurrency={formatCurrency}
-                  onViewDetails={() => handleEditCiclo(ciclo)}
+                  onEdit={() => handleEditCiclo(ciclo)}
                   parseLocalDate={parseLocalDate}
                 />
               ))}

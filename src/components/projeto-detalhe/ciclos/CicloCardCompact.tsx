@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, TrendingUp, TrendingDown, Target, CheckCircle2, Clock } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Calendar, TrendingUp, TrendingDown, Target, CheckCircle2, Clock, ChevronDown, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -23,11 +25,13 @@ interface CicloCardCompactProps {
     gatilho_fechamento: string | null;
   };
   formatCurrency: (value: number) => string;
-  onViewDetails: () => void;
+  onEdit: () => void;
   parseLocalDate: (dateString: string) => Date;
 }
 
-export function CicloCardCompact({ ciclo, formatCurrency, onViewDetails, parseLocalDate }: CicloCardCompactProps) {
+export function CicloCardCompact({ ciclo, formatCurrency, onEdit, parseLocalDate }: CicloCardCompactProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
   const getTipoGatilhoBadge = () => {
     const temDataLimite = ciclo.data_fim_prevista && ciclo.data_fim_prevista !== ciclo.data_inicio;
     const isMetaPrazo = (ciclo.tipo_gatilho === "META" || ciclo.tipo_gatilho === "VOLUME") && temDataLimite;
@@ -75,17 +79,33 @@ export function CicloCardCompact({ ciclo, formatCurrency, onViewDetails, parseLo
     );
   };
 
+  // Calcular dias totais do ciclo
+  const calcularDiasTotais = () => {
+    const dataInicio = parseLocalDate(ciclo.data_inicio);
+    const dataFim = parseLocalDate(ciclo.data_fim_prevista);
+    return Math.ceil((dataFim.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  };
+
   // Calcular meta diária para display
   const calcularMetaDiaria = () => {
     if (!ciclo.meta_volume) return null;
-    const dataInicio = parseLocalDate(ciclo.data_inicio);
-    const dataFim = parseLocalDate(ciclo.data_fim_prevista);
-    const diasTotais = Math.ceil((dataFim.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const diasTotais = calcularDiasTotais();
     if (diasTotais <= 0) return null;
     return ciclo.meta_volume / diasTotais;
   };
 
+  const diasTotais = calcularDiasTotais();
   const metaDiaria = calcularMetaDiaria();
+
+  // Limpar observações (remover métricas se houver)
+  const getObservacoes = () => {
+    if (!ciclo.observacoes) return null;
+    // Remove a parte de métricas se existir
+    const cleaned = ciclo.observacoes.split("\n\n📊")[0];
+    return cleaned.trim() || null;
+  };
+
+  const observacoes = getObservacoes();
 
   return (
     <Card className="hover:border-primary/30 transition-colors">
@@ -104,10 +124,22 @@ export function CicloCardCompact({ ciclo, formatCurrency, onViewDetails, parseLo
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Calendar className="h-3 w-3" />
                 {format(parseLocalDate(ciclo.data_inicio), "dd/MM", { locale: ptBR })} → {format(parseLocalDate(ciclo.data_fim_prevista), "dd/MM", { locale: ptBR })}
+                <span className="text-muted-foreground/70">({diasTotais} dias)</span>
               </div>
             </div>
           </div>
-          {getStatusBadge()}
+          <div className="flex items-center gap-1">
+            {getStatusBadge()}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={onEdit}
+              title="Editar ciclo"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
 
         {/* Métricas compactas */}
@@ -149,15 +181,30 @@ export function CicloCardCompact({ ciclo, formatCurrency, onViewDetails, parseLo
           </div>
         </div>
 
-        {/* Botão */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="w-full text-xs"
-          onClick={onViewDetails}
-        >
-          Ver Detalhes
-        </Button>
+        {/* Observações expandíveis */}
+        {observacoes ? (
+          <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-xs justify-between"
+              >
+                <span>Ver detalhes</span>
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 pt-2 border-t">
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                {observacoes}
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <p className="text-xs text-muted-foreground/50 text-center py-1">
+            Sem observações
+          </p>
+        )}
       </CardContent>
     </Card>
   );
