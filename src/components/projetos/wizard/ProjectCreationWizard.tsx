@@ -46,16 +46,27 @@ export function ProjectCreationWizard({
   const { workspaceId } = useWorkspace();
   const [currentStep, setCurrentStep] = useState<WizardStep>("dados");
   const [completedSteps, setCompletedSteps] = useState<WizardStep[]>([]);
+  const [skippedSteps, setSkippedSteps] = useState<WizardStep[]>([]);
   const [formData, setFormData] = useState<ProjectFormData>(DEFAULT_FORM_DATA);
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [modulesNames, setModulesNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+
+  // Função para verificar se etapa deve ser pulada
+  const shouldSkipStep = (step: WizardStep, data: ProjectFormData): boolean => {
+    if (step === "estrutura") {
+      // Pular Estrutura se BRL e sem crypto
+      return data.moeda_consolidacao === "BRL" && !data.tem_investimento_crypto;
+    }
+    return false;
+  };
 
   // Reset when dialog opens
   useEffect(() => {
     if (open) {
       setCurrentStep("dados");
       setCompletedSteps([]);
+      setSkippedSteps([]);
       setFormData(DEFAULT_FORM_DATA);
       setSelectedModules([]);
     }
@@ -133,14 +144,45 @@ export function ProjectCreationWizard({
     if (!completedSteps.includes(currentStep)) {
       setCompletedSteps((prev) => [...prev, currentStep]);
     }
-    if (currentIndex < WIZARD_STEPS.length - 1) {
-      setCurrentStep(WIZARD_STEPS[currentIndex + 1]);
+    
+    // Encontrar próxima etapa válida (pulando as que devem ser puladas)
+    let nextIndex = currentIndex + 1;
+    while (nextIndex < WIZARD_STEPS.length) {
+      const nextStep = WIZARD_STEPS[nextIndex];
+      if (shouldSkipStep(nextStep, formData)) {
+        // Marcar como pulada
+        if (!skippedSteps.includes(nextStep)) {
+          setSkippedSteps((prev) => [...prev, nextStep]);
+        }
+        nextIndex++;
+      } else {
+        // Remover de puladas se estava antes (mudou contexto)
+        if (skippedSteps.includes(nextStep)) {
+          setSkippedSteps((prev) => prev.filter(s => s !== nextStep));
+        }
+        break;
+      }
+    }
+    
+    if (nextIndex < WIZARD_STEPS.length) {
+      setCurrentStep(WIZARD_STEPS[nextIndex]);
     }
   };
 
   const goBack = () => {
-    if (currentIndex > 0) {
-      setCurrentStep(WIZARD_STEPS[currentIndex - 1]);
+    // Encontrar etapa anterior válida (pulando as que devem ser puladas)
+    let prevIndex = currentIndex - 1;
+    while (prevIndex >= 0) {
+      const prevStep = WIZARD_STEPS[prevIndex];
+      if (shouldSkipStep(prevStep, formData)) {
+        prevIndex--;
+      } else {
+        break;
+      }
+    }
+    
+    if (prevIndex >= 0) {
+      setCurrentStep(WIZARD_STEPS[prevIndex]);
     }
   };
 
@@ -348,7 +390,11 @@ export function ProjectCreationWizard({
           <DialogTitle>Novo Projeto</DialogTitle>
         </DialogHeader>
 
-        <WizardStepIndicator currentStep={currentStep} completedSteps={completedSteps} />
+        <WizardStepIndicator 
+          currentStep={currentStep} 
+          completedSteps={completedSteps}
+          skippedSteps={skippedSteps}
+        />
 
         <ScrollArea className="h-[450px] pr-4">{renderStep()}</ScrollArea>
 
