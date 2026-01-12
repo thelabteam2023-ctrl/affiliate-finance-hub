@@ -1226,7 +1226,7 @@ export default function Financeiro() {
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
+                  <thead className="sticky top-0 z-10 bg-background">
                     <tr className="border-b bg-muted/30">
                       <th className="text-left py-3 px-4 font-medium">Data</th>
                       <th className="text-left py-3 px-4 font-medium">Categoria</th>
@@ -1237,78 +1237,83 @@ export default function Financeiro() {
                       <th className="text-center py-3 px-4 font-medium">Ações</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {despesasAdmin.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                          Nenhuma despesa administrativa cadastrada
-                        </td>
-                      </tr>
-                    ) : (
-                      despesasAdmin
-                        .sort((a, b) => new Date(b.data_despesa).getTime() - new Date(a.data_despesa).getTime())
-                        .map((despesa) => (
-                          <tr key={despesa.id} className="border-b border-border/50 hover:bg-muted/30">
-                            <td className="py-3 px-4">
-                              {format(parseISO(despesa.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
-                            </td>
-                            <td className="py-3 px-4">
-                              <Badge variant="outline">{despesa.categoria}</Badge>
-                            </td>
-                            <td className="py-3 px-4 text-muted-foreground">
-                              {despesa.descricao || "—"}
-                            </td>
-                            <td className="py-3 px-4 text-right font-medium text-orange-500">
-                              {formatCurrency(despesa.valor)}
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              {despesa.recorrente ? (
-                                <Badge variant="secondary" className="text-xs">Sim</Badge>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <Badge 
-                                variant={despesa.status === "CONFIRMADO" ? "default" : "secondary"}
-                                className="text-xs"
-                              >
-                                {despesa.status}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center justify-center gap-2">
-                                <button
-                                  onClick={() => { setEditingDespesa(despesa); setDespesaAdminDialogOpen(true); }}
-                                  className="text-muted-foreground hover:text-foreground transition-colors"
-                                  title="Editar"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (confirm("Tem certeza que deseja excluir esta despesa?")) {
-                                      const { error } = await supabase.from("despesas_administrativas").delete().eq("id", despesa.id);
-                                      if (error) {
-                                        toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
-                                      } else {
-                                        toast({ title: "Despesa excluída" });
-                                        fetchData();
-                                      }
-                                    }
-                                  }}
-                                  className="text-muted-foreground hover:text-destructive transition-colors"
-                                  title="Excluir"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                    )}
-                  </tbody>
                 </table>
+                {/* Container com scroll quando houver 5+ registros */}
+                <div className={despesasAdmin.length >= 5 ? "max-h-[320px] overflow-y-auto" : ""}>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {despesasAdmin.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                            Nenhuma despesa administrativa cadastrada
+                          </td>
+                        </tr>
+                      ) : (
+                        [...despesasAdmin]
+                          .sort((a, b) => new Date(b.data_despesa).getTime() - new Date(a.data_despesa).getTime())
+                          .map((despesa) => (
+                            <tr key={despesa.id} className="border-b border-border/50 hover:bg-muted/30">
+                              <td className="py-3 px-4 w-[120px]">
+                                {format(parseISO(despesa.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
+                              </td>
+                              <td className="py-3 px-4 w-[140px]">
+                                <Badge variant="outline">{despesa.categoria}</Badge>
+                              </td>
+                              <td className="py-3 px-4 text-muted-foreground">
+                                {despesa.descricao || "—"}
+                              </td>
+                              <td className="py-3 px-4 text-right font-medium text-orange-500 w-[120px]">
+                                {formatCurrency(despesa.valor)}
+                              </td>
+                              <td className="py-3 px-4 text-center w-[100px]">
+                                {despesa.recorrente ? (
+                                  <Badge variant="secondary" className="text-xs">Sim</Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-center w-[100px]">
+                                <Badge 
+                                  variant={despesa.status === "CONFIRMADO" ? "default" : "secondary"}
+                                  className="text-xs"
+                                >
+                                  {despesa.status}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4 w-[80px]">
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    onClick={() => { setEditingDespesa(despesa); setDespesaAdminDialogOpen(true); }}
+                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                    title="Editar"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm("Tem certeza que deseja excluir esta despesa?")) {
+                                        const { error } = await supabase.from("despesas_administrativas").delete().eq("id", despesa.id);
+                                        if (error) {
+                                          toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+                                        } else {
+                                          toast({ title: "Despesa excluída" });
+                                          fetchData();
+                                        }
+                                      }
+                                    }}
+                                    className="text-muted-foreground hover:text-destructive transition-colors"
+                                    title="Excluir"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </CardContent>
           </Card>
