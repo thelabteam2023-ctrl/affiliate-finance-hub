@@ -481,14 +481,32 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
                 key={transacao.id}
                 className="p-3 border border-border rounded-lg hover:bg-muted/20 transition-colors"
               >
-                {/* Header: Badge + Data */}
+                {/* Header: Badge + Info Icon + Data */}
                 <div className="flex items-start justify-between gap-2 mb-3">
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs font-medium ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}
-                  >
-                    {getTipoLabel(transacao.tipo_transacao, transacao)}
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs font-medium ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}
+                    >
+                      {getTipoLabel(transacao.tipo_transacao, transacao)}
+                    </Badge>
+                    
+                    {/* Info icon com descrição/motivo ao lado do badge */}
+                    {(transacao.descricao || transacao.ajuste_motivo) && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-center h-5 w-5 rounded-full bg-muted/50 hover:bg-muted cursor-help transition-colors">
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-[300px]">
+                          <p className="text-xs whitespace-pre-wrap">
+                            {transacao.ajuste_motivo || transacao.descricao}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {formatDate(transacao.data_transacao)}
                   </span>
@@ -499,38 +517,14 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
                   <FlowLabel label={origem} align="left" />
                   <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <FlowLabel label={destino} align="left" />
-                  
-                  {/* Info icon para despesas administrativas */}
-                  {transacao.tipo_transacao === "DESPESA_ADMINISTRATIVA" && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[250px]">
-                        <p className="text-xs">Despesa administrativa registrada nesta conta</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
                 </div>
 
-                {/* Footer: Valor + Descrição */}
-                <div className="flex items-center justify-between gap-2">
+                {/* Footer: Valor */}
+                <div className="flex items-center">
                   <span className="text-sm font-semibold flex items-center">
                     {maskCurrency(transacao)}
                     {getMoedaBadge(transacao)}
                   </span>
-                  {transacao.descricao && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="text-xs text-muted-foreground truncate max-w-[180px] cursor-help">
-                          {transacao.descricao}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[300px]">
-                        <p className="text-xs">{transacao.descricao}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
                 </div>
               </div>
             );
