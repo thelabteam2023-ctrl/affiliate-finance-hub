@@ -51,32 +51,14 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Nome *</Label>
-          <Input
-            value={formData.nome}
-            onChange={(e) => onChange({ nome: e.target.value.toUpperCase() })}
-            placeholder="NOME DO PROJETO"
-            className="uppercase"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Status</Label>
-          <Select
-            value={formData.status}
-            onValueChange={(value) => onChange({ status: value })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="PLANEJADO">Planejado</SelectItem>
-              <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
-              <SelectItem value="PAUSADO">Pausado</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-2">
+        <Label>Nome *</Label>
+        <Input
+          value={formData.nome}
+          onChange={(e) => onChange({ nome: e.target.value.toUpperCase() })}
+          placeholder="NOME DO PROJETO"
+          className="uppercase"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
