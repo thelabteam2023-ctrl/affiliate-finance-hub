@@ -37,6 +37,7 @@ import {
   OperationsSubTabHeader,
   type HistorySubTab 
 } from "../operations";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface BonusApostasTabProps {
   projetoId: string;
@@ -461,7 +462,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     ...filteredApostas.map(a => ({ tipo: "simples" as const, data: a, data_aposta: a.data_aposta })),
     ...filteredMultiplas.map(am => ({ tipo: "multipla" as const, data: am, data_aposta: am.data_aposta })),
     ...filteredSurebets.map(sb => ({ tipo: "surebet" as const, data: sb, data_aposta: sb.data_operacao })),
-  ].sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
+  ].sort((a, b) => parseLocalDateTime(b.data_aposta).getTime() - parseLocalDateTime(a.data_aposta).getTime());
 
   // Separate into Abertas (pending) and Histórico (settled)
   const apostasAbertas = apostasUnificadas.filter(item => {

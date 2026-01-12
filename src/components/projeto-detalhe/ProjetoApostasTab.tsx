@@ -48,6 +48,7 @@ import { useOperationalFilters } from "@/contexts/OperationalFiltersContext";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { parsePernaFromJson } from "@/types/apostasUnificada";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 
 // Contextos de aposta para filtro unificado
@@ -699,7 +700,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     });
     
     // Ordenar por data
-    return result.sort((a, b) => new Date(b.data_aposta).getTime() - new Date(a.data_aposta).getTime());
+    return result.sort((a, b) => parseLocalDateTime(b.data_aposta).getTime() - parseLocalDateTime(a.data_aposta).getTime());
   }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo, globalFilters.bookmakerIds, globalFilters.parceiroIds, globalFilters.estrategias, statusFilter, resultadoFilter, contextoFilter, tipoFilter]);
 
   // Helper para verificar se um item está pendente
@@ -764,14 +765,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   // formatCurrency definido no escopo do componente
 
-  const parseLocalDateTime = (dateString: string): Date => {
-    if (!dateString) return new Date();
-    const cleanDate = dateString.replace(/\+00:00$/, '').replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
-    const [datePart, timePart] = cleanDate.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
-    return new Date(year, month - 1, day, hours || 0, minutes || 0);
-  };
 
 
   const getOperationType = (aposta: Aposta): { type: "bookmaker" | "back" | "lay" | "cobertura"; label: string; color: string } => {

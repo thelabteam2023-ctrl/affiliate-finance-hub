@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface Aposta {
   id: string;
@@ -61,7 +62,7 @@ export function ValueBetStatisticsCard({ apostas, formatCurrency }: ValueBetStat
 
     // Ordenar por data para calcular séries
     const sorted = [...apostasLiquidadas].sort(
-      (a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
+      (a, b) => parseLocalDateTime(a.data_aposta).getTime() - parseLocalDateTime(b.data_aposta).getTime()
     );
 
     sorted.forEach((a) => {

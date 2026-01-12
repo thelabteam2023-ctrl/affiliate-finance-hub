@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarioLucros } from "./CalendarioLucros";
 import { getFirstLastName } from "@/lib/utils";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 // =====================================================
 // TIPOS
@@ -479,7 +480,7 @@ export function VisaoGeralCharts({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const evolucaoData = useMemo((): EvolucaoData[] => {
     const sorted = [...apostas].sort(
-      (a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()
+      (a, b) => parseLocalDateTime(a.data_aposta).getTime() - parseLocalDateTime(b.data_aposta).getTime()
     );
     
     // MODO 1: Período de 1 dia → entrada por entrada
@@ -488,7 +489,7 @@ export function VisaoGeralCharts({
       return sorted.map((a, index) => {
         const impacto = a.lucro_prejuizo || 0;
         acumulado += impacto;
-        const date = new Date(a.data_aposta);
+        const date = parseLocalDateTime(a.data_aposta);
         const dataFormatada = format(date, "dd/MM", { locale: ptBR });
         const horaFormatada = format(date, "HH:mm", { locale: ptBR });
         
@@ -516,7 +517,7 @@ export function VisaoGeralCharts({
     }>();
     
     sorted.forEach((a) => {
-      const date = new Date(a.data_aposta);
+      const date = parseLocalDateTime(a.data_aposta);
       const dateKey = format(date, "yyyy-MM-dd"); // Chave única por dia
       const dataFormatada = format(date, "dd/MM", { locale: ptBR });
       const impacto = a.lucro_prejuizo || 0;

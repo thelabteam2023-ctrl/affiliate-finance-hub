@@ -26,6 +26,7 @@ import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-f
 import { useFreebetViewPreferences, FreebetSubTab } from "@/hooks/useFreebetViewPreferences";
 import { cn } from "@/lib/utils";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import { 
   FreebetApostaCard, 
   FreebetApostasList, 
@@ -418,7 +419,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   const apostasNoPeriodo = useMemo(() => {
     if (!dateRange) return apostasOperacionais;
     return apostasOperacionais.filter(ap => {
-      const dataAposta = new Date(ap.data_aposta);
+      const dataAposta = parseLocalDateTime(ap.data_aposta);
       return dataAposta >= dateRange.start && dataAposta <= dateRange.end;
     });
   }, [apostasOperacionais, dateRange]);

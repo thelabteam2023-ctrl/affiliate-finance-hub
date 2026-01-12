@@ -5,6 +5,7 @@ import {
   type DateRangeResult,
   getDateRangeFromPeriod
 } from "@/contexts/OperationalFiltersContext";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 /**
  * Hook para aplicar filtros transversais em uma lista de operações.
@@ -57,7 +58,7 @@ export function useOperationalFiltersQuery<T extends FilterableOperation>(
     return operations.filter(op => {
       // Filtro por período (se dateRange definido)
       if (dateRange && op.data_aposta) {
-        const opDate = new Date(op.data_aposta);
+        const opDate = parseLocalDateTime(op.data_aposta);
         if (opDate < dateRange.start || opDate > dateRange.end) {
           return false;
         }
