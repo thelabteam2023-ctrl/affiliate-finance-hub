@@ -65,6 +65,7 @@ import { ConfirmacaoSenhaDialog } from "@/components/ui/confirmacao-senha-dialog
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjectPostCreateWizard } from "@/components/projetos/ProjectPostCreateWizard";
 import { ProjectModulesStep } from "@/components/projetos/ProjectModulesStep";
+import { ProjectCreationWizard } from "@/components/projetos/wizard/ProjectCreationWizard";
 
 interface Projeto {
   id?: string;
@@ -439,48 +440,49 @@ export function ProjetoDialog({
   const isViewMode = mode === "view";
   const precisaConciliacao = formData.tem_investimento_crypto && !formData.conciliado;
 
+  // Use wizard for create mode
+  if (mode === "create") {
+    return (
+      <ProjectCreationWizard
+        open={open}
+        onOpenChange={onOpenChange}
+        onSuccess={(projectId) => {
+          onSuccess();
+          // Navigate to project page after creation
+          if (projectId) {
+            window.location.href = `/projeto/${projectId}`;
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
-              {mode === "create" 
-                ? "Novo Projeto" 
-                : mode === "edit" 
+              {mode === "edit" 
                   ? "Editar Projeto" 
                   : "Detalhes do Projeto"}
             </DialogTitle>
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={cn("grid w-full", mode === "create" ? "grid-cols-2" : "grid-cols-3")}>
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="dados">
                 <FolderKanban className="h-4 w-4 mr-2" />
                 Dados
               </TabsTrigger>
-              {mode === "create" ? (
-                <TabsTrigger value="modulos">
-                  <Puzzle className="h-4 w-4 mr-2" />
-                  Módulos
-                  {selectedModules.length > 0 && (
-                    <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                      {selectedModules.length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              ) : (
-                <>
-                  <TabsTrigger value="moeda">
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Moeda
-                  </TabsTrigger>
-                  <TabsTrigger value="operadores">
-                    <Users className="h-4 w-4 mr-2" />
-                    Operadores
-                  </TabsTrigger>
-                </>
-              )}
+              <TabsTrigger value="moeda">
+                <DollarSign className="h-4 w-4 mr-2" />
+                Moeda
+              </TabsTrigger>
+              <TabsTrigger value="operadores">
+                <Users className="h-4 w-4 mr-2" />
+                Operadores
+              </TabsTrigger>
             </TabsList>
 
             <ScrollArea className="h-[500px] mt-4">
@@ -606,7 +608,8 @@ export function ProjetoDialog({
                           </p>
                         </div>
 
-                        {mode !== "create" && (
+                        {/* Conciliation status - always show in edit/view mode */}
+                        {(
                           <div className={`mt-4 p-3 rounded-lg flex items-center justify-between ${
                             formData.conciliado 
                               ? "bg-emerald-500/10 border border-emerald-500/20" 
@@ -741,39 +744,18 @@ export function ProjetoDialog({
                 )}
               </TabsContent>
 
-              {/* Módulos - apenas no modo create */}
-              {mode === "create" && (
-                <TabsContent value="modulos" className="px-1">
-                  <ProjectModulesStep 
-                    selectedModules={selectedModules} 
-                    onSelectionChange={setSelectedModules} 
-                  />
-                </TabsContent>
-              )}
 
               <TabsContent value="operadores" className="space-y-4 px-1">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium">Operadores Vinculados</h3>
                   {!isViewMode && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span>
-                          <Button 
-                            size="sm"
-                            onClick={() => setVincularDialogOpen(true)}
-                            disabled={mode === "create"}
-                          >
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Vincular Operador
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      {mode === "create" && (
-                        <TooltipContent>
-                          <p>Salve o projeto para vincular operadores</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
+                    <Button 
+                      size="sm"
+                      onClick={() => setVincularDialogOpen(true)}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Vincular Operador
+                    </Button>
                   )}
                 </div>
 
@@ -932,7 +914,7 @@ export function ProjetoDialog({
                 onClick={handleSave} 
                 disabled={loading || (formData.status === "FINALIZADO" && precisaConciliacao)}
               >
-                {loading ? "Salvando..." : mode === "create" ? "Criar Projeto" : "Salvar Alterações"}
+                {loading ? "Salvando..." : "Salvar Alterações"}
               </Button>
             </div>
           )}
