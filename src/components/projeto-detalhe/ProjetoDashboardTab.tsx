@@ -330,6 +330,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   }, [apostasUnificadas]);
 
   // Preparar dados para VisaoGeralCharts
+  // Passa bookmaker_nome e parceiro_nome separados - o VisaoGeralCharts faz o agrupamento
   const apostasParaGraficos = useMemo(() => {
     return apostasUnificadas.map(a => ({
       data_aposta: a.data_aposta,
@@ -337,6 +338,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       stake: a.stake,
       stake_total: a.stake_total,
       bookmaker_nome: a.bookmaker_nome,
+      parceiro_nome: a.parceiro_nome,
       bookmaker_id: a.bookmaker_id,
       pernas: a.pernas,
       forma_registro: a.forma_registro,
