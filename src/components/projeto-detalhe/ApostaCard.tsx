@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash } from "lucide-react";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
-import { cn } from "@/lib/utils";
+import { cn, getFirstLastName } from "@/lib/utils";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import {
   DropdownMenu,
@@ -272,10 +272,12 @@ export function ApostaCard({
     const bookmakerBase = aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome;
     // Extrair vínculo (parceiro) - pode vir do parceiro_nome ou da parte após " - " no bookmaker_nome
     const vinculoFull = aposta.parceiro_nome || aposta.bookmaker_nome?.split(" - ")[1]?.trim();
+    // Abreviar para primeiro e último nome
+    const vinculoAbreviado = vinculoFull ? getFirstLastName(vinculoFull) : null;
     
-    // Formato padronizado: "CASA - PARCEIRO" (igual ao SurebetCard com pernas)
-    const bookmakerDisplay = vinculoFull 
-      ? `${bookmakerBase} - ${vinculoFull}`
+    // Formato padronizado: "CASA - PARCEIRO ABREVIADO" (igual ao SurebetCard com pernas)
+    const bookmakerDisplay = vinculoAbreviado 
+      ? `${bookmakerBase} - ${vinculoAbreviado}`
       : bookmakerBase;
     
     // Para operações com múltiplas pernas (3+), usa layout vertical
@@ -426,10 +428,12 @@ export function ApostaCard({
   const bookmakerBaseCard = aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome;
   // Extrair vínculo (parceiro) - pode vir do parceiro_nome ou da parte após " - " no bookmaker_nome
   const vinculoFullCard = aposta.parceiro_nome || aposta.bookmaker_nome?.split(" - ")[1]?.trim();
+  // Abreviar para primeiro e último nome
+  const vinculoAbreviadoCard = vinculoFullCard ? getFirstLastName(vinculoFullCard) : null;
   
-  // Formato padronizado: "CASA - PARCEIRO" (igual ao SurebetCard com pernas)
-  const bookmakerDisplayCard = vinculoFullCard 
-    ? `${bookmakerBaseCard} - ${vinculoFullCard}`
+  // Formato padronizado: "CASA - PARCEIRO ABREVIADO" (igual ao SurebetCard com pernas)
+  const bookmakerDisplayCard = vinculoAbreviadoCard 
+    ? `${bookmakerBaseCard} - ${vinculoAbreviadoCard}`
     : bookmakerBaseCard;
 
   return (
