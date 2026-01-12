@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Badge } from "@/components/ui/badge";
 import { Coins, Briefcase, Percent, Info } from "lucide-react";
 import {
   Select,
@@ -90,49 +91,66 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
         </div>
       </div>
 
-      {/* Investimento Crypto */}
-      <Card className={formData.tem_investimento_crypto ? "border-orange-500/30" : ""}>
-        <CardContent className="pt-4">
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="tem_crypto"
-              checked={formData.tem_investimento_crypto}
-              onCheckedChange={(checked) =>
-                onChange({ tem_investimento_crypto: checked as boolean })
-              }
-            />
-            <div className="space-y-1">
-              <Label htmlFor="tem_crypto" className="flex items-center gap-2 cursor-pointer">
-                <Coins className="h-4 w-4 text-orange-500" />
-                Projeto com Investimento Crypto
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Ativa a obrigatoriedade de conciliação patrimonial antes de finalizar o projeto
-              </p>
+      {/* Cards opcionais em grid 2 colunas (desktop) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Investimento Crypto */}
+        <Card className={formData.tem_investimento_crypto ? "border-orange-500/30" : ""}>
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="tem_crypto"
+                checked={formData.tem_investimento_crypto}
+                onCheckedChange={(checked) =>
+                  onChange({ tem_investimento_crypto: checked as boolean })
+                }
+              />
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="tem_crypto" className="flex items-center gap-2 cursor-pointer">
+                  <Coins className="h-4 w-4 text-orange-500" />
+                  Investimento Crypto
+                  <Badge variant="secondary" className="text-xs ml-auto">Opcional</Badge>
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Ativa conciliação patrimonial obrigatória
+                </p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Participação de Investidor */}
+        {/* Participação de Investidor */}
+        <Card className={formData.investidor_id ? "border-purple-500/30" : ""}>
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-3">
+              <Briefcase className="h-4 w-4 text-purple-500 mt-0.5" />
+              <div className="space-y-1 flex-1">
+                <Label className="flex items-center gap-2">
+                  Participação de Investidor
+                  <Badge variant="secondary" className="text-xs ml-auto">Opcional</Badge>
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Vincule para dividir lucros
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Seleção de investidor (aparece se o card de investidor estiver no contexto) */}
       <Card className={formData.investidor_id ? "border-purple-500/30" : ""}>
         <CardContent className="pt-4">
-          <div className="flex items-center gap-3 mb-4">
-            <Briefcase className="h-5 w-5 text-purple-500" />
-            <div>
-              <Label className="text-base font-medium">Participação de Investidor</Label>
-              <p className="text-xs text-muted-foreground">
-                Opcional: vincule um investidor para dividir lucros
-              </p>
-            </div>
-          </div>
-
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Investidor</Label>
               <InvestidorSelect
                 value={formData.investidor_id || ""}
-                onValueChange={(value) => onChange({ investidor_id: value || null })}
+                onValueChange={(value) => onChange({ 
+                  investidor_id: value || null,
+                  // Reset related fields when no investor is selected
+                  percentual_investidor: value ? formData.percentual_investidor : 0,
+                  base_calculo_investidor: value ? formData.base_calculo_investidor : "LUCRO_LIQUIDO",
+                })}
               />
             </div>
 
