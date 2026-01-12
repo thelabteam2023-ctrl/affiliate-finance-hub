@@ -747,18 +747,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           )}
         </Toggle>
         
-        {/* Filter: Only with bonus */}
-        <div className="flex items-center gap-2 px-3 py-1.5 border rounded-md bg-card">
-          <Switch
-            id="filter-bonus"
-            checked={filterBonusOnly}
-            onCheckedChange={setFilterBonusOnly}
-          />
-          <Label htmlFor="filter-bonus" className="text-sm cursor-pointer flex items-center gap-1">
-            <Gift className="h-3.5 w-3.5 text-purple-400" />
-            Só com bônus ({bookmakersWithBonus.length})
-          </Label>
-        </div>
         
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
