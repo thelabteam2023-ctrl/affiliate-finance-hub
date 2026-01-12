@@ -3,26 +3,30 @@
  */
 
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Info, CheckCircle2 } from "lucide-react";
+import { Info, CheckCircle2, Building2, User, Split } from "lucide-react";
 import { ProjectFormData } from "../ProjectCreationWizardTypes";
+import { cn } from "@/lib/utils";
 
 const MODELOS_ABSORCAO = [
   {
     value: "EMPRESA_100",
-    label: "Empresa absorve 100%",
+    label: "Empresa 100%",
     description: "Taxas são custo operacional da empresa",
+    icon: Building2,
   },
   {
     value: "OPERADOR_100",
-    label: "Operador absorve 100%",
+    label: "Operador 100%",
     description: "Taxas deduzidas do lucro antes de calcular comissão",
+    icon: User,
   },
   {
     value: "PROPORCIONAL",
-    label: "Divisão proporcional (50/50)",
-    description: "Taxas divididas igualmente entre empresa e operador",
+    label: "Divisão proporcional",
+    description: "Taxas divididas entre empresa e operador",
+    icon: Split,
   },
 ];
 
@@ -39,6 +43,36 @@ export function StepEstruturaOperacional({
   const showTaxasSection = 
     formData.moeda_consolidacao === "USD" || 
     formData.tem_investimento_crypto === true;
+
+  const handleModeloChange = (value: string) => {
+    onChange({ modelo_absorcao_taxas: value });
+    // Reset percentuais ao mudar de proporcional para outro modelo
+    if (value !== "PROPORCIONAL") {
+      onChange({ 
+        modelo_absorcao_taxas: value,
+        divisao_empresa_percentual: 50,
+        divisao_operador_percentual: 50,
+      });
+    }
+  };
+
+  const handleEmpresaPercentualChange = (value: string) => {
+    const numValue = parseInt(value) || 0;
+    const clampedValue = Math.min(100, Math.max(0, numValue));
+    onChange({
+      divisao_empresa_percentual: clampedValue,
+      divisao_operador_percentual: 100 - clampedValue,
+    });
+  };
+
+  const handleOperadorPercentualChange = (value: string) => {
+    const numValue = parseInt(value) || 0;
+    const clampedValue = Math.min(100, Math.max(0, numValue));
+    onChange({
+      divisao_operador_percentual: clampedValue,
+      divisao_empresa_percentual: 100 - clampedValue,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -58,32 +92,101 @@ export function StepEstruturaOperacional({
             e taxas associadas a operações internacionais ou cripto.
           </p>
           
-          <div className="grid gap-3">
-            {MODELOS_ABSORCAO.map((modelo) => (
-              <Card
-                key={modelo.value}
-                className={`cursor-pointer transition-all ${
-                  formData.modelo_absorcao_taxas === modelo.value
-                    ? "border-primary bg-primary/5"
-                    : "hover:border-primary/50"
-                }`}
-                onClick={() => onChange({ modelo_absorcao_taxas: modelo.value })}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{modelo.label}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {modelo.description}
-                      </p>
+          {/* Grid horizontal - 3 colunas no desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {MODELOS_ABSORCAO.map((modelo) => {
+              const Icon = modelo.icon;
+              const isSelected = formData.modelo_absorcao_taxas === modelo.value;
+              const isProporcional = modelo.value === "PROPORCIONAL";
+              
+              return (
+                <Card
+                  key={modelo.value}
+                  className={cn(
+                    "cursor-pointer transition-all h-full",
+                    isSelected
+                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                      : "hover:border-primary/50"
+                  )}
+                  onClick={() => handleModeloChange(modelo.value)}
+                >
+                  <CardContent className="p-4 flex flex-col h-full">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className={cn(
+                        "p-2 rounded-lg shrink-0",
+                        isSelected ? "bg-primary/10" : "bg-muted"
+                      )}>
+                        <Icon className={cn(
+                          "h-4 w-4",
+                          isSelected ? "text-primary" : "text-muted-foreground"
+                        )} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className={cn(
+                          "font-medium text-sm",
+                          isSelected && "text-primary"
+                        )}>
+                          {modelo.label}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {modelo.description}
+                        </p>
+                      </div>
                     </div>
-                    {formData.modelo_absorcao_taxas === modelo.value && (
-                      <Badge>Selecionado</Badge>
+                    
+                    {/* Campos de divisão proporcional - aparece quando selecionado */}
+                    {isProporcional && isSelected && (
+                      <div 
+                        className="mt-4 pt-4 border-t border-border space-y-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">
+                              Empresa
+                            </Label>
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={formData.divisao_empresa_percentual}
+                                onChange={(e) => handleEmpresaPercentualChange(e.target.value)}
+                                className="pr-7 h-9 text-sm"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                                %
+                              </span>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">
+                              Operador
+                            </Label>
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={formData.divisao_operador_percentual}
+                                onChange={(e) => handleOperadorPercentualChange(e.target.value)}
+                                className="pr-7 h-9 text-sm"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                                %
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground text-center">
+                          Soma: {formData.divisao_empresa_percentual + formData.divisao_operador_percentual}%
+                        </p>
+                      </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       ) : (

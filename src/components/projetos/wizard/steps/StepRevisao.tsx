@@ -205,7 +205,7 @@ export function StepRevisao({ formData, selectedModules, modulesNames }: StepRev
                     ? "Empresa absorve 100%"
                     : formData.modelo_absorcao_taxas === "OPERADOR_100"
                     ? "Operador absorve 100%"
-                    : "Divisão proporcional (50/50)"}
+                    : `Divisão proporcional (${formData.divisao_empresa_percentual}/${formData.divisao_operador_percentual})`}
                 </span>
               </>
             ) : (
