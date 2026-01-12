@@ -415,13 +415,6 @@ export function CicloDialog({
                   onChange={(e) => setFormData({ ...formData, meta_volume: e.target.value })}
                   placeholder={formData.metrica_acumuladora === "LUCRO" ? "5000" : "150000"}
                 />
-                <div className="flex items-start gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/30">
-                  <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <p className="text-xs text-amber-200">
-                    Este valor será registrado em <strong>{moedaConsolidacao}</strong>.
-                    Certifique-se de digitar na moeda correta.
-                  </p>
-                </div>
               </div>
             </>
           )}
