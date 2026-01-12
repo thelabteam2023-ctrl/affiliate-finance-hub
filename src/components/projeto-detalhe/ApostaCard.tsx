@@ -331,8 +331,17 @@ export function ApostaCard({
             </div>
           </div>
           
-          {/* LINHA 2: Logo + Casa + Seleção/Pernas + Odd + Stake */}
+          {/* LINHA 2: Badge Seleção + Logo + Casa + Odd + Stake (igual SurebetCard) */}
           <div className="flex items-center gap-3">
+            {/* Para apostas simples: Badge de seleção antes do logo */}
+            {isSimples && aposta.selecao && (
+              <div className="w-16 shrink-0">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-full">
+                  {aposta.selecao}
+                </Badge>
+              </div>
+            )}
+            
             {/* Logo */}
             {aposta.logo_url ? (
               <img 
@@ -347,41 +356,35 @@ export function ApostaCard({
               </div>
             )}
             
-            {/* Nome da casa + Parceiro na mesma linha - igual ao SurebetCard */}
-            <span className="text-sm font-medium truncate uppercase flex-1 min-w-0">
+            {/* Nome da casa + Parceiro - texto mais claro igual SurebetCard */}
+            <span className="text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
               {bookmakerDisplay || 'Casa'}
             </span>
             
-            {/* Seleção/Pernas - flex-1 para ocupar espaço restante */}
-            <div className="flex-1 min-w-0">
-              {hasPernas && hasMultipleLegs ? (
-                <div className="space-y-1">
-                  {aposta.pernas!.map((perna, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-xs">
-                      <span className="truncate">{perna.selecao}</span>
-                      <span className="font-medium shrink-0">@{Number(perna.odd).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : hasPernas ? (
-                <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" />
-              ) : hasSelecoes ? (
-                <p className="text-xs text-muted-foreground truncate uppercase">
-                  {aposta.selecoes!.map(s => `${s.descricao} @${Number(s.odd).toFixed(2)}`).join(' + ')}
-                </p>
-              ) : (
-                <p className="text-sm truncate uppercase">
-                  {aposta.selecao}
-                </p>
-              )}
-            </div>
+            {/* Múltiplas pernas - exibe inline ou vertical */}
+            {hasPernas && hasMultipleLegs ? (
+              <div className="space-y-1 flex-1 min-w-0">
+                {aposta.pernas!.map((perna, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs">
+                    <span className="truncate">{perna.selecao}</span>
+                    <span className="font-medium shrink-0">@{Number(perna.odd).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : hasPernas ? (
+              <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate flex-1" />
+            ) : hasSelecoes ? (
+              <p className="text-xs text-muted-foreground truncate uppercase flex-1">
+                {aposta.selecoes!.map(s => `${s.descricao} @${Number(s.odd).toFixed(2)}`).join(' + ')}
+              </p>
+            ) : null}
             
             {/* Odd + Stake à direita - grudados */}
             <div className="flex items-center gap-2 shrink-0">
               {isSimples && (
                 <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
               )}
-              <span className="text-sm font-medium">{formatValue(stake)}</span>
+              <span className="text-xs text-muted-foreground">{formatValue(stake)}</span>
             </div>
           </div>
           
