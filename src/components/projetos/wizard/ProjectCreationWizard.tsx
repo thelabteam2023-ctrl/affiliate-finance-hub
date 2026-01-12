@@ -181,7 +181,7 @@ export function ProjectCreationWizard({
 
       // Create cycle if requested
       if (formData.criar_ciclo && formData.ciclo_nome) {
-        await supabase.from("ciclos").insert({
+        await supabase.from("projeto_ciclos").insert({
           projeto_id: projectId,
           nome: formData.ciclo_nome,
           data_inicio: formData.ciclo_data_inicio,
