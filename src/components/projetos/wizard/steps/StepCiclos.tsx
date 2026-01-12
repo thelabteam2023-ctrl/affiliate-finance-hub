@@ -75,25 +75,25 @@ export function StepCiclos({ formData, onChange }: StepCiclosProps) {
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label>Nome do Ciclo *</Label>
-            <Input
-              value={formData.ciclo_nome}
-              onChange={(e) => onChange({ ciclo_nome: e.target.value.toUpperCase() })}
-              placeholder="Ex: CICLO 01"
-              className="uppercase"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+          {/* Linha principal: Nome + Datas */}
+          <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_1fr] gap-4">
+            <div className="space-y-1.5">
+              <Label>Nome do Ciclo *</Label>
+              <Input
+                value={formData.ciclo_nome}
+                onChange={(e) => onChange({ ciclo_nome: e.target.value.toUpperCase() })}
+                placeholder="Ex: CICLO 01"
+                className="uppercase"
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label>Data de Início *</Label>
               <DatePicker
                 value={formData.ciclo_data_inicio || ""}
                 onChange={(date) => onChange({ ciclo_data_inicio: date })}
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>Data de Fim Prevista *</Label>
               <DatePicker
                 value={formData.ciclo_data_fim || ""}
