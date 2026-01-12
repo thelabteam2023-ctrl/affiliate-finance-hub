@@ -58,84 +58,6 @@ const MODULE_ACCESS_MAP: Record<string, ModuleConfig> = {
   'testes': { permission: null, roles: ['owner'] },
 };
 
-// Role base permissions - cached for quick lookup
-// These MUST match the role_permissions table in the database
-const ROLE_BASE_PERMISSIONS: Record<string, string[]> = {
-  owner: ['*'], // Owner has all permissions
-  admin: ['*'], // Admin has all permissions
-  finance: [
-    'bookmakers.accounts.read',
-    'bookmakers.accounts.create',
-    'bookmakers.accounts.edit',
-    'bookmakers.catalog.read',
-    'bookmakers.transactions.create',
-    'bookmakers.transactions.read',
-    'caixa.read',
-    'caixa.reports.read',
-    'caixa.transactions.confirm',
-    'caixa.transactions.create',
-    'captacao.pagamentos.create',
-    'captacao.read',
-    'financeiro.despesas.create',
-    'financeiro.despesas.edit',
-    'financeiro.participacoes.read',
-    'financeiro.read',
-    'investidores.deals.manage',
-    'investidores.participacoes.pay',
-    'investidores.read',
-    'operadores.pagamentos.create',
-    'operadores.pagamentos.read',
-    'operadores.read',
-    'parceiros.read',
-    'parceiros.view_financeiro',
-    'projeto.ciclos.close',
-    'projeto.ciclos.read',
-    'projeto.dashboard.read',
-    'projeto.perdas.confirm',
-    'projeto.perdas.read',
-    'projetos.read',
-  ],
-  operator: [
-    // Permissões removidas da base (agora são adicionais):
-    // - 'parceiros.read'
-    // - 'bookmakers.catalog.read'
-    // - 'bookmakers.accounts.read_project'
-    'operadores.pagamentos.read_self',
-    'operadores.read_self',
-    'projeto.apostas.cancel',
-    'projeto.apostas.create',
-    'projeto.apostas.edit',
-    'projeto.apostas.read',
-    'projeto.ciclos.read',
-    'projeto.dashboard.read',
-    'projeto.perdas.create',
-    'projeto.perdas.read',
-    'projeto.vinculos.read',
-    'projetos.read_vinculados',
-  ],
-  viewer: [
-    'bookmakers.accounts.read',
-    'bookmakers.catalog.read',
-    'bookmakers.transactions.read',
-    'caixa.read',
-    'caixa.reports.read',
-    'captacao.read',
-    'financeiro.participacoes.read',
-    'financeiro.read',
-    'investidores.read',
-    'operadores.pagamentos.read',
-    'operadores.read',
-    'parceiros.read',
-    'parceiros.view_financeiro',
-    'projeto.apostas.read',
-    'projeto.ciclos.read',
-    'projeto.dashboard.read',
-    'projeto.perdas.read',
-    'projeto.vinculos.read',
-    'projetos.read',
-  ],
-};
-
 export interface ModuleAccessResult {
   canAccess: (moduleKey: string) => boolean;
   hasPermission: (permissionCode: string) => boolean;
@@ -145,46 +67,63 @@ export interface ModuleAccessResult {
 export function useModuleAccess(): ModuleAccessResult {
   const { role, isSystemOwner, workspace, user } = useAuth();
   const { hasFullAccess: hasCommunityAccess, loading: communityLoading } = useCommunityAccess();
+  const [roleBasePermissions, setRoleBasePermissions] = useState<string[]>([]);
   const [userOverrides, setUserOverrides] = useState<string[]>([]);
-  const [overridesLoading, setOverridesLoading] = useState(true);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
 
-  // Fetch user permission overrides from database
+  // Fetch role base permissions AND user overrides from database
   useEffect(() => {
-    const fetchOverrides = async () => {
-      if (!user?.id || !workspace?.id) {
+    const fetchPermissions = async () => {
+      if (!user?.id || !workspace?.id || !role) {
+        setRoleBasePermissions([]);
         setUserOverrides([]);
-        setOverridesLoading(false);
+        setPermissionsLoading(false);
         return;
       }
 
       try {
-        const { data, error } = await supabase
-          .from('user_permission_overrides')
-          .select('permission_code')
-          .eq('user_id', user.id)
-          .eq('workspace_id', workspace.id)
-          .eq('granted', true);
+        // Fetch role base permissions from role_permissions table
+        const [rolePermsResult, overridesResult] = await Promise.all([
+          supabase
+            .from('role_permissions')
+            .select('permission_code')
+            .eq('role', role),
+          supabase
+            .from('user_permission_overrides')
+            .select('permission_code')
+            .eq('user_id', user.id)
+            .eq('workspace_id', workspace.id)
+            .eq('granted', true)
+        ]);
 
-        if (error) {
-          console.error('[useModuleAccess] Error fetching overrides:', error);
+        if (rolePermsResult.error) {
+          console.error('[useModuleAccess] Error fetching role permissions:', rolePermsResult.error);
+          setRoleBasePermissions([]);
+        } else {
+          setRoleBasePermissions(rolePermsResult.data?.map(p => p.permission_code) || []);
+        }
+
+        if (overridesResult.error) {
+          console.error('[useModuleAccess] Error fetching overrides:', overridesResult.error);
           setUserOverrides([]);
         } else {
-          setUserOverrides(data?.map(o => o.permission_code) || []);
+          setUserOverrides(overridesResult.data?.map(o => o.permission_code) || []);
         }
       } catch (err) {
-        console.error('[useModuleAccess] Exception fetching overrides:', err);
+        console.error('[useModuleAccess] Exception fetching permissions:', err);
+        setRoleBasePermissions([]);
         setUserOverrides([]);
       } finally {
-        setOverridesLoading(false);
+        setPermissionsLoading(false);
       }
     };
 
-    fetchOverrides();
-  }, [user?.id, workspace?.id]);
+    fetchPermissions();
+  }, [user?.id, workspace?.id, role]);
 
   /**
    * Check if the current role has a specific permission
-   * Now also checks user_permission_overrides from database
+   * Fetches permissions from database instead of hardcoded cache
    */
   const hasPermission = useCallback((permissionCode: string): boolean => {
     // System Owner has all permissions
@@ -196,12 +135,9 @@ export function useModuleAccess(): ModuleAccessResult {
     // Check overrides first (additional permissions granted to user)
     if (userOverrides.includes(permissionCode)) return true;
     
-    // Get base permissions for role
-    const basePerms = ROLE_BASE_PERMISSIONS[role || ''] || [];
-    
-    // Check if permission is in base permissions
-    return basePerms.includes(permissionCode);
-  }, [role, isSystemOwner, userOverrides]);
+    // Check base permissions from database
+    return roleBasePermissions.includes(permissionCode);
+  }, [role, isSystemOwner, userOverrides, roleBasePermissions]);
 
   const canAccess = useMemo(() => {
     return (moduleKey: string): boolean => {
@@ -274,7 +210,7 @@ export function useModuleAccess(): ModuleAccessResult {
   return {
     canAccess,
     hasPermission,
-    loading: communityLoading || overridesLoading,
+    loading: communityLoading || permissionsLoading,
   };
 }
 
@@ -344,25 +280,34 @@ export function useActionAccess() {
 
 /**
  * Get the list of available additional permissions for a role
- * (permissions that can be granted beyond the base role)
+ * This function is now async as it fetches from the database
+ * NOTE: For synchronous usage, use usePermissionOverrides hook instead
  */
-export function getAvailableAdditionalPermissions(role: string | null): string[] {
+export async function getAvailableAdditionalPermissions(role: string | null): Promise<string[]> {
   if (!role) return [];
   
   // Owner and admin have all permissions - nothing to add
   if (role === 'owner' || role === 'admin') return [];
   
-  // Get base permissions for the role
-  const basePerms = new Set(ROLE_BASE_PERMISSIONS[role] || []);
-  
-  // Get all possible permissions
-  const allPerms = new Set<string>();
-  Object.values(ROLE_BASE_PERMISSIONS).forEach(perms => {
-    perms.forEach(p => {
-      if (p !== '*') allPerms.add(p);
-    });
-  });
-  
-  // Return permissions not in base role
-  return Array.from(allPerms).filter(p => !basePerms.has(p)).sort();
+  try {
+    // Fetch all permissions and role base permissions from database
+    const [allPermsResult, rolePermsResult] = await Promise.all([
+      supabase.from('permissions').select('code'),
+      supabase.from('role_permissions').select('permission_code').eq('role', role as any)
+    ]);
+
+    if (allPermsResult.error || rolePermsResult.error) {
+      console.error('[getAvailableAdditionalPermissions] Error:', allPermsResult.error || rolePermsResult.error);
+      return [];
+    }
+
+    const allPerms = new Set(allPermsResult.data?.map(p => p.code) || []);
+    const basePerms = new Set(rolePermsResult.data?.map(p => p.permission_code) || []);
+
+    // Return permissions not in base role
+    return Array.from(allPerms).filter(p => !basePerms.has(p)).sort();
+  } catch (err) {
+    console.error('[getAvailableAdditionalPermissions] Exception:', err);
+    return [];
+  }
 }
