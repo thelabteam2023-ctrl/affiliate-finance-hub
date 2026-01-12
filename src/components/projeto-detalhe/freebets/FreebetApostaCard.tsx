@@ -5,7 +5,7 @@ import { Gift, Target, TrendingUp, Shield, CheckCircle2, BarChart3, Layers } fro
 import { ApostaOperacionalFreebet } from "./types";
 import { ResultadoPill } from "../ResultadoPill";
 import { parseLocalDateTime } from "@/utils/dateUtils";
-import { cn } from "@/lib/utils";
+import { cn, getFirstLastName } from "@/lib/utils";
 
 interface FreebetApostaCardProps {
   aposta: ApostaOperacionalFreebet;
@@ -148,6 +148,18 @@ export function FreebetApostaCard({
   const operationType = getOperationType(aposta);
   const isMultipla = aposta.tipo === "multipla";
   
+  // Extrair nome base da casa (antes do " - ") para exibição limpa
+  const bookmakerBase = aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome;
+  // Extrair vínculo (parceiro) - pode vir do parceiro_nome ou da parte após " - " no bookmaker_nome
+  const vinculoFull = aposta.parceiro_nome || aposta.bookmaker_nome?.split(" - ")[1]?.trim();
+  // Abreviar para primeiro e último nome
+  const vinculoAbreviado = vinculoFull ? getFirstLastName(vinculoFull) : null;
+  
+  // Formato padronizado: "CASA - PARCEIRO ABREVIADO" (igual ao SurebetCard com pernas)
+  const bookmakerDisplay = vinculoAbreviado 
+    ? `${bookmakerBase} - ${vinculoAbreviado}`
+    : bookmakerBase;
+  
   // Compact mode - row style (igual ApostaCard list variant)
   if (compact) {
     return (
@@ -234,9 +246,9 @@ export function FreebetApostaCard({
               </div>
             )}
             
-            {/* Nome da casa */}
+            {/* Nome da casa + Vínculo abreviado */}
             <span className="text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
-              {aposta.bookmaker_nome || 'Casa'}
+              {bookmakerDisplay || 'Casa'}
             </span>
             
             {/* Múltipla - exibe seleções inline */}
@@ -370,9 +382,9 @@ export function FreebetApostaCard({
             </div>
           )}
           
-          {/* Nome da casa */}
+          {/* Nome da casa + Vínculo abreviado */}
           <span className="text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
-            {aposta.bookmaker_nome || 'Casa'}
+            {bookmakerDisplay || 'Casa'}
           </span>
           
           {/* Múltipla - exibe seleções inline */}
