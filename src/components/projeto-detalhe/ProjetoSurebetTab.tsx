@@ -842,10 +842,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                   lucro_prejuizo: s.lucro_real,
                   stake: isSimples ? (s.stake || s.stake_total) : s.stake_total,
                   bookmaker_nome: isSimples ? (s.bookmaker_nome || "—") : (s.pernas?.[0]?.bookmaker_nome || "—"),
+                  parceiro_nome: isSimples ? s.parceiro_nome : undefined,
                   // Para apostas simples, criar uma "perna virtual" para o cálculo de casas
                   pernas: isSimples 
                     ? [{
                         bookmaker_nome: s.bookmaker_nome || "—",
+                        parceiro_nome: s.parceiro_nome,
                         stake: s.stake || s.stake_total,
                         odd: s.odd,
                         resultado: s.resultado,
@@ -859,7 +861,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                         lucro_prejuizo: getLucroPerna(p)
                       }))
                 };
-              })} 
+              })}
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showCasasCard={false}
@@ -878,9 +880,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                   lucro_prejuizo: s.lucro_real,
                   stake: isSimples ? (s.stake || s.stake_total) : s.stake_total,
                   bookmaker_nome: isSimples ? (s.bookmaker_nome || "—") : (s.pernas?.[0]?.bookmaker_nome || "—"),
+                  parceiro_nome: isSimples ? s.parceiro_nome : undefined,
                   pernas: isSimples 
                     ? [{
                         bookmaker_nome: s.bookmaker_nome || "—",
+                        parceiro_nome: s.parceiro_nome,
                         stake: s.stake || s.stake_total,
                         odd: s.odd,
                         resultado: s.resultado,
@@ -894,7 +898,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                         lucro_prejuizo: getLucroPerna(p)
                       }))
                 };
-              })} 
+              })}
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showEvolucaoChart={false}

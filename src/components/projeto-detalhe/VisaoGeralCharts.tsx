@@ -28,6 +28,7 @@ import { parseLocalDateTime } from "@/utils/dateUtils";
 interface Perna {
   bookmaker_id?: string;
   bookmaker_nome?: string;
+  parceiro_nome?: string | null;
   stake?: number;
   lucro_prejuizo?: number;
   resultado?: string;
@@ -41,6 +42,7 @@ interface ApostaBase {
   stake: number;
   stake_total?: number | null;
   bookmaker_nome?: string;
+  parceiro_nome?: string | null;
   bookmaker_id?: string | null;
   pernas?: Perna[] | null;
   forma_registro?: string;
@@ -570,19 +572,27 @@ export function VisaoGeralCharts({
       vinculos: Map<string, { apostas: number; volume: number; lucro: number }> 
     }>();
 
-    const processEntry = (nomeCompleto: string, stake: number, lucro: number) => {
-      // Extrair casa e vínculo do nome (formato: "CASA - VÍNCULO")
-      const separatorIdx = nomeCompleto.indexOf(" - ");
+    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, stake: number, lucro: number) => {
+      // Se tem parceiro_nome separado, usa diretamente
+      // Caso contrário, tenta extrair do nome completo (formato: "CASA - VÍNCULO")
       let casa: string;
       let vinculo: string;
       
-      if (separatorIdx > 0) {
-        casa = nomeCompleto.substring(0, separatorIdx).trim();
-        const vinculoRaw = nomeCompleto.substring(separatorIdx + 3).trim();
-        vinculo = getFirstLastName(vinculoRaw);
+      if (parceiroNome) {
+        // Parceiro fornecido separadamente - usa diretamente
+        casa = bookmakerNome;
+        vinculo = getFirstLastName(parceiroNome);
       } else {
-        casa = nomeCompleto;
-        vinculo = "Principal";
+        // Tenta extrair do nome completo
+        const separatorIdx = bookmakerNome.indexOf(" - ");
+        if (separatorIdx > 0) {
+          casa = bookmakerNome.substring(0, separatorIdx).trim();
+          const vinculoRaw = bookmakerNome.substring(separatorIdx + 3).trim();
+          vinculo = getFirstLastName(vinculoRaw);
+        } else {
+          casa = bookmakerNome;
+          vinculo = "Principal";
+        }
       }
 
       if (!casaMap.has(casa)) {
@@ -608,15 +618,17 @@ export function VisaoGeralCharts({
       if (a.pernas && Array.isArray(a.pernas) && a.pernas.length > 0) {
         a.pernas.forEach((perna) => {
           const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
+          const parceiroNome = perna.parceiro_nome;
           const pernaStake = typeof perna.stake === "number" ? perna.stake : 0;
           const pernaLucro = typeof perna.lucro_prejuizo === "number" ? perna.lucro_prejuizo : 0;
-          processEntry(nomeCompleto, pernaStake, pernaLucro);
+          processEntry(nomeCompleto, parceiroNome, pernaStake, pernaLucro);
         });
       } else {
-        // Aposta simples — usa bookmaker_nome diretamente
+        // Aposta simples — usa bookmaker_nome e parceiro_nome
         const nomeCompleto = a.bookmaker_nome || "Desconhecida";
+        const parceiroNome = a.parceiro_nome;
         const lucro = a.lucro_prejuizo || 0;
-        processEntry(nomeCompleto, getStake(a), lucro);
+        processEntry(nomeCompleto, parceiroNome, getStake(a), lucro);
       }
     });
 
