@@ -261,6 +261,12 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
       PAGTO_PARCEIRO: "Pagamento Parceiro",
       CREDITO_GIRO: "Crédito de Giro",
       ESTORNO: "Estorno",
+      CONCILIACAO: "Conciliação",
+      // Tipos promocionais
+      GIRO_GRATIS_GANHO: "Giro Grátis",
+      FREEBET_CONVERTIDA: "Freebet Convertida",
+      BONUS_CREDITADO: "Bônus Creditado",
+      CREDITO_PROMOCIONAL: "Crédito Promocional",
     };
     return labels[tipo] || tipo.replace(/_/g, " ");
   };
@@ -283,6 +289,12 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
       PAGTO_PARCEIRO: "bg-pink-500/20 text-pink-500 border-pink-500/30",
       CREDITO_GIRO: "bg-indigo-500/20 text-indigo-500 border-indigo-500/30",
       ESTORNO: "bg-rose-500/20 text-rose-500 border-rose-500/30",
+      CONCILIACAO: "bg-slate-500/20 text-slate-400 border-slate-500/30",
+      // Tipos promocionais (destacados em verde/teal)
+      GIRO_GRATIS_GANHO: "bg-teal-500/20 text-teal-400 border-teal-500/30",
+      FREEBET_CONVERTIDA: "bg-lime-500/20 text-lime-400 border-lime-500/30",
+      BONUS_CREDITADO: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+      CREDITO_PROMOCIONAL: "bg-sky-500/20 text-sky-400 border-sky-500/30",
     };
     return colors[tipo] || "bg-muted text-muted-foreground border-muted";
   };

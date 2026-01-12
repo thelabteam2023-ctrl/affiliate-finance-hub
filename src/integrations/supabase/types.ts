@@ -1021,7 +1021,9 @@ export type Database = {
           destino_parceiro_id: string | null
           destino_tipo: string | null
           destino_wallet_id: string | null
+          evento_promocional_tipo: string | null
           id: string
+          impacta_caixa_operacional: boolean
           investidor_id: string | null
           moeda: string
           moeda_destino: string | null
@@ -1063,7 +1065,9 @@ export type Database = {
           destino_parceiro_id?: string | null
           destino_tipo?: string | null
           destino_wallet_id?: string | null
+          evento_promocional_tipo?: string | null
           id?: string
+          impacta_caixa_operacional?: boolean
           investidor_id?: string | null
           moeda: string
           moeda_destino?: string | null
@@ -1105,7 +1109,9 @@ export type Database = {
           destino_parceiro_id?: string | null
           destino_tipo?: string | null
           destino_wallet_id?: string | null
+          evento_promocional_tipo?: string | null
           id?: string
+          impacta_caixa_operacional?: boolean
           investidor_id?: string | null
           moeda?: string
           moeda_destino?: string | null
@@ -1351,6 +1357,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_ledger_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -1473,6 +1486,13 @@ export type Database = {
             columns: ["cash_ledger_id"]
             isOneToOne: false
             referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_registros_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
           },
           {
@@ -2350,6 +2370,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "exchange_adjustments_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "exchange_adjustments_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
@@ -2652,6 +2679,13 @@ export type Database = {
             columns: ["cash_ledger_id"]
             isOneToOne: false
             referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
           },
           {
@@ -3733,6 +3767,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pagamentos_operador_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pagamentos_operador_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
@@ -4332,6 +4373,13 @@ export type Database = {
             columns: ["pagamento_ledger_id"]
             isOneToOne: false
             referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_pagamento_ledger_id_fkey"
+            columns: ["pagamento_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
           },
           {
@@ -6479,6 +6527,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_ledger_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -6958,6 +7013,90 @@ export type Database = {
             columns: ["projeto_id"]
             isOneToOne: false
             referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_eventos_promocionais: {
+        Row: {
+          auditoria_metadata: Json | null
+          bookmaker_nome: string | null
+          created_at: string | null
+          data_transacao: string | null
+          descricao: string | null
+          destino_bookmaker_id: string | null
+          evento_promocional_tipo: string | null
+          id: string | null
+          impacta_caixa_operacional: boolean | null
+          moeda: string | null
+          origem_bookmaker_id: string | null
+          tipo_transacao: string | null
+          user_id: string | null
+          valor: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
+            columns: ["destino_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
+            columns: ["destino_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
+            columns: ["destino_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
+            columns: ["destino_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
+            columns: ["origem_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
+            columns: ["origem_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
+            columns: ["origem_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
+            columns: ["origem_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
