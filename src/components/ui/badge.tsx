@@ -62,14 +62,14 @@ function SelectionBadge({
       className={cn(
         // Base: inline-flex para adaptar ao conteúdo
         "inline-flex items-center justify-center",
-        // Altura fixa para alinhamento vertical perfeito (50% maior: de h-5 para h-7)
-        "h-7",
+        // Altura original compacta
+        "h-5",
         // Padding consistente (horizontal > vertical)
-        "px-2.5 py-0.5",
+        "px-2 py-0",
         // Borda e arredondamento
         "rounded-md border",
-        // Texto (50% maior: de text-[10px] para text-xs)
-        "text-xs font-medium",
+        // Texto compacto
+        "text-[10px] font-medium",
         // Truncamento
         "whitespace-nowrap overflow-hidden text-ellipsis",
         // Cores
