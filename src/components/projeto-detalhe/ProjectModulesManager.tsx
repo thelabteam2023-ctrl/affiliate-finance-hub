@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useProjectModules, ModuleWithStatus } from "@/hooks/useProjectModules";
 import { useActionAccess } from "@/hooks/useModuleAccess";
+import { useProjectResponsibilities } from "@/hooks/useProjectResponsibilities";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +48,10 @@ interface ProjectModulesManagerProps {
 export function ProjectModulesManager({ projetoId }: ProjectModulesManagerProps) {
   const { modulesWithStatus, loading, error, activateModule, deactivateModule, refresh } = useProjectModules(projetoId);
   const { canEdit } = useActionAccess();
-  const canManage = canEdit('projetos', 'projetos.edit');
+  const { isLinkedOperator, isOwnerOrAdmin } = useProjectResponsibilities(projetoId);
+  
+  // Operadores vinculados ao projeto também podem gerenciar módulos
+  const canManage = canEdit('projetos', 'projetos.edit') || isLinkedOperator || isOwnerOrAdmin;
   
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
