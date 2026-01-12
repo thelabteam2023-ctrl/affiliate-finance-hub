@@ -145,20 +145,22 @@ function PernaItem({
   const displayStake = perna.stake_total || perna.stake;
   
   if (!hasMultipleEntries) {
-    // Layout de grid: [Logo Fixa] [Badge] [Nome Casa] [Odd + Stake]
+    // Layout de grid: [Logo Fixa] [Badge Fixa] [Nome Casa] [Odd + Stake]
     return (
-      <div className="grid grid-cols-[3rem_auto_1fr_auto] gap-2 items-center text-xs">
+      <div className="grid grid-cols-[3rem_4rem_1fr_auto] gap-2 items-center text-xs">
         {/* Coluna 1: Logo - largura fixa */}
         <div className={cn(LOGO_COLUMN_WIDTH, "flex justify-center")}>
           <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
         </div>
         
-        {/* Coluna 2: Badge de seleção */}
-        <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10 w-fit">
-          {perna.selecao_livre || perna.selecao}
-        </Badge>
+        {/* Coluna 2: Badge de seleção - largura fixa para alinhamento */}
+        <div className="w-16 flex justify-start">
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-full">
+            {perna.selecao_livre || perna.selecao}
+          </Badge>
+        </div>
         
-        {/* Coluna 3: Nome da casa */}
+        {/* Coluna 3: Nome da casa - sempre alinhado */}
         <span className="text-muted-foreground truncate uppercase">
           {perna.bookmaker_nome}
         </span>
@@ -176,20 +178,22 @@ function PernaItem({
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
         <button 
-          className="w-full grid grid-cols-[3rem_auto_1fr_auto_auto] gap-2 items-center text-xs hover:bg-muted/30 rounded-md py-1 transition-colors"
+          className="w-full grid grid-cols-[3rem_4rem_1fr_auto_auto] gap-2 items-center text-xs hover:bg-muted/30 rounded-md py-1 transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Coluna 1: Espaço reservado para logo (vazio no header) */}
+          {/* Coluna 1: Ícone de múltiplas entradas */}
           <div className={cn(LOGO_COLUMN_WIDTH, "flex justify-center")}>
             <div className={cn(LOGO_SIZE, "rounded-lg bg-gradient-to-br from-primary/20 to-amber-500/20 flex items-center justify-center")}>
               <Layers className="h-5 w-5 text-primary" />
             </div>
           </div>
           
-          {/* Coluna 2: Badge de seleção */}
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary bg-primary/10 w-fit">
-            {perna.selecao_livre || perna.selecao}
-          </Badge>
+          {/* Coluna 2: Badge de seleção - largura fixa */}
+          <div className="w-16 flex justify-start">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-full">
+              {perna.selecao_livre || perna.selecao}
+            </Badge>
+          </div>
           
           {/* Coluna 3: Indicador de múltiplas entradas */}
           <div className="flex items-center gap-1.5 text-left">
