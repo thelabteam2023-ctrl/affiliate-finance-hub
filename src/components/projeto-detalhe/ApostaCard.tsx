@@ -421,50 +421,64 @@ export function ApostaCard({
     );
   }
 
-  // Variant: card (padrão)
+  // Variant: card (padrão) - Padronizado para seguir mesmo layout do "list"
+  // Extrair nome base da casa (antes do " - ") para exibição limpa
+  const bookmakerBaseCard = aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome;
+  // Extrair vínculo (parceiro) - pode vir do parceiro_nome ou da parte após " - " no bookmaker_nome
+  const vinculoFullCard = aposta.parceiro_nome || aposta.bookmaker_nome?.split(" - ")[1]?.trim();
+  
+  // Formato padronizado: "CASA - PARCEIRO" (igual ao SurebetCard com pernas)
+  const bookmakerDisplayCard = vinculoFullCard 
+    ? `${bookmakerBaseCard} - ${vinculoFullCard}`
+    : bookmakerBaseCard;
+
   return (
     <Card 
       className={cn("cursor-pointer transition-colors", hoverBorderColor, className)}
       onClick={onClick}
     >
-      <CardContent className="p-4">
-        {/* Header: Badges */}
-        <div className="flex items-center gap-1 mb-2 flex-wrap">
-          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
-            <Icon className="h-2.5 w-2.5" />
-            {config.label}
-          </Badge>
-          {isMultipla && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
-              <Layers className="h-2.5 w-2.5" />
-              {tipoMultiplaLabel}
+      <CardContent className="p-3">
+        {/* LINHA 1: Evento + Esporte + Badges */}
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <p className="text-sm font-medium truncate uppercase">{displayEvento || 'Aposta'}</p>
+            {aposta.esporte && (
+              <span className="text-xs text-muted-foreground shrink-0">• {aposta.esporte}</span>
+            )}
+          </div>
+          
+          {/* Badges alinhadas à direita */}
+          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
+              <Icon className="h-2.5 w-2.5" />
+              {config.label}
             </Badge>
-          )}
-          {isSimples && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-400 bg-blue-500/20">
-              SIMPLES
-            </Badge>
-          )}
-          {hasPernas && aposta.modelo && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
-              {aposta.modelo}
-            </Badge>
-          )}
-          {hasPernas && !aposta.modelo && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
-              {getModeloOperacao(aposta.pernas as Perna[])}
-            </Badge>
-          )}
-          <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+            {isMultipla && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
+                <Layers className="h-2.5 w-2.5" />
+                {tipoMultiplaLabel}
+              </Badge>
+            )}
+            {isSimples && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-400 bg-blue-500/20">
+                SIMPLES
+              </Badge>
+            )}
+            {hasPernas && aposta.modelo && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
+                {aposta.modelo}
+              </Badge>
+            )}
+            {hasPernas && !aposta.modelo && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
+                {getModeloOperacao(aposta.pernas as Perna[])}
+              </Badge>
+            )}
+            <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+          </div>
         </div>
-        
-        {/* Identificação: Evento e Esporte */}
-        <div className="mb-2">
-          <p className="font-medium text-sm truncate uppercase">{displayEvento || 'Aposta'}</p>
-          <p className="text-xs text-muted-foreground">{aposta.esporte || (isMultipla ? `${aposta.selecoes?.length || 2} SELEÇÕES` : '')}</p>
-        </div>
-        
-        {/* Detalhamento: Pernas, Seleções ou Seleção Simples */}
+
+        {/* LINHA 2: Detalhamento da operação */}
         {hasPernas ? (
           <ApostaPernasResumo 
             pernas={aposta.pernas as Perna[]} 
@@ -489,48 +503,69 @@ export function ApostaCard({
             </div>
           </div>
         ) : (
-          <div className="flex justify-between items-center text-sm mb-2">
-            <span className="text-muted-foreground truncate uppercase">{aposta.selecao}</span>
-            <span className="font-medium">@{displayOdd.toFixed(2)}</span>
+          /* Layout padronizado para apostas simples: Badge Seleção + Logo + Casa/Vínculo + Odd + Stake */
+          <div className="flex items-center gap-3 mb-2">
+            {/* Badge de seleção */}
+            {aposta.selecao && (
+              <div className="shrink-0">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[80px]">
+                  {aposta.selecao}
+                </Badge>
+              </div>
+            )}
+            
+            {/* Logo da bookmaker */}
+            {aposta.logo_url ? (
+              <img 
+                src={aposta.logo_url} 
+                alt={bookmakerDisplayCard || ''} 
+                className="h-10 w-10 rounded-lg object-contain bg-white/10 p-1 shrink-0"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
+                <Target className="h-5 w-5 text-muted-foreground" />
+              </div>
+            )}
+            
+            {/* Nome da casa + Vínculo/Parceiro */}
+            <span className="text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
+              {bookmakerDisplayCard || 'Casa'}
+            </span>
+            
+            {/* Odd + Stake à direita */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
+              <span className="text-xs text-muted-foreground">{formatValue(stake)}</span>
+            </div>
           </div>
         )}
         
-        {/* Rodapé: Data, Casa, Stake, Lucro, ROI */}
-        <div className="flex justify-between items-center pt-2 border-t">
-          <div className="flex flex-col">
+        {/* LINHA 3: Data/Hora + Moeda + Lucro/ROI */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+          <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
-              {format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}
+              {format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy HH:mm", { locale: ptBR })}
             </span>
-            {/* Só mostra casa/vínculo para apostas simples (sem pernas) */}
-            {!hasPernas && (aposta.bookmaker_nome || aposta.parceiro_nome || aposta.operador_nome) && (
-              (() => {
-                const label = [aposta.bookmaker_nome, aposta.parceiro_nome || aposta.operador_nome].filter(Boolean).join(" • ");
-                return (
-                  <span
-                    title={label}
-                    className="text-[10px] text-muted-foreground/70 truncate max-w-[180px]"
-                  >
-                    {label}
-                  </span>
-                );
-              })()
+            {isForeignCurrency && (
+              <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
+                {moeda}
+              </Badge>
             )}
           </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Stake: {formatValue(stake)}</p>
-            {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
-              <div className="flex items-center gap-2 justify-end">
-                <span className={cn("text-sm font-medium", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                  {formatValue(aposta.lucro_prejuizo)}
+          
+          {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
+            <div className="flex items-center gap-1">
+              <span className={cn("text-sm font-semibold", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                {formatValue(aposta.lucro_prejuizo)}
+              </span>
+              {roi !== null && (
+                <span className={cn("text-[10px]", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                  ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
                 </span>
-                {roi !== null && (
-                  <span className={cn("text-xs", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                    ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
