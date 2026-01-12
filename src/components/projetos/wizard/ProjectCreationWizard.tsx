@@ -204,7 +204,7 @@ export function ProjectCreationWizard({
       const projectPayload = {
         nome: formData.nome.trim(),
         descricao: formData.descricao,
-        status: formData.status,
+        status: "EM_ANDAMENTO", // Status fixo - válido pelo constraint do banco
         data_inicio: formData.data_inicio,
         data_fim_prevista: formData.data_fim_prevista,
         orcamento_inicial: 0,
