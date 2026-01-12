@@ -39,7 +39,6 @@ const MODELOS_PAGAMENTO = [
   { value: "PORCENTAGEM", label: "Porcentagem" },
   { value: "FIXO_MENSAL", label: "Fixo Mensal" },
   { value: "HIBRIDO", label: "Híbrido (Fixo + %)" },
-  { value: "POR_ENTREGA", label: "Por Entrega" },
 ];
 
 const BASES_CALCULO = [
