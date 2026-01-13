@@ -122,6 +122,24 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
     return await createDisponivel(data);
   };
 
+  // Handler para lançamento rápido (giro já utilizado - vai direto para resultados)
+  const handleSaveRapido = async (data: { 
+    bookmaker_id: string; 
+    valor_retorno: number; 
+    data_registro: Date; 
+    observacoes?: string 
+  }): Promise<boolean> => {
+    const giroData: GiroGratisFormData = {
+      bookmaker_id: data.bookmaker_id,
+      modo: "simples",
+      data_registro: data.data_registro,
+      valor_retorno: data.valor_retorno,
+      observacoes: data.observacoes,
+    };
+    const giroId = await createGiro(giroData);
+    return !!giroId;
+  };
+
   const handleEditDisponivel = (giro: GiroDisponivelComBookmaker) => {
     setEditingDisponivel(giro);
     setDisponivelDialogOpen(true);
@@ -318,6 +336,7 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
         projetoId={projetoId}
         giro={editingDisponivel}
         onSave={handleSaveDisponivel}
+        onSaveRapido={handleSaveRapido}
       />
     </div>
   );
