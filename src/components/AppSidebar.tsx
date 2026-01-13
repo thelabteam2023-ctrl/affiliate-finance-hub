@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -505,6 +505,12 @@ export function AppSidebar() {
               </p>
             </div>
             <DropdownMenuSeparator />
+            {isSystemOwner && (
+              <DropdownMenuItem onClick={() => navigate("/admin")}>
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Administração do Sistema
+              </DropdownMenuItem>
+            )}
             {canManageWorkspace && (
               <DropdownMenuItem onClick={() => navigate("/workspace")}>
                 <Settings className="mr-2 h-4 w-4" />
