@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceGuard } from "@/hooks/useWorkspaceGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, Trash2 } from "lucide-react";
 import { AnotacaoLivre } from "./types";
 import { cn } from "@/lib/utils";
 
@@ -196,6 +196,26 @@ export function LivreTab() {
     }
   };
 
+  // Excluir anotação
+  const handleDeleteNote = async (id: string) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from("anotacoes_livres")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setAnotacoes(prev => prev.filter(a => a.id !== id));
+    } catch (error) {
+      console.error("Erro ao excluir:", error);
+      toast.error("Erro ao excluir anotação");
+    }
+  };
+
   // Auto-resize textarea
   const autoResize = (textarea: HTMLTextAreaElement) => {
     textarea.style.height = "auto";
@@ -274,6 +294,19 @@ export function LivreTab() {
               "transition-all duration-200"
             )}
           >
+            {/* Botão excluir - canto superior direito */}
+            <button
+              onClick={() => handleDeleteNote(anotacao.id)}
+              className={cn(
+                "absolute top-3 right-3 p-1.5 rounded-lg",
+                "text-muted-foreground/40 hover:text-destructive",
+                "hover:bg-destructive/10 transition-colors",
+                "opacity-0 group-hover:opacity-100"
+              )}
+              title="Excluir anotação"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
             {/* Textarea para escrita */}
             <textarea
               ref={(el) => {
