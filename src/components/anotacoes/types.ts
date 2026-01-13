@@ -31,3 +31,12 @@ export interface FluxoCardHistorico {
   tipo_mudanca: 'criacao' | 'edicao' | 'movimentacao';
   created_at: string;
 }
+
+export interface AnotacaoLivre {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  conteudo: string;
+  created_at: string;
+  updated_at: string;
+}

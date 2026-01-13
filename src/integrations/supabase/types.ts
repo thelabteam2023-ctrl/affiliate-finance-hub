@@ -182,6 +182,41 @@ export type Database = {
         }
         Relationships: []
       }
+      anotacoes_livres: {
+        Row: {
+          conteudo: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          conteudo?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anotacoes_livres_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       apostas_unificada: {
         Row: {
           aposta_relacionada_id: string | null
