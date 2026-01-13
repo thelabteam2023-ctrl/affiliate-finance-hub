@@ -19,9 +19,8 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
-import { Calculator, Loader2, Clock, Gift, Zap, ClipboardList, Info, Check } from "lucide-react";
+import { Loader2, Clock, Gift, Zap, ClipboardList, Info, Check } from "lucide-react";
 import { GiroDisponivelComBookmaker, GiroDisponivelFormData } from "@/types/girosGratisDisponiveis";
 import { format } from "date-fns";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
@@ -58,9 +57,7 @@ export function GiroDisponivelDialog({
   const [valorRetorno, setValorRetorno] = useState(0);
   const [dataRegistro, setDataRegistro] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   
-  // Campos modo completo (promoção pendente)
-  const [quantidadeGiros, setQuantidadeGiros] = useState(1);
-  const [valorPorGiro, setValorPorGiro] = useState(0);
+  // Campos modo completo (promoção pendente) - simplificado
   const [motivo, setMotivo] = useState("Promoção");
   const [dataRecebido, setDataRecebido] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [dataValidade, setDataValidade] = useState<string>("");
@@ -94,16 +91,12 @@ export function GiroDisponivelDialog({
     return bookmakers.find(b => b.id === bookmakerId);
   }, [bookmakers, bookmakerId]);
 
-  const valorTotal = quantidadeGiros * valorPorGiro;
-
   useEffect(() => {
     if (open) {
       if (giro) {
         // Editando promoção existente -> modo completo
         setFormMode("completo");
         setBookmakerId(giro.bookmaker_id);
-        setQuantidadeGiros(giro.quantidade_giros);
-        setValorPorGiro(giro.valor_por_giro);
         setMotivo(giro.motivo);
         setDataRecebido(format(new Date(giro.data_recebido), "yyyy-MM-dd"));
         setDataValidade(giro.data_validade ? format(new Date(giro.data_validade), "yyyy-MM-dd") : "");
@@ -114,8 +107,6 @@ export function GiroDisponivelDialog({
         setBookmakerId("");
         setValorRetorno(0);
         setDataRegistro(format(new Date(), "yyyy-MM-dd"));
-        setQuantidadeGiros(1);
-        setValorPorGiro(0);
         setMotivo("Promoção");
         setDataRecebido(format(new Date(), "yyyy-MM-dd"));
         setDataValidade("");
@@ -164,7 +155,7 @@ export function GiroDisponivelDialog({
   };
 
   const handleSubmitCompleto = async () => {
-    if (!bookmakerId || quantidadeGiros <= 0 || valorPorGiro <= 0) {
+    if (!bookmakerId) {
       return;
     }
 
@@ -179,10 +170,11 @@ export function GiroDisponivelDialog({
         parsedDataValidade = new Date(vYear, vMonth - 1, vDay);
       }
 
+      // Simplificado: quantidade e valor fixos (não relevantes para o usuário)
       const formData: GiroDisponivelFormData = {
         bookmaker_id: bookmakerId,
-        quantidade_giros: quantidadeGiros,
-        valor_por_giro: valorPorGiro,
+        quantidade_giros: 1, // Valor padrão
+        valor_por_giro: 0, // Valor padrão - não relevante
         motivo,
         data_recebido: parsedDataRecebido,
         data_validade: parsedDataValidade,
@@ -208,7 +200,7 @@ export function GiroDisponivelDialog({
 
   const isEditing = !!giro;
   const canSubmitRapido = bookmakerId && valorRetorno > 0;
-  const canSubmitCompleto = bookmakerId && quantidadeGiros > 0 && valorPorGiro > 0;
+  const canSubmitCompleto = !!bookmakerId;
   const canSubmit = formMode === "rapido" ? canSubmitRapido : canSubmitCompleto;
 
   return (
@@ -242,7 +234,7 @@ export function GiroDisponivelDialog({
                 {formMode === "rapido" ? (
                   <span>Registro direto de giros <strong>já utilizados</strong>. Informe apenas a casa e quanto ganhou.</span>
                 ) : (
-                  <span>Registre promoções <strong>pendentes</strong> para usar depois. Controle validade e detalhes.</span>
+                  <span>Registre promoções <strong>pendentes</strong> para usar depois.</span>
                 )}
               </div>
             </div>
@@ -309,44 +301,9 @@ export function GiroDisponivelDialog({
             </>
           )}
 
-          {/* MODO COMPLETO */}
+          {/* MODO COMPLETO - Simplificado */}
           {(formMode === "completo" || isEditing) && (
             <>
-              {/* Quantidade e Valor */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Quantidade de Giros *</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={quantidadeGiros || ""}
-                    onChange={(e) => setQuantidadeGiros(Number(e.target.value) || 0)}
-                    placeholder="Ex: 50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Valor por Giro *</Label>
-                  <MoneyInput
-                    value={valorPorGiro.toString()}
-                    onChange={(v) => setValorPorGiro(Number(v) || 0)}
-                    currency={selectedBookmaker?.moeda === "USD" || selectedBookmaker?.moeda === "USDT" ? "$" : "R$"}
-                  />
-                </div>
-              </div>
-
-              {/* Valor total calculado */}
-              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calculator className="h-4 w-4 text-primary" />
-                    <span>Valor Total da Promoção</span>
-                  </div>
-                  <Badge variant="default" className="text-base font-mono">
-                    {selectedBookmaker?.moeda === "USD" || selectedBookmaker?.moeda === "USDT" ? "$" : "R$"} {valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </Badge>
-                </div>
-              </div>
-
               {/* Motivo */}
               <div className="space-y-2">
                 <Label>Motivo / Origem</Label>
