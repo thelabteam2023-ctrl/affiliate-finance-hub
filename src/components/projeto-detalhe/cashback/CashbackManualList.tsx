@@ -7,7 +7,8 @@ import {
   CalendarDays,
   Building2,
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  User
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -79,6 +80,12 @@ export function CashbackManualList({
                       <Building2 className="h-3 w-3 mr-1" />
                       {registro.bookmaker?.nome || "Casa"}
                     </Badge>
+                    {registro.bookmaker?.parceiro?.nome && (
+                      <Badge variant="outline" className="text-xs">
+                        <User className="h-3 w-3 mr-1" />
+                        {registro.bookmaker.parceiro.nome}
+                      </Badge>
+                    )}
                     <Badge variant="outline" className="text-xs">
                       {registro.moeda_operacao}
                     </Badge>

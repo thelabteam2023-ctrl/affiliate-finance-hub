@@ -36,6 +36,11 @@ export interface CashbackManualComBookmaker extends CashbackManual {
     id: string;
     nome: string;
     moeda: string;
+    parceiro_id?: string | null;
+    parceiro?: {
+      id: string;
+      nome: string;
+    } | null;
   };
 }
 
@@ -56,6 +61,7 @@ export interface CashbackManualPorBookmaker {
   bookmaker_id: string;
   bookmaker_nome: string;
   bookmaker_moeda: string;
+  parceiro_nome: string | null;
   totalRecebido: number;
   totalLancamentos: number;
 }

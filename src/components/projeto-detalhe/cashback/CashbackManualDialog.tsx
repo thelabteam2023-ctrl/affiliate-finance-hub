@@ -21,8 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, DollarSign, CalendarIcon, AlertTriangle } from "lucide-react";
-import BookmakerProjetoSelect from "@/components/bookmakers/BookmakerProjetoSelect";
+import { Loader2, DollarSign, CalendarIcon, Info } from "lucide-react";
+import BookmakerVinculoProjetoSelect from "@/components/bookmakers/BookmakerVinculoProjetoSelect";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -112,28 +112,28 @@ export function CashbackManualDialog({
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
             {/* Alerta informativo */}
             <Alert className="bg-muted/50 border-muted-foreground/20">
-              <AlertTriangle className="h-4 w-4" />
+              <Info className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                Apenas casas vinculadas a este projeto são exibidas para garantir consistência financeira.
+                Selecione o vínculo correto (Casa + Parceiro). O saldo será creditado diretamente no vínculo.
               </AlertDescription>
             </Alert>
 
-            {/* Casa / Bookmaker - Filtrado por Projeto */}
+            {/* Casa / Bookmaker + Parceiro - Filtrado por Projeto */}
             <FormField
               control={form.control}
               name="bookmaker_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Casa / Bookmaker *</FormLabel>
+                  <FormLabel>Casa + Parceiro *</FormLabel>
                   <FormControl>
-                    <BookmakerProjetoSelect
+                    <BookmakerVinculoProjetoSelect
                       projetoId={projetoId}
                       value={field.value}
                       onValueChange={field.onChange}
                     />
                   </FormControl>
                   <FormDescription>
-                    Selecione uma casa vinculada ao projeto
+                    Selecione o vínculo (casa + dono) para creditar o cashback
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
