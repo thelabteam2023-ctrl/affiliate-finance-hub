@@ -94,30 +94,80 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
     };
   }, [registros]);
 
-  // Dados por bookmaker (vínculo = casa + parceiro)
+  // Dados por bookmaker (agrupado por catálogo, com breakdown por parceiro)
   const porBookmaker: CashbackManualPorBookmaker[] = useMemo(() => {
-    const map = new Map<string, CashbackManualPorBookmaker>();
+    // Primeiro, agrupar por catálogo da casa
+    const catalogoMap = new Map<string, {
+      bookmaker_catalogo_id: string | null;
+      bookmaker_nome: string;
+      bookmaker_moeda: string;
+      logo_url: string | null;
+      totalRecebido: number;
+      totalLancamentos: number;
+      parceirosMap: Map<string, { parceiro_id: string | null; parceiro_nome: string | null; totalRecebido: number; totalLancamentos: number }>;
+    }>();
 
     registros.forEach((registro) => {
-      const key = registro.bookmaker_id;
-      const existing = map.get(key);
+      // Key é o catálogo ou o nome da casa se não tiver catálogo
+      const catalogoId = registro.bookmaker?.bookmaker_catalogo_id || registro.bookmaker_id;
+      const key = catalogoId || registro.bookmaker?.nome || "Casa";
+      
+      const parceiroId = registro.bookmaker?.parceiro_id || null;
+      const parceiroNome = registro.bookmaker?.parceiro?.nome || null;
+      const parceiroKey = parceiroId || "sem_parceiro";
+      
+      const existing = catalogoMap.get(key);
 
       if (existing) {
         existing.totalRecebido += Number(registro.valor);
         existing.totalLancamentos += 1;
+        
+        // Atualizar breakdown do parceiro
+        const parceiroExisting = existing.parceirosMap.get(parceiroKey);
+        if (parceiroExisting) {
+          parceiroExisting.totalRecebido += Number(registro.valor);
+          parceiroExisting.totalLancamentos += 1;
+        } else {
+          existing.parceirosMap.set(parceiroKey, {
+            parceiro_id: parceiroId,
+            parceiro_nome: parceiroNome,
+            totalRecebido: Number(registro.valor),
+            totalLancamentos: 1,
+          });
+        }
       } else {
-        map.set(key, {
-          bookmaker_id: registro.bookmaker_id,
-          bookmaker_nome: registro.bookmaker?.nome || "Casa",
-          bookmaker_moeda: registro.bookmaker?.moeda || "BRL",
-          parceiro_nome: registro.bookmaker?.parceiro?.nome || null,
+        const parceirosMap = new Map();
+        parceirosMap.set(parceiroKey, {
+          parceiro_id: parceiroId,
+          parceiro_nome: parceiroNome,
           totalRecebido: Number(registro.valor),
           totalLancamentos: 1,
+        });
+        
+        catalogoMap.set(key, {
+          bookmaker_catalogo_id: registro.bookmaker?.bookmaker_catalogo_id || null,
+          bookmaker_nome: registro.bookmaker?.nome || "Casa",
+          bookmaker_moeda: registro.bookmaker?.moeda || "BRL",
+          logo_url: registro.bookmaker?.bookmakers_catalogo?.logo_url || null,
+          totalRecebido: Number(registro.valor),
+          totalLancamentos: 1,
+          parceirosMap,
         });
       }
     });
 
-    return Array.from(map.values()).sort((a, b) => b.totalRecebido - a.totalRecebido);
+    // Converter para array final
+    return Array.from(catalogoMap.values())
+      .map((item) => ({
+        bookmaker_catalogo_id: item.bookmaker_catalogo_id,
+        bookmaker_nome: item.bookmaker_nome,
+        bookmaker_moeda: item.bookmaker_moeda,
+        logo_url: item.logo_url,
+        totalRecebido: item.totalRecebido,
+        totalLancamentos: item.totalLancamentos,
+        parceiros: Array.from(item.parceirosMap.values()).sort((a, b) => b.totalRecebido - a.totalRecebido),
+      }))
+      .sort((a, b) => b.totalRecebido - a.totalRecebido);
   }, [registros]);
 
   // Criar lançamento de cashback manual
