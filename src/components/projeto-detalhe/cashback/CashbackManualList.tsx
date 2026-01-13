@@ -26,6 +26,26 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 
+// Mapa de símbolos de moeda
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  BRL: "R$",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  ARS: "$",
+  MXN: "$",
+  CLP: "$",
+  COP: "$",
+  PEN: "S/",
+  UYU: "$U",
+  USDT: "$",
+};
+
+const formatWithCurrency = (value: number, moeda: string): string => {
+  const symbol = CURRENCY_SYMBOLS[moeda?.toUpperCase()] || moeda || "R$";
+  return `${symbol} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 interface CashbackManualListProps {
   registros: CashbackManualComBookmaker[];
   formatCurrency: (value: number) => string;
@@ -109,7 +129,7 @@ export function CashbackManualList({
                 {/* Valor e Ações */}
                 <div className="flex flex-col items-end gap-2">
                   <span className="text-lg font-bold text-emerald-500">
-                    +{formatCurrency(Number(registro.valor))}
+                    +{formatWithCurrency(Number(registro.valor), registro.moeda_operacao)}
                   </span>
                   
                   <AlertDialog>
@@ -131,7 +151,7 @@ export function CashbackManualList({
                           Remover Cashback?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          Esta ação irá remover o lançamento de cashback e <strong>reverter o saldo da casa</strong> em {formatCurrency(Number(registro.valor))}.
+                          Esta ação irá remover o lançamento de cashback e <strong>reverter o saldo da casa</strong> em {formatWithCurrency(Number(registro.valor), registro.moeda_operacao)}.
                           <br /><br />
                           Esta ação não pode ser desfeita.
                         </AlertDialogDescription>

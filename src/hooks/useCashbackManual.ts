@@ -75,9 +75,13 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
     fetchAll();
   }, [fetchAll]);
 
-  // Métricas calculadas
+  // Métricas calculadas (usando valor_brl_referencia para consistência entre moedas)
   const metrics: CashbackManualMetrics = useMemo(() => {
-    const totalRecebido = registros.reduce((acc, r) => acc + Number(r.valor), 0);
+    // Usar valor_brl_referencia quando disponível, senão usar valor original
+    const totalRecebido = registros.reduce((acc, r) => {
+      const valorBRL = r.valor_brl_referencia ?? Number(r.valor);
+      return acc + valorBRL;
+    }, 0);
     const totalLancamentos = registros.length;
     const mediaPorLancamento = totalLancamentos > 0 ? totalRecebido / totalLancamentos : 0;
 
@@ -146,6 +150,37 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         const moedaOperacao = bookmaker.moeda || "BRL";
         const dataCredito = data.data_credito || new Date().toISOString().split("T")[0];
 
+        // Calcular valor_brl_referencia para moedas não-BRL
+        let valorBRLReferencia: number | null = null;
+        let cotacaoSnapshot: number | null = null;
+        
+        if (moedaOperacao !== "BRL") {
+          // Para USD/USDT, usar cotação aproximada (em produção, buscar de API de câmbio)
+          // Por enquanto, tentar buscar cotação do workspace ou usar estimativa
+          try {
+            const { data: cotacaoData } = await supabase
+              .from("cash_ledger")
+              .select("cotacao")
+              .eq("workspace_id", workspaceId)
+              .not("cotacao", "is", null)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .single();
+            
+            if (cotacaoData?.cotacao) {
+              cotacaoSnapshot = Number(cotacaoData.cotacao);
+              valorBRLReferencia = data.valor * cotacaoSnapshot;
+            }
+          } catch {
+            // Se não encontrar cotação, usar estimativa conservadora (5.5 para USD)
+            cotacaoSnapshot = 5.5;
+            valorBRLReferencia = data.valor * cotacaoSnapshot;
+          }
+        } else {
+          valorBRLReferencia = data.valor;
+          cotacaoSnapshot = 1;
+        }
+
         // 2. Inserir registro de cashback
         const { data: novoCashback, error: insertError } = await supabase
           .from("cashback_manual")
@@ -158,6 +193,9 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
             data_credito: dataCredito,
             observacoes: data.observacoes || null,
             moeda_operacao: moedaOperacao,
+            valor_brl_referencia: valorBRLReferencia,
+            cotacao_snapshot: cotacaoSnapshot,
+            cotacao_snapshot_at: new Date().toISOString(),
           })
           .select()
           .single();
