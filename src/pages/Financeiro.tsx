@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useCurrencySnapshot } from "@/hooks/useCurrencySnapshot";
+import { useWorkspaceLucroOperacional } from "@/hooks/useWorkspaceLucroOperacional";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -127,11 +128,9 @@ interface PagamentoOperador {
   operadores?: { nome: string } | null;
 }
 
-interface ApostaLucro {
+// Interface simplificada para histórico mensal (não precisa de todos os campos)
+interface ApostaHistorico {
   lucro_prejuizo: number | null;
-  lucro_prejuizo_brl_referencia: number | null;
-  pl_consolidado: number | null;
-  moeda_operacao: string | null;
   data_aposta: string;
 }
 
@@ -206,8 +205,7 @@ export default function Financeiro() {
   const [movimentacoesIndicacao, setMovimentacoesIndicacao] = useState<DespesaIndicacao[]>([]);
   const [bookmakersSaldos, setBookmakersSaldos] = useState<BookmakerSaldo[]>([]);
   const [bookmakersDetalhados, setBookmakersDetalhados] = useState<BookmakerDetalhado[]>([]);
-  const [apostasLucro, setApostasLucro] = useState<ApostaLucro[]>([]);
-  const [cashbackManual, setCashbackManual] = useState<{ valor: number; valor_brl_referencia: number | null; moeda_operacao: string; data_credito: string }[]>([]);
+  const [apostasHistorico, setApostasHistorico] = useState<ApostaHistorico[]>([]);
   const [totalParceirosAtivos, setTotalParceirosAtivos] = useState<number>(0);
   const [contasParceiros, setContasParceiros] = useState<ContaParceiro[]>([]);
   const [contasDetalhadas, setContasDetalhadas] = useState<ContaDetalhada[]>([]);
@@ -231,6 +229,23 @@ export default function Financeiro() {
   const [periodoPreset, setPeriodoPreset] = useState<string>("1m");
   const [dataInicio, setDataInicio] = useState<string>("");
   const [dataFim, setDataFim] = useState<string>("");
+
+  // ==================== FONTE ÚNICA DE VERDADE: LUCRO OPERACIONAL ====================
+  // Hook centralizado que consolida: apostas + cashback + giros grátis (e futuros módulos)
+  const { 
+    resultado: lucroOperacionalData, 
+    loading: loadingLucroOperacional,
+    refresh: refreshLucroOperacional 
+  } = useWorkspaceLucroOperacional({
+    dataInicio: dataInicio || null,
+    dataFim: dataFim || null,
+    cotacaoUSD,
+  });
+
+  // Valores derivados do hook centralizado
+  const lucroOperacionalApostas = lucroOperacionalData?.lucroTotal ?? 0;
+  const hasMultiCurrencyApostas = lucroOperacionalData?.hasMultiCurrency ?? false;
+
 
   // Dialog states
   const [kpiDialogOpen, setKpiDialogOpen] = useState(false);
@@ -302,8 +317,6 @@ export default function Financeiro() {
         movIndicacaoResult,
         bookmakersResult,
         bookmakersDetalhadosResult,
-        apostasLucroResult,
-        cashbackManualResult,
         parceirosAtivosResult,
         parceriasParceiroResult,
         parceriasComissaoResult,
@@ -313,6 +326,8 @@ export default function Financeiro() {
         contasDetalhadasResult,
         walletsDetalhadasResult,
         participacoesResult,
+        // Para histórico mensal - fetch simplificado
+        apostasHistoricoResult,
       ] = await Promise.all([
         supabase.from("v_saldo_caixa_fiat").select("*"),
         supabase.from("v_saldo_caixa_crypto").select("*"),
@@ -326,8 +341,6 @@ export default function Financeiro() {
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)"),
         supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status, estado_conta, aguardando_saque_at, projeto_id, moeda").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA"]),
         supabase.from("bookmakers").select("saldo_atual, saldo_irrecuperavel, projeto_id, moeda, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA"]),
-        supabase.from("apostas_unificada").select("lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, moeda_operacao, data_aposta").not("resultado", "is", null),
-        supabase.from("cashback_manual").select("valor, valor_brl_referencia, moeda_operacao, data_credito"),
         supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
         supabase
           .from("parcerias")
@@ -350,6 +363,8 @@ export default function Financeiro() {
         supabase.from("v_saldo_parceiro_contas").select("saldo, banco"),
         supabase.from("v_saldo_parceiro_wallets").select("saldo_usd, exchange"),
         supabase.from("participacao_ciclos").select("valor_participacao, data_pagamento").eq("status", "PAGO"),
+        // Apenas para histórico mensal (lucro_prejuizo + data_aposta)
+        supabase.from("apostas_unificada").select("lucro_prejuizo, data_aposta").not("resultado", "is", null),
       ]);
 
       if (fiatResult.error) throw fiatResult.error;
@@ -382,9 +397,8 @@ export default function Financeiro() {
       setWalletsDetalhadas(walletsDetalhadasResult.data || []);
       setParticipacoesPagas(participacoesResult.data || []);
       
-      // Armazenar apostas e cashback para filtrar por período
-      setApostasLucro((apostasLucroResult.data || []) as ApostaLucro[]);
-      setCashbackManual(cashbackManualResult.data || []);
+      // Armazenar apostas para histórico mensal (não mais usado para lucro operacional)
+      setApostasHistorico(apostasHistoricoResult.data || []);
       
       // Total de parceiros ativos
       setTotalParceirosAtivos(parceirosAtivosResult.count || 0);
@@ -486,75 +500,9 @@ export default function Financeiro() {
   const filteredLedger = filterByPeriod(cashLedger, "data_transacao");
   const filteredDespesasAdmin = filterByPeriod(despesasAdmin, "data_despesa");
   const filteredPagamentosOp = filterByPeriod(pagamentosOperador, "data_pagamento") as PagamentoOperador[];
-  const filteredApostas = filterByPeriod(apostasLucro, "data_aposta");
-  // Cashback será filtrado diretamente no useMemo abaixo para evitar problemas de tipagem
-  
-  // Lucro operacional filtrado por período - COM CONSOLIDAÇÃO MULTIMOEDA
-  // Inclui: apostas liquidadas + cashback manual
-  // Prioridade: pl_consolidado > lucro_prejuizo_brl_referencia > lucro_prejuizo (convertido se USD)
-  const { lucroConsolidado: lucroOperacionalApostas, hasMultiCurrencyApostas } = useMemo(() => {
-    let total = 0;
-    let hasMulti = false;
-    
-    // 1. Lucro das apostas
-    filteredApostas.forEach(a => {
-      const moeda = a.moeda_operacao || "BRL";
-      
-      // Se tem pl_consolidado (já convertido no registro), usar
-      if (a.pl_consolidado != null) {
-        total += a.pl_consolidado;
-        if (moeda !== "BRL") hasMulti = true;
-        return;
-      }
-      
-      // Se tem referência BRL salva (snapshot), usar
-      if (a.lucro_prejuizo_brl_referencia != null) {
-        total += a.lucro_prejuizo_brl_referencia;
-        if (moeda !== "BRL") hasMulti = true;
-        return;
-      }
-      
-      // Fallback: converter on-the-fly se necessário
-      const lucro = a.lucro_prejuizo || 0;
-      if (moeda === "USD") {
-        total += lucro * cotacaoUSD;
-        hasMulti = true;
-      } else {
-        total += lucro;
-      }
-    });
-    
-    // 2. Cashback manual (também é lucro operacional)
-    cashbackManual
-      .filter(cb => {
-        if (!dataInicio && !dataFim) return true;
-        if (!cb.data_credito) return true;
-        const itemDate = parseLocalDate(cb.data_credito);
-        const start = dataInicio ? startOfMonth(parseLocalDate(dataInicio)) : new Date(0);
-        const end = dataFim ? endOfMonth(parseLocalDate(dataFim)) : new Date();
-        return isWithinInterval(itemDate, { start, end });
-      })
-      .forEach(cb => {
-        const moeda = cb.moeda_operacao || "BRL";
-        
-        // Usar valor_brl_referencia se disponível
-        if (cb.valor_brl_referencia != null) {
-          total += cb.valor_brl_referencia;
-          if (moeda !== "BRL") hasMulti = true;
-          return;
-        }
-        
-        // Converter se USD/USDT
-        if (moeda === "USD" || moeda === "USDT") {
-          total += cb.valor * cotacaoUSD;
-          hasMulti = true;
-        } else {
-          total += cb.valor;
-        }
-      });
-    
-    return { lucroConsolidado: total, hasMultiCurrencyApostas: hasMulti };
-  }, [filteredApostas, cashbackManual, dataInicio, dataFim, cotacaoUSD]);
+  // NOTA: Lucro operacional agora é calculado pelo hook useWorkspaceLucroOperacional
+  // que consolida todos os módulos (apostas, cashback, giros grátis, etc.)
+  // Valores disponíveis: lucroOperacionalApostas, hasMultiCurrencyApostas (definidos acima)
 
   // ==================== CÁLCULOS CORRIGIDOS ====================
   
@@ -1012,7 +960,7 @@ export default function Financeiro() {
     }
 
     // 1. LUCRO OPERACIONAL: soma de lucro_prejuizo das apostas liquidadas
-    apostasLucro.forEach(aposta => {
+    apostasHistorico.forEach(aposta => {
       if (aposta.data_aposta && aposta.lucro_prejuizo !== null) {
         const key = format(parseLocalDate(aposta.data_aposta), "yyyy-MM");
         if (months[key]) {
