@@ -156,7 +156,9 @@ export function EquilibrioOperacionalCard({
           <div className="space-y-1">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Lucro Operacional</span>
-              <span className="font-semibold text-success">{formatCurrency(lucroOperacional)}</span>
+              <span className={cn("font-semibold", lucroOperacional >= 0 ? "text-success" : "text-destructive")}>
+                {lucroOperacional >= 0 ? "" : ""}{formatCurrency(lucroOperacional)}
+              </span>
             </div>
             <div className="h-3 bg-muted rounded-full overflow-hidden">
               <div 

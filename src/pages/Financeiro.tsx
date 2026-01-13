@@ -207,6 +207,7 @@ export default function Financeiro() {
   const [bookmakersSaldos, setBookmakersSaldos] = useState<BookmakerSaldo[]>([]);
   const [bookmakersDetalhados, setBookmakersDetalhados] = useState<BookmakerDetalhado[]>([]);
   const [apostasLucro, setApostasLucro] = useState<ApostaLucro[]>([]);
+  const [cashbackManual, setCashbackManual] = useState<{ valor: number; valor_brl_referencia: number | null; moeda_operacao: string; data_credito: string }[]>([]);
   const [totalParceirosAtivos, setTotalParceirosAtivos] = useState<number>(0);
   const [contasParceiros, setContasParceiros] = useState<ContaParceiro[]>([]);
   const [contasDetalhadas, setContasDetalhadas] = useState<ContaDetalhada[]>([]);
@@ -302,6 +303,7 @@ export default function Financeiro() {
         bookmakersResult,
         bookmakersDetalhadosResult,
         apostasLucroResult,
+        cashbackManualResult,
         parceirosAtivosResult,
         parceriasParceiroResult,
         parceriasComissaoResult,
@@ -325,6 +327,7 @@ export default function Financeiro() {
         supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status, estado_conta, aguardando_saque_at, projeto_id, moeda").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA"]),
         supabase.from("bookmakers").select("saldo_atual, saldo_irrecuperavel, projeto_id, moeda, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA"]),
         supabase.from("apostas_unificada").select("lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, moeda_operacao, data_aposta").not("resultado", "is", null),
+        supabase.from("cashback_manual").select("valor, valor_brl_referencia, moeda_operacao, data_credito"),
         supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
         supabase
           .from("parcerias")
@@ -379,8 +382,9 @@ export default function Financeiro() {
       setWalletsDetalhadas(walletsDetalhadasResult.data || []);
       setParticipacoesPagas(participacoesResult.data || []);
       
-      // Armazenar apostas para filtrar por período
+      // Armazenar apostas e cashback para filtrar por período
       setApostasLucro((apostasLucroResult.data || []) as ApostaLucro[]);
+      setCashbackManual(cashbackManualResult.data || []);
       
       // Total de parceiros ativos
       setTotalParceirosAtivos(parceirosAtivosResult.count || 0);
@@ -459,7 +463,7 @@ export default function Financeiro() {
   };
 
   // Filtrar dados por período
-  const filterByPeriod = <T extends { data_movimentacao?: string; data_inicio?: string; data_transacao?: string; data_despesa?: string; data_pagamento?: string; data_aposta?: string }>(
+  const filterByPeriod = <T extends { data_movimentacao?: string; data_inicio?: string; data_transacao?: string; data_despesa?: string; data_pagamento?: string; data_aposta?: string; data_credito?: string }>(
     data: T[],
     dateField: keyof T
   ): T[] => {
@@ -483,13 +487,16 @@ export default function Financeiro() {
   const filteredDespesasAdmin = filterByPeriod(despesasAdmin, "data_despesa");
   const filteredPagamentosOp = filterByPeriod(pagamentosOperador, "data_pagamento") as PagamentoOperador[];
   const filteredApostas = filterByPeriod(apostasLucro, "data_aposta");
+  // Cashback será filtrado diretamente no useMemo abaixo para evitar problemas de tipagem
   
   // Lucro operacional filtrado por período - COM CONSOLIDAÇÃO MULTIMOEDA
+  // Inclui: apostas liquidadas + cashback manual
   // Prioridade: pl_consolidado > lucro_prejuizo_brl_referencia > lucro_prejuizo (convertido se USD)
   const { lucroConsolidado: lucroOperacionalApostas, hasMultiCurrencyApostas } = useMemo(() => {
     let total = 0;
     let hasMulti = false;
     
+    // 1. Lucro das apostas
     filteredApostas.forEach(a => {
       const moeda = a.moeda_operacao || "BRL";
       
@@ -517,8 +524,37 @@ export default function Financeiro() {
       }
     });
     
+    // 2. Cashback manual (também é lucro operacional)
+    cashbackManual
+      .filter(cb => {
+        if (!dataInicio && !dataFim) return true;
+        if (!cb.data_credito) return true;
+        const itemDate = parseLocalDate(cb.data_credito);
+        const start = dataInicio ? startOfMonth(parseLocalDate(dataInicio)) : new Date(0);
+        const end = dataFim ? endOfMonth(parseLocalDate(dataFim)) : new Date();
+        return isWithinInterval(itemDate, { start, end });
+      })
+      .forEach(cb => {
+        const moeda = cb.moeda_operacao || "BRL";
+        
+        // Usar valor_brl_referencia se disponível
+        if (cb.valor_brl_referencia != null) {
+          total += cb.valor_brl_referencia;
+          if (moeda !== "BRL") hasMulti = true;
+          return;
+        }
+        
+        // Converter se USD/USDT
+        if (moeda === "USD" || moeda === "USDT") {
+          total += cb.valor * cotacaoUSD;
+          hasMulti = true;
+        } else {
+          total += cb.valor;
+        }
+      });
+    
     return { lucroConsolidado: total, hasMultiCurrencyApostas: hasMulti };
-  }, [filteredApostas, cotacaoUSD]);
+  }, [filteredApostas, cashbackManual, dataInicio, dataFim, cotacaoUSD]);
 
   // ==================== CÁLCULOS CORRIGIDOS ====================
   
