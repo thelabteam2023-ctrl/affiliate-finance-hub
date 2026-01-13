@@ -136,21 +136,34 @@ export function ConciliacaoVinculoDialog({
       // Verificar se a casa está limitada
       const isLimitada = vinculo.bookmaker_status.toUpperCase() === "LIMITADA";
       
-      // Determinar o status final baseado nas regras de negócio:
-      // - Casa LIMITADA OU casa com saldo > 0: vai para AGUARDANDO_SAQUE (precisa sacar)
-      // - Casa ATIVA sem saldo: volta para ATIVO (disponível para novo vínculo)
+      // Determinar se precisa marcar para saque
+      // - Casa LIMITADA OU casa com saldo > 0: precisa sacar
+      // - Casa ATIVA sem saldo: disponível para novo vínculo
       const precisaSaque = isLimitada || saldoFinalReal > 0;
-      const novoStatus = precisaSaque ? "AGUARDANDO_SAQUE" : "ATIVO";
       
-      const { error } = await supabase
-        .from("bookmakers")
-        .update({
-          projeto_id: null,
-          status: novoStatus,
-        })
-        .eq("id", vinculo.id);
-
-      if (error) throw error;
+      if (precisaSaque) {
+        // Usar RPC que preserva estado_conta
+        const { error } = await supabase.rpc('marcar_para_saque', {
+          p_bookmaker_id: vinculo.id
+        });
+        if (error) throw error;
+        
+        // Desvincular do projeto
+        await supabase
+          .from("bookmakers")
+          .update({ projeto_id: null })
+          .eq("id", vinculo.id);
+      } else {
+        // Apenas desvincular
+        const { error } = await supabase
+          .from("bookmakers")
+          .update({
+            projeto_id: null,
+            status: "ativo",
+          })
+          .eq("id", vinculo.id);
+        if (error) throw error;
+      }
 
       // Mensagem apropriada baseada no cenário
       if (isLimitada) {
