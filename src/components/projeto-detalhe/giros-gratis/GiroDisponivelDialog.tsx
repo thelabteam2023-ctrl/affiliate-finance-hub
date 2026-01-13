@@ -13,6 +13,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -20,11 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calculator, Loader2, Clock, Gift } from "lucide-react";
+import { Calculator, Loader2, Clock, Gift, Zap, ClipboardList, Info, Check } from "lucide-react";
 import { GiroDisponivelComBookmaker, GiroDisponivelFormData } from "@/types/girosGratisDisponiveis";
 import { format } from "date-fns";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BookmakerSelectOption } from "@/components/bookmakers/BookmakerSelectOption";
+
+type FormMode = "rapido" | "completo";
 
 interface GiroDisponivelDialogProps {
   open: boolean;
@@ -32,6 +35,8 @@ interface GiroDisponivelDialogProps {
   projetoId: string;
   giro?: GiroDisponivelComBookmaker | null;
   onSave: (data: GiroDisponivelFormData) => Promise<boolean>;
+  /** Callback adicional para quando um lançamento rápido já utilizado é salvo */
+  onSaveRapido?: (data: { bookmaker_id: string; valor_retorno: number; data_registro: Date; observacoes?: string }) => Promise<boolean>;
 }
 
 export function GiroDisponivelDialog({
@@ -40,15 +45,25 @@ export function GiroDisponivelDialog({
   projetoId,
   giro,
   onSave,
+  onSaveRapido,
 }: GiroDisponivelDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [formMode, setFormMode] = useState<FormMode>("rapido");
+  
+  // Campos comuns
   const [bookmakerId, setBookmakerId] = useState("");
+  const [observacoes, setObservacoes] = useState("");
+  
+  // Campos modo rápido (giro já utilizado)
+  const [valorRetorno, setValorRetorno] = useState(0);
+  const [dataRegistro, setDataRegistro] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  
+  // Campos modo completo (promoção pendente)
   const [quantidadeGiros, setQuantidadeGiros] = useState(1);
   const [valorPorGiro, setValorPorGiro] = useState(0);
   const [motivo, setMotivo] = useState("Promoção");
   const [dataRecebido, setDataRecebido] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [dataValidade, setDataValidade] = useState<string>("");
-  const [observacoes, setObservacoes] = useState("");
 
   const { 
     data: bookmakerSaldos = [], 
@@ -84,6 +99,8 @@ export function GiroDisponivelDialog({
   useEffect(() => {
     if (open) {
       if (giro) {
+        // Editando promoção existente -> modo completo
+        setFormMode("completo");
         setBookmakerId(giro.bookmaker_id);
         setQuantidadeGiros(giro.quantidade_giros);
         setValorPorGiro(giro.valor_por_giro);
@@ -92,7 +109,11 @@ export function GiroDisponivelDialog({
         setDataValidade(giro.data_validade ? format(new Date(giro.data_validade), "yyyy-MM-dd") : "");
         setObservacoes(giro.observacoes || "");
       } else {
+        // Novo registro -> resetar para modo rápido
+        setFormMode("rapido");
         setBookmakerId("");
+        setValorRetorno(0);
+        setDataRegistro(format(new Date(), "yyyy-MM-dd"));
         setQuantidadeGiros(1);
         setValorPorGiro(0);
         setMotivo("Promoção");
@@ -103,7 +124,46 @@ export function GiroDisponivelDialog({
     }
   }, [open, giro]);
 
-  const handleSubmit = async () => {
+  const handleSubmitRapido = async () => {
+    if (!bookmakerId || valorRetorno <= 0) return;
+
+    setLoading(true);
+    try {
+      const [year, month, day] = dataRegistro.split('-').map(Number);
+      const parsedDate = new Date(year, month - 1, day);
+
+      if (onSaveRapido) {
+        const success = await onSaveRapido({
+          bookmaker_id: bookmakerId,
+          valor_retorno: valorRetorno,
+          data_registro: parsedDate,
+          observacoes: observacoes || undefined,
+        });
+        if (success) {
+          onOpenChange(false);
+        }
+      } else {
+        // Fallback: criar como promoção já utilizada
+        const formData: GiroDisponivelFormData = {
+          bookmaker_id: bookmakerId,
+          quantidade_giros: 1,
+          valor_por_giro: valorRetorno,
+          motivo: "Lançamento Rápido",
+          data_recebido: parsedDate,
+          data_validade: null,
+          observacoes: observacoes || undefined,
+        };
+        const success = await onSave(formData);
+        if (success) {
+          onOpenChange(false);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitCompleto = async () => {
     if (!bookmakerId || quantidadeGiros <= 0 || valorPorGiro <= 0) {
       return;
     }
@@ -138,7 +198,18 @@ export function GiroDisponivelDialog({
     }
   };
 
+  const handleSubmit = () => {
+    if (formMode === "rapido") {
+      handleSubmitRapido();
+    } else {
+      handleSubmitCompleto();
+    }
+  };
+
   const isEditing = !!giro;
+  const canSubmitRapido = bookmakerId && valorRetorno > 0;
+  const canSubmitCompleto = bookmakerId && quantidadeGiros > 0 && valorPorGiro > 0;
+  const canSubmit = formMode === "rapido" ? canSubmitRapido : canSubmitCompleto;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,12 +217,38 @@ export function GiroDisponivelDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Gift className="h-5 w-5 text-primary" />
-            {isEditing ? "Editar Promoção" : "Nova Promoção de Giros"}
+            {isEditing ? "Editar Promoção" : "Novo Giro Grátis"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Bookmaker */}
+        <div className="space-y-4 py-2">
+          {/* Seletor de Modo - apenas para novos registros */}
+          {!isEditing && (
+            <div className="space-y-2">
+              <Tabs value={formMode} onValueChange={(v) => setFormMode(v as FormMode)}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="rapido" className="flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    Lançamento Rápido
+                  </TabsTrigger>
+                  <TabsTrigger value="completo" className="flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4" />
+                    Promoção Pendente
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="flex items-start gap-2 p-2 rounded-lg bg-muted/50 text-xs text-muted-foreground">
+                <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                {formMode === "rapido" ? (
+                  <span>Registro direto de giros <strong>já utilizados</strong>. Informe apenas a casa e quanto ganhou.</span>
+                ) : (
+                  <span>Registre promoções <strong>pendentes</strong> para usar depois. Controle validade e detalhes.</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Bookmaker - comum a ambos */}
           <div className="space-y-2">
             <Label>Casa de Apostas *</Label>
             <Select value={bookmakerId} onValueChange={setBookmakerId}>
@@ -174,74 +271,117 @@ export function GiroDisponivelDialog({
             </Select>
           </div>
 
-          {/* Quantidade e Valor */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Quantidade de Giros *</Label>
-              <Input
-                type="number"
-                min={1}
-                value={quantidadeGiros || ""}
-                onChange={(e) => setQuantidadeGiros(Number(e.target.value) || 0)}
-                placeholder="Ex: 50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Valor por Giro *</Label>
-              <MoneyInput
-                value={valorPorGiro.toString()}
-                onChange={(v) => setValorPorGiro(Number(v) || 0)}
-                currency="R$"
-              />
-            </div>
-          </div>
-
-          {/* Valor total calculado */}
-          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm">
-                <Calculator className="h-4 w-4 text-primary" />
-                <span>Valor Total da Promoção</span>
+          {/* MODO RÁPIDO */}
+          {formMode === "rapido" && !isEditing && (
+            <>
+              <div className="space-y-2">
+                <Label>Quanto você ganhou? *</Label>
+                <MoneyInput
+                  value={valorRetorno.toString()}
+                  onChange={(v) => setValorRetorno(Number(v) || 0)}
+                  currency={selectedBookmaker?.moeda === "USD" || selectedBookmaker?.moeda === "USDT" ? "$" : "R$"}
+                  placeholder="0,00"
+                />
               </div>
-              <Badge variant="default" className="text-base font-mono">
-                R$ {valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </Badge>
-            </div>
-          </div>
 
-          {/* Motivo */}
-          <div className="space-y-2">
-            <Label>Motivo / Origem</Label>
-            <Input
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ex: Bônus de aniversário, Promoção semanal..."
-            />
-          </div>
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <DatePicker
+                  value={dataRegistro}
+                  onChange={setDataRegistro}
+                />
+              </div>
 
-          {/* Datas */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Data Recebido</Label>
-              <DatePicker
-                value={dataRecebido}
-                onChange={setDataRecebido}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                Data de Validade
-              </Label>
-              <DatePicker
-                value={dataValidade}
-                onChange={setDataValidade}
-                placeholder="Opcional"
-              />
-            </div>
-          </div>
+              {/* Resumo */}
+              {valorRetorno > 0 && (
+                <div className="p-3 rounded-lg bg-success/10 border border-success/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-success" />
+                      <span>Lucro dos Giros</span>
+                    </div>
+                    <Badge variant="default" className="text-base font-mono bg-success">
+                      {selectedBookmaker?.moeda === "USD" || selectedBookmaker?.moeda === "USDT" ? "$" : "R$"} {valorRetorno.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
 
-          {/* Observações */}
+          {/* MODO COMPLETO */}
+          {(formMode === "completo" || isEditing) && (
+            <>
+              {/* Quantidade e Valor */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Quantidade de Giros *</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={quantidadeGiros || ""}
+                    onChange={(e) => setQuantidadeGiros(Number(e.target.value) || 0)}
+                    placeholder="Ex: 50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor por Giro *</Label>
+                  <MoneyInput
+                    value={valorPorGiro.toString()}
+                    onChange={(v) => setValorPorGiro(Number(v) || 0)}
+                    currency={selectedBookmaker?.moeda === "USD" || selectedBookmaker?.moeda === "USDT" ? "$" : "R$"}
+                  />
+                </div>
+              </div>
+
+              {/* Valor total calculado */}
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calculator className="h-4 w-4 text-primary" />
+                    <span>Valor Total da Promoção</span>
+                  </div>
+                  <Badge variant="default" className="text-base font-mono">
+                    {selectedBookmaker?.moeda === "USD" || selectedBookmaker?.moeda === "USDT" ? "$" : "R$"} {valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Motivo */}
+              <div className="space-y-2">
+                <Label>Motivo / Origem</Label>
+                <Input
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  placeholder="Ex: Bônus de aniversário, Promoção semanal..."
+                />
+              </div>
+
+              {/* Datas */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data Recebido</Label>
+                  <DatePicker
+                    value={dataRecebido}
+                    onChange={setDataRecebido}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Data de Validade
+                  </Label>
+                  <DatePicker
+                    value={dataValidade}
+                    onChange={setDataValidade}
+                    placeholder="Opcional"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Observações - comum a ambos */}
           <div className="space-y-2">
             <Label>Observações</Label>
             <Textarea
@@ -259,14 +399,20 @@ export function GiroDisponivelDialog({
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={loading || !bookmakerId || quantidadeGiros <= 0 || valorPorGiro <= 0}
+            disabled={loading || !canSubmit}
           >
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Salvando...
               </>
-            ) : isEditing ? "Salvar" : "Registrar Promoção"}
+            ) : isEditing ? (
+              "Salvar"
+            ) : formMode === "rapido" ? (
+              "Registrar Ganho"
+            ) : (
+              "Registrar Promoção"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
