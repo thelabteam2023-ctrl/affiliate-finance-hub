@@ -1011,7 +1011,6 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           }
         }}
         projetoId={projetoId}
-        bookmakers={bookmakers}
         surebet={selectedSurebet}
         onSuccess={handleApostaUpdated}
         activeTab="bonus"

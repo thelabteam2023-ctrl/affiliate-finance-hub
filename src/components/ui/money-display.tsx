@@ -207,8 +207,6 @@ export interface MultiCurrencyDisplayProps {
   masked?: boolean;
   className?: string;
   showZero?: boolean;
-  /** @deprecated Use sempre layout vertical - prop mantida para compatibilidade */
-  stacked?: boolean;
   /** Se true, mostra "-" quando todos os valores forem 0 */
   showDashOnZero?: boolean;
 }
@@ -222,7 +220,6 @@ export function MultiCurrencyDisplay({
   masked = false,
   className,
   showZero = false,
-  stacked = true, // Sempre vertical por padrão
   showDashOnZero = false,
 }: MultiCurrencyDisplayProps) {
   // Construir lista de moedas a exibir

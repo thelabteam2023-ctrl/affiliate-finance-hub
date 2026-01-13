@@ -1452,7 +1452,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         open={dialogSurebetOpen}
         onOpenChange={setDialogSurebetOpen}
         projetoId={projetoId}
-        bookmakers={bookmakers}
         surebet={selectedSurebet || null}
         onSuccess={handleApostaUpdated}
       />

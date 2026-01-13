@@ -317,7 +317,6 @@ export function ParceiroDetalhesPanel({
                         size="sm"
                         masked={!showSensitiveData}
                         showDashOnZero
-                        stacked
                       />
                     </div>
                   </div>
@@ -333,7 +332,6 @@ export function ParceiroDetalhesPanel({
                         size="sm"
                         masked={!showSensitiveData}
                         showDashOnZero
-                        stacked
                       />
                     </div>
                   </div>
@@ -348,7 +346,6 @@ export function ParceiroDetalhesPanel({
                         valueUSD={totalSaldoUSD}
                         size="sm"
                         masked={!showSensitiveData}
-                        stacked
                         className="font-bold"
                       />
                     </div>
@@ -374,7 +371,6 @@ export function ParceiroDetalhesPanel({
                         variant="auto"
                         masked={!showSensitiveData}
                         showDashOnZero
-                        stacked
                       />
                     </div>
                   </div>

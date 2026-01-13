@@ -357,7 +357,7 @@ async function fetchLucroGirosGratis(
 
 /**
  * Busca o lucro total de cashback recebido do projeto.
- * Inclui AMBOS: cashback automático (cashback_registros) + cashback manual (cashback_manual)
+ * Apenas cashback manual (cashback_manual).
  * Cashback recebido é sempre positivo ou zero.
  */
 async function fetchLucroCashback(
@@ -367,42 +367,24 @@ async function fetchLucroCashback(
   moedaConsolidacao: string,
   cotacao: number
 ): Promise<number> {
-  // 1. Buscar cashback de regras automáticas (cashback_registros)
-  let queryRegistros = supabase
-    .from('cashback_registros')
-    .select('valor_recebido')
-    .eq('projeto_id', projetoId)
-    .eq('status', 'recebido');
-
-  if (dataInicio) queryRegistros = queryRegistros.gte('data_credito', dataInicio.toISOString());
-  if (dataFim) queryRegistros = queryRegistros.lte('data_credito', dataFim.toISOString());
-
-  // 2. Buscar cashback manual
-  let queryManual = supabase
+  // Buscar apenas cashback manual
+  let query = supabase
     .from('cashback_manual')
     .select('valor, moeda_operacao, valor_brl_referencia')
     .eq('projeto_id', projetoId);
 
-  if (dataInicio) queryManual = queryManual.gte('data_credito', dataInicio.toISOString().split('T')[0]);
-  if (dataFim) queryManual = queryManual.lte('data_credito', dataFim.toISOString().split('T')[0]);
+  if (dataInicio) query = query.gte('data_credito', dataInicio.toISOString().split('T')[0]);
+  if (dataFim) query = query.lte('data_credito', dataFim.toISOString().split('T')[0]);
 
-  const [registrosResult, manualResult] = await Promise.all([queryRegistros, queryManual]);
+  const { data, error } = await query;
 
-  if (registrosResult.error) {
-    console.error('Erro ao buscar cashback_registros:', registrosResult.error);
+  if (error) {
+    console.error('Erro ao buscar cashback_manual:', error);
+    return 0;
   }
-  if (manualResult.error) {
-    console.error('Erro ao buscar cashback_manual:', manualResult.error);
-  }
-
-  // Somar cashback automático
-  const totalRegistros = registrosResult.data?.reduce((acc: number, c: any) => {
-    const valor = Number(c.valor_recebido || 0);
-    return acc + Math.max(0, valor);
-  }, 0) || 0;
 
   // Somar cashback manual (com conversão de moeda)
-  const totalManual = manualResult.data?.reduce((acc: number, cb: any) => {
+  return data?.reduce((acc: number, cb: any) => {
     const valor = Number(cb.valor || 0);
     const moeda = cb.moeda_operacao || 'BRL';
     
@@ -414,8 +396,6 @@ async function fetchLucroCashback(
     // Converter para moeda de consolidação
     return acc + Math.max(0, convertToConsolidation(valor, moeda, moedaConsolidacao, cotacao));
   }, 0) || 0;
-
-  return totalRegistros + totalManual;
 }
 
 async function fetchCapitalData(

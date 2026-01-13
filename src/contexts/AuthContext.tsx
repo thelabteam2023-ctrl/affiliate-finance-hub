@@ -40,7 +40,6 @@ interface AuthContextType {
   setWorkspaceForTab: (workspaceId: string) => Promise<void>;
   hasPermission: (permissionCode: string) => Promise<boolean>;
   isOwnerOrAdmin: () => boolean;
-  isMaster: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -437,11 +436,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return role === 'owner' || role === 'admin';
   };
 
-  // DEPRECATED: Master role is obsolete. Use isSystemOwner for global privileges.
-  const isMaster = (): boolean => {
-    return false;
-  };
-
   const value: AuthContextType = {
     user,
     session,
@@ -461,7 +455,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setWorkspaceForTab,
     hasPermission,
     isOwnerOrAdmin,
-    isMaster,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
