@@ -1251,7 +1251,7 @@ export default function Financeiro() {
                         </tr>
                       ) : (
                         [...despesasAdmin]
-                          .sort((a, b) => new Date(b.data_despesa).getTime() - new Date(a.data_despesa).getTime())
+                          .sort((a, b) => parseLocalDate(b.data_despesa).getTime() - parseLocalDate(a.data_despesa).getTime())
                           .map((despesa) => (
                             <tr key={despesa.id} className="border-b border-border/50 hover:bg-muted/30">
                               <td className="py-3 px-4 w-[120px]">
