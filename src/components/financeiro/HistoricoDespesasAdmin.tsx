@@ -272,9 +272,10 @@ export function HistoricoDespesasAdmin({ formatCurrency }: HistoricoDespesasAdmi
                       <div className="flex items-center gap-2">
                         {(() => {
                           const grupoInfo = getGrupoInfo((transacao as any).grupo || "OUTROS");
+                          const IconComponent = grupoInfo.icon;
                           return (
                             <Badge variant="outline" className={`w-fit ${grupoInfo.color}`}>
-                              <span className="mr-1">{grupoInfo.icon}</span>
+                              <IconComponent className="h-3 w-3 mr-1" />
                               {grupoInfo.label}
                             </Badge>
                           );

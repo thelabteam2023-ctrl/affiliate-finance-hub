@@ -1260,8 +1260,9 @@ export default function Financeiro() {
                                 {format(parseLocalDate(despesa.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
                               </td>
                               <td className="py-3 px-4">
-                                {(() => {
+                              {(() => {
                                   const grupoInfo = getGrupoInfo(despesa.grupo || "OUTROS");
+                                  const IconComponent = grupoInfo.icon;
                                   return (
                                     <ShadcnTooltip>
                                       <TooltipTrigger asChild>
@@ -1269,7 +1270,7 @@ export default function Financeiro() {
                                           variant="outline" 
                                           className={`whitespace-nowrap ${grupoInfo.color}`}
                                         >
-                                          <span className="mr-1">{grupoInfo.icon}</span>
+                                          <IconComponent className="h-3 w-3 mr-1" />
                                           {grupoInfo.label}
                                         </Badge>
                                       </TooltipTrigger>
@@ -1359,10 +1360,11 @@ export default function Financeiro() {
                   }, {} as Record<string, number>)
                 ).sort((a, b) => b[1] - a[1]).map(([grupo, valor]) => {
                   const grupoInfo = getGrupoInfo(grupo);
+                  const IconComponent = grupoInfo.icon;
                   return (
                     <div key={grupo} className="flex items-center justify-between">
                       <span className="text-sm flex items-center gap-2">
-                        <span>{grupoInfo.icon}</span>
+                        <IconComponent className="h-4 w-4" />
                         <span>{grupoInfo.label}</span>
                       </span>
                       <span className="font-medium text-orange-500">{formatCurrency(valor)}</span>
