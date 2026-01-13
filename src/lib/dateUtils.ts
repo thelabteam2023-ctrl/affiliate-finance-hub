@@ -4,15 +4,18 @@
  */
 export function parseLocalDate(dateString: string): Date {
   if (!dateString) return new Date();
-  
-  // If already a full ISO string with time, just parse it
-  if (dateString.includes('T')) {
-    return new Date(dateString);
+
+  // Datas financeiras/administrativas são datas civis (sem fuso).
+  // Mesmo que venham do backend como timestamp (ex: "2026-01-13 00:00:00+00" ou "2026-01-13T00:00:00Z"),
+  // extraímos apenas YYYY-MM-DD e criamos um Date local (ano, mês, dia) para evitar shift de -1 dia.
+  const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(dateString);
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    return new Date(year, month - 1, day);
   }
-  
-  // For YYYY-MM-DD format, parse as local date
-  const [year, month, day] = dateString.split('-').map(Number);
-  if (!year || !month || !day) return new Date(dateString);
-  
-  return new Date(year, month - 1, day);
+
+  // Fallback para formatos inesperados
+  return new Date(dateString);
 }
