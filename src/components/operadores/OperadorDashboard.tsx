@@ -486,8 +486,7 @@ export function OperadorDashboard() {
             if (value !== "ano") setAnoSelecionado("");
           }}
         >
-          <SelectTrigger className="w-[180px] flex items-center gap-2">
-            <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <SelectTrigger className="w-[180px]" icon={<Calendar className="h-4 w-4" />}>
             <SelectValue placeholder="Tipo de Período" />
           </SelectTrigger>
           <SelectContent>
@@ -504,8 +503,7 @@ export function OperadorDashboard() {
         {/* Select Secundário - Mês (condicional) */}
         {tipoPeriodo === "mes" && meses.length > 0 && (
           <Select value={mesSelecionado} onValueChange={setMesSelecionado}>
-            <SelectTrigger className="w-[200px] flex items-center gap-2">
-              <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <SelectTrigger className="w-[200px]" icon={<Calendar className="h-4 w-4" />}>
               <SelectValue placeholder="Selecionar mês" />
             </SelectTrigger>
             <SelectContent>
@@ -521,8 +519,7 @@ export function OperadorDashboard() {
         {/* Select Secundário - Ano (condicional) */}
         {tipoPeriodo === "ano" && anos.length > 0 && (
           <Select value={anoSelecionado} onValueChange={setAnoSelecionado}>
-            <SelectTrigger className="w-[160px] flex items-center gap-2">
-              <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <SelectTrigger className="w-[160px]" icon={<Calendar className="h-4 w-4" />}>
               <SelectValue placeholder="Selecionar ano" />
             </SelectTrigger>
             <SelectContent>
@@ -537,8 +534,7 @@ export function OperadorDashboard() {
 
         {/* Outros Filtros */}
         <Select value={projetoFilter} onValueChange={setProjetoFilter}>
-          <SelectTrigger className="w-[200px] flex items-center gap-2">
-            <Target className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <SelectTrigger className="w-[200px]" icon={<Target className="h-4 w-4" />}>
             <SelectValue placeholder="Projeto" />
           </SelectTrigger>
           <SelectContent>
@@ -552,8 +548,7 @@ export function OperadorDashboard() {
         </Select>
 
         <Select value={modeloFilter} onValueChange={setModeloFilter}>
-          <SelectTrigger className="w-[200px] flex items-center gap-2">
-            <DollarSign className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <SelectTrigger className="w-[200px]" icon={<DollarSign className="h-4 w-4" />}>
             <SelectValue placeholder="Modelo de Pagamento" />
           </SelectTrigger>
           <SelectContent>
