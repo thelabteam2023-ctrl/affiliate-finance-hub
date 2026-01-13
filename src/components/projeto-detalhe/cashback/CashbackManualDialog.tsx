@@ -158,7 +158,7 @@ export function CashbackManualDialog({
                     />
                   </FormControl>
                   <FormDescription>
-                    Selecione o vínculo (casa + dono) para creditar o cashback
+                    Selecione o vínculo
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -246,7 +246,7 @@ export function CashbackManualDialog({
                     </PopoverContent>
                   </Popover>
                   <FormDescription>
-                    Data em que o cashback foi creditado (padrão: hoje)
+                    Data em que o cashback foi creditado
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
