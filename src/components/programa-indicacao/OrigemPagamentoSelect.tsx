@@ -684,8 +684,8 @@ export function OrigemPagamentoSelect({
         </div>
       )}
 
-      {/* Partner selection for PARCEIRO_CONTA or PARCEIRO_WALLET */}
-      {(value.origemTipo === "PARCEIRO_CONTA" || value.origemTipo === "PARCEIRO_WALLET") && (
+      {/* Partner selection for PARCEIRO_CONTA (FIAT) */}
+      {value.origemTipo === "PARCEIRO_CONTA" && (
         <div className="space-y-3 pt-2 border-t">
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Selecione o Parceiro</Label>
@@ -698,17 +698,33 @@ export function OrigemPagamentoSelect({
                 <SelectValue placeholder="Escolha um parceiro..." />
               </SelectTrigger>
               <SelectContent>
-                {parceiros.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.nome}
-                  </SelectItem>
-                ))}
+                {parceiros.map((p) => {
+                  // Calcular saldo total FIAT do parceiro
+                  const contasDoParceiro = saldosParceirosContas.filter(s => s.parceiro_id === p.id);
+                  const saldoTotal = contasDoParceiro.reduce((acc, c) => acc + (c.saldo || 0), 0);
+                  const temSaldo = saldoTotal > 0;
+                  
+                  return (
+                    <SelectItem key={p.id} value={p.id}>
+                      <div className="flex flex-col w-full gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${!temSaldo ? "text-muted-foreground" : ""}`}>
+                            {p.nome}
+                          </span>
+                        </div>
+                        <span className={`text-xs ${temSaldo ? "text-emerald-600 font-medium" : "text-muted-foreground"}`}>
+                          Saldo: {formatCurrency(saldoTotal)}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
 
           {/* Account selection for FIAT */}
-          {value.origemTipo === "PARCEIRO_CONTA" && value.origemParceiroId && (
+          {value.origemParceiroId && (
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Selecione a Conta</Label>
               {contasParceiroSelecionado.length === 0 ? (
@@ -744,8 +760,100 @@ export function OrigemPagamentoSelect({
             </div>
           )}
 
+          {/* Show selected balance for Partner accounts */}
+          {value.origemContaBancariaId && (
+            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+              isInsuficiente && valorPagamento > 0
+                ? "bg-destructive/10 border border-destructive/30 text-destructive" 
+                : "bg-muted/50 text-muted-foreground"
+            }`}>
+              {isInsuficiente && valorPagamento > 0 && (
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+              )}
+              <span>
+                Saldo disponível: {formatCurrency(value.saldoDisponivel)}
+                {isInsuficiente && valorPagamento > 0 && (
+                  <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
+                )}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Partner selection for PARCEIRO_WALLET (CRYPTO) */}
+      {value.origemTipo === "PARCEIRO_WALLET" && (
+        <div className="space-y-3 pt-2 border-t">
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Selecione o Parceiro</Label>
+            <Select
+              value={value.origemParceiroId || ""}
+              onValueChange={handleParceiroChange}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Escolha um parceiro..." />
+              </SelectTrigger>
+              <SelectContent>
+                {parceiros.map((p) => {
+                  // Buscar todas as wallets do parceiro
+                  const walletsDoParceiro = walletsCrypto.filter(w => w.parceiro_id === p.id);
+                  const saldosDoParceiroWallets = saldosParceirosWallets.filter(s => s.parceiro_id === p.id);
+                  
+                  // Calcular saldo total em USD de todas as wallets
+                  const saldoTotalUSD = saldosDoParceiroWallets.reduce((acc, s) => {
+                    const priceUSD = getCoinPriceUSD(s.coin);
+                    return acc + (s.saldo_coin || 0) * priceUSD;
+                  }, 0);
+                  const saldoTotalBRL = saldoTotalUSD * cotacaoUSD;
+                  const temSaldo = saldoTotalUSD > 0;
+                  const temWallets = walletsDoParceiro.length > 0;
+                  
+                  return (
+                    <SelectItem key={p.id} value={p.id}>
+                      <div className="flex flex-col w-full gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${!temSaldo ? "text-muted-foreground" : ""}`}>
+                            {p.nome}
+                          </span>
+                        </div>
+                        {temWallets ? (
+                          <div className="space-y-0.5">
+                            {saldosDoParceiroWallets.length > 0 ? (
+                              saldosDoParceiroWallets.map(s => {
+                                const wallet = walletsDoParceiro.find(w => 
+                                  saldosParceirosWallets.find(sw => sw.wallet_id === w.id && sw.coin === s.coin)
+                                );
+                                return (
+                                  <div key={s.wallet_id} className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted-foreground">•</span>
+                                    <span className={s.saldo_coin > 0 ? "text-emerald-600" : "text-muted-foreground"}>
+                                      {s.coin} {s.saldo_coin?.toFixed(4) || "0"}
+                                    </span>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">
+                                Sem saldo em wallets
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">
+                            Sem wallets cadastradas
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Wallet selection for CRYPTO */}
-          {value.origemTipo === "PARCEIRO_WALLET" && value.origemParceiroId && (
+          {value.origemParceiroId && (
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Selecione a Wallet</Label>
               {walletsParceiroSelecionado.length === 0 ? (
@@ -786,8 +894,8 @@ export function OrigemPagamentoSelect({
             </div>
           )}
 
-          {/* Show selected balance for Partner accounts/wallets */}
-          {(value.origemContaBancariaId || value.origemWalletId) && (
+          {/* Show selected balance for Partner wallets */}
+          {value.origemWalletId && (
             <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
               isInsuficiente && valorPagamento > 0
                 ? "bg-destructive/10 border border-destructive/30 text-destructive" 
@@ -797,10 +905,7 @@ export function OrigemPagamentoSelect({
                 <AlertTriangle className="h-4 w-4 shrink-0" />
               )}
               <span>
-                Saldo disponível: {value.origemTipo === "PARCEIRO_WALLET" && value.origemWalletId
-                  ? `${formatCoin(getSaldoWalletParceiro(value.origemWalletId).saldoCoin, getSaldoWalletParceiro(value.origemWalletId).coin)} ≈ ${formatCurrency(value.saldoDisponivel)}`
-                  : formatCurrency(value.saldoDisponivel)
-                }
+                Saldo disponível: {formatCoin(getSaldoWalletParceiro(value.origemWalletId).saldoCoin, getSaldoWalletParceiro(value.origemWalletId).coin)} ≈ {formatCurrency(value.saldoDisponivel)}
                 {isInsuficiente && valorPagamento > 0 && (
                   <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
                 )}
