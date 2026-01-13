@@ -1,11 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
   Trash2, 
   DollarSign, 
   CalendarDays,
-  Building2,
   MessageSquare,
   AlertCircle,
   User
@@ -25,6 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Mapa de símbolos de moeda
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -69,110 +68,115 @@ export function CashbackManualList({
 
   if (registros.length === 0) {
     return (
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-          <DollarSign className="h-12 w-12 text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground font-medium">
-            Nenhum cashback lançado ainda
-          </p>
-          <p className="text-sm text-muted-foreground/70 mt-1">
-            Clique em "Lançar Cashback" para adicionar
-          </p>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed rounded-lg bg-muted/20">
+        <DollarSign className="h-10 w-10 text-muted-foreground/30 mb-3" />
+        <p className="text-sm text-muted-foreground font-medium">
+          Nenhum cashback lançado ainda
+        </p>
+        <p className="text-xs text-muted-foreground/70 mt-1">
+          Clique em "Lançar Cashback" para adicionar
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {registros.map((registro) => (
-        <Card key={registro.id} className="overflow-hidden">
-          <div className="flex items-stretch">
-            {/* Indicador visual de valor */}
-            <div className="w-1.5 bg-emerald-500" />
-            
-            <div className="flex-1 p-4">
-              <div className="flex items-start justify-between gap-4">
-                {/* Info Principal */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="secondary" className="font-medium">
-                      <Building2 className="h-3 w-3 mr-1" />
-                      {registro.bookmaker?.nome || "Casa"}
-                    </Badge>
-                    {registro.bookmaker?.parceiro?.nome && (
-                      <Badge variant="outline" className="text-xs">
-                        <User className="h-3 w-3 mr-1" />
-                        {registro.bookmaker.parceiro.nome}
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className="text-xs">
-                      {registro.moeda_operacao}
-                    </Badge>
-                  </div>
-                  
-                  <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      {format(parseISO(registro.data_credito), "dd/MM/yyyy", { locale: ptBR })}
-                    </span>
-                  </div>
+    <div className="space-y-2">
+      {registros.map((registro) => {
+        const logoUrl = registro.bookmaker?.bookmakers_catalogo?.logo_url;
+        const casaNome = registro.bookmaker?.nome || "Casa";
+        const parceiroNome = registro.bookmaker?.parceiro?.nome;
 
-                  {registro.observacoes && (
-                    <div className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
-                      <MessageSquare className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                      <span className="line-clamp-2">{registro.observacoes}</span>
-                    </div>
-                  )}
-                </div>
+        return (
+          <div 
+            key={registro.id} 
+            className="flex items-center gap-3 px-4 py-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+          >
+            {/* Logo da casa */}
+            <Avatar className="h-8 w-8 flex-shrink-0">
+              {logoUrl ? (
+                <AvatarImage src={logoUrl} alt={casaNome} className="object-contain" />
+              ) : null}
+              <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+                {casaNome.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
 
-                {/* Valor e Ações */}
-                <div className="flex flex-col items-end gap-2">
-                  <span className="text-lg font-bold text-emerald-500">
-                    +{formatWithCurrency(Number(registro.valor), registro.moeda_operacao)}
+            {/* Info: Casa + Parceiro + Data */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary" className="text-xs font-medium px-2 py-0.5">
+                  {casaNome}
+                </Badge>
+                {parceiroNome && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {parceiroNome}
                   </span>
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-7 text-xs text-muted-foreground hover:text-destructive"
-                        disabled={deletingId === registro.id}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-1" />
-                        Remover
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                          <AlertCircle className="h-5 w-5 text-destructive" />
-                          Remover Cashback?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta ação irá remover o lançamento de cashback e <strong>reverter o saldo da casa</strong> em {formatWithCurrency(Number(registro.valor), registro.moeda_operacao)}.
-                          <br /><br />
-                          Esta ação não pode ser desfeita.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDelete(registro.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Remover e Reverter Saldo
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
+                )}
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  {registro.moeda_operacao}
+                </Badge>
+              </div>
+              
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <CalendarDays className="h-3 w-3" />
+                  {format(parseISO(registro.data_credito), "dd/MM/yyyy", { locale: ptBR })}
+                </span>
+                {registro.observacoes && (
+                  <span className="flex items-center gap-1 truncate max-w-[200px]" title={registro.observacoes}>
+                    <MessageSquare className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{registro.observacoes}</span>
+                  </span>
+                )}
               </div>
             </div>
+
+            {/* Valor */}
+            <span className="text-sm font-semibold text-emerald-500 whitespace-nowrap">
+              +{formatWithCurrency(Number(registro.valor), registro.moeda_operacao)}
+            </span>
+
+            {/* Ação de remover */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 px-2 text-muted-foreground hover:text-destructive"
+                  disabled={deletingId === registro.id}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="sr-only md:not-sr-only md:ml-1 text-xs">Remover</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                    Remover Cashback?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação irá remover o lançamento de cashback e <strong>reverter o saldo da casa</strong> em {formatWithCurrency(Number(registro.valor), registro.moeda_operacao)}.
+                    <br /><br />
+                    Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => handleDelete(registro.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Remover e Reverter Saldo
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
-        </Card>
-      ))}
+        );
+      })}
     </div>
   );
 }
