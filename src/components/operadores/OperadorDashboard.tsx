@@ -436,9 +436,23 @@ export function OperadorDashboard() {
     return result.slice(0, 3);
   }, [operadoresEnriquecidos, melhorWinRate]);
 
-  if (loading || loadingPeriodos) {
+  // Loading inicial apenas quando não há dados carregados ainda
+  const isInitialLoading = (loading || loadingPeriodos) && operadores.length === 0;
+  
+  // Loading de atualização (dados já existem, estamos apenas atualizando)
+  const isRefreshing = loading && operadores.length > 0;
+
+  // Loading inicial mostra skeleton completo
+  if (isInitialLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
+        {/* Filtros skeleton */}
+        <div className="flex flex-wrap gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-10 w-[180px]" />
+          ))}
+        </div>
+        {/* KPIs skeleton */}
         <div className="grid gap-4 md:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
@@ -448,6 +462,12 @@ export function OperadorDashboard() {
             </Card>
           ))}
         </div>
+        {/* Gráfico skeleton */}
+        <Card>
+          <CardContent className="pt-6">
+            <Skeleton className="h-[300px] w-full" />
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -455,7 +475,7 @@ export function OperadorDashboard() {
   return (
     <div className="space-y-6">
       {/* Filtros de Período Progressivo */}
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         {/* Select Principal - Tipo de Período */}
         <Select 
           value={tipoPeriodo} 
@@ -466,8 +486,8 @@ export function OperadorDashboard() {
             if (value !== "ano") setAnoSelecionado("");
           }}
         >
-          <SelectTrigger className="w-[180px]">
-            <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+          <SelectTrigger className="w-[180px] flex items-center gap-2">
+            <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
             <SelectValue placeholder="Tipo de Período" />
           </SelectTrigger>
           <SelectContent>
@@ -484,8 +504,8 @@ export function OperadorDashboard() {
         {/* Select Secundário - Mês (condicional) */}
         {tipoPeriodo === "mes" && meses.length > 0 && (
           <Select value={mesSelecionado} onValueChange={setMesSelecionado}>
-            <SelectTrigger className="w-[200px]">
-              <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+            <SelectTrigger className="w-[200px] flex items-center gap-2">
+              <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
               <SelectValue placeholder="Selecionar mês" />
             </SelectTrigger>
             <SelectContent>
@@ -501,8 +521,8 @@ export function OperadorDashboard() {
         {/* Select Secundário - Ano (condicional) */}
         {tipoPeriodo === "ano" && anos.length > 0 && (
           <Select value={anoSelecionado} onValueChange={setAnoSelecionado}>
-            <SelectTrigger className="w-[160px]">
-              <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+            <SelectTrigger className="w-[160px] flex items-center gap-2">
+              <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
               <SelectValue placeholder="Selecionar ano" />
             </SelectTrigger>
             <SelectContent>
@@ -517,8 +537,8 @@ export function OperadorDashboard() {
 
         {/* Outros Filtros */}
         <Select value={projetoFilter} onValueChange={setProjetoFilter}>
-          <SelectTrigger className="w-[200px]">
-            <Target className="h-4 w-4 mr-2 text-muted-foreground" />
+          <SelectTrigger className="w-[200px] flex items-center gap-2">
+            <Target className="h-4 w-4 shrink-0 text-muted-foreground" />
             <SelectValue placeholder="Projeto" />
           </SelectTrigger>
           <SelectContent>
@@ -532,8 +552,8 @@ export function OperadorDashboard() {
         </Select>
 
         <Select value={modeloFilter} onValueChange={setModeloFilter}>
-          <SelectTrigger className="w-[200px]">
-            <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
+          <SelectTrigger className="w-[200px] flex items-center gap-2">
+            <DollarSign className="h-4 w-4 shrink-0 text-muted-foreground" />
             <SelectValue placeholder="Modelo de Pagamento" />
           </SelectTrigger>
           <SelectContent>
@@ -545,6 +565,14 @@ export function OperadorDashboard() {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Indicador de atualização */}
+        {isRefreshing && (
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span>Atualizando...</span>
+          </div>
+        )}
       </div>
 
       {/* Insights */}
