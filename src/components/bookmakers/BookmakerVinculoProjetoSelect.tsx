@@ -182,41 +182,50 @@ const BookmakerVinculoProjetoSelect = forwardRef<BookmakerVinculoProjetoSelectRe
           role="combobox"
           aria-expanded={open}
           disabled={disabled || loading || !projetoId}
-          className="w-full h-14 justify-between"
+          className={cn(
+            "w-full h-14 justify-between",
+            !displayData && "justify-center"
+          )}
         >
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {displayData?.logo_url ? (
-              <img
-                src={displayData.logo_url}
-                alt=""
-                className="h-7 w-7 rounded object-contain flex-shrink-0"
-                onError={(e) => { e.currentTarget.style.display = "none"; }}
-              />
-            ) : displayData ? (
-              <Building2 className="h-6 w-6 text-muted-foreground flex-shrink-0" />
-            ) : null}
-            <div className="flex flex-col items-start min-w-0 flex-1">
-              <span className={cn(
-                "uppercase truncate text-sm font-medium",
-                !displayData && "text-muted-foreground"
-              )}>
-                {displayData?.nome 
-                  ? displayData.nome 
-                  : loading
-                    ? "Carregando..." 
-                    : !projetoId
-                      ? "Aguardando projeto..."
-                      : placeholder}
-              </span>
-              {displayData?.parceiro_nome && (
-                <span className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  {displayData.parceiro_nome}
-                </span>
+          {displayData ? (
+            // Estado com seleção - alinhado à esquerda
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              {displayData.logo_url ? (
+                <img
+                  src={displayData.logo_url}
+                  alt=""
+                  className="h-7 w-7 rounded object-contain flex-shrink-0"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
+              ) : (
+                <Building2 className="h-6 w-6 text-muted-foreground flex-shrink-0" />
               )}
+              <div className="flex flex-col items-start min-w-0 flex-1">
+                <span className="uppercase truncate text-sm font-medium">
+                  {displayData.nome}
+                </span>
+                {displayData.parceiro_nome && (
+                  <span className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {displayData.parceiro_nome}
+                  </span>
+                )}
+              </div>
+              <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
             </div>
-          </div>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
+          ) : (
+            // Estado vazio - placeholder centralizado
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <span className="text-sm">
+                {loading
+                  ? "Carregando..." 
+                  : !projetoId
+                    ? "Aguardando projeto..."
+                    : placeholder}
+              </span>
+              <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+            </div>
+          )}
         </Button>
       </PopoverTrigger>
       
