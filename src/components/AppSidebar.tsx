@@ -68,6 +68,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Projetos", url: "/projetos", icon: FolderKanban, iconName: "FolderKanban", moduleKey: "projetos" },
       { title: "Bookmakers", url: "/bookmakers", icon: Building2, iconName: "Building2", moduleKey: "bookmakers" },
+      { title: "Parceiros", url: "/parceiros", icon: Users, iconName: "Users", moduleKey: "parceiros" },
       { title: "Anotações", url: "/anotacoes", icon: StickyNote, iconName: "StickyNote", moduleKey: "central" },
     ],
   },
@@ -96,7 +97,6 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Bancos", url: "/bancos", icon: Landmark, iconName: "Landmark", moduleKey: "bancos" },
       { title: "Investidores", url: "/investidores", icon: TrendingUp, iconName: "TrendingUp", moduleKey: "investidores" },
-      { title: "Parceiros", url: "/parceiros", icon: Users, iconName: "Users", moduleKey: "parceiros" },
       { title: "Operadores", url: "/operadores", icon: Briefcase, iconName: "Briefcase", moduleKey: "operadores" },
       { title: "Workspace", url: "/workspace", icon: Settings, iconName: "Settings", moduleKey: "workspace" },
     ],
