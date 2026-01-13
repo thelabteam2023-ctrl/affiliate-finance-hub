@@ -2,7 +2,8 @@
  * Hook para verificar e corrigir discrepâncias de saldo em bookmakers
  * 
  * O saldo é DERIVADO e RECALCULÁVEL:
- * saldo_atual = depósitos - saques + transferências_entrada - transferências_saída + lucro_apostas
+ * saldo_atual = depósitos - saques + transferências_entrada - transferências_saída 
+ *             + lucro_apostas + cashback + giros_gratis
  * 
  * Este hook:
  * 1. Verifica se há discrepâncias entre o saldo registrado e o calculado
@@ -24,6 +25,8 @@ export interface BookmakerDiscrepancy {
   transferencias_entrada: number;
   transferencias_saida: number;
   lucro_apostas: number;
+  cashback: number;
+  giros_gratis: number;
 }
 
 interface UseBookmakerBalanceVerificationProps {
@@ -67,6 +70,8 @@ export function useBookmakerBalanceVerification({
             transferencias_entrada: result.transferencias_entrada,
             transferencias_saida: result.transferencias_saida,
             lucro_apostas: result.lucro_apostas,
+            cashback: result.cashback || 0,
+            giros_gratis: result.giros_gratis || 0,
           };
         }
       }
@@ -108,6 +113,8 @@ export function useBookmakerBalanceVerification({
           transferencias_entrada: item.transferencias_entrada || 0,
           transferencias_saida: item.transferencias_saida || 0,
           lucro_apostas: item.lucro_apostas,
+          cashback: item.cashback || 0,
+          giros_gratis: item.giros_gratis || 0,
         }));
 
       setDiscrepancies(discrepanciasEncontradas);
