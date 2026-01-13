@@ -71,11 +71,13 @@ const AnimatedLabel = (props: any) => {
   )
     return null;
 
-  // Position label OUTSIDE the bar:
-  // - Positive values: label above the bar top (y - offset)
-  // - Negative values: label below the bar bottom (y + height + offset)
-  const labelOffset = 12;
-  const labelY = isNegative ? y + height + labelOffset : y - labelOffset;
+  // Position label OUTSIDE the bar using the original bar viewBox.
+  // Note: in Recharts, negative values often produce a negative `height`.
+  // So we must compute the bar's top/bottom using min/max.
+  const labelOffset = 8;
+  const barTop = Math.min(y, y + height);
+  const barBottom = Math.max(y, y + height);
+  const labelY = isNegative ? barBottom + labelOffset : barTop - labelOffset;
 
   return (
     <text
