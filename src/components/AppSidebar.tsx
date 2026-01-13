@@ -66,9 +66,9 @@ const menuGroups: MenuGroup[] = [
   {
     label: "OPERAÇÃO",
     items: [
+      { title: "Parceiros", url: "/parceiros", icon: Users, iconName: "Users", moduleKey: "parceiros" },
       { title: "Projetos", url: "/projetos", icon: FolderKanban, iconName: "FolderKanban", moduleKey: "projetos" },
       { title: "Bookmakers", url: "/bookmakers", icon: Building2, iconName: "Building2", moduleKey: "bookmakers" },
-      { title: "Parceiros", url: "/parceiros", icon: Users, iconName: "Users", moduleKey: "parceiros" },
       { title: "Anotações", url: "/anotacoes", icon: StickyNote, iconName: "StickyNote", moduleKey: "central" },
     ],
   },
