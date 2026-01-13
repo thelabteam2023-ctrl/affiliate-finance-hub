@@ -257,12 +257,17 @@ const BookmakerVinculoProjetoSelect = forwardRef<BookmakerVinculoProjetoSelectRe
                     key={item.id}
                     value={item.id}
                     onSelect={() => handleSelect(item.id)}
-                    className="py-3 cursor-pointer"
+                    className={cn(
+                      "py-3 cursor-pointer rounded-none border-l-2 transition-colors",
+                      isSelected 
+                        ? "border-l-emerald-500 bg-emerald-500/10" 
+                        : "border-l-transparent hover:bg-accent/50"
+                    )}
                   >
                     <div className="flex items-center gap-3 w-full">
                       <Check
                         className={cn(
-                          "h-4 w-4 flex-shrink-0",
+                          "h-4 w-4 flex-shrink-0 text-emerald-500",
                           isSelected ? "opacity-100" : "opacity-0"
                         )}
                       />
