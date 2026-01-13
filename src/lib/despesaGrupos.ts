@@ -7,7 +7,7 @@ export const GRUPOS_DESPESA = {
   UTILIDADES_E_SERVICOS_BASICOS: {
     value: "UTILIDADES_E_SERVICOS_BASICOS",
     label: "Utilidades e Serviços Básicos",
-    description: "Energia, água, gás e serviços essenciais",
+    description: "Energia, água e serviços essenciais",
     icon: "⚡",
     color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
   },
