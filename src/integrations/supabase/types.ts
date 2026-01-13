@@ -828,8 +828,10 @@ export type Database = {
       }
       bookmakers: {
         Row: {
+          aguardando_saque_at: string | null
           bookmaker_catalogo_id: string | null
           created_at: string
+          estado_conta: string | null
           id: string
           link_origem: string | null
           login_password_encrypted: string
@@ -850,8 +852,10 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          aguardando_saque_at?: string | null
           bookmaker_catalogo_id?: string | null
           created_at?: string
+          estado_conta?: string | null
           id?: string
           link_origem?: string | null
           login_password_encrypted: string
@@ -872,8 +876,10 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          aguardando_saque_at?: string | null
           bookmaker_catalogo_id?: string | null
           created_at?: string
+          estado_conta?: string | null
           id?: string
           link_origem?: string | null
           login_password_encrypted?: string
@@ -6816,6 +6822,7 @@ export type Database = {
           bookmaker_id: string | null
           bookmaker_nome: string | null
           data_liberacao: string | null
+          estado_conta: string | null
           moeda: string | null
           parceiro_id: string | null
           parceiro_nome: string | null
@@ -8423,6 +8430,10 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["subscription_status"]
       }
+      confirmar_saque_concluido: {
+        Args: { p_bookmaker_id: string }
+        Returns: undefined
+      }
       create_audit_log: {
         Args: {
           _action: Database["public"]["Enums"]["audit_action"]
@@ -8650,6 +8661,10 @@ export type Database = {
         Returns: boolean
       }
       is_system_owner: { Args: { _user_id: string }; Returns: boolean }
+      marcar_para_saque: {
+        Args: { p_bookmaker_id: string }
+        Returns: undefined
+      }
       moderate_clear_chat: {
         Args: {
           _context_id?: string
