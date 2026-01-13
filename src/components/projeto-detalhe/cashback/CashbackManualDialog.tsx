@@ -21,17 +21,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, DollarSign, CalendarIcon } from "lucide-react";
-import BookmakerSelect from "@/components/bookmakers/BookmakerSelect";
+import { Loader2, DollarSign, CalendarIcon, AlertTriangle } from "lucide-react";
+import BookmakerProjetoSelect from "@/components/bookmakers/BookmakerProjetoSelect";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { CashbackManualFormData } from "@/types/cashback-manual";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const formSchema = z.object({
-  bookmaker_id: z.string().min(1, "Selecione uma casa"),
+  bookmaker_id: z.string().min(1, "Selecione uma casa vinculada ao projeto"),
   valor: z.number().min(0.01, "Valor deve ser maior que zero"),
   data_credito: z.date().optional(),
   observacoes: z.string().nullable().optional(),
@@ -109,7 +110,15 @@ export function CashbackManualDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
-            {/* Casa / Bookmaker */}
+            {/* Alerta informativo */}
+            <Alert className="bg-muted/50 border-muted-foreground/20">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Apenas casas vinculadas a este projeto são exibidas para garantir consistência financeira.
+              </AlertDescription>
+            </Alert>
+
+            {/* Casa / Bookmaker - Filtrado por Projeto */}
             <FormField
               control={form.control}
               name="bookmaker_id"
@@ -117,11 +126,15 @@ export function CashbackManualDialog({
                 <FormItem>
                   <FormLabel>Casa / Bookmaker *</FormLabel>
                   <FormControl>
-                    <BookmakerSelect
+                    <BookmakerProjetoSelect
+                      projetoId={projetoId}
                       value={field.value}
                       onValueChange={field.onChange}
                     />
                   </FormControl>
+                  <FormDescription>
+                    Selecione uma casa vinculada ao projeto
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

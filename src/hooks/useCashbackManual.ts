@@ -116,16 +116,27 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
       }
 
       try {
-        // 1. Buscar dados do bookmaker para moeda
+        // 1. VALIDAÇÃO CRÍTICA: Verificar que a casa pertence ao projeto
         const { data: bookmaker, error: bookmakerError } = await supabase
           .from("bookmakers")
-          .select("moeda")
+          .select("id, moeda, projeto_id")
           .eq("id", data.bookmaker_id)
           .single();
 
         if (bookmakerError) throw bookmakerError;
 
-        const moedaOperacao = bookmaker?.moeda || "BRL";
+        // Bloquear se a casa não pertence ao projeto
+        if (!bookmaker || bookmaker.projeto_id !== projetoId) {
+          toast.error("Esta casa não está vinculada a este projeto");
+          console.error("Tentativa de lançar cashback em casa não vinculada:", {
+            bookmaker_id: data.bookmaker_id,
+            projeto_id: projetoId,
+            bookmaker_projeto_id: bookmaker?.projeto_id
+          });
+          return false;
+        }
+
+        const moedaOperacao = bookmaker.moeda || "BRL";
         const dataCredito = data.data_credito || new Date().toISOString().split("T")[0];
 
         // 2. Inserir registro de cashback
