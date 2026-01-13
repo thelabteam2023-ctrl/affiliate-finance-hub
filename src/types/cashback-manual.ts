@@ -61,11 +61,21 @@ export interface CashbackManualMetrics {
   mediaPorLancamento: number;
 }
 
-export interface CashbackManualPorBookmaker {
-  bookmaker_id: string;
-  bookmaker_nome: string;
-  bookmaker_moeda: string;
+// Breakdown individual por parceiro dentro de uma casa
+export interface CashbackParceiroBreakdown {
+  parceiro_id: string | null;
   parceiro_nome: string | null;
   totalRecebido: number;
   totalLancamentos: number;
+}
+
+// Agregado por catálogo da casa (unifica todos os parceiros)
+export interface CashbackManualPorBookmaker {
+  bookmaker_catalogo_id: string | null;
+  bookmaker_nome: string;
+  bookmaker_moeda: string;
+  logo_url: string | null;
+  totalRecebido: number;
+  totalLancamentos: number;
+  parceiros: CashbackParceiroBreakdown[];
 }
