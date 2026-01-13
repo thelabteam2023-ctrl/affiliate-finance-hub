@@ -8633,8 +8633,10 @@ export type Database = {
         Args: { p_bookmaker_id: string }
         Returns: {
           bookmaker_id: string
+          cashback: number
           depositos: number
           diferenca: number
+          giros_gratis: number
           lucro_apostas: number
           nome: string
           saldo_anterior: number
@@ -8649,8 +8651,10 @@ export type Database = {
         Returns: {
           atualizado: boolean
           bookmaker_id: string
+          cashback: number
           depositos: number
           diferenca: number
+          giros_gratis: number
           lucro_apostas: number
           nome: string
           saldo_anterior: number

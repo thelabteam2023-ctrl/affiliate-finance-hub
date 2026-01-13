@@ -124,44 +124,87 @@ export function BalanceDiscrepancyAlert({
         </CollapsibleTrigger>
         
         <CollapsibleContent className="mt-3 pt-3 border-t border-amber-500/20">
-          <div className="space-y-2">
+          <div className="space-y-3">
             {discrepancies.map((d) => (
               <div 
                 key={d.bookmaker_id} 
-                className="flex items-center justify-between py-1.5 px-2 rounded bg-background/50"
+                className="py-2 px-3 rounded bg-background/50 border border-border/50"
               >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{d.nome}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Registrado: {formatCurrency(d.saldo_anterior)} → Correto: {formatCurrency(d.saldo_calculado)}
-                  </p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium">{d.nome}</p>
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        "text-xs",
+                        d.diferenca > 0 
+                          ? "text-amber-500 border-amber-500/30" 
+                          : "text-red-500 border-red-500/30"
+                      )}
+                    >
+                      Δ {d.diferenca > 0 ? '+' : ''}{formatCurrency(d.diferenca)}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => handleFix(d.bookmaker_id)}
+                      disabled={fixing !== null}
+                    >
+                      {fixing === d.bookmaker_id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Check className="h-3 w-3" />
+                      )}
+                      <span className="ml-1">Corrigir</span>
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 ml-2">
-                  <Badge 
-                    variant="outline" 
-                    className={cn(
-                      "text-xs",
-                      d.diferenca > 0 
-                        ? "text-amber-500 border-amber-500/30" 
-                        : "text-red-500 border-red-500/30"
-                    )}
-                  >
-                    {d.diferenca > 0 ? '+' : ''}{formatCurrency(d.diferenca)}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => handleFix(d.bookmaker_id)}
-                    disabled={fixing !== null}
-                  >
-                    {fixing === d.bookmaker_id ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Check className="h-3 w-3" />
-                    )}
-                    <span className="ml-1">Corrigir</span>
-                  </Button>
+                
+                {/* Breakdown do cálculo */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Depósitos:</span>
+                    <span className="text-green-500">+{formatCurrency(d.depositos)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Saques:</span>
+                    <span className="text-red-500">-{formatCurrency(d.saques)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Transf. entrada:</span>
+                    <span className="text-green-500">+{formatCurrency(d.transferencias_entrada)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Transf. saída:</span>
+                    <span className="text-red-500">-{formatCurrency(d.transferencias_saida)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Lucro apostas:</span>
+                    <span className={d.lucro_apostas >= 0 ? "text-green-500" : "text-red-500"}>
+                      {d.lucro_apostas >= 0 ? '+' : ''}{formatCurrency(d.lucro_apostas)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Cashback:</span>
+                    <span className="text-green-500">+{formatCurrency(d.cashback)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Giros grátis:</span>
+                    <span className="text-green-500">+{formatCurrency(d.giros_gratis)}</span>
+                  </div>
+                </div>
+                
+                {/* Resultado */}
+                <div className="mt-2 pt-2 border-t border-border/50 flex justify-between text-xs">
+                  <span>
+                    <span className="text-muted-foreground">Registrado:</span>{' '}
+                    <span className="font-medium">{formatCurrency(d.saldo_anterior)}</span>
+                  </span>
+                  <span>
+                    <span className="text-muted-foreground">Calculado:</span>{' '}
+                    <span className="font-medium text-green-500">{formatCurrency(d.saldo_calculado)}</span>
+                  </span>
                 </div>
               </div>
             ))}
