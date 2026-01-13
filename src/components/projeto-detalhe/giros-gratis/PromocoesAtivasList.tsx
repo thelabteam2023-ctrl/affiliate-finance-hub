@@ -112,12 +112,10 @@ export function PromocoesAtivasList({
                       </Badge>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                      <span>{giro.quantidade_giros} giros</span>
-                      <span>•</span>
-                      <span>{formatCurrency(giro.valor_por_giro)}/giro</span>
+                      {giro.motivo && <span>{giro.motivo}</span>}
                       {isActive && diasRestantes !== null && diasRestantes <= 3 && (
                         <>
-                          <span>•</span>
+                          {giro.motivo && <span>•</span>}
                           <span className="text-warning flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             {diasRestantes <= 0 ? "Expira hoje" : `${diasRestantes}d restantes`}
@@ -125,13 +123,6 @@ export function PromocoesAtivasList({
                         </>
                       )}
                     </div>
-                  </div>
-
-                  {/* Valor Total */}
-                  <div className="text-right shrink-0 hidden sm:block">
-                    <p className="text-sm font-bold">
-                      {formatCurrency(giro.quantidade_giros * giro.valor_por_giro)}
-                    </p>
                   </div>
 
                   {/* Ação Contextual */}

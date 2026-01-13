@@ -9,3 +9,4 @@ export { GirosDisponiveisCard } from "./GirosDisponiveisCard";
 export { GirosDisponiveisList } from "./GirosDisponiveisList";
 export { GirosAtivosCard } from "./GirosAtivosCard";
 export { PromocoesAtivasList } from "./PromocoesAtivasList";
+export { UsarPromocaoSheet } from "./UsarPromocaoSheet";

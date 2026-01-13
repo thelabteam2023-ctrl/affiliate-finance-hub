@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, Hash, Calculator, FileText } from "lucide-react";
+import { TrendingUp, FileText } from "lucide-react";
 import { GirosGratisMetrics } from "@/types/girosGratis";
 import { cn } from "@/lib/utils";
 
@@ -19,22 +19,6 @@ export function GirosGratisKPIsCompact({ metrics, formatCurrency }: GirosGratisK
       iconBg: metrics.totalRetorno >= 0 ? "bg-emerald-500/10" : "bg-red-500/10",
     },
     {
-      label: "Total de Giros",
-      value: metrics.totalGiros.toLocaleString("pt-BR"),
-      icon: Hash,
-      valueColor: "text-foreground",
-      iconColor: "text-blue-500",
-      iconBg: "bg-blue-500/10",
-    },
-    {
-      label: "Média por Giro",
-      value: formatCurrency(metrics.mediaRetornoPorGiro),
-      icon: Calculator,
-      valueColor: "text-foreground",
-      iconColor: "text-violet-500",
-      iconBg: "bg-violet-500/10",
-    },
-    {
       label: "Registros",
       value: metrics.totalRegistros.toString(),
       icon: FileText,
@@ -45,7 +29,7 @@ export function GirosGratisKPIsCompact({ metrics, formatCurrency }: GirosGratisK
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 gap-3">
       {kpis.map((kpi, index) => (
         <Card key={index} className="border-border/50">
           <CardContent className="p-3">

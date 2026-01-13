@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, BarChart3, List, Building2, RefreshCw, Gift, History } from "lucide-react";
+import { Plus, BarChart3, List, RefreshCw, Gift, History } from "lucide-react";
 import { useGirosGratis } from "@/hooks/useGirosGratis";
 import { useGirosDisponiveis } from "@/hooks/useGirosDisponiveis";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
@@ -14,6 +14,7 @@ import {
   GirosGratisPorBookmaker,
   GirosGratisList,
   GiroDisponivelDialog,
+  UsarPromocaoSheet,
 } from "./giros-gratis";
 import { GirosAtivosCard } from "./giros-gratis/GirosAtivosCard";
 import { GirosGratisKPIsCompact } from "./giros-gratis/GirosGratisKPIsCompact";
@@ -33,6 +34,9 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
   // Estados para dialog de disponível
   const [disponivelDialogOpen, setDisponivelDialogOpen] = useState(false);
   const [editingDisponivel, setEditingDisponivel] = useState<GiroDisponivelComBookmaker | null>(null);
+  
+  // Estado para sheet de usar promoção
+  const [usarSheetOpen, setUsarSheetOpen] = useState(false);
   const [usandoDisponivel, setUsandoDisponivel] = useState<GiroDisponivelComBookmaker | null>(null);
   
   // Estados gerais
@@ -87,18 +91,36 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
       return await updateGiro(editingGiro.id, data);
     }
     
-    if (usandoDisponivel) {
-      data.giro_disponivel_id = usandoDisponivel.id;
-    }
-    
     const giroId = await createGiro(data);
+    return !!giroId;
+  };
+
+  // Handler para confirmar utilização de promoção via Sheet
+  const handleConfirmarUtilizacao = async (
+    valorRetorno: number, 
+    dataRegistro: Date, 
+    observacoes?: string
+  ): Promise<boolean> => {
+    if (!usandoDisponivel) return false;
+
+    const giroData: GiroGratisFormData = {
+      bookmaker_id: usandoDisponivel.bookmaker_id,
+      modo: "simples",
+      data_registro: dataRegistro,
+      valor_retorno: valorRetorno,
+      observacoes,
+      giro_disponivel_id: usandoDisponivel.id,
+    };
+
+    const giroId = await createGiro(giroData);
     
-    if (giroId && usandoDisponivel) {
+    if (giroId) {
       await marcarComoUtilizado(usandoDisponivel.id, giroId);
       setUsandoDisponivel(null);
+      return true;
     }
     
-    return !!giroId;
+    return false;
   };
 
   const handleEditResultado = (giro: GiroGratisComBookmaker) => {
@@ -154,8 +176,14 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
 
   const handleUsarDisponivel = (giro: GiroDisponivelComBookmaker) => {
     setUsandoDisponivel(giro);
-    setEditingGiro(null);
-    setResultadoDialogOpen(true);
+    setUsarSheetOpen(true);
+  };
+
+  const handleUsarSheetClose = (open: boolean) => {
+    setUsarSheetOpen(open);
+    if (!open) {
+      setUsandoDisponivel(null);
+    }
   };
 
   const handleRefreshAll = () => {
@@ -326,7 +354,6 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
         projetoId={projetoId}
         giro={editingGiro}
         onSave={handleSaveResultado}
-        giroDisponivel={usandoDisponivel}
       />
 
       {/* Dialog de criação/edição de disponível */}
@@ -337,6 +364,14 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
         giro={editingDisponivel}
         onSave={handleSaveDisponivel}
         onSaveRapido={handleSaveRapido}
+      />
+
+      {/* Sheet para usar promoção pendente */}
+      <UsarPromocaoSheet
+        open={usarSheetOpen}
+        onOpenChange={handleUsarSheetClose}
+        promocao={usandoDisponivel}
+        onConfirm={handleConfirmarUtilizacao}
       />
     </div>
   );
