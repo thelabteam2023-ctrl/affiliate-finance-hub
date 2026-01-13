@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -51,7 +51,7 @@ interface ProjectInfo {
 // Icon mapping for favorites
 const iconMap: Record<string, any> = {
   Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, 
-  UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, Star, Shield, Calculator
+  UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, Star, Shield, Calculator, StickyNote
 };
 
 // Menu structure organized by functional domain
@@ -68,6 +68,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Projetos", url: "/projetos", icon: FolderKanban, iconName: "FolderKanban", moduleKey: "projetos" },
       { title: "Bookmakers", url: "/bookmakers", icon: Building2, iconName: "Building2", moduleKey: "bookmakers" },
+      { title: "Anotações", url: "/anotacoes", icon: StickyNote, iconName: "StickyNote", moduleKey: "central" },
     ],
   },
   {

@@ -25,6 +25,7 @@ import ProgramaIndicacao from "./pages/ProgramaIndicacao";
 import Caixa from "./pages/Caixa";
 import Financeiro from "./pages/Financeiro";
 import CentralOperacoes from "./pages/CentralOperacoes";
+import Anotacoes from "./pages/Anotacoes";
 import Testes from "./pages/Testes";
 import Workspace from "./pages/Workspace";
 import Comunidade from "./pages/Comunidade";
@@ -94,6 +95,15 @@ const App = () => (
               <ProtectedRoute>
                 <AuthenticatedLayout>
                   <CentralOperacoes />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Anotações - Pessoal, qualquer usuário autenticado */}
+            <Route path="/anotacoes" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <Anotacoes />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />

@@ -2399,6 +2399,153 @@ export type Database = {
           },
         ]
       }
+      fluxo_cards: {
+        Row: {
+          coluna_id: string
+          conteudo: string
+          created_at: string
+          id: string
+          ordem: number
+          updated_at: string
+          user_id: string
+          versao: number
+          workspace_id: string
+        }
+        Insert: {
+          coluna_id: string
+          conteudo?: string
+          created_at?: string
+          id?: string
+          ordem?: number
+          updated_at?: string
+          user_id: string
+          versao?: number
+          workspace_id: string
+        }
+        Update: {
+          coluna_id?: string
+          conteudo?: string
+          created_at?: string
+          id?: string
+          ordem?: number
+          updated_at?: string
+          user_id?: string
+          versao?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fluxo_cards_coluna_id_fkey"
+            columns: ["coluna_id"]
+            isOneToOne: false
+            referencedRelation: "fluxo_colunas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fluxo_cards_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fluxo_cards_historico: {
+        Row: {
+          card_id: string
+          coluna_id: string
+          conteudo: string
+          created_at: string
+          id: string
+          tipo_mudanca: string
+          user_id: string
+          versao: number
+          workspace_id: string
+        }
+        Insert: {
+          card_id: string
+          coluna_id: string
+          conteudo: string
+          created_at?: string
+          id?: string
+          tipo_mudanca: string
+          user_id: string
+          versao: number
+          workspace_id: string
+        }
+        Update: {
+          card_id?: string
+          coluna_id?: string
+          conteudo?: string
+          created_at?: string
+          id?: string
+          tipo_mudanca?: string
+          user_id?: string
+          versao?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fluxo_cards_historico_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "fluxo_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fluxo_cards_historico_coluna_id_fkey"
+            columns: ["coluna_id"]
+            isOneToOne: false
+            referencedRelation: "fluxo_colunas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fluxo_cards_historico_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fluxo_colunas: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fluxo_colunas_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           created_at: string | null
