@@ -34,7 +34,13 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         .from("cashback_manual")
         .select(`
           *,
-          bookmaker:bookmakers(id, nome, moeda)
+          bookmaker:bookmakers(
+            id, 
+            nome, 
+            moeda, 
+            parceiro_id,
+            parceiro:parceiros!bookmakers_parceiro_id_fkey(id, nome)
+          )
         `)
         .eq("projeto_id", projetoId)
         .order("data_credito", { ascending: false });
@@ -82,7 +88,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
     };
   }, [registros]);
 
-  // Dados por bookmaker
+  // Dados por bookmaker (vínculo = casa + parceiro)
   const porBookmaker: CashbackManualPorBookmaker[] = useMemo(() => {
     const map = new Map<string, CashbackManualPorBookmaker>();
 
@@ -98,6 +104,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
           bookmaker_id: registro.bookmaker_id,
           bookmaker_nome: registro.bookmaker?.nome || "Casa",
           bookmaker_moeda: registro.bookmaker?.moeda || "BRL",
+          parceiro_nome: registro.bookmaker?.parceiro?.nome || null,
           totalRecebido: Number(registro.valor),
           totalLancamentos: 1,
         });
