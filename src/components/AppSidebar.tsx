@@ -76,20 +76,6 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Caixa", url: "/caixa", icon: Wallet, iconName: "Wallet", moduleKey: "caixa" },
       { title: "Financeiro", url: "/financeiro", icon: PieChart, iconName: "PieChart", moduleKey: "financeiro" },
-      { title: "Bancos", url: "/bancos", icon: Landmark, iconName: "Landmark", moduleKey: "bancos" },
-      { title: "Investidores", url: "/investidores", icon: TrendingUp, iconName: "TrendingUp", moduleKey: "investidores" },
-    ],
-  },
-  {
-    label: "RELACIONAMENTOS",
-    items: [
-      { title: "Parceiros", url: "/parceiros", icon: Users, iconName: "Users", moduleKey: "parceiros" },
-      { title: "Operadores", url: "/operadores", icon: Briefcase, iconName: "Briefcase", moduleKey: "operadores" },
-    ],
-  },
-  {
-    label: "CRESCIMENTO",
-    items: [
       { title: "Captação", url: "/programa-indicacao", icon: UserPlus, iconName: "UserPlus", moduleKey: "captacao" },
     ],
   },
@@ -106,14 +92,17 @@ const menuGroups: MenuGroup[] = [
     ],
   },
   {
-    label: "ADMINISTRAÇÃO",
+    label: "CONFIGURAÇÕES",
     items: [
+      { title: "Bancos", url: "/bancos", icon: Landmark, iconName: "Landmark", moduleKey: "bancos" },
+      { title: "Investidores", url: "/investidores", icon: TrendingUp, iconName: "TrendingUp", moduleKey: "investidores" },
+      { title: "Parceiros", url: "/parceiros", icon: Users, iconName: "Users", moduleKey: "parceiros" },
+      { title: "Operadores", url: "/operadores", icon: Briefcase, iconName: "Briefcase", moduleKey: "operadores" },
       { title: "Workspace", url: "/workspace", icon: Settings, iconName: "Settings", moduleKey: "workspace" },
-      { title: "Admin Sistema", url: "/admin", icon: Shield, iconName: "Shield", moduleKey: "admin" },
     ],
   },
   {
-    label: "DESENVOLVIMENTO",
+    label: "TESTES",
     items: [
       { title: "Testes", url: "/testes", icon: FlaskConical, iconName: "FlaskConical", moduleKey: "testes" },
     ],
