@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { usePeriodosDisponiveis } from "@/hooks/usePeriodosDisponiveis";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ import {
   Award,
   Calendar
 } from "lucide-react";
-import { format, subDays, startOfMonth, startOfYear, parseISO, isAfter, isBefore } from "date-fns";
+import { format, subDays, startOfMonth, startOfYear, parseISO, isAfter, isBefore, endOfMonth, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { getFinancialDisplay, formatFinancialValue } from "@/lib/financial-display";
@@ -103,31 +104,64 @@ const MODELOS_PAGAMENTO_LABELS: Record<string, string> = {
   PROPORCIONAL_LUCRO: "Proporcional ao Lucro",
 };
 
-const PERIODOS = [
-  { value: "7d", label: "Últimos 7 dias" },
-  { value: "30d", label: "Últimos 30 dias" },
-  { value: "mes", label: "Este mês" },
-  { value: "ano", label: "Este ano" },
-  { value: "todos", label: "Todo período" },
-];
+type TipoPeriodo = "todos" | "mes" | "ano";
 
 export function OperadorDashboard() {
   const { workspace } = useWorkspace();
+  const { meses, anos, loading: loadingPeriodos } = usePeriodosDisponiveis(workspace?.id);
+  
   const [operadores, setOperadores] = useState<OperadorComparativo[]>([]);
   const [projetosOperadores, setProjetosOperadores] = useState<ProjetoOperador[]>([]);
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [entregas, setEntregas] = useState<Entrega[]>([]);
   const [loading, setLoading] = useState(true);
-  const [periodo, setPeriodo] = useState("30d");
+  
+  // Filtros de período progressivo
+  const [tipoPeriodo, setTipoPeriodo] = useState<TipoPeriodo>("todos");
+  const [mesSelecionado, setMesSelecionado] = useState<string>("");
+  const [anoSelecionado, setAnoSelecionado] = useState<string>("");
+  
   const [modeloFilter, setModeloFilter] = useState("todos");
   const [projetoFilter, setProjetoFilter] = useState("todos");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+
+  // Resetar seleção secundária quando mudar o tipo de período
+  useEffect(() => {
+    if (tipoPeriodo === "mes" && meses.length > 0 && !mesSelecionado) {
+      setMesSelecionado(meses[0].value);
+    } else if (tipoPeriodo === "ano" && anos.length > 0 && !anoSelecionado) {
+      setAnoSelecionado(anos[0].value);
+    }
+  }, [tipoPeriodo, meses, anos]);
+
+  // Calcular o intervalo de datas baseado nos filtros
+  const periodoFiltro = useMemo(() => {
+    if (tipoPeriodo === "todos") {
+      return { startDate: null, endDate: null };
+    }
+    
+    if (tipoPeriodo === "mes" && mesSelecionado) {
+      const mesEncontrado = meses.find(m => m.value === mesSelecionado);
+      if (mesEncontrado) {
+        return { startDate: mesEncontrado.startDate, endDate: mesEncontrado.endDate };
+      }
+    }
+    
+    if (tipoPeriodo === "ano" && anoSelecionado) {
+      const anoEncontrado = anos.find(a => a.value === anoSelecionado);
+      if (anoEncontrado) {
+        return { startDate: anoEncontrado.startDate, endDate: anoEncontrado.endDate };
+      }
+    }
+    
+    return { startDate: null, endDate: null };
+  }, [tipoPeriodo, mesSelecionado, anoSelecionado, meses, anos]);
 
   useEffect(() => {
     if (workspace?.id) {
       fetchData();
     }
-  }, [periodo, workspace?.id]);
+  }, [tipoPeriodo, mesSelecionado, anoSelecionado, workspace?.id]);
 
   const fetchData = async () => {
     try {
@@ -402,7 +436,7 @@ export function OperadorDashboard() {
     return result.slice(0, 3);
   }, [operadoresEnriquecidos, melhorWinRate]);
 
-  if (loading) {
+  if (loading || loadingPeriodos) {
     return (
       <div className="space-y-4">
         <div className="grid gap-4 md:grid-cols-4">
@@ -420,22 +454,68 @@ export function OperadorDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Filtros */}
+      {/* Filtros de Período Progressivo */}
       <div className="flex flex-wrap gap-4">
-        <Select value={periodo} onValueChange={setPeriodo}>
+        {/* Select Principal - Tipo de Período */}
+        <Select 
+          value={tipoPeriodo} 
+          onValueChange={(value: TipoPeriodo) => {
+            setTipoPeriodo(value);
+            // Resetar seleções secundárias
+            if (value !== "mes") setMesSelecionado("");
+            if (value !== "ano") setAnoSelecionado("");
+          }}
+        >
           <SelectTrigger className="w-[180px]">
             <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-            <SelectValue placeholder="Período" />
+            <SelectValue placeholder="Tipo de Período" />
           </SelectTrigger>
           <SelectContent>
-            {PERIODOS.map((p) => (
-              <SelectItem key={p.value} value={p.value}>
-                {p.label}
-              </SelectItem>
-            ))}
+            <SelectItem value="todos">Todo período</SelectItem>
+            <SelectItem value="mes" disabled={meses.length === 0}>
+              Mês {meses.length === 0 && "(sem dados)"}
+            </SelectItem>
+            <SelectItem value="ano" disabled={anos.length === 0}>
+              Ano {anos.length === 0 && "(sem dados)"}
+            </SelectItem>
           </SelectContent>
         </Select>
 
+        {/* Select Secundário - Mês (condicional) */}
+        {tipoPeriodo === "mes" && meses.length > 0 && (
+          <Select value={mesSelecionado} onValueChange={setMesSelecionado}>
+            <SelectTrigger className="w-[200px]">
+              <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Selecionar mês" />
+            </SelectTrigger>
+            <SelectContent>
+              {meses.map((m) => (
+                <SelectItem key={m.value} value={m.value}>
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Select Secundário - Ano (condicional) */}
+        {tipoPeriodo === "ano" && anos.length > 0 && (
+          <Select value={anoSelecionado} onValueChange={setAnoSelecionado}>
+            <SelectTrigger className="w-[160px]">
+              <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Selecionar ano" />
+            </SelectTrigger>
+            <SelectContent>
+              {anos.map((a) => (
+                <SelectItem key={a.value} value={a.value}>
+                  {a.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Outros Filtros */}
         <Select value={projetoFilter} onValueChange={setProjetoFilter}>
           <SelectTrigger className="w-[200px]">
             <Target className="h-4 w-4 mr-2 text-muted-foreground" />
