@@ -27,8 +27,10 @@ export interface BookmakerPorProjeto {
 
 export interface ContaPorBanco {
   bancoNome: string;
+  parceiroNome: string;
   saldo: number;
   qtdContas: number;
+  moeda: string;
 }
 
 export interface WalletPorExchange {
@@ -251,12 +253,7 @@ export function MapaPatrimonioCard({
     
     const totalContas = contasOrdenadas.reduce((acc, c) => acc + c.saldo, 0);
     
-    // Wallets com saldo
-    const walletsComSaldo = walletsPorExchange.filter(w => w.saldoUsd > 0);
-    const totalWalletsUSD = walletsComSaldo.reduce((acc, w) => acc + w.saldoUsd, 0);
-    const totalWalletsBRL = totalWalletsUSD * cotacaoUSD;
-    
-    if (contasPorBanco.length === 0 && walletsPorExchange.length === 0) return null;
+    if (contasPorBanco.length === 0) return null;
     
     return (
       <Popover open={open} onOpenChange={setOpen}>
@@ -265,24 +262,22 @@ export function MapaPatrimonioCard({
             <ChevronRight className="h-3 w-3" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-72 p-0" align="start">
+        <PopoverContent className="w-80 p-0" align="start">
           <div className="p-3 border-b border-border/50">
             <p className="font-medium text-sm">Distribuição — Contas Parceiros</p>
-            <p className="text-xs text-muted-foreground">Saldos por banco</p>
+            <p className="text-xs text-muted-foreground">Saldos por parceiro</p>
           </div>
-          <div className="p-3 space-y-2 max-h-[280px] overflow-y-auto">
-            {/* Bancos */}
-            {contasOrdenadas.slice(0, 5).map((conta, idx) => {
+          <div className="p-3 space-y-2 max-h-[320px] overflow-y-auto">
+            {/* Contas individuais por parceiro */}
+            {contasOrdenadas.slice(0, 8).map((conta, idx) => {
               const percent = totalContas > 0 ? (conta.saldo / totalContas) * 100 : 0;
               return (
                 <div key={idx} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="truncate flex-1">
-                      {conta.bancoNome}
-                      {conta.qtdContas > 1 && (
-                        <span className="text-muted-foreground ml-1">({conta.qtdContas})</span>
-                      )}
-                    </span>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="truncate font-medium">{conta.parceiroNome}</span>
+                      <span className="text-[10px] text-muted-foreground truncate">{conta.bancoNome}</span>
+                    </div>
                     <span className="font-medium ml-2">{formatCurrency(conta.saldo)}</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -300,9 +295,9 @@ export function MapaPatrimonioCard({
               );
             })}
             
-            {contasOrdenadas.length > 5 && (
-              <p className="text-[10px] text-muted-foreground text-center">
-                +{contasOrdenadas.length - 5} bancos não exibidos
+            {contasOrdenadas.length > 8 && (
+              <p className="text-[10px] text-muted-foreground text-center pt-1">
+                +{contasOrdenadas.length - 8} contas não exibidas
               </p>
             )}
             
@@ -314,7 +309,7 @@ export function MapaPatrimonioCard({
           </div>
           <div className="p-3 border-t border-border/50 bg-muted/30">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Total Contas</span>
+              <span className="text-muted-foreground">Total Contas ({contasOrdenadas.length})</span>
               <span className="font-bold">{formatCurrency(totalContas)}</span>
             </div>
           </div>
