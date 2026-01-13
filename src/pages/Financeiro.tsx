@@ -535,24 +535,36 @@ export default function Financeiro() {
 
   // ==================== DADOS DETALHADOS PARA MAPA DE PATRIMÔNIO ====================
   
-  // Bookmakers agrupados por projeto
+  // Bookmakers agrupados por projeto (separando BRL/USD)
   const bookmakersPorProjeto = useMemo((): BookmakerPorProjeto[] => {
-    const agrupado: Record<string, { projetoId: string | null; projetoNome: string; saldo: number }> = {};
+    const agrupado: Record<string, { projetoId: string | null; projetoNome: string; saldoBRL: number; saldoUSD: number }> = {};
     
     bookmakersDetalhados.forEach((b: any) => {
       const projetoId = b.projeto_id || null;
       const projetoNome = b.projetos?.nome || "Sem Projeto";
       const key = projetoId || "sem_projeto";
       const saldoLiquido = (b.saldo_atual || 0) - (b.saldo_irrecuperavel || 0);
+      const moeda = b.moeda || "BRL";
+      const isUSD = moeda === "USD" || moeda === "USDT";
       
       if (!agrupado[key]) {
-        agrupado[key] = { projetoId, projetoNome, saldo: 0 };
+        agrupado[key] = { projetoId, projetoNome, saldoBRL: 0, saldoUSD: 0 };
       }
-      agrupado[key].saldo += saldoLiquido;
+      
+      if (isUSD) {
+        agrupado[key].saldoUSD += saldoLiquido;
+      } else {
+        agrupado[key].saldoBRL += saldoLiquido;
+      }
     });
     
-    return Object.values(agrupado).filter(p => p.saldo !== 0);
-  }, [bookmakersDetalhados]);
+    return Object.values(agrupado)
+      .filter(p => p.saldoBRL !== 0 || p.saldoUSD !== 0)
+      .map(p => ({
+        ...p,
+        saldo: p.saldoBRL + (p.saldoUSD * cotacaoUSD), // Saldo consolidado em BRL
+      }));
+  }, [bookmakersDetalhados, cotacaoUSD]);
 
   // Contas agrupadas por banco
   const contasPorBanco = useMemo((): ContaPorBanco[] => {
