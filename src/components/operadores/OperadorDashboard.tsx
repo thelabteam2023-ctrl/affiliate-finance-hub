@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,7 @@ const PERIODOS = [
 ];
 
 export function OperadorDashboard() {
+  const { workspace } = useWorkspace();
   const [operadores, setOperadores] = useState<OperadorComparativo[]>([]);
   const [projetosOperadores, setProjetosOperadores] = useState<ProjetoOperador[]>([]);
   const [projetos, setProjetos] = useState<Projeto[]>([]);
@@ -121,17 +123,20 @@ export function OperadorDashboard() {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetchData();
-  }, [periodo]);
+    if (workspace?.id) {
+      fetchData();
+    }
+  }, [periodo, workspace?.id]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       
-      // Fetch operadores comparativos - usar type assertion por view recriada
+      // Fetch operadores comparativos com filtro por workspace
       const { data: opData, error: opError } = await supabase
         .from("v_operador_comparativo" as any)
-        .select("*");
+        .select("*")
+        .eq("workspace_id", workspace?.id);
 
       if (opError) throw opError;
       setOperadores((opData || []) as any);
@@ -148,6 +153,7 @@ export function OperadorDashboard() {
       const { data: projListData, error: projListError } = await supabase
         .from("projetos")
         .select("id, nome")
+        .eq("workspace_id", workspace?.id)
         .in("status", ["PLANEJADO", "EM_ANDAMENTO"])
         .order("nome");
 

@@ -1289,6 +1289,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
             referencedRelation: "v_operador_performance"
             referencedColumns: ["operador_id"]
           },
@@ -3750,6 +3757,13 @@ export type Database = {
             foreignKeyName: "operador_projetos_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
             referencedRelation: "v_operador_performance"
             referencedColumns: ["operador_id"]
           },
@@ -3878,6 +3892,13 @@ export type Database = {
             foreignKeyName: "operadores_legado_pendente_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operadores_legado_pendente_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
             referencedRelation: "v_operador_performance"
             referencedColumns: ["operador_id"]
           },
@@ -3970,6 +3991,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "operadores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_operador_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
           },
           {
             foreignKeyName: "pagamentos_operador_operador_id_fkey"
@@ -4110,6 +4138,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "operadores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_propostos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
           },
           {
             foreignKeyName: "pagamentos_propostos_operador_id_fkey"
@@ -6983,6 +7018,13 @@ export type Database = {
             foreignKeyName: "operador_projetos_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
             referencedRelation: "v_operador_performance"
             referencedColumns: ["operador_id"]
           },
@@ -7185,6 +7227,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "operadores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
           },
           {
             foreignKeyName: "operador_projetos_operador_id_fkey"
@@ -7518,6 +7567,62 @@ export type Database = {
           },
         ]
       }
+      v_operador_comparativo: {
+        Row: {
+          apostas_ganhas: number | null
+          cpf: string | null
+          lucro_total_gerado: number | null
+          nome: string | null
+          operador_id: string | null
+          projetos_ativos: number | null
+          status: string | null
+          tipo_contrato: string | null
+          total_apostas: number | null
+          total_pago: number | null
+          total_pendente: number | null
+          volume_total: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          apostas_ganhas?: never
+          cpf?: string | null
+          lucro_total_gerado?: never
+          nome?: string | null
+          operador_id?: string | null
+          projetos_ativos?: never
+          status?: string | null
+          tipo_contrato?: string | null
+          total_apostas?: never
+          total_pago?: never
+          total_pendente?: never
+          volume_total?: never
+          workspace_id?: string | null
+        }
+        Update: {
+          apostas_ganhas?: never
+          cpf?: string | null
+          lucro_total_gerado?: never
+          nome?: string | null
+          operador_id?: string | null
+          projetos_ativos?: never
+          status?: string | null
+          tipo_contrato?: string | null
+          total_apostas?: never
+          total_pago?: never
+          total_pendente?: never
+          volume_total?: never
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operadores_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_operador_performance: {
         Row: {
           cpf: string | null
@@ -7589,6 +7694,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "operadores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
           },
           {
             foreignKeyName: "operador_projetos_operador_id_fkey"
@@ -7828,6 +7940,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "operadores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operador_projetos_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
           },
           {
             foreignKeyName: "operador_projetos_operador_id_fkey"
