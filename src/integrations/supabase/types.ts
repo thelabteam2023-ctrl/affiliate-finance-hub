@@ -2065,6 +2065,7 @@ export type Database = {
           created_at: string
           data_despesa: string
           descricao: string | null
+          grupo: string | null
           id: string
           origem_caixa_operacional: boolean | null
           origem_conta_bancaria_id: string | null
@@ -2087,6 +2088,7 @@ export type Database = {
           created_at?: string
           data_despesa?: string
           descricao?: string | null
+          grupo?: string | null
           id?: string
           origem_caixa_operacional?: boolean | null
           origem_conta_bancaria_id?: string | null
@@ -2109,6 +2111,7 @@ export type Database = {
           created_at?: string
           data_despesa?: string
           descricao?: string | null
+          grupo?: string | null
           id?: string
           origem_caixa_operacional?: boolean | null
           origem_conta_bancaria_id?: string | null

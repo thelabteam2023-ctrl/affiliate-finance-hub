@@ -6,11 +6,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ArrowRight, Info, AlertCircle, Coins, Wallet, Building2, CreditCard, User } from "lucide-react";
 import { format } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
+import { getGrupoInfo } from "@/lib/despesaGrupos";
 import { ptBR } from "date-fns/locale";
 
 interface TransacaoHistorico {
   id: string;
   categoria: string;
+  grupo?: string;
   descricao: string | null;
   valor: number;
   data_despesa: string;
@@ -267,7 +269,15 @@ export function HistoricoDespesasAdmin({ formatCurrency }: HistoricoDespesasAdmi
 
                     <div className="flex flex-col ml-4">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="w-fit">{transacao.categoria}</Badge>
+                        {(() => {
+                          const grupoInfo = getGrupoInfo((transacao as any).grupo || "OUTROS");
+                          return (
+                            <Badge variant="outline" className={`w-fit ${grupoInfo.color}`}>
+                              <span className="mr-1">{grupoInfo.icon}</span>
+                              {grupoInfo.label}
+                            </Badge>
+                          );
+                        })()}
                         {isCrypto && (
                           <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
                             <Coins className="h-3 w-3 mr-1" />
