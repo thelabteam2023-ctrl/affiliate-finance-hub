@@ -1420,6 +1420,124 @@ export type Database = {
           },
         ]
       }
+      cashback_manual: {
+        Row: {
+          bookmaker_id: string
+          cash_ledger_id: string | null
+          cotacao_snapshot: number | null
+          cotacao_snapshot_at: string | null
+          created_at: string
+          data_credito: string
+          id: string
+          moeda_operacao: string
+          observacoes: string | null
+          projeto_id: string
+          updated_at: string
+          user_id: string
+          valor: number
+          valor_brl_referencia: number | null
+          workspace_id: string
+        }
+        Insert: {
+          bookmaker_id: string
+          cash_ledger_id?: string | null
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
+          created_at?: string
+          data_credito?: string
+          id?: string
+          moeda_operacao?: string
+          observacoes?: string | null
+          projeto_id: string
+          updated_at?: string
+          user_id: string
+          valor: number
+          valor_brl_referencia?: number | null
+          workspace_id: string
+        }
+        Update: {
+          bookmaker_id?: string
+          cash_ledger_id?: string | null
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
+          created_at?: string
+          data_credito?: string
+          id?: string
+          moeda_operacao?: string
+          observacoes?: string | null
+          projeto_id?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+          valor_brl_referencia?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cashback_manual_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cashback_registros: {
         Row: {
           bookmaker_id: string
