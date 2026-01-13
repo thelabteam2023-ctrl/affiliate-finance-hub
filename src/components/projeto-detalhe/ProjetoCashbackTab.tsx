@@ -2,25 +2,19 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, List, Building2, RefreshCw, History, RotateCcw } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, List, Building2, RefreshCw, DollarSign } from "lucide-react";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
-import { useCashback } from "@/hooks/useCashback";
+import { useCashbackManual } from "@/hooks/useCashbackManual";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
 import { DateRange } from "react-day-picker";
 import {
-  CashbackKPIsCompact,
-  CashbackStatusCard,
-  CashbackRegrasList,
-  CashbackRegistrosList,
-  CashbackPorCasaSection,
-  CashbackRegraDialog,
+  CashbackManualDialog,
+  CashbackManualList,
+  CashbackManualKPIs,
+  CashbackManualPorCasa,
 } from "./cashback";
-import { 
-  CashbackRegraComBookmaker, 
-  CashbackRegistroComDetalhes, 
-  CashbackRegraFormData
-} from "@/types/cashback";
-import { toast } from "sonner";
+import { CashbackManualFormData } from "@/types/cashback-manual";
 
 interface ProjetoCashbackTabProps {
   projetoId: string;
@@ -28,11 +22,10 @@ interface ProjetoCashbackTabProps {
 
 export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
   // Estados para dialog
-  const [regraDialogOpen, setRegraDialogOpen] = useState(false);
-  const [editingRegra, setEditingRegra] = useState<CashbackRegraComBookmaker | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   
   // Estados gerais
-  const [activeTab, setActiveTab] = useState("visao-geral");
+  const [activeTab, setActiveTab] = useState("lancamentos");
   const [period, setPeriod] = useState<StandardPeriodFilter>("30dias");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
 
@@ -43,67 +36,35 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
     return getDateRangeFromPeriod(period, customDateRange);
   }, [period, customDateRange]);
 
-  // Hook para cashback
+  // Hook para cashback manual
   const {
-    regras,
     registros,
     metrics,
     porBookmaker,
     loading,
     refresh,
-    createRegra,
-    updateRegra,
-    confirmarRecebimento,
-  } = useCashback({
+    criarCashback,
+    deletarCashback,
+  } = useCashbackManual({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
   });
 
-  // Handlers
-  const handleSaveRegra = async (data: CashbackRegraFormData): Promise<boolean> => {
-    if (editingRegra) {
-      return await updateRegra(editingRegra.id, data);
-    }
-    return await createRegra(data);
+  // Handler para salvar
+  const handleSaveCashback = async (data: CashbackManualFormData): Promise<boolean> => {
+    return await criarCashback(data);
   };
 
-  const handleEditRegra = (regra: CashbackRegraComBookmaker) => {
-    setEditingRegra(regra);
-    setRegraDialogOpen(true);
-  };
-
-  const handleViewDetails = (regra: CashbackRegraComBookmaker) => {
-    // TODO: Implementar visualização de detalhes
-    toast.info("Visualização de detalhes será implementada");
-  };
-
-  const handleRegraDialogClose = (open: boolean) => {
-    setRegraDialogOpen(open);
-    if (!open) {
-      setEditingRegra(null);
-    }
-  };
-
-  const handleViewRegistroDetails = (registro: CashbackRegistroComDetalhes) => {
-    // TODO: Implementar visualização de detalhes do registro
-    toast.info("Visualização de detalhes será implementada");
-  };
-
-  const handleConfirmRegistro = async (registro: CashbackRegistroComDetalhes) => {
-    await confirmarRecebimento(registro.id, registro.valor_calculado);
-  };
-
-  if (loading && regras.length === 0) {
+  if (loading && registros.length === 0) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-40" />
         </div>
-        <Skeleton className="h-20" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-20" />
           ))}
         </div>
@@ -114,12 +75,12 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
 
   return (
     <div className="space-y-5">
-      {/* Header - Uma única ação primária */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">Cashback</h2>
           <p className="text-sm text-muted-foreground">
-            Gerencie regras e acompanhe retornos
+            Lance cashbacks recebidos e acompanhe os retornos
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -132,19 +93,29 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
-          <Button onClick={() => setRegraDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Cashback
+          <Button onClick={() => setDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Lançar Cashback
           </Button>
         </div>
       </div>
 
-      {/* Card de Status - Regras Ativas */}
-      <CashbackStatusCard
-        metrics={metrics}
-        formatCurrency={formatCurrency}
-        onViewDetails={() => setActiveTab("visao-geral")}
-      />
+      {/* Card Principal - Total Recebido */}
+      <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-emerald-500/20">
+              <DollarSign className="h-6 w-6 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total Recebido no Período</p>
+              <p className="text-3xl font-bold text-emerald-500">
+                {formatCurrency(metrics.totalRecebido)}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filtro de tempo */}
       <StandardTimeFilter
@@ -154,81 +125,47 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
         onCustomDateRangeChange={setCustomDateRange}
       />
 
-      {/* KPIs de Performance - Compactos */}
-      <CashbackKPIsCompact metrics={metrics} formatCurrency={formatCurrency} />
+      {/* KPIs */}
+      <CashbackManualKPIs metrics={metrics} formatCurrency={formatCurrency} />
 
       {/* Navegação por Sub-abas */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="h-9">
-          <TabsTrigger value="visao-geral" className="text-xs px-3">
-            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-            Visão Geral
-          </TabsTrigger>
-          <TabsTrigger value="registros" className="text-xs px-3">
+          <TabsTrigger value="lancamentos" className="text-xs px-3">
             <List className="h-3.5 w-3.5 mr-1.5" />
-            Registros
+            Lançamentos
           </TabsTrigger>
           <TabsTrigger value="por-casa" className="text-xs px-3">
             <Building2 className="h-3.5 w-3.5 mr-1.5" />
             Por Casa
           </TabsTrigger>
-          <TabsTrigger value="historico" className="text-xs px-3">
-            <History className="h-3.5 w-3.5 mr-1.5" />
-            Histórico
-          </TabsTrigger>
         </TabsList>
 
-        {/* Tab: Visão Geral (default) - Lista de Regras */}
-        <TabsContent value="visao-geral" className="space-y-5 mt-4">
-          <CashbackRegrasList
-            regras={regras.filter(r => r.status !== 'encerrado')}
-            formatCurrency={formatCurrency}
-            onViewDetails={handleViewDetails}
-            onEdit={handleEditRegra}
-          />
-        </TabsContent>
-
-        {/* Tab: Registros */}
-        <TabsContent value="registros" className="mt-4">
-          <CashbackRegistrosList
+        {/* Tab: Lançamentos */}
+        <TabsContent value="lancamentos" className="space-y-5 mt-4">
+          <CashbackManualList
             registros={registros}
             formatCurrency={formatCurrency}
-            onViewDetails={handleViewRegistroDetails}
-            onConfirm={handleConfirmRegistro}
+            onDelete={deletarCashback}
+            loading={loading}
           />
         </TabsContent>
 
         {/* Tab: Por Casa */}
         <TabsContent value="por-casa" className="mt-4">
-          <CashbackPorCasaSection
+          <CashbackManualPorCasa
             data={porBookmaker}
             formatCurrency={formatCurrency}
           />
         </TabsContent>
-
-        {/* Tab: Histórico */}
-        <TabsContent value="historico" className="mt-4">
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Regras encerradas
-            </p>
-            <CashbackRegrasList
-              regras={regras.filter(r => r.status === 'encerrado')}
-              formatCurrency={formatCurrency}
-              onViewDetails={handleViewDetails}
-              onEdit={handleEditRegra}
-            />
-          </div>
-        </TabsContent>
       </Tabs>
 
-      {/* Dialog de criação/edição de regra */}
-      <CashbackRegraDialog
-        open={regraDialogOpen}
-        onOpenChange={handleRegraDialogClose}
+      {/* Dialog de lançamento */}
+      <CashbackManualDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
         projetoId={projetoId}
-        regra={editingRegra}
-        onSave={handleSaveRegra}
+        onSave={handleSaveCashback}
       />
     </div>
   );

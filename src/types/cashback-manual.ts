@@ -1,0 +1,61 @@
+/**
+ * Sistema de Cashback Manual Operacional
+ * 
+ * Cashback é tratado como um lançamento financeiro imediato.
+ * O valor informado representa dinheiro já creditado na casa.
+ */
+
+export interface CashbackManual {
+  id: string;
+  projeto_id: string;
+  bookmaker_id: string;
+  workspace_id: string;
+  user_id: string;
+  
+  // Dados do lançamento
+  valor: number;
+  data_credito: string;
+  observacoes: string | null;
+  
+  // Integração financeira
+  cash_ledger_id: string | null;
+  
+  // Snapshot de moeda
+  moeda_operacao: string;
+  cotacao_snapshot: number | null;
+  cotacao_snapshot_at: string | null;
+  valor_brl_referencia: number | null;
+  
+  // Metadados
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CashbackManualComBookmaker extends CashbackManual {
+  bookmaker?: {
+    id: string;
+    nome: string;
+    moeda: string;
+  };
+}
+
+export interface CashbackManualFormData {
+  bookmaker_id: string;
+  valor: number;
+  data_credito?: string;
+  observacoes?: string | null;
+}
+
+export interface CashbackManualMetrics {
+  totalRecebido: number;
+  totalLancamentos: number;
+  mediaPorLancamento: number;
+}
+
+export interface CashbackManualPorBookmaker {
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  bookmaker_moeda: string;
+  totalRecebido: number;
+  totalLancamentos: number;
+}
