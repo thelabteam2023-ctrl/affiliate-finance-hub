@@ -56,11 +56,13 @@ export function useKpiBreakdowns({
         girosGratisData,
         perdasData,
         ajustesData,
+        cashbackData,
       ] = await Promise.all([
         fetchApostasModuleData(projetoId, dataInicio, dataFim),
         fetchGirosGratisModuleData(projetoId, dataInicio, dataFim),
         fetchPerdasModuleData(projetoId, dataInicio, dataFim),
         fetchAjustesModuleData(projetoId),
+        fetchCashbackModuleData(projetoId, dataInicio, dataFim),
       ]);
 
       // === BREAKDOWN APOSTAS (quantidade) ===
@@ -115,6 +117,13 @@ export function useKpiBreakdowns({
           girosGratisData.lucro,
           girosGratisData.count > 0,
           { icon: 'Dices', color: 'positive' } // Sempre positivo por regra
+        ),
+        createModuleContribution(
+          'cashback',
+          'Cashback',
+          cashbackData.total,
+          cashbackData.count > 0,
+          { icon: 'Percent', color: 'positive' } // Cashback é sempre positivo
         ),
         createModuleContribution(
           'perdas',
@@ -303,4 +312,38 @@ async function fetchAjustesModuleData(projetoId: string) {
   }, 0);
 
   return { total };
+}
+
+async function fetchCashbackModuleData(
+  projetoId: string,
+  dataInicio: Date | null,
+  dataFim: Date | null
+) {
+  let query = supabase
+    .from('cashback_manual')
+    .select('valor, valor_brl_referencia, moeda_operacao')
+    .eq('projeto_id', projetoId);
+
+  if (dataInicio) query = query.gte('data_credito', dataInicio.toISOString().split('T')[0]);
+  if (dataFim) query = query.lte('data_credito', dataFim.toISOString().split('T')[0]);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Erro ao buscar dados de cashback:', error);
+    return { count: 0, total: 0 };
+  }
+
+  const cashbacks = data || [];
+  
+  // Contagem de registros
+  const count = cashbacks.length;
+  
+  // Valor total (usando valor_brl_referencia quando disponível para consolidação)
+  const total = cashbacks.reduce((acc, cb) => {
+    const valor = cb.valor_brl_referencia ?? Number(cb.valor || 0);
+    return acc + valor;
+  }, 0);
+
+  return { count, total };
 }

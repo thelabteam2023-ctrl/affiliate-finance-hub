@@ -151,7 +151,7 @@ export default function GestaoProjetos() {
       const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
-      const [bookmarkersResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackResult] = await Promise.all([
+      const [bookmarkersResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackResult, cashbackManualResult] = await Promise.all([
         // Bookmakers por projeto (incluindo saldo_freebet e moeda para conversão)
         supabase
           .from("bookmakers")
@@ -186,12 +186,18 @@ export default function GestaoProjetos() {
           .in("projeto_id", finalProjetoIds)
           .eq("status", "confirmado"),
         
-        // Cashback recebido por projeto
+        // Cashback recebido por projeto (regras automáticas)
         supabase
           .from("cashback_registros")
           .select("projeto_id, valor_recebido")
           .in("projeto_id", finalProjetoIds)
-          .eq("status", "recebido")
+          .eq("status", "recebido"),
+        
+        // Cashback manual por projeto (lançamentos manuais)
+        supabase
+          .from("cashback_manual")
+          .select("projeto_id, valor, moeda_operacao, valor_brl_referencia")
+          .in("projeto_id", finalProjetoIds)
       ]);
       
       // Taxa de conversão USD->BRL aproximada (idealmente vir de uma API ou cache)
@@ -278,7 +284,7 @@ export default function GestaoProjetos() {
         lucroByProjeto[giro.projeto_id].total += valorRetorno;
       });
       
-      // Agregar lucro de cashback recebido por projeto
+      // Agregar lucro de cashback recebido por projeto (regras automáticas)
       (cashbackResult.data || []).forEach((cb: any) => {
         if (!cb.projeto_id) return;
         if (!lucroByProjeto[cb.projeto_id]) {
@@ -289,6 +295,28 @@ export default function GestaoProjetos() {
         // Cashback é sempre em BRL por enquanto
         lucroByProjeto[cb.projeto_id].BRL += valorRecebido;
         lucroByProjeto[cb.projeto_id].total += valorRecebido;
+      });
+      
+      // Agregar lucro de cashback manual por projeto
+      (cashbackManualResult.data || []).forEach((cb: any) => {
+        if (!cb.projeto_id) return;
+        if (!lucroByProjeto[cb.projeto_id]) {
+          lucroByProjeto[cb.projeto_id] = { total: 0, BRL: 0, USD: 0 };
+        }
+        
+        const valor = cb.valor || 0;
+        const moeda = cb.moeda_operacao || 'BRL';
+        
+        // Acumular por moeda original
+        if (moeda === 'USD' || moeda === 'USDT') {
+          lucroByProjeto[cb.projeto_id].USD += valor;
+          // Para total consolidado, usar BRL referência se existir, senão converter
+          const valorBRL = cb.valor_brl_referencia ?? (valor * USD_TO_BRL);
+          lucroByProjeto[cb.projeto_id].total += valorBRL;
+        } else {
+          lucroByProjeto[cb.projeto_id].BRL += valor;
+          lucroByProjeto[cb.projeto_id].total += valor;
+        }
       });
       
       // Agregar operadores ativos por projeto
