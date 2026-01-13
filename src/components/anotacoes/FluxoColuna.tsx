@@ -80,11 +80,9 @@ export function FluxoColuna({
     >
       {/* Header da coluna com botão adicionar */}
       <div className="shrink-0 px-3 py-3 border-b border-border/20">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-foreground/80 tracking-tight">
-            {coluna.nome}
-          </h3>
-        </div>
+        <h3 className="text-sm font-medium text-foreground/80 tracking-tight uppercase text-center">
+          {coluna.nome}
+        </h3>
         
         {/* Botão adicionar - no topo, discreto */}
         <button
