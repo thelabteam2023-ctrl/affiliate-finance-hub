@@ -20,6 +20,9 @@ export interface BookmakerPorProjeto {
   projetoId: string | null;
   projetoNome: string;
   saldo: number;
+  saldoBRL: number;
+  saldoUSD: number;
+  moeda?: string;
 }
 
 export interface ContaPorBanco {
@@ -104,18 +107,25 @@ export function MapaPatrimonioCard({
   const BookmakersPopover = () => {
     const [open, setOpen] = useState(false);
     
-    // Agrupar por projeto
+    // Agrupar por projeto - agora com BRL/USD separados
     const alocadosProjetos = bookmakersPorProjeto
       .filter(b => b.projetoId !== null && b.saldo > 0)
       .sort((a, b) => b.saldo - a.saldo);
     
-    const naoAlocados = bookmakersPorProjeto
-      .filter(b => b.projetoId === null)
-      .reduce((acc, b) => acc + b.saldo, 0);
+    const naoAlocadosData = bookmakersPorProjeto.filter(b => b.projetoId === null);
+    const naoAlocadosBRL = naoAlocadosData.reduce((acc, b) => acc + (b.saldoBRL || 0), 0);
+    const naoAlocadosUSD = naoAlocadosData.reduce((acc, b) => acc + (b.saldoUSD || 0), 0);
+    const naoAlocadosTotal = naoAlocadosBRL + (naoAlocadosUSD * cotacaoUSD);
     
-    const totalBookmakers = alocadosProjetos.reduce((acc, b) => acc + b.saldo, 0) + naoAlocados;
+    // Totais separados por moeda
+    const totalBRL = bookmakersPorProjeto.reduce((acc, b) => acc + (b.saldoBRL || 0), 0);
+    const totalUSD = bookmakersPorProjeto.reduce((acc, b) => acc + (b.saldoUSD || 0), 0);
+    const totalConsolidado = totalBRL + (totalUSD * cotacaoUSD);
     
     if (bookmakersPorProjeto.length === 0) return null;
+    
+    const formatUSD = (value: number) => `$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+    const formatBRL = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
     
     return (
       <Popover open={open} onOpenChange={setOpen}>
@@ -124,7 +134,7 @@ export function MapaPatrimonioCard({
             <ChevronRight className="h-3 w-3" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-72 p-0" align="start">
+        <PopoverContent className="w-80 p-0" align="start">
           <div className="p-3 border-b border-border/50">
             <p className="font-medium text-sm">Distribuição — Bookmakers</p>
             <p className="text-xs text-muted-foreground">Alocação por projeto</p>
@@ -132,13 +142,24 @@ export function MapaPatrimonioCard({
           <div className="p-3 space-y-2 max-h-[280px] overflow-y-auto">
             {/* Projetos com saldo */}
             {alocadosProjetos.slice(0, 5).map((projeto) => {
-              const percent = totalBookmakers > 0 ? (projeto.saldo / totalBookmakers) * 100 : 0;
+              const percent = totalConsolidado > 0 ? (projeto.saldo / totalConsolidado) * 100 : 0;
+              const hasBRL = (projeto.saldoBRL || 0) > 0;
+              const hasUSD = (projeto.saldoUSD || 0) > 0;
+              
               return (
                 <div key={projeto.projetoId} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="truncate flex-1">{projeto.projetoNome}</span>
                     <span className="font-medium ml-2">{formatCurrency(projeto.saldo)}</span>
                   </div>
+                  {/* Breakdown BRL/USD quando houver ambos */}
+                  {(hasBRL || hasUSD) && (
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      {hasBRL && <span>{formatBRL(projeto.saldoBRL)}</span>}
+                      {hasBRL && hasUSD && <span>•</span>}
+                      {hasUSD && <span className="text-blue-400">{formatUSD(projeto.saldoUSD)} USD</span>}
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
                       <div 
@@ -155,21 +176,29 @@ export function MapaPatrimonioCard({
             })}
             
             {/* Não alocado */}
-            {naoAlocados > 0 && (
+            {naoAlocadosTotal > 0 && (
               <div className="space-y-1 pt-2 border-t border-border/50">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Sem Projeto</span>
-                  <span className="font-medium">{formatCurrency(naoAlocados)}</span>
+                  <span className="font-medium">{formatCurrency(naoAlocadosTotal)}</span>
                 </div>
+                {/* Breakdown BRL/USD para não alocados */}
+                {(naoAlocadosBRL > 0 || naoAlocadosUSD > 0) && (
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                    {naoAlocadosBRL > 0 && <span>{formatBRL(naoAlocadosBRL)}</span>}
+                    {naoAlocadosBRL > 0 && naoAlocadosUSD > 0 && <span>•</span>}
+                    {naoAlocadosUSD > 0 && <span className="text-blue-400">{formatUSD(naoAlocadosUSD)} USD</span>}
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
                     <div 
                       className="h-full rounded-full bg-muted-foreground/50 transition-all duration-300"
-                      style={{ width: `${totalBookmakers > 0 ? (naoAlocados / totalBookmakers) * 100 : 0}%` }}
+                      style={{ width: `${totalConsolidado > 0 ? (naoAlocadosTotal / totalConsolidado) * 100 : 0}%` }}
                     />
                   </div>
                   <span className="text-[10px] text-muted-foreground w-8 text-right">
-                    {(totalBookmakers > 0 ? (naoAlocados / totalBookmakers) * 100 : 0).toFixed(0)}%
+                    {(totalConsolidado > 0 ? (naoAlocadosTotal / totalConsolidado) * 100 : 0).toFixed(0)}%
                   </span>
                 </div>
               </div>
@@ -181,10 +210,30 @@ export function MapaPatrimonioCard({
               </p>
             )}
           </div>
-          <div className="p-3 border-t border-border/50 bg-muted/30">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Total Bookmakers</span>
-              <span className="font-bold">{formatCurrency(totalBookmakers)}</span>
+          
+          {/* Footer com totais separados */}
+          <div className="p-3 border-t border-border/50 bg-muted/30 space-y-1">
+            {/* Subtotais por moeda */}
+            {(totalBRL > 0 || totalUSD > 0) && (
+              <div className="space-y-0.5 pb-1.5 border-b border-border/30">
+                {totalBRL > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-muted-foreground">Total em BRL</span>
+                    <span className="font-medium">{formatBRL(totalBRL)}</span>
+                  </div>
+                )}
+                {totalUSD > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-muted-foreground">Total em USD</span>
+                    <span className="font-medium text-blue-400">{formatUSD(totalUSD)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Total consolidado */}
+            <div className="flex items-center justify-between text-xs pt-1">
+              <span className="text-muted-foreground">Saldo Consolidado</span>
+              <span className="font-bold">{formatCurrency(totalConsolidado)}</span>
             </div>
           </div>
         </PopoverContent>
