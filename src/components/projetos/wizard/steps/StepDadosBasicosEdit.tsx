@@ -60,6 +60,7 @@ export function StepDadosBasicosEdit({
     
     setLoadingOperadores(true);
     try {
+      // Query direta com join para profiles
       const { data, error } = await supabase
         .from("operador_projetos")
         .select(`
@@ -68,7 +69,10 @@ export function StepDadosBasicosEdit({
           status,
           operadores!inner(
             id,
-            auth_user_id
+            auth_user_id,
+            profiles:auth_user_id(
+              full_name
+            )
           )
         `)
         .eq("projeto_id", projetoId)
@@ -76,25 +80,16 @@ export function StepDadosBasicosEdit({
 
       if (error) throw error;
 
-      // Buscar nomes dos profiles
       if (data && data.length > 0) {
-        const authUserIds = data.map((op: any) => op.operadores.auth_user_id);
-        const { data: profiles, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", authUserIds);
-
-        if (!profilesError && profiles) {
-          const operadoresComNome = data.map((op: any) => {
-            const profile = profiles.find((p) => p.id === op.operadores.auth_user_id);
-            return {
-              operador_id: op.operador_id,
-              nome: profile?.full_name || "Operador",
-              status: op.status,
-            };
-          });
-          setOperadoresVinculados(operadoresComNome);
-        }
+        const operadoresComNome = data.map((op: any) => {
+          const fullName = op.operadores?.profiles?.full_name;
+          return {
+            operador_id: op.operador_id,
+            nome: fullName || "Sem nome",
+            status: op.status,
+          };
+        });
+        setOperadoresVinculados(operadoresComNome);
       } else {
         setOperadoresVinculados([]);
       }
