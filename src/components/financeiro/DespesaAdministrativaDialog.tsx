@@ -301,14 +301,17 @@ export function DespesaAdministrativaDialog({
                   <SelectValue placeholder="Selecione o grupo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {GRUPOS_DESPESA_LIST.map((grupo) => (
-                    <SelectItem key={grupo.value} value={grupo.value}>
-                      <span className="flex items-center gap-2">
-                        <span>{grupo.icon}</span>
-                        <span>{grupo.label}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
+                  {GRUPOS_DESPESA_LIST.map((grupo) => {
+                    const IconComponent = grupo.icon;
+                    return (
+                      <SelectItem key={grupo.value} value={grupo.value}>
+                        <span className="flex items-center gap-2">
+                          <IconComponent className="h-4 w-4" />
+                          <span>{grupo.label}</span>
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
