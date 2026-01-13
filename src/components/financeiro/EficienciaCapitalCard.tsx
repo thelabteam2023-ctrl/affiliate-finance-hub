@@ -147,10 +147,16 @@ export function EficienciaCapitalCard({
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 bg-muted/30 rounded-lg">
             <div className="flex items-center gap-1.5 mb-1">
-              <TrendingUp className="h-3.5 w-3.5 text-success" />
+              {lucroOperacional >= 0 ? (
+                <TrendingUp className="h-3.5 w-3.5 text-success" />
+              ) : (
+                <TrendingDown className="h-3.5 w-3.5 text-destructive" />
+              )}
               <p className="text-[10px] text-muted-foreground uppercase">Lucro Operacional</p>
             </div>
-            <p className="text-sm font-semibold text-success">{formatCurrency(lucroOperacional)}</p>
+            <p className={cn("text-sm font-semibold", lucroOperacional >= 0 ? "text-success" : "text-destructive")}>
+              {formatCurrency(lucroOperacional)}
+            </p>
           </div>
           <div className="p-3 bg-muted/30 rounded-lg">
             <div className="flex items-center gap-1.5 mb-1">
