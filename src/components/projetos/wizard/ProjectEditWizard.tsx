@@ -261,6 +261,7 @@ export function ProjectEditWizard({
             formData={formData}
             onChange={handleFormChange}
             isEditMode={true}
+            projetoId={projeto.id}
           />
         );
       case "moeda":

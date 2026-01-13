@@ -3,6 +3,7 @@
  * Reutiliza layout do wizard, com campos editáveis e status adicional
  */
 
+import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Briefcase, Percent, Info } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Coins, Briefcase, Percent, Info, Users } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,19 +23,87 @@ import {
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjectFormData } from "../ProjectCreationWizardTypes";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+
+interface OperadorVinculado {
+  operador_id: string;
+  nome: string;
+  status: string;
+}
 
 interface StepDadosBasicosEditProps {
   formData: ProjectFormData;
   onChange: (data: Partial<ProjectFormData>) => void;
   isEditMode?: boolean;
+  projetoId?: string;
 }
 
 export function StepDadosBasicosEdit({
   formData,
   onChange,
   isEditMode = false,
+  projetoId,
 }: StepDadosBasicosEditProps) {
   const hasInvestidor = !!formData.investidor_id;
+  const [operadoresVinculados, setOperadoresVinculados] = useState<OperadorVinculado[]>([]);
+  const [loadingOperadores, setLoadingOperadores] = useState(false);
+
+  // Carregar operadores vinculados ao projeto
+  useEffect(() => {
+    if (projetoId && isEditMode) {
+      fetchOperadoresVinculados();
+    }
+  }, [projetoId, isEditMode]);
+
+  const fetchOperadoresVinculados = async () => {
+    if (!projetoId) return;
+    
+    setLoadingOperadores(true);
+    try {
+      const { data, error } = await supabase
+        .from("operador_projetos")
+        .select(`
+          id,
+          operador_id,
+          status,
+          operadores!inner(
+            id,
+            auth_user_id
+          )
+        `)
+        .eq("projeto_id", projetoId)
+        .eq("status", "ATIVO");
+
+      if (error) throw error;
+
+      // Buscar nomes dos profiles
+      if (data && data.length > 0) {
+        const authUserIds = data.map((op: any) => op.operadores.auth_user_id);
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", authUserIds);
+
+        if (!profilesError && profiles) {
+          const operadoresComNome = data.map((op: any) => {
+            const profile = profiles.find((p) => p.id === op.operadores.auth_user_id);
+            return {
+              operador_id: op.operador_id,
+              nome: profile?.full_name || "Operador",
+              status: op.status,
+            };
+          });
+          setOperadoresVinculados(operadoresComNome);
+        }
+      } else {
+        setOperadoresVinculados([]);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar operadores:", error);
+    } finally {
+      setLoadingOperadores(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -214,6 +284,52 @@ export function StepDadosBasicosEdit({
           </CardContent>
         </Card>
       </div>
+
+      {/* Operadores Vinculados - Somente em modo de edição */}
+      {isEditMode && projetoId && (
+        <Card className="border-primary/20">
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-3">
+              <div className="p-1.5 rounded-md bg-primary/10">
+                <Users className="h-4 w-4 text-primary" />
+              </div>
+              <div className="space-y-1 flex-1">
+                <Label className="flex items-center gap-2">
+                  Operadores Vinculados
+                  <Badge variant="outline" className="text-xs ml-auto">
+                    Somente leitura
+                  </Badge>
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Gerencie operadores na aba "Operadores" do projeto
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              {loadingOperadores ? (
+                <div className="flex gap-2">
+                  <Skeleton className="h-6 w-24" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              ) : operadoresVinculados.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {operadoresVinculados.map((op) => (
+                    <Badge key={op.operador_id} variant="secondary" className="py-1.5 px-3">
+                      <Users className="h-3 w-3 mr-1.5" />
+                      {op.nome}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  Nenhum operador vinculado a este projeto
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
