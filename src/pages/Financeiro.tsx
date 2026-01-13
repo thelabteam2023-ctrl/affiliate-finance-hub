@@ -45,6 +45,7 @@ import {
 } from "recharts";
 import { format, subMonths, subWeeks, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval, getWeek } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
+import { getGrupoInfo } from "@/lib/despesaGrupos";
 import { ptBR } from "date-fns/locale";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
@@ -109,6 +110,7 @@ interface CashLedgerEntry {
 interface DespesaAdministrativa {
   id: string;
   categoria: string;
+  grupo?: string;
   descricao: string | null;
   valor: number;
   data_despesa: string;
@@ -1230,7 +1232,7 @@ export default function Financeiro() {
                   <thead className="sticky top-0 z-10 bg-background">
                     <tr className="border-b bg-muted/30">
                       <th className="text-left py-3 px-4 font-medium">Data</th>
-                      <th className="text-left py-3 px-4 font-medium">Categoria</th>
+                      <th className="text-left py-3 px-4 font-medium">Grupo</th>
                       <th className="text-left py-3 px-4 font-medium">Descrição</th>
                       <th className="text-right py-3 px-4 font-medium">Valor</th>
                       <th className="text-center py-3 px-4 font-medium">Recorrente</th>
@@ -1258,7 +1260,30 @@ export default function Financeiro() {
                                 {format(parseLocalDate(despesa.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
                               </td>
                               <td className="py-3 px-4">
-                                <Badge variant="outline" className="whitespace-nowrap">{despesa.categoria}</Badge>
+                                {(() => {
+                                  const grupoInfo = getGrupoInfo(despesa.grupo || "OUTROS");
+                                  return (
+                                    <ShadcnTooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge 
+                                          variant="outline" 
+                                          className={`whitespace-nowrap ${grupoInfo.color}`}
+                                        >
+                                          <span className="mr-1">{grupoInfo.icon}</span>
+                                          {grupoInfo.label}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p className="text-xs">{grupoInfo.description}</p>
+                                        {despesa.categoria && despesa.categoria !== grupoInfo.label && (
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            Categoria original: {despesa.categoria}
+                                          </p>
+                                        )}
+                                      </TooltipContent>
+                                    </ShadcnTooltip>
+                                  );
+                                })()}
                               </td>
                               <td className="py-3 px-4 text-muted-foreground">
                                 {despesa.descricao || "—"}
@@ -1319,24 +1344,31 @@ export default function Financeiro() {
             </CardContent>
           </Card>
 
-          {/* Resumo por Categoria */}
+          {/* Resumo por Grupo */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Resumo por Categoria</CardTitle>
+              <CardTitle className="text-base">Resumo por Grupo</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {Object.entries(
                   despesasAdmin.reduce((acc, d) => {
-                    acc[d.categoria] = (acc[d.categoria] || 0) + d.valor;
+                    const grupo = d.grupo || "OUTROS";
+                    acc[grupo] = (acc[grupo] || 0) + d.valor;
                     return acc;
                   }, {} as Record<string, number>)
-                ).sort((a, b) => b[1] - a[1]).map(([categoria, valor]) => (
-                  <div key={categoria} className="flex items-center justify-between">
-                    <span className="text-sm">{categoria}</span>
-                    <span className="font-medium text-orange-500">{formatCurrency(valor)}</span>
-                  </div>
-                ))}
+                ).sort((a, b) => b[1] - a[1]).map(([grupo, valor]) => {
+                  const grupoInfo = getGrupoInfo(grupo);
+                  return (
+                    <div key={grupo} className="flex items-center justify-between">
+                      <span className="text-sm flex items-center gap-2">
+                        <span>{grupoInfo.icon}</span>
+                        <span>{grupoInfo.label}</span>
+                      </span>
+                      <span className="font-medium text-orange-500">{formatCurrency(valor)}</span>
+                    </div>
+                  );
+                })}
                 {despesasAdmin.length > 0 && (
                   <div className="pt-3 border-t flex items-center justify-between font-semibold">
                     <span>Subtotal Infraestrutura</span>

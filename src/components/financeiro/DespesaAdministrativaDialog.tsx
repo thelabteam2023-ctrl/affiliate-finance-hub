@@ -21,14 +21,16 @@ import { Switch } from "@/components/ui/switch";
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { GRUPOS_DESPESA_LIST, getGrupoInfo } from "@/lib/despesaGrupos";
 
 interface DespesaAdministrativa {
   id?: string;
   categoria: string;
+  grupo?: string;
   descricao: string;
   valor: number;
   data_despesa: string;
@@ -51,38 +53,24 @@ interface DespesaAdministrativaDialogProps {
   onOpenChange: (open: boolean) => void;
   despesa?: DespesaAdministrativa | null;
   onSuccess?: () => void;
-  categoriasExtras?: string[];
 }
-
-// Removido "OPERADORES" - agora usa fluxo unificado via PagamentoOperadorDialog
-const categoriasBase = [
-  { value: "ENERGIA", label: "Energia" },
-  { value: "INTERNET_MOVEL", label: "Internet Móvel" },
-  { value: "ALUGUEL", label: "Aluguel" },
-  { value: "DARF", label: "DARF" },
-  { value: "CONTABILIDADE", label: "Contabilidade" },
-  { value: "OUTROS", label: "Outros" },
-];
 
 export function DespesaAdministrativaDialog({
   open,
   onOpenChange,
   despesa,
   onSuccess,
-  categoriasExtras = [],
 }: DespesaAdministrativaDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
-  const [showNovaCategoria, setShowNovaCategoria] = useState(false);
-  const [novaCategoria, setNovaCategoria] = useState("");
-  const [categoriasLocais, setCategoriasLocais] = useState<string[]>([]);
   
   // Estado para redirecionamento ao PagamentoOperadorDialog
   const [showPagamentoOperador, setShowPagamentoOperador] = useState(false);
   
   const [formData, setFormData] = useState<DespesaAdministrativa>({
-    categoria: "ENERGIA",
+    categoria: "", // Agora preenchido automaticamente pelo grupo
+    grupo: "UTILIDADES_E_SERVICOS_BASICOS",
     descricao: "",
     valor: 0,
     data_despesa: new Date().toISOString().split("T")[0],
@@ -100,22 +88,13 @@ export function DespesaAdministrativaDialog({
     coin: null,
     cotacao: null,
   });
-  // Combina categorias base com extras (do banco) e locais (criadas nesta sessão)
-  const todasCategorias = [
-    ...categoriasBase,
-    ...categoriasExtras
-      .filter(c => !categoriasBase.some(b => b.value === c))
-      .map(c => ({ value: c, label: c })),
-    ...categoriasLocais
-      .filter(c => !categoriasBase.some(b => b.value === c) && !categoriasExtras.includes(c))
-      .map(c => ({ value: c, label: c })),
-  ];
 
   useEffect(() => {
     if (despesa) {
       setFormData({
         ...despesa,
         data_despesa: despesa.data_despesa.split("T")[0],
+        grupo: despesa.grupo || "OUTROS",
       });
       // Set origem data from existing despesa
       setOrigemData({
@@ -131,7 +110,8 @@ export function DespesaAdministrativaDialog({
       });
     } else {
       setFormData({
-        categoria: "ENERGIA",
+        categoria: "",
+        grupo: "UTILIDADES_E_SERVICOS_BASICOS",
         descricao: "",
         valor: 0,
         data_despesa: new Date().toISOString().split("T")[0],
@@ -158,10 +138,10 @@ export function DespesaAdministrativaDialog({
   );
 
   const handleSubmit = async () => {
-    if (!formData.categoria || formData.valor <= 0) {
+    if (!formData.grupo || formData.valor <= 0) {
       toast({
         title: "Campos obrigatórios",
-        description: "Selecione a categoria e informe um valor válido.",
+        description: "Selecione o grupo e informe um valor válido.",
         variant: "destructive",
       });
       return;
@@ -187,8 +167,10 @@ export function DespesaAdministrativaDialog({
       if (!user) throw new Error("Usuário não autenticado");
       if (!workspaceId) throw new Error("Workspace não encontrado");
 
+      const grupoInfo = getGrupoInfo(formData.grupo || "OUTROS");
       const payload: any = {
-        categoria: formData.categoria,
+        categoria: grupoInfo.label, // Categoria recebe o label do grupo para compatibilidade
+        grupo: formData.grupo,
         descricao: formData.descricao || null,
         valor: formData.valor,
         data_despesa: formData.data_despesa,
@@ -308,77 +290,30 @@ export function DespesaAdministrativaDialog({
 
           <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-2">
             <div className="space-y-2">
-              <Label>Categoria *</Label>
-              {showNovaCategoria ? (
-                <div className="flex gap-2">
-                  <Input
-                    value={novaCategoria}
-                    onChange={(e) => setNovaCategoria(e.target.value.toUpperCase())}
-                    placeholder="Nome da nova categoria"
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => {
-                      if (novaCategoria.trim()) {
-                        const novaCat = novaCategoria.trim();
-                        setCategoriasLocais(prev => [...prev, novaCat]);
-                        setFormData({ ...formData, categoria: novaCat });
-                        setShowNovaCategoria(false);
-                        setNovaCategoria("");
-                      }
-                    }}
-                  >
-                    OK
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowNovaCategoria(false);
-                      setNovaCategoria("");
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Select
-                    value={formData.categoria}
-                    onValueChange={(value) => {
-                      // Se selecionou OPERADORES (pode vir de categoriasExtras), redireciona
-                      if (value === "OPERADORES") {
-                        setShowPagamentoOperador(true);
-                        return;
-                      }
-                      setFormData({ ...formData, categoria: value });
-                    }}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Selecione a categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {todasCategorias.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>
-                          {cat.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setShowNovaCategoria(true)}
-                    title="Criar nova categoria"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              <Label>Grupo de Despesa *</Label>
+              <Select
+                value={formData.grupo || "OUTROS"}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, grupo: value });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o grupo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GRUPOS_DESPESA_LIST.map((grupo) => (
+                    <SelectItem key={grupo.value} value={grupo.value}>
+                      <span className="flex items-center gap-2">
+                        <span>{grupo.icon}</span>
+                        <span>{grupo.label}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {getGrupoInfo(formData.grupo || "OUTROS").description}
+              </p>
             </div>
 
           <div className="space-y-2">
