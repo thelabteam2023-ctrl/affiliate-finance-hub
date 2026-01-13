@@ -124,7 +124,6 @@ export function ParceiroListaSidebar({
                     size="xs"
                     variant="auto"
                     masked={!showSensitiveData}
-                    stacked
                     showDashOnZero
                   />
                 </div>

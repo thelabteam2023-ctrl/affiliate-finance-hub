@@ -53,22 +53,6 @@ import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 import { SurebetLegPrintCompact } from "./SurebetLegPrintFields";
 
-// Interface local DEPRECATED - agora usamos BookmakerSaldo do hook canônico diretamente
-interface LegacyBookmaker {
-  id: string;
-  nome: string;
-  saldo_atual: number;
-  saldo_freebet?: number;
-  saldo_bonus?: number;
-  saldo_operavel?: number;
-  parceiro?: {
-    nome: string;
-  };
-  bookmakers_catalogo?: {
-    logo_url: string | null;
-  } | null;
-}
-
 interface Surebet {
   id: string;
   data_operacao: string;
@@ -91,7 +75,6 @@ interface SurebetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projetoId: string;
-  bookmakers?: LegacyBookmaker[]; // DEPRECATED: mantido para compatibilidade, ignorado internamente
   surebet: Surebet | null;
   onSuccess: () => void;
   activeTab?: string;
@@ -536,7 +519,7 @@ const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2"): string
   return ["Sim", "Não"];
 };
 
-export function SurebetDialog({ open, onOpenChange, projetoId, bookmakers, surebet, onSuccess, activeTab = 'surebet' }: SurebetDialogProps) {
+export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSuccess, activeTab = 'surebet' }: SurebetDialogProps) {
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
   

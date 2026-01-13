@@ -956,12 +956,6 @@ export default function Testes() {
         await supabase.from("giros_gratis_disponiveis").delete().in("projeto_id", projetoIds);
         console.log("✅ Giros grátis disponíveis apagados");
 
-        await supabase.from("cashback_registros").delete().in("projeto_id", projetoIds);
-        console.log("✅ Cashback registros apagados");
-
-        await supabase.from("cashback_regras").delete().in("projeto_id", projetoIds);
-        console.log("✅ Cashback regras apagadas");
-
         await supabase.from("project_bookmaker_link_bonuses").delete().in("project_id", projetoIds);
         console.log("✅ Bônus de bookmakers apagados");
 

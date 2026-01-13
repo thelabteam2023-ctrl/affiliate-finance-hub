@@ -977,7 +977,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           <TabsContent value={activeNavTab} className="mt-0">{renderMainContent()}</TabsContent>
         </Tabs>
         {selectedAposta && <ApostaDialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setSelectedAposta(null); }} projetoId={projetoId} aposta={selectedAposta as any} onSuccess={handleApostaUpdated} defaultEstrategia={APOSTA_ESTRATEGIA.DUPLO_GREEN} activeTab="duplogreen" />}
-        <SurebetDialog open={surebetDialogOpen} onOpenChange={(o) => { setSurebetDialogOpen(o); if (!o) setSelectedSurebet(null); }} projetoId={projetoId} bookmakers={bookmakers} surebet={selectedSurebet} onSuccess={handleApostaUpdated} activeTab="duplogreen" />
+        <SurebetDialog open={surebetDialogOpen} onOpenChange={(o) => { setSurebetDialogOpen(o); if (!o) setSelectedSurebet(null); }} projetoId={projetoId} surebet={selectedSurebet} onSuccess={handleApostaUpdated} activeTab="duplogreen" />
       </div>
     );
   }
@@ -1023,7 +1023,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
         <div className="flex-1 min-w-0">{renderMainContent()}</div>
       </div>
       {selectedAposta && <ApostaDialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setSelectedAposta(null); }} projetoId={projetoId} aposta={selectedAposta as any} onSuccess={handleApostaUpdated} defaultEstrategia={APOSTA_ESTRATEGIA.DUPLO_GREEN} activeTab="duplogreen" />}
-      <SurebetDialog open={surebetDialogOpen} onOpenChange={(o) => { setSurebetDialogOpen(o); if (!o) setSelectedSurebet(null); }} projetoId={projetoId} bookmakers={bookmakers} surebet={selectedSurebet} onSuccess={handleApostaUpdated} activeTab="duplogreen" />
+      <SurebetDialog open={surebetDialogOpen} onOpenChange={(o) => { setSurebetDialogOpen(o); if (!o) setSelectedSurebet(null); }} projetoId={projetoId} surebet={selectedSurebet} onSuccess={handleApostaUpdated} activeTab="duplogreen" />
     </div>
   );
 }
