@@ -119,9 +119,14 @@ export function CashbackManualDialog({
   const moedaSelecionada = selectedBookmaker?.moeda || "BRL";
   const simboloMoeda = getCurrencySymbol(moedaSelecionada);
 
-  // Saldo atual e novo saldo após cashback
+  // Verificar se é moeda USD
+  const isUSDMoeda = moedaSelecionada === "USD" || moedaSelecionada === "USDT";
+
+  // Saldo atual e novo saldo após cashback - usar saldo_usd para moedas USD/USDT
   const valorCashback = form.watch("valor") || 0;
-  const saldoAtual = selectedBookmaker?.saldo_atual ?? 0;
+  const saldoAtual = selectedBookmaker 
+    ? (isUSDMoeda ? (selectedBookmaker.saldo_usd ?? 0) : (selectedBookmaker.saldo_atual ?? 0))
+    : 0;
   const novoSaldo = saldoAtual + valorCashback;
 
   // Formatar moeda
