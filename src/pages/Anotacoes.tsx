@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StickyNote, GitBranch } from "lucide-react";
 import { FluxoTab } from "@/components/anotacoes/FluxoTab";
+import { LivreTab } from "@/components/anotacoes/LivreTab";
 
 /**
  * Página Anotações - Sistema pessoal de notas e organização de ideias
@@ -44,11 +45,9 @@ export default function Anotacoes() {
             <TabsTrigger 
               value="livre" 
               className="gap-2 text-xs data-[state=active]:bg-background"
-              disabled
             >
               <StickyNote className="h-3.5 w-3.5" />
               Livre
-              <span className="text-[10px] text-muted-foreground ml-1">(em breve)</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -65,9 +64,7 @@ export default function Anotacoes() {
           value="livre" 
           className="flex-1 min-h-0 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            Em desenvolvimento...
-          </div>
+          <LivreTab />
         </TabsContent>
       </Tabs>
     </div>

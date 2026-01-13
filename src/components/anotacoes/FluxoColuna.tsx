@@ -70,7 +70,7 @@ export function FluxoColuna({
     <div
       ref={dropRef}
       className={cn(
-        "flex flex-col w-72 shrink-0 rounded-xl transition-all duration-200",
+        "flex flex-col w-[340px] shrink-0 rounded-xl transition-all duration-200",
         "bg-muted/20 border border-border/30",
         isDragOver && "ring-2 ring-primary/30 bg-muted/40"
       )}
@@ -78,15 +78,31 @@ export function FluxoColuna({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Header da coluna */}
+      {/* Header da coluna com botão adicionar */}
       <div className="shrink-0 px-3 py-3 border-b border-border/20">
-        <h3 className="text-sm font-medium text-foreground/80 tracking-tight">
-          {coluna.nome}
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-foreground/80 tracking-tight">
+            {coluna.nome}
+          </h3>
+        </div>
+        
+        {/* Botão adicionar - no topo, discreto */}
+        <button
+          onClick={handleAddCard}
+          className={cn(
+            "w-full flex items-center justify-center gap-1.5 py-1.5 mt-2 rounded-lg",
+            "text-xs text-muted-foreground/60 hover:text-muted-foreground",
+            "hover:bg-muted/30 transition-colors",
+            "opacity-60 hover:opacity-100"
+          )}
+        >
+          <Plus className="h-3 w-3" />
+          <span>adicionar</span>
+        </button>
       </div>
 
       {/* Lista de cards */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-[200px]">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-[200px]">
         {sortedCards.map(card => (
           <FluxoCardComponent
             key={card.id}
@@ -103,23 +119,8 @@ export function FluxoColuna({
 
         {/* Drop zone visual quando arrastando */}
         {isDragOver && draggingCardId && !cards.some(c => c.id === draggingCardId) && (
-          <div className="h-20 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5" />
+          <div className="h-24 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5" />
         )}
-      </div>
-
-      {/* Botão adicionar */}
-      <div className="shrink-0 p-2 border-t border-border/20">
-        <button
-          onClick={handleAddCard}
-          className={cn(
-            "w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg",
-            "text-xs text-muted-foreground hover:text-foreground",
-            "hover:bg-muted/50 transition-colors"
-          )}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>adicionar</span>
-        </button>
       </div>
     </div>
   );
