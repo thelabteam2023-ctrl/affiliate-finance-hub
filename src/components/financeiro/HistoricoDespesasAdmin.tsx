@@ -117,6 +117,7 @@ export function HistoricoDespesasAdmin({ formatCurrency }: HistoricoDespesasAdmi
       const despesasNormalized: TransacaoHistorico[] = (despesasRes.data || []).map((d) => ({
         id: d.id,
         categoria: d.categoria,
+        grupo: d.grupo,
         descricao: d.descricao,
         valor: d.valor,
         data_despesa: d.data_despesa,
