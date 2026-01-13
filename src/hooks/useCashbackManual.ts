@@ -39,7 +39,9 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
             nome, 
             moeda, 
             parceiro_id,
-            parceiro:parceiros!bookmakers_parceiro_id_fkey(id, nome)
+            bookmaker_catalogo_id,
+            parceiro:parceiros!bookmakers_parceiro_id_fkey(id, nome),
+            bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url)
           )
         `)
         .eq("projeto_id", projetoId)

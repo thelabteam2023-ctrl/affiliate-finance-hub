@@ -37,9 +37,13 @@ export interface CashbackManualComBookmaker extends CashbackManual {
     nome: string;
     moeda: string;
     parceiro_id?: string | null;
+    bookmaker_catalogo_id?: string | null;
     parceiro?: {
       id: string;
       nome: string;
+    } | null;
+    bookmakers_catalogo?: {
+      logo_url: string | null;
     } | null;
   };
 }
