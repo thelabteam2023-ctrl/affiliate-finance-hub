@@ -4,6 +4,7 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { ArrowRight } from "lucide-react";
 
 interface Transacao {
@@ -249,7 +250,7 @@ export function HistoricoInvestidor() {
                             {isAporteT ? "Investidor Externo" : "Caixa Operacional"}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {format(new Date(t.data_transacao), "dd/MM/yyyy HH:mm")}
+                            {format(parseLocalDate(t.data_transacao), "dd/MM/yyyy HH:mm")}
                           </div>
                         </div>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />

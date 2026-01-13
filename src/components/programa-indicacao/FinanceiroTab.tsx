@@ -24,7 +24,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { PagamentoBonusDialog } from "./PagamentoBonusDialog";
 import { PagamentoComissaoDialog } from "./PagamentoComissaoDialog";
@@ -615,7 +616,7 @@ export function FinanceiroTab() {
                         - {formatCurrency(mov.valor)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(parseISO(mov.data_movimentacao), "dd/MM/yyyy", { locale: ptBR })}
+                        {format(parseLocalDate(mov.data_movimentacao), "dd/MM/yyyy", { locale: ptBR })}
                       </p>
                     </div>
                   </div>

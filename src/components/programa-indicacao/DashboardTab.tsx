@@ -11,7 +11,8 @@ import { HistoricoCaptacaoDrawer } from "./HistoricoCaptacaoDrawer";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange } from "@/components/projeto-detalhe/StandardTimeFilter";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 
 interface CustoData {
@@ -259,9 +260,9 @@ export function DashboardTab() {
   // Evolução Mensal
   const evolucaoMensal = Object.values(
     filteredCustos.reduce((acc, c) => {
-      const mes = format(parseISO(c.data_inicio), "yyyy-MM");
+      const mes = format(parseLocalDate(c.data_inicio), "yyyy-MM");
       if (!acc[mes]) {
-        acc[mes] = { mes, mesLabel: format(parseISO(c.data_inicio), "MMM/yy", { locale: ptBR }), quantidade: 0, custo: 0 };
+        acc[mes] = { mes, mesLabel: format(parseLocalDate(c.data_inicio), "MMM/yy", { locale: ptBR }), quantidade: 0, custo: 0 };
       }
       acc[mes].quantidade += 1;
       acc[mes].custo += c.custo_total || 0;

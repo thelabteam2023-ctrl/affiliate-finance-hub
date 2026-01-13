@@ -43,7 +43,8 @@ import {
   Line,
   Bar,
 } from "recharts";
-import { format, parseISO, subMonths, subWeeks, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval, getWeek } from "date-fns";
+import { format, subMonths, subWeeks, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval, getWeek } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { KpiExplanationDialog, KpiType } from "@/components/financeiro/KpiExplanationDialog";
 import { DespesaAdministrativaDialog } from "@/components/financeiro/DespesaAdministrativaDialog";
@@ -466,9 +467,9 @@ export default function Financeiro() {
       const dateValue = item[dateField] as string | undefined;
       if (!dateValue) return true;
       
-      const itemDate = parseISO(dateValue);
-      const start = dataInicio ? startOfMonth(parseISO(dataInicio)) : new Date(0);
-      const end = dataFim ? endOfMonth(parseISO(dataFim)) : new Date();
+      const itemDate = parseLocalDate(dateValue);
+      const start = dataInicio ? startOfMonth(parseLocalDate(dataInicio)) : new Date(0);
+      const end = dataFim ? endOfMonth(parseLocalDate(dataFim)) : new Date();
       
       return isWithinInterval(itemDate, { start, end });
     });
@@ -686,7 +687,7 @@ export default function Financeiro() {
           if (l.moeda !== "BRL") return false;
           // Entradas reais: APORTE_FINANCEIRO e SAQUE (lucro realizado)
           if (l.tipo_transacao !== "APORTE_FINANCEIRO" && l.tipo_transacao !== "SAQUE") return false;
-          const dataTransacao = parseISO(l.data_transacao);
+          const dataTransacao = parseLocalDate(l.data_transacao);
           return isWithinInterval(dataTransacao, { start: w.weekStart, end: w.weekEnd });
         })
         .reduce((acc, l) => acc + l.valor, 0);
@@ -696,7 +697,7 @@ export default function Financeiro() {
       const custosSemana = despesas
         .filter(d => {
           if (!d.data_movimentacao) return false;
-          const dataMovimentacao = parseISO(d.data_movimentacao);
+          const dataMovimentacao = parseLocalDate(d.data_movimentacao);
           return isWithinInterval(dataMovimentacao, { start: w.weekStart, end: w.weekEnd });
         })
         .reduce((acc, d) => acc + d.valor, 0);
@@ -704,7 +705,7 @@ export default function Financeiro() {
       const despesasAdminSemana = despesasAdmin
         .filter(d => {
           if (!d.data_despesa) return false;
-          const dataDespesa = parseISO(d.data_despesa);
+          const dataDespesa = parseLocalDate(d.data_despesa);
           return isWithinInterval(dataDespesa, { start: w.weekStart, end: w.weekEnd });
         })
         .reduce((acc, d) => acc + d.valor, 0);
@@ -712,7 +713,7 @@ export default function Financeiro() {
       const pagamentosOpSemana = pagamentosOperador
         .filter(p => {
           if (!p.data_pagamento) return false;
-          const dataPagamento = parseISO(p.data_pagamento);
+          const dataPagamento = parseLocalDate(p.data_pagamento);
           return isWithinInterval(dataPagamento, { start: w.weekStart, end: w.weekEnd });
         })
         .reduce((acc, p) => acc + p.valor, 0);
@@ -874,15 +875,15 @@ export default function Financeiro() {
     const keyAnterior = format(mesAnterior, "yyyy-MM");
     
     const custosAnt = despesas
-      .filter(d => d.data_movimentacao && format(parseISO(d.data_movimentacao), "yyyy-MM") === keyAnterior)
+      .filter(d => d.data_movimentacao && format(parseLocalDate(d.data_movimentacao), "yyyy-MM") === keyAnterior)
       .reduce((acc, d) => acc + d.valor, 0);
     
     const despesasAdmAnt = despesasAdmin
-      .filter(d => d.data_despesa && format(parseISO(d.data_despesa), "yyyy-MM") === keyAnterior)
+      .filter(d => d.data_despesa && format(parseLocalDate(d.data_despesa), "yyyy-MM") === keyAnterior)
       .reduce((acc, d) => acc + d.valor, 0);
     
     const opAnt = pagamentosOperador
-      .filter(p => p.data_pagamento && format(parseISO(p.data_pagamento), "yyyy-MM") === keyAnterior)
+      .filter(p => p.data_pagamento && format(parseLocalDate(p.data_pagamento), "yyyy-MM") === keyAnterior)
       .reduce((acc, p) => acc + p.valor, 0);
     
     return custosAnt + despesasAdmAnt + opAnt;
@@ -933,7 +934,7 @@ export default function Financeiro() {
     const diasPorParceria = custos
       .filter(c => c.data_inicio)
       .map(c => {
-        const dataInicio = parseISO(c.data_inicio);
+        const dataInicio = parseLocalDate(c.data_inicio);
         const diffMs = hoje.getTime() - dataInicio.getTime();
         return Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
       });
@@ -975,7 +976,7 @@ export default function Financeiro() {
     // 1. LUCRO OPERACIONAL: soma de lucro_prejuizo das apostas liquidadas
     apostasLucro.forEach(aposta => {
       if (aposta.data_aposta && aposta.lucro_prejuizo !== null) {
-        const key = format(parseISO(aposta.data_aposta), "yyyy-MM");
+        const key = format(parseLocalDate(aposta.data_aposta), "yyyy-MM");
         if (months[key]) {
           months[key].lucroApostas += aposta.lucro_prejuizo;
         }
@@ -986,7 +987,7 @@ export default function Financeiro() {
     // (despesas já vem filtrado por CONFIRMADO na query)
     despesas.forEach(d => {
       if (d.data_movimentacao) {
-        const key = format(parseISO(d.data_movimentacao), "yyyy-MM");
+        const key = format(parseLocalDate(d.data_movimentacao), "yyyy-MM");
         if (months[key]) {
           months[key].custosOperacionais += d.valor || 0;
         }
@@ -996,7 +997,7 @@ export default function Financeiro() {
     // 2b. CUSTOS OPERACIONAIS: pagamentos a operadores CONFIRMADOS
     pagamentosOperador.forEach(p => {
       if (p.data_pagamento) {
-        const key = format(parseISO(p.data_pagamento), "yyyy-MM");
+        const key = format(parseLocalDate(p.data_pagamento), "yyyy-MM");
         if (months[key]) {
           months[key].custosOperacionais += p.valor || 0;
         }
@@ -1006,7 +1007,7 @@ export default function Financeiro() {
     // 3. DESPESAS ADMINISTRATIVAS: despesas confirmadas
     despesasAdmin.forEach(d => {
       if (d.data_despesa) {
-        const key = format(parseISO(d.data_despesa), "yyyy-MM");
+        const key = format(parseLocalDate(d.data_despesa), "yyyy-MM");
         if (months[key]) {
           months[key].despesasAdmin += d.valor || 0;
         }
@@ -1016,7 +1017,7 @@ export default function Financeiro() {
     // 4. PARTICIPAÇÕES: distribuição de lucros a investidores PAGAS
     participacoesPagas.forEach(p => {
       if (p.data_pagamento) {
-        const key = format(parseISO(p.data_pagamento), "yyyy-MM");
+        const key = format(parseLocalDate(p.data_pagamento), "yyyy-MM");
         if (months[key]) {
           months[key].participacoes += p.valor_participacao || 0;
         }
@@ -1254,7 +1255,7 @@ export default function Financeiro() {
                           .map((despesa) => (
                             <tr key={despesa.id} className="border-b border-border/50 hover:bg-muted/30">
                               <td className="py-3 px-4 w-[120px]">
-                                {format(parseISO(despesa.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
+                                {format(parseLocalDate(despesa.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
                               </td>
                               <td className="py-3 px-4">
                                 <Badge variant="outline" className="whitespace-nowrap">{despesa.categoria}</Badge>

@@ -6,7 +6,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
-import { format, isWithinInterval, parseISO, subDays, startOfDay, endOfDay } from "date-fns";
+import { format, isWithinInterval, subDays, startOfDay, endOfDay } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, HelpCircle, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -110,7 +111,7 @@ export function FluxoFinanceiroOperacional({
     if (!dataInicio && !dataFim) return transacoes;
     
     return transacoes.filter((t) => {
-      const dataTransacao = parseISO(t.data_transacao);
+      const dataTransacao = parseLocalDate(t.data_transacao);
       if (dataInicio && dataFim) {
         return isWithinInterval(dataTransacao, { start: dataInicio, end: dataFim });
       }
@@ -134,7 +135,7 @@ export function FluxoFinanceiroOperacional({
     transacoesFiltradas.forEach((t) => {
       if (t.tipo_transacao !== "APORTE_FINANCEIRO") return;
       
-      const data = parseISO(t.data_transacao);
+      const data = parseLocalDate(t.data_transacao);
       let chave: string;
 
       switch (periodo) {
@@ -227,7 +228,7 @@ export function FluxoFinanceiroOperacional({
     transacoesFiltradas.forEach((t) => {
       if (t.tipo_transacao !== "DEPOSITO" && t.tipo_transacao !== "SAQUE") return;
       
-      const data = parseISO(t.data_transacao);
+      const data = parseLocalDate(t.data_transacao);
       let chave: string;
 
       switch (periodo) {
