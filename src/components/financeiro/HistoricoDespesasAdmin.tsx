@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ArrowRight, Info, AlertCircle, Coins, Wallet, Building2, CreditCard, User } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 
 interface TransacaoHistorico {
@@ -341,7 +342,7 @@ export function HistoricoDespesasAdmin({ formatCurrency }: HistoricoDespesasAdmi
                       )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {format(parseISO(transacao.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
+                      {format(parseLocalDate(transacao.data_despesa), "dd/MM/yyyy", { locale: ptBR })}
                     </div>
                   </div>
                 </div>

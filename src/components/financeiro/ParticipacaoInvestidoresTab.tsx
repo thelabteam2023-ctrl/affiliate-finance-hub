@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, Users, CheckCircle2, Clock, TrendingUp, Plus, Gift, Hourglass, X, Filter } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
 import { ParticipacaoManualDialog } from "./ParticipacaoManualDialog";
@@ -379,7 +380,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
                         {formatCurrency(p.valor_participacao)}
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">
-                        {format(parseISO(p.data_apuracao), "dd/MM/yyyy", { locale: ptBR })}
+                        {format(parseLocalDate(p.data_apuracao), "dd/MM/yyyy", { locale: ptBR })}
                       </td>
                     </tr>
                   ))
@@ -447,7 +448,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
                         {formatCurrency(p.valor_participacao)}
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">
-                        {format(parseISO(p.data_apuracao), "dd/MM/yyyy", { locale: ptBR })}
+                        {format(parseLocalDate(p.data_apuracao), "dd/MM/yyyy", { locale: ptBR })}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <Button size="sm" onClick={() => handlePagar(p)}>
@@ -519,7 +520,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
                       </td>
                       <td className="py-3 px-4 text-muted-foreground">
                         {p.data_pagamento 
-                          ? format(parseISO(p.data_pagamento), "dd/MM/yyyy", { locale: ptBR })
+                          ? format(parseLocalDate(p.data_pagamento), "dd/MM/yyyy", { locale: ptBR })
                           : "—"
                         }
                       </td>
