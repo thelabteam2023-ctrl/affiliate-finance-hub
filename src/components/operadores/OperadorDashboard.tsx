@@ -37,6 +37,7 @@ import {
 import { format, subDays, startOfMonth, startOfYear, parseISO, isAfter, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
+import { getFinancialDisplay, formatFinancialValue } from "@/lib/financial-display";
 
 interface OperadorComparativo {
   operador_id: string;
@@ -643,20 +644,21 @@ export function OperadorDashboard() {
               height={280}
               showLabels={true}
               showLegend={false}
-              formatValue={(value) => formatCurrency(Math.abs(value))}
+              dynamicColors={true}
+              formatValue={(value) => formatFinancialValue(value)}
               formatLabel={(value) => {
                 if (value === 0) return "";
-                return formatCurrency(Math.abs(value));
+                return formatFinancialValue(value);
               }}
               customTooltipContent={(payload, label) => {
                 const value = payload[0]?.value || 0;
-                const isLucro = value >= 0;
+                const display = getFinancialDisplay(value);
                 return (
                   <div>
                     <p className="font-medium text-sm mb-2">{label}</p>
                     <div className="space-y-1">
-                      <p className={isLucro ? "text-emerald-500 font-semibold" : "text-red-500 font-semibold"}>
-                        {isLucro ? "Lucro" : "Prejuízo"}: {formatCurrency(Math.abs(value))}
+                      <p className={`font-semibold ${display.colorClass}`}>
+                        {display.fullText}
                       </p>
                     </div>
                   </div>
@@ -703,9 +705,14 @@ export function OperadorDashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-bold ${op.lucro_total_gerado >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                        {formatCurrency(op.lucro_total_gerado)}
-                      </p>
+                      {(() => {
+                        const display = getFinancialDisplay(op.lucro_total_gerado);
+                        return (
+                          <p className={`font-bold ${display.colorClass}`}>
+                            {display.fullText}
+                          </p>
+                        );
+                      })()}
                       <p className="text-xs text-muted-foreground">
                         ROI: {formatPercent(op.roi)}
                       </p>
@@ -753,10 +760,19 @@ export function OperadorDashboard() {
                   <CardContent className="space-y-3">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-muted-foreground">Lucro Acumulado</p>
-                        <p className={`text-lg font-bold ${op.lucro_total_gerado >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                          {formatCurrency(op.lucro_total_gerado)}
-                        </p>
+                        {(() => {
+                          const display = getFinancialDisplay(op.lucro_total_gerado);
+                          return (
+                            <>
+                              <p className="text-xs text-muted-foreground">
+                                {display.label || 'Resultado'}
+                              </p>
+                              <p className={`text-lg font-bold ${display.colorClass}`}>
+                                {display.formattedValue}
+                              </p>
+                            </>
+                          );
+                        })()}
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">ROI</p>
