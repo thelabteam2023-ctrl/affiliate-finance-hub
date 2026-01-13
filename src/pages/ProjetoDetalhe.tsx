@@ -281,33 +281,61 @@ export default function ProjetoDetalhe() {
       const { start, end } = getDateRangeFromFilter();
       
       // Build query for apostas_unificada (all types combined)
-      let query = supabase
+      let apostasQuery = supabase
         .from("apostas_unificada")
-        .select("stake, lucro_prejuizo, status, resultado")
+        .select("stake, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao, status, resultado")
+        .eq("projeto_id", id);
+      
+      // Build query for cashback_manual
+      let cashbackQuery = supabase
+        .from("cashback_manual")
+        .select("valor, moeda_operacao, valor_brl_referencia")
         .eq("projeto_id", id);
       
       if (start) {
-        query = query.gte("data_aposta", start.toISOString());
+        apostasQuery = apostasQuery.gte("data_aposta", start.toISOString());
+        cashbackQuery = cashbackQuery.gte("data_credito", start.toISOString().split("T")[0]);
       }
       if (end) {
-        query = query.lte("data_aposta", end.toISOString());
+        apostasQuery = apostasQuery.lte("data_aposta", end.toISOString());
+        cashbackQuery = cashbackQuery.lte("data_credito", end.toISOString().split("T")[0]);
       }
       
-      const { data: todasApostas, error } = await query;
+      const [apostasResult, cashbackResult] = await Promise.all([
+        apostasQuery,
+        cashbackQuery
+      ]);
       
-      if (error) throw error;
+      if (apostasResult.error) throw apostasResult.error;
+      
+      const todasApostas = apostasResult.data || [];
+      const cashbacks = cashbackResult.data || [];
+      
+      // Calculate lucro from apostas (com conversão de moeda)
+      const lucroApostas = todasApostas.reduce((acc, a) => {
+        // Usar valor BRL de referência se disponível, senão usar lucro_prejuizo
+        const lucro = a.lucro_prejuizo_brl_referencia ?? Number(a.lucro_prejuizo || 0);
+        return acc + lucro;
+      }, 0);
+      
+      // Calculate lucro from cashback manual (é lucro!)
+      const lucroCashback = cashbacks.reduce((acc, cb) => {
+        // Usar valor BRL de referência se disponível
+        const valor = cb.valor_brl_referencia ?? Number(cb.valor || 0);
+        return acc + valor;
+      }, 0);
       
       // Calculate summary from all apostas
       const summary: ApostasResumo = {
-        total_apostas: (todasApostas || []).length,
-        apostas_pendentes: (todasApostas || []).filter(a => a.status === "PENDENTE").length,
-        greens: (todasApostas || []).filter(a => a.resultado === "GREEN").length,
-        reds: (todasApostas || []).filter(a => a.resultado === "RED").length,
-        voids: (todasApostas || []).filter(a => a.resultado === "VOID").length,
-        meio_greens: (todasApostas || []).filter(a => a.resultado === "MEIO_GREEN" || a.resultado === "HALF").length,
-        meio_reds: (todasApostas || []).filter(a => a.resultado === "MEIO_RED").length,
-        total_stake: (todasApostas || []).reduce((acc, a) => acc + Number(a.stake || 0), 0),
-        lucro_total: (todasApostas || []).reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0),
+        total_apostas: todasApostas.length,
+        apostas_pendentes: todasApostas.filter(a => a.status === "PENDENTE").length,
+        greens: todasApostas.filter(a => a.resultado === "GREEN").length,
+        reds: todasApostas.filter(a => a.resultado === "RED").length,
+        voids: todasApostas.filter(a => a.resultado === "VOID").length,
+        meio_greens: todasApostas.filter(a => a.resultado === "MEIO_GREEN" || a.resultado === "HALF").length,
+        meio_reds: todasApostas.filter(a => a.resultado === "MEIO_RED").length,
+        total_stake: todasApostas.reduce((acc, a) => acc + Number(a.stake || 0), 0),
+        lucro_total: lucroApostas + lucroCashback, // Inclui cashback como lucro
         roi_percentual: 0
       };
       
