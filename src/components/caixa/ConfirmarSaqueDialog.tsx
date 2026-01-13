@@ -125,10 +125,10 @@ export function ConfirmarSaqueDialog({
           observacoes: observacoes.trim() || undefined,
         });
         
-        // Verificar se precisa atualizar status baseado no saldo restante
+        // Verificar se precisa limpar workflow de saque baseado no saldo restante
         const { data: bookmaker } = await supabase
           .from("bookmakers")
-          .select("saldo_atual, saldo_usd, moeda")
+          .select("saldo_atual, saldo_usd, moeda, aguardando_saque_at")
           .eq("id", saque.origem_bookmaker_id)
           .single();
 
@@ -138,16 +138,12 @@ export function ConfirmarSaqueDialog({
             ? (bookmaker.saldo_usd || 0) 
             : (bookmaker.saldo_atual || 0);
           
-          // Atualizar status baseado no saldo restante
-          const novoStatus = saldoAtual > 0.5 ? "AGUARDANDO_SAQUE" : "ativo";
-          
-          await supabase
-            .from("bookmakers")
-            .update({ 
-              status: novoStatus,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", saque.origem_bookmaker_id);
+          // Se saldo zerou, limpar workflow e restaurar estado anterior
+          if (saldoAtual <= 0.5 && bookmaker.aguardando_saque_at) {
+            await supabase.rpc('confirmar_saque_concluido', {
+              p_bookmaker_id: saque.origem_bookmaker_id
+            });
+          }
         }
       }
 

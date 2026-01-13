@@ -710,12 +710,12 @@ export default function CentralOperacoes() {
   };
 
   // Marcar casa para saque (decisão do responsável)
+  // Usa RPC que preserva estado_conta antes de entrar no workflow
   const handleMarcarParaSaque = async (casa: BookmakerDesvinculado) => {
     try {
-      const { error } = await supabase
-        .from("bookmakers")
-        .update({ status: "AGUARDANDO_SAQUE" })
-        .eq("id", casa.id);
+      const { error } = await supabase.rpc('marcar_para_saque', {
+        p_bookmaker_id: casa.id
+      });
 
       if (error) throw error;
       
@@ -728,12 +728,13 @@ export default function CentralOperacoes() {
   };
 
   // Disponibilizar casa para novos projetos (decisão do responsável)
+  // Limpa workflow de saque e restaura estado anterior
   const handleDisponibilizarCasa = async (casa: BookmakerDesvinculado) => {
     try {
-      const { error } = await supabase
-        .from("bookmakers")
-        .update({ status: "ativo" })
-        .eq("id", casa.id);
+      // Se estava em workflow de saque, usar RPC para restaurar estado corretamente
+      const { error } = await supabase.rpc('confirmar_saque_concluido', {
+        p_bookmaker_id: casa.id
+      });
 
       if (error) throw error;
       
