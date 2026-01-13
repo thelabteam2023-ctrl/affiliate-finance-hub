@@ -3,6 +3,20 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, User } from "lucide-react";
 import { CashbackManualPorBookmaker } from "@/types/cashback-manual";
 
+// Mapa de símbolos de moeda
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  BRL: "R$",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  USDT: "$",
+};
+
+const formatWithCurrency = (value: number, moeda: string): string => {
+  const symbol = CURRENCY_SYMBOLS[moeda?.toUpperCase()] || moeda || "R$";
+  return `${symbol} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 interface CashbackManualPorCasaProps {
   data: CashbackManualPorBookmaker[];
   formatCurrency: (value: number) => string;
@@ -48,7 +62,7 @@ export function CashbackManualPorCasa({ data, formatCurrency }: CashbackManualPo
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-2xl font-bold text-emerald-500">
-                      {formatCurrency(item.totalRecebido)}
+                      {formatWithCurrency(item.totalRecebido, item.bookmaker_moeda)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {item.totalLancamentos} lançamento{item.totalLancamentos !== 1 ? 's' : ''}
