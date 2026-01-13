@@ -7583,36 +7583,6 @@ export type Database = {
           volume_total: number | null
           workspace_id: string | null
         }
-        Insert: {
-          apostas_ganhas?: never
-          cpf?: string | null
-          lucro_total_gerado?: never
-          nome?: string | null
-          operador_id?: string | null
-          projetos_ativos?: never
-          status?: string | null
-          tipo_contrato?: string | null
-          total_apostas?: never
-          total_pago?: never
-          total_pendente?: never
-          volume_total?: never
-          workspace_id?: string | null
-        }
-        Update: {
-          apostas_ganhas?: never
-          cpf?: string | null
-          lucro_total_gerado?: never
-          nome?: string | null
-          operador_id?: string | null
-          projetos_ativos?: never
-          status?: string | null
-          tipo_contrato?: string | null
-          total_apostas?: never
-          total_pago?: never
-          total_pendente?: never
-          volume_total?: never
-          workspace_id?: string | null
-        }
         Relationships: [
           {
             foreignKeyName: "operadores_workspace_id_fkey"
