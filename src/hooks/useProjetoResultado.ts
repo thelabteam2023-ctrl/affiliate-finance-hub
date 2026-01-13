@@ -104,8 +104,8 @@ export function useProjetoResultado({
       // 6. Fetch lucro de giros grátis (sempre >= 0)
       const lucroGirosGratis = await fetchLucroGirosGratis(projetoId, dataInicio, dataFim);
       
-      // 7. Fetch lucro de cashback (sempre >= 0)
-      const lucroCashback = await fetchLucroCashback(projetoId, dataInicio, dataFim);
+      // 7. Fetch lucro de cashback (sempre >= 0) - inclui automático + manual
+      const lucroCashback = await fetchLucroCashback(projetoId, dataInicio, dataFim, moedaConsolidacao, cotacaoTrabalho);
       
       // 8. Calcular lucro líquido (fonte única de verdade)
       // net_profit = gross_profit_from_bets + lucro_giros_gratis + lucro_cashback - operational_losses_confirmed + ajustes_conciliacao
@@ -357,34 +357,65 @@ async function fetchLucroGirosGratis(
 
 /**
  * Busca o lucro total de cashback recebido do projeto.
+ * Inclui AMBOS: cashback automático (cashback_registros) + cashback manual (cashback_manual)
  * Cashback recebido é sempre positivo ou zero.
  */
 async function fetchLucroCashback(
   projetoId: string,
   dataInicio: Date | null,
-  dataFim: Date | null
+  dataFim: Date | null,
+  moedaConsolidacao: string,
+  cotacao: number
 ): Promise<number> {
-  let query = supabase
+  // 1. Buscar cashback de regras automáticas (cashback_registros)
+  let queryRegistros = supabase
     .from('cashback_registros')
     .select('valor_recebido')
     .eq('projeto_id', projetoId)
-    .eq('status', 'recebido'); // Apenas cashback recebido
+    .eq('status', 'recebido');
 
-  if (dataInicio) query = query.gte('data_credito', dataInicio.toISOString());
-  if (dataFim) query = query.lte('data_credito', dataFim.toISOString());
+  if (dataInicio) queryRegistros = queryRegistros.gte('data_credito', dataInicio.toISOString());
+  if (dataFim) queryRegistros = queryRegistros.lte('data_credito', dataFim.toISOString());
 
-  const { data, error } = await query;
+  // 2. Buscar cashback manual
+  let queryManual = supabase
+    .from('cashback_manual')
+    .select('valor, moeda_operacao, valor_brl_referencia')
+    .eq('projeto_id', projetoId);
 
-  if (error) {
-    console.error('Erro ao buscar lucro de cashback:', error);
-    return 0;
+  if (dataInicio) queryManual = queryManual.gte('data_credito', dataInicio.toISOString().split('T')[0]);
+  if (dataFim) queryManual = queryManual.lte('data_credito', dataFim.toISOString().split('T')[0]);
+
+  const [registrosResult, manualResult] = await Promise.all([queryRegistros, queryManual]);
+
+  if (registrosResult.error) {
+    console.error('Erro ao buscar cashback_registros:', registrosResult.error);
+  }
+  if (manualResult.error) {
+    console.error('Erro ao buscar cashback_manual:', manualResult.error);
   }
 
-  // Somar todos os valores recebidos (sempre >= 0)
-  return data?.reduce((acc: number, c: any) => {
+  // Somar cashback automático
+  const totalRegistros = registrosResult.data?.reduce((acc: number, c: any) => {
     const valor = Number(c.valor_recebido || 0);
     return acc + Math.max(0, valor);
   }, 0) || 0;
+
+  // Somar cashback manual (com conversão de moeda)
+  const totalManual = manualResult.data?.reduce((acc: number, cb: any) => {
+    const valor = Number(cb.valor || 0);
+    const moeda = cb.moeda_operacao || 'BRL';
+    
+    // Se moeda de consolidação é BRL e temos valor_brl_referencia, usar ele
+    if (moedaConsolidacao === 'BRL' && cb.valor_brl_referencia) {
+      return acc + Math.max(0, Number(cb.valor_brl_referencia));
+    }
+    
+    // Converter para moeda de consolidação
+    return acc + Math.max(0, convertToConsolidation(valor, moeda, moedaConsolidacao, cotacao));
+  }, 0) || 0;
+
+  return totalRegistros + totalManual;
 }
 
 async function fetchCapitalData(
