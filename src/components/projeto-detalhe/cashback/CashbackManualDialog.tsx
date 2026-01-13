@@ -22,7 +22,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, DollarSign, CalendarIcon, Info } from "lucide-react";
-import BookmakerVinculoProjetoSelect from "@/components/bookmakers/BookmakerVinculoProjetoSelect";
+import BookmakerVinculoProjetoSelect, { BookmakerVinculoData } from "@/components/bookmakers/BookmakerVinculoProjetoSelect";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -30,6 +30,24 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { CashbackManualFormData } from "@/types/cashback-manual";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Mapa de símbolos de moeda
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  BRL: "R$",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  ARS: "$",
+  MXN: "$",
+  CLP: "$",
+  COP: "$",
+  PEN: "S/",
+  UYU: "$U",
+};
+
+const getCurrencySymbol = (currency: string): string => {
+  return CURRENCY_SYMBOLS[currency?.toUpperCase()] || currency || "R$";
+};
 
 const formSchema = z.object({
   bookmaker_id: z.string().min(1, "Selecione uma casa vinculada ao projeto"),
@@ -52,6 +70,7 @@ export function CashbackManualDialog({
   onSave,
 }: CashbackManualDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedBookmaker, setSelectedBookmaker] = useState<BookmakerVinculoData | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -71,6 +90,7 @@ export function CashbackManualDialog({
         data_credito: new Date(),
         observacoes: "",
       });
+      setSelectedBookmaker(null);
     }
   }, [open, form]);
 
@@ -94,6 +114,10 @@ export function CashbackManualDialog({
       setIsSubmitting(false);
     }
   };
+
+  // Moeda da casa selecionada
+  const moedaSelecionada = selectedBookmaker?.moeda || "BRL";
+  const simboloMoeda = getCurrencySymbol(moedaSelecionada);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -130,6 +154,7 @@ export function CashbackManualDialog({
                       projetoId={projetoId}
                       value={field.value}
                       onValueChange={field.onChange}
+                      onBookmakerData={setSelectedBookmaker}
                     />
                   </FormControl>
                   <FormDescription>
@@ -140,24 +165,31 @@ export function CashbackManualDialog({
               )}
             />
 
-            {/* Valor */}
+            {/* Valor - Com moeda dinâmica */}
             <FormField
               control={form.control}
               name="valor"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Valor do Cashback *</FormLabel>
+                  <FormLabel className="flex items-center gap-2">
+                    Valor do Cashback *
+                    {selectedBookmaker && (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        ({moedaSelecionada})
+                      </span>
+                    )}
+                  </FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                        R$
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+                        {simboloMoeda}
                       </span>
                       <Input
                         type="number"
                         step="0.01"
                         min="0.01"
                         placeholder="0,00"
-                        className="pl-10"
+                        className="pl-12"
                         value={field.value || ""}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                       />
@@ -165,6 +197,11 @@ export function CashbackManualDialog({
                   </FormControl>
                   <FormDescription>
                     Valor já creditado na sua conta da casa
+                    {selectedBookmaker && moedaSelecionada !== "BRL" && (
+                      <span className="text-amber-500 ml-1">
+                        (em {moedaSelecionada})
+                      </span>
+                    )}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
