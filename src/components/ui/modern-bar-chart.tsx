@@ -71,8 +71,11 @@ const AnimatedLabel = (props: any) => {
   )
     return null;
 
-  // Position label above for positive, below for negative values
-  const labelY = isNegative ? y + height + 16 : y - 8;
+  // Position label OUTSIDE the bar:
+  // - Positive values: label above the bar top (y - offset)
+  // - Negative values: label below the bar bottom (y + height + offset)
+  const labelOffset = 12;
+  const labelY = isNegative ? y + height + labelOffset : y - labelOffset;
 
   return (
     <text
@@ -80,13 +83,14 @@ const AnimatedLabel = (props: any) => {
       y={labelY}
       fill={fill}
       textAnchor="middle"
-      dominantBaseline="middle"
+      dominantBaseline={isNegative ? "hanging" : "baseline"}
       className="text-xs font-semibold"
       style={{
         opacity,
         transform: `translateY(${translateY}px)`,
         transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         fontSize: "11px",
+        pointerEvents: "none",
       }}
     >
       {displayValue}
@@ -205,11 +209,11 @@ export function ModernBarChart({
   }
 
   return (
-    <div ref={chartRef} className="w-full overflow-hidden" style={{ height: height + (showLegend ? 40 : 0) }}>
+    <div ref={chartRef} className="w-full overflow-visible" style={{ height: height + (showLegend ? 40 : 0) }}>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart 
           data={data} 
-          margin={{ top: 25, right: 10, left: 0, bottom: 5 }}
+          margin={{ top: 30, right: 15, left: 5, bottom: 5 }}
           barCategoryGap="2%"
           barGap={1}
         >
@@ -274,9 +278,12 @@ export function ModernBarChart({
               />
             }
             cursor={{ fill: "rgba(255, 255, 255, 0.03)", radius: 4 }}
-            wrapperStyle={{ zIndex: 1000 }}
-            position={{ x: 0, y: -20 }}
-            offset={20}
+            wrapperStyle={{ 
+              zIndex: 9999, 
+              visibility: 'visible',
+              pointerEvents: 'none',
+            }}
+            allowEscapeViewBox={{ x: true, y: true }}
           />
           
           {bars.map((bar, barIndex) => (
