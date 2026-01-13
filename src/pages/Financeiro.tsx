@@ -154,6 +154,8 @@ interface BookmakerDetalhado {
 interface ContaDetalhada {
   saldo: number;
   banco: string;
+  parceiro_nome: string;
+  moeda: string;
 }
 
 interface WalletDetalhada {
@@ -360,7 +362,7 @@ export default function Financeiro() {
           .eq("ativo", true),
         supabase.from("v_saldo_parceiro_contas").select("saldo"),
         supabase.from("v_saldo_parceiro_wallets").select("saldo_usd"),
-        supabase.from("v_saldo_parceiro_contas").select("saldo, banco"),
+        supabase.from("v_saldo_parceiro_contas").select("saldo, banco, parceiro_nome, moeda"),
         supabase.from("v_saldo_parceiro_wallets").select("saldo_usd, exchange"),
         supabase.from("participacao_ciclos").select("valor_participacao, data_pagamento").eq("status", "PAGO"),
         // Apenas para histórico mensal (lucro_prejuizo + data_aposta)
@@ -566,21 +568,18 @@ export default function Financeiro() {
       }));
   }, [bookmakersDetalhados, cotacaoUSD]);
 
-  // Contas agrupadas por banco
+  // Contas detalhadas por parceiro (não agrupadas por banco)
   const contasPorBanco = useMemo((): ContaPorBanco[] => {
-    const agrupado: Record<string, { bancoNome: string; saldo: number; qtdContas: number }> = {};
-    
-    contasDetalhadas.forEach((c: any) => {
-      const bancoNome = c.banco || "Banco não informado";
-      
-      if (!agrupado[bancoNome]) {
-        agrupado[bancoNome] = { bancoNome, saldo: 0, qtdContas: 0 };
-      }
-      agrupado[bancoNome].saldo += c.saldo || 0;
-      agrupado[bancoNome].qtdContas += 1;
-    });
-    
-    return Object.values(agrupado);
+    return contasDetalhadas
+      .filter((c: ContaDetalhada) => (c.saldo || 0) !== 0)
+      .map((c: ContaDetalhada) => ({
+        bancoNome: c.banco || "Banco não informado",
+        parceiroNome: c.parceiro_nome || "Parceiro não informado",
+        saldo: c.saldo || 0,
+        qtdContas: 1,
+        moeda: c.moeda || "BRL",
+      }))
+      .sort((a, b) => b.saldo - a.saldo);
   }, [contasDetalhadas]);
 
   // Wallets agrupadas por exchange
