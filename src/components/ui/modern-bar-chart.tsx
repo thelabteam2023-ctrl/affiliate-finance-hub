@@ -43,11 +43,13 @@ interface ModernBarChartProps {
   formatLabel?: (value: number, ctx: { dataKey: string; payload: any; currency?: CurrencyType }) => string; // Custom formatter for labels
   /** Hide Y axis tick values (useful for proportional scale charts) */
   hideYAxisTicks?: boolean;
+  /** Enable dynamic coloring based on value sign (green for positive, red for negative) */
+  dynamicColors?: boolean;
 }
 
 // Custom animated label component
 const AnimatedLabel = (props: any) => {
-  const { x, y, width, value, fill, index, formattedValue } = props;
+  const { x, y, width, height, value, fill, index, formattedValue, isNegative } = props;
   const [opacity, setOpacity] = useState(0);
   const [translateY, setTranslateY] = useState(10);
 
@@ -69,10 +71,13 @@ const AnimatedLabel = (props: any) => {
   )
     return null;
 
+  // Position label above for positive, below for negative values
+  const labelY = isNegative ? y + height + 16 : y - 8;
+
   return (
     <text
       x={x + width / 2}
-      y={y - 8}
+      y={labelY}
       fill={fill}
       textAnchor="middle"
       dominantBaseline="middle"
@@ -180,6 +185,7 @@ export function ModernBarChart({
   labelDataKey,
   formatLabel,
   hideYAxisTicks = false,
+  dynamicColors = true,
 }: ModernBarChartProps) {
   const [isAnimated, setIsAnimated] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -221,6 +227,16 @@ export function ModernBarChart({
                 <stop offset="100%" stopColor={bar.gradientEnd} stopOpacity={0.85} />
               </linearGradient>
             ))}
+            {/* Gradient for negative values */}
+            <linearGradient id="barGradient-negative" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#EF4444" stopOpacity={1} />
+              <stop offset="100%" stopColor="#DC2626" stopOpacity={0.85} />
+            </linearGradient>
+            {/* Gradient for neutral/zero values */}
+            <linearGradient id="barGradient-neutral" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#6B7280" stopOpacity={1} />
+              <stop offset="100%" stopColor="#4B5563" stopOpacity={0.85} />
+            </linearGradient>
           </defs>
           
           <CartesianGrid 
@@ -268,21 +284,35 @@ export function ModernBarChart({
               key={bar.dataKey}
               dataKey={bar.dataKey}
               fill={`url(#barGradient-${bar.dataKey})`}
-              radius={[3, 3, 0, 0]}
+              radius={[3, 3, 3, 3]}
               barSize={barSize}
               animationBegin={barIndex * 100}
               animationDuration={800}
               animationEasing="ease-out"
             >
-              {data.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`}
-                  style={{
-                    filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15))",
-                    transition: "all 0.3s ease",
-                  }}
-                />
-              ))}
+              {data.map((entry, index) => {
+                const value = entry[bar.dataKey];
+                let fillUrl = `url(#barGradient-${bar.dataKey})`;
+                
+                if (dynamicColors && typeof value === 'number') {
+                  if (value < 0) {
+                    fillUrl = 'url(#barGradient-negative)';
+                  } else if (value === 0) {
+                    fillUrl = 'url(#barGradient-neutral)';
+                  }
+                }
+                
+                return (
+                  <Cell 
+                    key={`cell-${index}`}
+                    fill={fillUrl}
+                    style={{
+                      filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15))",
+                      transition: "all 0.3s ease",
+                    }}
+                  />
+                );
+              })}
               {showLabels && (
                 <LabelList
                   dataKey={bar.labelValueKey ?? labelDataKey ?? bar.dataKey}
@@ -298,19 +328,23 @@ export function ModernBarChart({
                     const formattedValue =
                       formatLabel && rawValue !== undefined ? formatLabel(rawValue, ctx) : rawValue;
 
-                    // Color labels based on sign of the displayed label value (keeps behavior consistent)
+                    // Check if value is negative for label positioning
+                    const isNegative = typeof rawValue === 'number' && rawValue < 0;
+
+                    // Color labels based on sign of the displayed label value
                     const signValue = rawValue;
 
                     return (
                       <AnimatedLabel
                         {...props}
+                        isNegative={isNegative}
                         fill={
                           typeof signValue === "number"
                             ? signValue > 0
                               ? "#22C55E"
                               : signValue < 0
                                 ? "#EF4444"
-                                : bar.gradientStart
+                                : "#6B7280"
                             : bar.gradientStart
                         }
                         formattedValue={formattedValue}

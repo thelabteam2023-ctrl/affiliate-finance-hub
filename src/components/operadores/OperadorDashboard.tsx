@@ -359,9 +359,10 @@ export function OperadorDashboard() {
   };
 
   // Dados para gráfico comparativo usando ModernBarChart
+  // Separar lucros (positivos) e prejuízos (negativos) para representação correta
   const chartData = operadoresFiltrados.slice(0, 10).map((op) => ({
     nome: op.nome.split(" ")[0],
-    lucro: op.lucro_total_gerado,
+    valor: op.lucro_total_gerado,
     volume: op.volume_total,
   }));
 
@@ -618,12 +619,12 @@ export function OperadorDashboard() {
         </CardContent>
       </Card>
 
-      {/* Gráfico Comparativo */}
+      {/* Gráfico Comparativo - Lucro x Prejuízo */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
-            Comparativo de Lucro por Operador
+            Resultado Financeiro por Operador
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-hidden">
@@ -633,26 +634,34 @@ export function OperadorDashboard() {
               categoryKey="nome"
               bars={[
                 {
-                  dataKey: "lucro",
-                  label: "Lucro",
+                  dataKey: "valor",
+                  label: "Resultado",
                   gradientStart: "#22C55E",
                   gradientEnd: "#16A34A",
                 },
               ]}
               height={280}
-              showLabels={false}
+              showLabels={true}
               showLegend={false}
-              formatValue={(value) => formatCurrency(value)}
-              customTooltipContent={(payload, label) => (
-                <div>
-                  <p className="font-medium text-sm mb-2">{label}</p>
-                  <div className="space-y-1">
-                    <p className="text-emerald-500 font-semibold">
-                      Lucro: {formatCurrency(payload[0]?.value || 0)}
-                    </p>
+              formatValue={(value) => formatCurrency(Math.abs(value))}
+              formatLabel={(value) => {
+                if (value === 0) return "";
+                return formatCurrency(Math.abs(value));
+              }}
+              customTooltipContent={(payload, label) => {
+                const value = payload[0]?.value || 0;
+                const isLucro = value >= 0;
+                return (
+                  <div>
+                    <p className="font-medium text-sm mb-2">{label}</p>
+                    <div className="space-y-1">
+                      <p className={isLucro ? "text-emerald-500 font-semibold" : "text-red-500 font-semibold"}>
+                        {isLucro ? "Lucro" : "Prejuízo"}: {formatCurrency(Math.abs(value))}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              }}
             />
           </div>
         </CardContent>
