@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, DollarSign, CalendarIcon, Info } from "lucide-react";
+import { Loader2, DollarSign, CalendarIcon, Info, ArrowRight, Wallet } from "lucide-react";
 import BookmakerVinculoProjetoSelect, { BookmakerVinculoData } from "@/components/bookmakers/BookmakerVinculoProjetoSelect";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -119,6 +119,16 @@ export function CashbackManualDialog({
   const moedaSelecionada = selectedBookmaker?.moeda || "BRL";
   const simboloMoeda = getCurrencySymbol(moedaSelecionada);
 
+  // Saldo atual e novo saldo após cashback
+  const valorCashback = form.watch("valor") || 0;
+  const saldoAtual = selectedBookmaker?.saldo_atual ?? 0;
+  const novoSaldo = saldoAtual + valorCashback;
+
+  // Formatar moeda
+  const formatCurrency = (value: number) => {
+    return `${simboloMoeda} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -164,6 +174,37 @@ export function CashbackManualDialog({
                 </FormItem>
               )}
             />
+
+            {/* Preview de Saldo - Mostra transição */}
+            {selectedBookmaker && (
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Wallet className="h-4 w-4" />
+                  Impacto no Saldo
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  {/* Saldo Atual */}
+                  <div className="flex-1 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Saldo Atual</p>
+                    <p className="text-lg font-semibold">{formatCurrency(saldoAtual)}</p>
+                  </div>
+                  
+                  {/* Seta + Valor do Cashback */}
+                  <div className="flex flex-col items-center px-2">
+                    <span className="text-xs text-emerald-500 font-medium mb-1">
+                      +{formatCurrency(valorCashback)}
+                    </span>
+                    <ArrowRight className="h-5 w-5 text-emerald-500" />
+                  </div>
+                  
+                  {/* Novo Saldo */}
+                  <div className="flex-1 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Novo Saldo</p>
+                    <p className="text-lg font-bold text-emerald-500">{formatCurrency(novoSaldo)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Valor - Com moeda dinâmica */}
             <FormField
