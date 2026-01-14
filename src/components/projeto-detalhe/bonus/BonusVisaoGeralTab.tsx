@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, bonusQueryKeys } from "@/hooks/useProjectBonuses";
 import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
-import { Building2, Coins, TrendingUp, AlertTriangle, Timer, Receipt } from "lucide-react";
+import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt } from "lucide-react";
 import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay } from "date-fns";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
 import { BonusContaminationAlert } from "./BonusContaminationAlert";
@@ -71,26 +71,43 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const expiring7Days = getExpiringSoon(7);
   const expiring15Days = getExpiringSoon(15);
 
-  // Fetch apostas com bônus (juice/custo operacional)
+  // Fetch apostas com bônus (juice/custo operacional) - inclui apostas com bonus_id OU estratégia EXTRACAO_BONUS
   const { data: bonusBetsData = [], isLoading: betsLoading } = useQuery({
     queryKey: ["bonus-bets-juice", projetoId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()],
     queryFn: async () => {
       const startDate = dateRange?.start?.toISOString() || subDays(new Date(), 365).toISOString();
       
-      let query = supabase
+      // Query para apostas vinculadas a bônus (via bonus_id)
+      let queryBonusId = supabase
         .from("apostas_unificada")
-        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, bookmaker_id, is_bonus_bet, bonus_id, stake_bonus")
+        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, bookmaker_id, is_bonus_bet, bonus_id, stake_bonus, estrategia")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDate.split('T')[0])
-        .not("bonus_id", "is", null); // Apenas apostas vinculadas a um bônus
+        .not("bonus_id", "is", null);
+
+      // Query para apostas de estratégia EXTRACAO_BONUS (mesmo sem bonus_id)
+      let queryEstrategia = supabase
+        .from("apostas_unificada")
+        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, bookmaker_id, is_bonus_bet, bonus_id, stake_bonus, estrategia")
+        .eq("projeto_id", projetoId)
+        .gte("data_aposta", startDate.split('T')[0])
+        .eq("estrategia", "EXTRACAO_BONUS");
 
       if (dateRange?.end) {
-        query = query.lte("data_aposta", dateRange.end.toISOString());
+        queryBonusId = queryBonusId.lte("data_aposta", dateRange.end.toISOString());
+        queryEstrategia = queryEstrategia.lte("data_aposta", dateRange.end.toISOString());
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
+      const [resBonusId, resEstrategia] = await Promise.all([queryBonusId, queryEstrategia]);
+      
+      if (resBonusId.error) throw resBonusId.error;
+      if (resEstrategia.error) throw resEstrategia.error;
+
+      // Combina resultados removendo duplicados por id
+      const allBets = [...(resBonusId.data || []), ...(resEstrategia.data || [])];
+      const uniqueBets = Array.from(new Map(allBets.map(b => [b.id, b])).values());
+      
+      return uniqueBets;
     },
     enabled: !!projetoId,
     staleTime: 1000 * 30,
@@ -186,6 +203,25 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
   const totalSaldoOperavel = totalSaldoRealConsolidated + activeBonusTotalConsolidated;
 
+  // Performance de Bônus = Total de bônus creditados + Juice das operações
+  const bonusPerformance = useMemo(() => {
+    // Total de bônus creditados (histórico)
+    const totalBonusCreditado = bonuses
+      .filter(b => b.status === "credited" || b.status === "finalized")
+      .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
+    
+    // Total de juice (P&L das apostas com bônus)
+    const totalJuice = bonusBetsData.reduce((acc, bet) => {
+      const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
+      if (!isBonusBet) return acc;
+      return acc + (bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0);
+    }, 0);
+    
+    const total = totalBonusCreditado + totalJuice;
+    
+    return { totalBonusCreditado, totalJuice, total };
+  }, [bonuses, bonusBetsData, convertToConsolidation]);
+
   return (
     <div className="space-y-6">
 
@@ -198,7 +234,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       )}
 
       {/* KPIs with hierarchy - Saldo Operável is primary */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <TooltipProvider>
           <Card className={`border-primary/30 bg-primary/5 lg:col-span-1 ${isContaminated ? 'ring-1 ring-amber-500/30' : ''}`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -242,6 +278,36 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             <CardContent>
               <div className="text-2xl font-bold">{formatCurrency(activeBonusTotalConsolidated)}</div>
               <p className="text-xs text-muted-foreground">{summary.count_credited} bônus creditados</p>
+            </CardContent>
+          </Card>
+
+          {/* Nova KPI: Performance de Bônus */}
+          <Card className={bonusPerformance.total >= 0 ? "border-primary/30 bg-primary/5" : "border-destructive/30 bg-destructive/5"}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+                Performance de Bônus
+                <TooltipUI>
+                  <TooltipTrigger asChild>
+                    <Receipt className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[220px]">
+                    <p className="text-xs">Bônus creditados + Juice (resultado das operações com bônus)</p>
+                  </TooltipContent>
+                </TooltipUI>
+              </CardTitle>
+              {bonusPerformance.total >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-primary" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-destructive" />
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${bonusPerformance.total >= 0 ? "text-primary" : "text-destructive"}`}>
+                {formatCurrency(bonusPerformance.total)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Bônus: {formatCurrency(bonusPerformance.totalBonusCreditado)} | Juice: {formatCurrency(bonusPerformance.totalJuice)}
+              </p>
             </CardContent>
           </Card>
 

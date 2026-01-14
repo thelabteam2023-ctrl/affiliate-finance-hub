@@ -25,6 +25,7 @@ interface BonusBetData {
   pl_consolidado: number | null;
   bonus_id: string | null;
   stake_bonus?: number | null;
+  estrategia?: string | null;
 }
 
 interface BonusResultadoLiquidoChartProps {
@@ -70,9 +71,11 @@ export function BonusResultadoLiquidoChart({
       });
 
     // Agrupa juice (P&L das apostas com bônus) por data
+    // Inclui apostas com bonus_id OU estratégia EXTRACAO_BONUS
     const juiceByDate: Record<string, number> = {};
     bonusBets.forEach(bet => {
-      if (!bet.bonus_id) return;
+      const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
+      if (!isBonusBet) return;
       const date = bet.data_aposta.split("T")[0];
       const pl = bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0;
       juiceByDate[date] = (juiceByDate[date] || 0) + pl;
