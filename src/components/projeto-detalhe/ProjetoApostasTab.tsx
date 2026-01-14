@@ -43,8 +43,8 @@ import {
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { ESTRATEGIAS_LIST, inferEstrategiaLegado, type ApostaEstrategia } from "@/lib/apostaConstants";
 // VisaoGeralCharts removido - agora está em ProjetoDashboardTab
-import { OperationalFiltersBar } from "./OperationalFiltersBar";
-import { useOperationalFilters } from "@/contexts/OperationalFiltersContext";
+import { TabFiltersBar } from "./TabFiltersBar";
+import { useTabFilters } from "@/hooks/useTabFilters";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { parsePernaFromJson } from "@/types/apostasUnificada";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
@@ -290,19 +290,28 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   // Hook global de logos de bookmakers não mais necessário aqui - movido para ProjetoDashboardTab
 
-  // Consumir filtros do contexto global
-  const globalFilters = useOperationalFilters();
+  /**
+   * FILTROS INDEPENDENTES DA ABA APOSTAS
+   * Esta aba possui seus próprios filtros, isolados das demais abas.
+   * Filtros aplicados aqui NÃO afetam Visão Geral nem outras abas.
+   */
+  const tabFilters = useTabFilters({
+    tabId: "apostas",
+    projetoId,
+    defaultPeriod: "30dias",
+    persist: true,
+  });
 
   // Hook para pegar bookmakers com bônus ativo
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
   const bookmakersComBonusAtivo = useMemo(() => getBookmakersWithActiveBonus(), [bonuses]);
 
-  // Usar dateRange do contexto global
-  const dateRange = globalFilters.dateRange;
+  // Usar dateRange do filtro local da aba
+  const dateRange = tabFilters.dateRange;
 
   useEffect(() => {
     fetchAllApostas();
-  }, [projetoId, globalFilters.period, globalFilters.customDateRange, refreshTrigger]);
+  }, [projetoId, tabFilters.period, tabFilters.customDateRange, refreshTrigger]);
 
   const fetchAllApostas = async () => {
     try {
@@ -599,14 +608,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     }
   }, [apostas, onDataChange, projetoId, invalidateSaldos]);
 
-  // Filtrar e unificar apostas com contexto - usando filtros do contexto global
+  // Filtrar e unificar apostas com contexto - usando filtros LOCAIS da aba
   const apostasUnificadasBase: ApostaUnificada[] = useMemo(() => {
     const result: ApostaUnificada[] = [];
     
-    // Filtros do contexto global
-    const selectedBookmakerIds = globalFilters.bookmakerIds;
-    const selectedParceiroIds = globalFilters.parceiroIds;
-    const selectedEstrategias = globalFilters.estrategias;
+    // Filtros da aba (isolados de outras abas)
+    const selectedBookmakerIds = tabFilters.bookmakerIds;
+    const selectedParceiroIds = tabFilters.parceiroIds;
+    const selectedEstrategias = tabFilters.estrategias;
     
     // Apostas simples
     apostas.forEach(aposta => {
@@ -701,7 +710,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     
     // Ordenar por data
     return result.sort((a, b) => parseLocalDateTime(b.data_aposta).getTime() - parseLocalDateTime(a.data_aposta).getTime());
-  }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo, globalFilters.bookmakerIds, globalFilters.parceiroIds, globalFilters.estrategias, statusFilter, resultadoFilter, contextoFilter, tipoFilter]);
+  }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.estrategias, statusFilter, resultadoFilter, contextoFilter, tipoFilter]);
 
   // Helper para verificar se um item está pendente
   const isItemPendente = (item: ApostaUnificada): boolean => {
@@ -968,7 +977,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   abaOrigem="Apostas"
                   filename={`apostas-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
                   filtrosAplicados={{
-                    periodo: globalFilters.period,
+                    periodo: tabFilters.period,
                     dataInicio: dateRange?.start.toISOString(),
                     dataFim: dateRange?.end.toISOString(),
                   }}
@@ -984,9 +993,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
-          {/* Filtros Transversais (Período, Casa, Parceiro, Estratégia) */}
-          <OperationalFiltersBar
+          {/* Filtros LOCAIS da aba Apostas (isolados de outras abas) */}
+          <TabFiltersBar
             projetoId={projetoId}
+            filters={tabFilters}
             showEstrategiaFilter={true}
           />
         </CardContent>
@@ -1002,7 +1012,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 {apostasSubTab === "abertas" ? "Nenhuma aposta aberta" : "Nenhuma aposta no histórico"}
               </h3>
               <p className="text-muted-foreground">
-                {globalFilters.activeFiltersCount > 0 || resultadoFilter !== "all" || contextoFilter !== "all"
+                {tabFilters.activeFiltersCount > 0 || resultadoFilter !== "all" || contextoFilter !== "all"
                   ? "Tente ajustar os filtros"
                   : apostasSubTab === "abertas" 
                     ? "Registre uma nova aposta" 

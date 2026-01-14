@@ -24,9 +24,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
-import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
-import { useOperationalFiltersOptional } from "@/contexts/OperationalFiltersContext";
 
 interface ProjetoDashboardTabProps {
   projetoId: string;
@@ -79,25 +77,28 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   // Hook global de logos
   const { logoMap: catalogLogoMap, getLogoUrl: getCatalogLogoUrl } = useBookmakerLogoMap();
   
-  // Consumir filtros do contexto global (opcional - pode estar fora do provider)
-  const globalFilters = useOperationalFiltersOptional();
-  const dateRange = globalFilters?.dateRange;
+  /**
+   * VISÃO GERAL = CONSOLIDADO GLOBAL
+   * Esta aba SEMPRE exibe dados globais do projeto, sem filtros herdados de outras abas.
+   * Não utiliza filtros de período/bookmaker/parceiro - mostra TUDO.
+   */
   
-  // Filtros para Performance por Casa
+  // Filtros para Performance por Casa (locais apenas para visualização)
   const [bookmakerFilterType, setBookmakerFilterType] = useState<BookmakerFilter>("all");
   const [selectedBookmakerId, setSelectedBookmakerId] = useState<string>("");
   const [selectedParceiro, setSelectedParceiro] = useState<string>("");
 
   useEffect(() => {
     fetchAllApostas();
-  }, [projetoId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()]);
+  }, [projetoId]);
 
   const fetchAllApostas = async () => {
     try {
       setLoading(true);
       
-      // Usar apostas_unificada como fonte única
-      let query = supabase
+      // VISÃO GERAL: Busca TODAS as apostas sem filtro de período
+      // Isso garante que a visão consolidada sempre mostre o projeto inteiro
+      const query = supabase
         .from("apostas_unificada")
         .select(`
           id, 
@@ -115,13 +116,6 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         .eq("projeto_id", projetoId)
         .is("cancelled_at", null)
         .order("data_aposta", { ascending: true });
-
-      if (dateRange?.start) {
-        query = query.gte("data_aposta", dateRange.start.toISOString());
-      }
-      if (dateRange?.end) {
-        query = query.lte("data_aposta", dateRange.end.toISOString());
-      }
 
       const { data, error } = await query;
 
@@ -177,8 +171,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     }
   };
 
-  // Determina se é período de 1 dia
-  const isSingleDayPeriod = globalFilters?.period === "1dia";
+  // Visão Geral não usa período - sempre mostra evolução completa
+  const isSingleDayPeriod = false;
 
   // Aggregate by bookmaker
   const bookmakerMetrics = useMemo(() => {
@@ -341,7 +335,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       parceiro_nome: a.parceiro_nome,
       bookmaker_id: a.bookmaker_id,
       pernas: a.pernas,
-      forma_registro: a.forma_registro,
+      forma_registro: a.forma_registro || undefined,
     }));
   }, [apostasUnificadas]);
 
@@ -366,12 +360,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   if (apostasUnificadas.length === 0) {
     return (
       <div className="space-y-4">
-        {/* Barra de Filtros */}
-        <OperationalFiltersBar
-          projetoId={projetoId}
-          showEstrategiaFilter={true}
-        />
-        
+        {/* Visão Geral - Sempre consolidada, sem filtros */}
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -389,11 +378,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Barra de Filtros Global */}
-      <OperationalFiltersBar
-        projetoId={projetoId}
-        showEstrategiaFilter={true}
-      />
+      {/* Visão Geral - Consolidado Global (sem filtros, mostra o projeto inteiro) */}
 
       {/* KPIs Consolidados */}
       <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4">
