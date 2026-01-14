@@ -3,7 +3,8 @@ import { Trash2, Loader2, Image as ImageIcon } from "lucide-react";
 import { FluxoCard } from "./types";
 import { cn } from "@/lib/utils";
 import { FluxoCardDetailDialog } from "./FluxoCardDetailDialog";
-import { useImagePaste } from "@/hooks/useImagePaste";
+import { ContentRenderer } from "./ContentRenderer";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import { useAuth } from "@/hooks/useAuth";
 
 // Cores suaves estilo post-it para dark mode
@@ -16,7 +17,6 @@ const CARD_COLORS = [
 ];
 
 function getCardColor(id: string): string {
-  // Usar hash do ID para cor consistente
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);
@@ -49,36 +49,46 @@ export function FluxoCardComponent({
   const [localContent, setLocalContent] = useState(card.conteudo);
   const [isEditing, setIsEditing] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const cardColor = getCardColor(card.id);
 
-  // Hook para paste de imagens
-  const { handlePaste, handleDrop, handleDragOver } = useImagePaste({
+  // Debounced save
+  const debouncedSave = useCallback(
+    (content: string) => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = setTimeout(() => {
+        if (content !== card.conteudo) {
+          onUpdate(card.id, content);
+        }
+      }, 500);
+    },
+    [card.id, card.conteudo, onUpdate]
+  );
+
+  // Hook de upload de imagem
+  const { isUploading, handlePaste, handleDrop, handleDragOver } = useImageUpload({
     userId: user?.id || "",
     onImageUploaded: (imageUrl) => {
-      // Inserir imagem como markdown na posição do cursor
       const textarea = textareaRef.current;
       if (textarea) {
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
-        const newContent = 
-          localContent.slice(0, start) + 
-          `\n![imagem](${imageUrl})\n` + 
+        const newContent =
+          localContent.slice(0, start) +
+          `![imagem](${imageUrl})` +
           localContent.slice(end);
         setLocalContent(newContent);
         debouncedSave(newContent);
       } else {
-        // Se não há textarea, adicionar no final
-        const newContent = localContent + `\n![imagem](${imageUrl})\n`;
+        const newContent = localContent + `![imagem](${imageUrl})`;
         setLocalContent(newContent);
         debouncedSave(newContent);
       }
     },
-    onUploadStart: () => setIsUploading(true),
-    onUploadEnd: () => setIsUploading(false),
   });
 
   // Sincronizar conteúdo externo
@@ -97,18 +107,6 @@ export function FluxoCardComponent({
     }
   }, [autoFocus, onFocused]);
 
-  // Debounced save
-  const debouncedSave = useCallback((content: string) => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    saveTimeoutRef.current = setTimeout(() => {
-      if (content !== card.conteudo) {
-        onUpdate(card.id, content);
-      }
-    }, 500);
-  }, [card.id, card.conteudo, onUpdate]);
-
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -126,7 +124,6 @@ export function FluxoCardComponent({
 
   const handleBlur = () => {
     setIsEditing(false);
-    // Salvar imediatamente ao sair
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
@@ -146,93 +143,23 @@ export function FluxoCardComponent({
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Se clicar fora do textarea, abrir detalhes
     if (!(e.target as HTMLElement).closest("textarea")) {
       setShowDetail(true);
     }
   };
 
-  // Renderizar #tags, @projeto e imagens markdown com destaque
-  const renderContent = () => {
-    if (isEditing) return null; // Durante edição, mostrar textarea
-    
-    if (!localContent.trim()) {
-      return (
-        <span className="text-muted-foreground/50 text-xs italic">
-          clique para escrever...
-        </span>
-      );
+  // Handler para drop de arquivos no card
+  const handleCardDrop = async (e: React.DragEvent) => {
+    if (e.dataTransfer?.types?.includes("Files")) {
+      await handleDrop(e);
+      e.stopPropagation();
     }
-
-    // Regex para imagens markdown: ![alt](url)
-    const imageRegex = /!\[([^\]]*)\]\s*\(([^)]+)\)/g;
-    
-    // Primeiro, dividir por imagens
-    const segments: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let imgMatch: RegExpExecArray | null;
-    
-    const content = localContent;
-    const imageMatches: { index: number; length: number; alt: string; url: string }[] = [];
-    
-    while ((imgMatch = imageRegex.exec(content)) !== null) {
-      imageMatches.push({
-        index: imgMatch.index,
-        length: imgMatch[0].length,
-        alt: imgMatch[1],
-        url: imgMatch[2],
-      });
-    }
-    
-    imageMatches.forEach((img, idx) => {
-      // Texto antes da imagem
-      if (img.index > lastIndex) {
-        const textBefore = content.slice(lastIndex, img.index);
-        segments.push(...renderTextWithTags(textBefore, `text-${idx}`));
-      }
-      
-      // A imagem
-      segments.push(
-        <img 
-          key={`img-${idx}`}
-          src={img.url} 
-          alt={img.alt || "imagem"} 
-          className="max-w-full h-auto rounded-md my-1 max-h-32 object-contain"
-          loading="lazy"
-        />
-      );
-      
-      lastIndex = img.index + img.length;
-    });
-    
-    // Texto restante após última imagem
-    if (lastIndex < content.length) {
-      segments.push(...renderTextWithTags(content.slice(lastIndex), "text-end"));
-    }
-    
-    return segments.length > 0 ? segments : renderTextWithTags(content, "full");
   };
-  
-  // Helper para renderizar texto com #tags e @projeto
-  const renderTextWithTags = (text: string, keyPrefix: string): React.ReactNode[] => {
-    const parts = text.split(/(#\w+|@\w+)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith("#")) {
-        return (
-          <span key={`${keyPrefix}-${i}`} className="text-sky-400/80 font-medium">
-            {part}
-          </span>
-        );
-      }
-      if (part.startsWith("@")) {
-        return (
-          <span key={`${keyPrefix}-${i}`} className="text-violet-400/80 font-medium">
-            {part}
-          </span>
-        );
-      }
-      return <span key={`${keyPrefix}-${i}`}>{part}</span>;
-    });
+
+  const handleCardDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer?.types?.includes("Files")) {
+      handleDragOver(e);
+    }
   };
 
   return (
@@ -242,18 +169,8 @@ export function FluxoCardComponent({
         onDragStart={handleDragStart}
         onDragEnd={onDragEnd}
         onClick={handleCardClick}
-        onDragOver={(e) => {
-          // Permitir arrastar arquivos de imagem para o card (mesmo fora do textarea)
-          if (e.dataTransfer?.types?.includes("Files")) {
-            handleDragOver(e);
-          }
-        }}
-        onDrop={(e) => {
-          if (e.dataTransfer?.types?.includes("Files")) {
-            handleDrop(e);
-            e.stopPropagation();
-          }
-        }}
+        onDragOver={handleCardDragOver}
+        onDrop={handleCardDrop}
         className={cn(
           "group relative rounded-lg border p-3 cursor-grab active:cursor-grabbing",
           "transition-all duration-200",
@@ -262,7 +179,7 @@ export function FluxoCardComponent({
           isDragging && "opacity-50 scale-95"
         )}
       >
-        {/* Botão deletar - aparece no hover */}
+        {/* Botão deletar */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -307,11 +224,8 @@ export function FluxoCardComponent({
               )}
             </div>
           ) : (
-            <div 
-              className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap break-words"
-              onClick={() => textareaRef.current?.focus()}
-            >
-              {renderContent()}
+            <div className="text-sm text-foreground/90 leading-relaxed">
+              <ContentRenderer content={localContent} compact />
             </div>
           )}
         </div>

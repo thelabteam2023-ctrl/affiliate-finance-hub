@@ -1,32 +1,45 @@
-import { useCallback, type ClipboardEvent, type DragEvent } from "react";
+import { useCallback, useState, type ClipboardEvent, type DragEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface UseImagePasteOptions {
+interface UseImageUploadOptions {
   userId: string;
+  bucket?: string;
   onImageUploaded: (imageUrl: string) => void;
-  onUploadStart?: () => void;
-  onUploadEnd?: () => void;
+}
+
+interface UseImageUploadReturn {
+  isUploading: boolean;
+  uploadImage: (file: File) => Promise<string | null>;
+  handlePaste: (event: ClipboardEvent) => Promise<void>;
+  handleDrop: (event: DragEvent) => Promise<void>;
+  handleDragOver: (event: DragEvent) => void;
 }
 
 /**
- * Hook para lidar com colar/arrastar imagens em textarea/input
- * Faz upload para o storage e retorna a URL pública
+ * Hook para upload de imagens para o Storage
+ * Suporta: colar (Ctrl+V), arrastar e soltar
  */
-export function useImagePaste({
+export function useImageUpload({
   userId,
+  bucket = "anotacoes-images",
   onImageUploaded,
-  onUploadStart,
-  onUploadEnd,
-}: UseImagePasteOptions) {
+}: UseImageUploadOptions): UseImageUploadReturn {
+  const [isUploading, setIsUploading] = useState(false);
+
   const uploadImage = useCallback(
-    async (file: File) => {
+    async (file: File): Promise<string | null> => {
       if (!userId) {
         toast.error("Faça login para enviar imagens");
         return null;
       }
 
-      onUploadStart?.();
+      if (!file.type.startsWith("image/")) {
+        toast.error("Apenas imagens são permitidas");
+        return null;
+      }
+
+      setIsUploading(true);
 
       try {
         const timestamp = Date.now();
@@ -34,7 +47,7 @@ export function useImagePaste({
         const fileName = `${userId}/${timestamp}.${extension}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("anotacoes-images")
+          .from(bucket)
           .upload(fileName, file, {
             cacheControl: "3600",
             upsert: false,
@@ -42,9 +55,7 @@ export function useImagePaste({
 
         if (uploadError) throw uploadError;
 
-        const { data } = supabase.storage
-          .from("anotacoes-images")
-          .getPublicUrl(fileName);
+        const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
 
         return data.publicUrl;
       } catch (error) {
@@ -52,10 +63,10 @@ export function useImagePaste({
         toast.error("Erro ao enviar imagem");
         return null;
       } finally {
-        onUploadEnd?.();
+        setIsUploading(false);
       }
     },
-    [userId, onUploadStart, onUploadEnd]
+    [userId, bucket]
   );
 
   const handlePaste = useCallback(
@@ -72,24 +83,25 @@ export function useImagePaste({
 
           const imageUrl = await uploadImage(file);
           if (imageUrl) onImageUploaded(imageUrl);
-          return; // Processar apenas a primeira imagem
+          return;
         }
       }
     },
-    [onImageUploaded, uploadImage]
+    [uploadImage, onImageUploaded]
   );
 
   const handleDragOver = useCallback((event: DragEvent) => {
-    // Permitir drop
     event.preventDefault();
   }, []);
 
   const handleDrop = useCallback(
     async (event: DragEvent) => {
       const files = event.dataTransfer?.files;
-      if (!files || files.length === 0) return;
+      if (!files?.length) return;
 
-      const firstImage = Array.from(files).find((f) => f.type.startsWith("image/"));
+      const firstImage = Array.from(files).find((f) =>
+        f.type.startsWith("image/")
+      );
       if (!firstImage) return;
 
       event.preventDefault();
@@ -97,9 +109,14 @@ export function useImagePaste({
       const imageUrl = await uploadImage(firstImage);
       if (imageUrl) onImageUploaded(imageUrl);
     },
-    [onImageUploaded, uploadImage]
+    [uploadImage, onImageUploaded]
   );
 
-  return { handlePaste, handleDrop, handleDragOver };
+  return {
+    isUploading,
+    uploadImage,
+    handlePaste,
+    handleDrop,
+    handleDragOver,
+  };
 }
-
