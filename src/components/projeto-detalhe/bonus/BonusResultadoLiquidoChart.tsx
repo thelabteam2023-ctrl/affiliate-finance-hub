@@ -413,58 +413,106 @@ export function BonusResultadoLiquidoChart({
       
       case "bonus":
         return (
-          <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+          <BarChart 
+            data={chartData} 
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            barCategoryGap="35%"
+          >
+            <defs>
+              <linearGradient id="bonusBarGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(45, 93%, 58%)" stopOpacity={0.95} />
+                <stop offset="100%" stopColor="hsl(38, 92%, 45%)" stopOpacity={0.75} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              stroke="hsl(var(--border))" 
+              strokeOpacity={0.4}
+              vertical={false} 
+            />
             <XAxis
               dataKey="label"
               stroke="hsl(var(--muted-foreground))"
-              fontSize={11}
+              fontSize={10}
               tickLine={false}
               axisLine={false}
+              interval="preserveStartEnd"
+              tickMargin={8}
             />
             <YAxis
               stroke="hsl(var(--muted-foreground))"
-              fontSize={11}
+              fontSize={10}
               tickLine={false}
               axisLine={false}
-              width={60}
+              width={55}
+              tickCount={5}
               tickFormatter={(value) => {
                 if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(1)}k`;
                 return value.toFixed(0);
               }}
             />
-            <Tooltip content={<BonusTooltip formatCurrency={formatCurrency} />} />
-            <Bar dataKey="bonus_creditado" fill={colorWarning} radius={[4, 4, 0, 0]} />
+            <Tooltip content={<BonusTooltip formatCurrency={formatCurrency} />} cursor={{ fill: 'hsl(var(--muted)/0.1)' }} />
+            <Bar 
+              dataKey="bonus_creditado" 
+              fill="url(#bonusBarGradient)" 
+              radius={[6, 6, 0, 0]}
+              maxBarSize={40}
+            />
           </BarChart>
         );
       
       case "juice":
         return (
-          <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+          <BarChart 
+            data={chartData} 
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            barCategoryGap="35%"
+          >
+            <defs>
+              <linearGradient id="juicePositiveGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.6} />
+              </linearGradient>
+              <linearGradient id="juiceNegativeGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.6} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              stroke="hsl(var(--border))" 
+              strokeOpacity={0.4}
+              vertical={false} 
+            />
             <XAxis
               dataKey="label"
               stroke="hsl(var(--muted-foreground))"
-              fontSize={11}
+              fontSize={10}
               tickLine={false}
               axisLine={false}
+              interval="preserveStartEnd"
+              tickMargin={8}
             />
             <YAxis
               stroke="hsl(var(--muted-foreground))"
-              fontSize={11}
+              fontSize={10}
               tickLine={false}
               axisLine={false}
-              width={60}
+              width={55}
+              tickCount={5}
               tickFormatter={(value) => {
                 if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(1)}k`;
                 return value.toFixed(0);
               }}
             />
-            <Tooltip content={<JuiceTooltip formatCurrency={formatCurrency} />} />
-            <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" strokeOpacity={0.5} />
-            <Bar dataKey="juice" radius={[4, 4, 0, 0]}>
+            <Tooltip content={<JuiceTooltip formatCurrency={formatCurrency} />} cursor={{ fill: 'hsl(var(--muted)/0.1)' }} />
+            <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" strokeOpacity={0.3} />
+            <Bar dataKey="juice" radius={[6, 6, 0, 0]} maxBarSize={40}>
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.juice >= 0 ? colorPositivo : colorNegativo} />
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={entry.juice >= 0 ? "url(#juicePositiveGradient)" : "url(#juiceNegativeGradient)"} 
+                />
               ))}
             </Bar>
           </BarChart>
@@ -576,14 +624,17 @@ function BonusTooltip({ active, payload, label, formatCurrency }: any) {
   if (!data) return null;
 
   return (
-    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-      <p className="text-xs text-muted-foreground mb-2">Data: {label}</p>
-      <div className="flex justify-between gap-4 text-xs">
-        <span className="text-warning">Bônus Creditado:</span>
-        <span className="font-medium text-warning">{formatCurrency(data.bonus_creditado)}</span>
+    <div className="bg-popover/95 backdrop-blur-sm border border-border/50 rounded-lg p-3 shadow-xl">
+      <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wide mb-2">
+        {label}
+      </p>
+      <div className="flex items-baseline gap-2">
+        <span className="text-xl font-semibold text-warning">
+          {formatCurrency(data.bonus_creditado)}
+        </span>
       </div>
-      <p className="text-xs text-muted-foreground mt-2 italic">
-        Valor bruto recebido (não considera juice)
+      <p className="text-[10px] text-muted-foreground/60 mt-2 border-t border-border/30 pt-2">
+        Valor bruto creditado (não considera juice)
       </p>
     </div>
   );
@@ -598,17 +649,19 @@ function JuiceTooltip({ active, payload, label, formatCurrency }: any) {
   const isGanho = data.juice >= 0;
 
   return (
-    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-      <p className="text-xs text-muted-foreground mb-2">Data: {label}</p>
-      <div className="flex justify-between gap-4 text-xs">
-        <span className={isGanho ? "text-primary" : "text-destructive"}>
-          {isGanho ? "Ganho:" : "Custo:"}
-        </span>
-        <span className={`font-medium ${isGanho ? "text-primary" : "text-destructive"}`}>
+    <div className="bg-popover/95 backdrop-blur-sm border border-border/50 rounded-lg p-3 shadow-xl">
+      <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wide mb-2">
+        {label}
+      </p>
+      <div className="flex items-baseline gap-2">
+        <span className={`text-xl font-semibold ${isGanho ? "text-primary" : "text-destructive"}`}>
           {formatCurrency(Math.abs(data.juice))}
         </span>
+        <span className={`text-xs ${isGanho ? "text-primary/70" : "text-destructive/70"}`}>
+          {isGanho ? "ganho" : "custo"}
+        </span>
       </div>
-      <p className="text-xs text-muted-foreground mt-2 italic">
+      <p className="text-[10px] text-muted-foreground/60 mt-2 border-t border-border/30 pt-2">
         {isGanho 
           ? "Resultado positivo das apostas com bônus" 
           : "Custo operacional das apostas com bônus"}
