@@ -5,13 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, bonusQueryKeys } from "@/hooks/useProjectBonuses";
 import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
-import { Building2, Coins, TrendingUp, AlertTriangle, Timer } from "lucide-react";
-import { VisaoGeralCharts } from "../VisaoGeralCharts";
-import { differenceInDays, parseISO, format, subDays } from "date-fns";
+import { Building2, Coins, TrendingUp, AlertTriangle, Timer, Receipt } from "lucide-react";
+import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay } from "date-fns";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
 import { BonusContaminationAlert } from "./BonusContaminationAlert";
 import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
+import { BonusResultadoLiquidoChart } from "./BonusResultadoLiquidoChart";
+
 interface DateRangeResult {
   start: Date;
   end: Date;
@@ -34,13 +35,18 @@ interface BookmakerWithBonus {
   moeda: string;
 }
 
+// Estrutura para dados do gráfico de Resultado Líquido de Bônus
+interface BonusResultEntry {
+  data: string;
+  bonus_creditado: number;
+  juice: number; // custo operacional (P&L das apostas com bônus)
+}
 
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false }: BonusVisaoGeralTabProps) {
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
-  // Note: deposit_amount from bonus records is now used as source of truth (not cash_ledger)
 
   const summary = getSummary();
   
@@ -65,20 +71,18 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const expiring7Days = getExpiringSoon(7);
   const expiring15Days = getExpiringSoon(15);
 
-  // Fetch bets data for chart - using React Query for consistency
-  const { data: betsData = [], isLoading: betsLoading } = useQuery({
-    queryKey: ["bonus-bets", projetoId, bookmakersInBonusMode, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()],
+  // Fetch apostas com bônus (juice/custo operacional)
+  const { data: bonusBetsData = [], isLoading: betsLoading } = useQuery({
+    queryKey: ["bonus-bets-juice", projetoId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()],
     queryFn: async () => {
-      if (bookmakersInBonusMode.length === 0) return [];
-
-      const startDate = dateRange?.start?.toISOString() || subDays(new Date(), 30).toISOString();
+      const startDate = dateRange?.start?.toISOString() || subDays(new Date(), 365).toISOString();
       
       let query = supabase
         .from("apostas_unificada")
-        .select("id, data_aposta, stake, lucro_prejuizo, pl_consolidado, bookmaker_id, is_bonus_bet, bonus_id")
+        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, bookmaker_id, is_bonus_bet, bonus_id, stake_bonus")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDate.split('T')[0])
-        .in("bookmaker_id", bookmakersInBonusMode);
+        .not("bonus_id", "is", null); // Apenas apostas vinculadas a um bônus
 
       if (dateRange?.end) {
         query = query.lte("data_aposta", dateRange.end.toISOString());
@@ -88,7 +92,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       if (error) throw error;
       return data || [];
     },
-    enabled: !!projetoId && bookmakersInBonusMode.length > 0,
+    enabled: !!projetoId,
     staleTime: 1000 * 30,
   });
 
@@ -244,23 +248,13 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         </TooltipProvider>
       </div>
 
-      {/* Gráfico de Evolução do Lucro - Padrão do Sistema */}
-      <VisaoGeralCharts
-        apostas={betsData.map(bet => ({
-          data_aposta: bet.data_aposta,
-          lucro_prejuizo: bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0,
-          stake: bet.stake ?? 0,
-          stake_total: null,
-          bookmaker_nome: undefined,
-          bookmaker_id: bet.bookmaker_id,
-        }))}
+      {/* Gráfico de Resultado Líquido de Bônus (substituindo "Evolução do Lucro") */}
+      <BonusResultadoLiquidoChart
+        bonuses={bonuses}
+        bonusBets={bonusBetsData}
         formatCurrency={formatCurrency}
-        accentColor="hsl(var(--warning))"
-        title="Evolução do Lucro (Bônus)"
-        showCalendar={false}
-        showCasasCard={false}
-        showEvolucaoChart={true}
         isSingleDayPeriod={isSingleDayPeriod}
+        dateRange={dateRange}
       />
 
       {/* Expiring Soon */}
