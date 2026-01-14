@@ -3,9 +3,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceGuard } from "@/hooks/useWorkspaceGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Send, Trash2 } from "lucide-react";
+import { Loader2, Send, Trash2, Image as ImageIcon } from "lucide-react";
 import { AnotacaoLivre } from "./types";
 import { cn } from "@/lib/utils";
+
 
 /**
  * Aba Livre - Espaço de escrita simples, silencioso e fluido
@@ -20,6 +21,7 @@ export function LivreTab() {
   const [anotacoes, setAnotacoes] = useState<AnotacaoLivre[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const textareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map());
   const saveTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
@@ -236,19 +238,132 @@ export function LivreTab() {
     }
   }, [canOperate, loadData]);
 
-  // Highlight de #tags e @projeto
-  const renderContent = (content: string) => {
+  // Regex para imagens markdown: ![alt](url)
+  const renderContent = (content: string): React.ReactNode => {
     if (!content) return null;
     
-    return content.split(/(\s+)/).map((word, i) => {
+    const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const segments: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+    
+    const imageMatches: { index: number; length: number; alt: string; url: string }[] = [];
+    let imgMatch: RegExpExecArray | null;
+    
+    while ((imgMatch = imageRegex.exec(content)) !== null) {
+      imageMatches.push({
+        index: imgMatch.index,
+        length: imgMatch[0].length,
+        alt: imgMatch[1],
+        url: imgMatch[2],
+      });
+    }
+    
+    imageMatches.forEach((img, idx) => {
+      // Texto antes da imagem
+      if (img.index > lastIndex) {
+        const textBefore = content.slice(lastIndex, img.index);
+        segments.push(...renderTextWithTags(textBefore, `text-${idx}`));
+      }
+      
+      // A imagem
+      segments.push(
+        <img 
+          key={`img-${idx}`}
+          src={img.url} 
+          alt={img.alt || "imagem"} 
+          className="max-w-full h-auto rounded-lg my-2 max-h-64 object-contain"
+          loading="lazy"
+        />
+      );
+      
+      lastIndex = img.index + img.length;
+    });
+    
+    // Texto restante após última imagem
+    if (lastIndex < content.length) {
+      segments.push(...renderTextWithTags(content.slice(lastIndex), "text-end"));
+    }
+    
+    return segments.length > 0 ? segments : renderTextWithTags(content, "full");
+  };
+  
+  // Helper para renderizar texto com #tags e @projeto
+  const renderTextWithTags = (text: string, keyPrefix: string): React.ReactNode[] => {
+    return text.split(/(\s+)/).map((word, i) => {
       if (word.startsWith("#")) {
-        return <span key={i} className="text-amber-400/80">{word}</span>;
+        return <span key={`${keyPrefix}-${i}`} className="text-amber-400/80">{word}</span>;
       }
       if (word.startsWith("@")) {
-        return <span key={i} className="text-cyan-400/80">{word}</span>;
+        return <span key={`${keyPrefix}-${i}`} className="text-cyan-400/80">{word}</span>;
       }
-      return word;
+      return <span key={`${keyPrefix}-${i}`}>{word}</span>;
     });
+  };
+  
+  // Função para criar handler de paste para cada anotação
+  const createPasteHandler = (anotacaoId: string) => {
+    return async (event: React.ClipboardEvent) => {
+      const items = event.clipboardData?.items;
+      if (!items || !user?.id) return;
+
+      // Procurar por imagem no clipboard
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          event.preventDefault();
+          
+          const file = item.getAsFile();
+          if (!file) continue;
+
+          try {
+            setUploadingId(anotacaoId);
+
+            // Gerar nome único para o arquivo
+            const timestamp = Date.now();
+            const extension = file.type.split("/")[1] || "png";
+            const fileName = `${user.id}/${timestamp}.${extension}`;
+
+            // Upload para o storage
+            const { error: uploadError } = await supabase.storage
+              .from("anotacoes-images")
+              .upload(fileName, file, {
+                cacheControl: "3600",
+                upsert: false,
+              });
+
+            if (uploadError) {
+              throw uploadError;
+            }
+
+            // Gerar URL pública
+            const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+            const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/anotacoes-images/${fileName}`;
+            
+            // Inserir imagem no conteúdo
+            const textarea = textareaRefs.current.get(anotacaoId);
+            const anotacao = anotacoes.find(a => a.id === anotacaoId);
+            if (anotacao) {
+              const currentContent = anotacao.conteudo || "";
+              const start = textarea?.selectionStart ?? currentContent.length;
+              const end = textarea?.selectionEnd ?? currentContent.length;
+              const newContent = 
+                currentContent.slice(0, start) + 
+                `\n![imagem](${imageUrl})\n` + 
+                currentContent.slice(end);
+              
+              handleContentChange(anotacaoId, newContent);
+            }
+          } catch (error) {
+            console.error("Erro ao fazer upload da imagem:", error);
+            toast.error("Erro ao colar imagem");
+          } finally {
+            setUploadingId(null);
+          }
+
+          return;
+        }
+      }
+    };
   };
 
   if (loading) {
@@ -308,36 +423,52 @@ export function LivreTab() {
               <Trash2 className="h-3.5 w-3.5" />
             </button>
             {/* Textarea para escrita */}
-            <textarea
-              ref={(el) => {
-                if (el) textareaRefs.current.set(anotacao.id, el);
-              }}
-              value={anotacao.conteudo}
-              onChange={(e) => {
-                handleContentChange(anotacao.id, e.target.value);
-                autoResize(e.target);
-              }}
-              onFocus={(e) => autoResize(e.target)}
-              placeholder="Comece a escrever..."
-              className={cn(
-                "w-full min-h-[120px] p-6 bg-transparent resize-none",
-                "text-lg leading-relaxed text-foreground/90",
-                "placeholder:text-muted-foreground/30",
-                "focus:outline-none",
-                "font-light tracking-wide"
+            <div className="relative">
+              <textarea
+                ref={(el) => {
+                  if (el) textareaRefs.current.set(anotacao.id, el);
+                }}
+                value={anotacao.conteudo}
+                onChange={(e) => {
+                  handleContentChange(anotacao.id, e.target.value);
+                  autoResize(e.target);
+                }}
+                onFocus={(e) => autoResize(e.target)}
+                onPaste={createPasteHandler(anotacao.id)}
+                placeholder="Comece a escrever... (Ctrl+V para colar imagens)"
+                className={cn(
+                  "w-full min-h-[120px] p-6 bg-transparent resize-none",
+                  "text-lg leading-relaxed text-foreground/90",
+                  "placeholder:text-muted-foreground/30",
+                  "focus:outline-none",
+                  "font-light tracking-wide"
+                )}
+                style={{ overflow: "hidden" }}
+              />
+              {uploadingId === anotacao.id && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-xl">
+                  <div className="flex items-center gap-2 text-primary">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="text-sm">Enviando imagem...</span>
+                  </div>
+                </div>
               )}
-              style={{ overflow: "hidden" }}
-            />
+            </div>
 
             {/* Indicador de salvando e ação enviar */}
             <div className="flex items-center justify-between px-6 pb-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {savingId === anotacao.id && (
                   <span className="text-[10px] text-muted-foreground/50 flex items-center gap-1">
                     <Loader2 className="h-2.5 w-2.5 animate-spin" />
                     salvando...
                   </span>
                 )}
+                {/* Indicador de suporte a imagens */}
+                <span className="text-[10px] text-muted-foreground/30 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ImageIcon className="h-2.5 w-2.5" />
+                  Cole imagens
+                </span>
               </div>
 
               {/* Botão enviar para fluxo */}
