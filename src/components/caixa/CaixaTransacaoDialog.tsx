@@ -3372,11 +3372,13 @@ export function CaixaTransacaoDialog({
                                 </div>
                                 <div className="text-sm font-semibold text-foreground">
                                   {tipoMoeda === "CRYPTO" ? (
-                                    formatCryptoBalance(
-                                      getSaldoCoin("CAIXA_OPERACIONAL") - parseFloat(String(qtdCoin || 0)),
-                                      getSaldoAtual("CAIXA_OPERACIONAL") - parseFloat(String(valor)),
-                                      coin
-                                    )
+                                    (() => {
+                                      const novaQtdCoin = getSaldoCoin("CAIXA_OPERACIONAL") - parseFloat(String(qtdCoin || 0));
+                                      // Recalcular USD usando cotação atual (qtd × cotação) para evitar variação cambial artificial
+                                      const cotacaoAtual = parseFloat(cotacao) || (cryptoPrices[coin] || 1);
+                                      const novoUsdCalculado = novaQtdCoin * cotacaoAtual;
+                                      return formatCryptoBalance(novaQtdCoin, novoUsdCalculado, coin);
+                                    })()
                                   ) : (
                                     formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL") - parseFloat(String(valor)))
                                   )}
@@ -3436,11 +3438,12 @@ export function CaixaTransacaoDialog({
                                       </span>
                                     </div>
                                     <div className="text-sm font-semibold text-foreground">
-                                      {formatCryptoBalance(
-                                        getSaldoCoin("PARCEIRO_WALLET", origemWalletId) - parseFloat(String(qtdCoin || 0)),
-                                        getSaldoAtual("PARCEIRO_WALLET", origemWalletId) - parseFloat(String(valor)),
-                                        coin
-                                      )}
+                                      {(() => {
+                                        const novaQtdCoin = getSaldoCoin("PARCEIRO_WALLET", origemWalletId) - parseFloat(String(qtdCoin || 0));
+                                        const cotacaoAtual = parseFloat(cotacao) || (cryptoPrices[coin] || 1);
+                                        const novoUsdCalculado = novaQtdCoin * cotacaoAtual;
+                                        return formatCryptoBalance(novaQtdCoin, novoUsdCalculado, coin);
+                                      })()}
                                     </div>
                                   </>
                                 ) : (
@@ -3479,11 +3482,12 @@ export function CaixaTransacaoDialog({
                                     </div>
                                     <div className="text-sm font-semibold text-foreground">
                                       {tipoMoeda === "CRYPTO" && origemTipo === "PARCEIRO_WALLET" ? (
-                                        formatCryptoBalance(
-                                          getSaldoCoin(origemTipo, origemWalletId) - parseFloat(String(qtdCoin || 0)),
-                                          getSaldoAtual(origemTipo, origemWalletId) - parseFloat(String(valor)),
-                                          coin
-                                        )
+                                        (() => {
+                                          const novaQtdCoin = getSaldoCoin(origemTipo, origemWalletId) - parseFloat(String(qtdCoin || 0));
+                                          const cotacaoAtual = parseFloat(cotacao) || (cryptoPrices[coin] || 1);
+                                          const novoUsdCalculado = novaQtdCoin * cotacaoAtual;
+                                          return formatCryptoBalance(novaQtdCoin, novoUsdCalculado, coin);
+                                        })()
                                       ) : (
                                         formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId) - parseFloat(String(valor)))
                                       )}
@@ -3540,11 +3544,12 @@ export function CaixaTransacaoDialog({
                                 </div>
                                 <div className="text-sm font-semibold text-foreground">
                                   {tipoMoeda === "CRYPTO" ? (
-                                    formatCryptoBalance(
-                                      getSaldoCoin("CAIXA_OPERACIONAL") + parseFloat(String(qtdCoin || 0)),
-                                      getSaldoAtual("CAIXA_OPERACIONAL") + parseFloat(String(valor)),
-                                      coin
-                                    )
+                                    (() => {
+                                      const novaQtdCoin = getSaldoCoin("CAIXA_OPERACIONAL") + parseFloat(String(qtdCoin || 0));
+                                      const cotacaoAtual = parseFloat(cotacao) || (cryptoPrices[coin] || 1);
+                                      const novoUsdCalculado = novaQtdCoin * cotacaoAtual;
+                                      return formatCryptoBalance(novaQtdCoin, novoUsdCalculado, coin);
+                                    })()
                                   ) : (
                                     formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL") + parseFloat(String(valor)))
                                   )}
@@ -3630,11 +3635,12 @@ export function CaixaTransacaoDialog({
                                     </div>
                                     <div className="text-sm font-semibold text-foreground">
                                       {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
-                                        formatCryptoBalance(
-                                          getSaldoCoin(destinoTipo, destinoWalletId) + parseFloat(String(qtdCoin || 0)),
-                                          getSaldoAtual(destinoTipo, destinoWalletId) + parseFloat(String(valor)),
-                                          coin
-                                        )
+                                        (() => {
+                                          const novaQtdCoin = getSaldoCoin(destinoTipo, destinoWalletId) + parseFloat(String(qtdCoin || 0));
+                                          const cotacaoAtual = parseFloat(cotacao) || (cryptoPrices[coin] || 1);
+                                          const novoUsdCalculado = novaQtdCoin * cotacaoAtual;
+                                          return formatCryptoBalance(novaQtdCoin, novoUsdCalculado, coin);
+                                        })()
                                       ) : (
                                         formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId) + parseFloat(String(valor)))
                                       )}
