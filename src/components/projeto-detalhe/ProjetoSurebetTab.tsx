@@ -50,8 +50,8 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
-import { useOperationalFiltersOptional, type EstrategiaFilter } from "@/contexts/OperationalFiltersContext";
-import { OperationalFiltersBar } from "./OperationalFiltersBar";
+import { useTabFilters, type EstrategiaFilter } from "@/hooks/useTabFilters";
+import { TabFiltersBar } from "./TabFiltersBar";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
@@ -200,20 +200,17 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const [activeNavTab, setActiveNavTab] = useState<NavTabValue>("visao-geral");
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Contexto de filtros globais (opcional - funciona com ou sem provider)
-  const globalFilters = useOperationalFiltersOptional();
+  // === FILTROS LOCAIS DA ABA SUREBET ===
+  // ARQUITETURA: Esta aba usa seu próprio estado de filtros, independente de outras abas
+  const tabFilters = useTabFilters({
+    tabId: "surebet",
+    projetoId,
+    defaultPeriod: "30dias",
+    persist: true,
+  });
 
-  // Filtro de tempo interno (fallback quando não há contexto global)
-  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
-  const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
-
-  // Usar período do contexto global quando disponível
-  const effectivePeriod = globalFilters?.period ?? internalPeriod;
-  const effectiveDateRange = globalFilters?.customDateRange ?? internalDateRange;
-  const dateRange = useMemo(
-    () => globalFilters?.dateRange ?? getDateRangeFromPeriod(effectivePeriod, effectiveDateRange),
-    [globalFilters?.dateRange, effectivePeriod, effectiveDateRange]
-  );
+  // dateRange derivado dos filtros locais
+  const dateRange = tabFilters.dateRange;
 
   // Count of open operations for badge - uses the canonical hook
   const { count: openOperationsCount } = useOpenOperationsCount({
@@ -234,10 +231,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     localStorage.setItem(NAV_STORAGE_KEY, navMode);
   }, [navMode]);
 
-  // Refetch quando filtros globais ou locais mudarem
+  // Refetch quando filtros locais mudarem
   useEffect(() => {
     fetchData();
-  }, [projetoId, dateRange, refreshTrigger, globalFilters?.bookmakerIds, globalFilters?.parceiroIds]);
+  }, [projetoId, dateRange, refreshTrigger, tabFilters.bookmakerIds, tabFilters.parceiroIds]);
 
   const fetchData = async () => {
     try {
@@ -508,11 +505,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   };
 
   // KPIs calculados
-  // Filtrar surebets pelos filtros globais (bookmaker/parceiro)
+  // Filtrar surebets pelos filtros locais da aba (bookmaker/parceiro)
   const filteredSurebets = useMemo(() => {
-    if (!globalFilters) return surebets;
+    const { bookmakerIds, parceiroIds } = tabFilters;
     
-    const { bookmakerIds, parceiroIds } = globalFilters;
+    // Se nenhum filtro ativo, retorna tudo
+    if (bookmakerIds.length === 0 && parceiroIds.length === 0) {
+      return surebets;
+    }
     
     return surebets.filter(surebet => {
       // Filtro por bookmaker
@@ -543,7 +543,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       
       return true;
     });
-  }, [surebets, globalFilters?.bookmakerIds, globalFilters?.parceiroIds, bookmakers]);
+  }, [surebets, tabFilters.bookmakerIds, tabFilters.parceiroIds, bookmakers]);
 
   const kpis = useMemo(() => {
     const total = filteredSurebets.length;
@@ -759,13 +759,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     </Tooltip>
   );
 
-  // Period filter component - só exibe se não houver contexto global
-  const periodFilterComponent = globalFilters ? null : (
+  // Period filter component - usa filtros locais da aba
+  const periodFilterComponent = (
     <StandardTimeFilter
-      period={internalPeriod}
-      onPeriodChange={setInternalPeriod}
-      customDateRange={internalDateRange}
-      onCustomDateRangeChange={setInternalDateRange}
+      period={tabFilters.period}
+      onPeriodChange={tabFilters.setPeriod}
+      customDateRange={tabFilters.customDateRange}
+      onCustomDateRangeChange={tabFilters.setCustomDateRange}
     />
   );
 
@@ -867,7 +867,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showCasasCard={false}
-              isSingleDayPeriod={effectivePeriod === "1dia"}
+              isSingleDayPeriod={tabFilters.period === "1dia"}
               formatCurrency={formatCurrency}
             />
             <SurebetStatisticsCard surebets={filteredSurebets} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
@@ -904,7 +904,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showEvolucaoChart={false}
-              isSingleDayPeriod={effectivePeriod === "1dia"}
+              isSingleDayPeriod={tabFilters.period === "1dia"}
               formatCurrency={formatCurrency}
             />
           </div>
@@ -966,7 +966,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                   abaOrigem="Surebet"
                   filename={`surebets-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
                   filtrosAplicados={{
-                    periodo: effectivePeriod,
+                    periodo: tabFilters.period,
                     dataInicio: dateRange?.start.toISOString(),
                     dataFim: dateRange?.end.toISOString(),
                   }}
@@ -982,11 +982,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           </div>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
-          {/* Filtros Transversais (Período, Casa, Parceiro) */}
-          <OperationalFiltersBar
+          {/* Filtros Locais da Aba (Período, Casa, Parceiro) */}
+          <TabFiltersBar
             projetoId={projetoId}
+            filters={tabFilters}
             showEstrategiaFilter={false}
-            preselectedEstrategia="SUREBET"
             className="pb-3 border-b border-border/50"
           />
         </CardContent>
