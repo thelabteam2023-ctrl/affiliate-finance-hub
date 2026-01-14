@@ -17,6 +17,7 @@ import { toast } from "sonner";
 export interface BookmakerDiscrepancy {
   bookmaker_id: string;
   nome: string;
+  moeda: string; // Moeda nativa do bookmaker (BRL, USD, etc.)
   saldo_anterior: number;
   saldo_calculado: number;
   diferenca: number;
@@ -62,6 +63,7 @@ export function useBookmakerBalanceVerification({
           return {
             bookmaker_id: result.bookmaker_id,
             nome: result.nome,
+            moeda: result.moeda || 'BRL',
             saldo_anterior: result.saldo_anterior,
             saldo_calculado: result.saldo_calculado,
             diferenca: result.diferenca,
@@ -105,6 +107,7 @@ export function useBookmakerBalanceVerification({
         .map((item: any) => ({
           bookmaker_id: item.bookmaker_id,
           nome: item.nome,
+          moeda: item.moeda || 'BRL',
           saldo_anterior: item.saldo_anterior,
           saldo_calculado: item.saldo_calculado,
           diferenca: item.diferenca,

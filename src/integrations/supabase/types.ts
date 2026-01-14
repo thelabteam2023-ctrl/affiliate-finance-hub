@@ -8638,6 +8638,7 @@ export type Database = {
           diferenca: number
           giros_gratis: number
           lucro_apostas: number
+          moeda: string
           nome: string
           saldo_anterior: number
           saldo_calculado: number
@@ -8656,6 +8657,7 @@ export type Database = {
           diferenca: number
           giros_gratis: number
           lucro_apostas: number
+          moeda: string
           nome: string
           saldo_anterior: number
           saldo_calculado: number
