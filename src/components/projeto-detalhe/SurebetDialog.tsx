@@ -1748,7 +1748,111 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       if (!user) throw new Error("Usuário não autenticado");
 
       if (isEditing && surebet) {
-        // Update na tabela unificada
+        // CORREÇÃO: Ao editar, precisamos detectar mudanças de bookmaker nas pernas
+        // e ajustar saldos se a aposta já foi liquidada
+        
+        // 1. Buscar pernas originais do banco
+        const { data: operacaoAtual } = await supabase
+          .from("apostas_unificada")
+          .select("pernas, status")
+          .eq("id", surebet.id)
+          .single();
+        
+        const pernasOriginais = operacaoAtual?.pernas as unknown as SurebetPerna[] || [];
+        const statusAtual = operacaoAtual?.status;
+        
+        // 2. Construir novas pernas a partir do formulário (preservando resultados)
+        const getBookmakerMoedaEdit = (bookmakerId: string): SupportedCurrency => {
+          const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
+          return (bk?.moeda as SupportedCurrency) || "BRL";
+        };
+        
+        const novasPernas: SurebetPerna[] = odds.map((entry, idx) => {
+          const pernaOriginal = pernasOriginais[idx];
+          const mainStake = parseFloat(entry.stake) || 0;
+          const mainMoeda = getBookmakerMoedaEdit(entry.bookmaker_id);
+          const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda);
+          
+          return {
+            selecao: entry.selecao,
+            selecao_livre: entry.selecaoLivre || pernaOriginal?.selecao_livre || "",
+            bookmaker_id: entry.bookmaker_id,
+            bookmaker_nome: getBookmakerNome(entry.bookmaker_id),
+            moeda: mainMoeda,
+            odd: parseFloat(entry.odd),
+            stake: mainStake,
+            stake_brl_referencia: mainSnapshotFields.valor_brl_referencia,
+            cotacao_snapshot: mainSnapshotFields.cotacao_snapshot,
+            cotacao_snapshot_at: mainSnapshotFields.cotacao_snapshot_at,
+            // PRESERVAR resultados originais se existirem
+            resultado: pernaOriginal?.resultado || null,
+            lucro_prejuizo: pernaOriginal?.lucro_prejuizo || null,
+            lucro_prejuizo_brl_referencia: pernaOriginal?.lucro_prejuizo_brl_referencia || null,
+            gerou_freebet: pernaOriginal?.gerou_freebet || false,
+            valor_freebet_gerada: pernaOriginal?.valor_freebet_gerada || null,
+            // Preservar entries se existirem
+            entries: pernaOriginal?.entries,
+            odd_media: pernaOriginal?.odd_media,
+            stake_total: pernaOriginal?.stake_total,
+          };
+        });
+        
+        // 3. CORREÇÃO CRÍTICA: Se aposta liquidada e bookmaker mudou, ajustar saldos
+        for (let i = 0; i < Math.min(pernasOriginais.length, novasPernas.length); i++) {
+          const pernaOriginal = pernasOriginais[i];
+          const pernaNova = novasPernas[i];
+          
+          // Se a perna tem resultado e o bookmaker mudou
+          if (pernaOriginal?.resultado && 
+              pernaOriginal.resultado !== "PENDENTE" && 
+              pernaOriginal.bookmaker_id !== pernaNova.bookmaker_id) {
+            
+            const stake = pernaOriginal.stake || 0;
+            const odd = pernaOriginal.odd || 0;
+            const resultado = pernaOriginal.resultado;
+            
+            // Calcular delta do resultado
+            let deltaResultado = 0;
+            if (resultado === "GREEN") {
+              deltaResultado = stake * (odd - 1);
+            } else if (resultado === "MEIO_GREEN") {
+              deltaResultado = (stake * (odd - 1)) / 2;
+            } else if (resultado === "RED") {
+              deltaResultado = -stake;
+            } else if (resultado === "MEIO_RED") {
+              deltaResultado = -stake / 2;
+            }
+            // VOID = 0, não afeta saldo
+            
+            if (deltaResultado !== 0) {
+              // REVERTER do bookmaker original (tirar o que foi creditado/debitado)
+              await updateBookmakerBalance(pernaOriginal.bookmaker_id, -deltaResultado, projetoId);
+              console.log(`[SurebetEdit] Revertido ${-deltaResultado} de ${pernaOriginal.bookmaker_id}`);
+              
+              // APLICAR no novo bookmaker
+              await updateBookmakerBalance(pernaNova.bookmaker_id, deltaResultado, projetoId);
+              console.log(`[SurebetEdit] Aplicado ${deltaResultado} em ${pernaNova.bookmaker_id}`);
+            }
+          }
+        }
+        
+        // 4. Recalcular totais
+        const moedasEdit = [...new Set(novasPernas.map(p => p.moeda))];
+        const moedaOperacaoEdit: MoedaOperacao = moedasEdit.length === 1 ? moedasEdit[0] : "MULTI";
+        const valorBRLRefEdit = novasPernas.reduce((acc, p) => acc + (p.stake_brl_referencia || 0), 0);
+        const stakeEditTotal = moedaOperacaoEdit !== "MULTI" 
+          ? novasPernas.reduce((acc, p) => acc + p.stake, 0)
+          : null;
+        
+        // Recalcular spread e ROI
+        const oddsEdit = novasPernas.map(p => p.odd);
+        const sumProbEdit = oddsEdit.reduce((sum, o) => sum + (o > 1 ? 1/o : 0), 0);
+        const spreadEdit = sumProbEdit > 0 ? (1 - sumProbEdit) * 100 : 0;
+        const roiEdit = stakeEditTotal && stakeEditTotal > 0 
+          ? ((analysis?.guaranteedProfit || 0) / stakeEditTotal) * 100 
+          : null;
+        
+        // 5. Update completo na tabela unificada
         const { error } = await supabase
           .from("apostas_unificada")
           .update({
@@ -1756,11 +1860,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
             esporte,
             mercado,
             observacoes,
+            pernas: novasPernas as any,
+            moeda_operacao: moedaOperacaoEdit,
+            valor_brl_referencia: valorBRLRefEdit,
+            stake_total: stakeEditTotal,
+            spread_calculado: spreadEdit,
+            roi_esperado: roiEdit,
             updated_at: new Date().toISOString()
           })
           .eq("id", surebet.id);
 
         if (error) throw error;
+        
+        // Invalidar cache de saldos
+        invalidateSaldos(projetoId);
+        
         toast.success("Operação atualizada!");
       } else {
         // Obter moeda de cada bookmaker selecionada
