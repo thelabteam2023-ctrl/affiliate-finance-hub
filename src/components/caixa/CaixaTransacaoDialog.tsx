@@ -2741,16 +2741,27 @@ export function CaixaTransacaoDialog({
 
   const checkSaldoInsuficiente = (): boolean => {
     const valorNumerico = parseFloat(valor) || 0;
-    if (valorNumerico === 0) return false;
+    const qtdCoinNumerico = parseFloat(qtdCoin) || 0;
+    if (valorNumerico === 0 && qtdCoinNumerico === 0) return false;
 
-    // Check APORTE_FINANCEIRO flow
+    // ============================================================================
+    // REGRA CRÍTICA: Para CRYPTO, comparar QUANTIDADE DE MOEDAS (saldo_coin vs qtdCoin)
+    // NUNCA comparar valores convertidos em USD/BRL que variam com a cotação
+    // ============================================================================
+
+    // Check APORTE_FINANCEIRO flow (LIQUIDAÇÃO = saída do caixa)
     if (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") {
+      if (tipoMoeda === "CRYPTO") {
+        const saldoCoinAtual = getSaldoCoin("CAIXA_OPERACIONAL");
+        return saldoCoinAtual < qtdCoinNumerico;
+      }
       const saldoAtual = getSaldoAtual("CAIXA_OPERACIONAL");
       return saldoAtual < valorNumerico;
     }
 
-    // Check SAQUE
+    // Check SAQUE (bookmaker → parceiro)
     if (tipoTransacao === "SAQUE" && origemBookmakerId) {
+      // Para SAQUE, usamos saldo_usd vs valor_usd pois bookmakers operam em USD
       const saldoAtual = getSaldoAtual("BOOKMAKER", origemBookmakerId);
       return saldoAtual < valorNumerico;
     }
@@ -2758,8 +2769,9 @@ export function CaixaTransacaoDialog({
     // Check DEPOSITO - FIAT usa conta bancária, CRYPTO usa wallet
     if (tipoTransacao === "DEPOSITO") {
       if (tipoMoeda === "CRYPTO" && origemWalletId) {
-        const saldoAtual = getSaldoAtual("PARCEIRO_WALLET", origemWalletId);
-        return saldoAtual < valorNumerico;
+        // CRYPTO: comparar quantidade de moedas
+        const saldoCoinAtual = getSaldoCoin("PARCEIRO_WALLET", origemWalletId);
+        return saldoCoinAtual < qtdCoinNumerico;
       }
       if (tipoMoeda === "FIAT" && origemContaId) {
         const saldoAtual = getSaldoAtual("PARCEIRO_CONTA", origemContaId);
@@ -2769,6 +2781,12 @@ export function CaixaTransacaoDialog({
 
     // Check TRANSFERENCIA from CAIXA_OPERACIONAL
     if (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL") {
+      if (tipoMoeda === "CRYPTO") {
+        // CRYPTO: comparar quantidade de moedas diretamente
+        const saldoCoinAtual = getSaldoCoin("CAIXA_OPERACIONAL");
+        return saldoCoinAtual < qtdCoinNumerico;
+      }
+      // FIAT: comparar valor na moeda
       const saldoAtual = getSaldoAtual("CAIXA_OPERACIONAL");
       return saldoAtual < valorNumerico;
     }
@@ -2781,6 +2799,11 @@ export function CaixaTransacaoDialog({
 
     // Check TRANSFERENCIA from PARCEIRO_WALLET
     if (tipoTransacao === "TRANSFERENCIA" && origemTipo === "PARCEIRO_WALLET" && origemWalletId) {
+      if (tipoMoeda === "CRYPTO") {
+        // CRYPTO: comparar quantidade de moedas
+        const saldoCoinAtual = getSaldoCoin("PARCEIRO_WALLET", origemWalletId);
+        return saldoCoinAtual < qtdCoinNumerico;
+      }
       const saldoAtual = getSaldoAtual("PARCEIRO_WALLET", origemWalletId);
       return saldoAtual < valorNumerico;
     }
