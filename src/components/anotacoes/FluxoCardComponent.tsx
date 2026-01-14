@@ -56,7 +56,7 @@ export function FluxoCardComponent({
   const cardColor = getCardColor(card.id);
 
   // Hook para paste de imagens
-  const { handlePaste } = useImagePaste({
+  const { handlePaste, handleDrop, handleDragOver } = useImagePaste({
     userId: user?.id || "",
     onImageUploaded: (imageUrl) => {
       // Inserir imagem como markdown na posição do cursor
@@ -165,7 +165,7 @@ export function FluxoCardComponent({
     }
 
     // Regex para imagens markdown: ![alt](url)
-    const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const imageRegex = /!\[([^\]]*)\]\s*\(([^)]+)\)/g;
     
     // Primeiro, dividir por imagens
     const segments: React.ReactNode[] = [];
@@ -238,10 +238,22 @@ export function FluxoCardComponent({
   return (
     <>
       <div
-        draggable
+        draggable={!isEditing && !autoFocus}
         onDragStart={handleDragStart}
         onDragEnd={onDragEnd}
         onClick={handleCardClick}
+        onDragOver={(e) => {
+          // Permitir arrastar arquivos de imagem para o card (mesmo fora do textarea)
+          if (e.dataTransfer?.types?.includes("Files")) {
+            handleDragOver(e);
+          }
+        }}
+        onDrop={(e) => {
+          if (e.dataTransfer?.types?.includes("Files")) {
+            handleDrop(e);
+            e.stopPropagation();
+          }
+        }}
         className={cn(
           "group relative rounded-lg border p-3 cursor-grab active:cursor-grabbing",
           "transition-all duration-200",
@@ -277,7 +289,9 @@ export function FluxoCardComponent({
                 onBlur={handleBlur}
                 onFocus={handleFocus}
                 onPaste={handlePaste}
-                placeholder="Escreva sua ideia... (Ctrl+V para colar imagens)"
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                placeholder="Escreva sua ideia... (cole ou arraste imagens)"
                 className={cn(
                   "w-full bg-transparent border-none resize-none outline-none",
                   "text-sm text-foreground/90 leading-relaxed",
