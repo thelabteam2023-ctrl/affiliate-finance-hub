@@ -134,6 +134,15 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     );
   }, [bonuses]);
 
+  // IDs de bookmakers que já possuem bônus PENDENTE (não podem receber novo bônus)
+  const pendingBonusBookmakerIds = useMemo(() => {
+    return new Set(
+      bonuses
+        .filter((b) => b.status === "pending")
+        .map((b) => b.bookmaker_id)
+    );
+  }, [bonuses]);
+
   const [bookmakers, setBookmakers] = useState<BookmakerOption[]>([]);
   const [loadingBookmakers, setLoadingBookmakers] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -537,7 +546,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
         bookmakers={
           editingBonus
             ? bookmakers
-            : bookmakers.filter((b) => !activeBonusBookmakerIds.has(b.id))
+            : bookmakers.filter((b) => !pendingBonusBookmakerIds.has(b.id))
         }
         bonus={editingBonus}
         saving={saving}
