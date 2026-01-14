@@ -3245,19 +3245,14 @@ export function CaixaTransacaoDialog({
                             {tipoMoeda === "FIAT" && destinoContaId && (
                               <div className="mt-3 space-y-1">
                                 {parseFloat(String(valor)) > 0 ? (
-                                  <>
-                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                      <span className="line-through opacity-70">
-                                        {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
-                                      </span>
-                                    </div>
-                                    <div className="text-sm font-semibold text-foreground">
-                                      +{formatCurrency(parseFloat(String(valor)))}
-                                    </div>
-                                  </>
+                                  <div className="mt-2 flex items-center justify-center gap-2">
+                                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                    <span className="text-sm font-semibold text-foreground">
+                                      {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId) + parseFloat(String(valor)))}
+                                    </span>
+                                  </div>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="text-xs text-muted-foreground mt-2">
                                     Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
                                   </div>
                                 )}
@@ -3267,19 +3262,14 @@ export function CaixaTransacaoDialog({
                             {tipoMoeda === "CRYPTO" && destinoWalletId && (
                               <div className="mt-3 space-y-1">
                                 {parseFloat(String(valor)) > 0 ? (
-                                  <>
-                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                      <span className="line-through opacity-70 text-cyan-400">
-                                        {formatCurrency(getSaldoAtual("PARCEIRO_WALLET", destinoWalletId), "USD")}
-                                      </span>
-                                    </div>
-                                    <div className="text-sm font-semibold text-cyan-400">
-                                      +{formatCurrency(parseFloat(String(valor)), "USD")}
-                                    </div>
-                                  </>
+                                  <div className="mt-2 flex items-center justify-center gap-2">
+                                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                    <span className="text-sm font-semibold text-cyan-400">
+                                      {formatCurrency(getSaldoAtual("PARCEIRO_WALLET", destinoWalletId) + parseFloat(String(valor)), "USD")}
+                                    </span>
+                                  </div>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground text-cyan-400">
+                                  <div className="text-xs text-muted-foreground text-cyan-400 mt-2">
                                     Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_WALLET", destinoWalletId), "USD")}
                                   </div>
                                 )}
@@ -3310,21 +3300,14 @@ export function CaixaTransacaoDialog({
                                   </div>
                                 )}
                                 {parseFloat(String(valor)) > 0 ? (
-                                  <>
-                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                      <TrendingDown className="h-4 w-4 text-destructive" />
-                                      <span className="line-through opacity-70">
-                                        Disponível: {tipoMoeda === "CRYPTO" 
-                                          ? <span className="text-cyan-400">{formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId), "USD")}</span>
-                                          : formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId), "BRL")}
-                                      </span>
-                                    </div>
-                                    <div className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
+                                  <div className="mt-2 flex items-center justify-center gap-2">
+                                    <TrendingDown className="h-4 w-4 text-destructive" />
+                                    <span className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
                                       {tipoMoeda === "CRYPTO"
                                         ? formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)), "USD")
                                         : formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)), "BRL")}
-                                    </div>
-                                  </>
+                                    </span>
+                                  </div>
                                 ) : (
                                   <div className="text-xs text-muted-foreground">
                                     {/* Mostrar ambos os saldos se existirem */}
@@ -3353,28 +3336,12 @@ export function CaixaTransacaoDialog({
                             {(origemTipo === "CAIXA_OPERACIONAL" || 
                               (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO") ||
                               (tipoTransacao === "TRANSFERENCIA" && origemTipo === "CAIXA_OPERACIONAL")) && parseFloat(String(valor)) > 0 && (
-                              <div className="mt-3 space-y-1">
-                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                  <TrendingDown className="h-4 w-4 text-destructive" />
-                                  {tipoMoeda === "CRYPTO" ? (
-                                    <span className="line-through opacity-70">
-                                      {formatCryptoBalance(
-                                        getSaldoCoin("CAIXA_OPERACIONAL"),
-                                        getSaldoAtual("CAIXA_OPERACIONAL"),
-                                        coin
-                                      )}
-                                    </span>
-                                  ) : (
-                                    <span className="line-through opacity-70">
-                                      {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-sm font-semibold text-foreground">
+                              <div className="mt-2 flex items-center justify-center gap-2">
+                                <TrendingDown className="h-4 w-4 text-destructive" />
+                                <span className="text-sm font-semibold text-foreground">
                                   {tipoMoeda === "CRYPTO" ? (
                                     (() => {
                                       const novaQtdCoin = getSaldoCoin("CAIXA_OPERACIONAL") - parseFloat(String(qtdCoin || 0));
-                                      // Recalcular USD usando cotação atual (qtd × cotação) para evitar variação cambial artificial
                                       const cotacaoAtual = parseFloat(cotacao) || (cryptoPrices[coin] || 1);
                                       const novoUsdCalculado = novaQtdCoin * cotacaoAtual;
                                       return formatCryptoBalance(novaQtdCoin, novoUsdCalculado, coin);
@@ -3382,7 +3349,7 @@ export function CaixaTransacaoDialog({
                                   ) : (
                                     formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL") - parseFloat(String(valor)))
                                   )}
-                                </div>
+                                </span>
                               </div>
                             )}
                             {(origemTipo === "CAIXA_OPERACIONAL" || 
@@ -3404,50 +3371,35 @@ export function CaixaTransacaoDialog({
                             {tipoTransacao === "DEPOSITO" && tipoMoeda === "FIAT" && origemContaId && (
                               <div className="mt-3 space-y-1">
                                 {parseFloat(String(valor)) > 0 ? (
-                                  <>
-                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                      <TrendingDown className="h-4 w-4 text-destructive" />
-                                      <span className="line-through opacity-70">
-                                        {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
-                                      </span>
-                                    </div>
-                                    <div className="text-sm font-semibold text-foreground">
+                                  <div className="mt-2 flex items-center justify-center gap-2">
+                                    <TrendingDown className="h-4 w-4 text-destructive" />
+                                    <span className="text-sm font-semibold text-foreground">
                                       {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId) - parseFloat(String(valor)))}
-                                    </div>
-                                  </>
+                                    </span>
+                                  </div>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="text-xs text-muted-foreground mt-2">
                                     Saldo atual: {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", origemContaId))}
                                   </div>
                                 )}
                               </div>
                             )}
-                            {/* DEPOSITO CRYPTO - Mostrar saldo da wallet crypto */}
                             {tipoTransacao === "DEPOSITO" && tipoMoeda === "CRYPTO" && origemWalletId && (
                               <div className="mt-3 space-y-1">
                                 {parseFloat(String(valor)) > 0 ? (
-                                  <>
-                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                      <TrendingDown className="h-4 w-4 text-destructive" />
-                                      <span className="line-through opacity-70">
-                                        {formatCryptoBalance(
-                                          getSaldoCoin("PARCEIRO_WALLET", origemWalletId),
-                                          getSaldoAtual("PARCEIRO_WALLET", origemWalletId),
-                                          coin
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div className="text-sm font-semibold text-foreground">
+                                  <div className="mt-2 flex items-center justify-center gap-2">
+                                    <TrendingDown className="h-4 w-4 text-destructive" />
+                                    <span className="text-sm font-semibold text-foreground">
                                       {(() => {
                                         const novaQtdCoin = getSaldoCoin("PARCEIRO_WALLET", origemWalletId) - parseFloat(String(qtdCoin || 0));
                                         const cotacaoAtual = parseFloat(cotacao) || (cryptoPrices[coin] || 1);
                                         const novoUsdCalculado = novaQtdCoin * cotacaoAtual;
                                         return formatCryptoBalance(novaQtdCoin, novoUsdCalculado, coin);
                                       })()}
-                                    </div>
-                                  </>
+                                    </span>
+                                  </div>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="text-xs text-muted-foreground mt-2">
                                     Saldo disponível: {formatCryptoBalance(
                                       getSaldoCoin("PARCEIRO_WALLET", origemWalletId),
                                       getSaldoAtual("PARCEIRO_WALLET", origemWalletId),
@@ -3463,24 +3415,9 @@ export function CaixaTransacaoDialog({
                              (origemContaId || origemWalletId) && (
                               <div className="mt-3 space-y-1">
                                 {parseFloat(String(valor)) > 0 ? (
-                                  <>
-                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                      <TrendingDown className="h-4 w-4 text-destructive" />
-                                      {tipoMoeda === "CRYPTO" && origemTipo === "PARCEIRO_WALLET" ? (
-                                        <span className="line-through opacity-70">
-                                          {formatCryptoBalance(
-                                            getSaldoCoin(origemTipo, origemWalletId),
-                                            getSaldoAtual(origemTipo, origemWalletId),
-                                            coin
-                                          )}
-                                        </span>
-                                      ) : (
-                                        <span className="line-through opacity-70">
-                                          {formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId))}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-sm font-semibold text-foreground">
+                                  <div className="mt-2 flex items-center justify-center gap-2">
+                                    <TrendingDown className="h-4 w-4 text-destructive" />
+                                    <span className="text-sm font-semibold text-foreground">
                                       {tipoMoeda === "CRYPTO" && origemTipo === "PARCEIRO_WALLET" ? (
                                         (() => {
                                           const novaQtdCoin = getSaldoCoin(origemTipo, origemWalletId) - parseFloat(String(qtdCoin || 0));
@@ -3491,10 +3428,10 @@ export function CaixaTransacaoDialog({
                                       ) : (
                                         formatCurrency(getSaldoAtual(origemTipo, origemContaId || origemWalletId) - parseFloat(String(valor)))
                                       )}
-                                    </div>
-                                  </>
+                                    </span>
+                                  </div>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="text-xs text-muted-foreground mt-2">
                                     Saldo disponível: {tipoMoeda === "CRYPTO" && origemTipo === "PARCEIRO_WALLET" ? (
                                       formatCryptoBalance(
                                         getSaldoCoin(origemTipo, origemWalletId),
@@ -3525,24 +3462,9 @@ export function CaixaTransacaoDialog({
                             <div className="text-sm font-medium uppercase">{getDestinoLabel()}</div>
                             {(destinoTipo === "CAIXA_OPERACIONAL" || 
                               (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE")) && parseFloat(String(valor)) > 0 && (
-                              <div className="mt-3 space-y-1">
-                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                  {tipoMoeda === "CRYPTO" ? (
-                                    <span className="line-through opacity-70">
-                                      {formatCryptoBalance(
-                                        getSaldoCoin("CAIXA_OPERACIONAL"),
-                                        getSaldoAtual("CAIXA_OPERACIONAL"),
-                                        coin
-                                      )}
-                                    </span>
-                                  ) : (
-                                    <span className="line-through opacity-70">
-                                      {formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL"))}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-sm font-semibold text-foreground">
+                              <div className="mt-2 flex items-center justify-center gap-2">
+                                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                <span className="text-sm font-semibold text-foreground">
                                   {tipoMoeda === "CRYPTO" ? (
                                     (() => {
                                       const novaQtdCoin = getSaldoCoin("CAIXA_OPERACIONAL") + parseFloat(String(qtdCoin || 0));
@@ -3553,7 +3475,7 @@ export function CaixaTransacaoDialog({
                                   ) : (
                                     formatCurrency(getSaldoAtual("CAIXA_OPERACIONAL") + parseFloat(String(valor)))
                                   )}
-                                </div>
+                                </span>
                               </div>
                             )}
                             {(destinoTipo === "CAIXA_OPERACIONAL" || 
@@ -3573,41 +3495,28 @@ export function CaixaTransacaoDialog({
                             {tipoTransacao === "DEPOSITO" && destinoBookmakerId && (
                               <div className="mt-3 space-y-1">
                                 {parseFloat(String(valor)) > 0 ? (
-                                  <>
-                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                      <span className="line-through opacity-70">
-                                        {tipoMoeda === "CRYPTO" 
-                                          ? <span className="text-cyan-400">{formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId), "USD")}</span>
-                                          : formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId), "BRL")
-                                        }
-                                      </span>
-                                    </div>
-                                    <div className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
+                                  <div className="mt-2 flex items-center justify-center gap-2">
+                                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                    <span className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
                                       {tipoMoeda === "CRYPTO" 
                                         ? formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)), "USD")
                                         : formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)), "BRL")
                                       }
-                                    </div>
-                                  </>
+                                    </span>
+                                  </div>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="text-xs text-muted-foreground mt-2">
                                     {formatBookmakerFullBalance(destinoBookmakerId)}
                                   </div>
                                 )}
                               </div>
                             )}
                             {tipoTransacao === "SAQUE" && destinoContaId && parseFloat(String(valor)) > 0 && (
-                              <div className="mt-3 space-y-1">
-                                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                  <span className="line-through opacity-70">
-                                    {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId))}
-                                  </span>
-                                </div>
-                                <div className="text-sm font-semibold text-foreground">
+                              <div className="mt-2 flex items-center justify-center gap-2">
+                                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                <span className="text-sm font-semibold text-foreground">
                                   {formatCurrency(getSaldoAtual("PARCEIRO_CONTA", destinoContaId) + parseFloat(String(valor)))}
-                                </div>
+                                </span>
                               </div>
                             )}
                             {/* Transferência Caixa → Parceiro DESTINO - Mostrar saldo SEMPRE */}
@@ -3616,24 +3525,9 @@ export function CaixaTransacaoDialog({
                              (destinoContaId || destinoWalletId) && (
                               <div className="mt-3 space-y-1">
                                 {parseFloat(String(valor)) > 0 ? (
-                                  <>
-                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                      {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
-                                        <span className="line-through opacity-70">
-                                          {formatCryptoBalance(
-                                            getSaldoCoin(destinoTipo, destinoWalletId),
-                                            getSaldoAtual(destinoTipo, destinoWalletId),
-                                            coin
-                                          )}
-                                        </span>
-                                      ) : (
-                                        <span className="line-through opacity-70">
-                                          {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId))}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-sm font-semibold text-foreground">
+                                  <div className="mt-2 flex items-center justify-center gap-2">
+                                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                    <span className="text-sm font-semibold text-foreground">
                                       {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
                                         (() => {
                                           const novaQtdCoin = getSaldoCoin(destinoTipo, destinoWalletId) + parseFloat(String(qtdCoin || 0));
@@ -3644,10 +3538,10 @@ export function CaixaTransacaoDialog({
                                       ) : (
                                         formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId) + parseFloat(String(valor)))
                                       )}
-                                    </div>
-                                  </>
+                                    </span>
+                                  </div>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="text-xs text-muted-foreground mt-2">
                                     Saldo atual: {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
                                       formatCryptoBalance(
                                         getSaldoCoin(destinoTipo, destinoWalletId),
@@ -3667,37 +3561,23 @@ export function CaixaTransacaoDialog({
                              (destinoContaId || destinoWalletId) && (
                               <div className="mt-3 space-y-1">
                                 {parseFloat(String(valor)) > 0 ? (
-                                  <>
-                                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                  <div className="mt-2 flex items-center justify-center gap-2">
+                                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                    <span className="text-sm font-semibold text-foreground">
                                       {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
-                                        <span className="line-through opacity-70">
-                                          {formatCryptoBalance(
-                                            getSaldoCoin(destinoTipo, destinoWalletId),
-                                            getSaldoAtual(destinoTipo, destinoWalletId),
-                                            coin
-                                          )}
-                                        </span>
-                                      ) : (
-                                        <span className="line-through opacity-70">
-                                          {formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId))}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-sm font-semibold text-foreground">
-                                      {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
-                                        formatCryptoBalance(
-                                          getSaldoCoin(destinoTipo, destinoWalletId) + parseFloat(String(qtdCoin || 0)),
-                                          getSaldoAtual(destinoTipo, destinoWalletId) + parseFloat(String(valor)),
-                                          coin
-                                        )
+                                        (() => {
+                                          const novaQtdCoin = getSaldoCoin(destinoTipo, destinoWalletId) + parseFloat(String(qtdCoin || 0));
+                                          const cotacaoAtual = parseFloat(cotacao) || (cryptoPrices[coin] || 1);
+                                          const novoUsdCalculado = novaQtdCoin * cotacaoAtual;
+                                          return formatCryptoBalance(novaQtdCoin, novoUsdCalculado, coin);
+                                        })()
                                       ) : (
                                         formatCurrency(getSaldoAtual(destinoTipo, destinoContaId || destinoWalletId) + parseFloat(String(valor)))
                                       )}
-                                    </div>
-                                  </>
+                                    </span>
+                                  </div>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground">
+                                  <div className="text-xs text-muted-foreground mt-2">
                                     Saldo atual: {tipoMoeda === "CRYPTO" && destinoTipo === "PARCEIRO_WALLET" ? (
                                       formatCryptoBalance(
                                         getSaldoCoin(destinoTipo, destinoWalletId),
