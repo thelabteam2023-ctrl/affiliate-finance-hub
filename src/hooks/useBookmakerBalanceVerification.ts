@@ -28,6 +28,7 @@ export interface BookmakerDiscrepancy {
   lucro_apostas: number;
   cashback: number;
   giros_gratis: number;
+  bonus_creditado: number; // Bônus com status 'credited' - fonte legítima de saldo
 }
 
 interface UseBookmakerBalanceVerificationProps {
@@ -74,6 +75,7 @@ export function useBookmakerBalanceVerification({
             lucro_apostas: result.lucro_apostas,
             cashback: result.cashback || 0,
             giros_gratis: result.giros_gratis || 0,
+            bonus_creditado: result.bonus_creditado || 0,
           };
         }
       }
@@ -118,6 +120,7 @@ export function useBookmakerBalanceVerification({
           lucro_apostas: item.lucro_apostas,
           cashback: item.cashback || 0,
           giros_gratis: item.giros_gratis || 0,
+          bonus_creditado: item.bonus_creditado || 0,
         }));
 
       setDiscrepancies(discrepanciasEncontradas);
