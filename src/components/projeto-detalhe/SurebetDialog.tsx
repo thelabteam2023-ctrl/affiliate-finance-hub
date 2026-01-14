@@ -560,6 +560,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   
+  // Estado para confirmação de cobertura incompleta (menos de 3 pernas preenchidas no modelo 1-X-2)
+  const [showIncompleteCoverageConfirm, setShowIncompleteCoverageConfirm] = useState(false);
+  
   // Registro explícito - usa sugestões baseadas na aba ativa
   // Forma de registro é sempre ARBITRAGEM, estratégia e contexto vêm da aba
   const [registroValues, setRegistroValues] = useState<RegistroApostaValues>(() => {
@@ -1664,76 +1667,111 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       return;
     }
     
-    // Validar cada lado do modelo atual
+    // NOVO: Validação flexível para pernas - permite perna vazia (odd+stake ambos vazios)
+    // Regra: odd+stake preenchidos = válido, ambos vazios = válido, apenas um = inválido
+    let pernasPreenchidas = 0;
+    
     for (let i = 0; i < odds.length; i++) {
       const entry = odds[i];
       const selecaoLabel = entry.selecao;
       
-      // 1. Casa obrigatória
-      if (!entry.bookmaker_id || entry.bookmaker_id.trim() === "") {
-        toast.error(`Selecione a casa para "${selecaoLabel}"`);
-        return;
-      }
-      
-      // 2. Odd obrigatória e válida
       const odd = parseFloat(entry.odd);
-      if (!entry.odd || isNaN(odd) || odd <= 1) {
-        toast.error(`Odd inválida para "${selecaoLabel}" (deve ser > 1.00)`);
-        return;
-      }
-      
-      // 3. Stake obrigatória
       const stake = parseFloat(entry.stake);
-      if (!entry.stake || isNaN(stake) || stake <= 0) {
-        toast.error(`Stake obrigatória para "${selecaoLabel}"`);
-        return;
-      }
+      const hasOdd = entry.odd && !isNaN(odd) && odd > 1;
+      const hasStake = entry.stake && !isNaN(stake) && stake > 0;
+      const hasBookmaker = entry.bookmaker_id && entry.bookmaker_id.trim() !== "";
       
-      // 4. Verificar saldo considerando uso compartilhado (APENAS para criação, não edição)
-      if (!isEditing) {
-        const saldoDisponivel = getSaldoDisponivelParaPosicao(entry.bookmaker_id, i);
-        const bkMoeda = bookmakerSaldos.find(b => b.id === entry.bookmaker_id)?.moeda || "BRL";
-        if (saldoDisponivel !== null && stake > saldoDisponivel + 0.01) {
-          toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)} para "${selecaoLabel}": ${formatCurrency(saldoDisponivel, bkMoeda)} disponível nesta operação, ${formatCurrency(stake, bkMoeda)} necessário`);
+      // Verificar se perna está completamente vazia (permitido)
+      const isPernaVazia = !hasOdd && !hasStake && !hasBookmaker;
+      
+      // Verificar se perna está completa (permitido)
+      const isPernaCompleta = hasOdd && hasStake && hasBookmaker;
+      
+      // Se não é vazia nem completa, há erro de preenchimento parcial
+      if (!isPernaVazia && !isPernaCompleta) {
+        // Verificar qual campo está faltando
+        if (!hasBookmaker && (hasOdd || hasStake)) {
+          toast.error(`Selecione a casa para "${selecaoLabel}" ou deixe a perna vazia`);
+          return;
+        }
+        if (hasBookmaker && !hasOdd && hasStake) {
+          toast.error(`Informe a odd para "${selecaoLabel}" (odd e stake devem estar ambos preenchidos ou vazios)`);
+          return;
+        }
+        if (hasBookmaker && hasOdd && !hasStake) {
+          toast.error(`Informe a stake para "${selecaoLabel}" (odd e stake devem estar ambos preenchidos ou vazios)`);
+          return;
+        }
+        if (!hasOdd && !hasStake && hasBookmaker) {
+          toast.error(`Informe odd e stake para "${selecaoLabel}" ou remova a casa selecionada`);
           return;
         }
       }
       
-      // 5. Validar entradas adicionais (coberturas) - APENAS para criação
-      if (!isEditing && entry.additionalEntries && entry.additionalEntries.length > 0) {
-        for (let j = 0; j < entry.additionalEntries.length; j++) {
-          const ae = entry.additionalEntries[j];
-          const aeLabel = `cobertura ${j + 1} de "${selecaoLabel}"`;
-          
-          // Casa obrigatória
-          if (!ae.bookmaker_id || ae.bookmaker_id.trim() === "") {
-            toast.error(`Selecione a casa para ${aeLabel}`);
-            return;
-          }
-          
-          // Odd obrigatória e válida
-          const aeOdd = parseFloat(ae.odd);
-          if (!ae.odd || isNaN(aeOdd) || aeOdd <= 1) {
-            toast.error(`Odd inválida para ${aeLabel} (deve ser > 1.00)`);
-            return;
-          }
-          
-          // Stake obrigatória
-          const aeStake = parseFloat(ae.stake);
-          if (!ae.stake || isNaN(aeStake) || aeStake <= 0) {
-            toast.error(`Stake obrigatória para ${aeLabel}`);
-            return;
-          }
-          
-          // Verificar saldo
-          const aeSaldoDisponivel = getSaldoDisponivelParaAdditionalEntry(ae.bookmaker_id, i, j);
-          const aeBkMoeda = bookmakerSaldos.find(b => b.id === ae.bookmaker_id)?.moeda || "BRL";
-          if (aeSaldoDisponivel !== null && aeStake > aeSaldoDisponivel + 0.01) {
-            toast.error(`Saldo insuficiente em ${getBookmakerNome(ae.bookmaker_id)} para ${aeLabel}: ${formatCurrency(aeSaldoDisponivel, aeBkMoeda)} disponível, ${formatCurrency(aeStake, aeBkMoeda)} necessário`);
+      if (isPernaCompleta) {
+        pernasPreenchidas++;
+        
+        // Validar odd mínima
+        if (odd <= 1) {
+          toast.error(`Odd inválida para "${selecaoLabel}" (deve ser > 1.00)`);
+          return;
+        }
+        
+        // Verificar saldo considerando uso compartilhado (APENAS para criação, não edição)
+        if (!isEditing) {
+          const saldoDisponivel = getSaldoDisponivelParaPosicao(entry.bookmaker_id, i);
+          const bkMoeda = bookmakerSaldos.find(b => b.id === entry.bookmaker_id)?.moeda || "BRL";
+          if (saldoDisponivel !== null && stake > saldoDisponivel + 0.01) {
+            toast.error(`Saldo insuficiente em ${getBookmakerNome(entry.bookmaker_id)} para "${selecaoLabel}": ${formatCurrency(saldoDisponivel, bkMoeda)} disponível nesta operação, ${formatCurrency(stake, bkMoeda)} necessário`);
             return;
           }
         }
+        
+        // Validar entradas adicionais (coberturas) - APENAS para criação
+        if (!isEditing && entry.additionalEntries && entry.additionalEntries.length > 0) {
+          for (let j = 0; j < entry.additionalEntries.length; j++) {
+            const ae = entry.additionalEntries[j];
+            const aeLabel = `cobertura ${j + 1} de "${selecaoLabel}"`;
+            
+            const aeOdd = parseFloat(ae.odd);
+            const aeStake = parseFloat(ae.stake);
+            const aeHasOdd = ae.odd && !isNaN(aeOdd) && aeOdd > 1;
+            const aeHasStake = ae.stake && !isNaN(aeStake) && aeStake > 0;
+            const aeHasBookmaker = ae.bookmaker_id && ae.bookmaker_id.trim() !== "";
+            
+            // Cobertura vazia é permitida
+            if (!aeHasOdd && !aeHasStake && !aeHasBookmaker) continue;
+            
+            // Cobertura parcialmente preenchida é erro
+            if (!aeHasBookmaker) {
+              toast.error(`Selecione a casa para ${aeLabel}`);
+              return;
+            }
+            if (!aeHasOdd) {
+              toast.error(`Odd inválida para ${aeLabel} (deve ser > 1.00)`);
+              return;
+            }
+            if (!aeHasStake) {
+              toast.error(`Stake obrigatória para ${aeLabel}`);
+              return;
+            }
+            
+            // Verificar saldo
+            const aeSaldoDisponivel = getSaldoDisponivelParaAdditionalEntry(ae.bookmaker_id, i, j);
+            const aeBkMoeda = bookmakerSaldos.find(b => b.id === ae.bookmaker_id)?.moeda || "BRL";
+            if (aeSaldoDisponivel !== null && aeStake > aeSaldoDisponivel + 0.01) {
+              toast.error(`Saldo insuficiente em ${getBookmakerNome(ae.bookmaker_id)} para ${aeLabel}: ${formatCurrency(aeSaldoDisponivel, aeBkMoeda)} disponível, ${formatCurrency(aeStake, aeBkMoeda)} necessário`);
+              return;
+            }
+          }
+        }
       }
+    }
+    
+    // Validação: precisa ter pelo menos 1 perna preenchida
+    if (pernasPreenchidas === 0) {
+      toast.error("Preencha pelo menos uma perna da operação");
+      return;
     }
 
     // Validação extra: verificar se há inconsistência de saldo compartilhado (APENAS para criação)
@@ -1741,7 +1779,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       toast.error("Há inconsistência de saldo compartilhado entre as posições. Verifique as stakes.");
       return;
     }
-
+    
+    // NOVO: Verificar se há cobertura incompleta no modelo 1-X-2 (menos de 3 pernas)
+    const totalPernasModelo = modelo === "1-X-2" ? 3 : 2;
+    if (pernasPreenchidas < totalPernasModelo && !isEditing) {
+      // Mostrar modal de confirmação antes de salvar
+      setShowIncompleteCoverageConfirm(true);
+      return;
+    }
+    
+    // Executar salvamento diretamente
+    await executeSaveLogic();
+  };
+  
+  // Função separada para lógica de salvamento (usada após validação e confirmação)
+  const executeSaveLogic = async () => {
     try {
       setSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -3765,6 +3817,37 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Modal de confirmação para cobertura incompleta */}
+      <AlertDialog open={showIncompleteCoverageConfirm} onOpenChange={setShowIncompleteCoverageConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              Cobertura Incompleta
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-left">
+              Você está registrando uma operação com cobertura incompleta (menos de {modelo === "1-X-2" ? "3" : "2"} pernas preenchidas).
+              <br /><br />
+              <strong>Isso significa que há cenários de resultado sem proteção.</strong>
+              <br /><br />
+              Deseja prosseguir mesmo assim?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={async () => {
+                setShowIncompleteCoverageConfirm(false);
+                await executeSaveLogic();
+              }}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              Sim, registrar assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
