@@ -98,6 +98,15 @@ export function GlobalActionsBar({
     );
   }, [bonuses]);
 
+  // IDs de bookmakers que já possuem bônus PENDENTE (não podem receber novo bônus)
+  const pendingBonusBookmakerIds = useMemo(() => {
+    return new Set(
+      bonuses
+        .filter((b) => b.status === "pending")
+        .map((b) => b.bookmaker_id)
+    );
+  }, [bonuses]);
+
   useEffect(() => {
     fetchBookmakers();
   }, [projetoId]);
@@ -180,9 +189,9 @@ export function GlobalActionsBar({
     return success;
   };
 
-  // Transform bookmakers for BonusDialog format (hide bookmakers that already have an active bonus)
+  // Transform bookmakers for BonusDialog format (hide bookmakers that already have an active OR pending bonus)
   const bookmarkersForBonus = bookmakers
-    .filter((b) => !activeBonusBookmakerIds.has(b.id))
+    .filter((b) => !activeBonusBookmakerIds.has(b.id) && !pendingBonusBookmakerIds.has(b.id))
     .map((b) => ({
       id: b.id,
       nome: b.nome,
