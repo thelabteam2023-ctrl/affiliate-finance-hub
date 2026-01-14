@@ -364,6 +364,80 @@ export function DespesaAdministrativaDialog({
           if (estornoError) throw estornoError;
         }
         
+        // 📝 AUDITORIA: Registrar alteração com dados antes/depois
+        const beforeData = {
+          id: despesa.id,
+          categoria: despesa.categoria,
+          grupo: despesa.grupo,
+          descricao: despesa.descricao,
+          valor: despesa.valor,
+          data_despesa: despesa.data_despesa,
+          recorrente: despesa.recorrente,
+          status: despesa.status,
+          origem_tipo: despesa.origem_tipo,
+          origem_parceiro_id: despesa.origem_parceiro_id,
+          origem_conta_bancaria_id: despesa.origem_conta_bancaria_id,
+          origem_wallet_id: despesa.origem_wallet_id,
+          tipo_moeda: despesa.tipo_moeda,
+          moeda: despesa.moeda,
+        };
+        
+        const afterData = {
+          id: despesa.id,
+          categoria: payload.categoria,
+          grupo: payload.grupo,
+          descricao: payload.descricao,
+          valor: payload.valor,
+          data_despesa: payload.data_despesa,
+          recorrente: payload.recorrente,
+          status: payload.status,
+          origem_tipo: payload.origem_tipo,
+          origem_parceiro_id: payload.origem_parceiro_id,
+          origem_conta_bancaria_id: payload.origem_conta_bancaria_id,
+          origem_wallet_id: payload.origem_wallet_id,
+          tipo_moeda: payload.tipo_moeda,
+        };
+        
+        // Calcular metadata com as diferenças
+        const alteracoes: string[] = [];
+        if (diferencaValor !== 0) {
+          alteracoes.push(`Valor: R$ ${valorAnterior.toFixed(2)} → R$ ${valorNovo.toFixed(2)} (diferença: R$ ${diferencaValor.toFixed(2)})`);
+        }
+        if (despesa.status !== formData.status) {
+          alteracoes.push(`Status: ${despesa.status} → ${formData.status}`);
+        }
+        if (mudouOrigem) {
+          alteracoes.push(`Origem de pagamento alterada`);
+        }
+        if (despesa.grupo !== formData.grupo) {
+          alteracoes.push(`Grupo: ${despesa.grupo} → ${formData.grupo}`);
+        }
+        if (despesa.descricao !== formData.descricao) {
+          alteracoes.push(`Descrição alterada`);
+        }
+        
+        const auditMetadata = {
+          alteracoes,
+          impacto_financeiro: deveReconciliar || mudouOrigem,
+          diferenca_valor: diferencaValor,
+          reconciliacao_aplicada: deveReconciliar || mudouOrigem,
+        };
+        
+        // Inserir registro de auditoria
+        await supabase
+          .from("audit_logs")
+          .insert({
+            workspace_id: workspaceId,
+            actor_user_id: user.id,
+            action: "UPDATE",
+            entity_type: "despesa_administrativa",
+            entity_id: despesa.id,
+            entity_name: `${grupoInfo.label}${formData.descricao ? `: ${formData.descricao}` : ''}`,
+            before_data: beforeData,
+            after_data: afterData,
+            metadata: auditMetadata,
+          });
+        
         const { error } = await supabase
           .from("despesas_administrativas")
           .update(payload)
@@ -411,10 +485,48 @@ export function DespesaAdministrativaDialog({
         }
 
         // PASSO 2: Registrar em despesas_administrativas
-        const { error } = await supabase
+        const { data: newDespesa, error } = await supabase
           .from("despesas_administrativas")
-          .insert(payload);
+          .insert(payload)
+          .select('id')
+          .single();
         if (error) throw error;
+        
+        // 📝 AUDITORIA: Registrar criação
+        const afterData = {
+          id: newDespesa?.id,
+          categoria: payload.categoria,
+          grupo: payload.grupo,
+          descricao: payload.descricao,
+          valor: payload.valor,
+          data_despesa: payload.data_despesa,
+          recorrente: payload.recorrente,
+          status: payload.status,
+          origem_tipo: payload.origem_tipo,
+          origem_parceiro_id: payload.origem_parceiro_id,
+          origem_conta_bancaria_id: payload.origem_conta_bancaria_id,
+          origem_wallet_id: payload.origem_wallet_id,
+          tipo_moeda: payload.tipo_moeda,
+        };
+        
+        await supabase
+          .from("audit_logs")
+          .insert({
+            workspace_id: workspaceId,
+            actor_user_id: user.id,
+            action: "CREATE",
+            entity_type: "despesa_administrativa",
+            entity_id: newDespesa?.id,
+            entity_name: `${grupoInfo.label}${formData.descricao ? `: ${formData.descricao}` : ''}`,
+            before_data: null,
+            after_data: afterData,
+            metadata: {
+              impacto_financeiro: formData.status === "CONFIRMADO",
+              valor: formData.valor,
+              origem_tipo: origemData.origemTipo,
+            },
+          });
+        
         toast({ title: "Despesa registrada com sucesso!" });
       }
 
