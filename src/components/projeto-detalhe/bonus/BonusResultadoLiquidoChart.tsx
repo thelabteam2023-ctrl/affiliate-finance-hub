@@ -1,8 +1,18 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Receipt, TrendingUp, TrendingDown, AreaChart as AreaChartIcon, BarChart3, Activity } from "lucide-react";
+import { Receipt, TrendingUp, TrendingDown, AreaChart as AreaChartIcon, Activity, Filter, X } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -49,6 +59,13 @@ interface ChartDataPoint {
   acumuladoNegativo: number;
 }
 
+interface BookmakerBonusStats {
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  total_bonus: number;
+  count: number;
+}
+
 type ChartMode = "resultado" | "bonus" | "juice";
 
 export function BonusResultadoLiquidoChart({
@@ -59,12 +76,48 @@ export function BonusResultadoLiquidoChart({
   dateRange,
 }: BonusResultadoLiquidoChartProps) {
   const [chartMode, setChartMode] = useState<ChartMode>("resultado");
+  const [selectedBookmaker, setSelectedBookmaker] = useState<string | null>(null);
+
+  // Calcula estatísticas por bookmaker (para filtro e breakdown)
+  const bookmakerStats = useMemo(() => {
+    const statsMap: Record<string, BookmakerBonusStats> = {};
+    
+    bonuses
+      .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at)
+      .forEach(b => {
+        // Filtra por dateRange se especificado
+        if (dateRange) {
+          const bonusDate = parseISO(b.credited_at!.split("T")[0]);
+          if (bonusDate < dateRange.start || bonusDate > dateRange.end) return;
+        }
+        
+        const id = b.bookmaker_id;
+        if (!statsMap[id]) {
+          statsMap[id] = {
+            bookmaker_id: id,
+            bookmaker_nome: b.bookmaker_nome || b.bookmaker_login || "Casa desconhecida",
+            total_bonus: 0,
+            count: 0,
+          };
+        }
+        statsMap[id].total_bonus += b.bonus_amount || 0;
+        statsMap[id].count += 1;
+      });
+    
+    return Object.values(statsMap).sort((a, b) => b.total_bonus - a.total_bonus);
+  }, [bonuses, dateRange]);
+
+  // Filtra bônus pelo bookmaker selecionado
+  const filteredBonuses = useMemo(() => {
+    if (!selectedBookmaker) return bonuses;
+    return bonuses.filter(b => b.bookmaker_id === selectedBookmaker);
+  }, [bonuses, selectedBookmaker]);
 
   // Calcula dados do gráfico: Resultado Líquido = Bônus creditados + Juice
   const chartData = useMemo(() => {
     // Agrupa bônus creditados por data
     const bonusByDate: Record<string, number> = {};
-    bonuses
+    filteredBonuses
       .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at)
       .forEach(b => {
         const date = b.credited_at!.split("T")[0];
@@ -84,6 +137,13 @@ export function BonusResultadoLiquidoChart({
     bonusBets.forEach(bet => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
       if (!isBonusBet) return;
+      
+      // Se filtro por bookmaker ativo, filtrar juice também
+      if (selectedBookmaker && bet.bonus_id) {
+        const relatedBonus = bonuses.find(b => b.id === bet.bonus_id);
+        if (relatedBonus && relatedBonus.bookmaker_id !== selectedBookmaker) return;
+      }
+      
       const date = bet.data_aposta.split("T")[0];
       const pl = bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0;
       juiceByDate[date] = (juiceByDate[date] || 0) + pl;
@@ -116,7 +176,7 @@ export function BonusResultadoLiquidoChart({
     });
 
     return data;
-  }, [bonuses, bonusBets, dateRange]);
+  }, [filteredBonuses, bonusBets, bonuses, dateRange, selectedBookmaker]);
 
   // KPIs
   const kpis = useMemo(() => {
@@ -223,13 +283,70 @@ export function BonusResultadoLiquidoChart({
           </>
         );
       case "bonus":
+        const selectedBookmakerName = selectedBookmaker 
+          ? bookmakerStats.find(b => b.bookmaker_id === selectedBookmaker)?.bookmaker_nome 
+          : null;
         return (
           <>
+            {/* Filtro por casa */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-xs gap-1">
+                  <Filter className="h-3 w-3" />
+                  {selectedBookmakerName ? (
+                    <span className="max-w-[100px] truncate">{selectedBookmakerName}</span>
+                  ) : (
+                    "Todas as casas"
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                <DropdownMenuLabel className="text-xs">Filtrar por casa</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => setSelectedBookmaker(null)}
+                  className="text-xs"
+                >
+                  <span className="flex-1">Todas as casas</span>
+                  {!selectedBookmaker && <Badge variant="secondary" className="text-[10px] h-4">Ativo</Badge>}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <ScrollArea className="h-[200px]">
+                  {bookmakerStats.map((stat) => (
+                    <DropdownMenuItem 
+                      key={stat.bookmaker_id}
+                      onClick={() => setSelectedBookmaker(stat.bookmaker_id)}
+                      className="text-xs flex items-center justify-between"
+                    >
+                      <span className="flex-1 truncate">{stat.bookmaker_nome}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-warning font-medium">{formatCurrency(stat.total_bonus)}</span>
+                        {selectedBookmaker === stat.bookmaker_id && (
+                          <Badge variant="secondary" className="text-[10px] h-4">Ativo</Badge>
+                        )}
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            {selectedBookmaker && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setSelectedBookmaker(null)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+            
             <Badge variant="outline" className="text-xs border-warning/30 text-warning">
-              Total Bônus: {formatCurrency(kpis.totalBonus)}
+              Total: {formatCurrency(kpis.totalBonus)}
             </Badge>
             <Badge variant="outline" className="text-xs border-muted-foreground/30 text-muted-foreground">
-              {kpis.diasOperados} {kpis.diasOperados === 1 ? "dia" : "dias"} com bônus
+              {bookmakerStats.length} {bookmakerStats.length === 1 ? "casa" : "casas"}
             </Badge>
           </>
         );
