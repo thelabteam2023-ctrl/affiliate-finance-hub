@@ -220,7 +220,15 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     
     const total = totalBonusCreditado + totalJuice;
     
-    return { totalBonusCreditado, totalJuice, total };
+    // Performance % = (Resultado Líquido / Total Bônus) * 100
+    // 100% = bônus totalmente convertido sem perda
+    // >100% = bônus convertido com ganho adicional
+    // <100% = parte do bônus foi consumida pelo juice
+    const performancePercent = totalBonusCreditado > 0 
+      ? ((total / totalBonusCreditado) * 100) 
+      : 0;
+    
+    return { totalBonusCreditado, totalJuice, total, performancePercent };
   }, [bonuses, bonusBetsData, convertToConsolidation]);
 
   return (
@@ -282,7 +290,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             </CardContent>
           </Card>
 
-          {/* Nova KPI: Performance de Bônus */}
+          {/* Nova KPI: Performance de Bônus com % */}
           <Card className={bonusPerformance.total >= 0 ? "border-primary/30 bg-primary/5" : "border-destructive/30 bg-destructive/5"}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
@@ -291,8 +299,12 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                   <TooltipTrigger asChild>
                     <Receipt className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent className="max-w-[220px]">
-                    <p className="text-xs">Bônus creditados + Juice (resultado das operações com bônus)</p>
+                  <TooltipContent className="max-w-[280px]">
+                    <div className="text-xs space-y-1">
+                      <p><strong>Resultado:</strong> Bônus creditados + Juice</p>
+                      <p><strong>Eficiência:</strong> % do bônus convertido</p>
+                      <p className="text-muted-foreground">100% = conversão total | &gt;100% = lucro adicional</p>
+                    </div>
                   </TooltipContent>
                 </TooltipUI>
               </CardTitle>
@@ -303,10 +315,24 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               )}
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${bonusPerformance.total >= 0 ? "text-primary" : "text-destructive"}`}>
-                {formatCurrency(bonusPerformance.total)}
+              <div className="flex items-baseline gap-2">
+                <span className={`text-2xl font-bold ${bonusPerformance.total >= 0 ? "text-primary" : "text-destructive"}`}>
+                  {formatCurrency(bonusPerformance.total)}
+                </span>
+                <Badge 
+                  variant="outline"
+                  className={`text-xs font-semibold ${
+                    bonusPerformance.performancePercent >= 100 
+                      ? "border-primary/50 text-primary bg-primary/10" 
+                      : bonusPerformance.performancePercent >= 80
+                        ? "border-warning/50 text-warning bg-warning/10"
+                        : "border-destructive/50 text-destructive bg-destructive/10"
+                  }`}
+                >
+                  {bonusPerformance.performancePercent.toFixed(1)}%
+                </Badge>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-1">
                 Bônus: {formatCurrency(bonusPerformance.totalBonusCreditado)} | Juice: {formatCurrency(bonusPerformance.totalJuice)}
               </p>
             </CardContent>

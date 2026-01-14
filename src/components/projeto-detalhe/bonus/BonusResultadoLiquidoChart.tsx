@@ -118,8 +118,16 @@ export function BonusResultadoLiquidoChart({
     const resultadoLiquido = totalBonus + totalJuice;
     const diasOperados = chartData.length;
     const ultimoAcumulado = chartData.length > 0 ? chartData[chartData.length - 1].acumulado : 0;
+    
+    // Performance % = (Resultado Líquido / Total Bônus) * 100
+    // 100% = bônus totalmente convertido sem perda
+    // >100% = bônus convertido com ganho adicional
+    // <100% = parte do bônus foi consumida pelo juice
+    const performancePercent = totalBonus > 0 
+      ? ((resultadoLiquido / totalBonus) * 100) 
+      : 0;
 
-    return { totalBonus, totalJuice, resultadoLiquido, diasOperados, ultimoAcumulado };
+    return { totalBonus, totalJuice, resultadoLiquido, diasOperados, ultimoAcumulado, performancePercent };
   }, [chartData]);
 
   // Cores
@@ -177,6 +185,18 @@ export function BonusResultadoLiquidoChart({
             >
               {isPositivo ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
               Acumulado: {formatCurrency(acumuladoFinal)}
+            </Badge>
+            <Badge 
+              variant="outline"
+              className={`text-xs font-semibold ${
+                kpis.performancePercent >= 100 
+                  ? "border-primary/50 text-primary bg-primary/10" 
+                  : kpis.performancePercent >= 80
+                    ? "border-warning/50 text-warning bg-warning/10"
+                    : "border-destructive/50 text-destructive bg-destructive/10"
+              }`}
+            >
+              Performance: {kpis.performancePercent.toFixed(1)}%
             </Badge>
           </div>
         </div>
