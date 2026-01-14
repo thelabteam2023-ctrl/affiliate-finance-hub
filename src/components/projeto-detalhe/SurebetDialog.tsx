@@ -1935,8 +1935,17 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           return (bk?.moeda as SupportedCurrency) || "BRL";
         };
         
+        // CORREÇÃO: Filtrar apenas pernas preenchidas antes de salvar
+        // Pernas vazias (sem bookmaker, odd ou stake) são excluídas do array final
+        const pernasPreenchidas = odds.filter(entry => {
+          const hasBookmaker = entry.bookmaker_id && entry.bookmaker_id.trim() !== "";
+          const hasOdd = entry.odd && parseFloat(entry.odd) > 1;
+          const hasStake = entry.stake && parseFloat(entry.stake) > 0;
+          return hasBookmaker && hasOdd && hasStake;
+        });
+        
         // Criar pernas COM SNAPSHOT e suporte a múltiplas entradas
-        const pernasToSave: SurebetPerna[] = odds.map((entry, idx) => {
+        const pernasToSave: SurebetPerna[] = pernasPreenchidas.map((entry, idx) => {
           const mainStake = parseFloat(entry.stake) || 0;
           const mainMoeda = getBookmakerMoeda(entry.bookmaker_id);
           const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda);
