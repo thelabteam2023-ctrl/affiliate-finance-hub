@@ -202,8 +202,6 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     return bookmakersWithBonus.reduce((acc, bk) => acc + convertToConsolidation(bk.saldo_real || 0, bk.moeda), 0);
   }, [bookmakersWithBonus, convertToConsolidation]);
 
-  const totalSaldoOperavel = totalSaldoRealConsolidated + activeBonusTotalConsolidated;
-
   // Performance de Bônus = Total de bônus creditados + Juice das operações
   const bonusPerformance = useMemo(() => {
     // Total de bônus creditados (histórico)
@@ -231,6 +229,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     return { totalBonusCreditado, totalJuice, total, performancePercent };
   }, [bonuses, bonusBetsData, convertToConsolidation]);
 
+  // Saldo Operável DINÂMICO = Saldo Real + Performance de Bônus (não apenas bônus cru)
+  // Fórmula: Saldo Real + (Bônus Creditado + Juice Acumulado)
+  // Isso reflete o valor REAL disponível para operar, considerando o impacto das apostas
+  const totalSaldoOperavel = totalSaldoRealConsolidated + bonusPerformance.total;
+
   return (
     <div className="space-y-6">
 
@@ -249,6 +252,21 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
                 Saldo Operável
+                <TooltipUI>
+                  <TooltipTrigger asChild>
+                    <TrendingUp className="h-4 w-4 text-primary cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[280px]">
+                    <p className="text-xs font-medium mb-1">Valor dinâmico e volátil</p>
+                    <p className="text-xs text-muted-foreground">
+                      Este valor varia conforme o desempenho das apostas e o juice aplicado aos bônus.
+                    </p>
+                    <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
+                      <p className="text-xs">Saldo Real: {formatCurrency(totalSaldoRealConsolidated)}</p>
+                      <p className="text-xs">Performance Bônus: {formatCurrency(bonusPerformance.total)}</p>
+                    </div>
+                  </TooltipContent>
+                </TooltipUI>
                 {isContaminated && (
                   <TooltipUI>
                     <TooltipTrigger asChild>
@@ -260,11 +278,10 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                   </TooltipUI>
                 )}
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
-              <p className="text-xs text-muted-foreground">Real + Bônus Ativo</p>
+              <p className="text-xs text-muted-foreground">Real + Performance de Bônus</p>
             </CardContent>
           </Card>
 
