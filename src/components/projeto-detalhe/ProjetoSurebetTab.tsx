@@ -852,14 +852,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                         parceiro_nome: s.parceiro_nome,
                         stake: s.stake || s.stake_total,
                         odd: s.odd,
-                        resultado: s.resultado,
+                        resultado: s.resultado || undefined,
                         lucro_prejuizo: s.lucro_real || 0
                       }]
                     : s.pernas?.map(p => ({
                         bookmaker_nome: p.bookmaker_nome,
                         stake: p.stake,
                         odd: p.odd,
-                        resultado: p.resultado,
+                        resultado: p.resultado || undefined,
                         lucro_prejuizo: getLucroPerna(p)
                       }))
                 };
@@ -889,14 +889,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                         parceiro_nome: s.parceiro_nome,
                         stake: s.stake || s.stake_total,
                         odd: s.odd,
-                        resultado: s.resultado,
+                        resultado: s.resultado || undefined,
                         lucro_prejuizo: s.lucro_real || 0
                       }]
                     : s.pernas?.map(p => ({
                         bookmaker_nome: p.bookmaker_nome,
                         stake: p.stake,
                         odd: p.odd,
-                        resultado: p.resultado,
+                        resultado: p.resultado || undefined,
                         lucro_prejuizo: getLucroPerna(p)
                       }))
                 };
