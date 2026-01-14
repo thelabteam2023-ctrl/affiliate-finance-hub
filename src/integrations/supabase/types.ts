@@ -8632,6 +8632,7 @@ export type Database = {
       recalcular_saldo_bookmaker: {
         Args: { p_bookmaker_id: string }
         Returns: {
+          bonus_creditado: number
           bookmaker_id: string
           cashback: number
           depositos: number
@@ -8650,9 +8651,9 @@ export type Database = {
       recalcular_saldos_projeto: {
         Args: { p_aplicar?: boolean; p_projeto_id: string }
         Returns: {
+          bonus_creditado: number
           bookmaker_id: string
           cashback: number
-          corrigido: boolean
           depositos: number
           diferenca: number
           giros_gratis: number

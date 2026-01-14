@@ -202,6 +202,10 @@ export function BalanceDiscrepancyAlert({
                       <span>Giros grátis:</span>
                       <span className="text-green-500">+{formatCurrency(d.giros_gratis, moedaBookmaker)}</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span>Bônus creditado:</span>
+                      <span className="text-purple-500">+{formatCurrency(d.bonus_creditado, moedaBookmaker)}</span>
+                    </div>
                   </div>
                   
                   {/* Resultado - usando a moeda nativa */}
