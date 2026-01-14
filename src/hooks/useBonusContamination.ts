@@ -41,19 +41,18 @@ export function useBonusContamination({
 
       // Query for bets in bookmakers in bonus mode that are NOT bonus bets
       // Contamination = bookmaker in bonus mode used for non-bonus strategies
+      // Usa estrategia ao invés de is_bonus_bet (deprecado)
       const { data: nonBonusBets, error } = await supabase
         .from("apostas_unificada")
-        .select("bookmaker_id, estrategia, is_bonus_bet")
+        .select("bookmaker_id, estrategia")
         .eq("projeto_id", projetoId)
         .in("bookmaker_id", bookmakersInBonusMode)
-        .or("is_bonus_bet.is.null,is_bonus_bet.eq.false");
+        .neq("estrategia", "EXTRACAO_BONUS");
 
       if (error) throw error;
 
-      // Also exclude EXTRACAO_BONUS strategy as it's the expected bonus strategy
-      const contaminated = (nonBonusBets || []).filter(
-        bet => bet.estrategia !== "EXTRACAO_BONUS"
-      );
+      // Apostas que não são EXTRACAO_BONUS em bookmakers com bônus = contaminação
+      const contaminated = nonBonusBets || [];
 
       if (contaminated.length === 0) {
         setContaminatedBookmakers([]);
