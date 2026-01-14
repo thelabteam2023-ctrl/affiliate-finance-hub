@@ -260,11 +260,12 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
         .eq("forma_registro", "SIMPLES");
       
       // Apply OR filter based on available bookmakers in bonus mode
+      // Usa estrategia e contexto_operacional (is_bonus_bet deprecado)
       if (bookmakersInBonusMode.length > 0) {
-        query = query.or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true,contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
+        query = query.or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
       } else {
         // No bookmakers in bonus mode, only fetch by context/strategy
-        query = query.or(`is_bonus_bet.eq.true,contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
+        query = query.or(`contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
       }
       
       const { data, error } = await query.order("data_aposta", { ascending: false });
@@ -304,10 +305,11 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
         .eq("forma_registro", "MULTIPLA");
       
       // Apply OR filter based on available bookmakers in bonus mode
+      // Usa estrategia e contexto_operacional (is_bonus_bet deprecado)
       if (bookmakersInBonusMode.length > 0) {
-        query = query.or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),is_bonus_bet.eq.true,contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
+        query = query.or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
       } else {
-        query = query.or(`is_bonus_bet.eq.true,contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
+        query = query.or(`contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
       }
       
       const { data, error } = await query.order("data_aposta", { ascending: false });

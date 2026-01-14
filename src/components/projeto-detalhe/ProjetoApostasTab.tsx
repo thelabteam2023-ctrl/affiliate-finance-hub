@@ -226,8 +226,9 @@ function getApostaContexto(
     return "FREEBET";
   }
   
-  // Verifica se é aposta de bônus ou se o bookmaker tem bônus ativo
-  if (aposta.is_bonus_bet || bookmakersComBonusAtivo.includes(aposta.bookmaker_id)) {
+  // Verifica se é aposta de bônus via estrategia ou bookmaker com bônus ativo
+  // is_bonus_bet deprecado - usar estrategia="EXTRACAO_BONUS"
+  if (aposta.estrategia === "EXTRACAO_BONUS" || bookmakersComBonusAtivo.includes(aposta.bookmaker_id)) {
     return "BONUS";
   }
   
@@ -242,9 +243,10 @@ function getSurebetContexto(
   const hasFreebetPerna = surebet.pernas?.some(p => p.tipo_freebet || p.gerou_freebet);
   if (hasFreebetPerna) return "FREEBET";
   
-  // Verifica se alguma perna tem bônus ativo
+  // Verifica se alguma perna tem bônus ativo via bookmaker
+  // Para surebets, usamos apenas o bookmaker já que pernas não têm estrategia individual
   const hasBonusPerna = surebet.pernas?.some(p => 
-    p.is_bonus_bet || bookmakersComBonusAtivo.includes(p.bookmaker_id)
+    bookmakersComBonusAtivo.includes(p.bookmaker_id)
   );
   if (hasBonusPerna) return "BONUS";
   

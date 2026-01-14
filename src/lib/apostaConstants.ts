@@ -240,10 +240,8 @@ export const inferEstrategiaLegado = (aposta: {
     return 'EXTRACAO_FREEBET';
   }
   
-  if (aposta.is_bonus_bet) {
-    console.warn(`[LEGADO] Aposta com bonus sem estratégia definida`);
-    return 'EXTRACAO_BONUS';
-  }
+  // is_bonus_bet foi deprecado - usar estrategia="EXTRACAO_BONUS" diretamente
+  // Fallback mantido apenas para dados legados muito antigos
   
   return 'PUNTER';
 };
@@ -271,10 +269,7 @@ export const validateApostaConsistencia = (aposta: {
     warnings.push('Estratégia EXTRACAO_FREEBET mas sem indicador de freebet');
   }
   
-  // Validar EXTRACAO_BONUS
-  if (aposta.estrategia === 'EXTRACAO_BONUS' && !aposta.is_bonus_bet) {
-    warnings.push('Estratégia EXTRACAO_BONUS mas is_bonus_bet não está marcado');
-  }
+  // is_bonus_bet foi deprecado - estrategia="EXTRACAO_BONUS" é suficiente
   
   // Detectar conflitos
   if (aposta.estrategia === 'VALUEBET' && aposta.surebet_id) {
