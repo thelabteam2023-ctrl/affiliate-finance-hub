@@ -192,6 +192,178 @@ export function DespesaAdministrativaDialog({
       };
 
       if (despesa?.id) {
+        // 🔄 RECONCILIAÇÃO: Calcular diferença e ajustar saldo
+        const valorAnterior = despesa.valor || 0;
+        const valorNovo = formData.valor;
+        const diferencaValor = valorNovo - valorAnterior;
+        
+        // Verificar se houve mudança de valor E se a despesa está confirmada
+        const deveReconciliar = diferencaValor !== 0 && 
+          despesa.status === "CONFIRMADO" && 
+          formData.status === "CONFIRMADO";
+        
+        // Verificar se houve mudança de origem de pagamento
+        const mudouOrigem = 
+          despesa.origem_tipo !== origemData.origemTipo ||
+          despesa.origem_conta_bancaria_id !== origemData.origemContaBancariaId ||
+          despesa.origem_wallet_id !== origemData.origemWalletId;
+
+        if (deveReconciliar || mudouOrigem) {
+          // Se mudou origem, precisa estornar totalmente a antiga e debitar na nova
+          if (mudouOrigem && despesa.origem_tipo) {
+            // Estornar valor total da origem antiga
+            const estornoPayload: any = {
+              user_id: user.id,
+              workspace_id: workspaceId,
+              tipo_transacao: "AJUSTE_MANUAL",
+              tipo_moeda: despesa.tipo_moeda || "FIAT",
+              moeda: despesa.moeda || "BRL",
+              valor: valorAnterior,
+              destino_tipo: despesa.origem_tipo,
+              destino_parceiro_id: despesa.origem_parceiro_id || null,
+              destino_conta_bancaria_id: despesa.origem_conta_bancaria_id || null,
+              destino_wallet_id: despesa.origem_wallet_id || null,
+              data_transacao: new Date().toISOString().split("T")[0],
+              descricao: `Estorno por edição de despesa: ${formData.descricao || grupoInfo.label} - origem alterada`,
+              status: "CONFIRMADO",
+              ajuste_direcao: "ENTRADA",
+              ajuste_motivo: "Correção automática por edição de despesa administrativa",
+            };
+            
+            const { error: estornoError } = await supabase
+              .from("cash_ledger")
+              .insert(estornoPayload);
+            
+            if (estornoError) throw estornoError;
+            
+            // Debitar valor novo da nova origem
+            const novoDebitoPayload: any = {
+              user_id: user.id,
+              workspace_id: workspaceId,
+              tipo_transacao: "DESPESA_ADMINISTRATIVA",
+              tipo_moeda: origemData.tipoMoeda,
+              moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : origemData.moeda,
+              valor: valorNovo,
+              origem_tipo: origemData.origemTipo,
+              origem_parceiro_id: origemData.origemParceiroId || null,
+              origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
+              origem_wallet_id: origemData.origemWalletId || null,
+              data_transacao: formData.data_despesa,
+              descricao: `Despesa administrativa - ${grupoInfo.label}${formData.descricao ? `: ${formData.descricao}` : ''} (edição)`,
+              status: "CONFIRMADO",
+            };
+            
+            const { error: debitoError } = await supabase
+              .from("cash_ledger")
+              .insert(novoDebitoPayload);
+            
+            if (debitoError) throw debitoError;
+          } else if (deveReconciliar) {
+            // Mesma origem, apenas ajustar a diferença
+            if (diferencaValor > 0) {
+              // Valor aumentou: debitar a diferença da origem
+              const debitoPayload: any = {
+                user_id: user.id,
+                workspace_id: workspaceId,
+                tipo_transacao: "DESPESA_ADMINISTRATIVA",
+                tipo_moeda: origemData.tipoMoeda,
+                moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : origemData.moeda,
+                valor: diferencaValor,
+                origem_tipo: origemData.origemTipo,
+                origem_parceiro_id: origemData.origemParceiroId || null,
+                origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
+                origem_wallet_id: origemData.origemWalletId || null,
+                data_transacao: formData.data_despesa,
+                descricao: `Ajuste de despesa - ${grupoInfo.label}: valor aumentado em R$ ${diferencaValor.toFixed(2)}`,
+                status: "CONFIRMADO",
+              };
+              
+              const { error: ajusteError } = await supabase
+                .from("cash_ledger")
+                .insert(debitoPayload);
+              
+              if (ajusteError) throw ajusteError;
+            } else {
+              // Valor diminuiu: creditar a diferença de volta
+              const creditoPayload: any = {
+                user_id: user.id,
+                workspace_id: workspaceId,
+                tipo_transacao: "AJUSTE_MANUAL",
+                tipo_moeda: origemData.tipoMoeda,
+                moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : origemData.moeda,
+                valor: Math.abs(diferencaValor),
+                destino_tipo: origemData.origemTipo,
+                destino_parceiro_id: origemData.origemParceiroId || null,
+                destino_conta_bancaria_id: origemData.origemContaBancariaId || null,
+                destino_wallet_id: origemData.origemWalletId || null,
+                data_transacao: formData.data_despesa,
+                descricao: `Estorno de despesa - ${grupoInfo.label}: valor reduzido em R$ ${Math.abs(diferencaValor).toFixed(2)}`,
+                status: "CONFIRMADO",
+                ajuste_direcao: "ENTRADA",
+                ajuste_motivo: "Correção automática por edição de despesa administrativa",
+              };
+              
+              const { error: ajusteError } = await supabase
+                .from("cash_ledger")
+                .insert(creditoPayload);
+              
+              if (ajusteError) throw ajusteError;
+            }
+          }
+        }
+        
+        // Verificar mudança de status: PENDENTE -> CONFIRMADO
+        if (despesa.status === "PENDENTE" && formData.status === "CONFIRMADO") {
+          const debitoPayload: any = {
+            user_id: user.id,
+            workspace_id: workspaceId,
+            tipo_transacao: "DESPESA_ADMINISTRATIVA",
+            tipo_moeda: origemData.tipoMoeda,
+            moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : origemData.moeda,
+            valor: valorNovo,
+            origem_tipo: origemData.origemTipo,
+            origem_parceiro_id: origemData.origemParceiroId || null,
+            origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
+            origem_wallet_id: origemData.origemWalletId || null,
+            data_transacao: formData.data_despesa,
+            descricao: `Despesa administrativa confirmada - ${grupoInfo.label}${formData.descricao ? `: ${formData.descricao}` : ''}`,
+            status: "CONFIRMADO",
+          };
+          
+          const { error: debitoError } = await supabase
+            .from("cash_ledger")
+            .insert(debitoPayload);
+          
+          if (debitoError) throw debitoError;
+        }
+        
+        // Verificar mudança de status: CONFIRMADO -> PENDENTE (estornar)
+        if (despesa.status === "CONFIRMADO" && formData.status === "PENDENTE") {
+          const estornoPayload: any = {
+            user_id: user.id,
+            workspace_id: workspaceId,
+            tipo_transacao: "AJUSTE_MANUAL",
+            tipo_moeda: despesa.tipo_moeda || "FIAT",
+            moeda: despesa.moeda || "BRL",
+            valor: valorAnterior,
+            destino_tipo: despesa.origem_tipo,
+            destino_parceiro_id: despesa.origem_parceiro_id || null,
+            destino_conta_bancaria_id: despesa.origem_conta_bancaria_id || null,
+            destino_wallet_id: despesa.origem_wallet_id || null,
+            data_transacao: formData.data_despesa,
+            descricao: `Estorno de despesa - ${grupoInfo.label}: status alterado para PENDENTE`,
+            status: "CONFIRMADO",
+            ajuste_direcao: "ENTRADA",
+            ajuste_motivo: "Correção automática por alteração de status",
+          };
+          
+          const { error: estornoError } = await supabase
+            .from("cash_ledger")
+            .insert(estornoPayload);
+          
+          if (estornoError) throw estornoError;
+        }
+        
         const { error } = await supabase
           .from("despesas_administrativas")
           .update(payload)
