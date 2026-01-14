@@ -24,7 +24,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
-import { VisaoGeralCharts } from "./VisaoGeralCharts";
+import { VisaoGeralCharts, ExtraLucroEntry } from "./VisaoGeralCharts";
 
 interface ProjetoDashboardTabProps {
   projetoId: string;
@@ -68,6 +68,7 @@ type BookmakerFilter = "all" | "bookmaker" | "parceiro";
 
 export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const [apostasUnificadas, setApostasUnificadas] = useState<ApostaUnificada[]>([]);
+  const [extrasLucro, setExtrasLucro] = useState<ExtraLucroEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEsporte, setSelectedEsporte] = useState<string>("");
   
@@ -89,8 +90,100 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const [selectedParceiro, setSelectedParceiro] = useState<string>("");
 
   useEffect(() => {
-    fetchAllApostas();
+    fetchAllData();
   }, [projetoId]);
+
+  // Busca todos os dados: apostas + cashback + giros grátis + eventos promocionais
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([
+        fetchAllApostas(),
+        fetchExtrasLucro(),
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Busca cashback, giros grátis e eventos promocionais
+  const fetchExtrasLucro = async () => {
+    try {
+      const extras: ExtraLucroEntry[] = [];
+
+      // 1. Buscar cashback manual
+      const { data: cashback } = await supabase
+        .from("cashback_manual")
+        .select("data_credito, valor")
+        .eq("projeto_id", projetoId);
+
+      cashback?.forEach(cb => {
+        if (cb.valor && cb.valor > 0) {
+          extras.push({
+            data: cb.data_credito,
+            valor: cb.valor,
+            tipo: 'cashback',
+          });
+        }
+      });
+
+      // 2. Buscar giros grátis confirmados
+      const { data: girosGratis } = await supabase
+        .from("giros_gratis" as any)
+        .select("data_registro, valor_retorno")
+        .eq("projeto_id", projetoId)
+        .eq("status", "confirmado")
+        .not("valor_retorno", "is", null);
+
+      (girosGratis as any[])?.forEach((gg: any) => {
+        if (gg.valor_retorno && gg.valor_retorno > 0 && gg.data_registro) {
+          extras.push({
+            data: gg.data_registro,
+            valor: gg.valor_retorno,
+            tipo: 'giro_gratis',
+          });
+        }
+      });
+
+      // 3. Buscar eventos promocionais do cash_ledger (freebets convertidas, bônus creditados)
+      const { data: eventos } = await supabase
+        .from("cash_ledger")
+        .select("data_transacao, valor, tipo_transacao, evento_promocional_tipo, destino_bookmaker_id")
+        .eq("status", "CONFIRMADO")
+        .in("tipo_transacao", ["FREEBET_CONVERTIDA", "BONUS_CREDITADO", "CREDITO_PROMOCIONAL", "GIRO_GRATIS_GANHO"]);
+
+      // Filtrar por bookmakers do projeto
+      const { data: projectBookmakers } = await supabase
+        .from("bookmakers")
+        .select("id")
+        .eq("projeto_id", projetoId);
+
+      const projectBookmakerIds = new Set(projectBookmakers?.map(b => b.id) || []);
+
+      eventos?.forEach(ev => {
+        // Só incluir se o destino é um bookmaker do projeto
+        if (ev.destino_bookmaker_id && projectBookmakerIds.has(ev.destino_bookmaker_id)) {
+          const valor = ev.valor || 0;
+          if (valor > 0) {
+            let tipo: ExtraLucroEntry['tipo'] = 'promocional';
+            if (ev.tipo_transacao === 'FREEBET_CONVERTIDA') tipo = 'freebet';
+            else if (ev.tipo_transacao === 'BONUS_CREDITADO') tipo = 'bonus';
+            else if (ev.tipo_transacao === 'GIRO_GRATIS_GANHO') tipo = 'giro_gratis';
+
+            extras.push({
+              data: ev.data_transacao,
+              valor,
+              tipo,
+            });
+          }
+        }
+      });
+
+      setExtrasLucro(extras);
+    } catch (error) {
+      console.error("Erro ao carregar extras de lucro:", error);
+    }
+  };
 
   const fetchAllApostas = async () => {
     try {
@@ -335,7 +428,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       parceiro_nome: a.parceiro_nome,
       bookmaker_id: a.bookmaker_id,
       pernas: a.pernas,
-      forma_registro: a.forma_registro || undefined,
+      forma_registro: a.forma_registro ?? undefined,
     }));
   }, [apostasUnificadas]);
 
@@ -443,6 +536,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       {/* Gráficos de Evolução e Casas Mais Utilizadas */}
       <VisaoGeralCharts 
         apostas={apostasParaGraficos}
+        extrasLucro={extrasLucro}
         accentColor="hsl(var(--primary))"
         logoMap={catalogLogoMap}
         showCalendar={true}
