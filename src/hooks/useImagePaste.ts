@@ -1,8 +1,6 @@
-import { useCallback } from "react";
+import { useCallback, type ClipboardEvent, type DragEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 interface UseImagePasteOptions {
   userId: string;
@@ -12,8 +10,8 @@ interface UseImagePasteOptions {
 }
 
 /**
- * Hook para lidar com paste de imagens em textarea/input
- * Faz upload para o storage e retorna a URL
+ * Hook para lidar com colar/arrastar imagens em textarea/input
+ * Faz upload para o storage e retorna a URL pública
  */
 export function useImagePaste({
   userId,
@@ -21,54 +19,87 @@ export function useImagePaste({
   onUploadStart,
   onUploadEnd,
 }: UseImagePasteOptions) {
-  
-  const handlePaste = useCallback(async (event: React.ClipboardEvent) => {
-    const items = event.clipboardData?.items;
-    if (!items) return;
-
-    // Procurar por imagem no clipboard
-    for (const item of Array.from(items)) {
-      if (item.type.startsWith("image/")) {
-        event.preventDefault();
-        
-        const file = item.getAsFile();
-        if (!file) continue;
-
-        try {
-          onUploadStart?.();
-
-          // Gerar nome único para o arquivo
-          const timestamp = Date.now();
-          const extension = file.type.split("/")[1] || "png";
-          const fileName = `${userId}/${timestamp}.${extension}`;
-
-          // Upload para o storage
-          const { error: uploadError } = await supabase.storage
-            .from("anotacoes-images")
-            .upload(fileName, file, {
-              cacheControl: "3600",
-              upsert: false,
-            });
-
-          if (uploadError) {
-            throw uploadError;
-          }
-
-          // Gerar URL pública
-          const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/anotacoes-images/${fileName}`;
-          
-          onImageUploaded(imageUrl);
-        } catch (error) {
-          console.error("Erro ao fazer upload da imagem:", error);
-          toast.error("Erro ao colar imagem");
-        } finally {
-          onUploadEnd?.();
-        }
-
-        return; // Processar apenas a primeira imagem
+  const uploadImage = useCallback(
+    async (file: File) => {
+      if (!userId) {
+        toast.error("Faça login para enviar imagens");
+        return null;
       }
-    }
-  }, [userId, onImageUploaded, onUploadStart, onUploadEnd]);
 
-  return { handlePaste };
+      onUploadStart?.();
+
+      try {
+        const timestamp = Date.now();
+        const extension = file.type.split("/")[1] || "png";
+        const fileName = `${userId}/${timestamp}.${extension}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("anotacoes-images")
+          .upload(fileName, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+          .from("anotacoes-images")
+          .getPublicUrl(fileName);
+
+        return data.publicUrl;
+      } catch (error) {
+        console.error("Erro ao fazer upload da imagem:", error);
+        toast.error("Erro ao enviar imagem");
+        return null;
+      } finally {
+        onUploadEnd?.();
+      }
+    },
+    [userId, onUploadStart, onUploadEnd]
+  );
+
+  const handlePaste = useCallback(
+    async (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          event.preventDefault();
+
+          const file = item.getAsFile();
+          if (!file) return;
+
+          const imageUrl = await uploadImage(file);
+          if (imageUrl) onImageUploaded(imageUrl);
+          return; // Processar apenas a primeira imagem
+        }
+      }
+    },
+    [onImageUploaded, uploadImage]
+  );
+
+  const handleDragOver = useCallback((event: DragEvent) => {
+    // Permitir drop
+    event.preventDefault();
+  }, []);
+
+  const handleDrop = useCallback(
+    async (event: DragEvent) => {
+      const files = event.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+
+      const firstImage = Array.from(files).find((f) => f.type.startsWith("image/"));
+      if (!firstImage) return;
+
+      event.preventDefault();
+
+      const imageUrl = await uploadImage(firstImage);
+      if (imageUrl) onImageUploaded(imageUrl);
+    },
+    [onImageUploaded, uploadImage]
+  );
+
+  return { handlePaste, handleDrop, handleDragOver };
 }
+
