@@ -130,11 +130,16 @@ export function BonusResultadoLiquidoChart({
     return { totalBonus, totalJuice, resultadoLiquido, diasOperados, ultimoAcumulado, performancePercent };
   }, [chartData]);
 
-  // Cores
-  const colorPositivo = "hsl(var(--primary))";
+  // Cores - usando chart-2 (emerald) para positivo como no surebet
+  const colorPositivo = "hsl(var(--chart-2))";
   const colorNegativo = "hsl(var(--destructive))";
-  const colorJuice = "hsl(142, 76%, 36%)"; // Verde para juice positivo
-  const colorJuiceNeg = "hsl(var(--destructive))";
+  
+  // Helper para cor do performance %: <60% vermelho, 60-70% amarelo, 70%+ verde
+  const getPerformanceColorClass = (percent: number) => {
+    if (percent >= 70) return "border-emerald-500/50 text-emerald-500 bg-emerald-500/10";
+    if (percent >= 60) return "border-warning/50 text-warning bg-warning/10";
+    return "border-destructive/50 text-destructive bg-destructive/10";
+  };
 
   if (chartData.length === 0) {
     return (
@@ -188,13 +193,7 @@ export function BonusResultadoLiquidoChart({
             </Badge>
             <Badge 
               variant="outline"
-              className={`text-xs font-semibold ${
-                kpis.performancePercent >= 100 
-                  ? "border-primary/50 text-primary bg-primary/10" 
-                  : kpis.performancePercent >= 80
-                    ? "border-warning/50 text-warning bg-warning/10"
-                    : "border-destructive/50 text-destructive bg-destructive/10"
-              }`}
+              className={`text-xs font-semibold ${getPerformanceColorClass(kpis.performancePercent)}`}
             >
               Performance: {kpis.performancePercent.toFixed(1)}%
             </Badge>
@@ -209,30 +208,43 @@ export function BonusResultadoLiquidoChart({
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
-                <linearGradient id="gradientPositivo" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={colorPositivo} stopOpacity={0.4} />
-                  <stop offset="95%" stopColor={colorPositivo} stopOpacity={0.05} />
-                </linearGradient>
-                <linearGradient id="gradientNegativo" x1="0" y1="1" x2="0" y2="0">
-                  <stop offset="5%" stopColor={colorNegativo} stopOpacity={0.4} />
-                  <stop offset="95%" stopColor={colorNegativo} stopOpacity={0.05} />
+                <linearGradient id="bonusGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={isPositivo ? colorPositivo : colorNegativo} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={isPositivo ? colorPositivo : colorNegativo} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={11}
                 tickLine={false}
                 axisLine={false}
+                tick={({ x, y, payload }: { x: number; y: number; payload: { value: string } }) => {
+                  if (!payload.value) return <text />;
+                  return (
+                    <text 
+                      x={x} 
+                      y={y + 10} 
+                      textAnchor="middle" 
+                      fill="hsl(var(--muted-foreground))" 
+                      fontSize={11}
+                    >
+                      {payload.value}
+                    </text>
+                  );
+                }}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                tickFormatter={(value) => {
-                  if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(0)}k`;
-                  return value.toFixed(0);
-                }}
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={11}
                 tickLine={false}
                 axisLine={false}
+                width={60}
+                tickFormatter={(value) => {
+                  if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(1)}k`;
+                  return value.toFixed(0);
+                }}
               />
               <Tooltip
                 contentStyle={{
@@ -287,34 +299,13 @@ export function BonusResultadoLiquidoChart({
               />
               <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" strokeOpacity={0.5} />
               
-              {/* Área principal - Resultado Acumulado */}
+              {/* Área principal - Resultado Acumulado (estilo igual ao surebet) */}
               <Area
                 type="monotone"
                 dataKey="acumulado"
                 stroke={isPositivo ? colorPositivo : colorNegativo}
-                fill={isPositivo ? "url(#gradientPositivo)" : "url(#gradientNegativo)"}
-                strokeWidth={2.5}
-                dot={(props) => {
-                  const { cx, cy, payload } = props;
-                  if (chartData.length > 20) return null;
-                  const isPos = payload.acumulado >= 0;
-                  return (
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={4}
-                      fill={isPos ? colorPositivo : colorNegativo}
-                      stroke="hsl(var(--card))"
-                      strokeWidth={2}
-                    />
-                  );
-                }}
-                activeDot={{
-                  r: 6,
-                  fill: isPositivo ? colorPositivo : colorNegativo,
-                  stroke: "hsl(var(--card))",
-                  strokeWidth: 2,
-                }}
+                strokeWidth={2}
+                fill="url(#bonusGradient)"
               />
             </AreaChart>
           </ResponsiveContainer>

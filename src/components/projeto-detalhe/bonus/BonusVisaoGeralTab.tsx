@@ -322,9 +322,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                 <Badge 
                   variant="outline"
                   className={`text-xs font-semibold ${
-                    bonusPerformance.performancePercent >= 100 
-                      ? "border-primary/50 text-primary bg-primary/10" 
-                      : bonusPerformance.performancePercent >= 80
+                    bonusPerformance.performancePercent >= 70 
+                      ? "border-emerald-500/50 text-emerald-500 bg-emerald-500/10" 
+                      : bonusPerformance.performancePercent >= 60
                         ? "border-warning/50 text-warning bg-warning/10"
                         : "border-destructive/50 text-destructive bg-destructive/10"
                   }`}
