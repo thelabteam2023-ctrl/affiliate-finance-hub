@@ -1,0 +1,244 @@
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { DateRange } from "react-day-picker";
+import { startOfDay, endOfDay, subDays, startOfYear } from "date-fns";
+
+/**
+ * Sistema de Filtros Independentes por Aba
+ * 
+ * ARQUITETURA:
+ * - Cada aba mantém seu próprio estado de filtros
+ * - Filtros NÃO são compartilhados entre abas
+ * - Mudanças em uma aba NÃO afetam outras abas
+ * - Estado pode ser persistido no localStorage por aba
+ */
+
+// Tipos de filtros
+export type StandardPeriodFilter = "1dia" | "7dias" | "30dias" | "ano" | "custom";
+export type EstrategiaFilter = "all" | "PUNTER" | "SUREBET" | "VALUEBET" | "DUPLO_GREEN" | "EXTRACAO_FREEBET" | "EXTRACAO_BONUS";
+
+export interface DateRangeResult {
+  start: Date;
+  end: Date;
+}
+
+export interface TabFiltersState {
+  period: StandardPeriodFilter;
+  customDateRange: DateRange | undefined;
+  bookmakerIds: string[];
+  parceiroIds: string[];
+  estrategias: EstrategiaFilter[];
+  dateRange: DateRangeResult | null;
+}
+
+export interface UseTabFiltersOptions {
+  /** Identificador único da aba (ex: "surebet", "apostas", "promocoes") */
+  tabId: string;
+  /** ID do projeto para escopo de persistência */
+  projetoId: string;
+  /** Período padrão inicial */
+  defaultPeriod?: StandardPeriodFilter;
+  /** Se true, persiste estado no localStorage */
+  persist?: boolean;
+}
+
+/**
+ * Converte período em DateRange
+ */
+export function getDateRangeFromPeriod(
+  period: StandardPeriodFilter,
+  customRange?: DateRange
+): DateRangeResult | null {
+  const now = new Date();
+  const today = startOfDay(now);
+
+  switch (period) {
+    case "1dia":
+      return { start: today, end: endOfDay(now) };
+    case "7dias":
+      return { start: subDays(today, 7), end: endOfDay(now) };
+    case "30dias":
+      return { start: subDays(today, 30), end: endOfDay(now) };
+    case "ano":
+      return { start: startOfYear(now), end: endOfDay(now) };
+    case "custom":
+      if (customRange?.from) {
+        return {
+          start: startOfDay(customRange.from),
+          end: endOfDay(customRange.to || customRange.from),
+        };
+      }
+      return null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Hook de filtros independentes por aba.
+ * 
+ * IMPORTANTE: Este hook cria estado LOCAL para cada aba.
+ * Filtros de uma aba NÃO afetam outras abas.
+ * 
+ * @example
+ * ```tsx
+ * // Na aba Surebet
+ * const filters = useTabFilters({ tabId: "surebet", projetoId: "abc123" });
+ * 
+ * // Na aba Apostas (estado completamente separado)
+ * const filters = useTabFilters({ tabId: "apostas", projetoId: "abc123" });
+ * ```
+ */
+export function useTabFilters({
+  tabId,
+  projetoId,
+  defaultPeriod = "30dias",
+  persist = true,
+}: UseTabFiltersOptions) {
+  const storageKey = `tab-filters-${projetoId}-${tabId}`;
+
+  // Estado local da aba
+  const [period, setPeriodState] = useState<StandardPeriodFilter>(defaultPeriod);
+  const [customDateRange, setCustomDateRangeState] = useState<DateRange | undefined>(undefined);
+  const [bookmakerIds, setBookmakerIdsState] = useState<string[]>([]);
+  const [parceiroIds, setParceiroIdsState] = useState<string[]>([]);
+  const [estrategias, setEstrategiasState] = useState<EstrategiaFilter[]>(["all"]);
+
+  // Carregar estado salvo (apenas se persist=true)
+  useEffect(() => {
+    if (!persist) return;
+    
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.period) setPeriodState(parsed.period);
+        if (parsed.bookmakerIds) setBookmakerIdsState(parsed.bookmakerIds);
+        if (parsed.parceiroIds) setParceiroIdsState(parsed.parceiroIds);
+        // Não restaurar customDateRange e estrategias para evitar estados inválidos
+      } catch (e) {
+        console.error(`[useTabFilters] Erro ao restaurar filtros da aba ${tabId}:`, e);
+      }
+    }
+  }, [storageKey, persist, tabId]);
+
+  // Salvar estado (apenas se persist=true)
+  useEffect(() => {
+    if (!persist) return;
+    
+    const toSave = {
+      period,
+      bookmakerIds,
+      parceiroIds,
+    };
+    localStorage.setItem(storageKey, JSON.stringify(toSave));
+  }, [storageKey, persist, period, bookmakerIds, parceiroIds]);
+
+  // Computar dateRange
+  const dateRange = useMemo(
+    () => getDateRangeFromPeriod(period, customDateRange),
+    [period, customDateRange]
+  );
+
+  // Setters
+  const setPeriod = useCallback((p: StandardPeriodFilter) => {
+    setPeriodState(p);
+  }, []);
+
+  const setCustomDateRange = useCallback((range: DateRange | undefined) => {
+    setCustomDateRangeState(range);
+    if (range?.from && range?.to) {
+      setPeriodState("custom");
+    }
+  }, []);
+
+  const setBookmakerIds = useCallback((ids: string[]) => {
+    setBookmakerIdsState(ids);
+  }, []);
+
+  const setParceiroIds = useCallback((ids: string[]) => {
+    setParceiroIdsState(ids);
+  }, []);
+
+  const setEstrategias = useCallback((e: EstrategiaFilter[]) => {
+    setEstrategiasState(e);
+  }, []);
+
+  // Toggles
+  const toggleBookmaker = useCallback((id: string) => {
+    setBookmakerIdsState(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  }, []);
+
+  const toggleParceiro = useCallback((id: string) => {
+    setParceiroIdsState(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  }, []);
+
+  const toggleEstrategia = useCallback((estrategia: EstrategiaFilter) => {
+    setEstrategiasState(prev => {
+      if (estrategia === "all") {
+        return ["all"];
+      }
+      const withoutAll = prev.filter(e => e !== "all");
+      if (withoutAll.includes(estrategia)) {
+        const newList = withoutAll.filter(e => e !== estrategia);
+        return newList.length === 0 ? ["all"] : newList;
+      }
+      return [...withoutAll, estrategia];
+    });
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setPeriodState(defaultPeriod);
+    setCustomDateRangeState(undefined);
+    setBookmakerIdsState([]);
+    setParceiroIdsState([]);
+    setEstrategiasState(["all"]);
+  }, [defaultPeriod]);
+
+  // Contagem de filtros ativos
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (bookmakerIds.length > 0) count++;
+    if (parceiroIds.length > 0) count++;
+    if (!estrategias.includes("all")) count++;
+    if (period === "custom") count++;
+    return count;
+  }, [bookmakerIds, parceiroIds, estrategias, period]);
+
+  return {
+    // Identificação
+    tabId,
+    projetoId,
+    
+    // Estado
+    period,
+    customDateRange,
+    bookmakerIds,
+    parceiroIds,
+    estrategias,
+    dateRange,
+    
+    // Setters
+    setPeriod,
+    setCustomDateRange,
+    setBookmakerIds,
+    setParceiroIds,
+    setEstrategias,
+    
+    // Helpers
+    toggleBookmaker,
+    toggleParceiro,
+    toggleEstrategia,
+    clearFilters,
+    activeFiltersCount,
+    
+    // Verificações
+    hasActiveFilters: activeFiltersCount > 0,
+  };
+}
+
+// Tipo de retorno para uso em componentes
+export type TabFiltersReturn = ReturnType<typeof useTabFilters>;
