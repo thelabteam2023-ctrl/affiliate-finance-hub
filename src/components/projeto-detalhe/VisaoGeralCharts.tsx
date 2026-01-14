@@ -77,12 +77,23 @@ interface EvolucaoData {
   // Campos extras para modo consolidado diário
   isConsolidated?: boolean;
   apostasNoDia?: number;
+  // Extras para fontes de lucro adicionais
+  incluiExtras?: boolean;
+}
+
+// Interface para entradas de lucro extra (cashback, giros grátis, freebets, etc.)
+export interface ExtraLucroEntry {
+  data: string; // formato YYYY-MM-DD ou ISO
+  valor: number;
+  tipo: 'cashback' | 'giro_gratis' | 'freebet' | 'bonus' | 'promocional';
 }
 
 interface VisaoGeralChartsProps {
   apostas: ApostaBase[];
   /** Apostas de todos os projetos (para visão global) */
   apostasGlobal?: ApostaBase[];
+  /** Entradas extras de lucro (cashback, giros grátis, freebets, bônus) */
+  extrasLucro?: ExtraLucroEntry[];
   accentColor?: string;
   title?: string;
   logoMap?: Map<string, string | null>;
@@ -215,9 +226,9 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurren
           tickLine={false}
           axisLine={false}
           interval={tickInterval}
-          tick={({ x, y, payload }) => {
+          tick={({ x, y, payload }: { x: number; y: number; payload: { value: string } }) => {
             // Não renderiza tick se o label for vazio
-            if (!payload.value) return null;
+            if (!payload.value) return <text />;
             return (
               <text 
                 x={x} 
@@ -457,6 +468,7 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
 export function VisaoGeralCharts({ 
   apostas, 
   apostasGlobal,
+  extrasLucro = [],
   accentColor = "hsl(var(--primary))", 
   logoMap, 
   showCalendar = true,
@@ -480,12 +492,25 @@ export function VisaoGeralCharts({
     return `${prefix}R$${absVal.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
+  
+  // Prepara mapa de extras por data para inclusão no gráfico de evolução
+  const extrasMap = useMemo(() => {
+    const map = new Map<string, number>();
+    extrasLucro.forEach(e => {
+      // Normaliza data para formato yyyy-MM-dd
+      const dateStr = e.data.includes('T') ? e.data.split('T')[0] : e.data;
+      const current = map.get(dateStr) || 0;
+      map.set(dateStr, current + e.valor);
+    });
+    return map;
+  }, [extrasLucro]);
+  
   const evolucaoData = useMemo((): EvolucaoData[] => {
     const sorted = [...apostas].sort(
       (a, b) => parseLocalDateTime(a.data_aposta).getTime() - parseLocalDateTime(b.data_aposta).getTime()
     );
     
-    // MODO 1: Período de 1 dia → entrada por entrada
+    // MODO 1: Período de 1 dia → entrada por entrada (não inclui extras neste modo)
     if (isSingleDayPeriod) {
       let acumulado = 0;
       return sorted.map((a, index) => {
@@ -510,12 +535,13 @@ export function VisaoGeralCharts({
     }
     
     // MODO 2: Período > 1 dia → consolidado diário (um ponto por data)
-    // Agrupa apostas por data e soma os lucros
+    // Agrupa apostas por data e soma os lucros, INCLUINDO cashback e extras
     const dailyMap = new Map<string, { 
       lucroTotal: number; 
       apostasCount: number; 
       dateKey: string;
       dataFormatada: string;
+      incluiExtras: boolean;
     }>();
     
     sorted.forEach((a) => {
@@ -534,6 +560,27 @@ export function VisaoGeralCharts({
           apostasCount: 1,
           dateKey,
           dataFormatada,
+          incluiExtras: false,
+        });
+      }
+    });
+    
+    // Adiciona lucros extras (cashback, giros grátis, freebets, bônus) ao dailyMap
+    extrasMap.forEach((valor, dateKey) => {
+      const existing = dailyMap.get(dateKey);
+      if (existing) {
+        existing.lucroTotal += valor;
+        existing.incluiExtras = true;
+      } else {
+        // Cria entrada apenas para o dia do extra (sem apostas naquele dia)
+        const date = new Date(dateKey + 'T12:00:00');
+        const dataFormatada = format(date, "dd/MM", { locale: ptBR });
+        dailyMap.set(dateKey, {
+          lucroTotal: valor,
+          apostasCount: 0,
+          dateKey,
+          dataFormatada,
+          incluiExtras: true,
         });
       }
     });
@@ -557,9 +604,10 @@ export function VisaoGeralCharts({
         resultado: day.lucroTotal >= 0 ? 'GREEN' : 'RED',
         isConsolidated: true,
         apostasNoDia: day.apostasCount,
+        incluiExtras: day.incluiExtras,
       };
     });
-  }, [apostas, isSingleDayPeriod]);
+  }, [apostas, isSingleDayPeriod, extrasMap]);
 
   // Casas mais utilizadas (por volume) — agrupa por CASA, com detalhamento por vínculo
   // Formato esperado: "PARIMATCH - RAFAEL GOMES" → Casa = "PARIMATCH", Vínculo = "RAFAEL GOMES"
