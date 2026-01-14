@@ -403,18 +403,35 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const filteredEsportesData = useMemo(() => {
     return esportesData.filter(e => e.esporte === selectedEsporte);
   }, [esportesData, selectedEsporte]);
-
-  // KPIs consolidados
+  // KPIs consolidados - INCLUI todas as fontes de lucro (apostas + cashback + bônus + promoções)
   const kpis = useMemo(() => {
     const totalApostas = apostasUnificadas.length;
     const greens = apostasUnificadas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
     const reds = apostasUnificadas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
     const totalVolume = apostasUnificadas.reduce((acc, a) => acc + (a.stake || 0), 0);
-    const totalLucro = apostasUnificadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+    
+    // Lucro das apostas
+    const lucroApostas = apostasUnificadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+    
+    // Lucro adicional de cashback, bônus, freebets, giros grátis, promoções
+    const lucroExtras = extrasLucro.reduce((acc, e) => acc + (e.valor || 0), 0);
+    
+    // Lucro total consolidado
+    const totalLucro = lucroApostas + lucroExtras;
+    
     const roi = totalVolume > 0 ? (totalLucro / totalVolume) * 100 : 0;
     
-    return { totalApostas, greens, reds, totalVolume, totalLucro, roi };
-  }, [apostasUnificadas]);
+    return { 
+      totalApostas, 
+      greens, 
+      reds, 
+      totalVolume, 
+      totalLucro,
+      lucroApostas,
+      lucroExtras,
+      roi 
+    };
+  }, [apostasUnificadas, extrasLucro]);
 
   // Preparar dados para VisaoGeralCharts
   // Passa bookmaker_nome e parceiro_nome separados - o VisaoGeralCharts faz o agrupamento
