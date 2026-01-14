@@ -137,8 +137,12 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
     );
 
     // === 1. MÉTRICAS DE ROI ===
+    // CORREÇÃO: Garantir que stake_total tenha fallback para 0 quando NULL
+    // O valor já vem transformado do ProjetoSurebetTab com fallback stake_total || stake
+    const getStakeValue = (s: Surebet) => s.stake_total || 0;
+    
     const lucroTotalResolvidas = resolvidas.reduce((acc, s) => acc + (s.lucro_real || 0), 0);
-    const stakeTotalResolvidas = resolvidas.reduce((acc, s) => acc + s.stake_total, 0);
+    const stakeTotalResolvidas = resolvidas.reduce((acc, s) => acc + getStakeValue(s), 0);
     const roiMedioPorOperacao = stakeTotalResolvidas > 0 
       ? (lucroTotalResolvidas / stakeTotalResolvidas) * 100 
       : 0;
@@ -152,7 +156,7 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       }
       const entry = lucroMensal.get(mes)!;
       entry.lucro += s.lucro_real || 0;
-      entry.stake += s.stake_total;
+      entry.stake += getStakeValue(s);
     });
     const roisMensais = Array.from(lucroMensal.values())
       .filter(v => v.stake > 0)
@@ -167,14 +171,14 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
 
     // === 3. CAPITAL EM USO ===
     const totalOperacoes = surebets.length;
-    const stakeTotal = surebets.reduce((acc, s) => acc + s.stake_total, 0);
+    const stakeTotal = surebets.reduce((acc, s) => acc + getStakeValue(s), 0);
     const stakeMedia = totalOperacoes > 0 ? stakeTotal / totalOperacoes : 0;
 
     // Stake total média diária
     const stakePorDia = new Map<string, number>();
     surebets.forEach(s => {
       const dia = s.data_operacao.slice(0, 10);
-      stakePorDia.set(dia, (stakePorDia.get(dia) || 0) + s.stake_total);
+      stakePorDia.set(dia, (stakePorDia.get(dia) || 0) + getStakeValue(s));
     });
     const diasComOperacoes = stakePorDia.size;
     const stakeTotalDiaria = diasComOperacoes > 0 

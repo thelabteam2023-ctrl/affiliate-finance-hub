@@ -552,7 +552,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     const greens = filteredSurebets.filter(s => s.resultado === "GREEN").length;
     const reds = filteredSurebets.filter(s => s.resultado === "RED").length;
     const lucroTotal = filteredSurebets.reduce((acc, s) => acc + (s.lucro_real || 0), 0);
-    const stakeTotal = filteredSurebets.reduce((acc, s) => acc + s.stake_total, 0);
+    // CORREÇÃO: Usar fallback para stake quando stake_total é null
+    // stake_total pode ser NULL para apostas antigas ou migradas
+    const stakeTotal = filteredSurebets.reduce((acc, s) => acc + (s.stake_total || s.stake || 0), 0);
     const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
