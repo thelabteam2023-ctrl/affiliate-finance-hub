@@ -97,7 +97,15 @@ export function ApostaPernasResumo({
   showResultado = true,
   className = "",
 }: ApostaPernasResumoProps) {
-  if (!pernas || pernas.length === 0) {
+  // CORREÇÃO: Filtrar pernas vazias/inválidas antes de renderizar
+  // Uma perna é considerada válida se tem bookmaker e odd válida
+  const pernasValidas = pernas.filter(perna => {
+    const hasBookmaker = perna.bookmaker_id || perna.bookmaker_nome || perna.bookmaker;
+    const hasOdd = perna.odd && perna.odd > 0;
+    return hasBookmaker && hasOdd;
+  });
+  
+  if (!pernasValidas || pernasValidas.length === 0) {
     return null;
   }
 
@@ -105,7 +113,7 @@ export function ApostaPernasResumo({
   if (variant === "compact") {
     return (
       <div className={`flex flex-wrap items-center gap-1 ${className}`}>
-        {pernas.map((perna, idx) => (
+        {pernasValidas.map((perna, idx) => (
           <Badge
             key={idx}
             variant="outline"
@@ -119,7 +127,7 @@ export function ApostaPernasResumo({
               {getBookmakerNome(perna)}
             </span>
             <span className="text-muted-foreground">@</span>
-            <span>{perna.odd.toFixed(2)}</span>
+            <span>{(perna.odd || 0).toFixed(2)}</span>
             {showResultado && perna.resultado && (
               <>
                 <span className="text-muted-foreground">•</span>
@@ -138,7 +146,7 @@ export function ApostaPernasResumo({
   if (variant === "list") {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        {pernas.map((perna, idx) => (
+        {pernasValidas.map((perna, idx) => (
           <div
             key={idx}
             className="flex items-center gap-1 text-xs bg-muted/30 rounded px-1.5 py-0.5"
@@ -151,7 +159,7 @@ export function ApostaPernasResumo({
               {getBookmakerNome(perna)}
             </span>
             <span className="text-muted-foreground text-[10px]">@</span>
-            <span className="text-[10px]">{perna.odd.toFixed(2)}</span>
+            <span className="text-[10px]">{(perna.odd || 0).toFixed(2)}</span>
             {showStake && perna.stake && (
               <>
                 <span className="text-muted-foreground text-[10px]">•</span>
@@ -177,7 +185,7 @@ export function ApostaPernasResumo({
   // Variante card - layout vertical
   return (
     <div className={`space-y-1 ${className}`}>
-      {pernas.map((perna, idx) => (
+      {pernasValidas.map((perna, idx) => (
         <div
           key={idx}
           className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded-md px-2 py-1.5"
@@ -192,7 +200,7 @@ export function ApostaPernasResumo({
             </span>
             <span className="text-muted-foreground text-[10px]">•</span>
             <span className="text-[10px] text-muted-foreground flex-shrink-0">
-              @{perna.odd.toFixed(2)}
+              @{(perna.odd || 0).toFixed(2)}
             </span>
             {showStake && perna.stake && (
               <>
@@ -236,19 +244,26 @@ export function ApostaPernasInline({
   pernas: Perna[];
   className?: string;
 }) {
-  if (!pernas || pernas.length === 0) {
+  // CORREÇÃO: Filtrar pernas vazias/inválidas
+  const pernasValidas = pernas.filter(perna => {
+    const hasBookmaker = perna.bookmaker_id || perna.bookmaker_nome || perna.bookmaker;
+    const hasOdd = perna.odd && perna.odd > 0;
+    return hasBookmaker && hasOdd;
+  });
+  
+  if (!pernasValidas || pernasValidas.length === 0) {
     return null;
   }
 
   return (
     <span className={`text-xs text-muted-foreground ${className}`}>
-      {pernas.map((perna, idx) => (
+      {pernasValidas.map((perna, idx) => (
         <span key={idx}>
           {idx > 0 && " • "}
           <span className="uppercase font-medium text-foreground">
             {getBookmakerNome(perna)}
           </span>
-          <span className="ml-0.5">@{perna.odd.toFixed(2)}</span>
+          <span className="ml-0.5">@{(perna.odd || 0).toFixed(2)}</span>
         </span>
       ))}
     </span>

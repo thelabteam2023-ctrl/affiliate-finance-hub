@@ -361,14 +361,16 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
         {/* LINHA 2+: Pernas - Grid alinhado com coluna de seleção fixa */}
         {surebet.pernas && surebet.pernas.length > 0 && (
           <div className="space-y-2 mb-3">
-            {surebet.pernas.map((perna) => (
-              <PernaItem 
-                key={perna.id} 
-                perna={perna} 
-                formatValue={formatValue}
-                getLogoUrl={getLogoUrl}
-              />
-            ))}
+            {surebet.pernas
+              .filter(perna => perna.bookmaker_id && perna.odd && perna.odd > 0)
+              .map((perna) => (
+                <PernaItem 
+                  key={perna.id} 
+                  perna={perna} 
+                  formatValue={formatValue}
+                  getLogoUrl={getLogoUrl}
+                />
+              ))}
           </div>
         )}
         
