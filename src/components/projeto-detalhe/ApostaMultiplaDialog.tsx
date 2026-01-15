@@ -124,6 +124,8 @@ export function ApostaMultiplaDialog({
 
   // ========== HOOK CANÔNICO DE SALDOS ==========
   // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
+  // CORRIGIDO: Incluir todas as casas quando em modo edição OU quando aba é bônus
+  const isBonusContext = activeTab === 'bonus' || activeTab === 'bonus-operacoes';
   const { 
     data: bookmakerSaldos = [], 
     isLoading: saldosLoading,
@@ -131,7 +133,7 @@ export function ApostaMultiplaDialog({
   } = useBookmakerSaldosQuery({
     projetoId,
     enabled: open,
-    includeZeroBalance: !!aposta, // Em edição, mostrar todos
+    includeZeroBalance: !!aposta || isBonusContext, // Em edição ou contexto bônus, mostrar todos
     currentBookmakerId: aposta?.bookmaker_id || null
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
