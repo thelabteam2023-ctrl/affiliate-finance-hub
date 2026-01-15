@@ -130,6 +130,36 @@ function BookmakerLogo({
 // Cor neutra para badge de seleção - informativo, sem conotação de resultado
 const NEUTRAL_SELECTION_STYLE = "bg-slate-600/25 text-slate-300 border-slate-500/40";
 
+/**
+ * Retorna o label de exibição para a seleção.
+ * PRIORIDADE: selecao_livre (linha real) > selecao normalizada
+ * 
+ * Se selecao_livre existir, usa ela (ex: "Over 2.5", "Handicap -1.5")
+ * Se não, converte termos genéricos de mercado 1X2 para 1/X/2
+ */
+function getSelecaoDisplay(perna: SurebetPerna): string {
+  // Se tem selecao_livre, usar ela diretamente (é a linha real da aposta)
+  if (perna.selecao_livre && perna.selecao_livre.trim()) {
+    return perna.selecao_livre;
+  }
+  
+  // Fallback: normalizar apenas valores genéricos de mercado 1X2
+  const selecao = perna.selecao;
+  const marketLabels: Record<string, string> = {
+    "Casa": "1",
+    "Empate": "X",
+    "Fora": "2",
+  };
+  
+  // Se é um termo genérico do mercado, converte para 1/X/2
+  if (marketLabels[selecao]) {
+    return marketLabels[selecao];
+  }
+  
+  // Caso contrário, usa a seleção original
+  return selecao;
+}
+
 // Componente para exibir uma perna com layout de grid fixo
 function PernaItem({ 
   perna, 
@@ -173,7 +203,7 @@ function PernaItem({
             minWidth={80}
             maxWidth={116}
           >
-            {perna.selecao_livre || perna.selecao}
+            {getSelecaoDisplay(perna)}
           </SelectionBadge>
         </div>
         
@@ -203,7 +233,7 @@ function PernaItem({
             minWidth={60}
             maxWidth={100}
           >
-            {perna.selecao_livre || perna.selecao}
+            {getSelecaoDisplay(perna)}
           </SelectionBadge>
         </div>
       </div>
@@ -224,7 +254,7 @@ function PernaItem({
               minWidth={100}
               maxWidth={116}
             >
-              {perna.selecao_livre || perna.selecao}
+              {getSelecaoDisplay(perna)}
             </SelectionBadge>
           </div>
           
