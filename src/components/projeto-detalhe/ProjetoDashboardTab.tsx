@@ -193,6 +193,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
           pernas
         `)
         .eq("projeto_id", projetoId)
+        .eq("status", "LIQUIDADA") // CRÍTICO: Só contabilizar apostas liquidadas
         .is("cancelled_at", null)
         .order("data_aposta", { ascending: true });
 
