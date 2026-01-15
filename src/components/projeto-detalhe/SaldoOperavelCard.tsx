@@ -28,9 +28,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   const { 
     saldoOperavel, 
     saldoReal, 
-    saldoBonus, 
     saldoFreebet, 
-    saldoEmAposta,
     casasComSaldo,
     totalCasas, 
     isLoading 
@@ -61,10 +59,8 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     );
   }
 
-  // Verifica se há bônus ou freebet para mostrar breakdown detalhado
-  const hasBonus = saldoBonus > 0;
+  // Verifica se há freebet para mostrar breakdown detalhado
   const hasFreebet = saldoFreebet > 0;
-  const hasEmAposta = saldoEmAposta > 0;
   const hasCasas = casasComSaldo.length > 0;
 
   // Conteúdo do detalhamento por casa
@@ -176,7 +172,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               </div>
             </DialogTrigger>
             <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
-              {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{hasBonus ? ' + Bônus' : ''}{hasFreebet ? ' + FB' : ''}
+              {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{hasFreebet ? ' + FB' : ''}
             </p>
           </CardContent>
         </Card>
@@ -209,7 +205,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
             </div>
           </PopoverTrigger>
           <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
-            {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{hasBonus ? ' + Bônus' : ''}{hasFreebet ? ' + FB' : ''}
+            {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{hasFreebet ? ' + FB' : ''}
           </p>
         </CardContent>
       </Card>
