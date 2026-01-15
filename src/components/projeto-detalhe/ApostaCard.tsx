@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 
 // Tipos de estratégia para badge
 export type EstrategiaType = 
@@ -236,6 +237,9 @@ export function ApostaCard({
   className,
   formatCurrency: formatCurrencyProp
 }: ApostaCardProps) {
+  // Hook para buscar logos das casas
+  const { getLogoUrl } = useBookmakerLogoMap();
+  
   // Usa formatação do projeto se fornecida, senão usa a padrão local
   const formatValue = (value: number) => {
     if (formatCurrencyProp) return formatCurrencyProp(value);
@@ -392,7 +396,7 @@ export function ApostaCard({
               </div>
             ) : hasPernas ? (
               <div className="hidden sm:block flex-1 min-w-0 overflow-hidden">
-                <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" />
+                <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" getLogoUrl={getLogoUrl} />
               </div>
             ) : hasSelecoes ? (
               <p className="text-xs text-muted-foreground truncate uppercase flex-1 hidden sm:block">
@@ -506,7 +510,8 @@ export function ApostaCard({
             variant="card" 
             showStake 
             showResultado 
-            className="mb-2" 
+            className="mb-2"
+            getLogoUrl={getLogoUrl}
           />
         ) : hasSelecoes ? (
           <div className="space-y-1 mb-2">
