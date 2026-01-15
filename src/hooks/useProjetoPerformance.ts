@@ -40,9 +40,10 @@ export function useProjetoPerformance({
     const { dataInicio, dataFim } = periodo;
 
     // Usar apostas_unificada como fonte única de verdade
+    // CRÍTICO: Priorizar pl_consolidado para evitar inflação em surebets
     let query = supabase
       .from('apostas_unificada')
-      .select('lucro_prejuizo')
+      .select('lucro_prejuizo, pl_consolidado')
       .eq('status', 'LIQUIDADA');
     if (projetoId) query = query.eq('projeto_id', projetoId);
     if (dataInicio) query = query.gte('data_aposta', dataInicio.toISOString());
@@ -55,7 +56,8 @@ export function useProjetoPerformance({
       return 0;
     }
 
-    return data?.reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0) || 0;
+    // CRÍTICO: Usar pl_consolidado quando disponível para evitar inflação
+    return data?.reduce((acc, a) => acc + Number((a as any).pl_consolidado ?? a.lucro_prejuizo ?? 0), 0) || 0;
   }, [projetoId, periodo]);
 
   const fetchCashFlow = useCallback(async (historicalBookmakerIds?: Set<string>): Promise<{ depositos: number; saques: number }> => {

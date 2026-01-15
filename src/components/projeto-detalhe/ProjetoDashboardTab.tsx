@@ -318,7 +318,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       if (aposta.resultado === "RED") acc[aposta.esporte].reds++;
       if (aposta.resultado === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
       if (aposta.resultado === "MEIO_RED") acc[aposta.esporte].meioReds++;
-      acc[aposta.esporte].lucro += aposta.lucro_prejuizo || 0;
+      // CRÍTICO: Usar pl_consolidado quando disponível para evitar inflação
+      acc[aposta.esporte].lucro += (aposta.pl_consolidado ?? aposta.lucro_prejuizo) || 0;
       return acc;
     }, {});
 
@@ -357,11 +358,12 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   }, [esportesData, selectedEsporte]);
 
   // Preparar dados para VisaoGeralCharts
-  // Passa bookmaker_nome e parceiro_nome separados - o VisaoGeralCharts faz o agrupamento
+  // CRÍTICO: Passa pl_consolidado para usar lucro correto (evitar inflação em surebets)
   const apostasParaGraficos = useMemo(() => {
     return apostasUnificadas.map(a => ({
       data_aposta: a.data_aposta,
-      lucro_prejuizo: a.lucro_prejuizo,
+      // CRÍTICO: Usar pl_consolidado quando disponível para evitar inflação
+      lucro_prejuizo: a.pl_consolidado ?? a.lucro_prejuizo,
       stake: a.stake,
       stake_total: a.stake_total,
       bookmaker_nome: a.bookmaker_nome,
