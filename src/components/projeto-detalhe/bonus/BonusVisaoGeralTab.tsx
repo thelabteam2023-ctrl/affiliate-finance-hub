@@ -258,10 +258,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     return { totalBonusCreditado, totalJuice, total, performancePercent };
   }, [bonuses, bonusBetsData, convertToConsolidation]);
 
-  // Saldo Operável DINÂMICO = Saldo Real + Performance de Bônus (não apenas bônus cru)
-  // Fórmula: Saldo Real + (Bônus Creditado + Juice Acumulado)
-  // Isso reflete o valor REAL disponível para operar, considerando o impacto das apostas
-  const totalSaldoOperavel = totalSaldoRealConsolidated + bonusPerformance.total;
+  // Saldo Operável = Saldo Real consolidado de TODAS as casas vinculadas ao projeto
+  // NÃO soma performance de bônus pois ela já está refletida nos saldos:
+  // - Juice positivo → já creditado no saldo_atual da casa
+  // - Juice negativo → já descontado do saldo_atual da casa
+  const totalSaldoOperavel = totalSaldoRealConsolidated;
 
   return (
     <div className="space-y-6">
@@ -286,14 +287,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                     <TrendingUp className="h-4 w-4 text-primary cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[280px]">
-                    <p className="text-xs font-medium mb-1">Valor dinâmico e volátil</p>
+                    <p className="text-xs font-medium mb-1">Saldo real consolidado</p>
                     <p className="text-xs text-muted-foreground">
-                      Este valor varia conforme o desempenho das apostas e o juice aplicado aos bônus.
+                      Soma dos saldos reais de todas as casas vinculadas ao projeto. 
+                      A performance de bônus (juice) já está refletida neste valor.
                     </p>
-                    <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
-                      <p className="text-xs">Saldo Real: {formatCurrency(totalSaldoRealConsolidated)}</p>
-                      <p className="text-xs">Performance Bônus: {formatCurrency(bonusPerformance.total)}</p>
-                    </div>
                   </TooltipContent>
                 </TooltipUI>
                 {isContaminated && (
@@ -310,7 +308,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
-              <p className="text-xs text-muted-foreground">Real + Performance de Bônus</p>
+              <p className="text-xs text-muted-foreground">Saldo real de todas as casas</p>
             </CardContent>
           </Card>
 
