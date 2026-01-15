@@ -62,6 +62,11 @@ interface SurebetCardProps {
   formatCurrency?: (value: number) => string;
   /** Quando true, exibe badge "Bônus" no lugar de "SUREBET" */
   isBonusContext?: boolean;
+  /**
+   * Mapa de bookmaker_id -> nome completo com parceiro para enriquecer dados legados.
+   * Formato esperado: "NOME_CASA - PRIMEIRO_NOME ULTIMO_NOME"
+   */
+  bookmakerNomeMap?: Map<string, string>;
 }
 
 // Fallback para formatação de moeda quando não é passada via props
@@ -164,11 +169,13 @@ function getSelecaoDisplay(perna: SurebetPerna): string {
 function PernaItem({ 
   perna, 
   formatValue,
-  getLogoUrl
+  getLogoUrl,
+  bookmakerNomeMap
 }: { 
   perna: SurebetPerna; 
   formatValue: (value: number) => string;
   getLogoUrl: (name: string) => string | null;
+  bookmakerNomeMap?: Map<string, string>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const hasMultipleEntries = perna.entries && perna.entries.length > 1;
@@ -189,8 +196,12 @@ function PernaItem({
     return nomeCompleto;
   };
   
+  // Enriquecer nome do bookmaker: usar mapa canônico se disponível, senão usar o que está salvo
+  const enrichedBookmakerNome = (perna.bookmaker_id && bookmakerNomeMap?.has(perna.bookmaker_id))
+    ? bookmakerNomeMap.get(perna.bookmaker_id)!
+    : perna.bookmaker_nome;
   
-  const bookmakerDisplay = formatBookmakerDisplay(perna.bookmaker_nome);
+  const bookmakerDisplay = formatBookmakerDisplay(enrichedBookmakerNome);
   
   if (!hasMultipleEntries) {
     // Layout: [Badge Seleção Fixa] [Logo] [Nome Casa] [Odd + Stake à direita] - Responsivo
@@ -317,7 +328,7 @@ function PernaItem({
   );
 }
 
-export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonusContext }: SurebetCardProps) {
+export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
   // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
   
@@ -413,6 +424,7 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
                   perna={perna} 
                   formatValue={formatValue}
                   getLogoUrl={getLogoUrl}
+                  bookmakerNomeMap={bookmakerNomeMap}
                 />
               ))}
           </div>
