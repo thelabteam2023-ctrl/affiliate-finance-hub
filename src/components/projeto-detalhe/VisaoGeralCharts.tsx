@@ -514,8 +514,8 @@ export function VisaoGeralCharts({
     if (isSingleDayPeriod) {
       let acumulado = 0;
       return sorted.map((a, index) => {
-        // CORREÇÃO: Usar pl_consolidado quando disponível para evitar inflação
-        const impacto = (a as any).pl_consolidado ?? a.lucro_prejuizo ?? 0;
+        // Usa lucro_prejuizo diretamente (já vem corrigido com pl_consolidado aplicado)
+        const impacto = a.lucro_prejuizo ?? 0;
         acumulado += impacto;
         const date = parseLocalDateTime(a.data_aposta);
         const dataFormatada = format(date, "dd/MM", { locale: ptBR });
@@ -550,8 +550,8 @@ export function VisaoGeralCharts({
       const dateKey = extractLocalDateKey(a.data_aposta);
       const date = parseLocalDateTime(a.data_aposta);
       const dataFormatada = format(date, "dd/MM", { locale: ptBR });
-      // CORREÇÃO: Usar pl_consolidado quando disponível para evitar inflação
-      const impacto = (a as any).pl_consolidado ?? a.lucro_prejuizo ?? 0;
+      // Usa lucro_prejuizo diretamente (já vem corrigido do ProjetoDashboardTab com pl_consolidado aplicado)
+      const impacto = a.lucro_prejuizo ?? 0;
       
       const existing = dailyMap.get(dateKey);
       if (existing) {
