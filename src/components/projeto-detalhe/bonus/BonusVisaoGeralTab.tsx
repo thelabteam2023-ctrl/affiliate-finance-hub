@@ -53,6 +53,27 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   // Memoize to prevent infinite loops
   const bookmakersInBonusMode = useMemo(() => getBookmakersWithActiveBonus(), [bonuses]);
 
+  // Fetch ALL bookmakers linked to the project for Saldo Operável calculation
+  // This ensures houses without bonuses (like Rivalry) are included
+  const { data: allProjectBookmakers = [], isLoading: allBkLoading } = useQuery({
+    queryKey: ["all-project-bookmakers-saldo", projetoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select(`
+          id,
+          saldo_atual,
+          saldo_usd,
+          moeda
+        `)
+        .eq("projeto_id", projetoId)
+        .in("status", ["ATIVO", "ativo", "LIMITADA", "limitada"]);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Check for cross-strategy contamination
   const { isContaminated, contaminatedBookmakers, totalNonBonusBets, loading: contaminationLoading } = 
     useBonusContamination({ projetoId, bookmakersInBonusMode });
@@ -197,10 +218,18 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
   }, [bonuses, convertToConsolidation]);
 
-  // Saldo Real total das bookmakers em modo bônus (consolidado)
+  // Saldo Real total de TODAS as bookmakers vinculadas ao projeto (consolidado)
+  // Isso inclui casas sem bônus (como Rivalry) para refletir o saldo operável real
   const totalSaldoRealConsolidated = useMemo(() => {
-    return bookmakersWithBonus.reduce((acc, bk) => acc + convertToConsolidation(bk.saldo_real || 0, bk.moeda), 0);
-  }, [bookmakersWithBonus, convertToConsolidation]);
+    return allProjectBookmakers.reduce((acc, bk: any) => {
+      const moeda = bk.moeda || "BRL";
+      const isUsdCurrency = moeda === "USD" || moeda === "USDT";
+      const saldoReal = isUsdCurrency
+        ? Number(bk.saldo_usd ?? bk.saldo_atual ?? 0)
+        : Number(bk.saldo_atual ?? 0);
+      return acc + convertToConsolidation(saldoReal, moeda);
+    }, 0);
+  }, [allProjectBookmakers, convertToConsolidation]);
 
   // Performance de Bônus = Total de bônus creditados + Juice das operações
   const bonusPerformance = useMemo(() => {
