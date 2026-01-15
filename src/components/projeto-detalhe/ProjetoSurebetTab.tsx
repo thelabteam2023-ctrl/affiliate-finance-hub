@@ -55,6 +55,7 @@ import { TabFiltersBar } from "./TabFiltersBar";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
+import { SaldoOperavelCard } from "./SaldoOperavelCard";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -773,7 +774,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const renderVisaoGeral = () => (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
+        <SaldoOperavelCard projetoId={projetoId} />
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Surebets</CardTitle>

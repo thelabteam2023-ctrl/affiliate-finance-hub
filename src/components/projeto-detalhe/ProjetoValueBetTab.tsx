@@ -53,6 +53,7 @@ import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformApostaToExport } from "./ExportMenu";
+import { SaldoOperavelCard } from "./SaldoOperavelCard";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -674,7 +675,8 @@ export function ProjetoValueBetTab({
   const renderVisaoGeral = () => (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
+        <SaldoOperavelCard projetoId={projetoId} />
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Apostas ValueBet</CardTitle>
