@@ -17,8 +17,10 @@ import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts, ExtraLucroEntry } from "./VisaoGeralCharts";
-import { SaldoOperavelCard } from "./SaldoOperavelCard";
 import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
+import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
+import { DateRange } from "react-day-picker";
+import { format, isSameDay } from "date-fns";
 
 interface ProjetoDashboardTabProps {
   projetoId: string;
@@ -57,21 +59,24 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const [loading, setLoading] = useState(true);
   const [selectedEsporte, setSelectedEsporte] = useState<string>("");
   
+  // Filtros de período
+  const [period, setPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+  
   // Hook de formatação de moeda do projeto
   const { formatCurrency, formatChartAxis } = useProjetoCurrency(projetoId);
   
   // Hook global de logos
   const { logoMap: catalogLogoMap, getLogoUrl: getCatalogLogoUrl } = useBookmakerLogoMap();
   
-  /**
-   * VISÃO GERAL = CONSOLIDADO GLOBAL
-   * Esta aba SEMPRE exibe dados globais do projeto, sem filtros herdados de outras abas.
-   * Não utiliza filtros de período/bookmaker/parceiro - mostra TUDO.
-   */
+  // Calcula o range de datas
+  const dateRange = useMemo(() => {
+    return getDateRangeFromPeriod(period, customDateRange);
+  }, [period, customDateRange]);
 
   useEffect(() => {
     fetchAllData();
-  }, [projetoId]);
+  }, [projetoId, dateRange]);
 
   // Busca todos os dados: apostas + cashback + giros grátis + eventos promocionais
   const fetchAllData = async () => {
@@ -169,9 +174,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     try {
       setLoading(true);
       
-      // VISÃO GERAL: Busca TODAS as apostas sem filtro de período
-      // Isso garante que a visão consolidada sempre mostre o projeto inteiro
-      const query = supabase
+      // Busca apostas com filtro de período
+      let query = supabase
         .from("apostas_unificada")
         .select(`
           id, 
@@ -191,6 +195,14 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         .eq("projeto_id", projetoId)
         .is("cancelled_at", null)
         .order("data_aposta", { ascending: true });
+
+      // Aplica filtro de data se existir
+      if (dateRange) {
+        query = query
+          .gte("data_aposta", format(dateRange.start, "yyyy-MM-dd"))
+          .lte("data_aposta", format(dateRange.end, "yyyy-MM-dd"));
+
+      }
 
       const { data, error } = await query;
 
@@ -283,8 +295,11 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     }
   };
 
-  // Visão Geral não usa período - sempre mostra evolução completa
-  const isSingleDayPeriod = false;
+  // Detecta se é um único dia para ajustar gráficos
+  const isSingleDayPeriod = useMemo(() => {
+    if (!dateRange) return false;
+    return isSameDay(dateRange.start, dateRange.end);
+  }, [dateRange]);
 
   // Aggregate by sport
   const esportesData = useMemo(() => {
@@ -395,10 +410,13 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Visão Geral - Cockpit Estratégico (sem filtros, mostra o projeto inteiro) */}
-      
-      {/* KPI Estratégico Principal: Saldo Operável */}
-      <SaldoOperavelCard projetoId={projetoId} />
+      {/* Filtro de período */}
+      <StandardTimeFilter
+        period={period}
+        onPeriodChange={setPeriod}
+        customDateRange={customDateRange}
+        onCustomDateRangeChange={setCustomDateRange}
+      />
 
       {/* Gráficos de Evolução e Casas Mais Utilizadas */}
       <VisaoGeralCharts 
