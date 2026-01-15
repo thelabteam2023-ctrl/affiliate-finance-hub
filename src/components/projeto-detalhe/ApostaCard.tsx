@@ -286,7 +286,7 @@ export function ApostaCard({
     return (
       <div 
         className={cn(
-          "rounded-lg border cursor-pointer transition-colors p-3",
+          "rounded-lg border cursor-pointer transition-colors p-3 overflow-hidden",
           hoverBorderColor,
           className
         )}
@@ -295,17 +295,17 @@ export function ApostaCard({
         {/* Layout Padronizado: Evento/Esporte em cima, Casa e detalhes embaixo */}
         <div className="flex flex-col gap-2">
           
-          {/* LINHA 1: Evento + Esporte + Badges */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* LINHA 1: Evento + Esporte + Badges - Responsivo */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
               <p className="text-sm font-medium truncate uppercase">{displayEvento || 'Aposta'}</p>
               {aposta.esporte && (
-                <span className="text-xs text-muted-foreground shrink-0">• {aposta.esporte}</span>
+                <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">• {aposta.esporte}</span>
               )}
             </div>
             
-            {/* Badges alinhadas à direita */}
-            <div className="flex items-center gap-1.5 shrink-0">
+            {/* Badges - wrap on mobile */}
+            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
               <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
                 <Icon className="h-2.5 w-2.5" />
                 {config.label}
@@ -335,71 +335,85 @@ export function ApostaCard({
             </div>
           </div>
           
-          {/* LINHA 2: Badge Seleção + Logo + Casa + Odd + Stake (igual SurebetCard) */}
-          <div className="flex items-center gap-3">
-            {/* Para apostas simples: Badge de seleção antes do logo - cor neutra informativa */}
+          {/* LINHA 2: Badge Seleção + Logo + Casa + Odd + Stake - Responsivo */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 overflow-hidden">
+            {/* Top row on mobile: Logo + Casa */}
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
+              {/* Para apostas simples: Badge de seleção antes do logo - hidden on very small screens */}
+              {isSimples && aposta.selecao && (
+                <div className="hidden sm:block w-[100px] md:w-[120px] shrink-0">
+                  <SelectionBadge 
+                    minWidth={80}
+                    maxWidth={116}
+                  >
+                    {aposta.selecao}
+                  </SelectionBadge>
+                </div>
+              )}
+              
+              {/* Logo */}
+              {aposta.logo_url ? (
+                <img 
+                  src={aposta.logo_url} 
+                  alt={bookmakerDisplay || ''} 
+                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain bg-white/10 p-1 shrink-0"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
+                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                </div>
+              )}
+              
+              {/* Nome da casa + Parceiro */}
+              <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
+                {bookmakerDisplay || 'Casa'}
+              </span>
+            </div>
+            
+            {/* Mobile: Selection badge on separate row */}
             {isSimples && aposta.selecao && (
-              <div className="w-[120px] shrink-0">
-                <SelectionBadge 
-                  minWidth={100}
-                  maxWidth={116}
-                >
+              <div className="sm:hidden">
+                <SelectionBadge minWidth={60} maxWidth={100}>
                   {aposta.selecao}
                 </SelectionBadge>
               </div>
             )}
             
-            {/* Logo */}
-            {aposta.logo_url ? (
-              <img 
-                src={aposta.logo_url} 
-                alt={bookmakerDisplay || ''} 
-                className="h-10 w-10 rounded-lg object-contain bg-white/10 p-1 shrink-0"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-            ) : (
-              <div className="h-10 w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                <Target className="h-5 w-5 text-muted-foreground" />
-              </div>
-            )}
-            
-            {/* Nome da casa + Parceiro - texto mais claro igual SurebetCard */}
-            <span className="text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
-              {bookmakerDisplay || 'Casa'}
-            </span>
-            
             {/* Múltiplas pernas - exibe inline ou vertical */}
             {hasPernas && hasMultipleLegs ? (
-              <div className="space-y-1 flex-1 min-w-0">
+              <div className="space-y-1 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden">
                 {aposta.pernas!.map((perna, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs">
-                    <span className="truncate">{perna.selecao}</span>
+                  <div key={idx} className="flex items-center gap-2 text-xs overflow-hidden">
+                    <span className="truncate flex-1">{perna.selecao}</span>
                     <span className="font-medium shrink-0">@{Number(perna.odd).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
             ) : hasPernas ? (
-              <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate flex-1" />
+              <div className="hidden sm:block flex-1 min-w-0 overflow-hidden">
+                <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" />
+              </div>
             ) : hasSelecoes ? (
-              <p className="text-xs text-muted-foreground truncate uppercase flex-1">
+              <p className="text-xs text-muted-foreground truncate uppercase flex-1 hidden sm:block">
                 {aposta.selecoes!.map(s => `${s.descricao} @${Number(s.odd).toFixed(2)}`).join(' + ')}
               </p>
             ) : null}
             
-            {/* Odd + Stake à direita - grudados */}
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Odd + Stake à direita */}
+            <div className="flex items-center gap-2 shrink-0 justify-end sm:justify-start">
               {isSimples && (
                 <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
               )}
-              <span className="text-xs text-muted-foreground">{formatValue(stake)}</span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatValue(stake)}</span>
             </div>
           </div>
           
           {/* LINHA 3: Data/Hora + Lucro/ROI */}
-          <div className="flex items-center justify-between pt-2 border-t border-border/50">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                {format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy HH:mm", { locale: ptBR })}
+          <div className="flex items-center justify-between pt-2 border-t border-border/50 gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+              <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+                {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
               </span>
               {isForeignCurrency && (
                 <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
@@ -409,12 +423,12 @@ export function ApostaCard({
             </div>
             
             {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
-              <div className="flex items-center gap-1">
-                <span className={cn("text-sm font-semibold", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+              <div className="flex items-center gap-1 shrink-0">
+                <span className={cn("text-xs sm:text-sm font-semibold whitespace-nowrap", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
                   {formatValue(aposta.lucro_prejuizo)}
                 </span>
                 {roi !== null && (
-                  <span className={cn("text-[10px]", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                  <span className={cn("text-[9px] sm:text-[10px] whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
                     ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
                   </span>
                 )}
@@ -441,20 +455,20 @@ export function ApostaCard({
 
   return (
     <Card 
-      className={cn("cursor-pointer transition-colors", hoverBorderColor, className)}
+      className={cn("cursor-pointer transition-colors overflow-hidden", hoverBorderColor, className)}
       onClick={onClick}
     >
       <CardContent className="p-3">
-        {/* LINHA 1: Evento + Esporte + Badges */}
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+        {/* LINHA 1: Evento + Esporte + Badges - Responsivo */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             <p className="text-sm font-medium truncate uppercase">{displayEvento || 'Aposta'}</p>
             {aposta.esporte && (
-              <span className="text-xs text-muted-foreground shrink-0">• {aposta.esporte}</span>
+              <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">• {aposta.esporte}</span>
             )}
           </div>
           
-          {/* Badges alinhadas à direita */}
+          {/* Badges - wrap on mobile */}
           <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
             <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
               <Icon className="h-2.5 w-2.5" />
@@ -510,49 +524,61 @@ export function ApostaCard({
             </div>
           </div>
         ) : (
-          /* Layout padronizado para apostas simples: Badge Seleção + Logo + Casa/Vínculo + Odd + Stake */
-          <div className="flex items-center gap-3 mb-2">
-            {/* Badge de seleção */}
+          /* Layout padronizado para apostas simples: Badge Seleção + Logo + Casa/Vínculo + Odd + Stake - Responsivo */
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2 overflow-hidden">
+            {/* Top row: Logo + Casa */}
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
+              {/* Badge de seleção - hidden on very small */}
+              {aposta.selecao && (
+                <div className="shrink-0 hidden sm:block">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[80px]">
+                    {aposta.selecao}
+                  </Badge>
+                </div>
+              )}
+              
+              {/* Logo da bookmaker */}
+              {aposta.logo_url ? (
+                <img 
+                  src={aposta.logo_url} 
+                  alt={bookmakerDisplayCard || ''} 
+                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain bg-white/10 p-1 shrink-0"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
+                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                </div>
+              )}
+              
+              {/* Nome da casa + Vínculo/Parceiro */}
+              <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
+                {bookmakerDisplayCard || 'Casa'}
+              </span>
+            </div>
+            
+            {/* Mobile: Selection badge on separate row */}
             {aposta.selecao && (
-              <div className="shrink-0">
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[80px]">
+              <div className="sm:hidden">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[100px]">
                   {aposta.selecao}
                 </Badge>
               </div>
             )}
             
-            {/* Logo da bookmaker */}
-            {aposta.logo_url ? (
-              <img 
-                src={aposta.logo_url} 
-                alt={bookmakerDisplayCard || ''} 
-                className="h-10 w-10 rounded-lg object-contain bg-white/10 p-1 shrink-0"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-            ) : (
-              <div className="h-10 w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                <Target className="h-5 w-5 text-muted-foreground" />
-              </div>
-            )}
-            
-            {/* Nome da casa + Vínculo/Parceiro */}
-            <span className="text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
-              {bookmakerDisplayCard || 'Casa'}
-            </span>
-            
             {/* Odd + Stake à direita */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 justify-end sm:justify-start">
               <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
-              <span className="text-xs text-muted-foreground">{formatValue(stake)}</span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatValue(stake)}</span>
             </div>
           </div>
         )}
         
-        {/* LINHA 3: Data/Hora + Moeda + Lucro/ROI */}
-        <div className="flex items-center justify-between pt-2 border-t border-border/50">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              {format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy HH:mm", { locale: ptBR })}
+        {/* LINHA 3: Data/Hora + Moeda + Lucro/ROI - Responsivo */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/50 gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+            <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+              {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
             </span>
             {isForeignCurrency && (
               <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
@@ -562,12 +588,12 @@ export function ApostaCard({
           </div>
           
           {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
-            <div className="flex items-center gap-1">
-              <span className={cn("text-sm font-semibold", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className={cn("text-xs sm:text-sm font-semibold whitespace-nowrap", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
                 {formatValue(aposta.lucro_prejuizo)}
               </span>
               {roi !== null && (
-                <span className={cn("text-[10px]", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                <span className={cn("text-[9px] sm:text-[10px] whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
                   ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
                 </span>
               )}
