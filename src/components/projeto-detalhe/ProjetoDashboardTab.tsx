@@ -47,8 +47,11 @@ interface ApostaUnificada {
   pernas?: {
     bookmaker_id?: string;
     bookmaker_nome?: string;
+    parceiro_nome?: string | null;
+    logo_url?: string | null;
     stake?: number;
-    lucro_prejuizo?: number;
+    lucro_prejuizo?: number | null;
+    resultado?: string | null;
   }[];
 }
 
@@ -215,8 +218,22 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
 
       if (error) throw error;
       
-      // Buscar bookmaker names
-      const bookmakerIds = [...new Set((data || []).map(a => a.bookmaker_id).filter(Boolean))];
+      // Buscar bookmaker names - incluindo bookmakers das pernas de arbitragem
+      const bookmakerIdsFromApostas = (data || []).map(a => a.bookmaker_id).filter(Boolean);
+      
+      // Extrair bookmaker_ids das pernas de arbitragem
+      const bookmakerIdsFromPernas: string[] = [];
+      (data || []).forEach((item: any) => {
+        if (item.forma_registro === 'ARBITRAGEM' && Array.isArray(item.pernas)) {
+          item.pernas.forEach((perna: any) => {
+            if (perna.bookmaker_id) {
+              bookmakerIdsFromPernas.push(perna.bookmaker_id);
+            }
+          });
+        }
+      });
+      
+      const bookmakerIds = [...new Set([...bookmakerIdsFromApostas, ...bookmakerIdsFromPernas])];
       let bookmakerMap: Record<string, { nome: string; parceiro_nome: string | null; logo_url: string | null }> = {};
       
       if (bookmakerIds.length > 0) {
@@ -236,9 +253,29 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       }
       
       // Transform para formato unificado
+      // NOTA: Apostas de arbitragem mantêm bookmaker_id como null/unknown
+      // mas suas pernas contêm os bookmaker_ids reais - usados em bookmakerMetrics
       const apostasTransformadas: ApostaUnificada[] = (data || []).map((item: any) => {
         const bkInfo = bookmakerMap[item.bookmaker_id] || { nome: 'Desconhecida', parceiro_nome: null, logo_url: null };
         const stake = item.forma_registro === 'ARBITRAGEM' ? item.stake_total : item.stake;
+        
+        // Enriquecer pernas com dados do bookmakerMap
+        let pernasEnriquecidas = undefined;
+        if (item.forma_registro === 'ARBITRAGEM' && Array.isArray(item.pernas)) {
+          pernasEnriquecidas = item.pernas.map((perna: any) => {
+            const pernaBookmakerInfo = bookmakerMap[perna.bookmaker_id] || { 
+              nome: perna.bookmaker_nome || 'Desconhecida', 
+              parceiro_nome: null, 
+              logo_url: null 
+            };
+            return {
+              ...perna,
+              bookmaker_nome: pernaBookmakerInfo.nome,
+              parceiro_nome: pernaBookmakerInfo.parceiro_nome,
+              logo_url: pernaBookmakerInfo.logo_url,
+            };
+          });
+        }
         
         return {
           id: item.id,
@@ -249,11 +286,11 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
           stake_total: item.stake_total,
           esporte: item.esporte || item.estrategia || 'N/A',
           bookmaker_id: item.bookmaker_id || 'unknown',
-          bookmaker_nome: item.forma_registro === 'ARBITRAGEM' ? 'Arbitragem' : bkInfo.nome,
+          bookmaker_nome: bkInfo.nome,
           parceiro_nome: bkInfo.parceiro_nome,
           logo_url: bkInfo.logo_url,
           forma_registro: item.forma_registro,
-          pernas: Array.isArray(item.pernas) ? item.pernas : undefined,
+          pernas: pernasEnriquecidas,
         };
       });
       
@@ -268,16 +305,37 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   // Visão Geral não usa período - sempre mostra evolução completa
   const isSingleDayPeriod = false;
 
-  // Aggregate by bookmaker
+  /**
+   * PERFORMANCE POR CASA - Agregação por bookmaker
+   * 
+   * REGRA CONCEITUAL:
+   * - Apostas simples/múltiplas: contam normalmente por bookmaker_id
+   * - Arbitragem/Surebet: DESAGREGADAS por perna, cada casa recebe sua performance individual
+   *   - Volume = stake da perna
+   *   - Lucro = lucro_prejuizo da perna
+   *   - Contagem = cada perna conta como 1 participação
+   * 
+   * Isso garante que "Arbitragem" nunca apareça como casa,
+   * e cada bookmaker real tenha suas métricas próprias.
+   */
   const bookmakerMetrics = useMemo(() => {
-    const metricsMap = apostasUnificadas.reduce((acc: Record<string, BookmakerMetrics>, aposta) => {
-      const key = aposta.bookmaker_id;
-      if (!acc[key]) {
-        acc[key] = {
-          bookmaker_id: aposta.bookmaker_id,
-          bookmaker_nome: aposta.bookmaker_nome,
-          parceiro_nome: aposta.parceiro_nome,
-          logo_url: aposta.logo_url,
+    const metricsMap: Record<string, BookmakerMetrics> = {};
+    
+    const addToMetrics = (
+      bookmaker_id: string,
+      bookmaker_nome: string,
+      parceiro_nome: string | null,
+      logo_url: string | null,
+      stake: number,
+      lucro_prejuizo: number,
+      resultado: string | null
+    ) => {
+      if (!metricsMap[bookmaker_id]) {
+        metricsMap[bookmaker_id] = {
+          bookmaker_id,
+          bookmaker_nome,
+          parceiro_nome,
+          logo_url,
           totalApostas: 0,
           totalStake: 0,
           lucro: 0,
@@ -287,19 +345,50 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         };
       }
       
-      acc[key].totalApostas++;
-      acc[key].totalStake += aposta.stake || 0;
-      acc[key].lucro += aposta.lucro_prejuizo || 0;
+      metricsMap[bookmaker_id].totalApostas++;
+      metricsMap[bookmaker_id].totalStake += stake || 0;
+      metricsMap[bookmaker_id].lucro += lucro_prejuizo || 0;
       
-      if (aposta.resultado === "GREEN" || aposta.resultado === "MEIO_GREEN") {
-        acc[key].greens++;
+      if (resultado === "GREEN" || resultado === "MEIO_GREEN") {
+        metricsMap[bookmaker_id].greens++;
       }
-      if (aposta.resultado === "RED" || aposta.resultado === "MEIO_RED") {
-        acc[key].reds++;
+      if (resultado === "RED" || resultado === "MEIO_RED") {
+        metricsMap[bookmaker_id].reds++;
       }
-      
-      return acc;
-    }, {});
+    };
+    
+    apostasUnificadas.forEach(aposta => {
+      // ARBITRAGEM: Desagregar pernas - cada casa recebe sua performance individual
+      if (aposta.forma_registro === 'ARBITRAGEM' && aposta.pernas && aposta.pernas.length > 0) {
+        aposta.pernas.forEach(perna => {
+          const pernaBookmakerId = perna.bookmaker_id || 'unknown';
+          const pernaBookmakerNome = perna.bookmaker_nome || 'Desconhecida';
+          const pernaParceiro = perna.parceiro_nome || null;
+          const pernaLogo = perna.logo_url || null;
+          
+          addToMetrics(
+            pernaBookmakerId,
+            pernaBookmakerNome,
+            pernaParceiro,
+            pernaLogo,
+            perna.stake || 0,
+            perna.lucro_prejuizo || 0,
+            perna.resultado || null
+          );
+        });
+      } else {
+        // APOSTAS SIMPLES/MÚLTIPLAS: Contagem normal por bookmaker
+        addToMetrics(
+          aposta.bookmaker_id,
+          aposta.bookmaker_nome,
+          aposta.parceiro_nome,
+          aposta.logo_url,
+          aposta.stake || 0,
+          aposta.lucro_prejuizo || 0,
+          aposta.resultado
+        );
+      }
+    });
 
     return Object.values(metricsMap)
       .map((m: BookmakerMetrics) => ({
@@ -309,12 +398,23 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       .sort((a, b) => b.totalApostas - a.totalApostas);
   }, [apostasUnificadas]);
 
-  // Listas únicas para filtros
+  // Listas únicas para filtros - inclui bookmakers das pernas de arbitragem
   const uniqueBookmakers = useMemo(() => {
     const map = new Map<string, { id: string; nome: string }>();
     apostasUnificadas.forEach(a => {
-      if (!map.has(a.bookmaker_id)) {
-        map.set(a.bookmaker_id, { id: a.bookmaker_id, nome: a.bookmaker_nome });
+      // Apostas simples/múltiplas
+      if (a.forma_registro !== 'ARBITRAGEM') {
+        if (!map.has(a.bookmaker_id)) {
+          map.set(a.bookmaker_id, { id: a.bookmaker_id, nome: a.bookmaker_nome });
+        }
+      } else if (a.pernas && a.pernas.length > 0) {
+        // Arbitragem: incluir bookmakers das pernas
+        a.pernas.forEach(perna => {
+          const pernaId = perna.bookmaker_id || 'unknown';
+          if (!map.has(pernaId)) {
+            map.set(pernaId, { id: pernaId, nome: perna.bookmaker_nome || 'Desconhecida' });
+          }
+        });
       }
     });
     return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
@@ -323,7 +423,13 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const uniqueParceiros = useMemo(() => {
     const set = new Set<string>();
     apostasUnificadas.forEach(a => {
-      if (a.parceiro_nome) set.add(a.parceiro_nome);
+      if (a.forma_registro !== 'ARBITRAGEM') {
+        if (a.parceiro_nome) set.add(a.parceiro_nome);
+      } else if (a.pernas && a.pernas.length > 0) {
+        a.pernas.forEach(perna => {
+          if (perna.parceiro_nome) set.add(perna.parceiro_nome);
+        });
+      }
     });
     return Array.from(set).sort();
   }, [apostasUnificadas]);
