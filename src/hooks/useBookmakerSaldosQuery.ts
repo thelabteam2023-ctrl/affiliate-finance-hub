@@ -132,21 +132,18 @@ export function calcularSaldoDisponivelParaPosicao(
 }
 
 /**
- * Formata saldo para exibição com breakdown, respeitando a moeda do bookmaker
+ * Formata saldo consolidado para exibição (sem breakdown separado)
+ * @deprecated Use formatCurrency do BookmakerSelectOption para exibição
  */
 export function formatarSaldoBreakdown(bookmaker: BookmakerSaldo): string {
   const moeda = bookmaker.moeda || "BRL";
   const symbol = moeda === "USD" ? "$" : "R$";
   
-  const parts: string[] = [];
-  parts.push(`${symbol} ${bookmaker.saldo_disponivel.toFixed(0)}`);
-  if (bookmaker.saldo_freebet > 0) {
-    parts.push(`FB: ${bookmaker.saldo_freebet.toFixed(0)}`);
-  }
-  if (bookmaker.saldo_bonus > 0) {
-    parts.push(`🎁: ${bookmaker.saldo_bonus.toFixed(0)}`);
-  }
-  return parts.join(" + ");
+  // MUDANÇA: Retorna apenas saldo operável consolidado
+  return `${symbol} ${bookmaker.saldo_operavel.toLocaleString(moeda === "BRL" ? "pt-BR" : "en-US", { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  })}`;
 }
 
 /**

@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { getFirstLastName } from "@/lib/utils";
 
 export type SupportedCurrency = "BRL" | "USD" | "EUR" | "GBP" | "USDT";
 
@@ -28,25 +27,22 @@ interface BookmakerSelectOptionProps {
 /**
  * COMPONENTE CANÔNICO para exibição de bookmaker em selects
  * 
- * REGRAS VISUAIS:
+ * REGRAS VISUAIS (ATUALIZADAS 2025-01-15):
  * - Nome da casa (uppercase)
- * - Nome do parceiro (primeiro + último nome)
- * - Badge de moeda com cor:
- *   - BRL → verde (emerald)
- *   - USD/USDT → azul (blue)
- *   - EUR → roxo (purple)
- *   - GBP → laranja (amber)
- * - Valor formatado na moeda correta
+ * - APENAS primeiro nome do parceiro (não mais primeiro + último)
+ * - Badge de moeda com cor
+ * - SALDO CONSOLIDADO apenas (não mostrar breakdown Real + Bônus separados)
+ * - Freebet só aparece como indicador visual se existir
  */
 export function BookmakerSelectOption({
   bookmaker,
   disabled = false,
-  showBreakdown = true,
   className,
 }: BookmakerSelectOptionProps) {
-  const { nome, parceiro_nome, moeda, saldo_operavel, saldo_freebet = 0, saldo_bonus = 0, logo_url, bonus_rollover_started = false } = bookmaker;
+  const { nome, parceiro_nome, moeda, saldo_operavel, saldo_freebet = 0, saldo_bonus = 0, logo_url } = bookmaker;
   
-  const parceiroShortName = getFirstLastName(parceiro_nome || "");
+  // MUDANÇA: Extrair APENAS o primeiro nome do parceiro
+  const primeiroNome = getFirstName(parceiro_nome || "");
   
   return (
     <div className={cn(
@@ -73,39 +69,53 @@ export function BookmakerSelectOption({
           <span className="uppercase text-xs font-medium truncate">{nome}</span>
           <CurrencyBadge moeda={moeda} />
         </div>
-        {parceiroShortName && (
+        {primeiroNome && (
           <span className="text-[10px] text-muted-foreground truncate">
-            {parceiroShortName}
+            {primeiroNome}
           </span>
         )}
       </div>
       
-      {/* Coluna 3: Saldo (fixo à direita) */}
+      {/* Coluna 3: Saldo CONSOLIDADO (fixo à direita) */}
       <div className="flex flex-col items-end flex-shrink-0">
         <span className={cn(
           "text-xs font-medium flex items-center gap-1",
           disabled ? "text-destructive" : getCurrencyTextColor(moeda)
         )}>
           {disabled ? "Indisponível" : formatCurrency(saldo_operavel, moeda)}
-          {!disabled && saldo_bonus > 0 && bonus_rollover_started && (
-            <span className="text-purple-400" title="Bônus ativo em rollover">🎁</span>
+          {/* Indicador de bônus ativo */}
+          {!disabled && saldo_bonus > 0 && (
+            <span className="text-purple-400" title="Inclui bônus creditado">🎁</span>
           )}
         </span>
         
-        {showBreakdown && !disabled && (
-          (saldo_bonus > 0 && !bonus_rollover_started) ? (
-            <span className="text-[9px] text-muted-foreground/70">
-              {formatBreakdown(bookmaker.saldo_disponivel || (saldo_operavel - saldo_bonus - saldo_freebet), saldo_freebet, saldo_bonus, moeda)}
-            </span>
-          ) : (saldo_freebet > 0 && saldo_bonus === 0) ? (
-            <span className="text-[9px] text-muted-foreground/70">
-              {formatBreakdown(bookmaker.saldo_disponivel || saldo_operavel, saldo_freebet, 0, moeda)}
-            </span>
-          ) : null
+        {/* Indicador de freebet disponível (separado do saldo operável) */}
+        {!disabled && saldo_freebet > 0 && (
+          <span className="text-[9px] text-amber-400/80">
+            +FB {formatCurrencyCompact(saldo_freebet, moeda)}
+          </span>
         )}
       </div>
     </div>
   );
+}
+
+/**
+ * Extrai apenas o PRIMEIRO nome de uma string
+ */
+function getFirstName(fullName: string): string {
+  if (!fullName) return "";
+  return fullName.trim().split(/\s+/)[0] || "";
+}
+
+/**
+ * Formata valor de forma compacta (sem símbolo da moeda)
+ */
+function formatCurrencyCompact(value: number, moeda: string = "BRL"): string {
+  return value.toLocaleString(moeda === "BRL" ? "pt-BR" : "en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
 }
 
 /**
@@ -220,7 +230,12 @@ function formatBreakdown(
 }
 
 /**
- * Componente de display de saldo com breakdown visual
+ * Componente de display de saldo CONSOLIDADO
+ * 
+ * REGRA ATUALIZADA (2025-01-15):
+ * Mostrar APENAS o saldo operável consolidado.
+ * Freebet aparece como indicador separado se existir.
+ * Bônus está incluso no saldo operável (indicador 🎁 se > 0).
  */
 interface SaldoBreakdownDisplayProps {
   saldoReal: number;
@@ -228,23 +243,16 @@ interface SaldoBreakdownDisplayProps {
   saldoBonus: number;
   saldoOperavel: number;
   moeda: string;
-  /** Se true, o rollover já foi iniciado - mostra saldo unificado com 🎁 */
+  /** @deprecated Não mais utilizado - saldo sempre consolidado */
   bonusRolloverStarted?: boolean;
 }
 
 export function SaldoBreakdownDisplay({
-  saldoReal,
   saldoFreebet,
   saldoBonus,
   saldoOperavel,
   moeda,
-  bonusRolloverStarted = false,
 }: SaldoBreakdownDisplayProps) {
-  // Se tem bônus ativo E rollover iniciado, mostrar saldo unificado
-  const showUnifiedBonus = saldoBonus > 0 && bonusRolloverStarted;
-  // Se tem bônus mas rollover NÃO iniciou, mostra separado
-  const showSeparatedBonus = saldoBonus > 0 && !bonusRolloverStarted;
-  
   return (
     <div className="text-xs text-center space-y-0.5">
       <p className="text-muted-foreground flex items-center justify-center gap-1">
@@ -252,54 +260,23 @@ export function SaldoBreakdownDisplay({
         <span className={cn("font-medium", getCurrencyTextColor(moeda))}>
           {formatCurrency(saldoOperavel, moeda)}
         </span>
-        {showUnifiedBonus && (
-          <span className="text-purple-400" title="Bônus ativo em rollover">🎁</span>
+        {saldoBonus > 0 && (
+          <span className="text-purple-400" title="Inclui bônus creditado">🎁</span>
         )}
       </p>
       
-      {/* Mostra breakdown se:
-          1. Bônus existe MAS rollover NÃO iniciou (antes da 1ª aposta)
-          2. Só tem freebet
-      */}
-      {(showSeparatedBonus || (!showUnifiedBonus && saldoFreebet > 0)) && (
-        <p className="text-muted-foreground/70 text-[10px] flex items-center justify-center gap-3 flex-wrap">
-          {/* Saldo Real */}
-          <span className="text-emerald-400 flex items-center gap-1">
+      {/* Freebet aparece separado pois não faz parte do saldo operável */}
+      {saldoFreebet > 0 && (
+        <p className="text-muted-foreground/70 text-[10px] flex items-center justify-center gap-1">
+          <span className="text-amber-400 flex items-center gap-1">
             <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3" y="8" width="18" height="11" rx="2" className="fill-emerald-500/20 stroke-emerald-400" strokeWidth="1.5"/>
-              <path d="M3 10h18" className="stroke-emerald-400" strokeWidth="1.5"/>
-              <path d="M7 4h10M9 4v4M15 4v4" className="stroke-emerald-400" strokeWidth="1.5" strokeLinecap="round"/>
-              <rect x="6" y="13" width="4" height="3" rx="0.5" className="fill-emerald-400/50"/>
+              <rect x="2" y="6" width="20" height="12" rx="2" className="fill-amber-500/20 stroke-amber-400" strokeWidth="1.5"/>
+              <path d="M2 10h20" className="stroke-amber-400" strokeWidth="1"/>
+              <circle cx="12" cy="14" r="2" className="stroke-amber-400" strokeWidth="1.5"/>
+              <path d="M6 14h2M16 14h2" className="stroke-amber-400/60" strokeWidth="1" strokeLinecap="round"/>
             </svg>
-            {formatCurrency(saldoReal, moeda)}
+            +FB: {formatCurrency(saldoFreebet, moeda)}
           </span>
-          
-          {/* Freebet */}
-          {saldoFreebet > 0 && (
-            <span className="text-amber-400 flex items-center gap-1">
-              <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="6" width="20" height="12" rx="2" className="fill-amber-500/20 stroke-amber-400" strokeWidth="1.5"/>
-                <path d="M2 10h20" className="stroke-amber-400" strokeWidth="1"/>
-                <circle cx="12" cy="14" r="2" className="stroke-amber-400" strokeWidth="1.5"/>
-                <path d="M6 14h2M16 14h2" className="stroke-amber-400/60" strokeWidth="1" strokeLinecap="round"/>
-              </svg>
-              {formatCurrency(saldoFreebet, moeda)}
-            </span>
-          )}
-          
-          {/* Bônus - só mostra se rollover NÃO iniciou */}
-          {showSeparatedBonus && (
-            <span className="text-purple-400 flex items-center gap-1">
-              <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="4" width="20" height="16" rx="3" className="fill-purple-500/20 stroke-purple-400" strokeWidth="1.5"/>
-                <circle cx="12" cy="12" r="4" className="stroke-purple-400" strokeWidth="1.5"/>
-                <path d="M12 10v4M10.5 11.5l1.5-1.5 1.5 1.5" className="stroke-purple-400" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="5.5" cy="8" r="1" className="fill-purple-400/60"/>
-                <circle cx="18.5" cy="16" r="1" className="fill-purple-400/60"/>
-              </svg>
-              {formatCurrency(saldoBonus, moeda)}
-            </span>
-          )}
         </p>
       )}
     </div>
