@@ -163,34 +163,48 @@ function PernaItem({
   const bookmakerDisplay = formatBookmakerDisplay(perna.bookmaker_nome);
   
   if (!hasMultipleEntries) {
-    // Layout: [Badge Seleção Fixa] [Logo] [Nome Casa] [Odd + Stake à direita]
+    // Layout: [Badge Seleção Fixa] [Logo] [Nome Casa] [Odd + Stake à direita] - Responsivo
     return (
-      <div className="flex items-center gap-3">
-        {/* Badge de seleção - cor neutra informativa */}
-        <div className="w-[120px] shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 overflow-hidden">
+        {/* Badge de seleção - responsivo */}
+        <div className="hidden sm:block w-[100px] md:w-[120px] shrink-0">
           <SelectionBadge 
             colorClassName={NEUTRAL_SELECTION_STYLE}
-            minWidth={100}
+            minWidth={80}
             maxWidth={116}
           >
             {perna.selecao_livre || perna.selecao}
           </SelectionBadge>
         </div>
         
-        {/* Logo */}
-        <div className="shrink-0">
-          <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
+        {/* Row with Logo + Nome + Odd/Stake */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 overflow-hidden">
+          {/* Logo */}
+          <div className="shrink-0">
+            <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
+          </div>
+          
+          {/* Nome da casa + vínculo abreviado */}
+          <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 uppercase min-w-0">
+            {bookmakerDisplay}
+          </span>
+          
+          {/* Odd e Stake à direita */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-sm font-medium whitespace-nowrap">@{perna.odd.toFixed(2)}</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{formatValue(perna.stake)}</span>
+          </div>
         </div>
         
-        {/* Nome da casa + vínculo abreviado - flex-1 para ocupar espaço restante */}
-        <span className="text-sm text-muted-foreground truncate flex-1 uppercase">
-          {bookmakerDisplay}
-        </span>
-        
-        {/* Odd e Stake à direita */}
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-sm font-medium">@{perna.odd.toFixed(2)}</span>
-          <span className="text-xs text-muted-foreground">{formatValue(perna.stake)}</span>
+        {/* Mobile: Selection badge below */}
+        <div className="sm:hidden">
+          <SelectionBadge 
+            colorClassName={NEUTRAL_SELECTION_STYLE}
+            minWidth={60}
+            maxWidth={100}
+          >
+            {perna.selecao_livre || perna.selecao}
+          </SelectionBadge>
         </div>
       </div>
     );
@@ -329,24 +343,24 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
 
   return (
     <Card 
-      className={cn("cursor-pointer transition-colors hover:border-primary/30", className)}
+      className={cn("cursor-pointer transition-colors hover:border-primary/30 overflow-hidden", className)}
       onClick={() => onEdit?.(surebet)}
     >
-      <CardContent className="p-4">
-        {/* LINHA 1: Evento + Esporte + Badges */}
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+      <CardContent className="p-3 sm:p-4">
+        {/* LINHA 1: Evento + Esporte + Badges - Responsivo */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             <p className="text-sm font-medium truncate uppercase">{surebet.evento || 'Operação'}</p>
             {surebet.esporte && (
-              <span className="text-xs text-muted-foreground shrink-0">• {surebet.esporte}</span>
+              <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">• {surebet.esporte}</span>
             )}
             {surebet.mercado && (
-              <span className="text-xs text-muted-foreground shrink-0">• {surebet.mercado}</span>
+              <span className="text-xs text-muted-foreground shrink-0 hidden md:inline">• {surebet.mercado}</span>
             )}
           </div>
           
-          {/* Badges à direita */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Badges - wrap on mobile */}
+          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
             <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", estrategiaConfig.bgColor, estrategiaConfig.color, estrategiaConfig.borderColor)}>
               <Icon className="h-2.5 w-2.5" />
               {estrategiaConfig.label}
@@ -374,21 +388,21 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
           </div>
         )}
         
-        {/* LINHA FINAL: Data/Hora + Stake + Lucro/ROI */}
-        <div className="flex items-center justify-between pt-2 border-t border-border/50">
-          <span className="text-xs text-muted-foreground">
-            {formatDate(parseLocalDateTime(surebet.data_operacao), "dd/MM/yy HH:mm", { locale: ptBR })}
+        {/* LINHA FINAL: Data/Hora + Stake + Lucro/ROI - Responsivo */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2 border-t border-border/50 gap-2">
+          <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+            {formatDate(parseLocalDateTime(surebet.data_operacao), "dd/MM HH:mm", { locale: ptBR })}
           </span>
           
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-muted-foreground">
+          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
               Stake: {formatValue(surebet.stake_total)}
             </span>
             
             {lucroExibir !== null && lucroExibir !== undefined && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <span className={cn(
-                  "text-sm font-medium",
+                  "text-xs sm:text-sm font-medium whitespace-nowrap",
                   lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
                   !isLiquidada && 'opacity-30'
                 )}>
@@ -396,7 +410,7 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
                 </span>
                 {roiExibir !== null && roiExibir !== undefined && (
                   <span className={cn(
-                    "text-[10px]",
+                    "text-[9px] sm:text-[10px] whitespace-nowrap",
                     roiExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
                     !isLiquidada && 'opacity-30'
                   )}>
