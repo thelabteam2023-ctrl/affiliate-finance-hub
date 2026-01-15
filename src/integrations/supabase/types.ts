@@ -8423,20 +8423,16 @@ export type Database = {
       get_bookmaker_saldos: {
         Args: { p_projeto_id: string }
         Returns: {
-          bonus_rollover_started: boolean
-          id: string
+          bookmaker_id: string
+          estado_conta: string
           login_username: string
-          logo_url: string
           moeda: string
           nome: string
-          parceiro_id: string
           parceiro_nome: string
-          saldo_bonus: number
-          saldo_disponivel: number
-          saldo_em_aposta: number
+          saldo_atual: number
           saldo_freebet: number
-          saldo_operavel: number
-          saldo_real: number
+          saldo_irrecuperavel: number
+          status: string
         }[]
       }
       get_current_workspace: { Args: never; Returns: string }
