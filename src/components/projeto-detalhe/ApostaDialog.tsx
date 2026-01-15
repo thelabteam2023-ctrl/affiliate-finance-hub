@@ -56,6 +56,8 @@ import {
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { GerouFreebetInput } from "./GerouFreebetInput";
+import { useActiveBonusInfo } from "@/hooks/useActiveBonusInfo";
+import { BonusImpactAlert } from "./BonusImpactAlert";
 
 interface Aposta {
   id: string;
@@ -575,6 +577,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     estrategia: null,
     contexto_operacional: null,
   });
+
+  // Hook para verificar bônus ativo na bookmaker selecionada (alerta contextual)
+  const { hasActiveBonus, bonusInfo } = useActiveBonusInfo(projetoId, bookmakerId || null);
 
   // Calculated values
   const [layStake, setLayStake] = useState<number | null>(null);
@@ -2593,6 +2598,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         saldoOperavel={bookmakerSaldo.saldoOperavel}
                         moeda={bookmakerSaldo.moeda}
                         bonusRolloverStarted={bookmakerSaldo.bonusRolloverStarted}
+                      />
+                    )}
+                    {/* Alerta contextual de impacto em bônus */}
+                    {bookmakerId && hasActiveBonus && registroValues.estrategia !== "EXTRACAO_BONUS" && (
+                      <BonusImpactAlert
+                        bookmakerId={bookmakerId}
+                        bookmakerNome={bookmakers.find(b => b.id === bookmakerId)?.nome || ""}
+                        estrategia={registroValues.estrategia || ""}
+                        hasActiveBonus={hasActiveBonus}
+                        rolloverProgress={bonusInfo?.rollover_progress}
+                        rolloverTarget={bonusInfo?.rollover_target_amount || undefined}
+                        minOdds={bonusInfo?.min_odds || undefined}
+                        currentOdd={parseFloat(odd) || undefined}
                       />
                     )}
                   </div>
