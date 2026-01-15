@@ -127,6 +127,9 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // Estados para busca e filtros do modal de adicionar vínculos
+  const [addDialogSearchTerm, setAddDialogSearchTerm] = useState("");
+  const [showOnlyWithBalance, setShowOnlyWithBalance] = useState(false);
   const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [statusPopoverId, setStatusPopoverId] = useState<string | null>(null);
@@ -336,6 +339,37 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       toast.error("Erro ao carregar vínculos disponíveis: " + error.message);
     }
   };
+
+  // Lógica de filtragem e ordenação para o modal de adicionar vínculos
+  const disponiveisFiltrados = useMemo(() => {
+    let resultado = [...disponiveis];
+
+    // Filtro de busca (case-insensitive, substring)
+    if (addDialogSearchTerm.trim()) {
+      const termo = addDialogSearchTerm.toLowerCase().trim();
+      resultado = resultado.filter((item) =>
+        item.nome.toLowerCase().includes(termo) ||
+        (item.parceiro_nome && item.parceiro_nome.toLowerCase().includes(termo))
+      );
+    }
+
+    // Filtro de saldo > 0
+    if (showOnlyWithBalance) {
+      resultado = resultado.filter((item) => item.saldo_atual > 0);
+    }
+
+    // Ordenação: saldo decrescente, depois nome alfabético
+    resultado.sort((a, b) => {
+      // Primeiro: ordenar por saldo (decrescente)
+      if (b.saldo_atual !== a.saldo_atual) {
+        return b.saldo_atual - a.saldo_atual;
+      }
+      // Segundo: ordenar por nome (alfabético)
+      return a.nome.localeCompare(b.nome);
+    });
+
+    return resultado;
+  }, [disponiveis, addDialogSearchTerm, showOnlyWithBalance]);
 
   const handleOpenAddDialog = () => {
     fetchDisponiveis();
@@ -1404,7 +1438,14 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       </div>
 
       {/* Add Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+      <Dialog open={addDialogOpen} onOpenChange={(open) => {
+        setAddDialogOpen(open);
+        // Reset filtros ao fechar
+        if (!open) {
+          setAddDialogSearchTerm("");
+          setShowOnlyWithBalance(false);
+        }
+      }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Adicionar Vínculos ao Projeto</DialogTitle>
@@ -1414,61 +1455,100 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[400px] pr-4">
+          {/* Campo de busca e filtros */}
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por casa ou parceiro..."
+                value={addDialogSearchTerm}
+                onChange={(e) => setAddDialogSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="show-with-balance"
+                  checked={showOnlyWithBalance}
+                  onCheckedChange={setShowOnlyWithBalance}
+                />
+                <Label htmlFor="show-with-balance" className="text-sm cursor-pointer">
+                  Mostrar apenas com saldo
+                </Label>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {disponiveisFiltrados.length} de {disponiveis.length} vínculos
+              </span>
+            </div>
+          </div>
+
+          <ScrollArea className="max-h-[350px] pr-4">
             {disponiveis.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Link2 className="mx-auto h-10 w-10 mb-2 opacity-50" />
                 <p>Nenhum vínculo disponível</p>
                 <p className="text-sm">Todos os vínculos estão em uso ou limitados</p>
               </div>
+            ) : disponiveisFiltrados.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Search className="mx-auto h-10 w-10 mb-2 opacity-50" />
+                <p>Nenhum vínculo encontrado</p>
+                <p className="text-sm">Tente ajustar os filtros de busca</p>
+              </div>
             ) : (
               <div className="space-y-2">
-                {disponiveis.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                      selectedIds.includes(item.id)
-                        ? "bg-primary/10 border-primary"
-                        : "hover:bg-muted/50"
-                    }`}
-                    onClick={() => toggleSelection(item.id)}
-                  >
-                    <Checkbox
-                      checked={selectedIds.includes(item.id)}
-                      onCheckedChange={() => toggleSelection(item.id)}
-                    />
-                    {item.logo_url ? (
-                      <img
-                        src={item.logo_url}
-                        alt={item.nome}
-                        className="h-8 w-8 rounded object-contain bg-white p-0.5"
+                {disponiveisFiltrados.map((item) => {
+                  const hasSaldo = item.saldo_atual > 0;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        selectedIds.includes(item.id)
+                          ? "bg-primary/10 border-primary"
+                          : hasSaldo
+                          ? "hover:bg-muted/50 border-green-500/30 bg-green-500/5"
+                          : "hover:bg-muted/50"
+                      }`}
+                      onClick={() => toggleSelection(item.id)}
+                    >
+                      <Checkbox
+                        checked={selectedIds.includes(item.id)}
+                        onCheckedChange={() => toggleSelection(item.id)}
                       />
-                    ) : (
-                      <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                        <Building2 className="h-4 w-4" />
+                      {item.logo_url ? (
+                        <img
+                          src={item.logo_url}
+                          alt={item.nome}
+                          className="h-8 w-8 rounded object-contain bg-white p-0.5"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                          <Building2 className="h-4 w-4" />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium">{item.nome}</p>
+                          {item.moeda !== 'BRL' && (
+                            <Badge 
+                              variant="outline" 
+                              className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30"
+                            >
+                              {item.moeda}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {item.parceiro_nome || "Sem parceiro"}
+                        </p>
                       </div>
-                    )}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="font-medium">{item.nome}</p>
-                        {item.moeda !== 'BRL' && (
-                          <Badge 
-                            variant="outline" 
-                            className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30"
-                          >
-                            {item.moeda}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {item.parceiro_nome || "Sem parceiro"}
-                      </p>
+                      <span className={`text-sm font-medium ${hasSaldo ? "text-green-500" : "text-muted-foreground"}`}>
+                        {formatCurrency(item.saldo_atual, item.moeda)}
+                      </span>
                     </div>
-                    <span className="text-sm font-medium">
-                      {formatCurrency(item.saldo_atual, item.moeda)}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </ScrollArea>
