@@ -494,6 +494,20 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     });
   }, [surebets, tabFilters.bookmakerIds, tabFilters.parceiroIds, bookmakers]);
 
+  // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer dados legados no SurebetCard
+  const bookmakerNomeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    bookmakers.forEach(bk => {
+      const parceiroNome = bk.parceiro_nome?.split(" ");
+      const shortName = parceiroNome 
+        ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
+        : "";
+      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      map.set(bk.id, nomeCompleto);
+    });
+    return map;
+  }, [bookmakers]);
+
   const kpis = useMemo(() => {
     const total = filteredSurebets.length;
     const pendentes = filteredSurebets.filter(s => s.status === "PENDENTE").length;
@@ -1020,6 +1034,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                     setDialogOpen(true);
                   }}
                   formatCurrency={formatCurrency}
+                  bookmakerNomeMap={bookmakerNomeMap}
                 />
               );
             })}
