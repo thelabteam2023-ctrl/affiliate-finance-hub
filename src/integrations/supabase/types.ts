@@ -8712,6 +8712,16 @@ export type Database = {
         Args: { _workspace_id: string }
         Returns: boolean
       }
+      sync_all_bonus_rollovers: {
+        Args: never
+        Returns: {
+          bonus_id: string
+          bookmaker_nome: string
+          new_progress: number
+          old_progress: number
+        }[]
+      }
+      sync_bonus_rollover: { Args: { p_bonus_id: string }; Returns: number }
       update_bookmaker_balance_with_audit: {
         Args: {
           p_bookmaker_id: string

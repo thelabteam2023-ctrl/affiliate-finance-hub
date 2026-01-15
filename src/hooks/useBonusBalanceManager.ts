@@ -357,124 +357,84 @@ export function useBonusBalanceManager() {
    * @param stakeApostada - Valor apostado que conta para o rollover
    * @param oddAposta - Odd da aposta (para validar odd mínima)
    */
-  const atualizarProgressoRollover = useCallback(async (
+  /**
+   * Sincroniza o progresso do rollover recalculando baseado nos dados reais do banco.
+   * Esta abordagem é mais segura porque evita duplicações e garante consistência.
+   * 
+   * @param projectId - ID do projeto
+   * @param bookmakerId - ID da bookmaker
+   */
+  const sincronizarRollover = useCallback(async (
     projectId: string,
-    bookmakerId: string,
-    stakeApostada: number,
-    oddAposta?: number
+    bookmakerId: string
   ): Promise<boolean> => {
     try {
       // Buscar todos os bônus ativos para esta bookmaker
       const { data: bonusesAtivos, error: fetchError } = await supabase
         .from("project_bookmaker_link_bonuses")
-        .select("id, rollover_progress, rollover_target_amount, min_odds")
+        .select("id")
         .eq("project_id", projectId)
         .eq("bookmaker_id", bookmakerId)
         .eq("status", "credited");
 
       if (fetchError) {
-        console.error("Erro ao buscar bônus para rollover:", fetchError);
+        console.error("Erro ao buscar bônus para sincronizar rollover:", fetchError);
         return false;
       }
 
       if (!bonusesAtivos || bonusesAtivos.length === 0) {
-        return true; // Sem bônus ativo, nada a atualizar
+        return true; // Sem bônus ativo, nada a sincronizar
       }
 
-      // Atualizar o progresso de cada bônus ativo
+      // Sincronizar o progresso de cada bônus ativo usando a RPC do banco
       for (const bonus of bonusesAtivos) {
-        // Verificar se a aposta atende a odd mínima (se configurada)
-        if (bonus.min_odds && oddAposta && oddAposta < bonus.min_odds) {
-          console.log(`Aposta com odd ${oddAposta} não atende min_odds ${bonus.min_odds} do bônus ${bonus.id}`);
-          continue; // Não conta para este bônus
-        }
+        const { data: newProgress, error: rpcError } = await supabase
+          .rpc("sync_bonus_rollover", { p_bonus_id: bonus.id });
 
-        // Calcular novo progresso
-        const currentProgress = Number(bonus.rollover_progress || 0);
-        const newProgress = currentProgress + stakeApostada;
-
-        // Atualizar no banco
-        const { error: updateError } = await supabase
-          .from("project_bookmaker_link_bonuses")
-          .update({ 
-            rollover_progress: newProgress,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", bonus.id);
-
-        if (updateError) {
-          console.error("Erro ao atualizar rollover_progress:", updateError);
+        if (rpcError) {
+          console.error("Erro ao sincronizar rollover via RPC:", rpcError);
           return false;
         }
 
-        console.log(`Rollover atualizado: bônus ${bonus.id}, progresso ${currentProgress} -> ${newProgress}`);
+        console.log(`Rollover sincronizado: bônus ${bonus.id}, novo progresso = ${newProgress}`);
       }
 
       return true;
     } catch (error) {
-      console.error("Erro ao atualizar progresso do rollover:", error);
+      console.error("Erro ao sincronizar progresso do rollover:", error);
       return false;
     }
   }, []);
 
   /**
+   * Atualiza o progresso do rollover após liquidação de aposta.
+   * IMPORTANTE: Esta função agora usa sincronização baseada nos dados reais do banco
+   * para evitar duplicações causadas por atualizações incrementais incorretas.
+   */
+  const atualizarProgressoRollover = useCallback(async (
+    projectId: string,
+    bookmakerId: string,
+    _stakeApostada: number,
+    _oddAposta?: number
+  ): Promise<boolean> => {
+    // CORREÇÃO: Ao invés de incrementar manualmente (que pode causar duplicação),
+    // sincronizamos recalculando baseado nos dados reais do banco
+    return sincronizarRollover(projectId, bookmakerId);
+  }, [sincronizarRollover]);
+
+  /**
    * Reverte o progresso do rollover quando um resultado válido é alterado para VOID/PENDENTE.
-   * 
-   * @param projectId - ID do projeto
-   * @param bookmakerId - ID da bookmaker
-   * @param stakeApostada - Valor que foi contabilizado e precisa ser revertido
+   * IMPORTANTE: Esta função agora usa sincronização baseada nos dados reais do banco.
    */
   const reverterProgressoRollover = useCallback(async (
     projectId: string,
     bookmakerId: string,
-    stakeApostada: number
+    _stakeApostada: number
   ): Promise<boolean> => {
-    try {
-      // Buscar todos os bônus ativos para esta bookmaker
-      const { data: bonusesAtivos, error: fetchError } = await supabase
-        .from("project_bookmaker_link_bonuses")
-        .select("id, rollover_progress")
-        .eq("project_id", projectId)
-        .eq("bookmaker_id", bookmakerId)
-        .eq("status", "credited");
-
-      if (fetchError) {
-        console.error("Erro ao buscar bônus para reverter rollover:", fetchError);
-        return false;
-      }
-
-      if (!bonusesAtivos || bonusesAtivos.length === 0) {
-        return true; // Sem bônus ativo, nada a reverter
-      }
-
-      // Reverter o progresso de cada bônus ativo
-      for (const bonus of bonusesAtivos) {
-        const currentProgress = Number(bonus.rollover_progress || 0);
-        const newProgress = Math.max(0, currentProgress - stakeApostada);
-
-        // Atualizar no banco
-        const { error: updateError } = await supabase
-          .from("project_bookmaker_link_bonuses")
-          .update({ 
-            rollover_progress: newProgress,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", bonus.id);
-
-        if (updateError) {
-          console.error("Erro ao reverter rollover_progress:", updateError);
-          return false;
-        }
-
-        console.log(`Rollover revertido: bônus ${bonus.id}, progresso ${currentProgress} -> ${newProgress}`);
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Erro ao reverter progresso do rollover:", error);
-      return false;
-    }
-  }, []);
+    // CORREÇÃO: Ao invés de decrementar manualmente,
+    // sincronizamos recalculando baseado nos dados reais do banco
+    return sincronizarRollover(projectId, bookmakerId);
+  }, [sincronizarRollover]);
 
   return {
     getActiveBonus,
