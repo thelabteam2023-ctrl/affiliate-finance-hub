@@ -601,6 +601,20 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     return `${symbol} ${formatted}`;
   };
 
+  // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer nomes no SurebetCard
+  const bookmakerNomeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    bookmakers.forEach(bk => {
+      const parceiroNome = bk.parceiro?.nome?.split(" ");
+      const shortName = parceiroNome 
+        ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
+        : "";
+      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      map.set(bk.id, nomeCompleto);
+    });
+    return map;
+  }, [bookmakers]);
+
 
 
   const handleOpenDialog = (aposta: Aposta | null) => {
@@ -669,6 +683,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
               surebet={surebetData}
               isBonusContext={true}
               formatCurrency={formatSurebetCurrency}
+              bookmakerNomeMap={bookmakerNomeMap}
               onEdit={(surebet) => {
                 setSelectedSurebet(surebet);
                 setDialogSurebetOpen(true);
