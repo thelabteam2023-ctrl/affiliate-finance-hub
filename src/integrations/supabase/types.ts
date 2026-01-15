@@ -8426,6 +8426,7 @@ export type Database = {
           id: string
           moeda: string
           nome: string
+          parceiro_primeiro_nome: string
           saldo_bonus: number
           saldo_disponivel: number
           saldo_em_aposta: number
