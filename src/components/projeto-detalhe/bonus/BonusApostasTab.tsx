@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   RotateCcw,
   LayoutGrid,
-  List
+  List,
+  Gift
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -169,13 +170,17 @@ type ApostaUnificada = {
 export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
   
-  // Memoize the bookmaker IDs to prevent infinite loops
+  // Use refs to track previous values and prevent infinite loops
+  const prevBonusIdsRef = useRef<string>("");
+  const hasFetchedRef = useRef(false);
+  
+  // Memoize the bookmaker IDs with stable comparison
   const bookmakersInBonusMode = useMemo(() => {
     return getBookmakersWithActiveBonus();
-  }, [bonuses]);
+  }, [getBookmakersWithActiveBonus]);
   
-  // Create a stable string key for dependency
-  const bookmakersKey = useMemo(() => bookmakersInBonusMode.join(','), [bookmakersInBonusMode]);
+  // Create a stable string key for comparison only, not as dependency
+  const currentBonusIdsKey = bookmakersInBonusMode.sort().join(',');
   
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
@@ -198,27 +203,37 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
   const [subTab, setSubTab] = useState<HistorySubTab>("abertas");
   const [reasonFilter, setReasonFilter] = useState<string>("all");
 
-  useEffect(() => {
-    fetchAllApostas();
-  }, [projetoId, bookmakersKey]);
-
-  const fetchAllApostas = async () => {
+  // Stable fetch function with useCallback
+  const fetchAllApostas = useCallback(async () => {
     try {
       setLoading(true);
       await Promise.all([fetchApostas(), fetchApostasMultiplas(), fetchSurebets(), fetchBookmakers()]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [projetoId, bookmakersInBonusMode]);
 
+  // Initial fetch and when projetoId changes
+  useEffect(() => {
+    hasFetchedRef.current = false;
+    prevBonusIdsRef.current = "";
+  }, [projetoId]);
+
+  // Fetch only when bonus IDs actually change (deep comparison)
+  useEffect(() => {
+    if (!projetoId) return;
+    
+    // Check if bonus IDs actually changed
+    if (prevBonusIdsRef.current !== currentBonusIdsKey || !hasFetchedRef.current) {
+      prevBonusIdsRef.current = currentBonusIdsKey;
+      hasFetchedRef.current = true;
+      fetchAllApostas();
+    }
+  }, [projetoId, currentBonusIdsKey, fetchAllApostas]);
+
+  // CORRIGIDO: Buscar TODAS as casas ativas do projeto, não apenas as com bônus
   const fetchBookmakers = async () => {
     try {
-      // Only fetch bookmakers in bonus mode
-      if (bookmakersInBonusMode.length === 0) {
-        setBookmakers([]);
-        return;
-      }
-
       const { data, error } = await supabase
         .from("bookmakers")
         .select(`
@@ -226,15 +241,22 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           nome,
           saldo_atual,
           saldo_freebet,
+          moeda,
           parceiro:parceiros (nome),
           bookmakers_catalogo (logo_url)
         `)
         .eq("projeto_id", projetoId)
-        .in("id", bookmakersInBonusMode)
         .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
 
       if (error) throw error;
-      setBookmakers(data || []);
+      
+      // Adicionar indicador de qual casa tem bônus ativo
+      const dataWithBonusFlag = (data || []).map(bk => ({
+        ...bk,
+        hasActiveBonus: bookmakersInBonusMode.includes(bk.id)
+      }));
+      
+      setBookmakers(dataWithBonusFlag);
     } catch (error: any) {
       console.error("Erro ao carregar bookmakers:", error.message);
     }
@@ -1009,6 +1031,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
         projetoId={projetoId}
         aposta={selectedApostaMultipla}
         onSuccess={handleApostaUpdated}
+        activeTab="bonus"
       />
 
       {/* Dialog Surebet - usa apenas bookmakers em modo bônus */}
