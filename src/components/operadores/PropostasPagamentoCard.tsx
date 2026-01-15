@@ -8,8 +8,6 @@ import { toast } from "sonner";
 import {
   CheckCircle2,
   XCircle,
-  Clock,
-  DollarSign,
   User,
   FolderKanban,
   Calendar,
@@ -238,24 +236,10 @@ export function PropostasPagamentoCard() {
     );
   }
 
+  // REGRA: Não renderizar nada quando não há propostas pendentes
+  // Cards vazios não devem ocupar espaço na Central de Operações
   if (propostas.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Propostas de Pagamento
-          </CardTitle>
-          <CardDescription>Pagamentos pendentes de aprovação</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <CheckCircle2 className="h-12 w-12 mb-4 opacity-50" />
-            <p>Nenhuma proposta pendente</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   return (
