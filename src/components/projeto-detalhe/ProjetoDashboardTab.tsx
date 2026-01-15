@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Select,
@@ -9,23 +9,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   TrendingUp, 
   TrendingDown,
   Target, 
-  Building2,
   BarChart3,
   DollarSign,
   Percent
 } from "lucide-react";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts, ExtraLucroEntry } from "./VisaoGeralCharts";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
+import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
 
 interface ProjetoDashboardTabProps {
   projetoId: string;
@@ -55,21 +52,6 @@ interface ApostaUnificada {
   }[];
 }
 
-interface BookmakerMetrics {
-  bookmaker_id: string;
-  bookmaker_nome: string;
-  parceiro_nome: string | null;
-  logo_url: string | null;
-  totalApostas: number;
-  totalStake: number;
-  lucro: number;
-  greens: number;
-  reds: number;
-  roi: number;
-}
-
-type BookmakerFilter = "all" | "bookmaker" | "parceiro";
-
 export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const [apostasUnificadas, setApostasUnificadas] = useState<ApostaUnificada[]>([]);
   const [extrasLucro, setExtrasLucro] = useState<ExtraLucroEntry[]>([]);
@@ -77,7 +59,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const [selectedEsporte, setSelectedEsporte] = useState<string>("");
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, formatChartAxis, getSymbol } = useProjetoCurrency(projetoId);
+  const { formatCurrency, formatChartAxis } = useProjetoCurrency(projetoId);
   
   // Hook global de logos
   const { logoMap: catalogLogoMap, getLogoUrl: getCatalogLogoUrl } = useBookmakerLogoMap();
@@ -87,11 +69,6 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
    * Esta aba SEMPRE exibe dados globais do projeto, sem filtros herdados de outras abas.
    * Não utiliza filtros de período/bookmaker/parceiro - mostra TUDO.
    */
-  
-  // Filtros para Performance por Casa (locais apenas para visualização)
-  const [bookmakerFilterType, setBookmakerFilterType] = useState<BookmakerFilter>("all");
-  const [selectedBookmakerId, setSelectedBookmakerId] = useState<string>("");
-  const [selectedParceiro, setSelectedParceiro] = useState<string>("");
 
   useEffect(() => {
     fetchAllData();
@@ -304,158 +281,6 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
 
   // Visão Geral não usa período - sempre mostra evolução completa
   const isSingleDayPeriod = false;
-
-  /**
-   * PERFORMANCE POR CASA - Agregação por bookmaker
-   * 
-   * REGRA CONCEITUAL:
-   * - Apostas simples/múltiplas: contam normalmente por bookmaker_id
-   * - Arbitragem/Surebet: DESAGREGADAS por perna, cada casa recebe sua performance individual
-   *   - Volume = stake da perna
-   *   - Lucro = lucro_prejuizo da perna
-   *   - Contagem = cada perna conta como 1 participação
-   * 
-   * Isso garante que "Arbitragem" nunca apareça como casa,
-   * e cada bookmaker real tenha suas métricas próprias.
-   */
-  const bookmakerMetrics = useMemo(() => {
-    const metricsMap: Record<string, BookmakerMetrics> = {};
-    
-    const addToMetrics = (
-      bookmaker_id: string,
-      bookmaker_nome: string,
-      parceiro_nome: string | null,
-      logo_url: string | null,
-      stake: number,
-      lucro_prejuizo: number,
-      resultado: string | null
-    ) => {
-      if (!metricsMap[bookmaker_id]) {
-        metricsMap[bookmaker_id] = {
-          bookmaker_id,
-          bookmaker_nome,
-          parceiro_nome,
-          logo_url,
-          totalApostas: 0,
-          totalStake: 0,
-          lucro: 0,
-          greens: 0,
-          reds: 0,
-          roi: 0,
-        };
-      }
-      
-      metricsMap[bookmaker_id].totalApostas++;
-      metricsMap[bookmaker_id].totalStake += stake || 0;
-      metricsMap[bookmaker_id].lucro += lucro_prejuizo || 0;
-      
-      if (resultado === "GREEN" || resultado === "MEIO_GREEN") {
-        metricsMap[bookmaker_id].greens++;
-      }
-      if (resultado === "RED" || resultado === "MEIO_RED") {
-        metricsMap[bookmaker_id].reds++;
-      }
-    };
-    
-    apostasUnificadas.forEach(aposta => {
-      // ARBITRAGEM: Desagregar pernas - cada casa recebe sua performance individual
-      if (aposta.forma_registro === 'ARBITRAGEM' && aposta.pernas && aposta.pernas.length > 0) {
-        aposta.pernas.forEach(perna => {
-          const pernaBookmakerId = perna.bookmaker_id || 'unknown';
-          const pernaBookmakerNome = perna.bookmaker_nome || 'Desconhecida';
-          const pernaParceiro = perna.parceiro_nome || null;
-          const pernaLogo = perna.logo_url || null;
-          
-          addToMetrics(
-            pernaBookmakerId,
-            pernaBookmakerNome,
-            pernaParceiro,
-            pernaLogo,
-            perna.stake || 0,
-            perna.lucro_prejuizo || 0,
-            perna.resultado || null
-          );
-        });
-      } else {
-        // APOSTAS SIMPLES/MÚLTIPLAS: Contagem normal por bookmaker
-        addToMetrics(
-          aposta.bookmaker_id,
-          aposta.bookmaker_nome,
-          aposta.parceiro_nome,
-          aposta.logo_url,
-          aposta.stake || 0,
-          aposta.lucro_prejuizo || 0,
-          aposta.resultado
-        );
-      }
-    });
-
-    return Object.values(metricsMap)
-      .map((m: BookmakerMetrics) => ({
-        ...m,
-        roi: m.totalStake > 0 ? (m.lucro / m.totalStake) * 100 : 0
-      }))
-      .sort((a, b) => b.totalApostas - a.totalApostas);
-  }, [apostasUnificadas]);
-
-  // Listas únicas para filtros - inclui bookmakers das pernas de arbitragem
-  const uniqueBookmakers = useMemo(() => {
-    const map = new Map<string, { id: string; nome: string }>();
-    apostasUnificadas.forEach(a => {
-      // Apostas simples/múltiplas
-      if (a.forma_registro !== 'ARBITRAGEM') {
-        if (!map.has(a.bookmaker_id)) {
-          map.set(a.bookmaker_id, { id: a.bookmaker_id, nome: a.bookmaker_nome });
-        }
-      } else if (a.pernas && a.pernas.length > 0) {
-        // Arbitragem: incluir bookmakers das pernas
-        a.pernas.forEach(perna => {
-          const pernaId = perna.bookmaker_id || 'unknown';
-          if (!map.has(pernaId)) {
-            map.set(pernaId, { id: pernaId, nome: perna.bookmaker_nome || 'Desconhecida' });
-          }
-        });
-      }
-    });
-    return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [apostasUnificadas]);
-
-  const uniqueParceiros = useMemo(() => {
-    const set = new Set<string>();
-    apostasUnificadas.forEach(a => {
-      if (a.forma_registro !== 'ARBITRAGEM') {
-        if (a.parceiro_nome) set.add(a.parceiro_nome);
-      } else if (a.pernas && a.pernas.length > 0) {
-        a.pernas.forEach(perna => {
-          if (perna.parceiro_nome) set.add(perna.parceiro_nome);
-        });
-      }
-    });
-    return Array.from(set).sort();
-  }, [apostasUnificadas]);
-
-  // Filtrar métricas por bookmaker
-  const filteredBookmakerMetrics = useMemo(() => {
-    if (bookmakerFilterType === "all") return bookmakerMetrics;
-    
-    if (bookmakerFilterType === "bookmaker" && selectedBookmakerId) {
-      return bookmakerMetrics.filter(bm => bm.bookmaker_id === selectedBookmakerId);
-    }
-    
-    if (bookmakerFilterType === "parceiro" && selectedParceiro) {
-      return bookmakerMetrics.filter(bm => bm.parceiro_nome === selectedParceiro);
-    }
-    
-    return bookmakerMetrics;
-  }, [bookmakerMetrics, bookmakerFilterType, selectedBookmakerId, selectedParceiro]);
-
-  // Reset seleção quando muda o tipo de filtro
-  useEffect(() => {
-    if (bookmakerFilterType === "all") {
-      setSelectedBookmakerId("");
-      setSelectedParceiro("");
-    }
-  }, [bookmakerFilterType]);
 
   // Aggregate by sport
   const esportesData = useMemo(() => {
@@ -673,134 +498,12 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         showScopeToggle={false}
       />
 
-      {/* Performance por Casa */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Performance por Casa
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Select value={bookmakerFilterType} onValueChange={(v) => setBookmakerFilterType(v as BookmakerFilter)}>
-                <SelectTrigger className="w-[130px] h-8 text-xs">
-                  <SelectValue placeholder="Filtrar por" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="bookmaker">Por Casa</SelectItem>
-                  <SelectItem value="parceiro">Por Usuário</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              {bookmakerFilterType === "bookmaker" && uniqueBookmakers.length > 0 && (
-                <Select value={selectedBookmakerId} onValueChange={setSelectedBookmakerId}>
-                  <SelectTrigger className="w-[150px] h-8 text-xs">
-                    <SelectValue placeholder="Selecione a casa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {uniqueBookmakers.map(bm => (
-                      <SelectItem key={bm.id} value={bm.id}>
-                        {bm.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              
-              {bookmakerFilterType === "parceiro" && uniqueParceiros.length > 0 && (
-                <Select value={selectedParceiro} onValueChange={setSelectedParceiro}>
-                  <SelectTrigger className="w-[150px] h-8 text-xs">
-                    <SelectValue placeholder="Selecione o usuário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {uniqueParceiros.map(nome => (
-                      <SelectItem key={nome} value={nome}>
-                        {nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="px-0">
-          <ScrollArea className="h-[260px]">
-            {/* Header */}
-            <div className="grid grid-cols-5 gap-2 px-6 pb-2 text-xs text-muted-foreground font-medium border-b border-border/50">
-              <div className="col-span-1">Casa</div>
-              <div className="text-right">Apostas</div>
-              <div className="text-right">Volume</div>
-              <div className="text-right">Lucro</div>
-              <div className="text-right">ROI</div>
-            </div>
-            
-            {/* Rows */}
-            <div className="divide-y divide-border/30">
-              {filteredBookmakerMetrics.length === 0 ? (
-                <div className="px-6 py-8 text-center text-sm text-muted-foreground">
-                  {bookmakerFilterType !== "all" && !(selectedBookmakerId || selectedParceiro) 
-                    ? "Selecione um filtro" 
-                    : "Nenhum resultado encontrado"}
-                </div>
-              ) : (
-                filteredBookmakerMetrics.map((bm) => {
-                  // Tentar buscar logo do catálogo global
-                  const logoFromCatalog = getCatalogLogoUrl(bm.bookmaker_nome);
-                  const displayLogo = bm.logo_url || logoFromCatalog;
-                  
-                  return (
-                    <div 
-                      key={bm.bookmaker_id} 
-                      className="grid grid-cols-5 gap-2 px-6 py-3 hover:bg-muted/30 transition-colors"
-                    >
-                      <div className="col-span-1 flex items-center gap-2">
-                        {displayLogo ? (
-                          <img 
-                            src={displayLogo} 
-                            alt={bm.bookmaker_nome}
-                            className="w-6 h-6 rounded object-contain bg-muted/50 p-0.5 flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="w-6 h-6 rounded bg-muted/50 flex items-center justify-center flex-shrink-0">
-                            <Building2 className="h-3 w-3 text-muted-foreground" />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{bm.bookmaker_nome}</p>
-                          {bm.parceiro_nome && (
-                            <p className="text-[10px] text-muted-foreground truncate">{bm.parceiro_nome}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-mono">{bm.totalApostas}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {bm.greens}G / {bm.reds}R
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-mono">{formatCurrency(bm.totalStake)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-mono font-medium ${bm.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {formatCurrency(bm.lucro)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-mono font-medium ${bm.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {bm.roi.toFixed(1)}%
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+      {/* Performance por Casa - Componente com visões alternáveis */}
+      <PerformancePorCasaCard
+        apostasUnificadas={apostasUnificadas}
+        formatCurrency={formatCurrency}
+        getLogoUrl={getCatalogLogoUrl}
+      />
 
       {/* Performance por Esporte */}
       <Card>
