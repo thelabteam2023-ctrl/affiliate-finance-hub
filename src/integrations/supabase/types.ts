@@ -8423,9 +8423,13 @@ export type Database = {
       get_bookmaker_saldos: {
         Args: { p_projeto_id: string }
         Returns: {
+          bonus_rollover_started: boolean
           id: string
+          logo_url: string
           moeda: string
           nome: string
+          parceiro_id: string
+          parceiro_nome: string
           parceiro_primeiro_nome: string
           saldo_bonus: number
           saldo_disponivel: number

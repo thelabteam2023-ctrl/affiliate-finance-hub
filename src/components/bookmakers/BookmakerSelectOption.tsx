@@ -9,12 +9,13 @@ export interface BookmakerOptionData {
   nome: string;
   parceiro_nome: string | null;
   moeda: string;
+  /** Saldo consolidado disponível para apostar (saldo_real + bonus - em_aposta + freebet) */
   saldo_operavel: number;
   saldo_disponivel?: number;
   saldo_freebet?: number;
   saldo_bonus?: number;
   logo_url?: string | null;
-  /** Se true, o rollover já foi iniciado (rollover_progress > 0) - mostra saldo unificado */
+  /** Se true, o rollover já foi iniciado (rollover_progress > 0) */
   bonus_rollover_started?: boolean;
 }
 
@@ -28,15 +29,12 @@ interface BookmakerSelectOptionProps {
 /**
  * COMPONENTE CANÔNICO para exibição de bookmaker em selects
  * 
- * REGRAS VISUAIS:
- * - Nome da casa (uppercase)
- * - Nome do parceiro (primeiro + último nome)
- * - Badge de moeda com cor:
- *   - BRL → verde (emerald)
- *   - USD/USDT → azul (blue)
- *   - EUR → roxo (purple)
- *   - GBP → laranja (amber)
- * - Valor formatado na moeda correta
+ * REGRAS VISUAIS (simplificado - saldo consolidado):
+ * - Logo da casa
+ * - Nome da casa (uppercase) + Badge de moeda
+ * - Primeiro nome do parceiro
+ * - Saldo consolidado (único valor relevante para operações)
+ * - Indicador 🎁 se houver bônus ativo
  */
 export function BookmakerSelectOption({
   bookmaker,
@@ -44,9 +42,19 @@ export function BookmakerSelectOption({
   showBreakdown = true,
   className,
 }: BookmakerSelectOptionProps) {
-  const { nome, parceiro_nome, moeda, saldo_operavel, saldo_freebet = 0, saldo_bonus = 0, logo_url, bonus_rollover_started = false } = bookmaker;
+  const { 
+    nome, 
+    parceiro_nome, 
+    moeda, 
+    saldo_operavel, 
+    saldo_freebet = 0, 
+    saldo_bonus = 0, 
+    logo_url, 
+    bonus_rollover_started = false 
+  } = bookmaker;
   
   const parceiroShortName = getFirstLastName(parceiro_nome || "");
+  const hasBonus = saldo_bonus > 0;
   
   return (
     <div className={cn(
@@ -80,28 +88,23 @@ export function BookmakerSelectOption({
         )}
       </div>
       
-      {/* Coluna 3: Saldo (fixo à direita) */}
+      {/* Coluna 3: Saldo Consolidado (fixo à direita) */}
       <div className="flex flex-col items-end flex-shrink-0">
         <span className={cn(
           "text-xs font-medium flex items-center gap-1",
           disabled ? "text-destructive" : getCurrencyTextColor(moeda)
         )}>
           {disabled ? "Indisponível" : formatCurrency(saldo_operavel, moeda)}
-          {!disabled && saldo_bonus > 0 && bonus_rollover_started && (
-            <span className="text-purple-400" title="Bônus ativo em rollover">🎁</span>
+          {!disabled && hasBonus && (
+            <span className="text-purple-400" title="Bônus ativo">🎁</span>
           )}
         </span>
         
-        {showBreakdown && !disabled && (
-          (saldo_bonus > 0 && !bonus_rollover_started) ? (
-            <span className="text-[9px] text-muted-foreground/70">
-              {formatBreakdown(bookmaker.saldo_disponivel || (saldo_operavel - saldo_bonus - saldo_freebet), saldo_freebet, saldo_bonus, moeda)}
-            </span>
-          ) : (saldo_freebet > 0 && saldo_bonus === 0) ? (
-            <span className="text-[9px] text-muted-foreground/70">
-              {formatBreakdown(bookmaker.saldo_disponivel || saldo_operavel, saldo_freebet, 0, moeda)}
-            </span>
-          ) : null
+        {/* Breakdown opcional: só mostra se tem freebet separado (não usado ainda) */}
+        {showBreakdown && !disabled && saldo_freebet > 0 && !bonus_rollover_started && (
+          <span className="text-[9px] text-muted-foreground/70">
+            FB: {formatCurrency(saldo_freebet, moeda)}
+          </span>
         )}
       </div>
     </div>

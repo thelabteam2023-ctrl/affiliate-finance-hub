@@ -14,22 +14,29 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
  * - saldo_real = bookmakers.saldo_atual
  * - saldo_freebet = bookmakers.saldo_freebet
  * - saldo_bonus = SUM(project_bookmaker_link_bonuses.saldo_atual) WHERE status='credited'
- * - saldo_em_aposta = SUM(apostas_unificada.stake) WHERE status='PENDENTE'
+ * - saldo_em_aposta = SUM de stakes pendentes (SIMPLES/MULTIPLA: direto, ARBITRAGEM: pernas JSON)
  * 
- * Este é o ÚNICO local onde o Saldo Operável global do projeto deve ser calculado.
+ * REGRA FUNDAMENTAL:
+ * - NÃO existe separação entre saldo real e bônus para fins operacionais
+ * - Apostas pendentes BLOQUEIAM capital
+ * - Este é o ÚNICO local onde o Saldo Operável global do projeto deve ser calculado.
  */
 
 interface BookmakerSaldoCompleto {
   id: string;
   nome: string;
   moeda: string;
-  parceiro_primeiro_nome: string;
+  parceiro_id: string | null;
+  parceiro_nome: string | null;
+  parceiro_primeiro_nome: string | null;
+  logo_url: string | null;
   saldo_real: number;
   saldo_freebet: number;
   saldo_bonus: number;
   saldo_em_aposta: number;
   saldo_disponivel: number;
   saldo_operavel: number;
+  bonus_rollover_started: boolean;
 }
 
 export function useSaldoOperavel(projetoId: string) {
@@ -94,19 +101,21 @@ export function useSaldoOperavel(projetoId: string) {
   const totalCasas = bookmakers.length;
 
   // Lista de casas com saldo > 0 para o tooltip detalhado
-  // Ordenadas por maior saldo operável, excluindo freebets não utilizadas
+  // Ordenadas por maior saldo operável
   const casasComSaldo = useMemo(() => {
     return bookmakers
       .map((bk) => {
         const moeda = bk.moeda || "BRL";
-        // saldo_operavel já inclui real + bonus - em_aposta (exclui freebet não utilizada no saldo exibido)
+        // saldo_operavel = consolidado total disponível para apostar
         const saldoConvertido = convertToConsolidation(Number(bk.saldo_operavel) || 0, moeda);
         return {
           id: bk.id,
           nome: bk.nome,
           parceiroPrimeiroNome: bk.parceiro_primeiro_nome || "",
+          parceiroNome: bk.parceiro_nome || "",
           saldoOperavel: saldoConvertido,
           moedaOriginal: moeda,
+          logoUrl: bk.logo_url,
         };
       })
       .filter((casa) => casa.saldoOperavel > 0)
