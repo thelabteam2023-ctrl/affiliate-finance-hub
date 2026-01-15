@@ -173,14 +173,28 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
   // Use refs to track previous values and prevent infinite loops
   const prevBonusIdsRef = useRef<string>("");
   const hasFetchedRef = useRef(false);
+  const projetoIdRef = useRef(projetoId);
+  
+  // Keep projetoId ref updated
+  useEffect(() => {
+    projetoIdRef.current = projetoId;
+  }, [projetoId]);
   
   // Memoize the bookmaker IDs with stable comparison
   const bookmakersInBonusMode = useMemo(() => {
     return getBookmakersWithActiveBonus();
   }, [getBookmakersWithActiveBonus]);
   
-  // Create a stable string key for comparison only, not as dependency
-  const currentBonusIdsKey = bookmakersInBonusMode.sort().join(',');
+  // Store bonus mode IDs in ref for use in fetch functions
+  const bookmakersInBonusModeRef = useRef<string[]>([]);
+  useEffect(() => {
+    bookmakersInBonusModeRef.current = bookmakersInBonusMode;
+  }, [bookmakersInBonusMode]);
+  
+  // Create a stable string key for comparison only
+  const currentBonusIdsKey = useMemo(() => {
+    return [...bookmakersInBonusMode].sort().join(',');
+  }, [bookmakersInBonusMode]);
   
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
@@ -203,23 +217,13 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
   const [subTab, setSubTab] = useState<HistorySubTab>("abertas");
   const [reasonFilter, setReasonFilter] = useState<string>("all");
 
-  // Stable fetch function with useCallback
-  const fetchAllApostas = useCallback(async () => {
-    try {
-      setLoading(true);
-      await Promise.all([fetchApostas(), fetchApostasMultiplas(), fetchSurebets(), fetchBookmakers()]);
-    } finally {
-      setLoading(false);
-    }
-  }, [projetoId, bookmakersInBonusMode]);
-
-  // Initial fetch and when projetoId changes
+  // Initial fetch and when projetoId changes - reset refs
   useEffect(() => {
     hasFetchedRef.current = false;
     prevBonusIdsRef.current = "";
   }, [projetoId]);
 
-  // Fetch only when bonus IDs actually change (deep comparison)
+  // Fetch only when projetoId changes OR bonus IDs actually change (deep comparison)
   useEffect(() => {
     if (!projetoId) return;
     
@@ -227,12 +231,33 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     if (prevBonusIdsRef.current !== currentBonusIdsKey || !hasFetchedRef.current) {
       prevBonusIdsRef.current = currentBonusIdsKey;
       hasFetchedRef.current = true;
-      fetchAllApostas();
+      
+      // Fetch all data
+      const fetchAllData = async () => {
+        try {
+          setLoading(true);
+          const currentProjetoId = projetoIdRef.current;
+          const currentBonusIds = bookmakersInBonusModeRef.current;
+          
+          await Promise.all([
+            fetchApostasInternal(currentProjetoId, currentBonusIds),
+            fetchApostasMultiplasInternal(currentProjetoId, currentBonusIds),
+            fetchSurebetsInternal(currentProjetoId, currentBonusIds),
+            fetchBookmakersInternal(currentProjetoId, currentBonusIds)
+          ]);
+        } catch (error) {
+          console.error("Erro ao carregar dados:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchAllData();
     }
-  }, [projetoId, currentBonusIdsKey, fetchAllApostas]);
+  }, [projetoId, currentBonusIdsKey]);
 
-  // CORRIGIDO: Buscar TODAS as casas ativas do projeto, não apenas as com bônus
-  const fetchBookmakers = async () => {
+  // Internal fetch functions that receive parameters (avoid closure issues)
+  const fetchBookmakersInternal = async (projId: string, bonusIds: string[]) => {
     try {
       const { data, error } = await supabase
         .from("bookmakers")
@@ -245,7 +270,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           parceiro:parceiros (nome),
           bookmakers_catalogo (logo_url)
         `)
-        .eq("projeto_id", projetoId)
+        .eq("projeto_id", projId)
         .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
 
       if (error) throw error;
@@ -253,7 +278,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
       // Adicionar indicador de qual casa tem bônus ativo
       const dataWithBonusFlag = (data || []).map(bk => ({
         ...bk,
-        hasActiveBonus: bookmakersInBonusMode.includes(bk.id)
+        hasActiveBonus: bonusIds.includes(bk.id)
       }));
       
       setBookmakers(dataWithBonusFlag);
@@ -262,9 +287,8 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     }
   };
 
-  const fetchApostas = async () => {
+  const fetchApostasInternal = async (projId: string, bonusIds: string[]) => {
     try {
-      // Build filter: apostas with bonus context, strategy, or bookmaker in bonus mode
       let query = supabase
         .from("apostas_unificada")
         .select(`
@@ -278,15 +302,12 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
             bookmakers_catalogo (logo_url)
           )
         `)
-        .eq("projeto_id", projetoId)
+        .eq("projeto_id", projId)
         .eq("forma_registro", "SIMPLES");
       
-      // Apply OR filter based on available bookmakers in bonus mode
-      // Usa estrategia e contexto_operacional (is_bonus_bet deprecado)
-      if (bookmakersInBonusMode.length > 0) {
-        query = query.or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
+      if (bonusIds.length > 0) {
+        query = query.or(`bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
       } else {
-        // No bookmakers in bonus mode, only fetch by context/strategy
         query = query.or(`contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
       }
       
@@ -294,7 +315,6 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
 
       if (error) throw error;
       
-      // Map to expected Aposta format
       const mapped = (data || []).map((a: any) => ({
         ...a,
         esporte: a.esporte || '',
@@ -307,9 +327,8 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     }
   };
 
-  const fetchApostasMultiplas = async () => {
+  const fetchApostasMultiplasInternal = async (projId: string, bonusIds: string[]) => {
     try {
-      // Build filter for multiple bets with bonus context
       let query = supabase
         .from("apostas_unificada")
         .select(`
@@ -323,13 +342,11 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
             bookmakers_catalogo (logo_url)
           )
         `)
-        .eq("projeto_id", projetoId)
+        .eq("projeto_id", projId)
         .eq("forma_registro", "MULTIPLA");
       
-      // Apply OR filter based on available bookmakers in bonus mode
-      // Usa estrategia e contexto_operacional (is_bonus_bet deprecado)
-      if (bookmakersInBonusMode.length > 0) {
-        query = query.or(`bookmaker_id.in.(${bookmakersInBonusMode.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
+      if (bonusIds.length > 0) {
+        query = query.or(`bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
       } else {
         query = query.or(`contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
       }
@@ -347,21 +364,18 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     }
   };
 
-  const fetchSurebets = async () => {
+  const fetchSurebetsInternal = async (projId: string, bonusIds: string[]) => {
     try {
-      // Fetch arbitragem operations (surebets) related to bonus context
-      // Include: estrategia EXTRACAO_BONUS, contexto_operacional BONUS, or pernas with bonus bookmakers
       const { data: surebetsData, error } = await supabase
         .from("apostas_unificada")
         .select("*")
-        .eq("projeto_id", projetoId)
+        .eq("projeto_id", projId)
         .eq("forma_registro", "ARBITRAGEM")
         .or(`estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS`)
         .order("data_aposta", { ascending: false });
 
       if (error) throw error;
       
-      // Parse pernas from JSON
       const surebetsComPernas = (surebetsData || []).map((surebet: any) => {
         const pernas = Array.isArray(surebet.pernas) ? surebet.pernas : [];
         return {
@@ -387,11 +401,11 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
       });
       
       // Also include surebets with SUREBET strategy if they have pernas with bonus bookmakers
-      if (bookmakersInBonusMode.length > 0) {
+      if (bonusIds.length > 0) {
         const { data: surebetsWithBonusBk, error: error2 } = await supabase
           .from("apostas_unificada")
           .select("*")
-          .eq("projeto_id", projetoId)
+          .eq("projeto_id", projId)
           .eq("forma_registro", "ARBITRAGEM")
           .eq("estrategia", "SUREBET")
           .order("data_aposta", { ascending: false });
@@ -400,7 +414,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           const additionalSurebets = surebetsWithBonusBk
             .filter((surebet: any) => {
               const pernas = Array.isArray(surebet.pernas) ? surebet.pernas : [];
-              return pernas.some((p: any) => bookmakersInBonusMode.includes(p.bookmaker_id));
+              return pernas.some((p: any) => bonusIds.includes(p.bookmaker_id));
             })
             .filter((sb: any) => !surebetsComPernas.some((existing: any) => existing.id === sb.id))
             .map((surebet: any) => {
@@ -442,9 +456,24 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     }
   };
 
-  const handleApostaUpdated = () => {
-    fetchAllApostas();
-  };
+  const handleApostaUpdated = useCallback(async () => {
+    try {
+      setLoading(true);
+      const currentProjetoId = projetoIdRef.current;
+      const currentBonusIds = bookmakersInBonusModeRef.current;
+      
+      await Promise.all([
+        fetchApostasInternal(currentProjetoId, currentBonusIds),
+        fetchApostasMultiplasInternal(currentProjetoId, currentBonusIds),
+        fetchSurebetsInternal(currentProjetoId, currentBonusIds),
+        fetchBookmakersInternal(currentProjetoId, currentBonusIds)
+      ]);
+    } catch (error) {
+      console.error("Erro ao atualizar dados:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Filter apostas
   const filteredApostas = apostas.filter((aposta) => {
