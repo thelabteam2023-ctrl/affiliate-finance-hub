@@ -9,7 +9,7 @@ import {
   Zap
 } from "lucide-react";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
-import { parseLocalDateTime } from "@/utils/dateUtils";
+import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
 
 interface Aposta {
   id: string;
@@ -371,7 +371,8 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     // Maior prejuízo diário e maior lucro diário
     const lucroPorDia = new Map<string, number>();
     liquidadas.forEach(a => {
-      const dia = a.data_aposta.slice(0, 10);
+      // Usar extractLocalDateKey para garantir agrupamento por dia civil correto
+      const dia = extractLocalDateKey(a.data_aposta);
       lucroPorDia.set(dia, (lucroPorDia.get(dia) || 0) + (a.lucro_prejuizo || 0));
     });
     const diasValues = Array.from(lucroPorDia.values());

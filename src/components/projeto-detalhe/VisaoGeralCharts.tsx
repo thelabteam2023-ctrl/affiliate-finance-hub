@@ -19,7 +19,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarioLucros } from "./CalendarioLucros";
 import { getFirstLastName } from "@/lib/utils";
-import { parseLocalDateTime } from "@/utils/dateUtils";
+import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
 
 // =====================================================
 // TIPOS
@@ -546,8 +546,9 @@ export function VisaoGeralCharts({
     }>();
     
     sorted.forEach((a) => {
+      // CORREÇÃO: Usar extractLocalDateKey para garantir agrupamento por dia civil correto
+      const dateKey = extractLocalDateKey(a.data_aposta);
       const date = parseLocalDateTime(a.data_aposta);
-      const dateKey = format(date, "yyyy-MM-dd"); // Chave única por dia
       const dataFormatada = format(date, "dd/MM", { locale: ptBR });
       // CORREÇÃO: Usar pl_consolidado quando disponível para evitar inflação
       const impacto = (a as any).pl_consolidado ?? a.lucro_prejuizo ?? 0;
