@@ -5,6 +5,7 @@ export interface Perna {
   bookmaker_nome?: string;
   bookmaker?: string;
   selecao: string;
+  selecao_livre?: string; // Linha real da aposta (ex: Over 2.5, Handicap -1.5)
   odd: number;
   stake?: number;
   resultado?: string | null;
@@ -20,17 +21,34 @@ interface ApostaPernasResumoProps {
   className?: string;
 }
 
-// Normaliza seleção para label curto
-function getSelecaoLabel(selecao: string): string {
-  const labels: Record<string, string> = {
+/**
+ * Retorna o label de exibição para a seleção.
+ * PRIORIDADE: selecao_livre (linha real) > selecao original
+ * 
+ * Se selecao_livre existir, usa ela (ex: "Over 2.5", "Handicap -1.5")
+ * Se não, usa o fallback do mercado (1/X/2) apenas para valores genéricos
+ */
+function getSelecaoLabel(perna: Perna): string {
+  // Se tem selecao_livre, usar ela diretamente (é a linha real da aposta)
+  if (perna.selecao_livre && perna.selecao_livre.trim()) {
+    return perna.selecao_livre;
+  }
+  
+  // Fallback: normalizar apenas valores genéricos de mercado 1X2
+  const selecao = perna.selecao;
+  const marketLabels: Record<string, string> = {
     "Casa": "1",
-    "1": "1",
     "Empate": "X",
-    "X": "X",
     "Fora": "2",
-    "2": "2",
   };
-  return labels[selecao] || selecao;
+  
+  // Se é um termo genérico do mercado, converte para 1/X/2
+  if (marketLabels[selecao]) {
+    return marketLabels[selecao];
+  }
+  
+  // Caso contrário, usa a seleção original
+  return selecao;
 }
 
 // Normaliza nome do bookmaker
@@ -120,7 +138,7 @@ export function ApostaPernasResumo({
             className="text-[9px] px-1 py-0 gap-0.5 font-normal"
           >
             <span className="font-semibold text-primary">
-              {getSelecaoLabel(perna.selecao)}
+              {getSelecaoLabel(perna)}
             </span>
             <span className="text-muted-foreground">•</span>
             <span className="uppercase truncate max-w-[60px]">
@@ -152,7 +170,7 @@ export function ApostaPernasResumo({
             className="flex items-center gap-1 text-xs bg-muted/30 rounded px-1.5 py-0.5"
           >
             <span className="font-bold text-primary w-3 text-center">
-              {getSelecaoLabel(perna.selecao)}
+              {getSelecaoLabel(perna)}
             </span>
             <span className="text-muted-foreground">–</span>
             <span className="font-medium uppercase truncate max-w-[80px] text-[11px]">
@@ -192,7 +210,7 @@ export function ApostaPernasResumo({
         >
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <span className="font-bold text-primary w-4 flex-shrink-0 text-center">
-              {getSelecaoLabel(perna.selecao)}
+              {getSelecaoLabel(perna)}
             </span>
             <span className="text-muted-foreground">–</span>
             <span className="font-medium truncate uppercase text-[11px]">

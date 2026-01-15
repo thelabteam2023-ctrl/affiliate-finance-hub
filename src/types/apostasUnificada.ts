@@ -45,6 +45,7 @@ export interface PernaArbitragem {
   bookmaker_nome: string;
   moeda: SupportedCurrency; // OBRIGATÓRIO - moeda da bookmaker
   selecao: string;
+  selecao_livre?: string; // Linha real da aposta (ex: Over 2.5, Handicap -1.5) - prioridade sobre selecao
   odd: number;
   stake: number;
   // Campos de snapshot para referência BRL

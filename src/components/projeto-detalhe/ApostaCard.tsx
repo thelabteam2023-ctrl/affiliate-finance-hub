@@ -385,7 +385,7 @@ export function ApostaCard({
               <div className="space-y-1 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden">
                 {aposta.pernas!.map((perna, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-xs overflow-hidden">
-                    <span className="truncate flex-1">{perna.selecao}</span>
+                    <span className="truncate flex-1">{perna.selecao_livre || perna.selecao}</span>
                     <span className="font-medium shrink-0">@{Number(perna.odd).toFixed(2)}</span>
                   </div>
                 ))}
