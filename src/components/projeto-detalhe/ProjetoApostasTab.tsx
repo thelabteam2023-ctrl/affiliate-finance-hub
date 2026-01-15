@@ -1037,14 +1037,18 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               const surebetData: SurebetData = {
                 ...sb,
                 lucro_real: sb.lucro_prejuizo,
-                pernas: sb.pernas?.map(p => ({
+                pernas: sb.pernas?.map((p: any) => ({
                   id: p.id,
                   selecao: p.selecao,
+                  selecao_livre: p.selecao_livre,
                   odd: p.odd,
                   stake: p.stake,
                   resultado: p.resultado,
-                  bookmaker_nome: p.bookmaker?.nome || "—",
+                  bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
                   bookmaker_id: p.bookmaker_id,
+                  entries: p.entries,
+                  odd_media: p.odd_media,
+                  stake_total: p.stake_total,
                 }))
               };
               
