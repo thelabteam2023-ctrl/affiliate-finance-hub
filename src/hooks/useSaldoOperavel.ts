@@ -35,21 +35,31 @@ export function useSaldoOperavel(projetoId: string) {
   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
 
   // Usa a RPC canônica que já calcula corretamente todos os componentes do saldo
-  const { data: bookmakers = [], isLoading, refetch } = useQuery({
+  const { data: bookmakers = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ["saldo-operavel-rpc", projetoId],
     queryFn: async () => {
+      console.log("[useSaldoOperavel] Chamando RPC get_bookmaker_saldos para projeto:", projetoId);
+      
       const { data, error } = await supabase
         .rpc("get_bookmaker_saldos", { p_projeto_id: projetoId });
 
       if (error) {
-        console.error("Erro ao buscar saldos via RPC:", error);
+        console.error("[useSaldoOperavel] ERRO CRÍTICO na RPC get_bookmaker_saldos:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          projetoId
+        });
         throw error;
       }
       
+      console.log("[useSaldoOperavel] RPC retornou", data?.length || 0, "casas");
       return (data || []) as BookmakerSaldoCompleto[];
     },
     enabled: !!projetoId,
     staleTime: 10000, // 10 segundos
+    retry: 2, // Retry até 2 vezes em caso de erro
   });
 
   // Saldo Operável = soma do saldo_operavel de todas as casas (já inclui real + freebet + bonus - em_aposta)
@@ -117,6 +127,8 @@ export function useSaldoOperavel(projetoId: string) {
     // Metadata
     totalCasas,
     isLoading,
+    isError,
+    error,
     moedaConsolidacao,
     
     // Função para refetch manual
