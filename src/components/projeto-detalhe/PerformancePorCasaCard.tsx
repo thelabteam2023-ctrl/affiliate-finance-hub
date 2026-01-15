@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Building2, Layers, Users, Info } from "lucide-react";
+import { Building2, Layers, Users, Info, TrendingUp } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -13,9 +13,10 @@ import {
 /**
  * VISÕES DE PERFORMANCE
  * 
- * 1. operacao: Agrupa por operação - cada aposta/arbitragem conta como 1 operação
- *    - Arbitragem = 1 operação com lucro consolidado
- *    - Foco: resultado real das estratégias
+ * 1. estrategia: Agrupa por ESTRATÉGIA/ABA de negócio (não por técnica)
+ *    - Bônus, Surebet, Duplo Green, ValueBet, Apostas Livres
+ *    - Cada aba representa uma estratégia distinta com objetivos e métricas próprias
+ *    - "Arbitragem" é técnica operacional, não estratégia de negócio
  * 
  * 2. casa_consolidada: Agrupa por nome da casa, independente do parceiro
  *    - Todas as contas Bet365 viram uma linha "Bet365"
@@ -26,12 +27,24 @@ import {
  *    - Foco: auditoria detalhada por conta
  */
 
-type PerformanceView = "operacao" | "casa_consolidada" | "casa_parceiro";
+type PerformanceView = "estrategia" | "casa_consolidada" | "casa_parceiro";
+
+// Mapeamento de estratégia técnica para nome exibido (Aba)
+const ESTRATEGIA_LABELS: Record<string, string> = {
+  "EXTRACAO_BONUS": "Bônus",
+  "SUREBET": "Surebet",
+  "DUPLO_GREEN": "Duplo Green",
+  "VALUEBET": "ValueBet",
+  "EXTRACAO_FREEBET": "Freebets",
+  "PUNTER": "Apostas Livres",
+  "NORMAL": "Apostas Livres",
+};
 
 interface ApostaUnificada {
   id: string;
   data_aposta: string;
   lucro_prejuizo: number | null;
+  pl_consolidado?: number | null;
   resultado: string | null;
   stake: number;
   stake_total: number | null;
@@ -41,6 +54,8 @@ interface ApostaUnificada {
   parceiro_nome: string | null;
   logo_url: string | null;
   forma_registro: string | null;
+  estrategia?: string | null;
+  bonus_id?: string | null;
   pernas?: {
     bookmaker_id?: string;
     bookmaker_nome?: string;
@@ -51,6 +66,7 @@ interface ApostaUnificada {
     resultado?: string | null;
   }[];
 }
+
 
 interface PerformanceMetrics {
   key: string;
@@ -72,9 +88,9 @@ interface PerformancePorCasaCardProps {
 }
 
 const VIEW_LABELS: Record<PerformanceView, { label: string; tooltip: string }> = {
-  operacao: {
-    label: "Operação",
-    tooltip: "Resultado consolidado por operação. Surebets/Arbitragem contam como 1 operação única.",
+  estrategia: {
+    label: "Estratégia",
+    tooltip: "Performance por aba de negócio (Bônus, Surebet, ValueBet, etc). Cada estratégia tem métricas e objetivos distintos.",
   },
   casa_consolidada: {
     label: "Casa",
@@ -91,26 +107,26 @@ export function PerformancePorCasaCard({
   formatCurrency,
   getLogoUrl,
 }: PerformancePorCasaCardProps) {
-  const [view, setView] = useState<PerformanceView>("operacao");
+  const [view, setView] = useState<PerformanceView>("estrategia");
 
   /**
-   * VISÃO OPERAÇÃO - Resultado consolidado por operação
-   * - Apostas simples: 1 operação por aposta
-   * - Arbitragem: 1 operação com stake_total e lucro consolidado
+   * VISÃO ESTRATÉGIA - Agrupa por Estratégia/Aba de Negócio
+   * - Bônus, Surebet, Duplo Green, ValueBet, Apostas Livres
+   * - NÃO agrupa por técnica (Arbitragem é técnica, não estratégia)
+   * - Cada aba tem objetivos e métricas distintas
    */
-  const operacaoMetrics = useMemo(() => {
+  const estrategiaMetrics = useMemo(() => {
     const estrategiaMap: Record<string, PerformanceMetrics> = {};
 
     apostasUnificadas.forEach((aposta) => {
-      // Determina o tipo de estratégia
-      const estrategia = aposta.forma_registro === "ARBITRAGEM" 
-        ? "Arbitragem" 
-        : aposta.esporte || "Outros";
+      // Determina a estratégia de negócio (aba) com base no campo estrategia
+      const estrategiaCodigo = aposta.estrategia || "PUNTER";
+      const estrategiaNome = ESTRATEGIA_LABELS[estrategiaCodigo] || "Apostas Livres";
 
-      if (!estrategiaMap[estrategia]) {
-        estrategiaMap[estrategia] = {
-          key: estrategia,
-          nome: estrategia,
+      if (!estrategiaMap[estrategiaNome]) {
+        estrategiaMap[estrategiaNome] = {
+          key: estrategiaNome,
+          nome: estrategiaNome,
           parceiro_nome: null,
           logo_url: null,
           totalOperacoes: 0,
@@ -122,21 +138,20 @@ export function PerformancePorCasaCard({
         };
       }
 
-      estrategiaMap[estrategia].totalOperacoes++;
+      estrategiaMap[estrategiaNome].totalOperacoes++;
       
-      // Para arbitragem, usa stake_total; para simples, usa stake
-      const stakeOperacao = aposta.forma_registro === "ARBITRAGEM" 
-        ? (aposta.stake_total || aposta.stake) 
-        : aposta.stake;
+      // Para operações com stake_total (arbitragem/surebet), usa stake_total
+      const stakeOperacao = aposta.stake_total || aposta.stake;
       
-      estrategiaMap[estrategia].totalStake += stakeOperacao || 0;
-      estrategiaMap[estrategia].lucro += aposta.lucro_prejuizo || 0;
+      estrategiaMap[estrategiaNome].totalStake += stakeOperacao || 0;
+      // Usa pl_consolidado se disponível, senão lucro_prejuizo
+      estrategiaMap[estrategiaNome].lucro += (aposta.pl_consolidado ?? aposta.lucro_prejuizo) || 0;
 
       if (aposta.resultado === "GREEN" || aposta.resultado === "MEIO_GREEN") {
-        estrategiaMap[estrategia].greens++;
+        estrategiaMap[estrategiaNome].greens++;
       }
       if (aposta.resultado === "RED" || aposta.resultado === "MEIO_RED") {
-        estrategiaMap[estrategia].reds++;
+        estrategiaMap[estrategiaNome].reds++;
       }
     });
 
@@ -300,28 +315,28 @@ export function PerformancePorCasaCard({
   // Selecionar métricas baseado na visão atual
   const displayMetrics = useMemo(() => {
     switch (view) {
-      case "operacao":
-        return operacaoMetrics;
+      case "estrategia":
+        return estrategiaMetrics;
       case "casa_consolidada":
         return casaConsolidadaMetrics;
       case "casa_parceiro":
         return casaParceiroMetrics;
       default:
-        return operacaoMetrics;
+        return estrategiaMetrics;
     }
-  }, [view, operacaoMetrics, casaConsolidadaMetrics, casaParceiroMetrics]);
+  }, [view, estrategiaMetrics, casaConsolidadaMetrics, casaParceiroMetrics]);
 
   // Labels dinâmicos para header
   const headerLabels = useMemo(() => {
     switch (view) {
-      case "operacao":
+      case "estrategia":
         return { col1: "Estratégia", count: "Operações" };
       case "casa_consolidada":
         return { col1: "Casa", count: "Participações" };
       case "casa_parceiro":
         return { col1: "Conta", count: "Participações" };
       default:
-        return { col1: "Casa", count: "Apostas" };
+        return { col1: "Estratégia", count: "Operações" };
     }
   }, [view]);
 
@@ -330,8 +345,8 @@ export function PerformancePorCasaCard({
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            <CardTitle>Performance por Casa</CardTitle>
+            <TrendingUp className="h-5 w-5" />
+            <CardTitle>Performance</CardTitle>
           </div>
           
           <div className="flex items-center gap-2">
@@ -349,7 +364,7 @@ export function PerformancePorCasaCard({
                         value={v}
                         className="text-xs px-3 py-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm rounded-md transition-all"
                       >
-                        {v === "operacao" && <Layers className="h-3.5 w-3.5 mr-1.5" />}
+                        {v === "estrategia" && <Layers className="h-3.5 w-3.5 mr-1.5" />}
                         {v === "casa_consolidada" && <Building2 className="h-3.5 w-3.5 mr-1.5" />}
                         {v === "casa_parceiro" && <Users className="h-3.5 w-3.5 mr-1.5" />}
                         {VIEW_LABELS[v].label}
@@ -384,8 +399,8 @@ export function PerformancePorCasaCard({
               </div>
             ) : (
               displayMetrics.map((item) => {
-                // Tentar buscar logo do catálogo global
-                const logoFromCatalog = view !== "operacao" ? getLogoUrl(item.nome) : undefined;
+                // Tentar buscar logo do catálogo global (apenas para visões de casa)
+                const logoFromCatalog = view !== "estrategia" ? getLogoUrl(item.nome) : undefined;
                 const displayLogo = item.logo_url || logoFromCatalog;
 
                 return (
@@ -394,13 +409,13 @@ export function PerformancePorCasaCard({
                     className="grid grid-cols-5 gap-2 px-6 py-3 hover:bg-muted/30 transition-colors"
                   >
                     <div className="col-span-1 flex items-center gap-2">
-                      {view !== "operacao" && displayLogo ? (
+                      {view !== "estrategia" && displayLogo ? (
                         <img
                           src={displayLogo}
                           alt={item.nome}
                           className="w-6 h-6 rounded object-contain bg-muted/50 p-0.5 flex-shrink-0"
                         />
-                      ) : view !== "operacao" ? (
+                      ) : view !== "estrategia" ? (
                         <div className="w-6 h-6 rounded bg-muted/50 flex items-center justify-center flex-shrink-0">
                           <Building2 className="h-3 w-3 text-muted-foreground" />
                         </div>
