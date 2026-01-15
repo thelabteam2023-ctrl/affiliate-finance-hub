@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, bonusQueryKeys } from "@/hooks/useProjectBonuses";
 import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
-import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt } from "lucide-react";
+import { useSaldoOperavel } from "@/hooks/useSaldoOperavel";
+import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt, Wallet } from "lucide-react";
 import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay } from "date-fns";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
 import { BonusContaminationAlert } from "./BonusContaminationAlert";
@@ -45,6 +46,15 @@ interface BonusResultEntry {
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false }: BonusVisaoGeralTabProps) {
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
+  const { 
+    saldoOperavel: totalSaldoOperavel, 
+    saldoReal, 
+    saldoBonus, 
+    saldoFreebet, 
+    saldoEmAposta,
+    totalCasas,
+    isLoading: saldoLoading 
+  } = useSaldoOperavel(projetoId);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,26 +63,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   // Memoize to prevent infinite loops
   const bookmakersInBonusMode = useMemo(() => getBookmakersWithActiveBonus(), [bonuses]);
 
-  // Fetch ALL bookmakers linked to the project for Saldo Operável calculation
-  // This ensures houses without bonuses (like Rivalry) are included
-  const { data: allProjectBookmakers = [], isLoading: allBkLoading } = useQuery({
-    queryKey: ["all-project-bookmakers-saldo", projetoId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookmakers")
-        .select(`
-          id,
-          saldo_atual,
-          saldo_usd,
-          moeda
-        `)
-        .eq("projeto_id", projetoId)
-        .in("status", ["ATIVO", "ativo", "LIMITADA", "limitada"]);
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  // O hook useSaldoOperavel já calcula tudo corretamente via RPC canônica
 
   // Check for cross-strategy contamination
   const { isContaminated, contaminatedBookmakers, totalNonBonusBets, loading: contaminationLoading } = 
@@ -218,19 +209,6 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
   }, [bonuses, convertToConsolidation]);
 
-  // Saldo Real total de TODAS as bookmakers vinculadas ao projeto (consolidado)
-  // Isso inclui casas sem bônus (como Rivalry) para refletir o saldo operável real
-  const totalSaldoRealConsolidated = useMemo(() => {
-    return allProjectBookmakers.reduce((acc, bk: any) => {
-      const moeda = bk.moeda || "BRL";
-      const isUsdCurrency = moeda === "USD" || moeda === "USDT";
-      const saldoReal = isUsdCurrency
-        ? Number(bk.saldo_usd ?? bk.saldo_atual ?? 0)
-        : Number(bk.saldo_atual ?? 0);
-      return acc + convertToConsolidation(saldoReal, moeda);
-    }, 0);
-  }, [allProjectBookmakers, convertToConsolidation]);
-
   // Performance de Bônus = Total de bônus creditados + Juice das operações
   const bonusPerformance = useMemo(() => {
     // Total de bônus creditados (histórico)
@@ -258,11 +236,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     return { totalBonusCreditado, totalJuice, total, performancePercent };
   }, [bonuses, bonusBetsData, convertToConsolidation]);
 
-  // Saldo Operável = Saldo Real consolidado de TODAS as casas vinculadas ao projeto
-  // NÃO soma performance de bônus pois ela já está refletida nos saldos:
-  // - Juice positivo → já creditado no saldo_atual da casa
-  // - Juice negativo → já descontado do saldo_atual da casa
-  const totalSaldoOperavel = totalSaldoRealConsolidated;
+  // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
   return (
     <div className="space-y-6">
@@ -284,13 +258,40 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                 Saldo Operável
                 <TooltipUI>
                   <TooltipTrigger asChild>
-                    <TrendingUp className="h-4 w-4 text-primary cursor-help" />
+                    <Wallet className="h-4 w-4 text-primary cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent className="max-w-[280px]">
-                    <p className="text-xs font-medium mb-1">Saldo real consolidado</p>
-                    <p className="text-xs text-muted-foreground">
-                      Soma dos saldos reais de todas as casas vinculadas ao projeto. 
-                      A performance de bônus (juice) já está refletida neste valor.
+                  <TooltipContent className="max-w-[300px]">
+                    <p className="text-xs font-medium mb-2">Composição do Saldo</p>
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Saldo Real:</span>
+                        <span>{formatCurrency(saldoReal)}</span>
+                      </div>
+                      {saldoBonus > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-yellow-400">+ Bônus Creditado:</span>
+                          <span className="text-yellow-400">{formatCurrency(saldoBonus)}</span>
+                        </div>
+                      )}
+                      {saldoFreebet > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-amber-400">+ Freebet:</span>
+                          <span className="text-amber-400">{formatCurrency(saldoFreebet)}</span>
+                        </div>
+                      )}
+                      {saldoEmAposta > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-red-400">- Em Aposta:</span>
+                          <span className="text-red-400">{formatCurrency(saldoEmAposta)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between pt-1.5 border-t border-border/50 font-medium">
+                        <span>= Operável:</span>
+                        <span className="text-primary">{formatCurrency(totalSaldoOperavel)}</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-2">
+                      Valor total disponível para apostas agora
                     </p>
                   </TooltipContent>
                 </TooltipUI>
@@ -308,7 +309,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
-              <p className="text-xs text-muted-foreground">Saldo real de todas as casas</p>
+              <p className="text-xs text-muted-foreground">
+                {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{saldoBonus > 0 ? ' + Bônus' : ''}{saldoFreebet > 0 ? ' + FB' : ''}
+              </p>
             </CardContent>
           </Card>
 
