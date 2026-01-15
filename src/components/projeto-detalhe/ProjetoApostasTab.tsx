@@ -1004,7 +1004,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         </CardContent>
       </Card>
 
-      {/* Lista de Apostas */}
+      {/* Lista de Apostas - Layout padronizado igual Surebet/Bônus */}
       {apostasUnificadas.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
@@ -1023,10 +1023,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             </div>
           </CardContent>
         </Card>
-      ) : viewMode === "cards" ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      ) : (
+        <div className={cn(
+          viewMode === "cards" 
+            ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+            : "space-y-2"
+        )}>
           {apostasUnificadas.map((item) => {
-            // Card de Surebet
+            // ===== SUREBET =====
             if (item.tipo === "surebet") {
               const sb = item.data as Surebet;
               
@@ -1039,7 +1043,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   odd: p.odd,
                   stake: p.stake,
                   resultado: p.resultado,
-                  bookmaker_nome: p.bookmaker?.nome || "—"
+                  bookmaker_nome: p.bookmaker?.nome || "—",
+                  bookmaker_id: p.bookmaker_id,
                 }))
               };
               
@@ -1051,346 +1056,108 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     setSelectedSurebet(surebet);
                     setDialogSurebetOpen(true);
                   }}
+                  formatCurrency={formatCurrency}
                 />
               );
             }
             
+            // ===== APOSTA SIMPLES - Usando ApostaCard padronizado =====
             if (item.tipo === "simples") {
               const aposta = item.data as Aposta;
               const displayInfo = getApostaDisplayInfo(aposta);
-              const opType = displayInfo.badgeType;
-              const roi = aposta.stake > 0 && aposta.lucro_prejuizo !== null ? (aposta.lucro_prejuizo / aposta.stake) * 100 : null;
-            
+              const bookmakerBase = aposta.bookmaker?.nome?.split(" - ")[0] || aposta.bookmaker?.nome;
+              const parceiroNome = aposta.bookmaker?.parceiro?.nome;
+              const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
+              
+              // Determinar estratégia para o card
+              let estrategia: string = "NORMAL";
+              if (aposta.gerou_freebet) estrategia = "FREEBET";
+              else if (aposta.estrategia === "SUREBET") estrategia = "SUREBET";
+              else if (aposta.estrategia === "DUPLO_GREEN") estrategia = "DUPLO_GREEN";
+              else if (aposta.estrategia === "VALUEBET") estrategia = "VALUEBET";
+              else if (item.contexto === "FREEBET") estrategia = "FREEBET";
+              else if (item.contexto === "BONUS") estrategia = "BONUS";
+              
+              // Preparar dados para ApostaCard
+              const apostaCardData = {
+                id: aposta.id,
+                evento: aposta.evento,
+                esporte: aposta.esporte,
+                selecao: aposta.selecao,
+                odd: aposta.odd,
+                stake: aposta.stake,
+                data_aposta: aposta.data_aposta,
+                resultado: aposta.resultado,
+                status: aposta.status,
+                lucro_prejuizo: aposta.lucro_prejuizo,
+                estrategia: aposta.estrategia,
+                bookmaker_nome: bookmakerBase,
+                parceiro_nome: parceiroNome,
+                logo_url: logoUrl,
+              };
+              
               return (
-                <Card key={aposta.id} className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => handleOpenDialog(aposta)}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-1 mb-2 flex-wrap">
-                      {getEstrategiaBadge(aposta) || getContextoBadge(item.contexto, aposta)}
-                      {opType.label && (
-                        <Badge className={`${opType.color} text-[10px] px-1.5 py-0`}>
-                          {opType.type === "cobertura" && <Shield className="h-2.5 w-2.5 mr-0.5" />}
-                          {opType.type === "back" && <ArrowUp className="h-2.5 w-2.5 mr-0.5" />}
-                          {opType.type === "lay" && <ArrowDown className="h-2.5 w-2.5 mr-0.5" />}
-                          {opType.label}
-                        </Badge>
-                      )}
-                      <ResultadoPill
-                        apostaId={aposta.id}
-                        bookmarkerId={aposta.bookmaker_id}
-                        projetoId={projetoId}
-                        layExchangeBookmakerId={opType.type === "cobertura" ? aposta.lay_exchange : undefined}
-                        resultado={aposta.resultado}
-                        status={aposta.status}
-                        stake={aposta.stake}
-                        odd={aposta.odd}
-                        operationType={opType.type}
-                        layLiability={aposta.lay_liability || undefined}
-                        layOdd={aposta.lay_odd || undefined}
-                        layStake={aposta.lay_stake || undefined}
-                        layComissao={aposta.lay_comissao || undefined}
-                        isFreebetExtraction={aposta.estrategia === "COBERTURA_LAY" && aposta.back_em_exchange === true}
-                        gerouFreebet={aposta.gerou_freebet || false}
-                        valorFreebetGerada={aposta.valor_freebet_gerada || undefined}
-                        contextoOperacional={aposta.contexto_operacional}
-                        estrategia={aposta.estrategia}
-                        onResultadoUpdated={handleApostaUpdated}
-                        onEditClick={() => handleOpenDialog(aposta)}
-                      />
-                    </div>
-                    <div className="mb-2">
-                      <p className="font-medium text-sm truncate uppercase">{aposta.evento}</p>
-                      <p className="text-xs text-muted-foreground">{aposta.esporte}</p>
-                    </div>
-                    <div className="flex justify-between items-center text-sm mb-2">
-                      <span className="text-muted-foreground truncate">{aposta.selecao}</span>
-                      <span className="font-medium">@{aposta.odd.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">{format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy", { locale: ptBR })}</span>
-                        {/* Nome da casa e parceiro */}
-                        <span
-                          className="text-[10px] text-muted-foreground/70 truncate max-w-[180px]"
-                          title={getCasaLabelFromAposta(aposta)}
-                        >
-                          {getCasaLabelFromAposta(aposta)}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Stake: {formatCurrency(aposta.stake)}</p>
-                        {aposta.lucro_prejuizo !== null && aposta.status === "LIQUIDADA" && (
-                          <div className="flex items-center gap-2 justify-end">
-                            <span className={`text-sm font-medium ${aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {formatCurrency(aposta.lucro_prejuizo)}
-                            </span>
-                            {roi !== null && (
-                              <span className={`text-xs ${roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <ApostaCard
+                  key={aposta.id}
+                  aposta={apostaCardData}
+                  estrategia={estrategia}
+                  variant={viewMode === "cards" ? "card" : "list"}
+                  onClick={() => handleOpenDialog(aposta)}
+                  onQuickResolve={handleQuickResolve}
+                  formatCurrency={formatCurrency}
+                />
               );
             }
 
-            // Card de Múltipla
+            // ===== APOSTA MÚLTIPLA - Usando ApostaCard padronizado =====
             const multipla = item.data as ApostaMultipla;
-            const multiplaRoi = multipla.stake > 0 && multipla.lucro_prejuizo !== null ? (multipla.lucro_prejuizo / multipla.stake) * 100 : null;
+            const bookmakerBaseMultipla = multipla.bookmaker?.nome?.split(" - ")[0] || multipla.bookmaker?.nome;
+            const parceiroNomeMultipla = multipla.bookmaker?.parceiro?.nome;
+            const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
+            
+            // Determinar estratégia
+            let estrategiaMultipla: string = "NORMAL";
+            if (multipla.gerou_freebet) estrategiaMultipla = "FREEBET";
+            else if (multipla.estrategia === "SUREBET") estrategiaMultipla = "SUREBET";
+            else if (multipla.estrategia === "DUPLO_GREEN") estrategiaMultipla = "DUPLO_GREEN";
+            else if (item.contexto === "FREEBET") estrategiaMultipla = "FREEBET";
+            else if (item.contexto === "BONUS") estrategiaMultipla = "BONUS";
+            
+            // Preparar dados para ApostaCard (múltipla)
+            const multiplaCardData = {
+              id: multipla.id,
+              evento: `Múltipla ${multipla.tipo_multipla}`,
+              esporte: `${multipla.selecoes.length} seleções`,
+              odd_final: multipla.odd_final,
+              stake: multipla.stake,
+              data_aposta: multipla.data_aposta,
+              resultado: multipla.resultado,
+              status: multipla.status,
+              lucro_prejuizo: multipla.lucro_prejuizo,
+              estrategia: multipla.estrategia,
+              tipo_multipla: multipla.tipo_multipla,
+              selecoes: multipla.selecoes.map(s => ({
+                descricao: s.descricao,
+                odd: parseFloat(s.odd),
+                resultado: s.resultado,
+              })),
+              bookmaker_nome: bookmakerBaseMultipla,
+              parceiro_nome: parceiroNomeMultipla,
+              logo_url: logoUrlMultipla,
+            };
+            
             return (
-              <Card 
+              <ApostaCard
                 key={multipla.id}
-                className="hover:border-primary/50 transition-colors cursor-pointer"
+                aposta={multiplaCardData}
+                estrategia={estrategiaMultipla}
+                variant={viewMode === "cards" ? "card" : "list"}
                 onClick={() => handleOpenMultiplaDialog(multipla)}
-              >
-                <CardContent className="p-4">
-                  {/* Badges */}
-                  <div className="flex items-center gap-1 mb-2 flex-wrap">
-                    {getEstrategiaBadge(multipla) || getContextoBadge(item.contexto, multipla)}
-                    <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 text-[10px] px-1.5 py-0">
-                      MULT
-                    </Badge>
-                    <ResultadoPill
-                      apostaId={multipla.id}
-                      bookmarkerId={multipla.bookmaker_id}
-                      projetoId={projetoId}
-                      resultado={multipla.resultado}
-                      status={multipla.status}
-                      stake={multipla.stake}
-                      odd={multipla.odd_final}
-                      contextoOperacional={multipla.contexto_operacional}
-                      estrategia={multipla.estrategia}
-                      onResultadoUpdated={handleApostaUpdated}
-                      onEditClick={() => handleOpenMultiplaDialog(multipla)}
-                    />
-                  </div>
-                  {/* Identificação */}
-                  <div className="mb-2">
-                    <p className="font-medium text-sm truncate uppercase">
-                      Múltipla {multipla.tipo_multipla}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {multipla.selecoes.length} seleções
-                    </p>
-                  </div>
-                  {/* Seleções */}
-                  <div className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                    {multipla.selecoes.map(s => s.descricao).join(" + ")}
-                  </div>
-                  {/* Rodapé */}
-                  <div className="flex justify-between items-center pt-2 border-t">
-                    <div className="flex flex-col">
-                      <span className="text-xs text-muted-foreground">
-                        {format(parseLocalDateTime(multipla.data_aposta), "dd/MM/yy", { locale: ptBR })}
-                      </span>
-                      {/* Nome da casa e parceiro */}
-                      <span
-                        className="text-[10px] text-muted-foreground/70 truncate max-w-[180px]"
-                        title={getCasaLabelFromAposta(multipla)}
-                      >
-                        {getCasaLabelFromAposta(multipla)}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">@{multipla.odd_final.toFixed(2)} · {formatCurrency(multipla.stake)}</p>
-                      {multipla.lucro_prejuizo !== null && multipla.status === "LIQUIDADA" && (
-                        <div className="flex items-center gap-2 justify-end">
-                          <span className={`text-sm font-medium ${multipla.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {formatCurrency(multipla.lucro_prejuizo)}
-                          </span>
-                          {multiplaRoi !== null && (
-                            <span className={`text-xs ${multiplaRoi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              ({multiplaRoi >= 0 ? '+' : ''}{multiplaRoi.toFixed(1)}%)
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                formatCurrency={formatCurrency}
+              />
             );
           })}
         </div>
-      ) : (
-        // List view
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left p-3 font-medium">Contexto</th>
-                    <th className="text-left p-3 font-medium">Tipo</th>
-                    <th className="text-left p-3 font-medium">Casa</th>
-                    <th className="text-left p-3 font-medium">Evento</th>
-                    <th className="text-left p-3 font-medium">Seleção / Pernas</th>
-                    <th className="text-right p-3 font-medium">Odds</th>
-                    <th className="text-right p-3 font-medium">Stake</th>
-                    <th className="text-right p-3 font-medium">P/L</th>
-                    <th className="text-center p-3 font-medium">Status</th>
-                    <th className="text-left p-3 font-medium">Data</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {apostasUnificadas.map((item) => {
-                    const isSimples = item.tipo === "simples";
-                    const isMultipla = item.tipo === "multipla";
-                    const data = item.data as any;
-                    
-                    return (
-                      <tr 
-                        key={data.id} 
-                        className="border-b hover:bg-muted/30 cursor-pointer"
-                        onClick={() => {
-                          if (isSimples) {
-                            handleOpenDialog(data);
-                            return;
-                          }
-                          if (isMultipla) {
-                            handleOpenMultiplaDialog(data);
-                            return;
-                          }
-
-                          // Surebet
-                          const sb = data as Surebet;
-                          const surebetData: SurebetData = {
-                            ...(sb as any),
-                            lucro_real: sb.lucro_prejuizo,
-                            pernas: sb.pernas?.map((p) => ({
-                              id: p.id,
-                              selecao: p.selecao,
-                              odd: p.odd,
-                              stake: p.stake,
-                              resultado: p.resultado,
-                              bookmaker_nome: p.bookmaker?.nome || "—",
-                            })),
-                          };
-                          setSelectedSurebet(surebetData);
-                          setDialogSurebetOpen(true);
-                        }}
-                      >
-                        <td className="p-3">{(isSimples || isMultipla) ? (getEstrategiaBadge(data) || getContextoBadge(item.contexto, data)) : getContextoBadge(item.contexto) || <span className="text-muted-foreground">—</span>}</td>
-                        <td className="p-3">
-                          {(() => {
-                            if (isSimples) {
-                              const opInfo = getOperationType(data);
-                              if (opInfo.label) {
-                                return <Badge className={`text-xs ${opInfo.color}`}>{opInfo.label}</Badge>;
-                              }
-                              return <Badge variant="outline" className="text-xs">BACK</Badge>;
-                            } else if (isMultipla) {
-                              return <Badge variant="outline" className="text-xs">Múltipla</Badge>;
-                            } else {
-                              // Surebet
-                              return <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-xs">Surebet</Badge>;
-                            }
-                          })()}
-                        </td>
-                        <td className="p-3 max-w-[150px]">
-                          {isSimples ? (
-                            <div className="truncate text-xs">
-                              <span className="font-medium">{data.bookmaker?.nome || "—"}</span>
-                              {data.bookmaker?.parceiro?.nome && (
-                                <span className="text-muted-foreground"> • {data.bookmaker.parceiro.nome}</span>
-                              )}
-                            </div>
-                          ) : isMultipla ? (
-                            <div className="truncate text-xs">
-                              <span className="font-medium">{data.bookmaker?.nome || "—"}</span>
-                              {data.bookmaker?.parceiro?.nome && (
-                                <span className="text-muted-foreground"> • {data.bookmaker.parceiro.nome}</span>
-                              )}
-                            </div>
-                          ) : (
-                            // Surebet: mostrar casas das pernas
-                            <div className="flex flex-col gap-0.5 text-xs">
-                              {(data as Surebet).pernas?.map((perna, idx) => (
-                                <span key={perna.id} className="truncate">{perna.bookmaker?.nome || "—"}</span>
-                              )) || <span className="text-muted-foreground">—</span>}
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-3 max-w-[200px] truncate">
-                          {isSimples ? data.evento : isMultipla ? `Múltipla ${data.tipo_multipla}` : data.evento}
-                        </td>
-                        <td className="p-3 max-w-[200px]">
-                          {isSimples ? (
-                            <span className="truncate">{data.selecao}</span>
-                          ) : isMultipla ? (
-                            <span className="truncate">{data.selecoes.length} seleções</span>
-                          ) : (
-                            // Surebet: mostrar pernas resumidas
-                            <ApostaPernasResumo 
-                              pernas={(data as Surebet).pernas?.map(p => ({
-                                bookmaker_nome: p.bookmaker?.nome || 'Casa',
-                                selecao: p.selecao,
-                                odd: p.odd,
-                                stake: p.stake,
-                                resultado: p.resultado
-                              })) || []}
-                              variant="compact"
-                              showResultado={false}
-                            />
-                          )}
-                        </td>
-                        <td className="p-3 text-right font-mono">
-                          {isSimples ? (
-                            <span>@{data.odd.toFixed(2)}</span>
-                          ) : isMultipla ? (
-                            <span>@{data.odd_final.toFixed(2)}</span>
-                          ) : (
-                            // Surebet: mostrar odds de cada perna
-                            <div className="flex flex-col gap-0.5 text-xs">
-                              {(data as Surebet).pernas?.map((perna, idx) => (
-                                <span key={perna.id}>@{perna.odd.toFixed(2)}</span>
-                              )) || <span className="text-muted-foreground">—</span>}
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-3 text-right">
-                          {formatCurrency(isSimples || isMultipla ? data.stake : data.stake_total)}
-                        </td>
-                        <td className="p-3 text-right">
-                          {(() => {
-                            const isSurebetItem = item.tipo === "surebet";
-                            let lucro: number | null | undefined;
-                            
-                            if (isSurebetItem) {
-                              const sb = data as Surebet;
-                              lucro = sb.status === "LIQUIDADA" ? sb.lucro_prejuizo : sb.lucro_esperado;
-                            } else {
-                              lucro = data.lucro_prejuizo;
-                            }
-                            
-                            return lucro !== null && lucro !== undefined ? (
-                              <span className={lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                                {formatCurrency(lucro)}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            );
-                          })()}
-                        </td>
-                        <td className="p-3 text-center">
-                          <Badge className={data.status === "LIQUIDADA" ? "bg-emerald-500/20 text-emerald-400" : "bg-blue-500/20 text-blue-400"}>
-                            {data.status === "LIQUIDADA" ? "Liquidada" : "Pendente"}
-                          </Badge>
-                        </td>
-                        <td className="p-3 text-muted-foreground">
-                          {format(parseLocalDateTime(item.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
       )}
 
 
