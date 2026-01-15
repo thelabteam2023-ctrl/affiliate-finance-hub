@@ -19,18 +19,18 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
  * Este é o ÚNICO local onde o Saldo Operável global do projeto deve ser calculado.
  */
 
-// Interface matching what the RPC actually returns
+// Interface matching what the RPC actually returns (order matches RPC definition)
 interface BookmakerSaldoRPC {
   bookmaker_id: string;
   nome: string;
-  moeda: string;
+  login_username: string;
+  parceiro_nome: string | null;
   saldo_atual: number;
   saldo_freebet: number;
   saldo_irrecuperavel: number;
-  estado_conta: string;
+  moeda: string;
   status: string;
-  login_username: string;
-  parceiro_nome: string | null;
+  estado_conta: string;
 }
 
 // Derived interface with calculated fields
