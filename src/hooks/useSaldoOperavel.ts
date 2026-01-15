@@ -23,6 +23,7 @@ interface BookmakerSaldoCompleto {
   id: string;
   nome: string;
   moeda: string;
+  parceiro_primeiro_nome: string;
   saldo_real: number;
   saldo_freebet: number;
   saldo_bonus: number;
@@ -103,6 +104,7 @@ export function useSaldoOperavel(projetoId: string) {
         return {
           id: bk.id,
           nome: bk.nome,
+          parceiroPrimeiroNome: bk.parceiro_primeiro_nome || "",
           saldoOperavel: saldoConvertido,
           moedaOriginal: moeda,
         };
