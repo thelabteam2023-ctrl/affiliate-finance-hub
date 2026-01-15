@@ -252,6 +252,7 @@ export default function CentralOperacoes() {
   const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperadorPendente[]>([]);
   const [participacoesPendentes, setParticipacoesPendentes] = useState<ParticipacaoPendente[]>([]);
   const [casasDesvinculadas, setCasasDesvinculadas] = useState<BookmakerDesvinculado[]>([]);
+  const [propostasPagamentoCount, setPropostasPagamentoCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
@@ -665,6 +666,14 @@ export default function CentralOperacoes() {
         setCasasDesvinculadas([]);
       }
 
+      // Propostas de pagamento - buscar contagem para renderização condicional
+      const propostasResult = await supabase
+        .from("pagamentos_propostos")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "PENDENTE");
+      
+      setPropostasPagamentoCount(propostasResult.count || 0);
+
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -819,7 +828,8 @@ export default function CentralOperacoes() {
     }
 
     // 2. Propostas de Pagamento - project_event (operador vê apenas as próprias)
-    if (allowedDomains.includes('project_event')) {
+    // REGRA: Só renderizar se houver propostas pendentes
+    if (allowedDomains.includes('project_event') && propostasPagamentoCount > 0) {
       cards.push({
         id: "propostas-pagamento",
         priority: PRIORITY.HIGH,
@@ -1587,7 +1597,7 @@ export default function CentralOperacoes() {
     alertasCriticos, saquesPendentes, alertasSaques, alertasLimitadas, casasDesvinculadas,
     participacoesPendentes, pagamentosOperadorPendentes, alertasCiclosFiltrados, alertasLucro, 
     entregasPendentes, parceirosSemParceria, pagamentosParceiros, bonusPendentes, comissoesPendentes, 
-    parceriasEncerramento, allowedDomains
+    parceriasEncerramento, allowedDomains, propostasPagamentoCount
   ]);
 
   const hasAnyAlerts = alertCards.length > 0;
