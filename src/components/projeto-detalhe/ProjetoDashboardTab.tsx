@@ -41,6 +41,9 @@ interface ApostaUnificada {
   parceiro_nome: string | null;
   logo_url: string | null;
   forma_registro: string | null;
+  estrategia?: string | null;
+  pl_consolidado?: number | null;
+  bonus_id?: string | null;
   pernas?: {
     bookmaker_id?: string;
     bookmaker_nome?: string;
@@ -178,6 +181,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
           id, 
           data_aposta, 
           lucro_prejuizo, 
+          pl_consolidado,
           resultado, 
           stake,
           stake_total,
@@ -185,6 +189,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
           bookmaker_id,
           forma_registro,
           estrategia,
+          bonus_id,
           pernas
         `)
         .eq("projeto_id", projetoId)
@@ -258,6 +263,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
           id: item.id,
           data_aposta: item.data_aposta,
           lucro_prejuizo: item.lucro_prejuizo,
+          pl_consolidado: item.pl_consolidado,
           resultado: item.resultado,
           stake: stake || 0,
           stake_total: item.stake_total,
@@ -267,6 +273,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
           parceiro_nome: bkInfo.parceiro_nome,
           logo_url: bkInfo.logo_url,
           forma_registro: item.forma_registro,
+          estrategia: item.estrategia,
+          bonus_id: item.bonus_id,
           pernas: pernasEnriquecidas,
         };
       });
