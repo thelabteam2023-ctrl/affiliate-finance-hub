@@ -81,8 +81,17 @@ interface PerformanceMetrics {
   roi: number;
 }
 
+interface ExtraLucroEntry {
+  data: string;
+  valor: number;
+  tipo: 'cashback' | 'giro_gratis' | 'freebet' | 'bonus' | 'promocional';
+  bookmaker_id?: string;
+  bookmaker_nome?: string;
+}
+
 interface PerformancePorCasaCardProps {
   apostasUnificadas: ApostaUnificada[];
+  extrasLucro?: ExtraLucroEntry[];
   formatCurrency: (value: number) => string;
   getLogoUrl: (nome: string) => string | undefined;
 }
@@ -102,8 +111,18 @@ const VIEW_LABELS: Record<PerformanceView, { label: string; tooltip: string }> =
   },
 };
 
+// Mapeamento de tipos de extras para nome exibido
+const EXTRAS_LABELS: Record<string, string> = {
+  "cashback": "Cashback",
+  "giro_gratis": "Giros Grátis",
+  "freebet": "Freebets",
+  "bonus": "Bônus Creditados",
+  "promocional": "Promoções",
+};
+
 export function PerformancePorCasaCard({
   apostasUnificadas,
+  extrasLucro = [],
   formatCurrency,
   getLogoUrl,
 }: PerformancePorCasaCardProps) {
@@ -118,6 +137,7 @@ export function PerformancePorCasaCard({
   const estrategiaMetrics = useMemo(() => {
     const estrategiaMap: Record<string, PerformanceMetrics> = {};
 
+    // 1. Processar apostas unificadas
     apostasUnificadas.forEach((aposta) => {
       // Determina a estratégia de negócio (aba) com base no campo estrategia
       const estrategiaCodigo = aposta.estrategia || "PUNTER";
@@ -155,10 +175,38 @@ export function PerformancePorCasaCard({
       }
     });
 
+    // 2. Processar extras (cashback, giros grátis, freebets, bônus, promoções)
+    // Esses lucros não têm stake associado, então aparecem como linhas separadas
+    extrasLucro.forEach((extra) => {
+      const tipoNome = EXTRAS_LABELS[extra.tipo] || "Outros";
+      
+      if (!estrategiaMap[tipoNome]) {
+        estrategiaMap[tipoNome] = {
+          key: tipoNome,
+          nome: tipoNome,
+          parceiro_nome: null,
+          logo_url: null,
+          totalOperacoes: 0,
+          totalStake: 0,
+          lucro: 0,
+          greens: 0,
+          reds: 0,
+          roi: 0,
+        };
+      }
+
+      estrategiaMap[tipoNome].totalOperacoes++;
+      estrategiaMap[tipoNome].lucro += extra.valor || 0;
+      // Extras sempre são "positivos" (greens) pois representam créditos
+      if (extra.valor > 0) {
+        estrategiaMap[tipoNome].greens++;
+      }
+    });
+
     return Object.values(estrategiaMap)
       .map((m) => ({ ...m, roi: m.totalStake > 0 ? (m.lucro / m.totalStake) * 100 : 0 }))
       .sort((a, b) => b.totalOperacoes - a.totalOperacoes);
-  }, [apostasUnificadas]);
+  }, [apostasUnificadas, extrasLucro]);
 
   /**
    * VISÃO CASA CONSOLIDADA - Agrupa por nome da casa, independente do parceiro

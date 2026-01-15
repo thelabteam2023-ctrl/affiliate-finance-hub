@@ -436,6 +436,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       {/* Performance por Casa - Componente com visões alternáveis */}
       <PerformancePorCasaCard
         apostasUnificadas={apostasUnificadas}
+        extrasLucro={extrasLucro}
         formatCurrency={formatCurrency}
         getLogoUrl={getCatalogLogoUrl}
       />
