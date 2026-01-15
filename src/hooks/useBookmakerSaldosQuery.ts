@@ -4,12 +4,15 @@
  * CONTRATO CANÔNICO DE SALDO (via RPC get_bookmaker_saldos):
  * - saldo_real = bookmakers.saldo_atual
  * - saldo_freebet = bookmakers.saldo_freebet
- * - saldo_bonus = SUM(project_bookmaker_link_bonuses.saldo_atual) WHERE status='credited' AND project_id=X
- * - saldo_em_aposta = SUM(apostas_unificada.stake) WHERE status='PENDENTE'
- * - saldo_disponivel = saldo_real - saldo_em_aposta
- * - saldo_operavel = saldo_disponivel + saldo_freebet + saldo_bonus
+ * - saldo_bonus = SUM(project_bookmaker_link_bonuses.saldo_atual) WHERE status='credited'
+ * - saldo_em_aposta = SUM de stakes pendentes (SIMPLES/MULTIPLA: direto, ARBITRAGEM: pernas JSON)
+ * - saldo_disponivel = saldo_real - saldo_em_aposta (capital livre)
+ * - saldo_operavel = saldo_disponivel + saldo_freebet + saldo_bonus (total para apostar)
  * 
- * Este hook é a ÚNICA fonte de saldos de bookmaker para TODOS os formulários.
+ * REGRA FUNDAMENTAL:
+ * - NÃO existe separação operacional entre saldo real e bônus
+ * - Apostas pendentes BLOQUEIAM capital (refletido em saldo_em_aposta)
+ * - Este hook é a ÚNICA fonte de saldos de bookmaker para TODOS os componentes
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +23,7 @@ export interface BookmakerSaldo {
   nome: string;
   parceiro_id: string | null;
   parceiro_nome: string | null;
+  parceiro_primeiro_nome: string | null;
   moeda: string;
   logo_url: string | null;
   // Saldos brutos (da RPC)
@@ -45,6 +49,7 @@ const QUERY_KEY = "bookmaker-saldos";
 
 /**
  * Hook principal para consumo de saldos canônicos
+ * FONTE ÚNICA DE VERDADE - usar este hook em TODOS os componentes
  */
 export function useBookmakerSaldosQuery({
   projetoId,
@@ -60,7 +65,7 @@ export function useBookmakerSaldosQuery({
       });
 
       if (error) {
-        console.error("Erro ao buscar saldos via RPC:", error);
+        console.error("[useBookmakerSaldosQuery] Erro na RPC:", error);
         throw error;
       }
 
@@ -68,9 +73,10 @@ export function useBookmakerSaldosQuery({
         id: row.id,
         nome: row.nome,
         parceiro_id: row.parceiro_id,
-        parceiro_nome: row.parceiro_nome,
+        parceiro_nome: row.parceiro_nome || null,
+        parceiro_primeiro_nome: row.parceiro_primeiro_nome || null,
         moeda: row.moeda || "BRL",
-        logo_url: row.logo_url,
+        logo_url: row.logo_url || null,
         saldo_real: Number(row.saldo_real) || 0,
         saldo_freebet: Number(row.saldo_freebet) || 0,
         saldo_bonus: Number(row.saldo_bonus) || 0,
@@ -136,7 +142,7 @@ export function calcularSaldoDisponivelParaPosicao(
  */
 export function formatarSaldoBreakdown(bookmaker: BookmakerSaldo): string {
   const moeda = bookmaker.moeda || "BRL";
-  const symbol = moeda === "USD" ? "$" : "R$";
+  const symbol = moeda === "USD" || moeda === "USDT" ? "$" : "R$";
   
   const parts: string[] = [];
   parts.push(`${symbol} ${bookmaker.saldo_disponivel.toFixed(0)}`);
@@ -166,4 +172,19 @@ export function createSaldosMap(
   bookmakers: BookmakerSaldo[]
 ): Map<string, BookmakerSaldo> {
   return new Map(bookmakers.map(b => [b.id, b]));
+}
+
+/**
+ * Helper para verificar se um bookmaker tem bônus ativo
+ */
+export function hasActiveBonus(bookmaker: BookmakerSaldo): boolean {
+  return bookmaker.saldo_bonus > 0;
+}
+
+/**
+ * Helper para obter o saldo total consolidado (saldo que pode ser apostado agora)
+ * ESTE É O ÚNICO VALOR QUE IMPORTA PARA OPERAÇÕES
+ */
+export function getSaldoConsolidado(bookmaker: BookmakerSaldo): number {
+  return bookmaker.saldo_operavel;
 }

@@ -49,7 +49,7 @@ import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
-import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { useInvalidateBookmakerSaldos, useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { useTabFilters, type EstrategiaFilter } from "@/hooks/useTabFilters";
 import { TabFiltersBar } from "./TabFiltersBar";
@@ -96,20 +96,7 @@ interface Surebet {
   bonus_id?: string | null;
 }
 
-interface Bookmaker {
-  id: string;
-  nome: string;
-  saldo_atual: number;
-  saldo_freebet?: number;
-  saldo_bonus?: number;
-  saldo_operavel?: number;
-  parceiro?: {
-    nome: string;
-  };
-  bookmakers_catalogo?: {
-    logo_url: string | null;
-  } | null;
-}
+// REMOVIDO: Interface Bookmaker - agora usa BookmakerSaldo do hook centralizado
 
 type NavigationMode = "tabs" | "sidebar";
 type NavTabValue = "visao-geral" | "operacoes" | "por-casa";
@@ -171,8 +158,13 @@ const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null })
 
 export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: ProjetoSurebetTabProps) {
   const [surebets, setSurebets] = useState<Surebet[]>([]);
-  const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // FONTE ÚNICA DE VERDADE: Usa o hook centralizado para saldos de bookmakers
+  const { data: bookmakers = [], refetch: refetchBookmakers } = useBookmakerSaldosQuery({
+    projetoId,
+    includeZeroBalance: true, // Mostrar todas as casas para agregação por casa
+  });
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSurebet, setSelectedSurebet] = useState<Surebet | null>(null);
@@ -244,19 +236,20 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     localStorage.setItem(NAV_STORAGE_KEY, navMode);
   }, [navMode]);
 
-  // Refetch quando filtros locais mudarem
+  // Refetch quando filtros locais mudarem (apenas surebets, bookmakers são gerenciados pelo hook)
   useEffect(() => {
-    fetchData();
+    fetchSurebets();
   }, [projetoId, dateRange, refreshTrigger, tabFilters.bookmakerIds, tabFilters.parceiroIds]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      await Promise.all([fetchSurebets(), fetchBookmakers()]);
-    } finally {
-      setLoading(false);
-    }
+  // Carregar surebets quando necessário
+  const loadSurebets = async () => {
+    setLoading(true);
+    await fetchSurebets();
+    setLoading(false);
   };
+
+  useEffect(() => {
+    loadSurebets();
+  }, [projetoId, dateRange, refreshTrigger, tabFilters.bookmakerIds, tabFilters.parceiroIds]);
 
   const fetchSurebets = async () => {
     try {
@@ -353,91 +346,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     }
   };
 
-  const fetchBookmakers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("bookmakers")
-        .select(`
-          id,
-          nome,
-          saldo_atual,
-          saldo_freebet,
-          parceiro:parceiros (nome),
-          bookmakers_catalogo (logo_url)
-        `)
-        .eq("projeto_id", projetoId)
-        .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
-
-      if (error) throw error;
-      
-      const bookmakerIds = (data || []).map(b => b.id);
-      
-      // Buscar em paralelo: apostas pendentes e bônus creditados
-      let pendingStakes: Record<string, number> = {};
-      let bonusByBookmaker: Record<string, number> = {};
-      
-      if (bookmakerIds.length > 0) {
-        const [pendingBetsResult, bonusResult] = await Promise.all([
-          // Apostas pendentes
-          supabase
-            .from("apostas_unificada")
-            .select("bookmaker_id, stake")
-            .in("bookmaker_id", bookmakerIds)
-            .eq("status", "PENDENTE")
-            .not("bookmaker_id", "is", null),
-          // CONTRATO: saldo_bonus = SUM(project_bookmaker_link_bonuses.saldo_atual) WHERE status='credited' AND project_id=X
-          supabase
-            .from("project_bookmaker_link_bonuses")
-            .select("bookmaker_id, saldo_atual")
-            .eq("project_id", projetoId)
-            .in("bookmaker_id", bookmakerIds)
-            .eq("status", "credited")
-        ]);
-        
-        // Agregar apostas pendentes
-        (pendingBetsResult.data || []).forEach((bet: any) => {
-          if (bet.bookmaker_id) {
-            pendingStakes[bet.bookmaker_id] = (pendingStakes[bet.bookmaker_id] || 0) + (bet.stake || 0);
-          }
-        });
-        
-        // Agregar bônus
-        if (bonusResult.error) {
-          console.error("Erro ao buscar bonus:", bonusResult.error);
-        } else {
-          (bonusResult.data || []).forEach((b: any) => {
-            bonusByBookmaker[b.bookmaker_id] = (bonusByBookmaker[b.bookmaker_id] || 0) + (b.saldo_atual || 0);
-          });
-        }
-      }
-      
-      // Enriquecer bookmakers com saldos calculados corretamente
-      // CONTRATO CANÔNICO:
-      // saldo_disponivel = saldo_atual - saldo_em_aposta
-      // saldo_operavel = saldo_disponivel + saldo_freebet + saldo_bonus
-      const enriched = (data || []).map((bk: any) => {
-        const saldoReal = Number(bk.saldo_atual) || 0;
-        const saldoFreebet = Number(bk.saldo_freebet) || 0;
-        const saldoBonus = bonusByBookmaker[bk.id] || 0;
-        const saldoEmAposta = pendingStakes[bk.id] || 0;
-        const saldoDisponivel = saldoReal - saldoEmAposta;
-        const saldoOperavel = saldoDisponivel + saldoFreebet + saldoBonus;
-        
-        return {
-          ...bk,
-          saldo_real: saldoReal,
-          saldo_bonus: saldoBonus,
-          saldo_em_aposta: saldoEmAposta,
-          saldo_disponivel: saldoDisponivel,
-          saldo_operavel: saldoOperavel,
-        };
-      });
-      
-      setBookmakers(enriched);
-    } catch (error: any) {
-      console.error("Erro ao carregar bookmakers:", error.message);
-    }
-  };
+  // REMOVIDO: fetchBookmakers - agora usa useBookmakerSaldosQuery centralizado
 
   const handleDataChange = () => {
     fetchSurebets();
@@ -574,8 +483,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         
         const matchingBookmakers = bookmakers.filter(bk => 
           surebetBookmakerIds.includes(bk.id) && 
-          bk.parceiro && 
-          parceiroIds.includes((bk.parceiro as any).id || '')
+          bk.parceiro_id && 
+          parceiroIds.includes(bk.parceiro_id)
         );
         
         if (matchingBookmakers.length === 0) return false;
@@ -700,7 +609,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       const baseName = nomeParts[0].trim().toUpperCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
-      const logoUrl = bk.bookmakers_catalogo?.logo_url || null;
+      const logoUrl = bk.logo_url || null;
       if (logoUrl && !map.has(baseName)) {
         map.set(baseName, logoUrl);
       }
