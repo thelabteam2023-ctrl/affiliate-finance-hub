@@ -80,8 +80,8 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               key={casa.id} 
               className="flex justify-between items-center py-1.5 px-2 rounded bg-muted/30 hover:bg-muted/50 transition-colors"
             >
-              <span className="text-xs text-muted-foreground truncate max-w-[140px]" title={`${casa.nome} - ${casa.loginUsername}`}>
-                {casa.nome} ({casa.nomeExibicao})
+              <span className="text-xs text-muted-foreground truncate max-w-[160px]" title={`${casa.nome}${casa.parceiroNome ? ` - ${casa.parceiroNome}` : ''}`}>
+                {casa.nome}{casa.nomeExibicao ? ` - ${casa.nomeExibicao}` : ''}
               </span>
               <span className="text-xs font-medium text-foreground ml-2">
                 {formatCurrency(casa.saldoOperavel)}
