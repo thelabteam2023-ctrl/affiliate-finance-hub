@@ -29,10 +29,17 @@ interface SaldoWalletParceiro {
 
 interface SaldoBookmakerParceiro {
   parceiro_id: string;
+  bookmaker_id: string;
   bookmaker_nome: string;
   saldo_atual: number;
   saldo_usd: number;
+  saldo_freebet: number;
   moeda: string;
+}
+
+interface BonusCreditado {
+  bookmaker_id: string;
+  total_bonus: number;
 }
 
 interface ParceiroSaldoAgrupado {
@@ -40,7 +47,13 @@ interface ParceiroSaldoAgrupado {
   parceiro_nome: string;
   saldos_fiat: Array<{ moeda: string; saldo: number; banco: string }>;
   saldos_crypto: Array<{ coin: string; saldo_coin: number; saldo_usd: number; exchange: string }>;
-  saldos_bookmakers: Array<{ nome: string; saldo_brl: number; saldo_usd: number; moeda: string }>;
+  saldos_bookmakers: Array<{ 
+    nome: string; 
+    saldo_operavel_brl: number;  // saldo_real + bonus + freebet
+    saldo_operavel_usd: number;  // saldo_real + bonus + freebet
+    moeda: string;
+    has_bonus: boolean;
+  }>;
   total_fiat_brl: number;
   total_crypto_usd: number;
   total_bookmakers_brl: number;
@@ -95,13 +108,29 @@ export function SaldosParceirosSheet() {
 
       if (walletsError) throw walletsError;
 
-      // Buscar bookmakers vinculadas aos parceiros
+      // Buscar bookmakers vinculadas aos parceiros COM saldo freebet
       const { data: bookmakers, error: bookmakersError } = await supabase
         .from("bookmakers")
-        .select("parceiro_id, nome, saldo_atual, saldo_usd, moeda")
+        .select("id, parceiro_id, nome, saldo_atual, saldo_usd, saldo_freebet, moeda")
         .not("parceiro_id", "is", null);
 
       if (bookmakersError) throw bookmakersError;
+
+      // Buscar bônus creditados por bookmaker (saldo operável = saldo_real + bonus + freebet)
+      const { data: bonusCreditados, error: bonusError } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .select("bookmaker_id, saldo_atual")
+        .eq("status", "credited");
+
+      if (bonusError) throw bonusError;
+
+      // Criar mapa de bônus por bookmaker
+      const bonusMap = new Map<string, number>();
+      (bonusCreditados || []).forEach((bonus) => {
+        if (!bonus.bookmaker_id) return;
+        const current = bonusMap.get(bonus.bookmaker_id) || 0;
+        bonusMap.set(bonus.bookmaker_id, current + (bonus.saldo_atual || 0));
+      });
 
       // Extrair coins únicos para buscar preços
       const uniqueCoins = [...new Set(
@@ -174,12 +203,12 @@ export function SaldosParceirosSheet() {
         parceiro.total_crypto_usd += saldoUsdAtualizado;
       });
 
-      // Processar bookmakers
+      // Processar bookmakers COM bônus
+      // SALDO OPERÁVEL = saldo_real + saldo_freebet + bônus_creditado
       (bookmakers || []).forEach((bk) => {
         if (!bk.parceiro_id) return;
 
         if (!parceirosMap.has(bk.parceiro_id)) {
-          // Buscar nome do parceiro se não existir no map
           parceirosMap.set(bk.parceiro_id, {
             parceiro_id: bk.parceiro_id,
             parceiro_nome: "Parceiro",
@@ -194,19 +223,35 @@ export function SaldosParceirosSheet() {
         }
 
         const parceiro = parceirosMap.get(bk.parceiro_id)!;
-        const saldoBrl = bk.saldo_atual || 0;
-        const saldoUsd = bk.saldo_usd || 0;
+        const saldoReal = bk.saldo_atual || 0;
+        const saldoUsdReal = bk.saldo_usd || 0;
+        const saldoFreebet = bk.saldo_freebet || 0;
+        const bonusCreditado = bonusMap.get(bk.id) || 0;
+        const moeda = bk.moeda || "BRL";
         
-        // Só adicionar se tiver saldo em alguma moeda
-        if (saldoBrl > 0 || saldoUsd > 0) {
+        // Calcular saldo operável = real + freebet + bônus
+        // Para BRL: usar saldo_atual, para USD: usar saldo_usd
+        let saldoOperavelBrl = 0;
+        let saldoOperavelUsd = 0;
+        
+        if (moeda === "BRL") {
+          saldoOperavelBrl = saldoReal + saldoFreebet + bonusCreditado;
+        } else {
+          // Moedas USD/USDT usam saldo_usd
+          saldoOperavelUsd = saldoUsdReal + saldoFreebet + bonusCreditado;
+        }
+        
+        // Só adicionar se tiver saldo operável
+        if (saldoOperavelBrl > 0.50 || saldoOperavelUsd > 0.50) {
           parceiro.saldos_bookmakers.push({
             nome: bk.nome,
-            saldo_brl: saldoBrl,
-            saldo_usd: saldoUsd,
-            moeda: bk.moeda || "BRL",
+            saldo_operavel_brl: saldoOperavelBrl,
+            saldo_operavel_usd: saldoOperavelUsd,
+            moeda: moeda,
+            has_bonus: bonusCreditado > 0 || saldoFreebet > 0,
           });
-          parceiro.total_bookmakers_brl += saldoBrl;
-          parceiro.total_bookmakers_usd += saldoUsd;
+          parceiro.total_bookmakers_brl += saldoOperavelBrl;
+          parceiro.total_bookmakers_usd += saldoOperavelUsd;
         }
       });
 
@@ -290,22 +335,27 @@ export function SaldosParceirosSheet() {
   );
 
   const BookmakerHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_bookmakers"] }) => {
-    const saldosFiltrados = saldos.filter(s => s.saldo_brl > 0.50 || s.saldo_usd > 0.50);
+    const saldosFiltrados = saldos.filter(s => s.saldo_operavel_brl > 0.50 || s.saldo_operavel_usd > 0.50);
     return (
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">Saldo por Bookmaker</p>
         {saldosFiltrados.map((s, idx) => (
           <div key={idx} className="flex justify-between items-center gap-3 text-sm">
-            <span className="text-foreground truncate max-w-[150px]">{s.nome}</span>
+            <div className="flex items-center gap-1.5 truncate max-w-[150px]">
+              <span className="text-foreground truncate">{s.nome}</span>
+              {s.has_bonus && (
+                <span className="text-[10px] text-purple-400" title="Inclui bônus/freebet">🎁</span>
+              )}
+            </div>
             <div className="flex flex-col items-end">
-              {s.saldo_brl > 0 && (
+              {s.saldo_operavel_brl > 0 && (
                 <span className="font-mono text-amber-400 whitespace-nowrap">
-                  R$ {s.saldo_brl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {s.saldo_operavel_brl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
               )}
-              {s.saldo_usd > 0 && (
+              {s.saldo_operavel_usd > 0 && (
                 <span className="font-mono text-cyan-400 whitespace-nowrap">
-                  $ {s.saldo_usd.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} USD
+                  $ {s.saldo_operavel_usd.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} USD
                 </span>
               )}
             </div>
