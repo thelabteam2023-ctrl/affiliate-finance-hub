@@ -25,6 +25,7 @@ import { ptBR } from "date-fns/locale";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts, ExtraLucroEntry } from "./VisaoGeralCharts";
+import { SaldoOperavelCard } from "./SaldoOperavelCard";
 
 interface ProjetoDashboardTabProps {
   projetoId: string;
@@ -491,7 +492,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       {/* Visão Geral - Consolidado Global (sem filtros, mostra o projeto inteiro) */}
 
       {/* KPIs Consolidados */}
-      <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4">
+      <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-5">
+        <SaldoOperavelCard projetoId={projetoId} />
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
             <CardTitle className="text-xs md:text-sm font-medium">Apostas</CardTitle>
