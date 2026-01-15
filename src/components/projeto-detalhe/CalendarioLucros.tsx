@@ -16,7 +16,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { parseLocalDateTime } from "@/utils/dateUtils";
+import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
 
 interface ApostaData {
   data_aposta: string;
@@ -74,7 +74,8 @@ export function CalendarioLucros({
       
       if (!isLiquidada) return;
       
-      const dataKey = format(parseLocalDateTime(aposta.data_aposta), "yyyy-MM-dd");
+      // Usar extractLocalDateKey para garantir agrupamento por dia civil correto
+      const dataKey = extractLocalDateKey(aposta.data_aposta);
       const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
       
       mapa.set(dataKey, {

@@ -6,6 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { extractLocalDateKey } from "@/utils/dateUtils";
 
 interface SurebetPerna {
   id?: string;
@@ -174,10 +175,10 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
     const stakeTotal = surebets.reduce((acc, s) => acc + getStakeValue(s), 0);
     const stakeMedia = totalOperacoes > 0 ? stakeTotal / totalOperacoes : 0;
 
-    // Stake total média diária
+    // Stake total média diária - Usar extractLocalDateKey para garantir agrupamento correto
     const stakePorDia = new Map<string, number>();
     surebets.forEach(s => {
-      const dia = s.data_operacao.slice(0, 10);
+      const dia = extractLocalDateKey(s.data_operacao);
       stakePorDia.set(dia, (stakePorDia.get(dia) || 0) + getStakeValue(s));
     });
     const diasComOperacoes = stakePorDia.size;
@@ -308,10 +309,10 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       ? Math.min(...lucrosResolvidas, 0) 
       : 0;
 
-    // Maior prejuízo acumulado em um dia
+    // Maior prejuízo acumulado em um dia - Usar extractLocalDateKey para garantir agrupamento correto
     const lucroPorDia = new Map<string, number>();
     resolvidas.forEach(s => {
-      const dia = s.data_operacao.slice(0, 10);
+      const dia = extractLocalDateKey(s.data_operacao);
       lucroPorDia.set(dia, (lucroPorDia.get(dia) || 0) + (s.lucro_real || 0));
     });
     const maiorPrejuizoDiario = lucroPorDia.size > 0 
