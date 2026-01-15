@@ -499,12 +499,13 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     return false;
   });
 
-  // Auto-switch to history tab when no open operations
+  // Auto-switch to history tab when no open operations (only on initial load)
   useEffect(() => {
     if (!loading && apostasAbertas.length === 0 && (apostasHistorico.length > 0 || bonuses.some(b => b.status === 'finalized')) && subTab === 'abertas') {
       setSubTab('historico');
     }
-  }, [loading, apostasAbertas.length, apostasHistorico.length, bonuses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]); // Only run on initial load, not on every apostasAbertas change
 
   // Finalized bonuses for "Histórico" sub-tab
   const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
