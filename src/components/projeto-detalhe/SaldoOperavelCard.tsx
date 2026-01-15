@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Wallet, ChevronDown } from "lucide-react";
+import { Wallet, ChevronDown, AlertTriangle, RefreshCw } from "lucide-react";
 import { useSaldoOperavel } from "@/hooks/useSaldoOperavel";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface SaldoOperavelCardProps {
@@ -33,9 +34,12 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     saldoEmAposta,
     casasComSaldo,
     totalCasas, 
-    isLoading 
+    isLoading,
+    isError,
+    refetch
   } = useSaldoOperavel(projetoId);
   const { formatCurrency } = useProjetoCurrency(projetoId);
+  const [isRetrying, setIsRetrying] = useState(false);
   
   // Detectar se é mobile
   const [isMobile, setIsMobile] = useState(false);
@@ -48,6 +52,12 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    await refetch();
+    setIsRetrying(false);
+  };
+
   if (isLoading) {
     return (
       <Card className="border-primary/30 bg-primary/5">
@@ -56,6 +66,33 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         </CardHeader>
         <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
           <Skeleton className="h-8 w-32" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Estado de erro - permite retry
+  if (isError) {
+    return (
+      <Card className="border-destructive/30 bg-destructive/5">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+          <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 text-destructive">
+            Saldo Operável
+            <AlertTriangle className="h-3.5 w-3.5 md:h-4 md:w-4" />
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+          <p className="text-xs text-destructive mb-2">Erro ao carregar saldo</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRetry}
+            disabled={isRetrying}
+            className="h-7 text-xs"
+          >
+            <RefreshCw className={cn("h-3 w-3 mr-1", isRetrying && "animate-spin")} />
+            {isRetrying ? "Carregando..." : "Tentar novamente"}
+          </Button>
         </CardContent>
       </Card>
     );
