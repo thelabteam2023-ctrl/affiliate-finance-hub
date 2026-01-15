@@ -10,12 +10,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  TrendingUp, 
-  TrendingDown,
   Target, 
   BarChart3,
-  DollarSign,
-  Percent
 } from "lucide-react";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -343,35 +339,6 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const filteredEsportesData = useMemo(() => {
     return esportesData.filter(e => e.esporte === selectedEsporte);
   }, [esportesData, selectedEsporte]);
-  // KPIs consolidados - INCLUI todas as fontes de lucro (apostas + cashback + bônus + promoções)
-  const kpis = useMemo(() => {
-    const totalApostas = apostasUnificadas.length;
-    const greens = apostasUnificadas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
-    const reds = apostasUnificadas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
-    const totalVolume = apostasUnificadas.reduce((acc, a) => acc + (a.stake || 0), 0);
-    
-    // Lucro das apostas
-    const lucroApostas = apostasUnificadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
-    
-    // Lucro adicional de cashback, bônus, freebets, giros grátis, promoções
-    const lucroExtras = extrasLucro.reduce((acc, e) => acc + (e.valor || 0), 0);
-    
-    // Lucro total consolidado
-    const totalLucro = lucroApostas + lucroExtras;
-    
-    const roi = totalVolume > 0 ? (totalLucro / totalVolume) * 100 : 0;
-    
-    return { 
-      totalApostas, 
-      greens, 
-      reds, 
-      totalVolume, 
-      totalLucro,
-      lucroApostas,
-      lucroExtras,
-      roi 
-    };
-  }, [apostasUnificadas, extrasLucro]);
 
   // Preparar dados para VisaoGeralCharts
   // Passa bookmaker_nome e parceiro_nome separados - o VisaoGeralCharts faz o agrupamento
@@ -428,68 +395,10 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Visão Geral - Consolidado Global (sem filtros, mostra o projeto inteiro) */}
-
-      {/* KPIs Consolidados */}
-      <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-5">
-        <SaldoOperavelCard projetoId={projetoId} />
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium">Apostas</CardTitle>
-            <Target className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-            <div className="text-lg md:text-2xl font-bold">{kpis.totalApostas}</div>
-            <div className="flex gap-2 text-[10px] md:text-xs">
-              <span className="text-emerald-500">{kpis.greens} G</span>
-              <span className="text-red-500">{kpis.reds} R</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium">Volume</CardTitle>
-            <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-            <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(kpis.totalVolume)}</div>
-            <p className="text-[10px] md:text-xs text-muted-foreground">Total apostado</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium">
-              {kpis.totalLucro >= 0 ? "Lucro" : "Prejuízo"}
-            </CardTitle>
-            {kpis.totalLucro >= 0 ? (
-              <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-emerald-500" />
-            ) : (
-              <TrendingDown className="h-3.5 w-3.5 md:h-4 md:w-4 text-red-500" />
-            )}
-          </CardHeader>
-          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-            <div className={`text-lg md:text-2xl font-bold truncate ${kpis.totalLucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {formatCurrency(Math.abs(kpis.totalLucro))}
-            </div>
-            <p className="text-[10px] md:text-xs text-muted-foreground">Resultado no período</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium">ROI</CardTitle>
-            <Percent className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-            <div className={`text-lg md:text-2xl font-bold ${kpis.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {kpis.roi.toFixed(2)}%
-            </div>
-            <p className="text-[10px] md:text-xs text-muted-foreground">Retorno sobre investimento</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Visão Geral - Cockpit Estratégico (sem filtros, mostra o projeto inteiro) */}
+      
+      {/* KPI Estratégico Principal: Saldo Operável */}
+      <SaldoOperavelCard projetoId={projetoId} />
 
       {/* Gráficos de Evolução e Casas Mais Utilizadas */}
       <VisaoGeralCharts 
