@@ -10,8 +10,26 @@ interface SaldoOperavelCardProps {
   variant?: "default" | "compact";
 }
 
+/**
+ * Card do KPI "Saldo Operável"
+ * 
+ * Definição canônica:
+ * Saldo Operável = Saldo Disponível + Freebet + Bônus Creditado
+ * 
+ * Onde Saldo Disponível = Saldo Real - Saldo em Aposta
+ * 
+ * Este é o valor TOTAL disponível para apostas agora.
+ */
 export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOperavelCardProps) {
-  const { saldoOperavel, totalCasas, isLoading } = useSaldoOperavel(projetoId);
+  const { 
+    saldoOperavel, 
+    saldoReal, 
+    saldoBonus, 
+    saldoFreebet, 
+    saldoEmAposta,
+    totalCasas, 
+    isLoading 
+  } = useSaldoOperavel(projetoId);
   const { formatCurrency } = useProjetoCurrency(projetoId);
 
   if (isLoading) {
@@ -27,6 +45,11 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     );
   }
 
+  // Verifica se há bônus ou freebet para mostrar breakdown detalhado
+  const hasBonus = saldoBonus > 0;
+  const hasFreebet = saldoFreebet > 0;
+  const hasEmAposta = saldoEmAposta > 0;
+
   if (variant === "compact") {
     return (
       <TooltipProvider>
@@ -39,10 +62,16 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               </span>
             </div>
           </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-xs font-medium">Saldo Operável</p>
-            <p className="text-xs text-muted-foreground">
-              Soma dos saldos de {totalCasas} casa{totalCasas !== 1 ? 's' : ''}
+          <TooltipContent className="max-w-[280px]">
+            <p className="text-xs font-medium mb-2">Saldo Operável</p>
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <p>Saldo Real: {formatCurrency(saldoReal)}</p>
+              {hasBonus && <p>Bônus Creditado: {formatCurrency(saldoBonus)}</p>}
+              {hasFreebet && <p>Freebet: {formatCurrency(saldoFreebet)}</p>}
+              {hasEmAposta && <p className="text-amber-400">Em Aposta: -{formatCurrency(saldoEmAposta)}</p>}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border/50">
+              {totalCasas} casa{totalCasas !== 1 ? 's' : ''} vinculada{totalCasas !== 1 ? 's' : ''}
             </p>
           </TooltipContent>
         </Tooltip>
@@ -60,10 +89,38 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               <TooltipTrigger asChild>
                 <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary cursor-help" />
               </TooltipTrigger>
-              <TooltipContent className="max-w-[280px]">
-                <p className="text-xs font-medium mb-1">Saldo real consolidado</p>
-                <p className="text-xs text-muted-foreground">
-                  Soma dos saldos reais de todas as casas vinculadas ao projeto.
+              <TooltipContent className="max-w-[300px]">
+                <p className="text-xs font-medium mb-2">Composição do Saldo</p>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Saldo Real:</span>
+                    <span>{formatCurrency(saldoReal)}</span>
+                  </div>
+                  {hasBonus && (
+                    <div className="flex justify-between">
+                      <span className="text-yellow-400">+ Bônus Creditado:</span>
+                      <span className="text-yellow-400">{formatCurrency(saldoBonus)}</span>
+                    </div>
+                  )}
+                  {hasFreebet && (
+                    <div className="flex justify-between">
+                      <span className="text-amber-400">+ Freebet:</span>
+                      <span className="text-amber-400">{formatCurrency(saldoFreebet)}</span>
+                    </div>
+                  )}
+                  {hasEmAposta && (
+                    <div className="flex justify-between">
+                      <span className="text-red-400">- Em Aposta:</span>
+                      <span className="text-red-400">{formatCurrency(saldoEmAposta)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-1.5 border-t border-border/50 font-medium">
+                    <span>= Operável:</span>
+                    <span className="text-primary">{formatCurrency(saldoOperavel)}</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Valor total disponível para apostas agora
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -74,7 +131,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
             {formatCurrency(saldoOperavel)}
           </div>
           <p className="text-[10px] md:text-xs text-muted-foreground">
-            {totalCasas} casa{totalCasas !== 1 ? 's' : ''} vinculada{totalCasas !== 1 ? 's' : ''}
+            {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{hasBonus ? ' + Bônus' : ''}{hasFreebet ? ' + FB' : ''}
           </p>
         </CardContent>
       </Card>
