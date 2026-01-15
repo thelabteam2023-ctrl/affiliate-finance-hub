@@ -8424,9 +8424,7 @@ export type Database = {
         Args: { p_projeto_id: string }
         Returns: {
           bonus_rollover_started: boolean
-          estado_conta: string
           id: string
-          login_username: string
           logo_url: string
           moeda: string
           nome: string
@@ -8438,7 +8436,6 @@ export type Database = {
           saldo_freebet: number
           saldo_operavel: number
           saldo_real: number
-          status: string
         }[]
       }
       get_current_workspace: { Args: never; Returns: string }

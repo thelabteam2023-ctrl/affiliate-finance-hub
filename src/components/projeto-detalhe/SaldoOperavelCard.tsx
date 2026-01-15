@@ -28,7 +28,9 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   const { 
     saldoOperavel, 
     saldoReal, 
+    saldoBonus, 
     saldoFreebet, 
+    saldoEmAposta,
     casasComSaldo,
     totalCasas, 
     isLoading 
@@ -59,8 +61,10 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     );
   }
 
-  // Verifica se há freebet para mostrar breakdown detalhado
+  // Verifica se há bônus ou freebet para mostrar breakdown detalhado
+  const hasBonus = saldoBonus > 0;
   const hasFreebet = saldoFreebet > 0;
+  const hasEmAposta = saldoEmAposta > 0;
   const hasCasas = casasComSaldo.length > 0;
 
   // Conteúdo do detalhamento por casa
@@ -76,8 +80,8 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               key={casa.id} 
               className="flex justify-between items-center py-1.5 px-2 rounded bg-muted/30 hover:bg-muted/50 transition-colors"
             >
-              <span className="text-xs text-muted-foreground truncate max-w-[160px]" title={`${casa.nome}${casa.parceiroNome ? ` - ${casa.parceiroNome}` : ''}`}>
-                {casa.nome}{casa.nomeExibicao ? ` - ${casa.nomeExibicao}` : ''}
+              <span className="text-xs text-muted-foreground truncate max-w-[140px]">
+                {casa.nome}
               </span>
               <span className="text-xs font-medium text-foreground ml-2">
                 {formatCurrency(casa.saldoOperavel)}
@@ -172,7 +176,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               </div>
             </DialogTrigger>
             <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
-              {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{hasFreebet ? ' + FB' : ''}
+              {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{hasBonus ? ' + Bônus' : ''}{hasFreebet ? ' + FB' : ''}
             </p>
           </CardContent>
         </Card>
@@ -205,7 +209,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
             </div>
           </PopoverTrigger>
           <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
-            {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{hasFreebet ? ' + FB' : ''}
+            {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{hasBonus ? ' + Bônus' : ''}{hasFreebet ? ' + FB' : ''}
           </p>
         </CardContent>
       </Card>

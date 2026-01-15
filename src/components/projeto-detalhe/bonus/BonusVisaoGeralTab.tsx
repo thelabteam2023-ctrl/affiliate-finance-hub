@@ -48,8 +48,10 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
   const { 
     saldoOperavel: totalSaldoOperavel, 
-    saldoReal,
+    saldoReal, 
+    saldoBonus, 
     saldoFreebet, 
+    saldoEmAposta,
     totalCasas,
     isLoading: saldoLoading 
   } = useSaldoOperavel(projetoId);
@@ -265,16 +267,22 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                         <span className="text-muted-foreground">Saldo Real:</span>
                         <span>{formatCurrency(saldoReal)}</span>
                       </div>
-                      {activeBonusTotalConsolidated > 0 && (
+                      {saldoBonus > 0 && (
                         <div className="flex justify-between">
                           <span className="text-yellow-400">+ Bônus Creditado:</span>
-                          <span className="text-yellow-400">{formatCurrency(activeBonusTotalConsolidated)}</span>
+                          <span className="text-yellow-400">{formatCurrency(saldoBonus)}</span>
                         </div>
                       )}
                       {saldoFreebet > 0 && (
                         <div className="flex justify-between">
                           <span className="text-amber-400">+ Freebet:</span>
                           <span className="text-amber-400">{formatCurrency(saldoFreebet)}</span>
+                        </div>
+                      )}
+                      {saldoEmAposta > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-red-400">- Em Aposta:</span>
+                          <span className="text-red-400">{formatCurrency(saldoEmAposta)}</span>
                         </div>
                       )}
                       <div className="flex justify-between pt-1.5 border-t border-border/50 font-medium">
@@ -302,7 +310,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             <CardContent>
               <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
               <p className="text-xs text-muted-foreground">
-                {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{activeBonusTotalConsolidated > 0 ? ' + Bônus' : ''}{saldoFreebet > 0 ? ' + FB' : ''}
+                {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{saldoBonus > 0 ? ' + Bônus' : ''}{saldoFreebet > 0 ? ' + FB' : ''}
               </p>
             </CardContent>
           </Card>
