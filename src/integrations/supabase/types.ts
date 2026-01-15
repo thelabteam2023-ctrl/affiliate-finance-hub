@@ -8425,6 +8425,7 @@ export type Database = {
         Returns: {
           bonus_rollover_started: boolean
           id: string
+          login_username: string
           logo_url: string
           moeda: string
           nome: string

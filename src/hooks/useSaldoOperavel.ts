@@ -29,6 +29,7 @@ interface BookmakerSaldoCompleto {
   saldo_em_aposta: number;
   saldo_disponivel: number;
   saldo_operavel: number;
+  login_username: string;
 }
 
 export function useSaldoOperavel(projetoId: string) {
@@ -90,9 +91,14 @@ export function useSaldoOperavel(projetoId: string) {
         const moeda = bk.moeda || "BRL";
         // saldo_operavel já inclui real + bonus - em_aposta (exclui freebet não utilizada no saldo exibido)
         const saldoConvertido = convertToConsolidation(Number(bk.saldo_operavel) || 0, moeda);
+        // Extrai apenas o primeiro nome do login para exibição compacta
+        const loginParts = (bk.login_username || "").trim().split(/\s+/);
+        const primeiroNome = loginParts[0] || bk.nome;
         return {
           id: bk.id,
           nome: bk.nome,
+          loginUsername: bk.login_username || "",
+          nomeExibicao: primeiroNome, // Primeiro nome do login para exibir no tooltip
           saldoOperavel: saldoConvertido,
           moedaOriginal: moeda,
         };
