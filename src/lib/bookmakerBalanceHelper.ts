@@ -121,11 +121,18 @@ export async function updateBonusBalance(
  * Atualiza o saldo de um bookmaker aplicando o delta correto
  * baseado na moeda do bookmaker
  * 
- * IMPORTANTE: Se houver bônus ativo, o delta é aplicado no bônus, não no bookmaker
+ * ARQUITETURA CANÔNICA:
+ * - Se a aposta usou stake_bonus > 0 e tem bonus_id, o consumo de bônus é tratado
+ *   EXCLUSIVAMENTE por processarLiquidacaoBonus (useBonusBalanceManager).
+ * - Esta função NÃO deve verificar/atualizar bônus quando skipBonusCheck=true.
+ * - Quando skipBonusCheck=false (padrão), verifica bônus ativo para operações
+ *   sem stake de bônus explícito (ex: depósitos, cashback, etc).
  * 
  * @param bookmakerId - ID do bookmaker
  * @param delta - Valor a somar (positivo = crédito, negativo = débito)
  * @param projetoId - ID do projeto (necessário para verificar bônus ativo)
+ * @param auditInfo - Informações de auditoria opcionais
+ * @param skipBonusCheck - Se true, pula verificação de bônus ativo (usar quando bônus é tratado externamente)
  * @returns Promise<boolean> - true se sucesso
  */
 export async function updateBookmakerBalance(
@@ -137,18 +144,24 @@ export async function updateBookmakerBalance(
     referenciaId?: string;
     referenciaTipo?: string;
     observacoes?: string;
-  }
+  },
+  skipBonusCheck: boolean = false
 ): Promise<boolean> {
   if (delta === 0) return true;
   
   try {
     // Verificar se há bônus ativo para esta bookmaker/projeto
-    const activeBonus = await getActiveBonus(bookmakerId, projetoId);
-    
-    if (activeBonus) {
-      // Bônus ativo: aplicar delta no saldo do bônus
-      console.log(`[updateBookmakerBalance] Bônus ativo detectado para bookmaker ${bookmakerId}, aplicando delta no bônus ${activeBonus.id}`);
-      return await updateBonusBalance(activeBonus.id, delta);
+    // SKIP se o chamador já tratou o bônus externamente (ex: processarLiquidacaoBonus)
+    if (!skipBonusCheck) {
+      const activeBonus = await getActiveBonus(bookmakerId, projetoId);
+      
+      if (activeBonus) {
+        // Bônus ativo: aplicar delta no saldo do bônus
+        console.log(`[updateBookmakerBalance] Bônus ativo detectado para bookmaker ${bookmakerId}, aplicando delta no bônus ${activeBonus.id}`);
+        return await updateBonusBalance(activeBonus.id, delta);
+      }
+    } else {
+      console.log(`[updateBookmakerBalance] skipBonusCheck=true, bônus será tratado externamente`);
     }
     
     // Sem bônus ativo: usar função RPC com auditoria se disponível

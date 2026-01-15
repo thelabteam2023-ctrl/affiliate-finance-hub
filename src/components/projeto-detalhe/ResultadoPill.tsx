@@ -464,13 +464,21 @@ export function ResultadoPill({
 
   /**
    * Atualiza o saldo do bookmaker baseado na mudança de resultado
-   * CORRIGIDO: Usa helper centralizado que respeita multi-moeda (USD vs BRL)
+   * 
+   * ARQUITETURA CANÔNICA:
+   * - Se a aposta usou stake_bonus (bonusId + stakeBonus > 0), o consumo do bônus
+   *   é tratado EXCLUSIVAMENTE por processarLiquidacaoBonus.
+   * - Nesse caso, passamos skipBonusCheck=true para evitar dupla atualização.
+   * - O ajuste de saldo aqui refere-se APENAS à parte de saldo real da aposta.
    */
   const atualizarSaldoBookmaker = async (
     resultadoAnterior: string | null,
     resultadoNovo: string
   ) => {
     try {
+      // Determinar se há bônus ativo sendo usado nesta aposta
+      const temBonusComStake = bonusId && stakeBonus > 0;
+      
       let saldoAjuste = 0;
 
       // Reverter efeito do resultado anterior (se havia um resultado definido)
@@ -481,9 +489,17 @@ export function ResultadoPill({
       // Aplicar efeito do novo resultado
       saldoAjuste += calcularAjusteSaldo(resultadoNovo);
 
-      // CORREÇÃO: Usar helper que respeita moeda do bookmaker e bônus ativo
+      // CORREÇÃO: Quando há bônus com stake, skipBonusCheck=true para evitar dupla atualização
+      // O processarLiquidacaoBonus já trata o consumo do bônus separadamente
       if (saldoAjuste !== 0) {
-        await updateBookmakerBalance(bookmarkerId, saldoAjuste, projetoId);
+        console.log(`[ResultadoPill] atualizarSaldoBookmaker: delta=${saldoAjuste}, temBonusComStake=${temBonusComStake}`);
+        await updateBookmakerBalance(
+          bookmarkerId, 
+          saldoAjuste, 
+          projetoId, 
+          undefined, // sem auditInfo
+          temBonusComStake // skipBonusCheck = true quando há bônus
+        );
       }
 
       // Para Cobertura, também atualizar o saldo da Exchange
@@ -498,7 +514,7 @@ export function ResultadoPill({
         // Aplicar efeito do novo resultado na exchange
         saldoAjusteExchange += calcularAjusteSaldoExchange(resultadoNovo);
 
-        // CORREÇÃO: Usar helper que respeita moeda da exchange e bônus ativo
+        // CORREÇÃO: Exchange não usa bônus, então não precisa de skipBonusCheck
         if (saldoAjusteExchange !== 0) {
           await updateBookmakerBalance(layExchangeBookmakerId, saldoAjusteExchange, projetoId);
         }
@@ -528,14 +544,21 @@ export function ResultadoPill({
 
       if (error) throw error;
 
-      // Atualizar saldo do bookmaker (saldo real)
+      // ====== ATUALIZAÇÃO DE SALDOS ======
+      // Ordem importante: primeiro saldo real, depois bônus (se houver)
+      
+      // 1. Atualizar saldo do bookmaker (saldo real)
+      // Se há bônus com stake, skipBonusCheck=true para evitar dupla atualização
       await atualizarSaldoBookmaker(resultado, novoResultado);
 
-      // ====== LÓGICA DE CONSUMO DE BÔNUS ======
+      // 2. LÓGICA DE CONSUMO DE BÔNUS
       // Se a aposta usou saldo de bônus, processar consumo proporcional
+      // NOTA: Esta é a ÚNICA fonte de verdade para consumo de bônus
       if (bonusId && stakeBonus > 0) {
         const stakeReal = stake - stakeBonus;
         const resultadoAnterior = resultado || "PENDENTE";
+        
+        console.log(`[ResultadoPill] Processando bônus: bonusId=${bonusId}, stakeBonus=${stakeBonus}, stakeReal=${stakeReal}, resultado: ${resultadoAnterior} → ${novoResultado}`);
         
         // Reverter liquidação anterior se havia resultado
         if (resultadoAnterior !== "PENDENTE") {

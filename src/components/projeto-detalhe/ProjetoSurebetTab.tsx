@@ -48,6 +48,7 @@ import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { useTabFilters, type EstrategiaFilter } from "@/hooks/useTabFilters";
@@ -90,6 +91,9 @@ interface Surebet {
   bookmaker_id?: string;
   bookmaker_nome?: string;
   parceiro_nome?: string;
+  // Campos para bônus
+  stake_bonus?: number | null;
+  bonus_id?: string | null;
 }
 
 interface Bookmaker {
@@ -179,6 +183,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  
+  // Hook para gerenciamento de bônus/rollover
+  const { 
+    hasActiveRolloverBonus, 
+    atualizarProgressoRollover,
+    processarLiquidacaoBonus,
+    reverterLiquidacaoBonus 
+  } = useBonusBalanceManager();
 
   // Hook global de logos de bookmakers (busca do catálogo)
   const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
@@ -432,7 +444,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     onDataChange?.();
   };
 
-  // Resolução rápida de apostas simples - atualiza saldo da bookmaker
+  // Resolução rápida de apostas simples - atualiza saldo da bookmaker + BÔNUS/ROLLOVER
   const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
     try {
       const operacao = surebets.find(s => s.id === apostaId);
@@ -443,6 +455,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
       const stake = operacao.stake || operacao.stake_total || 0;
       const odd = operacao.odd || 1;
+      const stakeBonus = operacao.stake_bonus || 0;
+      const bonusId = operacao.bonus_id || null;
+      const bookmakerId = operacao.bookmaker_id;
       
       // Calcular lucro usando função canônica
       const lucro = calcularImpactoResultado(stake, odd, resultado);
@@ -450,16 +465,32 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       // 1. Calcular delta financeiro (PENDENTE → novo resultado)
       const delta = calcularImpactoResultado(stake, odd, resultado);
 
-      // 2. Atualizar saldo da bookmaker via helper canônico (passa projetoId para verificar bônus ativo)
-      if (operacao.bookmaker_id && delta !== 0) {
-        const balanceUpdated = await updateBookmakerBalance(operacao.bookmaker_id, delta, projetoId);
+      // 2. Verificar se há bônus com stake
+      const temBonusComStake = bonusId && stakeBonus > 0;
+
+      // 3. Atualizar saldo da bookmaker via helper canônico
+      // Se há bônus com stake, skipBonusCheck=true para evitar dupla atualização
+      if (bookmakerId && delta !== 0) {
+        const balanceUpdated = await updateBookmakerBalance(
+          bookmakerId, 
+          delta, 
+          projetoId, 
+          undefined, // sem auditInfo
+          temBonusComStake // skipBonusCheck
+        );
         if (!balanceUpdated) {
           toast.error("Erro ao atualizar saldo da bookmaker. Liquidação cancelada.");
           return;
         }
       }
 
-      // 3. Atualizar aposta no banco
+      // 4. Processar consumo de bônus se houver stake de bônus
+      if (temBonusComStake) {
+        const stakeReal = stake - stakeBonus;
+        await processarLiquidacaoBonus(resultado, stakeReal, stakeBonus, bonusId, lucro, bookmakerId);
+      }
+
+      // 5. Atualizar aposta no banco
       const { error } = await supabase
         .from("apostas_unificada")
         .update({
@@ -471,14 +502,22 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
       if (error) throw error;
 
-      // 4. Atualizar estado local
+      // 6. Atualizar rollover se houver bônus ativo para a casa
+      if (bookmakerId && resultado !== "VOID") {
+        const temBonusAtivo = await hasActiveRolloverBonus(projetoId, bookmakerId);
+        if (temBonusAtivo) {
+          await atualizarProgressoRollover(projetoId, bookmakerId, stake, odd);
+        }
+      }
+
+      // 7. Atualizar estado local
       setSurebets(prev => prev.map(s => 
         s.id === apostaId 
           ? { ...s, resultado, lucro_real: lucro, status: "LIQUIDADA" }
           : s
       ));
 
-      // 5. Invalidar cache de saldos
+      // 8. Invalidar cache de saldos
       invalidateSaldos(projetoId);
 
       const resultLabel = {
@@ -495,7 +534,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       console.error("Erro ao atualizar aposta:", error);
       toast.error("Erro ao atualizar resultado");
     }
-  }, [surebets, onDataChange, projetoId, invalidateSaldos]);
+  }, [surebets, onDataChange, projetoId, invalidateSaldos, processarLiquidacaoBonus, hasActiveRolloverBonus, atualizarProgressoRollover]);
 
   // Usa a formatação do projeto (moeda de consolidação)
   const formatCurrency = projectFormatCurrency;
