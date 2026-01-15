@@ -145,7 +145,7 @@ export default function ProjetoDetalhe() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // KPIs should only show on performance tabs
-  const showKpis = ["visao-geral", "apostas", "perdas", "ciclos"].includes(activeTab);
+  const showKpis = ["visao-geral", "apostas", "ciclos"].includes(activeTab);
   
   // Build dynamic tabs based on active modules - with safe fallback
   const dynamicTabs = useMemo(() => {
