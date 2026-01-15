@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -102,6 +103,9 @@ interface Aposta {
   selecoes?: { descricao: string; odd: number | string; resultado?: string }[] | null;
   tipo_multipla?: string | null;
   odd_final?: number | null;
+  // Campos para bônus
+  stake_bonus?: number | null;
+  bonus_id?: string | null;
 }
 
 type NavigationMode = "tabs" | "sidebar";
@@ -158,6 +162,14 @@ export function ProjetoValueBetTab({
 
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  
+  // Hook para gerenciamento de bônus/rollover
+  const { 
+    hasActiveRolloverBonus, 
+    atualizarProgressoRollover,
+    processarLiquidacaoBonus,
+    reverterLiquidacaoBonus 
+  } = useBonusBalanceManager();
   
   // Hook global de logos de bookmakers (busca do catálogo)
   const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
@@ -303,7 +315,7 @@ export function ProjetoValueBetTab({
     }
   };
 
-  // Resolução rápida de apostas - USA HELPER FINANCEIRO
+  // Resolução rápida de apostas - USA HELPER FINANCEIRO + BÔNUS/ROLLOVER
   const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
     try {
       const aposta = apostas.find(a => a.id === apostaId);
@@ -311,6 +323,9 @@ export function ProjetoValueBetTab({
 
       const stake = typeof aposta.stake_total === "number" ? aposta.stake_total : aposta.stake;
       const odd = aposta.odd || 1;
+      const stakeBonus = aposta.stake_bonus || 0;
+      const bonusId = aposta.bonus_id || null;
+      const bookmakerId = aposta.bookmaker_id;
       
       // Calcular lucro usando função canônica
       const lucro = calcularImpactoResultado(stake, odd, resultado);
@@ -318,16 +333,32 @@ export function ProjetoValueBetTab({
       // 1. Calcular delta financeiro (PENDENTE → novo resultado)
       const delta = calcularImpactoResultado(stake, odd, resultado);
 
-      // 2. Atualizar saldo da bookmaker via helper canônico (passa projetoId para verificar bônus ativo)
-      if (aposta.bookmaker_id && delta !== 0) {
-        const balanceUpdated = await updateBookmakerBalance(aposta.bookmaker_id, delta, projetoId);
+      // 2. Verificar se há bônus com stake
+      const temBonusComStake = bonusId && stakeBonus > 0;
+
+      // 3. Atualizar saldo da bookmaker via helper canônico
+      // Se há bônus com stake, skipBonusCheck=true para evitar dupla atualização
+      if (bookmakerId && delta !== 0) {
+        const balanceUpdated = await updateBookmakerBalance(
+          bookmakerId, 
+          delta, 
+          projetoId, 
+          undefined, // sem auditInfo
+          temBonusComStake // skipBonusCheck
+        );
         if (!balanceUpdated) {
           toast.error("Erro ao atualizar saldo da bookmaker. Liquidação cancelada.");
           return;
         }
       }
 
-      // 3. Atualizar aposta no banco
+      // 4. Processar consumo de bônus se houver stake de bônus
+      if (temBonusComStake) {
+        const stakeReal = stake - stakeBonus;
+        await processarLiquidacaoBonus(resultado, stakeReal, stakeBonus, bonusId, lucro, bookmakerId);
+      }
+
+      // 5. Atualizar aposta no banco
       const { error } = await supabase
         .from("apostas_unificada")
         .update({
@@ -339,14 +370,22 @@ export function ProjetoValueBetTab({
 
       if (error) throw error;
 
-      // 4. Atualizar lista local
+      // 6. Atualizar rollover se houver bônus ativo para a casa
+      if (bookmakerId && resultado !== "VOID") {
+        const temBonusAtivo = await hasActiveRolloverBonus(projetoId, bookmakerId);
+        if (temBonusAtivo) {
+          await atualizarProgressoRollover(projetoId, bookmakerId, stake, odd);
+        }
+      }
+
+      // 7. Atualizar lista local
       setApostas(prev => prev.map(a => 
         a.id === apostaId 
           ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
           : a
       ));
 
-      // 5. Invalidar cache de saldos
+      // 8. Invalidar cache de saldos
       invalidateSaldos(projetoId);
 
       const resultLabel = {
@@ -363,7 +402,7 @@ export function ProjetoValueBetTab({
       console.error("Erro ao resolver aposta:", error);
       toast.error("Erro ao atualizar resultado");
     }
-  }, [apostas, onDataChange, projetoId, invalidateSaldos]);
+  }, [apostas, onDataChange, projetoId, invalidateSaldos, processarLiquidacaoBonus, hasActiveRolloverBonus, atualizarProgressoRollover]);
 
   const metricas = useMemo(() => {
     const todasApostas = apostas.map((a) => ({
