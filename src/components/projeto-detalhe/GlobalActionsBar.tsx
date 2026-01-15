@@ -60,7 +60,6 @@ interface Bookmaker {
  * Para exibir, adicione explicitamente à whitelist.
  */
 const ABAS_OPERACIONAIS_APOSTA: readonly string[] = [
-  "visao-geral",
   "apostas",
   "freebets", 
   "bonus",

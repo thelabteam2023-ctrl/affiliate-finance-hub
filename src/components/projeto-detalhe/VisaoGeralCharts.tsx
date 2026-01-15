@@ -759,7 +759,10 @@ export function VisaoGeralCharts({
               ) : (
                 <TrendingDown className="h-4 w-4 text-red-500" />
               )}
-              <CardTitle className="text-sm font-medium">Evolução do Lucro</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Evolução do Lucro Geral
+                <span className="text-muted-foreground/60 font-normal ml-1">(Unificação de estratégias)</span>
+              </CardTitle>
             </div>
             <div className="flex items-center gap-2">
               {showCalendar && (
