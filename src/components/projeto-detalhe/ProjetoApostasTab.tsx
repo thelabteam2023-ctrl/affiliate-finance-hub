@@ -774,6 +774,20 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     };
   }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo]);
 
+  // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer nomes no SurebetCard
+  const bookmakerNomeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    bookmakers.forEach(bk => {
+      const parceiroNome = bk.parceiro?.nome?.split(" ");
+      const shortName = parceiroNome 
+        ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
+        : "";
+      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      map.set(bk.id, nomeCompleto);
+    });
+    return map;
+  }, [bookmakers]);
+
   // formatCurrency definido no escopo do componente
 
 
@@ -1061,6 +1075,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     setDialogSurebetOpen(true);
                   }}
                   formatCurrency={formatCurrency}
+                  bookmakerNomeMap={bookmakerNomeMap}
                 />
               );
             }
