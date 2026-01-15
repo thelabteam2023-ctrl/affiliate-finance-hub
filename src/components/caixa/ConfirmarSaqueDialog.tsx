@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -115,17 +114,12 @@ export function ConfirmarSaqueDialog({
 
       if (error) throw error;
 
-      // ATUALIZAR SALDO DO BOOKMAKER DE ORIGEM (decrementar o valor sacado) com auditoria
+      // ⚠️ ATENÇÃO: O trigger 'atualizar_saldo_bookmaker' no banco de dados
+      // JÁ DECREMENTA o saldo automaticamente quando status muda de PENDENTE → CONFIRMADO.
+      // NÃO chamar updateBookmakerBalance aqui para evitar débito duplo!
+      
+      // Verificar se precisa limpar workflow de saque baseado no saldo restante
       if (saque.origem_bookmaker_id) {
-        // Usar helper centralizado com auditoria
-        await updateBookmakerBalance(saque.origem_bookmaker_id, -saque.valor, undefined, {
-          origem: 'SAQUE',
-          referenciaId: saque.id,
-          referenciaTipo: 'cash_ledger',
-          observacoes: observacoes.trim() || undefined,
-        });
-        
-        // Verificar se precisa limpar workflow de saque baseado no saldo restante
         const { data: bookmaker } = await supabase
           .from("bookmakers")
           .select("saldo_atual, saldo_usd, moeda, aguardando_saque_at")
