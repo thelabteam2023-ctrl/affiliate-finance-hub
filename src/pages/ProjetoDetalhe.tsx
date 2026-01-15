@@ -58,6 +58,7 @@ import { ProjetoValueBetTab } from "@/components/projeto-detalhe/ProjetoValueBet
 import { ProjetoDuploGreenTab } from "@/components/projeto-detalhe/ProjetoDuploGreenTab";
 import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoCashbackTab } from "@/components/projeto-detalhe/ProjetoCashbackTab";
+import { SaldoOperavelCard } from "@/components/projeto-detalhe/SaldoOperavelCard";
 import { ProjetoGestaoTab } from "@/components/projeto-detalhe/ProjetoGestaoTab";
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
@@ -542,7 +543,9 @@ export default function ProjetoDetalhe() {
 
       {/* KPIs Resumo - Only show on performance tabs */}
       {showKpis && (
-        <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4 flex-shrink-0">
+        <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-5 flex-shrink-0">
+          {/* Saldo Operável - KPI estratégico transversal */}
+          <SaldoOperavelCard projetoId={id!} />
           {/* Apostas - Com breakdown por módulo */}
           <CountBreakdownTooltip
             breakdown={kpiBreakdowns?.apostas || null}
