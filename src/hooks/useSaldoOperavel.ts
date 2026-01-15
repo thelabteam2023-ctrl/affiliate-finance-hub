@@ -19,18 +19,25 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
  * Este é o ÚNICO local onde o Saldo Operável global do projeto deve ser calculado.
  */
 
-interface BookmakerSaldoCompleto {
-  id: string;
+// Interface matching what the RPC actually returns
+interface BookmakerSaldoRPC {
+  bookmaker_id: string;
   nome: string;
   moeda: string;
-  saldo_real: number;
+  saldo_atual: number;
   saldo_freebet: number;
-  saldo_bonus: number;
-  saldo_em_aposta: number;
-  saldo_disponivel: number;
-  saldo_operavel: number;
+  saldo_irrecuperavel: number;
+  estado_conta: string;
+  status: string;
   login_username: string;
   parceiro_nome: string | null;
+}
+
+// Derived interface with calculated fields
+interface BookmakerSaldoCompleto extends BookmakerSaldoRPC {
+  id: string;
+  saldo_real: number;
+  saldo_operavel: number;
 }
 
 export function useSaldoOperavel(projetoId: string) {
@@ -48,19 +55,25 @@ export function useSaldoOperavel(projetoId: string) {
         throw error;
       }
       
-      return (data || []) as BookmakerSaldoCompleto[];
+      // Map RPC response to include derived fields
+      const rpcData = (data || []) as BookmakerSaldoRPC[];
+      return rpcData.map((bk): BookmakerSaldoCompleto => ({
+        ...bk,
+        id: bk.bookmaker_id,
+        saldo_real: bk.saldo_atual,
+        // saldo_operavel = saldo_real + saldo_freebet (simplified, without bonus/em_aposta from RPC)
+        saldo_operavel: bk.saldo_atual + bk.saldo_freebet,
+      }));
     },
     enabled: !!projetoId,
     staleTime: 10000, // 10 segundos
   });
 
-  // Saldo Operável = soma do saldo_operavel de todas as casas (já inclui real + freebet + bonus - em_aposta)
+  // Saldo Operável = soma do saldo_operavel de todas as casas
   const totals = useMemo(() => {
     let saldoOperavel = 0;
     let saldoReal = 0;
-    let saldoBonus = 0;
     let saldoFreebet = 0;
-    let saldoEmAposta = 0;
 
     bookmakers.forEach((bk) => {
       const moeda = bk.moeda || "BRL";
@@ -68,17 +81,13 @@ export function useSaldoOperavel(projetoId: string) {
       // Converte cada componente para a moeda de consolidação
       saldoOperavel += convertToConsolidation(Number(bk.saldo_operavel) || 0, moeda);
       saldoReal += convertToConsolidation(Number(bk.saldo_real) || 0, moeda);
-      saldoBonus += convertToConsolidation(Number(bk.saldo_bonus) || 0, moeda);
       saldoFreebet += convertToConsolidation(Number(bk.saldo_freebet) || 0, moeda);
-      saldoEmAposta += convertToConsolidation(Number(bk.saldo_em_aposta) || 0, moeda);
     });
 
     return {
       saldoOperavel,
       saldoReal,
-      saldoBonus,
       saldoFreebet,
-      saldoEmAposta,
     };
   }, [bookmakers, convertToConsolidation]);
 
@@ -114,9 +123,7 @@ export function useSaldoOperavel(projetoId: string) {
     
     // Componentes para breakdown/tooltip
     saldoReal: totals.saldoReal,
-    saldoBonus: totals.saldoBonus,
     saldoFreebet: totals.saldoFreebet,
-    saldoEmAposta: totals.saldoEmAposta,
     
     // Detalhamento por casa (para tooltip)
     casasComSaldo,
