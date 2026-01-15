@@ -82,6 +82,25 @@ export function useSaldoOperavel(projetoId: string) {
 
   const totalCasas = bookmakers.length;
 
+  // Lista de casas com saldo > 0 para o tooltip detalhado
+  // Ordenadas por maior saldo operável, excluindo freebets não utilizadas
+  const casasComSaldo = useMemo(() => {
+    return bookmakers
+      .map((bk) => {
+        const moeda = bk.moeda || "BRL";
+        // saldo_operavel já inclui real + bonus - em_aposta (exclui freebet não utilizada no saldo exibido)
+        const saldoConvertido = convertToConsolidation(Number(bk.saldo_operavel) || 0, moeda);
+        return {
+          id: bk.id,
+          nome: bk.nome,
+          saldoOperavel: saldoConvertido,
+          moedaOriginal: moeda,
+        };
+      })
+      .filter((casa) => casa.saldoOperavel > 0)
+      .sort((a, b) => b.saldoOperavel - a.saldoOperavel);
+  }, [bookmakers, convertToConsolidation]);
+
   return {
     // Valor principal do KPI
     saldoOperavel: totals.saldoOperavel,
@@ -91,6 +110,9 @@ export function useSaldoOperavel(projetoId: string) {
     saldoBonus: totals.saldoBonus,
     saldoFreebet: totals.saldoFreebet,
     saldoEmAposta: totals.saldoEmAposta,
+    
+    // Detalhamento por casa (para tooltip)
+    casasComSaldo,
     
     // Metadata
     totalCasas,
