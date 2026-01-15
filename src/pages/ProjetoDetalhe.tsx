@@ -152,7 +152,7 @@ export default function ProjetoDetalhe() {
     // Note: "Gestão" is rendered as a tabGroup dropdown, not a direct tab
     const baseTabs: TabItem[] = [
       { value: "visao-geral", label: "Visão Geral", icon: <LayoutDashboard className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
-      { value: "apostas", label: "Apostas", icon: <Target className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
+      { value: "apostas", label: "Apostas Livres", icon: <Target className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
       { value: "vinculos", label: "Vínculos", icon: <Link2 className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
     ];
 
