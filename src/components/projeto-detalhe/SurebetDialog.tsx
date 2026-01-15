@@ -2338,6 +2338,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       const odd = perna.odd || 0;
       const resultadoAnterior = perna.resultado;
       const bookmakerId = perna.bookmaker_id;
+      
+      // CORREÇÃO: Verificar se a perna usa stake_bonus
+      // Se não usa bônus, o delta deve ir para o saldo real (não para o bônus)
+      const stakeBonus = (perna as { stake_bonus?: number }).stake_bonus || 0;
+      const temBonusComStake = stakeBonus > 0;
 
       // Se o resultado não mudou, não fazer nada
       if (resultadoAnterior === resultado) return;
@@ -2387,8 +2392,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       }
 
       // CORREÇÃO: Usar helper centralizado que respeita moeda do bookmaker
+      // skipBonusCheck = true quando a perna NÃO usa stake_bonus (delta vai pro saldo real)
       if (delta !== 0) {
-        await updateBookmakerBalance(bookmakerId, delta);
+        await updateBookmakerBalance(bookmakerId, delta, projetoId, undefined, !temBonusComStake);
       }
 
       // ====== LÓGICA DE ROLLOVER ======
