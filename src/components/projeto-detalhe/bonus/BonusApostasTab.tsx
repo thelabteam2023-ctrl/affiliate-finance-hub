@@ -572,14 +572,6 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     return `${symbol} ${formatted}`;
   };
 
-  const parseLocalDateTime = (dateString: string): Date => {
-    if (!dateString) return new Date();
-    const cleanDate = dateString.replace(/\+00:00$/, '').replace(/Z$/, '').replace(/\+\d{2}:\d{2}$/, '');
-    const [datePart, timePart] = cleanDate.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hours, minutes] = (timePart || '00:00').split(':').map(Number);
-    return new Date(year, month - 1, day, hours || 0, minutes || 0);
-  };
 
 
   const handleOpenDialog = (aposta: Aposta | null) => {
