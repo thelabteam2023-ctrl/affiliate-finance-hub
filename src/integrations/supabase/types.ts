@@ -994,7 +994,6 @@ export type Database = {
           nome: string
           observacoes: string | null
           operacional: string
-          permite_saque_fiat: boolean | null
           status: string
           updated_at: string
           user_id: string | null
@@ -1015,7 +1014,6 @@ export type Database = {
           nome: string
           observacoes?: string | null
           operacional?: string
-          permite_saque_fiat?: boolean | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -1038,7 +1036,6 @@ export type Database = {
           nome?: string
           observacoes?: string | null
           operacional?: string
-          permite_saque_fiat?: boolean | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -1055,8 +1052,6 @@ export type Database = {
           ajuste_motivo: string | null
           auditoria_metadata: Json | null
           coin: string | null
-          conversao_aplicada: boolean | null
-          conversao_referencia_id: string | null
           cotacao: number | null
           cotacao_implicita: number | null
           created_at: string
@@ -1071,8 +1066,6 @@ export type Database = {
           id: string
           impacta_caixa_operacional: boolean
           investidor_id: string | null
-          metodo_destino: string | null
-          metodo_origem: string | null
           moeda: string
           moeda_destino: string | null
           moeda_origem: string | null
@@ -1103,8 +1096,6 @@ export type Database = {
           ajuste_motivo?: string | null
           auditoria_metadata?: Json | null
           coin?: string | null
-          conversao_aplicada?: boolean | null
-          conversao_referencia_id?: string | null
           cotacao?: number | null
           cotacao_implicita?: number | null
           created_at?: string
@@ -1119,8 +1110,6 @@ export type Database = {
           id?: string
           impacta_caixa_operacional?: boolean
           investidor_id?: string | null
-          metodo_destino?: string | null
-          metodo_origem?: string | null
           moeda: string
           moeda_destino?: string | null
           moeda_origem?: string | null
@@ -1151,8 +1140,6 @@ export type Database = {
           ajuste_motivo?: string | null
           auditoria_metadata?: Json | null
           coin?: string | null
-          conversao_aplicada?: boolean | null
-          conversao_referencia_id?: string | null
           cotacao?: number | null
           cotacao_implicita?: number | null
           created_at?: string
@@ -1167,8 +1154,6 @@ export type Database = {
           id?: string
           impacta_caixa_operacional?: boolean
           investidor_id?: string | null
-          metodo_destino?: string | null
-          metodo_origem?: string | null
           moeda?: string
           moeda_destino?: string | null
           moeda_origem?: string | null
@@ -1195,27 +1180,6 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "cash_ledger_conversao_referencia_id_fkey"
-            columns: ["conversao_referencia_id"]
-            isOneToOne: false
-            referencedRelation: "cash_ledger"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cash_ledger_conversao_referencia_id_fkey"
-            columns: ["conversao_referencia_id"]
-            isOneToOne: false
-            referencedRelation: "v_ajustes_auditoria"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cash_ledger_conversao_referencia_id_fkey"
-            columns: ["conversao_referencia_id"]
-            isOneToOne: false
-            referencedRelation: "v_eventos_promocionais"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
             columns: ["destino_bookmaker_id"]

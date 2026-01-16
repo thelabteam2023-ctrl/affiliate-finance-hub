@@ -43,10 +43,8 @@ interface BookmakerSelectProps {
   somenteComSaldo?: boolean;
   somenteComSaldoUsd?: boolean;
   somenteComSaldoFiat?: boolean; // Apenas bookmakers com saldo_atual > 0 (FIAT)
-  somentePermiteSaqueFiat?: boolean; // Apenas casas cujo catálogo permite saque FIAT (permite_saque_fiat = true)
   excludeVinculosDoParceiro?: string;
   moedaOperacional?: string; // Filtra bookmakers pela moeda operacional (BRL, USD, etc)
-  buscarTodosVinculos?: boolean; // Buscar todos os vínculos (de todos os parceiros) - usado apenas em fluxos que realmente selecionam bookmaker antes do parceiro
 }
 
 export interface BookmakerSelectRef {
@@ -74,10 +72,8 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   somenteComSaldo,
   somenteComSaldoUsd,
   somenteComSaldoFiat,
-  somentePermiteSaqueFiat,
   excludeVinculosDoParceiro,
-  moedaOperacional,
-  buscarTodosVinculos
+  moedaOperacional
 }, ref) => {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<BookmakerItem[]>([]);
@@ -91,7 +87,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   
   const lastFetchedValue = useRef<string>("");
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const isVinculoMode = !!parceiroId || !!buscarTodosVinculos;
+  const isVinculoMode = !!parceiroId;
 
   // Expose focus and open methods via ref
   useImperativeHandle(ref, () => ({
@@ -133,12 +129,6 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   const prevContextRef = useRef<{
     parceiroId?: string;
     moedaOperacional?: string;
-    somenteComSaldo?: boolean;
-    somenteComSaldoUsd?: boolean;
-    somenteComSaldoFiat?: boolean;
-    somentePermiteSaqueFiat?: boolean;
-    buscarTodosVinculos?: boolean;
-    excludeVinculosDoParceiro?: string;
     initialized: boolean;
   }>({ initialized: false });
   
@@ -149,29 +139,15 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     // Na montagem inicial, apenas marcar como inicializado
     if (!prev.initialized) {
       prevContextRef.current = { 
-        parceiroId,
-        moedaOperacional,
-        somenteComSaldo,
-        somenteComSaldoUsd,
-        somenteComSaldoFiat,
-        somentePermiteSaqueFiat,
-        buscarTodosVinculos,
-        excludeVinculosDoParceiro,
-        initialized: true,
+        parceiroId, 
+        moedaOperacional, 
+        initialized: true 
       };
       return;
     }
     
     // Detectar se houve mudança REAL de contexto
-    const contextChanged =
-      prev.parceiroId !== parceiroId ||
-      prev.moedaOperacional !== moedaOperacional ||
-      prev.somenteComSaldo !== somenteComSaldo ||
-      prev.somenteComSaldoUsd !== somenteComSaldoUsd ||
-      prev.somenteComSaldoFiat !== somenteComSaldoFiat ||
-      prev.somentePermiteSaqueFiat !== somentePermiteSaqueFiat ||
-      prev.buscarTodosVinculos !== buscarTodosVinculos ||
-      prev.excludeVinculosDoParceiro !== excludeVinculosDoParceiro;
+    const contextChanged = prev.parceiroId !== parceiroId || prev.moedaOperacional !== moedaOperacional;
     
     if (contextChanged) {
       // CRÍTICO: Limpar TUDO quando contexto muda - zero estado residual
@@ -181,23 +157,15 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
       setLoadingDisplay(false); // Evitar estado "Carregando..." fantasma
       lastFetchedValue.current = "";
       
-      // NÃO chamar onValueChange("") aqui - isso causa cascata de efeitos indesejados
-      // O componente pai é responsável por gerenciar o value quando as props mudam
+      // Se o value atual não pode mais existir no novo contexto, limpar
+      if (value) {
+        onValueChange("");
+      }
     }
     
     // Atualizar ref
-    prevContextRef.current = {
-      parceiroId,
-      moedaOperacional,
-      somenteComSaldo,
-      somenteComSaldoUsd,
-      somenteComSaldoFiat,
-      somentePermiteSaqueFiat,
-      buscarTodosVinculos,
-      excludeVinculosDoParceiro,
-      initialized: true,
-    };
-  }, [parceiroId, moedaOperacional, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, somentePermiteSaqueFiat, buscarTodosVinculos, excludeVinculosDoParceiro]);
+    prevContextRef.current = { parceiroId, moedaOperacional, initialized: true };
+  }, [parceiroId, moedaOperacional, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat]);
   
   // Buscar lista de bookmakers para o dropdown
   useEffect(() => {
@@ -222,30 +190,25 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
               moeda,
               status,
               bookmakers_catalogo:bookmaker_catalogo_id (
-                logo_url,
-                permite_saque_fiat
+                logo_url
               )
             `)
             .eq("parceiro_id", parceiroId);
 
           // Filtrar por moeda operacional (mecanismo de depósito)
           if (moedaOperacional) {
-            query = query.eq("moeda", moedaOperacional);
+            query = query.eq('moeda', moedaOperacional);
           }
-
-          // NOTA: Não podemos filtrar por bookmakers_catalogo.permite_saque_fiat via query
-          // porque o Supabase não suporta bem filtros em nested objects via .eq()
-          // O filtro será aplicado no cliente após buscar os dados
 
           if (somenteComSaldoUsd) {
             // Apenas bookmakers com saldo_usd > 0 (para saques CRYPTO)
-            query = query.gt("saldo_usd", 0);
+            query = query.gt('saldo_usd', 0);
           } else if (somenteComSaldoFiat) {
             // Apenas bookmakers com saldo_atual > 0 (para saques FIAT)
-            query = query.gt("saldo_atual", 0);
+            query = query.gt('saldo_atual', 0);
           } else if (somenteComSaldo) {
             // Com saldo significa saldo_atual > 0 OU saldo_usd > 0
-            query = query.or("saldo_atual.gt.0,saldo_usd.gt.0");
+            query = query.or('saldo_atual.gt.0,saldo_usd.gt.0');
           }
 
           const { data, error } = await query.order("nome");
@@ -255,15 +218,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           
           if (error) throw error;
 
-          // Filtrar no cliente por permite_saque_fiat se necessário
-          let filteredData = data || [];
-          if (somentePermiteSaqueFiat) {
-            filteredData = filteredData.filter((b: any) => 
-              b.bookmakers_catalogo?.permite_saque_fiat === true
-            );
-          }
-
-          const mapped: BookmakerItem[] = filteredData.map((b: any) => ({
+          const mapped: BookmakerItem[] = (data || []).map((b: any) => ({
             id: b.id,
             nome: b.nome,
             logo_url: b.bookmakers_catalogo?.logo_url || null,
@@ -285,89 +240,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
             setLoading(false);
           }
         }
-      }
-      // MODO TODOS OS VÍNCULOS (buscarTodosVinculos): Buscar todos os bookmakers de todos os parceiros
-      // Usado em SAQUE CRYPTO/USD onde a bookmaker é selecionada ANTES do parceiro
-      else if (buscarTodosVinculos && (somenteComSaldoUsd || somenteComSaldoFiat || somenteComSaldo || somentePermiteSaqueFiat)) {
-        setPrerequisitesReady(true);
-        setLoading(true);
-        
-        try {
-          let query = supabase
-            .from("bookmakers")
-            .select(`
-              id,
-              nome,
-              saldo_atual,
-              saldo_usd,
-              saldo_freebet,
-              moeda,
-              status,
-              parceiro_id,
-              bookmakers_catalogo:bookmaker_catalogo_id (
-                logo_url,
-                permite_saque_fiat
-              )
-            `);
-
-          // Filtrar por moeda operacional (mecanismo de depósito)
-          if (moedaOperacional) {
-            query = query.eq("moeda", moedaOperacional);
-          }
-
-          // NOTA: Não podemos filtrar por bookmakers_catalogo.permite_saque_fiat via query
-          // porque o Supabase não suporta bem filtros em nested objects via .eq()
-          // O filtro será aplicado no cliente após buscar os dados
-
-          if (somenteComSaldoUsd) {
-            // Apenas bookmakers com saldo_usd > 0 (para saques CRYPTO)
-            query = query.gt("saldo_usd", 0);
-          } else if (somenteComSaldoFiat) {
-            // Apenas bookmakers com saldo_atual > 0 (para saques FIAT)
-            query = query.gt("saldo_atual", 0);
-          } else if (somenteComSaldo) {
-            // Com saldo significa saldo_atual > 0 OU saldo_usd > 0
-            query = query.or("saldo_atual.gt.0,saldo_usd.gt.0");
-          }
-
-          const { data, error } = await query.order("nome");
-          
-          // Verificar se foi abortado antes de atualizar estado
-          if (abortController.signal.aborted) return;
-          
-          if (error) throw error;
-
-          // Filtrar no cliente por permite_saque_fiat se necessário
-          let filteredData = data || [];
-          if (somentePermiteSaqueFiat) {
-            filteredData = filteredData.filter((b: any) => 
-              b.bookmakers_catalogo?.permite_saque_fiat === true
-            );
-          }
-
-          const mapped: BookmakerItem[] = filteredData.map((b: any) => ({
-            id: b.id,
-            nome: b.nome,
-            logo_url: b.bookmakers_catalogo?.logo_url || null,
-            saldo_atual: b.saldo_atual,
-            saldo_usd: b.saldo_usd,
-            saldo_freebet: b.saldo_freebet,
-            moeda: b.moeda,
-            status: b.status,
-          }));
-
-          setItems(mapped);
-        } catch (error) {
-          if (!abortController.signal.aborted) {
-            console.error("Erro ao carregar bookmakers:", error);
-            setItems([]);
-          }
-        } finally {
-          if (!abortController.signal.aborted) {
-            setLoading(false);
-          }
-        }
-      }
+      } 
       // MODO CATÁLOGO (sem parceiroId): Buscar do catálogo global
       else if (!parceiroId && !moedaOperacional && !somenteComSaldo && !somenteComSaldoUsd && !somenteComSaldoFiat) {
         // Modo catálogo só é permitido quando não há nenhum filtro de contexto
@@ -425,7 +298,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     return () => {
       abortController.abort();
     };
-  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, somentePermiteSaqueFiat, excludeVinculosDoParceiro, moedaOperacional, buscarTodosVinculos]);
+  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro, moedaOperacional]);
 
   // Buscar dados de exibição quando value muda - execução imediata e determinística
   useEffect(() => {
