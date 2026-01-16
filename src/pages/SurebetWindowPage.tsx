@@ -168,13 +168,13 @@ export default function SurebetWindowPage() {
   }
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header simples */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-12 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <RefreshCcw className="h-5 w-5 text-purple-500" />
-            <h1 className="text-base font-semibold">
+        <div className="flex h-12 items-center justify-between px-3 sm:px-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <RefreshCcw className="h-5 w-5 text-purple-500 flex-shrink-0" />
+            <h1 className="text-sm sm:text-base font-semibold truncate">
               {isEditing ? "Editar Arbitragem" : "Nova Arbitragem"}
             </h1>
           </div>
@@ -182,7 +182,7 @@ export default function SurebetWindowPage() {
             variant="ghost"
             size="sm"
             onClick={handleClose}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 flex-shrink-0"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -190,7 +190,7 @@ export default function SurebetWindowPage() {
       </header>
       
       {/* Conteúdo - SurebetDialog como modal sempre aberto */}
-      <div className="p-4">
+      <div className="p-2 sm:p-4">
         <SurebetDialog
           open={true}
           onOpenChange={(open) => {

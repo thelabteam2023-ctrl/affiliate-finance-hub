@@ -2557,7 +2557,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
             </div>
 
             {/* LINHA 2: Esporte + Evento + Mercado */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
               {/* Esporte */}
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Esporte</Label>
@@ -2622,7 +2622,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                 </div>
                 
                 {/* Grid de Colunas com botões de swap entre elas */}
-                <div className="flex items-stretch gap-1">
+                <div className="flex flex-col sm:flex-row items-stretch gap-2 sm:gap-1">
                   {odds.map((entry, index) => {
                     const saldoLivreBase = getBookmakerSaldoLivre(entry.bookmaker_id);
                     const saldoDisponivelPosicao = getSaldoDisponivelParaPosicao(entry.bookmaker_id, index);
@@ -2666,7 +2666,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                       <div key={index} className="contents">
                         {/* Botão de swap entre colunas anteriores */}
                         {index > 0 && (
-                          <div className="flex items-center justify-center px-1">
+                          <div className="flex items-center justify-center px-1 sm:px-1 py-1 sm:py-0">
                             <Button
                               type="button"
                               variant="ghost"
@@ -2675,14 +2675,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                               onClick={() => swapSelecoes(index - 1, index)}
                               title={`Trocar ${odds[index - 1].selecao} ↔ ${entry.selecao}`}
                             >
-                              <ArrowLeftRight className="h-4 w-4" />
+                              <ArrowLeftRight className="h-4 w-4 rotate-90 sm:rotate-0" />
                             </Button>
                           </div>
                         )}
                         
                         <div 
                           tabIndex={!isEditing ? 0 : undefined}
-                          className={`flex-1 rounded-xl border-2 p-4 space-y-3 transition-all relative outline-none ${colors.bg} ${
+                          className={`flex-1 min-w-0 rounded-xl border-2 p-3 sm:p-4 space-y-3 transition-all relative outline-none ${colors.bg} ${
                             entry.isReference 
                               ? `${colors.border} ring-2 ring-primary/30` 
                               : colors.border
@@ -3029,7 +3029,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                           
                           {/* Casa | Odd | Stake | Linha na mesma linha - centralizado */}
                           {/* Stake com min-width para 5 dígitos + separadores (99.999,00) */}
-                          <div className="grid gap-2 justify-center" style={{ gridTemplateColumns: '130px 60px minmax(90px, 100px) 70px' }}>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 justify-center w-full" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))' }}>
                             {/* Casa */}
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground text-center block">Casa</Label>
@@ -3286,7 +3286,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                                     {/* Wrapper com posicionamento relativo para o botão de excluir */}
                                     <div className="relative">
                                       {/* Grid alinhado com entrada principal: Casa | Linha | Odd | Stake */}
-                                      <div className="grid gap-1.5 items-end pr-5" style={{ gridTemplateColumns: '130px 60px minmax(90px, 100px) 70px' }}>
+                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 items-end pr-5 w-full" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))' }}>
                                         <Select 
                                           value={addEntry.bookmaker_id}
                                           onValueChange={(v) => updateAdditionalEntry(index, addIdx, "bookmaker_id", v)}
