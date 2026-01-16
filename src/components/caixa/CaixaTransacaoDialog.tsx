@@ -95,6 +95,14 @@ interface Bookmaker {
   saldo_atual: number;
   saldo_usd: number;
   moeda: string;
+  bookmaker_catalogo_id?: string | null;
+}
+
+interface CatalogoConfig {
+  id: string;
+  moeda_padrao: string;
+  permite_saque_fiat: boolean;
+  status: string;
 }
 
 interface SaldoCaixaFiat {
@@ -521,6 +529,11 @@ export function CaixaTransacaoDialog({
   
   // Transfer flow type for TRANSFERENCIA
   const [fluxoTransferencia, setFluxoTransferencia] = useState<"CAIXA_PARCEIRO" | "PARCEIRO_PARCEIRO">("CAIXA_PARCEIRO");
+  
+  // Estado para configuração do catálogo (desacoplamento de métodos de saque)
+  const [catalogoConfig, setCatalogoConfig] = useState<CatalogoConfig | null>(null);
+  // Método de saque escolhido para bookmakers USD com permite_saque_fiat = true
+  const [metodoSaqueUsd, setMetodoSaqueUsd] = useState<"CRYPTO" | "FIAT">("CRYPTO");
   
   // Alert dialogs state
   const [showNoBankAlert, setShowNoBankAlert] = useState(false);
@@ -1026,10 +1039,13 @@ export function CaixaTransacaoDialog({
     try {
       const { data } = await supabase
         .from("bookmakers")
-        .select("id, nome, saldo_atual, saldo_usd, moeda")
+        .select("id, nome, saldo_atual, saldo_usd, moeda, bookmaker_catalogo_id")
         .order("nome");
       
-      setBookmakers(data || []);
+      setBookmakers(data?.map(b => ({
+        ...b,
+        bookmaker_catalogo_id: b.bookmaker_catalogo_id || null
+      })) || []);
     } catch (error) {
       console.error("Erro ao carregar bookmakers:", error);
     }
@@ -1109,6 +1125,62 @@ export function CaixaTransacaoDialog({
     }
   };
 
+  // Buscar configuração do catálogo quando bookmaker é selecionada para SAQUE
+  // Isso determina se a casa USD permite saque em FIAT (conta bancária)
+  useEffect(() => {
+    if (tipoTransacao !== "SAQUE") {
+      setCatalogoConfig(null);
+      setMetodoSaqueUsd("CRYPTO");
+      return;
+    }
+    
+    if (!origemBookmakerId) {
+      setCatalogoConfig(null);
+      setMetodoSaqueUsd("CRYPTO");
+      return;
+    }
+    
+    const fetchCatalogoConfig = async () => {
+      const bm = bookmakers.find(b => b.id === origemBookmakerId);
+      if (!bm) return;
+      
+      // Se a bookmaker opera em BRL (FIAT), não precisa buscar catálogo
+      // pois saque será sempre em FIAT
+      if (bm.moeda === "BRL") {
+        setCatalogoConfig(null);
+        setMetodoSaqueUsd("CRYPTO"); // Resetar para padrão
+        return;
+      }
+      
+      // Bookmaker USD - buscar configuração do catálogo
+      if (bm.bookmaker_catalogo_id) {
+        const { data } = await supabase
+          .from("bookmakers_catalogo")
+          .select("id, moeda_padrao, permite_saque_fiat, status")
+          .eq("id", bm.bookmaker_catalogo_id)
+          .single();
+        
+        if (data) {
+          setCatalogoConfig(data);
+          // Se a casa permite saque FIAT, manter a escolha anterior ou default CRYPTO
+          // Se não permite, forçar CRYPTO
+          if (!data.permite_saque_fiat) {
+            setMetodoSaqueUsd("CRYPTO");
+          }
+        } else {
+          setCatalogoConfig(null);
+          setMetodoSaqueUsd("CRYPTO");
+        }
+      } else {
+        // Sem catálogo vinculado, default CRYPTO
+        setCatalogoConfig(null);
+        setMetodoSaqueUsd("CRYPTO");
+      }
+    };
+    
+    fetchCatalogoConfig();
+  }, [origemBookmakerId, tipoTransacao, bookmakers]);
+
   // Funções auxiliares para filtrar parceiros e contas/wallets disponíveis no destino
   const getContasDisponiveisDestino = (parceiroId: string) => {
     return contasBancarias.filter(
@@ -1171,6 +1243,9 @@ export function CaixaTransacaoDialog({
     setDestinoWalletId("");
     setDestinoBookmakerId("");
     setFluxoTransferencia("CAIXA_PARCEIRO");
+    // Reset estados de saque USD
+    setCatalogoConfig(null);
+    setMetodoSaqueUsd("CRYPTO");
     
     // Reset refs de tracking para auto-focus
     prevCoin.current = "";

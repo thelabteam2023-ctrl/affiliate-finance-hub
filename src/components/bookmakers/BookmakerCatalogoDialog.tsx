@@ -53,6 +53,8 @@ export default function BookmakerCatalogoDialog({
   const [bonusList, setBonusList] = useState<BonusItem[]>([]);
   const [observacoes, setObservacoes] = useState("");
   const [loading, setLoading] = useState(false);
+  // Novo campo para desacoplamento de métodos de saque
+  const [permiteSaqueFiat, setPermiteSaqueFiat] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -68,6 +70,8 @@ export default function BookmakerCatalogoDialog({
         ? bookmaker.links_json.map((link: any) => ({ ...link, id: link.id || crypto.randomUUID() }))
         : [{ id: crypto.randomUUID(), url: "", referencia: "PADRÃO" }]);
       setBonusEnabled(bookmaker.bonus_enabled || false);
+      // Carregar configuração de saque FIAT
+      setPermiteSaqueFiat(bookmaker.permite_saque_fiat || false);
       
       if (Array.isArray(bookmaker.bonus_multiplos_json) && bookmaker.bonus_multiplos_json.length > 0) {
         setBonusList(bookmaker.bonus_multiplos_json.map((bonus: any) => ({ 
@@ -96,6 +100,7 @@ export default function BookmakerCatalogoDialog({
     setBonusEnabled(false);
     setBonusList([]);
     setObservacoes("");
+    setPermiteSaqueFiat(false);
   };
 
   // Auto-sugerir moeda quando status muda
@@ -104,8 +109,12 @@ export default function BookmakerCatalogoDialog({
     // Auto-sugerir moeda baseado no status
     if (newStatus === "REGULAMENTADA") {
       setMoedaPadrao("BRL");
+      // Casas regulamentadas não precisam de opção de saque FIAT (já é o padrão)
+      setPermiteSaqueFiat(false);
     } else {
       setMoedaPadrao("USD");
+      // Casas não regulamentadas: por padrão saque é CRYPTO
+      // Se desejar saque em FIAT, precisa marcar a opção
     }
   };
 
@@ -315,6 +324,8 @@ export default function BookmakerCatalogoDialog({
         bonus_simples_json: {} as any,
         bonus_multiplos_json: bonusEnabled ? bonusList.map(({ id, ...bonus }) => bonus) as any : [] as any,
         observacoes: observacoes || null,
+        // Campo de desacoplamento: só relevante para casas não regulamentadas (USD)
+        permite_saque_fiat: status === "NAO_REGULAMENTADA" ? permiteSaqueFiat : false,
       };
 
       if (bookmaker) {
@@ -468,6 +479,32 @@ export default function BookmakerCatalogoDialog({
                 </Select>
               </div>
             </div>
+
+            {/* Seção de Métodos de Saque - Apenas para casas não regulamentadas (USD) */}
+            {status === "NAO_REGULAMENTADA" && (
+              <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label htmlFor="permite-saque-fiat" className="text-sm font-medium">
+                      Permite saque em FIAT
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Habilita saque para conta bancária (BRL). Por padrão, saques são em CRYPTO.
+                    </p>
+                  </div>
+                  <Switch
+                    id="permite-saque-fiat"
+                    checked={permiteSaqueFiat}
+                    onCheckedChange={setPermiteSaqueFiat}
+                  />
+                </div>
+                {permiteSaqueFiat && (
+                  <p className="text-xs text-blue-500 bg-blue-500/10 p-2 rounded-md">
+                    ℹ️ Ao sacar em FIAT, o saldo USD será convertido para BRL com cotação no momento da confirmação.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-3">
               <Label>Links de Acesso *</Label>
