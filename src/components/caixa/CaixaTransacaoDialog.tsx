@@ -2043,49 +2043,88 @@ export function CaixaTransacaoDialog({
           );
         }
         
-        // SAQUE FIAT de casa USD (conversão) - buscar TODOS os vínculos USD com saldo
+        // SAQUE FIAT de casa USD (conversão)
+        // Filtrar pelo parceiro de destino e mostrar apenas casas USD que permitem saque FIAT
         if (origemSaqueFiat === "USD") {
+          const isDestinoCompleta = destinoParceiroId && destinoContaId;
+
           // Verificar se a bookmaker selecionada permite saque FIAT
-          const bookmakeSelecionada = origemBookmakerId 
-            ? bookmakers.find(b => b.id === origemBookmakerId) 
+          const bookmakeSelecionada = origemBookmakerId
+            ? bookmakers.find((b) => b.id === origemBookmakerId)
             : null;
-          
-          // Se bookmaker USD não permite saque FIAT, mostrar alerta
+
+          if (!isDestinoCompleta) {
+            return (
+              <>
+                <Alert className="border-blue-500/50 bg-blue-500/10">
+                  <AlertTriangle className="h-4 w-4 text-blue-500" />
+                  <AlertDescription className="text-blue-500">
+                    Selecione primeiro o parceiro e a conta bancária de destino
+                  </AlertDescription>
+                </Alert>
+                <div className="space-y-2">
+                  <Label>Bookmaker (USD → Conta Bancária)</Label>
+                  <BookmakerSelect
+                    key={`saque-usd-fiat-${destinoParceiroId}`}
+                    ref={bookmakerSelectRef}
+                    value={origemBookmakerId}
+                    onValueChange={setOrigemBookmakerId}
+                    disabled={!isDestinoCompleta}
+                    parceiroId={destinoParceiroId}
+                    somenteComSaldoUsd={true}
+                    moedaOperacional="USD"
+                    somentePermiteSaqueFiat={true}
+                  />
+                </div>
+              </>
+            );
+          }
+
+          // Se bookmaker USD não permite saque FIAT, mostrar alerta (fallback de segurança)
           if (bookmakeSelecionada && catalogoConfig && !catalogoConfig.permite_saque_fiat) {
             return (
               <>
                 <div className="space-y-2">
                   <Label>Bookmaker (USD → Conta Bancária)</Label>
                   <BookmakerSelect
-                    key={`saque-usd-fiat-all`}
+                    key={`saque-usd-fiat-${destinoParceiroId}`}
                     ref={bookmakerSelectRef}
                     value={origemBookmakerId}
                     onValueChange={setOrigemBookmakerId}
-                    buscarTodosVinculos={true}
+                    disabled={!isDestinoCompleta}
+                    parceiroId={destinoParceiroId}
                     somenteComSaldoUsd={true}
+                    moedaOperacional="USD"
+                    somentePermiteSaqueFiat={true}
                   />
                 </div>
-                <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+                <Alert
+                  variant="destructive"
+                  className="border-destructive/50 bg-destructive/10"
+                >
                   <AlertTriangle className="h-4 w-4 text-destructive" />
                   <AlertDescription className="text-destructive">
-                    Esta casa não permite saque direto para conta bancária (FIAT). 
-                    Use o método CRYPTO para realizar o saque ou selecione outra casa.
+                    Esta casa não permite saque direto para conta bancária (FIAT). Use o
+                    método CRYPTO para realizar o saque ou selecione outra casa.
                   </AlertDescription>
                 </Alert>
               </>
             );
           }
-          
+
           return (
             <div className="space-y-2">
               <Label>Bookmaker (USD → Conta Bancária)</Label>
               <BookmakerSelect
-                key={`saque-usd-fiat-all`}
+                key={`saque-usd-fiat-${destinoParceiroId}`}
                 ref={bookmakerSelectRef}
                 value={origemBookmakerId}
                 onValueChange={setOrigemBookmakerId}
-                buscarTodosVinculos={true}
+                disabled={!isDestinoCompleta}
+                parceiroId={destinoParceiroId}
                 somenteComSaldoUsd={true}
+                moedaOperacional="USD"
+                somentePermiteSaqueFiat={true}
               />
               {origemBookmakerId && catalogoConfig?.permite_saque_fiat && (
                 <p className="text-xs text-green-600">
@@ -2124,12 +2163,14 @@ export function CaixaTransacaoDialog({
           <div className="space-y-2">
             <Label>Bookmaker (com saldo USD)</Label>
             <BookmakerSelect
-              key={`saque-crypto-all`}
+              key={`saque-crypto-${destinoParceiroId}`}
               ref={bookmakerSelectRef}
               value={origemBookmakerId}
               onValueChange={setOrigemBookmakerId}
-              buscarTodosVinculos={true}
+              disabled={!isDestinoCompletaCrypto}
+              parceiroId={destinoParceiroId}
               somenteComSaldoUsd={true}
+              moedaOperacional="USD"
             />
           </div>
         </>
@@ -3238,10 +3279,8 @@ export function CaixaTransacaoDialog({
                   size="sm"
                   onClick={() => {
                     setOrigemSaqueFiat("BRL");
-                    // Resetar seleções
+                    // Resetar apenas a origem (mantém parceiro/conta destino)
                     setOrigemBookmakerId("");
-                    setDestinoParceiroId("");
-                    setDestinoContaId("");
                     setCatalogoConfig(null);
                   }}
                   className="flex-1"
@@ -3254,10 +3293,8 @@ export function CaixaTransacaoDialog({
                   size="sm"
                   onClick={() => {
                     setOrigemSaqueFiat("USD");
-                    // Resetar seleções
+                    // Resetar apenas a origem (mantém parceiro/conta destino)
                     setOrigemBookmakerId("");
-                    setDestinoParceiroId("");
-                    setDestinoContaId("");
                     setCatalogoConfig(null);
                   }}
                   className="flex-1"
