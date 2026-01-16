@@ -25,6 +25,7 @@ export default function SurebetWindowPage() {
   const [surebet, setSurebet] = useState<any>(null);
   const [loading, setLoading] = useState(isEditing);
   const [error, setError] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0); // Key para forçar remount do formulário
   
   // Buscar dados da surebet se estiver editando
   useEffect(() => {
@@ -121,8 +122,9 @@ export default function SurebetWindowPage() {
     if (isEditing) {
       window.close();
     } else {
-      // Resetar o estado para novo registro (force re-render)
+      // Resetar o estado e forçar remount do formulário com nova key
       setSurebet(null);
+      setFormKey(prev => prev + 1);
     }
   };
   
@@ -198,6 +200,7 @@ export default function SurebetWindowPage() {
       {/* Conteúdo - SurebetDialog como modal sempre aberto */}
       <div className="p-2 sm:p-4">
         <SurebetDialog
+          key={formKey}
           open={true}
           onOpenChange={(open) => {
             if (!open) handleClose();

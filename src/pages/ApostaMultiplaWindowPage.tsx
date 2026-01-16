@@ -21,6 +21,7 @@ export default function ApostaMultiplaWindowPage() {
   const [aposta, setAposta] = useState<any>(null);
   const [loading, setLoading] = useState(isEditing);
   const [error, setError] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0); // Key para forçar remount do formulário
 
   // Buscar dados da aposta se estiver editando
   useEffect(() => {
@@ -67,8 +68,9 @@ export default function ApostaMultiplaWindowPage() {
     if (isEditing) {
       window.close();
     } else {
-      // Resetar o estado para novo registro
+      // Resetar o estado e forçar remount do formulário com nova key
       setAposta(null);
+      setFormKey(prev => prev + 1);
     }
   };
 
@@ -113,6 +115,7 @@ export default function ApostaMultiplaWindowPage() {
   return (
     <div className="min-h-screen bg-background">
       <ApostaMultiplaDialog
+        key={formKey}
         open={true}
         onOpenChange={(open) => !open && handleClose()}
         aposta={aposta}
