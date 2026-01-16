@@ -43,9 +43,10 @@ interface BookmakerSelectProps {
   somenteComSaldo?: boolean;
   somenteComSaldoUsd?: boolean;
   somenteComSaldoFiat?: boolean; // Apenas bookmakers com saldo_atual > 0 (FIAT)
+  somentePermiteSaqueFiat?: boolean; // Apenas casas cujo catálogo permite saque FIAT (permite_saque_fiat = true)
   excludeVinculosDoParceiro?: string;
   moedaOperacional?: string; // Filtra bookmakers pela moeda operacional (BRL, USD, etc)
-  buscarTodosVinculos?: boolean; // Buscar todos os vínculos (de todos os parceiros) - usado em SAQUE CRYPTO/USD onde bookmaker é selecionada antes do parceiro
+  buscarTodosVinculos?: boolean; // Buscar todos os vínculos (de todos os parceiros) - usado apenas em fluxos que realmente selecionam bookmaker antes do parceiro
 }
 
 export interface BookmakerSelectRef {
@@ -73,6 +74,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   somenteComSaldo,
   somenteComSaldoUsd,
   somenteComSaldoFiat,
+  somentePermiteSaqueFiat,
   excludeVinculosDoParceiro,
   moedaOperacional,
   buscarTodosVinculos
@@ -89,7 +91,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   
   const lastFetchedValue = useRef<string>("");
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const isVinculoMode = !!parceiroId;
+  const isVinculoMode = !!parceiroId || !!buscarTodosVinculos;
 
   // Expose focus and open methods via ref
   useImperativeHandle(ref, () => ({
@@ -131,6 +133,12 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   const prevContextRef = useRef<{
     parceiroId?: string;
     moedaOperacional?: string;
+    somenteComSaldo?: boolean;
+    somenteComSaldoUsd?: boolean;
+    somenteComSaldoFiat?: boolean;
+    somentePermiteSaqueFiat?: boolean;
+    buscarTodosVinculos?: boolean;
+    excludeVinculosDoParceiro?: string;
     initialized: boolean;
   }>({ initialized: false });
   
@@ -141,15 +149,29 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     // Na montagem inicial, apenas marcar como inicializado
     if (!prev.initialized) {
       prevContextRef.current = { 
-        parceiroId, 
-        moedaOperacional, 
-        initialized: true 
+        parceiroId,
+        moedaOperacional,
+        somenteComSaldo,
+        somenteComSaldoUsd,
+        somenteComSaldoFiat,
+        somentePermiteSaqueFiat,
+        buscarTodosVinculos,
+        excludeVinculosDoParceiro,
+        initialized: true,
       };
       return;
     }
     
     // Detectar se houve mudança REAL de contexto
-    const contextChanged = prev.parceiroId !== parceiroId || prev.moedaOperacional !== moedaOperacional;
+    const contextChanged =
+      prev.parceiroId !== parceiroId ||
+      prev.moedaOperacional !== moedaOperacional ||
+      prev.somenteComSaldo !== somenteComSaldo ||
+      prev.somenteComSaldoUsd !== somenteComSaldoUsd ||
+      prev.somenteComSaldoFiat !== somenteComSaldoFiat ||
+      prev.somentePermiteSaqueFiat !== somentePermiteSaqueFiat ||
+      prev.buscarTodosVinculos !== buscarTodosVinculos ||
+      prev.excludeVinculosDoParceiro !== excludeVinculosDoParceiro;
     
     if (contextChanged) {
       // CRÍTICO: Limpar TUDO quando contexto muda - zero estado residual
@@ -166,8 +188,18 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     }
     
     // Atualizar ref
-    prevContextRef.current = { parceiroId, moedaOperacional, initialized: true };
-  }, [parceiroId, moedaOperacional, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat]);
+    prevContextRef.current = {
+      parceiroId,
+      moedaOperacional,
+      somenteComSaldo,
+      somenteComSaldoUsd,
+      somenteComSaldoFiat,
+      somentePermiteSaqueFiat,
+      buscarTodosVinculos,
+      excludeVinculosDoParceiro,
+      initialized: true,
+    };
+  }, [parceiroId, moedaOperacional, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, somentePermiteSaqueFiat, buscarTodosVinculos, excludeVinculosDoParceiro]);
   
   // Buscar lista de bookmakers para o dropdown
   useEffect(() => {
@@ -192,25 +224,31 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
               moeda,
               status,
               bookmakers_catalogo:bookmaker_catalogo_id (
-                logo_url
+                logo_url,
+                permite_saque_fiat
               )
             `)
             .eq("parceiro_id", parceiroId);
 
           // Filtrar por moeda operacional (mecanismo de depósito)
           if (moedaOperacional) {
-            query = query.eq('moeda', moedaOperacional);
+            query = query.eq("moeda", moedaOperacional);
+          }
+
+          // Filtrar apenas casas cujo catálogo permite saque FIAT
+          if (somentePermiteSaqueFiat) {
+            query = query.eq("bookmakers_catalogo.permite_saque_fiat", true);
           }
 
           if (somenteComSaldoUsd) {
             // Apenas bookmakers com saldo_usd > 0 (para saques CRYPTO)
-            query = query.gt('saldo_usd', 0);
+            query = query.gt("saldo_usd", 0);
           } else if (somenteComSaldoFiat) {
             // Apenas bookmakers com saldo_atual > 0 (para saques FIAT)
-            query = query.gt('saldo_atual', 0);
+            query = query.gt("saldo_atual", 0);
           } else if (somenteComSaldo) {
             // Com saldo significa saldo_atual > 0 OU saldo_usd > 0
-            query = query.or('saldo_atual.gt.0,saldo_usd.gt.0');
+            query = query.or("saldo_atual.gt.0,saldo_usd.gt.0");
           }
 
           const { data, error } = await query.order("nome");
@@ -262,24 +300,30 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
               status,
               parceiro_id,
               bookmakers_catalogo:bookmaker_catalogo_id (
-                logo_url
+                logo_url,
+                permite_saque_fiat
               )
             `);
 
           // Filtrar por moeda operacional (mecanismo de depósito)
           if (moedaOperacional) {
-            query = query.eq('moeda', moedaOperacional);
+            query = query.eq("moeda", moedaOperacional);
+          }
+
+          // Filtrar apenas casas cujo catálogo permite saque FIAT
+          if (somentePermiteSaqueFiat) {
+            query = query.eq("bookmakers_catalogo.permite_saque_fiat", true);
           }
 
           if (somenteComSaldoUsd) {
             // Apenas bookmakers com saldo_usd > 0 (para saques CRYPTO)
-            query = query.gt('saldo_usd', 0);
+            query = query.gt("saldo_usd", 0);
           } else if (somenteComSaldoFiat) {
             // Apenas bookmakers com saldo_atual > 0 (para saques FIAT)
-            query = query.gt('saldo_atual', 0);
+            query = query.gt("saldo_atual", 0);
           } else if (somenteComSaldo) {
             // Com saldo significa saldo_atual > 0 OU saldo_usd > 0
-            query = query.or('saldo_atual.gt.0,saldo_usd.gt.0');
+            query = query.or("saldo_atual.gt.0,saldo_usd.gt.0");
           }
 
           const { data, error } = await query.order("nome");
@@ -369,7 +413,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     return () => {
       abortController.abort();
     };
-  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro, moedaOperacional, buscarTodosVinculos]);
+  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, somentePermiteSaqueFiat, excludeVinculosDoParceiro, moedaOperacional, buscarTodosVinculos]);
 
   // Buscar dados de exibição quando value muda - execução imediata e determinística
   useEffect(() => {
