@@ -237,26 +237,12 @@ export function ConciliacaoSaldos({
         }
       }
 
-      // 3. Ajustar saldo da bookmaker com o VALOR REAL (não o nominal)
-      // Para DEPÓSITO: adicionar o valor REAL ao saldo da bookmaker
-      // Para SAQUE: subtrair o valor REAL do saldo da bookmaker
-      // Nota: o trigger atualizar_saldo_bookmaker_caixa() usa o valor_usd (nominal)
-      // Precisamos ajustar a DIFERENÇA para que o saldo final reflita o valor real
-      if (hasDiferenca) {
-        const bookmakerId = selectedTransaction.tipo_transacao === "DEPOSITO" 
-          ? selectedTransaction.destino_bookmaker_id 
-          : selectedTransaction.origem_bookmaker_id;
-        
-        if (bookmakerId) {
-          // A diferença é: valorReal - valorNominal
-          // Se positiva = ganho (adicionar mais), se negativa = perda (subtrair)
-          // Para DEPÓSITO: trigger já adicionou valorNominal, precisamos adicionar a diferença
-          // Para SAQUE: trigger já subtraiu valorNominal, precisamos subtrair a diferença
-          const deltaAjuste = selectedTransaction.tipo_transacao === "DEPOSITO" ? diferenca : -diferenca;
-          
-          await updateBookmakerBalance(bookmakerId, deltaAjuste);
-        }
-      }
+      // NOTA: A conciliação é SOMENTE INFORMATIVA
+      // A diferença cambial é registrada na tabela exchange_adjustments
+      // para fins de análise (perdas/ganhos nas taxas de conversão das casas)
+      // mas NÃO afeta o saldo de exposição crypto nem o saldo da bookmaker.
+      // O saldo já foi atualizado corretamente pelo trigger com o valor nominal (qtd_coin)
+      // que é o valor real de crypto que foi movimentado.
 
       if (hasDiferenca) {
         const tipoAjuste = diferenca > 0 ? "GANHO_CAMBIAL" : "PERDA_CAMBIAL";
