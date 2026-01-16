@@ -78,6 +78,8 @@ interface SurebetDialogProps {
   surebet: Surebet | null;
   onSuccess: () => void;
   activeTab?: string;
+  /** Quando true, renderiza apenas o conteúdo interno (sem Dialog wrapper) para uso em janelas flutuantes */
+  embedded?: boolean;
 }
 
 // Estrutura de entrada individual (fill) dentro de uma perna
@@ -519,7 +521,7 @@ const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2"): string
   return ["Sim", "Não"];
 };
 
-export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSuccess, activeTab = 'surebet' }: SurebetDialogProps) {
+export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSuccess, activeTab = 'surebet', embedded = false }: SurebetDialogProps) {
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
   
