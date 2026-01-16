@@ -45,6 +45,7 @@ interface BookmakerSelectProps {
   somenteComSaldoFiat?: boolean; // Apenas bookmakers com saldo_atual > 0 (FIAT)
   excludeVinculosDoParceiro?: string;
   moedaOperacional?: string; // Filtra bookmakers pela moeda operacional (BRL, USD, etc)
+  buscarTodosVinculos?: boolean; // Buscar todos os vínculos (de todos os parceiros) - usado em SAQUE CRYPTO/USD onde bookmaker é selecionada antes do parceiro
 }
 
 export interface BookmakerSelectRef {
@@ -73,7 +74,8 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   somenteComSaldoUsd,
   somenteComSaldoFiat,
   excludeVinculosDoParceiro,
-  moedaOperacional
+  moedaOperacional,
+  buscarTodosVinculos
 }, ref) => {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<BookmakerItem[]>([]);
@@ -241,6 +243,75 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           }
         }
       } 
+      // MODO TODOS OS VÍNCULOS (buscarTodosVinculos): Buscar todos os bookmakers de todos os parceiros
+      // Usado em SAQUE CRYPTO/USD onde a bookmaker é selecionada ANTES do parceiro
+      else if (buscarTodosVinculos && (somenteComSaldoUsd || somenteComSaldoFiat || somenteComSaldo)) {
+        setPrerequisitesReady(true);
+        setLoading(true);
+        
+        try {
+          let query = supabase
+            .from("bookmakers")
+            .select(`
+              id,
+              nome,
+              saldo_atual,
+              saldo_usd,
+              saldo_freebet,
+              moeda,
+              status,
+              parceiro_id,
+              bookmakers_catalogo:bookmaker_catalogo_id (
+                logo_url
+              )
+            `);
+
+          // Filtrar por moeda operacional (mecanismo de depósito)
+          if (moedaOperacional) {
+            query = query.eq('moeda', moedaOperacional);
+          }
+
+          if (somenteComSaldoUsd) {
+            // Apenas bookmakers com saldo_usd > 0 (para saques CRYPTO)
+            query = query.gt('saldo_usd', 0);
+          } else if (somenteComSaldoFiat) {
+            // Apenas bookmakers com saldo_atual > 0 (para saques FIAT)
+            query = query.gt('saldo_atual', 0);
+          } else if (somenteComSaldo) {
+            // Com saldo significa saldo_atual > 0 OU saldo_usd > 0
+            query = query.or('saldo_atual.gt.0,saldo_usd.gt.0');
+          }
+
+          const { data, error } = await query.order("nome");
+          
+          // Verificar se foi abortado antes de atualizar estado
+          if (abortController.signal.aborted) return;
+          
+          if (error) throw error;
+
+          const mapped: BookmakerItem[] = (data || []).map((b: any) => ({
+            id: b.id,
+            nome: b.nome,
+            logo_url: b.bookmakers_catalogo?.logo_url || null,
+            saldo_atual: b.saldo_atual,
+            saldo_usd: b.saldo_usd,
+            saldo_freebet: b.saldo_freebet,
+            moeda: b.moeda,
+            status: b.status,
+          }));
+
+          setItems(mapped);
+        } catch (error) {
+          if (!abortController.signal.aborted) {
+            console.error("Erro ao carregar bookmakers:", error);
+            setItems([]);
+          }
+        } finally {
+          if (!abortController.signal.aborted) {
+            setLoading(false);
+          }
+        }
+      }
       // MODO CATÁLOGO (sem parceiroId): Buscar do catálogo global
       else if (!parceiroId && !moedaOperacional && !somenteComSaldo && !somenteComSaldoUsd && !somenteComSaldoFiat) {
         // Modo catálogo só é permitido quando não há nenhum filtro de contexto
@@ -298,7 +369,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     return () => {
       abortController.abort();
     };
-  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro, moedaOperacional]);
+  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro, moedaOperacional, buscarTodosVinculos]);
 
   // Buscar dados de exibição quando value muda - execução imediata e determinística
   useEffect(() => {
