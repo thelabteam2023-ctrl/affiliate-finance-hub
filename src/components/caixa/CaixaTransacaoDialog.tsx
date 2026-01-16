@@ -1186,6 +1186,8 @@ export function CaixaTransacaoDialog({
   }, [origemBookmakerId, tipoTransacao, bookmakers]);
 
   // Sincronizar tipoMoeda quando metodoSaqueUsd muda (para SAQUE de bookmaker USD)
+  // IMPORTANTE: Se origemSaqueFiat === "USD", estamos no fluxo de conversão USD→FIAT
+  // e NÃO devemos mudar para CRYPTO
   useEffect(() => {
     if (tipoTransacao !== "SAQUE") return;
     if (!origemBookmakerId) return;
@@ -1193,6 +1195,14 @@ export function CaixaTransacaoDialog({
     const bm = bookmakers.find(b => b.id === origemBookmakerId);
     if (!bm || bm.moeda !== "USD") return;
     
+    // Se estamos no fluxo "Casa USD (conversão)", MANTER FIAT - não mudar para CRYPTO
+    if (origemSaqueFiat === "USD") {
+      // Este fluxo é explicitamente FIAT (conversão USD → BRL)
+      // Não fazer nada - manter tipoMoeda como FIAT
+      return;
+    }
+    
+    // Fluxo normal de SAQUE USD (via toggle metodoSaqueUsd dentro do form de origem)
     // Atualizar tipoMoeda baseado no método escolhido
     if (metodoSaqueUsd === "FIAT") {
       setTipoMoeda("FIAT");
@@ -1200,7 +1210,7 @@ export function CaixaTransacaoDialog({
     } else {
       setTipoMoeda("CRYPTO");
     }
-  }, [metodoSaqueUsd, origemBookmakerId, tipoTransacao, bookmakers]);
+  }, [metodoSaqueUsd, origemBookmakerId, tipoTransacao, bookmakers, origemSaqueFiat]);
   const getContasDisponiveisDestino = (parceiroId: string) => {
     return contasBancarias.filter(
       (c) => c.parceiro_id === parceiroId && c.id !== origemContaId
