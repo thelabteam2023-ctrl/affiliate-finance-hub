@@ -315,6 +315,45 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     fetchAllApostas();
   }, [projetoId, tabFilters.period, tabFilters.customDateRange, refreshTrigger]);
 
+  // Listener para BroadcastChannel - atualiza quando surebet é salva em janela externa
+  useEffect(() => {
+    const channel = new BroadcastChannel("surebet_channel");
+    
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "SUREBET_SAVED" && event.data?.projetoId === projetoId) {
+        console.log("[ProjetoApostasTab] Surebet salva em janela externa, atualizando lista...");
+        fetchAllApostas();
+        onDataChange?.();
+      }
+    };
+    
+    channel.addEventListener("message", handleMessage);
+    
+    // Fallback: listener para localStorage (browsers que não suportam BroadcastChannel)
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "surebet_saved") {
+        try {
+          const data = JSON.parse(event.newValue || "{}");
+          if (data.projetoId === projetoId) {
+            console.log("[ProjetoApostasTab] Surebet salva (localStorage fallback), atualizando lista...");
+            fetchAllApostas();
+            onDataChange?.();
+          }
+        } catch (e) {
+          // Ignorar erros de parse
+        }
+      }
+    };
+    
+    window.addEventListener("storage", handleStorage);
+    
+    return () => {
+      channel.removeEventListener("message", handleMessage);
+      channel.close();
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [projetoId, onDataChange]);
+
   const fetchAllApostas = async () => {
     try {
       setLoading(true);
