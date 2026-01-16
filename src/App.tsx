@@ -37,6 +37,8 @@ import SystemAdmin from "./pages/SystemAdmin";
 import AcceptInvite from "./pages/AcceptInvite";
 import ProtecaoProgressiva from "./pages/ProtecaoProgressiva";
 import SurebetWindowPage from "./pages/SurebetWindowPage";
+import ApostaWindowPage from "./pages/ApostaWindowPage";
+import ApostaMultiplaWindowPage from "./pages/ApostaMultiplaWindowPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -270,6 +272,30 @@ const App = () => (
             <Route path="/janela/surebet/:id" element={
               <ProtectedRoute>
                 <SurebetWindowPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Janela Aposta Simples - standalone, para abrir em nova janela */}
+            <Route path="/janela/aposta/novo" element={
+              <ProtectedRoute>
+                <ApostaWindowPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/janela/aposta/:id" element={
+              <ProtectedRoute>
+                <ApostaWindowPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Janela Aposta Múltipla - standalone, para abrir em nova janela */}
+            <Route path="/janela/multipla/novo" element={
+              <ProtectedRoute>
+                <ApostaMultiplaWindowPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/janela/multipla/:id" element={
+              <ProtectedRoute>
+                <ApostaMultiplaWindowPage />
               </ProtectedRoute>
             } />
             

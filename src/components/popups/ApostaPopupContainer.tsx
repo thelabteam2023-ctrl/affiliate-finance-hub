@@ -1,19 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApostaPopup } from '@/contexts/ApostaPopupContext';
-import { ApostaDialog } from '@/components/projeto-detalhe/ApostaDialog';
-import { ApostaMultiplaDialog } from '@/components/projeto-detalhe/ApostaMultiplaDialog';
 import { SurebetPopup } from './SurebetPopup';
+import { openApostaWindow, openApostaMultiplaWindow } from '@/lib/windowHelper';
 import { getEstrategiaFromTab } from '@/lib/apostaConstants';
-import { DollarSign, Layers } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 /**
  * Container que renderiza os popups de apostas baseado no contexto
  * Gerencia qual popup/dialog está aberto através do ApostaPopupContext
  * 
- * - Surebet: Usa janela flutuante arrastável (SurebetPopup)
- * - Simples/Múltipla: Usa dialogs tradicionais (temporariamente)
+ * - Surebet: Abre em janela externa via SurebetPopup (bridge)
+ * - Simples: Abre em janela externa
+ * - Múltipla: Abre em janela externa
  */
 export const ApostaPopupContainer: React.FC = () => {
   const {
@@ -24,44 +21,39 @@ export const ApostaPopupContainer: React.FC = () => {
     closePopup,
     toggleMinimize,
     setPosition,
-    onSuccessCallback,
   } = useApostaPopup();
 
-  const handleSuccess = () => {
-    onSuccessCallback?.();
-    closePopup();
-  };
+  // Quando um popup é ativado, abrir a janela externa correspondente
+  useEffect(() => {
+    if (!activePopup || !data) return;
+
+    if (activePopup === 'simples') {
+      const estrategia = getEstrategiaFromTab(data.activeTab || 'apostas');
+      openApostaWindow({
+        projetoId: data.projetoId,
+        id: data.aposta?.id || null,
+        activeTab: data.activeTab,
+        estrategia,
+      });
+      closePopup();
+    }
+
+    if (activePopup === 'multipla') {
+      const estrategia = getEstrategiaFromTab(data.activeTab || 'apostas');
+      openApostaMultiplaWindow({
+        projetoId: data.projetoId,
+        id: data.aposta?.id || null,
+        activeTab: data.activeTab,
+        estrategia,
+      });
+      closePopup();
+    }
+  }, [activePopup, data, closePopup]);
 
   if (!activePopup || !data) return null;
 
-  // Configurações por tipo para botão minimizado (simples e múltipla)
-  const getPopupConfig = () => {
-    switch (activePopup) {
-      case 'simples':
-        return {
-          title: data.aposta ? 'Editar Aposta' : 'Nova Aposta',
-          icon: <DollarSign className="h-5 w-5" />,
-          color: 'bg-emerald-500 hover:bg-emerald-600',
-        };
-      case 'multipla':
-        return {
-          title: data.aposta ? 'Editar Múltipla' : 'Nova Múltipla',
-          icon: <Layers className="h-5 w-5" />,
-          color: 'bg-blue-500 hover:bg-blue-600',
-        };
-      default:
-        return {
-          title: 'Popup',
-          icon: <DollarSign className="h-5 w-5" />,
-          color: 'bg-primary',
-        };
-    }
-  };
-
-  const config = getPopupConfig();
-
   // ============================================================
-  // SUREBET - Janela flutuante arrastável
+  // SUREBET - Janela flutuante arrastável (bridge para janela externa)
   // ============================================================
   if (activePopup === 'surebet') {
     return (
@@ -74,63 +66,12 @@ export const ApostaPopupContainer: React.FC = () => {
         onPositionChange={setPosition}
         projetoId={data.projetoId}
         surebet={data.surebet}
-        onSuccess={handleSuccess}
+        onSuccess={closePopup}
         activeTab={data.activeTab}
       />
     );
   }
 
-  // ============================================================
-  // SIMPLES e MÚLTIPLA - Dialogs tradicionais (por enquanto)
-  // ============================================================
-  
-  // Quando minimizado, mostra apenas o FAB flutuante
-  if (isMinimized) {
-    return (
-      <div
-        className="fixed z-[9999] cursor-pointer"
-        style={{ bottom: 20, right: 20 }}
-      >
-        <Button
-          onClick={toggleMinimize}
-          className={cn(
-            "h-14 w-14 rounded-full shadow-lg",
-            config.color
-          )}
-          title={config.title}
-        >
-          {config.icon}
-        </Button>
-      </div>
-    );
-  }
-
-  // Renderiza o dialog apropriado
-  return (
-    <>
-      {activePopup === 'simples' && (
-        <ApostaDialog
-          open={true}
-          onOpenChange={(open) => !open && closePopup()}
-          aposta={data.aposta || null}
-          projetoId={data.projetoId}
-          onSuccess={handleSuccess}
-          defaultEstrategia={getEstrategiaFromTab(data.activeTab || 'apostas')}
-          activeTab={data.activeTab || 'apostas'}
-        />
-      )}
-
-      {activePopup === 'multipla' && (
-        <ApostaMultiplaDialog
-          open={true}
-          onOpenChange={(open) => !open && closePopup()}
-          aposta={data.aposta || null}
-          projetoId={data.projetoId}
-          onSuccess={handleSuccess}
-          defaultEstrategia={getEstrategiaFromTab(data.activeTab || 'apostas')}
-          activeTab={data.activeTab || 'apostas'}
-        />
-      )}
-    </>
-  );
+  // Simples e Múltipla são tratados no useEffect acima
+  return null;
 };
