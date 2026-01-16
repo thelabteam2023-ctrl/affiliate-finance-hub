@@ -107,6 +107,8 @@ interface ApostaMultiplaDialogProps {
   onSuccess: () => void;
   defaultEstrategia?: string;
   activeTab?: string;
+  /** Quando true, renderiza apenas o conteúdo interno (sem Dialog wrapper) para uso em janelas flutuantes */
+  embedded?: boolean;
 }
 
 export function ApostaMultiplaDialog({
@@ -117,6 +119,7 @@ export function ApostaMultiplaDialog({
   onSuccess,
   defaultEstrategia = 'PUNTER',
   activeTab = 'apostas',
+  embedded = false,
 }: ApostaMultiplaDialogProps) {
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);

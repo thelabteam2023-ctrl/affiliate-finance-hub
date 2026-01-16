@@ -115,6 +115,8 @@ interface ApostaDialogProps {
   onSuccess: () => void;
   defaultEstrategia?: string;
   activeTab?: string;
+  /** Quando true, renderiza apenas o conteúdo interno (sem Dialog wrapper) para uso em janelas flutuantes */
+  embedded?: boolean;
 }
 
 const ESPORTES_BASE = [
@@ -367,7 +369,7 @@ const getMoneylineSelecoes = (esporte: string | undefined, evento: string): stri
 
 // Removed EXCHANGES list - now using bookmakers list for Exchange tab
 
-export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas' }: ApostaDialogProps) {
+export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas', embedded = false }: ApostaDialogProps) {
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
