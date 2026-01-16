@@ -2319,10 +2319,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     if (!surebet) return;
     
     try {
-      // Buscar pernas atuais da operação na tabela unificada
+      // Buscar pernas atuais E contexto_operacional da operação na tabela unificada
       const { data: operacaoData } = await supabase
         .from("apostas_unificada")
-        .select("pernas")
+        .select("pernas, contexto_operacional")
         .eq("id", surebet.id)
         .single();
       
@@ -2332,17 +2332,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       const perna = pernas[pernaIndex];
       if (!perna) return;
 
-      // Rollover: a contabilização deve depender de bônus ativo na casa (não da aba/contexto)
+      // CORREÇÃO: Determinar se é contexto de bônus
+      // Em contexto BONUS, o delta deve ir para o saldo do bônus (skipBonusCheck = false)
+      const contextoOperacional = operacaoData.contexto_operacional || "NORMAL";
+      const isContextoBonus = contextoOperacional === "BONUS";
 
       const stake = perna.stake || 0;
       const odd = perna.odd || 0;
       const resultadoAnterior = perna.resultado;
       const bookmakerId = perna.bookmaker_id;
       
-      // CORREÇÃO: Verificar se a perna usa stake_bonus
-      // Se não usa bônus, o delta deve ir para o saldo real (não para o bônus)
+      // CORREÇÃO: Verificar se a perna usa stake_bonus OU se é contexto de bônus
+      // Se tem stake_bonus explícito OU é contexto BONUS, o delta deve ir para o bônus
       const stakeBonus = (perna as { stake_bonus?: number }).stake_bonus || 0;
-      const temBonusComStake = stakeBonus > 0;
+      const temBonusComStake = stakeBonus > 0 || isContextoBonus;
 
       // Se o resultado não mudou, não fazer nada
       if (resultadoAnterior === resultado) return;
