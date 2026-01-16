@@ -1309,7 +1309,7 @@ export function ApostaMultiplaDialog({
                   "bg-muted/30"
                 }`}>
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                       <span className="text-xs font-medium text-muted-foreground">
                         SELEÇÃO {index + 1}
                       </span>
@@ -1317,7 +1317,7 @@ export function ApostaMultiplaDialog({
                         value={selecao.resultado || "PENDENTE"} 
                         onValueChange={(v) => handleSelecaoChange(index, "resultado", v)}
                       >
-                        <SelectTrigger className="w-[110px] h-7 text-xs">
+                        <SelectTrigger className="w-full sm:w-[110px] h-7 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1330,7 +1330,7 @@ export function ApostaMultiplaDialog({
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="grid grid-cols-[1fr,100px] gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr,100px] gap-2">
                       <Input
                         placeholder="Ex: Flamengo x Palmeiras - Flamengo vence"
                         value={selecao.descricao}
@@ -1360,7 +1360,7 @@ export function ApostaMultiplaDialog({
                 <div className="text-xs text-muted-foreground mb-2">
                   Preview da Múltipla
                 </div>
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Resultado:</span>
                     <Badge className={`${
@@ -1391,7 +1391,7 @@ export function ApostaMultiplaDialog({
             </Card>
 
             {/* Stake e Cálculos */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <Label>Stake (R$) *</Label>
                 <Input

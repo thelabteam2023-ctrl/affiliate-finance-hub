@@ -2414,7 +2414,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             </div>
 
             {/* Linha 1: Evento + Data/Hora */}
-            <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
               <div className="space-y-1.5">
                 <Label className={`block uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.evento ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Evento {printFieldsNeedingReview.evento && <span className="text-[9px]">⚠</span>}
@@ -2426,7 +2426,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   className={`uppercase h-10 ${printFieldsNeedingReview.evento ? 'border-amber-500/50 focus:ring-amber-500/30' : ''}`}
                 />
               </div>
-              <div className={`space-y-1.5 min-w-[180px] ${printFieldsNeedingReview.dataHora ? '[&_button]:border-amber-500/50' : ''}`}>
+              <div className={`space-y-1.5 w-full sm:min-w-[180px] ${printFieldsNeedingReview.dataHora ? '[&_button]:border-amber-500/50' : ''}`}>
                 <Label className={`block text-center uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.dataHora ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Data/Hora {printFieldsNeedingReview.dataHora && <span className="text-[9px]">⚠</span>}
                 </Label>
@@ -2439,7 +2439,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             </div>
 
             {/* Linha 2: Esporte, Mercado, Seleção */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="space-y-1.5">
                 <Label className={`block text-center uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.esporte ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Esporte {printFieldsNeedingReview.esporte && <span className="text-[9px]">⚠</span>}
@@ -2523,7 +2523,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
               {/* Aba Bookmaker */}
               <TabsContent value="bookmaker" className="space-y-4 mt-4">
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div className="space-y-2">
                     <Label className="block text-center uppercase text-xs tracking-wider">Bookmaker *</Label>
                     <Select 
@@ -2831,7 +2831,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                       ? "border-emerald-500/30 bg-emerald-500/5" 
                       : "border-rose-500/30 bg-rose-500/5"
                   }`}>
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div className="space-y-1">
                         <Label className="block text-center uppercase text-xs tracking-wider">Casa *</Label>
                         <Select value={exchangeBookmakerId} onValueChange={setExchangeBookmakerId}>
