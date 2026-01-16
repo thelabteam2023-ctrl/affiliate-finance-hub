@@ -520,7 +520,7 @@ export function CaixaTransacaoDialog({
   const [saquesPendentes, setSaquesPendentes] = useState<Record<string, number>>({});
   
   // Transfer flow type for TRANSFERENCIA
-  const [fluxoTransferencia, setFluxoTransferencia] = useState<"CAIXA_PARCEIRO" | "PARCEIRO_PARCEIRO">("CAIXA_PARCEIRO");
+  const [fluxoTransferencia, setFluxoTransferencia] = useState<"CAIXA_PARCEIRO" | "PARCEIRO_PARCEIRO" | "PARCEIRO_CAIXA">("CAIXA_PARCEIRO");
   
   // Alert dialogs state
   const [showNoBankAlert, setShowNoBankAlert] = useState(false);
@@ -625,7 +625,20 @@ export function CaixaTransacaoDialog({
         setOrigemParceiroId("");
         setOrigemContaId("");
         setOrigemWalletId("");
+      } else if (fluxoTransferencia === "PARCEIRO_CAIXA") {
+        // PARCEIRO → CAIXA OPERACIONAL
+        setDestinoTipo("CAIXA_OPERACIONAL");
+        if (tipoMoeda === "FIAT") {
+          setOrigemTipo("PARCEIRO_CONTA");
+        } else {
+          setOrigemTipo("PARCEIRO_WALLET");
+        }
+        // Limpar destino quando fluxo muda para PARCEIRO_CAIXA
+        setDestinoParceiroId("");
+        setDestinoContaId("");
+        setDestinoWalletId("");
       } else {
+        // PARCEIRO_PARCEIRO
         if (tipoMoeda === "FIAT") {
           setOrigemTipo("PARCEIRO_CONTA");
           setDestinoTipo("PARCEIRO_CONTA");
@@ -1996,6 +2009,204 @@ export function CaixaTransacaoDialog({
         );
       }
       
+      // PARCEIRO → CAIXA flow - Mesma UI de seleção de parceiros com saldo
+      if (fluxoTransferencia === "PARCEIRO_CAIXA") {
+        if (tipoMoeda === "FIAT") {
+          // Get parceiros com saldo disponível na moeda selecionada
+          const parceirosComSaldo = saldosParceirosContas
+            .filter(s => s.moeda === moeda && s.saldo > 0)
+            .map(s => s.parceiro_id)
+            .filter((value, index, self) => self.indexOf(value) === index);
+
+          return (
+            <>
+              <div className="space-y-2">
+                <Label>Parceiro (com saldo em {moeda})</Label>
+                <ParceiroSelect
+                  value={origemParceiroId}
+                  onValueChange={(value) => {
+                    setOrigemParceiroId(value);
+                    setOrigemContaId("");
+                  }}
+                  onlyParceiros={parceirosComSaldo}
+                  showSaldo={true}
+                  tipoMoeda="FIAT"
+                  moeda={moeda}
+                  saldosContas={saldosParceirosContas}
+                />
+              </div>
+              {origemParceiroId && (
+                <div className="space-y-2">
+                  <Label>Conta Bancária</Label>
+                  <Select 
+                    value={origemContaId} 
+                    onValueChange={(value) => {
+                      setOrigemContaId(value);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contasBancarias
+                        .filter((c) => {
+                          if (c.parceiro_id !== origemParceiroId) return false;
+                          const saldo = saldosParceirosContas.find(
+                            s => s.conta_id === c.id && s.moeda === moeda
+                          );
+                          return saldo && saldo.saldo > 0;
+                        })
+                        .map((conta) => {
+                          const saldo = saldosParceirosContas.find(
+                            s => s.conta_id === conta.id && s.moeda === moeda
+                          );
+                          return (
+                            <SelectItem key={conta.id} value={conta.id}>
+                              {conta.banco} - Saldo: {formatCurrency(saldo?.saldo || 0)}
+                            </SelectItem>
+                          );
+                        })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {origemParceiroId && contasBancarias.filter((c) => {
+                if (c.parceiro_id !== origemParceiroId) return false;
+                const saldo = saldosParceirosContas.find(
+                  s => s.conta_id === c.id && s.moeda === moeda
+                );
+                return saldo && saldo.saldo > 0;
+              }).length === 0 && (
+                <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <AlertDescription className="text-warning">
+                    Este parceiro não possui contas bancárias com saldo em {moeda}.{' '}
+                    <button
+                      onClick={() => {
+                        setAlertParceiroId(origemParceiroId);
+                        setShowNoBankAlert(true);
+                      }}
+                      className="underline font-medium"
+                    >
+                      Cadastrar agora
+                    </button>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
+          );
+        } else {
+          // CRYPTO - Filtrar parceiros com saldo no coin selecionado
+          const parceirosComSaldo = saldosParceirosWallets
+            .filter(s => s.coin === coin && s.saldo_usd > 0)
+            .map(s => s.parceiro_id)
+            .filter((value, index, self) => self.indexOf(value) === index);
+
+          return (
+            <>
+              <div className="space-y-2">
+                <Label>Parceiro (com saldo em {coin})</Label>
+                <ParceiroSelect
+                  value={origemParceiroId}
+                  onValueChange={(value) => {
+                    setOrigemParceiroId(value);
+                    setOrigemWalletId("");
+                  }}
+                  onlyParceiros={parceirosComSaldo}
+                  showSaldo={true}
+                  tipoMoeda="CRYPTO"
+                  coin={coin}
+                  saldosWallets={saldosParceirosWallets}
+                />
+              </div>
+              {origemParceiroId && (
+                <div className="space-y-2">
+                  <Label>Wallet Crypto</Label>
+                  <Select 
+                    value={origemWalletId} 
+                    onValueChange={(value) => {
+                      setOrigemWalletId(value);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {walletsCrypto
+                        .filter((w) => {
+                          if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
+                          const saldo = saldosParceirosWallets.find(
+                            s => s.wallet_id === w.id && s.coin === coin
+                          );
+                          return saldo && saldo.saldo_usd > 0;
+                        })
+                        .map((wallet) => {
+                          const saldo = saldosParceirosWallets.find(
+                            s => s.wallet_id === wallet.id && s.coin === coin
+                          );
+                          const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                          const shortenedAddress = wallet.endereco 
+                            ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
+                            : '';
+                          return (
+                            <SelectItem key={wallet.id} value={wallet.id}>
+                              <span className="font-mono">{walletName} - {shortenedAddress} - Saldo: {formatCurrency(saldo?.saldo_usd || 0)}</span>
+                            </SelectItem>
+                          );
+                        })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {origemParceiroId && coin && (() => {
+                const walletsDoParceiroComMoeda = walletsCrypto.filter(
+                  (w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin)
+                );
+                const temWalletComMoeda = walletsDoParceiroComMoeda.length > 0;
+                const walletsComSaldo = walletsDoParceiroComMoeda.filter((w) => {
+                  const saldo = saldosParceirosWallets.find(
+                    s => s.wallet_id === w.id && s.coin === coin
+                  );
+                  return saldo && saldo.saldo_usd > 0;
+                });
+                const temSaldo = walletsComSaldo.length > 0;
+
+                if (temSaldo) return null;
+
+                if (!temWalletComMoeda) {
+                  return (
+                    <Alert variant="destructive" className="border-warning/50 bg-warning/10">
+                      <AlertTriangle className="h-4 w-4 text-warning" />
+                      <AlertDescription className="text-warning">
+                        Este parceiro não possui uma wallet {coin} cadastrada.{' '}
+                        <button
+                          onClick={() => {
+                            setAlertParceiroId(origemParceiroId);
+                            setShowNoWalletAlert(true);
+                          }}
+                          className="underline font-medium"
+                        >
+                          Cadastrar agora
+                        </button>
+                      </AlertDescription>
+                    </Alert>
+                  );
+                } else {
+                  return (
+                    <Alert className="border-blue-500/50 bg-blue-500/10">
+                      <Info className="h-4 w-4 text-blue-500" />
+                      <AlertDescription className="text-blue-500">
+                        Este parceiro possui uma wallet {coin}, porém sem saldo disponível.
+                      </AlertDescription>
+                    </Alert>
+                  );
+                }
+              })()}
+            </>
+          );
+        }
+      }
+      
       // PARCEIRO → PARCEIRO flow - Filtrar parceiros com saldo na moeda
       if (tipoMoeda === "FIAT") {
         // Get parceiros com saldo disponível na moeda selecionada
@@ -2559,6 +2770,15 @@ export function CaixaTransacaoDialog({
         }
       }
 
+      // PARCEIRO → CAIXA OPERACIONAL flow (destino = caixa)
+      if (fluxoTransferencia === "PARCEIRO_CAIXA") {
+        return (
+          <div className="text-sm text-muted-foreground italic text-center">
+            Caixa Operacional
+          </div>
+        );
+      }
+
       // PARCEIRO → PARCEIRO flow (destino)
       const parceirosDisponiveis = getParceirosDisponiveisDestino();
       const origemEstaCompleta = isOrigemCompleta();
@@ -2952,6 +3172,24 @@ export function CaixaTransacaoDialog({
             saldo: s.saldo_usd
           }))
         };
+      } else if (fluxoTransferencia === "PARCEIRO_CAIXA") {
+        // Parceiro → Caixa Operacional: moedas disponíveis nos parceiros
+        const moedasFiatParceiros = [...new Set(
+          saldosParceirosContas
+            .filter(s => s.saldo > 0)
+            .map(s => s.moeda)
+        )];
+        
+        const moedasCryptoParceiros = [...new Set(
+          saldosParceirosWallets
+            .filter(s => s.saldo_coin > 0)
+            .map(s => s.coin)
+        )];
+        
+        return {
+          fiat: MOEDAS_FIAT.filter(m => moedasFiatParceiros.includes(m.value)),
+          crypto: MOEDAS_CRYPTO.filter(m => moedasCryptoParceiros.includes(m.value))
+        };
       } else {
         // Parceiro → Parceiro: moedas disponíveis nos parceiros
         const moedasFiatParceiros = [...new Set(
@@ -3046,6 +3284,15 @@ export function CaixaTransacaoDialog({
                 className="flex-1"
               >
                 Caixa → Parceiro
+              </Button>
+              <Button
+                type="button"
+                variant={fluxoTransferencia === "PARCEIRO_CAIXA" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFluxoTransferencia("PARCEIRO_CAIXA")}
+                className="flex-1"
+              >
+                Parceiro → Caixa
               </Button>
               <Button
                 type="button"
@@ -3409,8 +3656,9 @@ export function CaixaTransacaoDialog({
                                 )}
                               </div>
                             )}
-                            {/* Transferência Parceiro → Parceiro - Mostrar saldo SEMPRE */}
-                            {tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && 
+                            {/* Transferência Parceiro → Parceiro OU Parceiro → Caixa - Mostrar saldo SEMPRE */}
+                            {tipoTransacao === "TRANSFERENCIA" && 
+                             (fluxoTransferencia === "PARCEIRO_PARCEIRO" || fluxoTransferencia === "PARCEIRO_CAIXA") && 
                              (origemTipo === "PARCEIRO_CONTA" || origemTipo === "PARCEIRO_WALLET") && 
                              (origemContaId || origemWalletId) && (
                               <div className="mt-3 space-y-1">
