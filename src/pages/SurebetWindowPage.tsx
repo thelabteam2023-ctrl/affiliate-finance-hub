@@ -96,7 +96,7 @@ export default function SurebetWindowPage() {
     fetchSurebet();
   }, [id, isEditing]);
   
-  // Handler de sucesso - notifica janela pai e fecha
+  // Handler de sucesso - notifica janela pai e mantém janela aberta para novas inserções
   const handleSuccess = () => {
     // Usar BroadcastChannel para notificar a janela principal
     try {
@@ -116,8 +116,14 @@ export default function SurebetWindowPage() {
       }));
     }
     
-    // Fechar a janela após salvar
-    window.close();
+    // Se estava editando, fechar a janela após salvar
+    // Se era novo registro, manter aberta para próximas inserções
+    if (isEditing) {
+      window.close();
+    } else {
+      // Resetar o estado para novo registro (force re-render)
+      setSurebet(null);
+    }
   };
   
   // Handler de fechamento
