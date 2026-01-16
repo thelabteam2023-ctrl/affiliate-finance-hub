@@ -1030,8 +1030,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                   key={operacao.id}
                   surebet={operacao}
                   onEdit={(sb) => {
-                    setSelectedSurebet(sb as Surebet);
-                    setDialogOpen(true);
+                    // Abrir em janela externa
+                    const url = `/janela/surebet/${sb.id}?projetoId=${encodeURIComponent(projetoId)}&tab=surebet`;
+                    window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
                   }}
                   formatCurrency={formatCurrency}
                   bookmakerNomeMap={bookmakerNomeMap}

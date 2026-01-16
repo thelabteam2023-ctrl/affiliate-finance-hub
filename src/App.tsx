@@ -36,6 +36,7 @@ import ComunidadeChatPopout from "./pages/ComunidadeChatPopout";
 import SystemAdmin from "./pages/SystemAdmin";
 import AcceptInvite from "./pages/AcceptInvite";
 import ProtecaoProgressiva from "./pages/ProtecaoProgressiva";
+import SurebetWindowPage from "./pages/SurebetWindowPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -257,6 +258,18 @@ const App = () => (
             <Route path="/ferramentas/protecao-progressiva" element={
               <ProtectedRoute>
                 <ProtecaoProgressiva />
+              </ProtectedRoute>
+            } />
+            
+            {/* Janela Surebet - standalone, para abrir em nova janela */}
+            <Route path="/janela/surebet/novo" element={
+              <ProtectedRoute>
+                <SurebetWindowPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/janela/surebet/:id" element={
+              <ProtectedRoute>
+                <SurebetWindowPage />
               </ProtectedRoute>
             } />
             

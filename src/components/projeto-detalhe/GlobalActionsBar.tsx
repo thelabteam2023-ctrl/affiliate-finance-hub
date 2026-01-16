@@ -161,16 +161,10 @@ export function GlobalActionsBar({
   };
 
   const handleOpenSurebet = () => {
-    setOnSuccessCallback(() => () => {
-      onApostaCreated?.();
-      toast.success("Surebet registrada com sucesso!", {
-        action: onNavigateToTab ? {
-          label: "Ver em Apostas",
-          onClick: () => onNavigateToTab("apostas")
-        } : undefined,
-      });
-    });
-    openSurebet(projetoId, activeTab);
+    // Abrir em nova janela do navegador com URL própria
+    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab || 'surebet')}`;
+    const windowFeatures = 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+    window.open(url, '_blank', windowFeatures);
   };
 
   const handleBonusSubmit = async (data: any) => {
