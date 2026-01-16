@@ -849,6 +849,7 @@ export type Database = {
           updated_at: string
           url: string | null
           user_id: string
+          version: number | null
           workspace_id: string
         }
         Insert: {
@@ -873,6 +874,7 @@ export type Database = {
           updated_at?: string
           url?: string | null
           user_id: string
+          version?: number | null
           workspace_id: string
         }
         Update: {
@@ -897,6 +899,7 @@ export type Database = {
           updated_at?: string
           url?: string | null
           user_id?: string
+          version?: number | null
           workspace_id?: string
         }
         Relationships: [
@@ -8439,6 +8442,17 @@ export type Database = {
         }
         Returns: Json
       }
+      debit_bookmaker_with_lock: {
+        Args: {
+          p_bookmaker_id: string
+          p_expected_version: number
+          p_origem: string
+          p_referencia_id?: string
+          p_referencia_tipo?: string
+          p_stake: number
+        }
+        Returns: Json
+      }
       encerrar_ciclo_e_criar_proximo: {
         Args: { p_ciclo_id: string; p_excedente?: number; p_gatilho: string }
         Returns: string
@@ -8788,6 +8802,15 @@ export type Database = {
       user_is_owner_or_admin: {
         Args: { check_user_id: string }
         Returns: boolean
+      }
+      validate_aposta_pre_commit: {
+        Args: {
+          p_bookmaker_ids: string[]
+          p_expected_versions?: number[]
+          p_projeto_id: string
+          p_stakes: number[]
+        }
+        Returns: Json
       }
       validate_operator_eligibility: {
         Args: { _user_id: string; _workspace_id: string }
