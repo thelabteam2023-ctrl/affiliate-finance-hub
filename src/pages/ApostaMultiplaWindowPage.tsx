@@ -51,7 +51,7 @@ export default function ApostaMultiplaWindowPage() {
     fetchAposta();
   }, [id, isEditing]);
 
-  // Notificar janela principal após salvar
+  // Notificar janela principal após salvar - manter aberta para novas inserções
   const handleSuccess = () => {
     try {
       const channel = new BroadcastChannel('aposta_multipla_channel');
@@ -61,7 +61,15 @@ export default function ApostaMultiplaWindowPage() {
       // Fallback para localStorage
       localStorage.setItem('aposta_multipla_saved', JSON.stringify({ projetoId, timestamp: Date.now() }));
     }
-    window.close();
+    
+    // Se estava editando, fechar a janela após salvar
+    // Se era novo registro, manter aberta para próximas inserções
+    if (isEditing) {
+      window.close();
+    } else {
+      // Resetar o estado para novo registro
+      setAposta(null);
+    }
   };
 
   const handleClose = () => {
