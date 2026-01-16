@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { BonusDialog } from "./BonusDialog";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
-import { useApostaPopup } from "@/contexts/ApostaPopupContext";
 
 interface GlobalActionsBarProps {
   projetoId: string;
@@ -73,9 +72,6 @@ export function GlobalActionsBar({
   onNavigateToTab 
 }: GlobalActionsBarProps) {
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
-  
-  // Hook do popup de apostas
-  const { openApostaSimples, openApostaMultipla, openSurebet, setOnSuccessCallback } = useApostaPopup();
   
   // Verificação centralizada: botão só aparece em abas operacionais
   const showNovaApostaButton = ABAS_OPERACIONAIS_APOSTA.includes(activeTab || "");
@@ -133,35 +129,20 @@ export function GlobalActionsBar({
     }
   };
 
-  // Handlers para abrir popups de apostas
+  // Handlers para abrir janelas de apostas
   const handleOpenApostaSimples = () => {
-    setOnSuccessCallback(() => () => {
-      onApostaCreated?.();
-      toast.success("Aposta registrada com sucesso!", {
-        action: onNavigateToTab ? {
-          label: "Ver em Apostas",
-          onClick: () => onNavigateToTab("apostas")
-        } : undefined,
-      });
-    });
-    openApostaSimples(projetoId, activeTab);
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab || 'apostas')}&estrategia=PUNTER`;
+    const windowFeatures = 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+    window.open(url, '_blank', windowFeatures);
   };
 
   const handleOpenApostaMultipla = () => {
-    setOnSuccessCallback(() => () => {
-      onApostaCreated?.();
-      toast.success("Aposta múltipla registrada com sucesso!", {
-        action: onNavigateToTab ? {
-          label: "Ver em Apostas",
-          onClick: () => onNavigateToTab("apostas")
-        } : undefined,
-      });
-    });
-    openApostaMultipla(projetoId, activeTab);
+    const url = `/janela/multipla/novo?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab || 'apostas')}&estrategia=PUNTER`;
+    const windowFeatures = 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+    window.open(url, '_blank', windowFeatures);
   };
 
   const handleOpenSurebet = () => {
-    // Abrir em nova janela do navegador com URL própria
     const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab || 'surebet')}`;
     const windowFeatures = 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
     window.open(url, '_blank', windowFeatures);
