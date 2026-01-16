@@ -37,9 +37,14 @@ import {
   Clock,
   Gift,
   CheckCircle2,
-  Target
+  Target,
+  History,
+  XCircle,
+  AlertTriangle,
+  RotateCcw
 } from "lucide-react";
-import { differenceInDays, parseISO } from "date-fns";
+import { differenceInDays, parseISO, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Tooltip,
   TooltipContent,
@@ -51,6 +56,128 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+
+const REASON_LABELS: Record<FinalizeReason, { label: string; icon: React.ElementType; color: string }> = {
+  rollover_completed: { label: "Rollover Concluído", icon: CheckCircle2, color: "text-emerald-400 bg-emerald-500/20 border-emerald-500/30" },
+  bonus_consumed: { label: "Bônus Consumido", icon: AlertTriangle, color: "text-yellow-400 bg-yellow-500/20 border-yellow-500/30" },
+  expired: { label: "Expirou", icon: XCircle, color: "text-red-400 bg-red-500/20 border-red-500/30" },
+  cancelled_reversed: { label: "Cancelado/Revertido", icon: RotateCcw, color: "text-gray-400 bg-gray-500/20 border-gray-500/30" },
+};
+
+// Subcomponent to show finalized bonus history
+function FinalizedBonusHistory({ 
+  bonuses, 
+  formatCurrency 
+}: { 
+  bonuses: ProjectBonus[]; 
+  formatCurrency: (value: number, moeda: string) => string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
+  
+  // Sort by finalized_at descending
+  const sortedBonuses = [...finalizedBonuses].sort((a, b) => {
+    if (!a.finalized_at) return 1;
+    if (!b.finalized_at) return -1;
+    return new Date(b.finalized_at).getTime() - new Date(a.finalized_at).getTime();
+  });
+  
+  if (finalizedBonuses.length === 0) return null;
+  
+  const getReasonBadge = (reason: FinalizeReason | null) => {
+    if (!reason) return null;
+    const config = REASON_LABELS[reason];
+    const Icon = config.icon;
+    return (
+      <Badge className={config.color}>
+        <Icon className="h-3 w-3 mr-1" />
+        {config.label}
+      </Badge>
+    );
+  };
+  
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="border-muted/50">
+        <CollapsibleTrigger asChild>
+          <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors py-3">
+            <CardTitle className="text-sm font-medium flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <History className="h-4 w-4 text-muted-foreground" />
+                <span>Histórico de Bônus Finalizados</span>
+                <Badge variant="secondary" className="ml-2">
+                  {finalizedBonuses.length}
+                </Badge>
+              </div>
+              {isOpen ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+            </CardTitle>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0">
+            <ScrollArea className="max-h-[400px]">
+              <div className="space-y-2">
+                {sortedBonuses.map(bonus => (
+                  <div key={bonus.id} className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+                    {/* Logo */}
+                    {bonus.bookmaker_logo_url ? (
+                      <img
+                        src={bonus.bookmaker_logo_url}
+                        alt={bonus.bookmaker_nome}
+                        className="h-8 w-8 rounded-lg object-contain bg-white p-0.5 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Building2 className="h-4 w-4 text-primary" />
+                      </div>
+                    )}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{bonus.bookmaker_nome}</span>
+                        {bonus.title && (
+                          <>
+                            <span className="text-muted-foreground text-xs">•</span>
+                            <span className="text-xs text-muted-foreground">{bonus.title}</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        {bonus.parceiro_nome && (
+                          <>
+                            <span>{bonus.parceiro_nome}</span>
+                            <span>•</span>
+                          </>
+                        )}
+                        {bonus.finalized_at && (
+                          <span>
+                            {format(parseISO(bonus.finalized_at), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Value & Reason */}
+                    <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
+                      <span className="font-semibold text-sm">{formatCurrency(bonus.bonus_amount, bonus.currency)}</span>
+                      {getReasonBadge(bonus.finalize_reason)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
 
 interface BonusBookmakersTabProps {
   projetoId: string;
@@ -745,6 +872,12 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           })}
         </div>
       )}
+
+      {/* Histórico de Bônus Finalizados */}
+      <FinalizedBonusHistory 
+        bonuses={bonuses} 
+        formatCurrency={formatCurrency}
+      />
 
       {/* Bonus Drawer */}
       {selectedBookmaker && (
