@@ -1181,7 +1181,22 @@ export function CaixaTransacaoDialog({
     fetchCatalogoConfig();
   }, [origemBookmakerId, tipoTransacao, bookmakers]);
 
-  // Funções auxiliares para filtrar parceiros e contas/wallets disponíveis no destino
+  // Sincronizar tipoMoeda quando metodoSaqueUsd muda (para SAQUE de bookmaker USD)
+  useEffect(() => {
+    if (tipoTransacao !== "SAQUE") return;
+    if (!origemBookmakerId) return;
+    
+    const bm = bookmakers.find(b => b.id === origemBookmakerId);
+    if (!bm || bm.moeda !== "USD") return;
+    
+    // Atualizar tipoMoeda baseado no método escolhido
+    if (metodoSaqueUsd === "FIAT") {
+      setTipoMoeda("FIAT");
+      setMoeda("BRL");
+    } else {
+      setTipoMoeda("CRYPTO");
+    }
+  }, [metodoSaqueUsd, origemBookmakerId, tipoTransacao, bookmakers]);
   const getContasDisponiveisDestino = (parceiroId: string) => {
     return contasBancarias.filter(
       (c) => c.parceiro_id === parceiroId && c.id !== origemContaId
@@ -1990,8 +2005,16 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "SAQUE") {
-      // SAQUE FIAT: destino = conta bancária, origem = bookmaker com saldo_atual
-      if (tipoMoeda === "FIAT") {
+      // Verificar a moeda da bookmaker selecionada
+      const bookmakeSelecionada = origemBookmakerId 
+        ? bookmakers.find(b => b.id === origemBookmakerId) 
+        : null;
+      const isBookmakerUsd = bookmakeSelecionada?.moeda === "USD";
+      
+      // SAQUE FIAT NATIVO: bookmaker BRL (não USD) OU bookmaker USD com metodoSaqueUsd = FIAT
+      // Neste caso, destino = conta bancária, origem = bookmaker
+      if (tipoMoeda === "FIAT" && !isBookmakerUsd) {
+        // Fluxo padrão FIAT para bookmakers BRL
         const isDestinoCompleta = destinoParceiroId && destinoContaId;
         
         return (
@@ -2021,6 +2044,24 @@ export function CaixaTransacaoDialog({
         );
       }
       
+      // SAQUE FIAT de Bookmaker USD (permite_saque_fiat = true e metodoSaqueUsd = FIAT)
+      // Fluxo especial: bookmaker USD já selecionada, saque via conta bancária
+      if (tipoMoeda === "FIAT" && isBookmakerUsd && metodoSaqueUsd === "FIAT") {
+        return (
+          <div className="space-y-2">
+            <Label>Bookmaker (USD → Conta Bancária)</Label>
+            <BookmakerSelect
+              key={`saque-usd-fiat-${origemBookmakerId}`}
+              ref={bookmakerSelectRef}
+              value={origemBookmakerId}
+              onValueChange={setOrigemBookmakerId}
+              somenteComSaldo={true}
+              somenteComSaldoUsd={true}
+            />
+          </div>
+        );
+      }
+      
       // SAQUE CRYPTO: destino = wallet crypto, origem = bookmaker com saldo_usd
       const isDestinoCompletaCrypto = destinoParceiroId && destinoWalletId;
       
@@ -2029,11 +2070,11 @@ export function CaixaTransacaoDialog({
       
       return (
         <>
-          {!isDestinoCompletaCrypto && (
+          {!isDestinoCompletaCrypto && !origemBookmakerId && (
             <Alert className="border-blue-500/50 bg-blue-500/10">
               <AlertTriangle className="h-4 w-4 text-blue-500" />
               <AlertDescription className="text-blue-500">
-                Selecione primeiro o parceiro e a wallet crypto de destino
+                Selecione a bookmaker de origem para continuar
               </AlertDescription>
             </Alert>
           )}
@@ -2052,8 +2093,6 @@ export function CaixaTransacaoDialog({
               ref={bookmakerSelectRef}
               value={origemBookmakerId}
               onValueChange={setOrigemBookmakerId}
-              disabled={!isDestinoCompletaCrypto}
-              parceiroId={destinoParceiroId}
               somenteComSaldo={true}
               somenteComSaldoUsd={true}
             />
@@ -2292,8 +2331,27 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "SAQUE") {
+      // Verificar a moeda da bookmaker selecionada
+      const bookmakeSelecionada = origemBookmakerId 
+        ? bookmakers.find(b => b.id === origemBookmakerId) 
+        : null;
+      const isBookmakerUsd = bookmakeSelecionada?.moeda === "USD";
+      
       // SAQUE FIAT: Parceiro + Conta Bancária
+      // Inclui tanto bookmaker BRL quanto bookmaker USD com metodoSaqueUsd = FIAT
       if (tipoMoeda === "FIAT") {
+        // Se é bookmaker USD com método FIAT, verificar se a bookmaker já foi selecionada
+        if (isBookmakerUsd && metodoSaqueUsd === "FIAT" && !origemBookmakerId) {
+          return (
+            <Alert className="border-blue-500/50 bg-blue-500/10">
+              <Info className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-blue-500">
+                Selecione primeiro a bookmaker de origem (USD).
+              </AlertDescription>
+            </Alert>
+          );
+        }
+        
         return (
           <>
             <div className="space-y-2">
@@ -3131,6 +3189,51 @@ export function CaixaTransacaoDialog({
               >
                 Parceiro → Parceiro
               </Button>
+            </div>
+          )}
+
+          {/* Método de Saque para Bookmaker USD (quando permite FIAT) */}
+          {tipoTransacao === "SAQUE" && origemBookmakerId && catalogoConfig?.permite_saque_fiat && (
+            <div className="space-y-2">
+              <Label className="text-center block">Método de Saque</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={metodoSaqueUsd === "CRYPTO" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setMetodoSaqueUsd("CRYPTO");
+                    setTipoMoeda("CRYPTO");
+                    // Resetar destino ao mudar método
+                    setDestinoParceiroId("");
+                    setDestinoContaId("");
+                    setDestinoWalletId("");
+                  }}
+                  className="flex-1"
+                >
+                  Crypto (Wallet)
+                </Button>
+                <Button
+                  type="button"
+                  variant={metodoSaqueUsd === "FIAT" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setMetodoSaqueUsd("FIAT");
+                    setTipoMoeda("FIAT");
+                    setMoeda("BRL");
+                    // Resetar destino ao mudar método
+                    setDestinoParceiroId("");
+                    setDestinoContaId("");
+                    setDestinoWalletId("");
+                  }}
+                  className="flex-1"
+                >
+                  FIAT (Conta Bancária)
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Esta casa permite saque tanto em crypto quanto em conta bancária (FIAT).
+              </p>
             </div>
           )}
 
