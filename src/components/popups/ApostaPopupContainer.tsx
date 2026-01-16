@@ -2,16 +2,18 @@ import React from 'react';
 import { useApostaPopup } from '@/contexts/ApostaPopupContext';
 import { ApostaDialog } from '@/components/projeto-detalhe/ApostaDialog';
 import { ApostaMultiplaDialog } from '@/components/projeto-detalhe/ApostaMultiplaDialog';
-import { SurebetDialog } from '@/components/projeto-detalhe/SurebetDialog';
+import { SurebetPopup } from './SurebetPopup';
 import { getEstrategiaFromTab } from '@/lib/apostaConstants';
-import { DollarSign, Layers, RefreshCcw } from 'lucide-react';
+import { DollarSign, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 /**
  * Container que renderiza os popups de apostas baseado no contexto
- * Gerencia qual dialog está aberto através do ApostaPopupContext
- * Inclui botão minimizado flutuante quando minimizado
+ * Gerencia qual popup/dialog está aberto através do ApostaPopupContext
+ * 
+ * - Surebet: Usa janela flutuante arrastável (SurebetPopup)
+ * - Simples/Múltipla: Usa dialogs tradicionais (temporariamente)
  */
 export const ApostaPopupContainer: React.FC = () => {
   const {
@@ -32,7 +34,7 @@ export const ApostaPopupContainer: React.FC = () => {
 
   if (!activePopup || !data) return null;
 
-  // Configurações por tipo
+  // Configurações por tipo para botão minimizado (simples e múltipla)
   const getPopupConfig = () => {
     switch (activePopup) {
       case 'simples':
@@ -47,12 +49,6 @@ export const ApostaPopupContainer: React.FC = () => {
           icon: <Layers className="h-5 w-5" />,
           color: 'bg-blue-500 hover:bg-blue-600',
         };
-      case 'surebet':
-        return {
-          title: data.surebet ? 'Editar Surebet' : 'Nova Surebet',
-          icon: <RefreshCcw className="h-5 w-5" />,
-          color: 'bg-purple-500 hover:bg-purple-600',
-        };
       default:
         return {
           title: 'Popup',
@@ -64,6 +60,30 @@ export const ApostaPopupContainer: React.FC = () => {
 
   const config = getPopupConfig();
 
+  // ============================================================
+  // SUREBET - Janela flutuante arrastável
+  // ============================================================
+  if (activePopup === 'surebet') {
+    return (
+      <SurebetPopup
+        isOpen={true}
+        isMinimized={isMinimized}
+        position={position}
+        onClose={closePopup}
+        onToggleMinimize={toggleMinimize}
+        onPositionChange={setPosition}
+        projetoId={data.projetoId}
+        surebet={data.surebet}
+        onSuccess={handleSuccess}
+        activeTab={data.activeTab}
+      />
+    );
+  }
+
+  // ============================================================
+  // SIMPLES e MÚLTIPLA - Dialogs tradicionais (por enquanto)
+  // ============================================================
+  
   // Quando minimizado, mostra apenas o FAB flutuante
   if (isMinimized) {
     return (
@@ -109,17 +129,6 @@ export const ApostaPopupContainer: React.FC = () => {
           onSuccess={handleSuccess}
           defaultEstrategia={getEstrategiaFromTab(data.activeTab || 'apostas')}
           activeTab={data.activeTab || 'apostas'}
-        />
-      )}
-
-      {activePopup === 'surebet' && (
-        <SurebetDialog
-          open={true}
-          onOpenChange={(open) => !open && closePopup()}
-          projetoId={data.projetoId}
-          surebet={data.surebet || null}
-          onSuccess={handleSuccess}
-          activeTab={data.activeTab || 'surebet'}
         />
       )}
     </>
