@@ -17,12 +17,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { ApostaDialog } from "./ApostaDialog";
-import { ApostaMultiplaDialog } from "./ApostaMultiplaDialog";
-import { SurebetDialog } from "./SurebetDialog";
 import { BonusDialog } from "./BonusDialog";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
-import { getEstrategiaFromTab, type ApostaEstrategia } from "@/lib/apostaConstants";
+import { useApostaPopup } from "@/contexts/ApostaPopupContext";
 
 interface GlobalActionsBarProps {
   projetoId: string;
@@ -77,13 +74,13 @@ export function GlobalActionsBar({
 }: GlobalActionsBarProps) {
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   
+  // Hook do popup de apostas
+  const { openApostaSimples, openApostaMultipla, openSurebet, setOnSuccessCallback } = useApostaPopup();
+  
   // Verificação centralizada: botão só aparece em abas operacionais
   const showNovaApostaButton = ABAS_OPERACIONAIS_APOSTA.includes(activeTab || "");
   
-  // Dialog states
-  const [apostaDialogOpen, setApostaDialogOpen] = useState(false);
-  const [multiplaDialogOpen, setMultiplaDialogOpen] = useState(false);
-  const [surebetDialogOpen, setSurebetDialogOpen] = useState(false);
+  // Dialog states (apenas para bônus agora)
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
 
   // Bonus hook
@@ -136,40 +133,44 @@ export function GlobalActionsBar({
     }
   };
 
-  const handleApostaSuccess = () => {
-    setApostaDialogOpen(false);
-    onApostaCreated?.();
-    
-    toast.success("Aposta registrada com sucesso!", {
-      action: onNavigateToTab ? {
-        label: "Ver em Apostas",
-        onClick: () => onNavigateToTab("apostas")
-      } : undefined,
+  // Handlers para abrir popups de apostas
+  const handleOpenApostaSimples = () => {
+    setOnSuccessCallback(() => () => {
+      onApostaCreated?.();
+      toast.success("Aposta registrada com sucesso!", {
+        action: onNavigateToTab ? {
+          label: "Ver em Apostas",
+          onClick: () => onNavigateToTab("apostas")
+        } : undefined,
+      });
     });
+    openApostaSimples(projetoId, activeTab);
   };
 
-  const handleMultiplaSuccess = () => {
-    setMultiplaDialogOpen(false);
-    onApostaCreated?.();
-    
-    toast.success("Aposta múltipla registrada com sucesso!", {
-      action: onNavigateToTab ? {
-        label: "Ver em Apostas",
-        onClick: () => onNavigateToTab("apostas")
-      } : undefined,
+  const handleOpenApostaMultipla = () => {
+    setOnSuccessCallback(() => () => {
+      onApostaCreated?.();
+      toast.success("Aposta múltipla registrada com sucesso!", {
+        action: onNavigateToTab ? {
+          label: "Ver em Apostas",
+          onClick: () => onNavigateToTab("apostas")
+        } : undefined,
+      });
     });
+    openApostaMultipla(projetoId, activeTab);
   };
 
-  const handleSurebetSuccess = () => {
-    setSurebetDialogOpen(false);
-    onApostaCreated?.();
-    
-    toast.success("Surebet registrada com sucesso!", {
-      action: onNavigateToTab ? {
-        label: "Ver em Apostas",
-        onClick: () => onNavigateToTab("apostas")
-      } : undefined,
+  const handleOpenSurebet = () => {
+    setOnSuccessCallback(() => () => {
+      onApostaCreated?.();
+      toast.success("Surebet registrada com sucesso!", {
+        action: onNavigateToTab ? {
+          label: "Ver em Apostas",
+          onClick: () => onNavigateToTab("apostas")
+        } : undefined,
+      });
     });
+    openSurebet(projetoId, activeTab);
   };
 
   const handleBonusSubmit = async (data: any) => {
@@ -219,13 +220,13 @@ export function GlobalActionsBar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => setApostaDialogOpen(true)}>
+              <DropdownMenuItem onClick={handleOpenApostaSimples}>
                 <Target className="mr-2 h-4 w-4" />
                 Aposta Simples
               </DropdownMenuItem>
               {/* Ocultar Aposta Múltipla na aba Duplo Green e Surebet */}
               {activeTab !== "duplogreen" && activeTab !== "surebet" && (
-                <DropdownMenuItem onClick={() => setMultiplaDialogOpen(true)}>
+                <DropdownMenuItem onClick={handleOpenApostaMultipla}>
                   <Layers className="mr-2 h-4 w-4" />
                   Aposta Múltipla
                 </DropdownMenuItem>
@@ -234,7 +235,7 @@ export function GlobalActionsBar({
               {activeTab !== "valuebet" && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setSurebetDialogOpen(true)}>
+                  <DropdownMenuItem onClick={handleOpenSurebet}>
                     <ArrowLeftRight className="mr-2 h-4 w-4" />
                     Surebet
                   </DropdownMenuItem>
@@ -258,36 +259,7 @@ export function GlobalActionsBar({
         )}
       </div>
 
-      {/* Dialogs */}
-      <ApostaDialog
-        open={apostaDialogOpen}
-        onOpenChange={setApostaDialogOpen}
-        aposta={null}
-        projetoId={projetoId}
-        onSuccess={handleApostaSuccess}
-        defaultEstrategia={getEstrategiaFromTab(activeTab || 'apostas')}
-        activeTab={activeTab || 'apostas'}
-      />
-
-      <ApostaMultiplaDialog
-        open={multiplaDialogOpen}
-        onOpenChange={setMultiplaDialogOpen}
-        aposta={null}
-        projetoId={projetoId}
-        onSuccess={handleMultiplaSuccess}
-        defaultEstrategia={getEstrategiaFromTab(activeTab || 'apostas')}
-        activeTab={activeTab || 'apostas'}
-      />
-
-      <SurebetDialog
-        open={surebetDialogOpen}
-        onOpenChange={setSurebetDialogOpen}
-        projetoId={projetoId}
-        surebet={null}
-        onSuccess={handleSurebetSuccess}
-        activeTab={activeTab || 'surebet'}
-      />
-
+      {/* Bonus Dialog - único que permanece como Dialog tradicional */}
       <BonusDialog
         open={bonusDialogOpen}
         onOpenChange={setBonusDialogOpen}
