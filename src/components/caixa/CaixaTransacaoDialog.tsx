@@ -2044,7 +2044,8 @@ export function CaixaTransacaoDialog({
         }
         
         // SAQUE FIAT de casa USD (conversão)
-        // Filtrar pelo parceiro de destino e mostrar apenas casas USD que permitem saque FIAT
+        // Mostrar TODAS as casas USD que permitem saque FIAT, independente do parceiro
+        // O parceiro/conta de destino é onde o dinheiro será recebido (não relacionado à bookmaker)
         if (origemSaqueFiat === "USD") {
           const isDestinoCompleta = destinoParceiroId && destinoContaId;
 
@@ -2065,14 +2066,13 @@ export function CaixaTransacaoDialog({
                 <div className="space-y-2">
                   <Label>Bookmaker (USD → Conta Bancária)</Label>
                   <BookmakerSelect
-                    key={`saque-usd-fiat-${destinoParceiroId}`}
+                    key={`saque-usd-fiat-todos`}
                     ref={bookmakerSelectRef}
                     value={origemBookmakerId}
                     onValueChange={setOrigemBookmakerId}
-                    disabled={!isDestinoCompleta}
-                    parceiroId={destinoParceiroId}
+                    disabled={true}
+                    buscarTodosVinculos={true}
                     somenteComSaldoUsd={true}
-                    moedaOperacional="USD"
                     somentePermiteSaqueFiat={true}
                   />
                 </div>
@@ -2087,14 +2087,12 @@ export function CaixaTransacaoDialog({
                 <div className="space-y-2">
                   <Label>Bookmaker (USD → Conta Bancária)</Label>
                   <BookmakerSelect
-                    key={`saque-usd-fiat-${destinoParceiroId}`}
+                    key={`saque-usd-fiat-todos-selected`}
                     ref={bookmakerSelectRef}
                     value={origemBookmakerId}
                     onValueChange={setOrigemBookmakerId}
-                    disabled={!isDestinoCompleta}
-                    parceiroId={destinoParceiroId}
+                    buscarTodosVinculos={true}
                     somenteComSaldoUsd={true}
-                    moedaOperacional="USD"
                     somentePermiteSaqueFiat={true}
                   />
                 </div>
@@ -2116,14 +2114,12 @@ export function CaixaTransacaoDialog({
             <div className="space-y-2">
               <Label>Bookmaker (USD → Conta Bancária)</Label>
               <BookmakerSelect
-                key={`saque-usd-fiat-${destinoParceiroId}`}
+                key={`saque-usd-fiat-todos-ok`}
                 ref={bookmakerSelectRef}
                 value={origemBookmakerId}
                 onValueChange={setOrigemBookmakerId}
-                disabled={!isDestinoCompleta}
-                parceiroId={destinoParceiroId}
+                buscarTodosVinculos={true}
                 somenteComSaldoUsd={true}
-                moedaOperacional="USD"
                 somentePermiteSaqueFiat={true}
               />
               {origemBookmakerId && catalogoConfig?.permite_saque_fiat && (

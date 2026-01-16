@@ -181,10 +181,8 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
       setLoadingDisplay(false); // Evitar estado "Carregando..." fantasma
       lastFetchedValue.current = "";
       
-      // Se o value atual não pode mais existir no novo contexto, limpar
-      if (value) {
-        onValueChange("");
-      }
+      // NÃO chamar onValueChange("") aqui - isso causa cascata de efeitos indesejados
+      // O componente pai é responsável por gerenciar o value quando as props mudam
     }
     
     // Atualizar ref
@@ -235,10 +233,9 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
             query = query.eq("moeda", moedaOperacional);
           }
 
-          // Filtrar apenas casas cujo catálogo permite saque FIAT
-          if (somentePermiteSaqueFiat) {
-            query = query.eq("bookmakers_catalogo.permite_saque_fiat", true);
-          }
+          // NOTA: Não podemos filtrar por bookmakers_catalogo.permite_saque_fiat via query
+          // porque o Supabase não suporta bem filtros em nested objects via .eq()
+          // O filtro será aplicado no cliente após buscar os dados
 
           if (somenteComSaldoUsd) {
             // Apenas bookmakers com saldo_usd > 0 (para saques CRYPTO)
@@ -258,7 +255,15 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           
           if (error) throw error;
 
-          const mapped: BookmakerItem[] = (data || []).map((b: any) => ({
+          // Filtrar no cliente por permite_saque_fiat se necessário
+          let filteredData = data || [];
+          if (somentePermiteSaqueFiat) {
+            filteredData = filteredData.filter((b: any) => 
+              b.bookmakers_catalogo?.permite_saque_fiat === true
+            );
+          }
+
+          const mapped: BookmakerItem[] = filteredData.map((b: any) => ({
             id: b.id,
             nome: b.nome,
             logo_url: b.bookmakers_catalogo?.logo_url || null,
@@ -280,10 +285,10 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
             setLoading(false);
           }
         }
-      } 
+      }
       // MODO TODOS OS VÍNCULOS (buscarTodosVinculos): Buscar todos os bookmakers de todos os parceiros
       // Usado em SAQUE CRYPTO/USD onde a bookmaker é selecionada ANTES do parceiro
-      else if (buscarTodosVinculos && (somenteComSaldoUsd || somenteComSaldoFiat || somenteComSaldo)) {
+      else if (buscarTodosVinculos && (somenteComSaldoUsd || somenteComSaldoFiat || somenteComSaldo || somentePermiteSaqueFiat)) {
         setPrerequisitesReady(true);
         setLoading(true);
         
@@ -310,10 +315,9 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
             query = query.eq("moeda", moedaOperacional);
           }
 
-          // Filtrar apenas casas cujo catálogo permite saque FIAT
-          if (somentePermiteSaqueFiat) {
-            query = query.eq("bookmakers_catalogo.permite_saque_fiat", true);
-          }
+          // NOTA: Não podemos filtrar por bookmakers_catalogo.permite_saque_fiat via query
+          // porque o Supabase não suporta bem filtros em nested objects via .eq()
+          // O filtro será aplicado no cliente após buscar os dados
 
           if (somenteComSaldoUsd) {
             // Apenas bookmakers com saldo_usd > 0 (para saques CRYPTO)
@@ -333,7 +337,15 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           
           if (error) throw error;
 
-          const mapped: BookmakerItem[] = (data || []).map((b: any) => ({
+          // Filtrar no cliente por permite_saque_fiat se necessário
+          let filteredData = data || [];
+          if (somentePermiteSaqueFiat) {
+            filteredData = filteredData.filter((b: any) => 
+              b.bookmakers_catalogo?.permite_saque_fiat === true
+            );
+          }
+
+          const mapped: BookmakerItem[] = filteredData.map((b: any) => ({
             id: b.id,
             nome: b.nome,
             logo_url: b.bookmakers_catalogo?.logo_url || null,
