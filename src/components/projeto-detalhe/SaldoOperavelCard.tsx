@@ -109,33 +109,95 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     <div className="space-y-2">
       <p className="text-xs font-medium text-foreground mb-3">Saldo por Casa</p>
       <ScrollArea className={cn(
-        casasComSaldo.length > 6 ? "h-[200px]" : "h-auto"
+        casasComSaldo.length > 4 ? "h-[320px]" : "h-auto"
       )}>
-        <div className="space-y-1.5 pr-2">
+        <div className="space-y-2 pr-2">
           {casasComSaldo.map((casa) => (
             <div 
               key={casa.id} 
-              className="flex justify-between items-center py-1.5 px-2 rounded bg-muted/30 hover:bg-muted/50 transition-colors"
+              className="p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors space-y-1.5"
             >
-              <span className="text-xs text-muted-foreground truncate max-w-[160px]">
-                {casa.nome}
-                {casa.parceiroPrimeiroNome && (
-                  <span className="text-primary/80 ml-1">
-                    {casa.parceiroPrimeiroNome}
+              {/* Nome da casa */}
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
+                  {casa.nome}
+                  {casa.parceiroPrimeiroNome && (
+                    <span className="text-primary/80 ml-1 font-normal">
+                      {casa.parceiroPrimeiroNome}
+                    </span>
+                  )}
+                </span>
+                <span className="text-sm font-bold text-primary ml-2 whitespace-nowrap">
+                  {formatCurrency(casa.saldoOperavel)}
+                </span>
+              </div>
+              
+              {/* Breakdown: Livre + Em Aposta */}
+              <div className="flex justify-between items-center text-[10px] gap-3">
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground">Livre:</span>
+                  <span className="text-emerald-500 font-medium">
+                    {formatCurrency(casa.saldoDisponivel)}
                   </span>
+                </div>
+                {casa.saldoEmAposta > 0 && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Pendente:</span>
+                    <span className="text-amber-500 font-medium">
+                      {formatCurrency(casa.saldoEmAposta)}
+                    </span>
+                  </div>
                 )}
-              </span>
-              <span className="text-xs font-medium text-foreground ml-2 whitespace-nowrap">
-                {formatCurrency(casa.saldoOperavel)}
-              </span>
+              </div>
+              
+              {/* Freebet/Bônus se houver */}
+              {(casa.saldoFreebet > 0 || casa.saldoBonus > 0) && (
+                <div className="flex gap-3 text-[10px]">
+                  {casa.saldoFreebet > 0 && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground">FB:</span>
+                      <span className="text-cyan-400 font-medium">
+                        {formatCurrency(casa.saldoFreebet)}
+                      </span>
+                    </div>
+                  )}
+                  {casa.saldoBonus > 0 && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground">Bônus:</span>
+                      <span className="text-purple-400 font-medium">
+                        {formatCurrency(casa.saldoBonus)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
       </ScrollArea>
-      <div className="flex justify-between items-center pt-2 mt-2 border-t border-border/50">
-        <span className="text-xs font-medium text-muted-foreground">Total Consolidado</span>
-        <span className="text-sm font-bold text-primary">{formatCurrency(saldoOperavel)}</span>
+      
+      {/* Totais consolidados */}
+      <div className="pt-3 mt-2 border-t border-border/50 space-y-1.5">
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-muted-foreground">Saldo Livre Total</span>
+          <span className="font-medium text-emerald-500">
+            {formatCurrency(saldoOperavel - saldoEmAposta)}
+          </span>
+        </div>
+        {hasEmAposta && (
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-muted-foreground">Em Apostas Pendentes</span>
+            <span className="font-medium text-amber-500">
+              {formatCurrency(saldoEmAposta)}
+            </span>
+          </div>
+        )}
+        <div className="flex justify-between items-center pt-1">
+          <span className="text-xs font-medium text-muted-foreground">Total Consolidado</span>
+          <span className="text-sm font-bold text-primary">{formatCurrency(saldoOperavel)}</span>
+        </div>
       </div>
+      
       <p className="text-[10px] text-muted-foreground pt-1">
         {casasComSaldo.length} casa{casasComSaldo.length !== 1 ? 's' : ''} com saldo
       </p>
@@ -255,7 +317,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           </p>
         </CardContent>
       </Card>
-      <PopoverContent className="w-[300px] p-4" align="start">
+      <PopoverContent className="w-[340px] p-4" align="start">
         <CasasBreakdown />
       </PopoverContent>
     </Popover>
