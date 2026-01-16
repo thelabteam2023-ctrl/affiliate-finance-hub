@@ -8453,6 +8453,10 @@ export type Database = {
         }
         Returns: Json
       }
+      debit_multiple_bookmakers: {
+        Args: { p_debits: Json; p_origem?: string }
+        Returns: Json
+      }
       encerrar_ciclo_e_criar_proximo: {
         Args: { p_ciclo_id: string; p_excedente?: number; p_gatilho: string }
         Returns: string
@@ -8802,6 +8806,10 @@ export type Database = {
       user_is_owner_or_admin: {
         Args: { check_user_id: string }
         Returns: boolean
+      }
+      validate_and_reserve_stakes: {
+        Args: { p_bookmaker_stakes: Json; p_projeto_id: string }
+        Returns: Json
       }
       validate_aposta_pre_commit: {
         Args: {

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
+import { usePreCommitValidation } from "@/hooks/usePreCommitValidation";
 import {
   Dialog,
   DialogContent,
@@ -387,6 +388,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     currentBookmakerId: aposta?.bookmaker_id || null
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  
+  // Hook para validação pré-commit (anti-concorrência)
+  const { validateAndReserve, showValidationErrors, validating } = usePreCommitValidation();
   
   // Hook para gerenciamento de bônus (rollover)
   const { atualizarProgressoRollover } = useBonusBalanceManager();
@@ -1767,6 +1771,41 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Invalidar cache de saldos após update
         invalidateSaldos(projetoId);
       } else {
+        // ========== VALIDAÇÃO PRÉ-COMMIT (ANTI-CONCORRÊNCIA) ==========
+        // Antes de inserir, validar server-side com lock para prevenir:
+        // 1. Dois usuários apostando simultaneamente na mesma casa
+        // 2. Saldo negativo resultante
+        // 3. Bookmaker desvinculada durante preenchimento
+        const bookmakerParaValidar = tipoAposta === "bookmaker" 
+          ? bookmakerId 
+          : tipoOperacaoExchange === "cobertura" 
+            ? coberturaBackBookmakerId 
+            : exchangeBookmakerId;
+        
+        const stakeParaValidar = tipoAposta === "bookmaker"
+          ? parseFloat(stake)
+          : tipoOperacaoExchange === "cobertura"
+            ? parseFloat(coberturaBackStake)
+            : parseFloat(exchangeStake);
+        
+        // Só validar se não for freebet (freebet não debita saldo real)
+        const isFreebet = (tipoAposta === "bookmaker" && usarFreebetBookmaker) ||
+                          (tipoAposta === "exchange" && tipoOperacaoExchange === "back" && tipoApostaExchangeBack !== "normal") ||
+                          (tipoAposta === "exchange" && tipoOperacaoExchange === "cobertura" && tipoApostaBack !== "normal");
+        
+        if (bookmakerParaValidar && stakeParaValidar > 0 && !isFreebet && statusResultado === "PENDENTE") {
+          const validation = await validateAndReserve(projetoId, [
+            { bookmaker_id: bookmakerParaValidar, stake: stakeParaValidar }
+          ]);
+          
+          if (!validation.valid) {
+            showValidationErrors(validation.errors);
+            setLoading(false);
+            return; // Abortar sem inserir
+          }
+        }
+        // ========== FIM VALIDAÇÃO PRÉ-COMMIT ==========
+
         // Insert - capturar o ID da aposta inserida
         const { data: insertedData, error } = await supabase
           .from("apostas_unificada")
