@@ -106,19 +106,30 @@ export function useSaldoOperavel(projetoId: string) {
     return bookmakers
       .map((bk) => {
         const moeda = bk.moeda || "BRL";
-        // saldo_operavel = consolidado total disponível para apostar
-        const saldoConvertido = convertToConsolidation(Number(bk.saldo_operavel) || 0, moeda);
+        // Converter todos os componentes para moeda de consolidação
+        const saldoOperavel = convertToConsolidation(Number(bk.saldo_operavel) || 0, moeda);
+        const saldoReal = convertToConsolidation(Number(bk.saldo_real) || 0, moeda);
+        const saldoDisponivel = convertToConsolidation(Number(bk.saldo_disponivel) || 0, moeda);
+        const saldoEmAposta = convertToConsolidation(Number(bk.saldo_em_aposta) || 0, moeda);
+        const saldoFreebet = convertToConsolidation(Number(bk.saldo_freebet) || 0, moeda);
+        const saldoBonus = convertToConsolidation(Number(bk.saldo_bonus) || 0, moeda);
+        
         return {
           id: bk.id,
           nome: bk.nome,
           parceiroPrimeiroNome: bk.parceiro_primeiro_nome || "",
           parceiroNome: bk.parceiro_nome || "",
-          saldoOperavel: saldoConvertido,
+          saldoOperavel,
+          saldoReal,           // Saldo total na casa (antes de descontar pendentes)
+          saldoDisponivel,     // Saldo livre (real - em aposta)
+          saldoEmAposta,       // Saldo comprometido em apostas pendentes
+          saldoFreebet,
+          saldoBonus,
           moedaOriginal: moeda,
           logoUrl: bk.logo_url,
         };
       })
-      .filter((casa) => casa.saldoOperavel > 0)
+      .filter((casa) => casa.saldoOperavel > 0 || casa.saldoEmAposta > 0)
       .sort((a, b) => b.saldoOperavel - a.saldoOperavel);
   }, [bookmakers, convertToConsolidation]);
 
