@@ -7859,8 +7859,17 @@ export type Database = {
           saldo_coin: number | null
           saldo_usd: number | null
           user_id: string | null
+          workspace_id: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cash_ledger_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_saldo_caixa_fiat: {
         Row: {
