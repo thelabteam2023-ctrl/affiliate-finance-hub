@@ -5,7 +5,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Filter, Calendar, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Filter, Calendar, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Wallet, Building2 } from "lucide-react";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { format, subDays, startOfDay, endOfDay, isToday } from "date-fns";
 
 // Helper para renderizar badge de status
@@ -95,6 +96,9 @@ export function HistoricoMovimentacoes({
   bookmakers,
   onConfirmarSaque,
 }: HistoricoMovimentacoesProps) {
+  // Hook para logos de bookmakers
+  const { getLogoUrl } = useBookmakerLogoMap();
+
   const handlePeriodoRapido = (dias: number | null) => {
     if (dias === null) {
       // Todo o período - remove os filtros de data
@@ -256,57 +260,145 @@ export function HistoricoMovimentacoes({
                     {getTipoLabel(transacao.tipo_transacao, transacao)}
                   </Badge>
                   <div className="flex items-center gap-2 flex-1">
-                    <div className="flex items-center gap-2">
-                       {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
-                        <div className="flex flex-col">
-                          <span className="text-sm text-muted-foreground">Investidor</span>
-                          <span className="text-xs text-muted-foreground/70">
-                            {transacao.nome_investidor?.split(' ').slice(0, 2).join(' ') || 'Não informado'}
-                          </span>
+                    {/* SAQUE: Ordem especial - Bookmaker → Wallet/Conta */}
+                    {transacao.tipo_transacao === "SAQUE" ? (
+                      <>
+                        {/* Origem: Bookmaker (com logo) */}
+                        <div className="flex items-center gap-2">
+                          {transacao.origem_bookmaker_id && bookmakers[transacao.origem_bookmaker_id] && (
+                            <>
+                              {(() => {
+                                const bookmakerNome = bookmakers[transacao.origem_bookmaker_id]?.nome;
+                                const logoUrl = getLogoUrl(bookmakerNome || '');
+                                return logoUrl ? (
+                                  <img 
+                                    src={logoUrl} 
+                                    alt={bookmakerNome}
+                                    className="h-5 w-5 rounded object-contain bg-background"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                ) : (
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                );
+                              })()}
+                              <div className="flex flex-col">
+                                <span 
+                                  className={`text-sm text-muted-foreground transition-colors cursor-default ${
+                                    bookmakers[transacao.origem_bookmaker_id]?.status === "LIMITADA" 
+                                      ? "hover:text-red-500" 
+                                      : ""
+                                  }`}
+                                  title={bookmakers[transacao.origem_bookmaker_id]?.status === "LIMITADA" 
+                                    ? "⚠️ Casa limitada - Saque necessário" 
+                                    : undefined}
+                                >
+                                  {bookmakers[transacao.origem_bookmaker_id]?.nome || 'Bookmaker'}
+                                </span>
+                              </div>
+                            </>
+                          )}
                         </div>
-                      ) : transacao.origem_tipo === "PARCEIRO_CONTA" && transacao.origem_conta_bancaria_id ? (
-                        <div className="flex flex-col">
-                          <span className="text-sm text-muted-foreground">
-                            {contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id)?.banco || 'Conta Bancária'}
-                          </span>
-                          <span className="text-xs text-muted-foreground/70">
-                            {contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id)?.titular || ''}
-                          </span>
+                        <ArrowRight className="h-4 w-4 text-primary" />
+                        {/* Destino: Wallet ou Conta Bancária */}
+                        <div className="flex items-center gap-2">
+                          <Wallet className="h-4 w-4 text-muted-foreground" />
+                          <div className="flex flex-col">
+                            {transacao.destino_wallet_id ? (
+                              <>
+                                <span className="text-sm text-muted-foreground">
+                                  {walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.exchange || 'Wallet'}
+                                </span>
+                                <span className="text-xs text-muted-foreground/70">
+                                  {parceiros[transacao.destino_parceiro_id!] || ''}
+                                </span>
+                              </>
+                            ) : transacao.destino_conta_bancaria_id ? (
+                              <>
+                                <span className="text-sm text-muted-foreground">
+                                  {contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.banco || 'Conta'}
+                                </span>
+                                <span className="text-xs text-muted-foreground/70">
+                                  {contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.titular || ''}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">Destino</span>
+                            )}
+                          </div>
                         </div>
-                      ) : transacao.origem_tipo === "PARCEIRO_WALLET" && transacao.origem_wallet_id ? (
-                        <div className="flex flex-col">
-                          <span className="text-sm text-muted-foreground">
-                            {walletsDetalhes.find(w => w.id === transacao.origem_wallet_id)?.exchange || 'Wallet'}
-                          </span>
-                          <span className="text-xs text-muted-foreground/70">
-                            {parceiros[transacao.origem_parceiro_id!] || ''}
-                          </span>
+                      </>
+                    ) : (
+                      /* Fluxo padrão para outras transações */
+                      <>
+                        <div className="flex items-center gap-2">
+                           {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm text-muted-foreground">Investidor</span>
+                              <span className="text-xs text-muted-foreground/70">
+                                {transacao.nome_investidor?.split(' ').slice(0, 2).join(' ') || 'Não informado'}
+                              </span>
+                            </div>
+                          ) : transacao.origem_tipo === "PARCEIRO_CONTA" && transacao.origem_conta_bancaria_id ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm text-muted-foreground">
+                                {contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id)?.banco || 'Conta Bancária'}
+                              </span>
+                              <span className="text-xs text-muted-foreground/70">
+                                {contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id)?.titular || ''}
+                              </span>
+                            </div>
+                          ) : transacao.origem_tipo === "PARCEIRO_WALLET" && transacao.origem_wallet_id ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm text-muted-foreground">
+                                {walletsDetalhes.find(w => w.id === transacao.origem_wallet_id)?.exchange || 'Wallet'}
+                              </span>
+                              <span className="text-xs text-muted-foreground/70">
+                                {parceiros[transacao.origem_parceiro_id!] || ''}
+                              </span>
+                            </div>
+                          ) : transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id ? (
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const bookmakerNome = bookmakers[transacao.origem_bookmaker_id]?.nome;
+                                const logoUrl = getLogoUrl(bookmakerNome || '');
+                                return logoUrl ? (
+                                  <img 
+                                    src={logoUrl} 
+                                    alt={bookmakerNome}
+                                    className="h-5 w-5 rounded object-contain bg-background"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                ) : null;
+                              })()}
+                              <div className="flex flex-col">
+                                <span 
+                                  className={`text-sm text-muted-foreground transition-colors cursor-default ${
+                                    bookmakers[transacao.origem_bookmaker_id]?.status === "LIMITADA" 
+                                      ? "hover:text-red-500" 
+                                      : ""
+                                  }`}
+                                  title={bookmakers[transacao.origem_bookmaker_id]?.status === "LIMITADA" 
+                                    ? "⚠️ Casa limitada - Saque necessário" 
+                                    : undefined}
+                                >
+                                  {bookmakers[transacao.origem_bookmaker_id]?.nome || 'Bookmaker'}
+                                </span>
+                                <span className="text-xs text-muted-foreground/70">
+                                  {parceiros[transacao.origem_parceiro_id!] || ''}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              {getOrigemLabel(transacao)}
+                            </span>
+                          )}
                         </div>
-                      ) : transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id ? (
-                        <div className="flex flex-col">
-                          <span 
-                            className={`text-sm text-muted-foreground transition-colors cursor-default ${
-                              bookmakers[transacao.origem_bookmaker_id]?.status === "LIMITADA" 
-                                ? "hover:text-red-500" 
-                                : ""
-                            }`}
-                            title={bookmakers[transacao.origem_bookmaker_id]?.status === "LIMITADA" 
-                              ? "⚠️ Casa limitada - Saque necessário" 
-                              : undefined}
-                          >
-                            {bookmakers[transacao.origem_bookmaker_id]?.nome || 'Bookmaker'}
-                          </span>
-                          <span className="text-xs text-muted-foreground/70">
-                            {parceiros[transacao.origem_parceiro_id!] || ''}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">
-                          {getOrigemLabel(transacao)}
-                        </span>
-                      )}
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-primary" />
+                        <ArrowRight className="h-4 w-4 text-primary" />
                     <div className="flex items-center gap-2">
                       {transacao.tipo_transacao === "APORTE_FINANCEIRO" && transacao.origem_tipo === "CAIXA_OPERACIONAL" ? (
                         <div className="flex flex-col">
@@ -738,9 +830,9 @@ export function HistoricoMovimentacoes({
                               )}
                             </>
                           )}
-                        </>
-                      )}
-                    </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
