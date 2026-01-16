@@ -10,6 +10,11 @@
  *   no bonus.saldo_atual em vez do bookmaker.saldo_atual/saldo_usd
  * - Isso unifica os saldos durante o período de bônus
  * 
+ * REGRA CRÍTICA CONCORRÊNCIA (v2.0):
+ * - Coluna `version` para controle otimista
+ * - RPC `debit_bookmaker_with_lock` com lock pessimista + verificação de versão
+ * - RPC `validate_aposta_pre_commit` para validação server-side antes do commit
+ * 
  * A RPC get_bookmaker_saldos lê saldo_usd para USD/USDT e saldo_atual para outras.
  * Este helper garante consistência ao gravar.
  */
@@ -20,12 +25,49 @@ export interface BookmakerBalanceUpdate {
   bookmakerId: string;
   delta: number; // Valor a somar (positivo = crédito, negativo = débito)
   projetoId?: string; // Necessário para verificar bônus ativo
+  expectedVersion?: number; // Para controle otimista
 }
 
 export interface ActiveBonusInfo {
   id: string;
   saldo_atual: number;
   project_id: string;
+}
+
+export interface PreCommitValidationError {
+  code: string;
+  message: string;
+  bookmaker_id?: string;
+  saldo_atual?: number;
+  stake_necessario?: number;
+}
+
+export interface PreCommitValidationResult {
+  valid: boolean;
+  errors: PreCommitValidationError[];
+  validations: Array<{
+    bookmaker_id: string;
+    bookmaker_nome: string;
+    saldo_atual: number;
+    stake_necessario: number;
+    version: number;
+    valid: boolean;
+  }>;
+  projeto: {
+    id: string;
+    nome: string;
+    status: string;
+  } | null;
+  timestamp: string;
+}
+
+export interface DebitWithLockResult {
+  success: boolean;
+  error_code?: string;
+  message?: string;
+  saldo_anterior?: number;
+  saldo_novo?: number;
+  new_version?: number;
 }
 
 /**
@@ -299,4 +341,153 @@ export function calcularImpactoResultado(
     default:
       return 0;
   }
+}
+
+// ============================================================
+// FUNÇÕES DE VALIDAÇÃO E DÉBITO COM CONTROLE DE CONCORRÊNCIA
+// ============================================================
+
+/**
+ * Validação server-side obrigatória antes de registrar apostas
+ * Verifica: projeto ativo, vínculos bookmaker-projeto, saldos, versões
+ * 
+ * @param projetoId - ID do projeto
+ * @param bookmakers - Array de bookmakers com stakes e versões esperadas
+ * @returns Resultado detalhado da validação
+ */
+export async function validatePreCommit(
+  projetoId: string,
+  bookmakers: Array<{ id: string; stake: number; expectedVersion?: number }>
+): Promise<PreCommitValidationResult> {
+  try {
+    const bookmakerIds = bookmakers.map(b => b.id);
+    const stakes = bookmakers.map(b => b.stake);
+    const versions = bookmakers.some(b => b.expectedVersion !== undefined)
+      ? bookmakers.map(b => b.expectedVersion || 1)
+      : null;
+
+    const { data, error } = await supabase.rpc('validate_aposta_pre_commit', {
+      p_projeto_id: projetoId,
+      p_bookmaker_ids: bookmakerIds,
+      p_stakes: stakes,
+      p_expected_versions: versions,
+    });
+
+    if (error) {
+      console.error('[validatePreCommit] Erro RPC:', error);
+      return {
+        valid: false,
+        errors: [{ code: 'RPC_ERROR', message: error.message }],
+        validations: [],
+        projeto: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    return data as unknown as PreCommitValidationResult;
+  } catch (err: any) {
+    console.error('[validatePreCommit] Exceção:', err);
+    return {
+      valid: false,
+      errors: [{ code: 'EXCEPTION', message: err.message }],
+      validations: [],
+      projeto: null,
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+/**
+ * Débito atômico com lock pessimista e controle otimista de versão
+ * Previne race conditions em cenários de múltiplos usuários
+ * 
+ * @param bookmakerId - ID do bookmaker
+ * @param stake - Valor a debitar
+ * @param expectedVersion - Versão esperada (controle otimista)
+ * @param origem - Origem da operação (para auditoria)
+ * @param referenciaId - ID de referência opcional
+ * @param referenciaTipo - Tipo de referência opcional
+ * @returns Resultado do débito
+ */
+export async function debitWithLock(
+  bookmakerId: string,
+  stake: number,
+  expectedVersion: number,
+  origem: string,
+  referenciaId?: string,
+  referenciaTipo?: string
+): Promise<DebitWithLockResult> {
+  try {
+    const { data, error } = await supabase.rpc('debit_bookmaker_with_lock', {
+      p_bookmaker_id: bookmakerId,
+      p_stake: stake,
+      p_expected_version: expectedVersion,
+      p_origem: origem,
+      p_referencia_id: referenciaId || null,
+      p_referencia_tipo: referenciaTipo || null,
+    });
+
+    if (error) {
+      console.error('[debitWithLock] Erro RPC:', error);
+      return {
+        success: false,
+        error_code: 'RPC_ERROR',
+        message: error.message,
+      };
+    }
+
+    return data as unknown as DebitWithLockResult;
+  } catch (err: any) {
+    console.error('[debitWithLock] Exceção:', err);
+    return {
+      success: false,
+      error_code: 'EXCEPTION',
+      message: err.message,
+    };
+  }
+}
+
+/**
+ * Busca a versão atual de um bookmaker
+ * Útil para obter a versão antes de operações que precisam de controle otimista
+ */
+export async function getBookmakerVersion(bookmakerId: string): Promise<number | null> {
+  try {
+    const { data, error } = await supabase
+      .from('bookmakers')
+      .select('version')
+      .eq('id', bookmakerId)
+      .maybeSingle();
+    
+    if (error || !data) return null;
+    return (data as any).version || 1;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Busca versões atuais de múltiplos bookmakers
+ */
+export async function getBookmakerVersions(
+  bookmakerIds: string[]
+): Promise<Map<string, number>> {
+  const versions = new Map<string, number>();
+  
+  try {
+    const { data, error } = await supabase
+      .from('bookmakers')
+      .select('id, version')
+      .in('id', bookmakerIds);
+    
+    if (error || !data) return versions;
+    
+    data.forEach((bk: any) => {
+      versions.set(bk.id, bk.version || 1);
+    });
+  } catch {
+    // Retorna mapa vazio em caso de erro
+  }
+  
+  return versions;
 }

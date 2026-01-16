@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
 import { Button } from "@/components/ui/button";
-import { X, RefreshCcw, Loader2, AlertTriangle } from "lucide-react";
+import { X, RefreshCcw, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 /**
  * Página standalone para o formulário de Surebet.
@@ -12,6 +13,11 @@ import { X, RefreshCcw, Loader2, AlertTriangle } from "lucide-react";
  * 
  * Esta página abre em uma janela separada do navegador,
  * permitindo ao usuário posicionar o formulário em qualquer área da tela.
+ * 
+ * COMPORTAMENTO:
+ * - Novo registro: após salvar, formulário é resetado e janela permanece aberta
+ * - Edição: após salvar, janela é fechada automaticamente
+ * - Toast de confirmação visual ao salvar
  */
 export default function SurebetWindowPage() {
   const { id } = useParams<{ id: string }>();
@@ -25,7 +31,8 @@ export default function SurebetWindowPage() {
   const [surebet, setSurebet] = useState<any>(null);
   const [loading, setLoading] = useState(isEditing);
   const [error, setError] = useState<string | null>(null);
-  const [formKey, setFormKey] = useState(0); // Key para forçar remount do formulário
+  const [formKey, setFormKey] = useState(0);
+  const [saveCount, setSaveCount] = useState(0); // Contador de salvamentos
   
   // Buscar dados da surebet se estiver editando
   useEffect(() => {
@@ -97,8 +104,8 @@ export default function SurebetWindowPage() {
     fetchSurebet();
   }, [id, isEditing]);
   
-  // Handler de sucesso - notifica janela pai e mantém janela aberta para novas inserções
-  const handleSuccess = () => {
+  // Handler de sucesso - notifica janela pai e gerencia ciclo de vida
+  const handleSuccess = useCallback(() => {
     // Usar BroadcastChannel para notificar a janela principal
     try {
       const channel = new BroadcastChannel("surebet_channel");
@@ -118,20 +125,31 @@ export default function SurebetWindowPage() {
     }
     
     // Se estava editando, fechar a janela após salvar
-    // Se era novo registro, manter aberta para próximas inserções
     if (isEditing) {
-      window.close();
+      toast.success("Arbitragem atualizada!", {
+        description: "Janela será fechada...",
+        duration: 2000,
+      });
+      setTimeout(() => window.close(), 1500);
     } else {
-      // Resetar o estado e forçar remount do formulário com nova key
+      // Novo registro: manter aberta e resetar formulário
+      setSaveCount(prev => prev + 1);
       setSurebet(null);
       setFormKey(prev => prev + 1);
+      
+      // Toast de confirmação com contador
+      toast.success("Arbitragem registrada!", {
+        description: `${saveCount + 1}ª operação salva. Formulário pronto para nova entrada.`,
+        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        duration: 3000,
+      });
     }
-  };
+  }, [isEditing, projetoId, id, saveCount]);
   
-  // Handler de fechamento
-  const handleClose = () => {
+  // Handler de fechamento com confirmação
+  const handleClose = useCallback(() => {
     window.close();
-  };
+  }, []);
   
   // Validação de parâmetros
   if (!projetoId) {
@@ -185,6 +203,11 @@ export default function SurebetWindowPage() {
             <h1 className="text-sm sm:text-base font-semibold truncate">
               {isEditing ? "Editar Arbitragem" : "Nova Arbitragem"}
             </h1>
+            {saveCount > 0 && (
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {saveCount} salva(s)
+              </span>
+            )}
           </div>
           <Button
             variant="ghost"
