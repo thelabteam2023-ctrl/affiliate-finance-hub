@@ -74,7 +74,14 @@ Define a origem do saldo usado:
 3. **Saldo é DERIVADO e RECALCULÁVEL**
    - `saldo_atual` = depósitos - saques + transferências ± lucro_apostas
    - Função `recalcular_saldo_bookmaker()` sempre pode reconstruir o saldo
+   - Usa tabela normalizada `apostas_pernas` (não mais JSONB)
    - Auditoria completa em `bookmaker_balance_audit`
+
+4. **Pernas são NORMALIZADAS (tabela apostas_pernas)**
+   - Todas as pernas de apostas multi-bookmaker estão em `apostas_pernas`
+   - Índice por `bookmaker_id` para queries eficientes
+   - Não depende de filtro por estratégia
+   - Dual-write: JSONB ainda mantido por compatibilidade durante transição
 
 4. **FreeBet é um MODIFICADOR, não um tipo separado**
    - Aposta com freebet = aposta normal + `contexto_operacional = FREEBET`
