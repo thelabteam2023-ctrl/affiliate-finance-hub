@@ -490,22 +490,24 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   }, [vinculos, groupBalancesByMoeda]);
 
   // Calcular totais consolidados em BRL
+  // NOTA: O bônus já está incluído no saldo_atual/saldo_livre de cada bookmaker
+  // Portanto, NÃO somamos bônus novamente no Saldo Operável
   const consolidatedTotals = useMemo(() => {
+    // saldo_atual já inclui o bônus creditado - usar diretamente
     const totalRealBRL = vinculos.reduce((acc, v) => acc + convertToBRL(v.saldo_atual, v.moeda), 0);
     const totalFreebetBRL = vinculos.reduce((acc, v) => acc + convertToBRL(v.saldo_freebet || 0, v.moeda), 0);
-    const totalBonusBRL = bonusSummary.active_bonus_total; // Bônus já está em BRL no summary
-    const totalOperavelBRL = totalRealBRL + totalFreebetBRL + totalBonusBRL;
+    // Saldo Operável = Real + Freebet (bônus já está no Real)
+    const totalOperavelBRL = totalRealBRL + totalFreebetBRL;
     
     const hasForeignCurrency = vinculos.some(v => v.moeda !== "BRL");
     
     return {
       totalRealBRL,
       totalFreebetBRL,
-      totalBonusBRL,
       totalOperavelBRL,
       hasForeignCurrency,
     };
-  }, [vinculos, convertToBRL, bonusSummary]);
+  }, [vinculos, convertToBRL]);
 
   const getStatusBadge = (status: string) => {
     switch (status.toUpperCase()) {
@@ -673,21 +675,13 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     </div>
                   )}
                   
-                  {/* Indicadores secundários */}
-                  {(consolidatedTotals.totalFreebetBRL > 0 || consolidatedTotals.totalBonusBRL > 0) && (
+                  {/* Indicadores secundários - apenas Freebet (bônus já está no saldo real) */}
+                  {consolidatedTotals.totalFreebetBRL > 0 && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 border-t border-border/50">
-                      {consolidatedTotals.totalFreebetBRL > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Gift className="h-3 w-3 text-amber-400" />
-                          FB {formatCurrency(consolidatedTotals.totalFreebetBRL, "BRL", { compact: true })}
-                        </span>
-                      )}
-                      {consolidatedTotals.totalBonusBRL > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Coins className="h-3 w-3 text-purple-400" />
-                          Bônus {formatCurrency(consolidatedTotals.totalBonusBRL, "BRL", { compact: true })}
-                        </span>
-                      )}
+                      <span className="flex items-center gap-1">
+                        <Gift className="h-3 w-3 text-amber-400" />
+                        FB {formatCurrency(consolidatedTotals.totalFreebetBRL, "BRL", { compact: true })}
+                      </span>
                     </div>
                   )}
                 </CardContent>
@@ -695,8 +689,11 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
               <div className="space-y-2">
-                <p className="font-medium">Saldo Operável = Real + Freebet + Bônus</p>
-                <p className="text-xs text-muted-foreground">Valor total disponível para operação</p>
+                <p className="font-medium">Saldo Operável = Real + Freebet</p>
+                <p className="text-xs text-muted-foreground">
+                  Valor total disponível para operação.
+                  O bônus já está incluído no saldo real de cada casa.
+                </p>
                 {consolidatedTotals.hasForeignCurrency && (
                   <div className="pt-2 border-t border-border/50">
                     <p className="text-xs font-medium text-blue-400">⚡ Conversão em tempo real</p>
@@ -711,22 +708,41 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           </Tooltip>
         </TooltipProvider>
 
-        {/* Bônus em Conversão - Só exibe se houver bônus ativo */}
-        {consolidatedTotals.totalBonusBRL > 0 && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Bônus em Conversão</CardTitle>
-              <Gift className="h-4 w-4 text-purple-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-400">
-                {formatCurrency(consolidatedTotals.totalBonusBRL, "BRL")}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {bonusSummary.bookmakers_with_active_bonus} casa{bonusSummary.bookmakers_with_active_bonus !== 1 ? 's' : ''} com bônus
-              </p>
-            </CardContent>
-          </Card>
+        {/* Bônus Creditados - Total histórico de bônus já lançados no projeto */}
+        {bonusSummary.total_credited > 0 && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Card className="cursor-help">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-1">
+                      Bônus Creditados
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </CardTitle>
+                    <Gift className="h-4 w-4 text-purple-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-purple-400">
+                      {formatCurrency(bonusSummary.total_credited, "USD")}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {bonusSummary.bookmakers_with_active_bonus} casa{bonusSummary.bookmakers_with_active_bonus !== 1 ? 's' : ''} com bônus
+                    </p>
+                  </CardContent>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">Total de bônus já creditados neste projeto</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Valor histórico de bônus registrados.
+                    Não representa saldo ativo ou valor em conversão.
+                    O bônus já está incluído no saldo de cada casa.
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
 
         <Card>
@@ -1301,11 +1317,36 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     </p>
                   </div>
 
-                  {/* Saldo Total */}
-                  <div className="text-right flex-shrink-0 min-w-[80px]">
-                    <p className="text-xs text-muted-foreground">Saldo Total</p>
-                    <p className="font-semibold">{formatCurrency(vinculo.saldo_atual + (vinculo.saldo_freebet || 0) + (bonusTotalsByBookmaker[vinculo.id] || 0), vinculo.moeda)}</p>
-                  </div>
+                  {/* Saldo Total = Saldo Livre (bônus já incluído) */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="text-right flex-shrink-0 min-w-[80px] cursor-help">
+                          <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+                            Saldo Total
+                            {(bonusTotalsByBookmaker[vinculo.id] || 0) > 0 && (
+                              <Coins className="h-3 w-3 text-purple-400" />
+                            )}
+                          </p>
+                          <p className="font-semibold">{formatCurrency(vinculo.saldo_livre, vinculo.moeda)}</p>
+                        </div>
+                      </TooltipTrigger>
+                      {(bonusTotalsByBookmaker[vinculo.id] || 0) > 0 && (
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium flex items-center gap-1">
+                              <Coins className="h-3 w-3 text-purple-400" />
+                              Inclui {formatCurrency(bonusTotalsByBookmaker[vinculo.id], vinculo.moeda)} em bônus creditados
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              Valor histórico de bônus já incorporado ao saldo.
+                              Pode variar conforme regras da casa.
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
 
                   {/* Em Aposta */}
                   <div className="text-right flex-shrink-0 min-w-[80px]">
@@ -1327,17 +1368,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         Freebet
                       </p>
                       <p className="font-medium text-amber-400">{formatCurrency(vinculo.saldo_freebet, vinculo.moeda)}</p>
-                    </div>
-                  )}
-
-                  {/* Bonus Badge in List */}
-                  {(bonusTotalsByBookmaker[vinculo.id] || 0) > 0 && (
-                    <div className="text-right flex-shrink-0 min-w-[80px]">
-                      <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
-                        <Coins className="h-3 w-3 text-purple-400" />
-                        Bônus
-                      </p>
-                      <p className="font-medium text-purple-400">{formatCurrency(bonusTotalsByBookmaker[vinculo.id], vinculo.moeda)}</p>
                     </div>
                   )}
 
