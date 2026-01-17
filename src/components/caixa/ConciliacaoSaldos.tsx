@@ -206,13 +206,14 @@ export function ConciliacaoSaldos({
 
       if (updateError) throw updateError;
 
-      // 2. Se houve diferença, registrar ajuste cambial
+      // 2. Se houve diferença, registrar ajuste cambial E atualizar saldo do bookmaker
       if (hasDiferenca) {
         const tipoAjuste = diferenca > 0 ? "GANHO_CAMBIAL" : "PERDA_CAMBIAL";
         const bookmakerId = selectedTransaction.tipo_transacao === "DEPOSITO" 
           ? selectedTransaction.destino_bookmaker_id 
           : selectedTransaction.origem_bookmaker_id;
         
+        // Registrar ajuste cambial para histórico
         const { error: adjError } = await supabase
           .from("exchange_adjustments")
           .insert({
@@ -233,16 +234,39 @@ export function ConciliacaoSaldos({
         
         if (adjError) {
           console.error("Erro ao registrar ajuste cambial:", adjError);
-          // Não bloquear fluxo por erro no registro do ajuste
+        }
+
+        // CORRIGIR SALDO DO BOOKMAKER: Aplicar diferença cambial
+        // Ex: se depositou $100.13 nominal mas casa recebeu só $100.08, diferença é -$0.05
+        // Precisamos reduzir o saldo do bookmaker em $0.05
+        if (bookmakerId) {
+          const { data: bookmaker } = await supabase
+            .from("bookmakers")
+            .select("moeda, saldo_atual, saldo_usd")
+            .eq("id", bookmakerId)
+            .single();
+          
+          if (bookmaker) {
+            const usaUsd = bookmaker.moeda === "USD" || bookmaker.moeda === "USDT";
+            const saldoAtual = usaUsd ? (bookmaker.saldo_usd || 0) : (bookmaker.saldo_atual || 0);
+            const novoSaldo = saldoAtual + diferenca; // diferença é negativa se perda
+
+            const updateField = usaUsd ? { saldo_usd: novoSaldo } : { saldo_atual: novoSaldo };
+            
+            const { error: balanceError } = await supabase
+              .from("bookmakers")
+              .update(updateField)
+              .eq("id", bookmakerId);
+            
+            if (balanceError) {
+              console.error("Erro ao atualizar saldo do bookmaker:", balanceError);
+              toast.error("Erro ao atualizar saldo da casa");
+            } else {
+              console.log(`[Conciliação] Saldo bookmaker ${bookmakerId}: ${saldoAtual} → ${novoSaldo} (diferença: ${diferenca})`);
+            }
+          }
         }
       }
-
-      // NOTA: A conciliação é SOMENTE INFORMATIVA
-      // A diferença cambial é registrada na tabela exchange_adjustments
-      // para fins de análise (perdas/ganhos nas taxas de conversão das casas)
-      // mas NÃO afeta o saldo de exposição crypto nem o saldo da bookmaker.
-      // O saldo já foi atualizado corretamente pelo trigger com o valor nominal (qtd_coin)
-      // que é o valor real de crypto que foi movimentado.
 
       if (hasDiferenca) {
         const tipoAjuste = diferenca > 0 ? "GANHO_CAMBIAL" : "PERDA_CAMBIAL";
