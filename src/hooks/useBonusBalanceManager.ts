@@ -154,7 +154,10 @@ export function useBonusBalanceManager() {
   /**
    * Verifica se existe bônus ativo com rollover em andamento nesta casa.
    *
-   * Regra: status=credited, saldo_atual > 0 e rollover_target_amount > 0.
+   * CORREÇÃO: A verificação deve ser baseada em rollover não cumprido, não em saldo_atual.
+   * No modelo de saldo unificado, o saldo_atual do bônus pode ser 0 mesmo com rollover ativo.
+   * 
+   * Regra correta: status=credited, rollover_target_amount > 0, e rollover_progress < target.
    * (Assim, qualquer aposta liquidada nessa casa deve contar para o rollover,
    * independente da aba/contexto em que foi registrada.)
    */
@@ -164,7 +167,7 @@ export function useBonusBalanceManager() {
   ): Promise<boolean> => {
     const { data, error } = await supabase
       .from("project_bookmaker_link_bonuses")
-      .select("saldo_atual, rollover_target_amount")
+      .select("saldo_atual, rollover_target_amount, rollover_progress")
       .eq("project_id", projectId)
       .eq("bookmaker_id", bookmakerId)
       .eq("status", "credited");
@@ -175,9 +178,10 @@ export function useBonusBalanceManager() {
     }
 
     return (data || []).some((b) => {
-      const saldoAtual = Number((b as any).saldo_atual || 0);
       const target = Number((b as any).rollover_target_amount || 0);
-      return saldoAtual > 0 && target > 0;
+      const progress = Number((b as any).rollover_progress || 0);
+      // Tem rollover ativo se: há meta definida E ainda não cumpriu
+      return target > 0 && progress < target;
     });
   }, []);
 
