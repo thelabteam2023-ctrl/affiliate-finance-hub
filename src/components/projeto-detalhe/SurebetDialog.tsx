@@ -33,7 +33,7 @@ import {
   Camera
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
+import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab, type ApostaEstrategia, type ContextoOperacional, type FormaRegistro } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
@@ -70,6 +70,10 @@ interface Surebet {
   status: string;
   resultado: string | null;
   observacoes: string | null;
+  // Campos de contexto/estratégia (single source of truth)
+  forma_registro?: string | null;
+  estrategia?: string | null;
+  contexto_operacional?: string | null;
 }
 
 interface SurebetDialogProps {
@@ -630,6 +634,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         setModelo(surebet.modelo as "1-X-2" | "1-2");
         setMercado(surebet.mercado || "");
         setObservacoes(surebet.observacoes || "");
+        
+        // CRÍTICO: Restaurar estratégia e contexto operacional ORIGINAIS da aposta
+        // Isso garante que ao editar, o contexto real em que a aposta foi criada seja preservado
+        setRegistroValues({
+          forma_registro: (surebet.forma_registro as FormaRegistro) || 'ARBITRAGEM',
+          estrategia: (surebet.estrategia as ApostaEstrategia) || null,
+          contexto_operacional: (surebet.contexto_operacional as ContextoOperacional) || 'NORMAL',
+        });
+        
         // Buscar apostas vinculadas passando o modelo correto
         fetchLinkedPernas(surebet.id, surebet.modelo);
         // Não inicializar prints em modo edição
