@@ -1,3 +1,20 @@
+/**
+ * SurebetDialog - Formulário de criação/edição de Surebets
+ * 
+ * NOTA DE ARQUITETURA (2026-01):
+ * Este componente ainda usa inserções diretas no Supabase por razões de complexidade.
+ * O hook useSurebetService foi criado para centralizar a lógica, mas a migração completa
+ * requer refatoração extensiva devido à complexidade do formulário (múltiplas entradas,
+ * snapshots de moeda, freebets, etc.).
+ * 
+ * PRÓXIMOS PASSOS:
+ * - Novas funcionalidades devem usar useSurebetService
+ * - Gradualmente migrar lógica de handleSubmit para o serviço
+ * - O dual-write atual JÁ foi corrigido para incluir apostas_pernas
+ * 
+ * @see src/services/aposta - Serviço centralizado de apostas
+ * @see src/hooks/useSurebetService.ts - Hook especializado para Surebets
+ */
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -37,6 +54,7 @@ import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
 import { pernasToInserts } from "@/types/apostasPernas";
+import { useSurebetService, type SurebetPerna as SurebetPernaService } from "@/hooks/useSurebetService";
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
@@ -562,6 +580,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   
   // ========== HOOK DE GERENCIAMENTO DE BÔNUS/ROLLOVER ==========
   const { atualizarProgressoRollover, reverterProgressoRollover, hasActiveRolloverBonus } = useBonusBalanceManager();
+  
+  // ========== HOOK CENTRALIZADO DE SUREBET ==========
+  // Delega operações de persistência para o ApostaService
+  const { criarSurebet, atualizarSurebet, deletarSurebet } = useSurebetService();
+  
   // Form state
   const [evento, setEvento] = useState("");
   const [mercado, setMercado] = useState("");
