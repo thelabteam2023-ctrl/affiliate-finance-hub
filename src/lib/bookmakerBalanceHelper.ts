@@ -1,22 +1,20 @@
 /**
  * Helper centralizado para atualização de saldos de bookmakers
  * 
- * REGRA CRÍTICA MULTI-MOEDA:
- * - Bookmakers com moeda USD/USDT: usar saldo_usd
- * - Bookmakers com outras moedas (BRL): usar saldo_atual
+ * REGRA CANÔNICA (v3.0):
+ * - SEMPRE usar saldo_atual como campo canônico para todas as moedas
+ * - O campo saldo_usd está DEPRECADO e é atualizado apenas para compatibilidade
+ * - Ambos os campos são sincronizados para evitar dessincronização
  * 
  * REGRA CRÍTICA BÔNUS ATIVO:
  * - Quando há bônus ativo (status=credited, saldo_atual > 0), o delta é aplicado
- *   no bonus.saldo_atual em vez do bookmaker.saldo_atual/saldo_usd
+ *   no bonus.saldo_atual em vez do bookmaker.saldo_atual
  * - Isso unifica os saldos durante o período de bônus
  * 
  * REGRA CRÍTICA CONCORRÊNCIA (v2.0):
  * - Coluna `version` para controle otimista
  * - RPC `debit_bookmaker_with_lock` com lock pessimista + verificação de versão
  * - RPC `validate_aposta_pre_commit` para validação server-side antes do commit
- * 
- * A RPC get_bookmaker_saldos lê saldo_usd para USD/USDT e saldo_atual para outras.
- * Este helper garante consistência ao gravar.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -84,7 +82,8 @@ export async function getBookmakerMoeda(bookmakerId: string): Promise<string | n
 }
 
 /**
- * Verifica se uma moeda usa o campo saldo_usd
+ * Verifica se uma moeda é USD/USDT
+ * NOTA: Usado apenas para lógica de exibição, não para determinar campo de saldo
  */
 export function isUsdCurrency(moeda: string): boolean {
   return moeda === "USD" || moeda === "USDT";
@@ -229,7 +228,7 @@ export async function updateBookmakerBalance(
     // Fallback: atualização direta sem auditoria
     const { data: bookmaker, error: fetchError } = await supabase
       .from("bookmakers")
-      .select("moeda, saldo_atual, saldo_usd")
+      .select("moeda, saldo_atual")
       .eq("id", bookmakerId)
       .maybeSingle();
     
@@ -239,18 +238,15 @@ export async function updateBookmakerBalance(
     }
     
     const moeda = bookmaker.moeda || "BRL";
-    const usaUsd = isUsdCurrency(moeda);
-    
-    // Calcular novo saldo (permitindo saldos negativos para refletir prejuízo real)
-    const saldoAtual = usaUsd 
-      ? (bookmaker.saldo_usd || 0) 
-      : (bookmaker.saldo_atual || 0);
+    const saldoAtual = bookmaker.saldo_atual || 0;
     const novoSaldo = saldoAtual + delta;
     
-    // Atualizar campo correto
-    const updateData = usaUsd 
-      ? { saldo_usd: novoSaldo }
-      : { saldo_atual: novoSaldo };
+    // SEMPRE atualizar saldo_atual (campo canônico)
+    // Para moedas USD/USDT, também sincroniza saldo_usd para compatibilidade
+    const updateData: Record<string, number> = { saldo_atual: novoSaldo };
+    if (isUsdCurrency(moeda)) {
+      updateData.saldo_usd = novoSaldo;
+    }
     
     const { error: updateError } = await supabase
       .from("bookmakers")
@@ -262,7 +258,7 @@ export async function updateBookmakerBalance(
       return false;
     }
     
-    console.log(`[updateBookmakerBalance] Bookmaker ${bookmakerId}: ${usaUsd ? 'saldo_usd' : 'saldo_atual'} ${saldoAtual} → ${novoSaldo} (delta: ${delta})`);
+    console.log(`[updateBookmakerBalance] Bookmaker ${bookmakerId}: saldo_atual ${saldoAtual} → ${novoSaldo} (delta: ${delta}, moeda: ${moeda})`);
     return true;
   } catch (error) {
     console.error("[updateBookmakerBalance] Exceção:", error);

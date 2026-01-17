@@ -164,13 +164,10 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     setBonusDrawerOpen(true);
   };
 
-  // Fonte de verdade de saldo por moeda:
-  // - Para USD/USDT, o saldo está no campo saldo_usd (legado).
-  // - Para BRL (e demais), o saldo está em saldo_atual.
-  const isUSDMoeda = (moeda?: string | null) => moeda === "USD" || moeda === "USDT";
+  // Fonte de verdade de saldo: SEMPRE usar saldo_atual
+  // O campo saldo_usd está deprecado - saldo_atual é o campo canônico para todas as moedas
   const getSaldoBookmaker = (b: { moeda?: string | null; saldo_atual?: number | null; saldo_usd?: number | null }) => {
-    const moeda = b.moeda || "BRL";
-    return isUSDMoeda(moeda) ? (b.saldo_usd ?? 0) : (b.saldo_atual ?? 0);
+    return b.saldo_atual ?? 0;
   };
 
   const fetchCotacaoTrabalho = useCallback(async () => {
