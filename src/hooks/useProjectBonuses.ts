@@ -226,10 +226,10 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         case "credited":
           summary.total_credited += b.bonus_amount;
           summary.count_credited++;
-          summary.active_bonus_total += b.saldo_atual;
-          if (b.saldo_atual > 0) {
-            bookmakersWithBonus.add(b.bookmaker_id);
-          }
+          // No modelo unificado, saldo_atual é 0, usamos bonus_amount para contabilizar
+          summary.active_bonus_total += b.bonus_amount;
+          // Sempre adiciona bookmaker com bônus creditado (independente de saldo_atual)
+          bookmakersWithBonus.add(b.bookmaker_id);
           break;
         case "pending":
           summary.total_pending += b.bonus_amount;
@@ -260,15 +260,18 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
   }, [bonuses]);
 
   const getActiveBonusByBookmaker = useCallback((bkId: string): number => {
+    // No modelo unificado, retorna bonus_amount dos bônus creditados
     return bonuses
       .filter((b) => b.bookmaker_id === bkId && b.status === "credited")
-      .reduce((acc, b) => acc + b.saldo_atual, 0);
+      .reduce((acc, b) => acc + b.bonus_amount, 0);
   }, [bonuses]);
 
   const getBookmakersWithActiveBonus = useCallback((): string[] => {
+    // Retorna bookmakers que têm bônus com status "credited"
+    // No modelo unificado, saldo_atual é sempre 0, então verificamos apenas o status
     const ids = new Set<string>();
     bonuses.forEach((b) => {
-      if (b.status === "credited" && b.saldo_atual > 0) {
+      if (b.status === "credited") {
         ids.add(b.bookmaker_id);
       }
     });
@@ -276,7 +279,8 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
   }, [bonuses]);
 
   const getActiveBonusId = useCallback((bkId: string): string | null => {
-    const bonus = bonuses.find((b) => b.bookmaker_id === bkId && b.status === "credited" && b.saldo_atual > 0);
+    // Retorna o ID do primeiro bônus creditado para o bookmaker
+    const bonus = bonuses.find((b) => b.bookmaker_id === bkId && b.status === "credited");
     return bonus?.id || null;
   }, [bonuses]);
 
