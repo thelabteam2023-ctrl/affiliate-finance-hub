@@ -203,18 +203,18 @@ export default function Caixa() {
       // Fetch FIAT balances (view já filtra por workspace via get_current_workspace())
       const { data: saldosFiatData, error: fiatError } = await supabase
         .from("v_saldo_caixa_fiat")
-        .select("moeda, saldo");
+        .select("*");
 
       if (fiatError) throw fiatError;
-      setSaldosFiat((saldosFiatData || []) as SaldoFiat[]);
+      setSaldosFiat((saldosFiatData || []) as unknown as SaldoFiat[]);
 
       // Fetch CRYPTO balances (view já filtra por workspace via get_current_workspace())
       const { data: saldosCryptoData, error: cryptoError } = await supabase
         .from("v_saldo_caixa_crypto")
-        .select("coin, saldo_coin, saldo_usd");
+        .select("*");
 
       if (cryptoError) throw cryptoError;
-      setSaldosCrypto((saldosCryptoData || []) as SaldoCrypto[]);
+      setSaldosCrypto((saldosCryptoData || []) as unknown as SaldoCrypto[]);
 
       // Fetch total bookmaker balance (BRL + USD separados)
       const { data: bookmakersBalanceData } = await supabase
