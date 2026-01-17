@@ -339,19 +339,24 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
           })
           .eq("id", data.bookmaker_id);
 
-        // Incrementar saldo do bookmaker
+        // Incrementar saldo do bookmaker (considerando moeda USD/USDT)
         const { data: bookmaker } = await supabase
           .from("bookmakers")
-          .select("saldo_atual")
+          .select("saldo_atual, saldo_usd, moeda")
           .eq("id", data.bookmaker_id)
           .single();
 
         if (bookmaker) {
+          const isUsdCurrency = ['USD', 'USDT', 'USDC'].includes(bookmaker.moeda?.toUpperCase());
           const novoSaldo = Number(bookmaker.saldo_atual || 0) + data.bonus_amount;
+          const novoSaldoUsd = Number(bookmaker.saldo_usd || 0) + data.bonus_amount;
+          
+          // CORREÇÃO: Atualizar ambos os campos para garantir consistência
           await supabase
             .from("bookmakers")
             .update({ 
               saldo_atual: novoSaldo,
+              saldo_usd: isUsdCurrency ? novoSaldoUsd : bookmaker.saldo_usd,
               updated_at: new Date().toISOString()
             })
             .eq("id", data.bookmaker_id);
@@ -382,20 +387,25 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       // Se status muda para credited, creditar no bookmaker
       if (existingBonus && data.status && data.status !== existingBonus.status) {
         if (data.status === "credited") {
-          // Creditar no bookmaker
+          // Creditar no bookmaker (considerando moeda USD/USDT)
           const bonusAmount = data.bonus_amount ?? existingBonus.bonus_amount;
           const { data: bookmaker } = await supabase
             .from("bookmakers")
-            .select("saldo_atual")
+            .select("saldo_atual, saldo_usd, moeda")
             .eq("id", existingBonus.bookmaker_id)
             .single();
 
           if (bookmaker) {
+            const isUsdCurrency = ['USD', 'USDT', 'USDC'].includes(bookmaker.moeda?.toUpperCase());
             const novoSaldo = Number(bookmaker.saldo_atual || 0) + bonusAmount;
+            const novoSaldoUsd = Number(bookmaker.saldo_usd || 0) + bonusAmount;
+            
+            // CORREÇÃO: Atualizar ambos os campos para garantir consistência
             await supabase
               .from("bookmakers")
               .update({ 
                 saldo_atual: novoSaldo,
+                saldo_usd: isUsdCurrency ? novoSaldoUsd : bookmaker.saldo_usd,
                 updated_at: new Date().toISOString()
               })
               .eq("id", existingBonus.bookmaker_id);
