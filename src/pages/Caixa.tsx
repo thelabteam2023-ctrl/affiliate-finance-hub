@@ -183,7 +183,7 @@ export default function Caixa() {
       setParceiros(parceirosMap);
 
       const contasMap: { [key: string]: string } = {};
-      contasData?.forEach(c => contasMap[c.id] = c.titular ? `${c.banco}, ${c.titular}` : c.banco);
+      contasData?.forEach(c => contasMap[c.id] = c.banco);
       setContas(contasMap);
       setContasBancarias(contasData || []);
 
@@ -371,106 +371,140 @@ export default function Caixa() {
   };
 
   const getOrigemLabel = (transacao: Transacao): string => {
+    const info = getOrigemInfo(transacao);
+    return info.primary;
+  };
+
+  const getOrigemInfo = (transacao: Transacao): { primary: string; secondary?: string } => {
     // Para APORTE_FINANCEIRO, verificamos o fluxo pela direção
     if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
       // Se destino é CAIXA_OPERACIONAL, é um aporte (Investidor → Caixa)
       if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
-        return transacao.nome_investidor || "Investidor Externo";
+        return { primary: transacao.nome_investidor || "Investidor Externo" };
       }
       // Se origem é CAIXA_OPERACIONAL, é uma liquidação (Caixa → Investidor)
       if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-        return "Caixa Operacional";
+        return { primary: "Caixa Operacional" };
       }
     }
     
     if (transacao.tipo_transacao === "APORTE") {
-      return transacao.nome_investidor || "Investidor Externo";
+      return { primary: transacao.nome_investidor || "Investidor Externo" };
     }
     
     if (transacao.tipo_transacao === "LIQUIDACAO") {
-      return "Caixa Operacional";
+      return { primary: "Caixa Operacional" };
     }
     
     if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-      return "Caixa Operacional";
+      return { primary: "Caixa Operacional" };
     }
     
     if (transacao.origem_tipo === "PARCEIRO_CONTA" && transacao.origem_conta_bancaria_id) {
-      return contas[transacao.origem_conta_bancaria_id] || "Conta Bancária";
+      const conta = contasBancarias.find(c => c.id === transacao.origem_conta_bancaria_id);
+      if (conta) {
+        return { primary: conta.banco, secondary: conta.titular };
+      }
+      return { primary: "Conta Bancária" };
     }
     
     if (transacao.origem_tipo === "PARCEIRO_WALLET" && transacao.origem_wallet_id) {
-      return wallets[transacao.origem_wallet_id] || "Wallet";
+      const wallet = walletsDetalhes.find(w => w.id === transacao.origem_wallet_id);
+      if (wallet) {
+        const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
+        return { 
+          primary: wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET',
+          secondary: parceiroNome
+        };
+      }
+      return { primary: wallets[transacao.origem_wallet_id] || "Wallet" };
     }
     
     if (transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id) {
-      return bookmakers[transacao.origem_bookmaker_id]?.nome || "Bookmaker";
+      return { primary: bookmakers[transacao.origem_bookmaker_id]?.nome || "Bookmaker" };
     }
     
-    return "Origem";
+    return { primary: "Origem" };
   };
 
   const getDestinoLabel = (transacao: Transacao): string => {
+    const info = getDestinoInfo(transacao);
+    return info.primary;
+  };
+
+  const getDestinoInfo = (transacao: Transacao): { primary: string; secondary?: string } => {
     // Para APORTE_FINANCEIRO, verificamos o fluxo pela direção
     if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
       // Se destino é CAIXA_OPERACIONAL, é um aporte (Investidor → Caixa)
       if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
-        return "Caixa Operacional";
+        return { primary: "Caixa Operacional" };
       }
       // Se origem é CAIXA_OPERACIONAL, é uma liquidação (Caixa → Investidor)
       if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-        return transacao.nome_investidor || "Investidor Externo";
+        return { primary: transacao.nome_investidor || "Investidor Externo" };
       }
     }
     
     if (transacao.tipo_transacao === "APORTE") {
-      return "Caixa Operacional";
+      return { primary: "Caixa Operacional" };
     }
     
     if (transacao.tipo_transacao === "LIQUIDACAO") {
-      return transacao.nome_investidor || "Investidor Externo";
+      return { primary: transacao.nome_investidor || "Investidor Externo" };
     }
     
     if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
-      return "Caixa Operacional";
+      return { primary: "Caixa Operacional" };
     }
     
     if (transacao.destino_tipo === "PARCEIRO_CONTA" && transacao.destino_conta_bancaria_id) {
-      return contas[transacao.destino_conta_bancaria_id] || "Conta Bancária";
+      const conta = contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id);
+      if (conta) {
+        return { primary: conta.banco, secondary: conta.titular };
+      }
+      return { primary: "Conta Bancária" };
     }
     
     if (transacao.destino_tipo === "PARCEIRO_WALLET" && transacao.destino_wallet_id) {
-      return wallets[transacao.destino_wallet_id] || "Wallet";
+      const wallet = walletsDetalhes.find(w => w.id === transacao.destino_wallet_id);
+      if (wallet) {
+        const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
+        return { 
+          primary: wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET',
+          secondary: parceiroNome
+        };
+      }
+      return { primary: wallets[transacao.destino_wallet_id] || "Wallet" };
     }
     
     if (transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id) {
-      return bookmakers[transacao.destino_bookmaker_id]?.nome || "Bookmaker";
+      return { primary: bookmakers[transacao.destino_bookmaker_id]?.nome || "Bookmaker" };
     }
     
     // Pagamentos para parceiros, indicadores, operadores
     if (transacao.destino_tipo === "PARCEIRO" && transacao.destino_parceiro_id) {
-      return parceiros[transacao.destino_parceiro_id] || "Parceiro";
+      return { primary: parceiros[transacao.destino_parceiro_id] || "Parceiro" };
     }
     
     if (transacao.destino_tipo === "INDICADOR") {
-      return transacao.descricao?.split(" - ")[0] || "Indicador";
+      return { primary: transacao.descricao?.split(" - ")[0] || "Indicador" };
     }
     
     if (transacao.destino_tipo === "OPERADOR") {
       // Usar operador_id diretamente para rastreabilidade
       if (transacao.operador_id && operadoresMap[transacao.operador_id]) {
-        return operadoresMap[transacao.operador_id];
+        return { primary: operadoresMap[transacao.operador_id] };
       }
       // Fallback para descrição (registros antigos)
-      return transacao.descricao?.split(" - ")[0] || "Operador";
+      return { primary: transacao.descricao?.split(" - ")[0] || "Operador" };
     }
     
     // Despesas administrativas - destino externo
     if (!transacao.destino_tipo) {
-      return "Despesa Externa";
+      return { primary: "Despesa Externa" };
     }
     
-    return "Destino";
+    return { primary: "Destino" };
   };
 
   return (
@@ -647,6 +681,8 @@ export default function Caixa() {
             getTipoColor={getTipoColor}
             getOrigemLabel={getOrigemLabel}
             getDestinoLabel={getDestinoLabel}
+            getOrigemInfo={getOrigemInfo}
+            getDestinoInfo={getDestinoInfo}
             formatCurrency={formatCurrency}
             onConfirmarSaque={(transacao) => {
               setSaqueParaConfirmar(transacao);
