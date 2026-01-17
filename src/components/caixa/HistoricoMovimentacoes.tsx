@@ -51,6 +51,11 @@ interface WalletDetalhe {
   parceiro_id: string;
 }
 
+interface LabelInfo {
+  primary: string;
+  secondary?: string;
+}
+
 interface HistoricoMovimentacoesProps {
   transacoes: any[];
   parceiros: { [key: string]: string };
@@ -71,6 +76,8 @@ interface HistoricoMovimentacoesProps {
   getTipoColor: (tipo: string, transacao?: any) => string;
   getOrigemLabel: (transacao: any) => string;
   getDestinoLabel: (transacao: any) => string;
+  getOrigemInfo?: (transacao: any) => LabelInfo;
+  getDestinoInfo?: (transacao: any) => LabelInfo;
   formatCurrency: (value: number, currency: string) => string;
   onConfirmarSaque?: (transacao: any) => void;
 }
@@ -88,6 +95,8 @@ export function HistoricoMovimentacoes({
   getTipoColor,
   getOrigemLabel,
   getDestinoLabel,
+  getOrigemInfo,
+  getDestinoInfo,
   formatCurrency,
   contasBancarias,
   parceiros,
@@ -232,9 +241,31 @@ export function HistoricoMovimentacoes({
                       </>
                     ) : (
                       <>
-                        <span className="text-sm text-muted-foreground">{getOrigemLabel(transacao)}</span>
-                        <ArrowRight className="h-4 w-4 text-primary" />
-                        <span className="text-sm text-muted-foreground">{getDestinoLabel(transacao)}</span>
+                        {/* Origem com nome secundário */}
+                        {(() => {
+                          const origemInfo = getOrigemInfo ? getOrigemInfo(transacao) : { primary: getOrigemLabel(transacao) };
+                          return (
+                            <div className="flex flex-col">
+                              <span className="text-sm text-muted-foreground">{origemInfo.primary}</span>
+                              {origemInfo.secondary && (
+                                <span className="text-xs text-muted-foreground/70">{origemInfo.secondary}</span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                        <ArrowRight className="h-4 w-4 text-primary flex-shrink-0" />
+                        {/* Destino com nome secundário */}
+                        {(() => {
+                          const destinoInfo = getDestinoInfo ? getDestinoInfo(transacao) : { primary: getDestinoLabel(transacao) };
+                          return (
+                            <div className="flex flex-col">
+                              <span className="text-sm text-muted-foreground">{destinoInfo.primary}</span>
+                              {destinoInfo.secondary && (
+                                <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
+                              )}
+                            </div>
+                          );
+                        })()}
                         {transacao.descricao && (
                           <Dialog>
                             <DialogTrigger asChild>

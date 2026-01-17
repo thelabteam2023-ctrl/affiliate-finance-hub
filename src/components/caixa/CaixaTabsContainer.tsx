@@ -5,6 +5,11 @@ import { FluxoFinanceiroOperacional } from "./FluxoFinanceiroOperacional";
 import { HistoricoMovimentacoes } from "./HistoricoMovimentacoes";
 import { ConciliacaoSaldos } from "./ConciliacaoSaldos";
 
+interface LabelInfo {
+  primary: string;
+  secondary?: string;
+}
+
 interface CaixaTabsContainerProps {
   transacoes: any[];
   parceiros: { [key: string]: string };
@@ -25,6 +30,8 @@ interface CaixaTabsContainerProps {
   getTipoColor: (tipo: string, transacao?: any) => string;
   getOrigemLabel: (transacao: any) => string;
   getDestinoLabel: (transacao: any) => string;
+  getOrigemInfo?: (transacao: any) => LabelInfo;
+  getDestinoInfo?: (transacao: any) => LabelInfo;
   formatCurrency: (value: number, currency: string) => string;
   onConfirmarSaque?: (transacao: any) => void;
   saldoBookmakers: number;
@@ -51,6 +58,8 @@ export function CaixaTabsContainer({
   getTipoColor,
   getOrigemLabel,
   getDestinoLabel,
+  getOrigemInfo,
+  getDestinoInfo,
   formatCurrency,
   onConfirmarSaque,
   saldoBookmakers,
@@ -122,6 +131,8 @@ export function CaixaTabsContainer({
             getTipoColor={getTipoColor}
             getOrigemLabel={getOrigemLabel}
             getDestinoLabel={getDestinoLabel}
+            getOrigemInfo={getOrigemInfo}
+            getDestinoInfo={getDestinoInfo}
             formatCurrency={formatCurrency}
             onConfirmarSaque={onConfirmarSaque}
           />
