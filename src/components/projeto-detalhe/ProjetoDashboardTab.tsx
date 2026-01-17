@@ -174,7 +174,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     try {
       setLoading(true);
       
-      // Busca apostas com filtro de período
+      // Busca apostas com filtro de período (SEM o campo pernas JSONB)
       let query = supabase
         .from("apostas_unificada")
         .select(`
@@ -189,8 +189,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
           bookmaker_id,
           forma_registro,
           estrategia,
-          bonus_id,
-          pernas
+          bonus_id
         `)
         .eq("projeto_id", projetoId)
         .eq("status", "LIQUIDADA") // CRÍTICO: Só contabilizar apostas liquidadas
@@ -202,36 +201,75 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         query = query
           .gte("data_aposta", format(dateRange.start, "yyyy-MM-dd"))
           .lte("data_aposta", format(dateRange.end, "yyyy-MM-dd"));
-
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
       
-      // Buscar bookmaker names - incluindo bookmakers das pernas de arbitragem
-      const bookmakerIdsFromApostas = (data || []).map(a => a.bookmaker_id).filter(Boolean);
+      // Buscar pernas da tabela normalizada para apostas de arbitragem
+      const apostaIds = (data || [])
+        .filter(a => a.forma_registro === 'ARBITRAGEM')
+        .map(a => a.id);
       
-      // Extrair bookmaker_ids das pernas de arbitragem
-      const bookmakerIdsFromPernas: string[] = [];
-      (data || []).forEach((item: any) => {
-        if (item.forma_registro === 'ARBITRAGEM' && Array.isArray(item.pernas)) {
-          item.pernas.forEach((perna: any) => {
-            if (perna.bookmaker_id) {
-              bookmakerIdsFromPernas.push(perna.bookmaker_id);
-            }
+      let pernasMap: Record<string, any[]> = {};
+      if (apostaIds.length > 0) {
+        const { data: pernasData } = await supabase
+          .from("apostas_pernas")
+          .select(`
+            aposta_id,
+            bookmaker_id,
+            selecao,
+            odd,
+            stake,
+            moeda,
+            resultado,
+            lucro_prejuizo,
+            gerou_freebet,
+            valor_freebet_gerada,
+            bookmakers (
+              nome,
+              parceiro_id,
+              parceiros (nome),
+              bookmakers_catalogo (logo_url)
+            )
+          `)
+          .in("aposta_id", apostaIds)
+          .order("ordem", { ascending: true });
+        
+        // Agrupar pernas por aposta_id
+        (pernasData || []).forEach((p: any) => {
+          if (!pernasMap[p.aposta_id]) {
+            pernasMap[p.aposta_id] = [];
+          }
+          pernasMap[p.aposta_id].push({
+            bookmaker_id: p.bookmaker_id,
+            bookmaker_nome: p.bookmakers?.nome || 'Desconhecida',
+            parceiro_nome: p.bookmakers?.parceiros?.nome || null,
+            logo_url: p.bookmakers?.bookmakers_catalogo?.logo_url || null,
+            selecao: p.selecao,
+            odd: p.odd,
+            stake: p.stake,
+            moeda: p.moeda,
+            resultado: p.resultado,
+            lucro_prejuizo: p.lucro_prejuizo,
+            gerou_freebet: p.gerou_freebet,
+            valor_freebet_gerada: p.valor_freebet_gerada,
           });
-        }
-      });
+        });
+      }
       
-      const bookmakerIds = [...new Set([...bookmakerIdsFromApostas, ...bookmakerIdsFromPernas])];
+      // Buscar bookmaker info para apostas simples
+      const bookmakerIdsFromApostas = (data || [])
+        .filter(a => a.bookmaker_id)
+        .map(a => a.bookmaker_id as string);
+      
       let bookmakerMap: Record<string, { nome: string; parceiro_nome: string | null; logo_url: string | null }> = {};
       
-      if (bookmakerIds.length > 0) {
+      if (bookmakerIdsFromApostas.length > 0) {
         const { data: bookmakers } = await supabase
           .from("bookmakers")
           .select("id, nome, parceiros(nome), bookmakers_catalogo(logo_url)")
-          .in("id", bookmakerIds);
+          .in("id", bookmakerIdsFromApostas);
         
         bookmakerMap = (bookmakers || []).reduce((acc: any, bk: any) => {
           acc[bk.id] = {
@@ -244,29 +282,14 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       }
       
       // Transform para formato unificado
-      // NOTA: Apostas de arbitragem mantêm bookmaker_id como null/unknown
-      // mas suas pernas contêm os bookmaker_ids reais - usados em bookmakerMetrics
       const apostasTransformadas: ApostaUnificada[] = (data || []).map((item: any) => {
         const bkInfo = bookmakerMap[item.bookmaker_id] || { nome: 'Desconhecida', parceiro_nome: null, logo_url: null };
         const stake = item.forma_registro === 'ARBITRAGEM' ? item.stake_total : item.stake;
         
-        // Enriquecer pernas com dados do bookmakerMap
-        let pernasEnriquecidas = undefined;
-        if (item.forma_registro === 'ARBITRAGEM' && Array.isArray(item.pernas)) {
-          pernasEnriquecidas = item.pernas.map((perna: any) => {
-            const pernaBookmakerInfo = bookmakerMap[perna.bookmaker_id] || { 
-              nome: perna.bookmaker_nome || 'Desconhecida', 
-              parceiro_nome: null, 
-              logo_url: null 
-            };
-            return {
-              ...perna,
-              bookmaker_nome: pernaBookmakerInfo.nome,
-              parceiro_nome: pernaBookmakerInfo.parceiro_nome,
-              logo_url: pernaBookmakerInfo.logo_url,
-            };
-          });
-        }
+        // Pernas da tabela normalizada (já enriquecidas com dados do bookmaker)
+        const pernasEnriquecidas = item.forma_registro === 'ARBITRAGEM' 
+          ? pernasMap[item.id] || []
+          : undefined;
         
         return {
           id: item.id,

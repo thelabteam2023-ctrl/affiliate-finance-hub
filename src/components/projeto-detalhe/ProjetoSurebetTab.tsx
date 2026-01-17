@@ -258,7 +258,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          *,
+          id, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
+          spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
+          status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
+          odd, selecao, bookmaker_id, bonus_id,
           bookmaker:bookmakers(nome, parceiro:parceiros(nome))
         `)
         .eq("projeto_id", projetoId)
@@ -276,10 +279,53 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       if (error) throw error;
       
       if (arbitragensData && arbitragensData.length > 0) {
-        const surebetsFormatadas: Surebet[] = arbitragensData.map(arb => {
-          const pernas = parsePernaFromJson(arb.pernas);
+        // Buscar pernas da tabela normalizada para apostas de arbitragem
+        const apostaIdsArbitragem = arbitragensData
+          .filter((arb: any) => arb.forma_registro === 'ARBITRAGEM')
+          .map((arb: any) => arb.id);
+        
+        let pernasMap: Record<string, any[]> = {};
+        if (apostaIdsArbitragem.length > 0) {
+          const { data: pernasData } = await supabase
+            .from("apostas_pernas")
+            .select(`
+              aposta_id,
+              bookmaker_id,
+              selecao,
+              odd,
+              stake,
+              resultado,
+              lucro_prejuizo,
+              gerou_freebet,
+              valor_freebet_gerada,
+              bookmakers (nome)
+            `)
+            .in("aposta_id", apostaIdsArbitragem)
+            .order("ordem", { ascending: true });
           
-          const pernasOrdenadas = [...pernas].sort((a, b) => {
+          (pernasData || []).forEach((p: any) => {
+            if (!pernasMap[p.aposta_id]) {
+              pernasMap[p.aposta_id] = [];
+            }
+            pernasMap[p.aposta_id].push({
+              bookmaker_id: p.bookmaker_id,
+              bookmaker_nome: p.bookmakers?.nome || "—",
+              selecao: p.selecao,
+              odd: p.odd,
+              stake: p.stake,
+              resultado: p.resultado,
+              lucro_prejuizo: p.lucro_prejuizo,
+              gerou_freebet: p.gerou_freebet,
+              valor_freebet_gerada: p.valor_freebet_gerada,
+            });
+          });
+        }
+        
+        const surebetsFormatadas: Surebet[] = arbitragensData.map((arb: any) => {
+          // Usar pernas da tabela normalizada (com fallback para JSONB legado)
+          const pernasRaw = pernasMap[arb.id] || parsePernaFromJson(arb.pernas);
+          
+          const pernasOrdenadas = [...pernasRaw].sort((a, b) => {
             const order: Record<string, number> = { 
               "Casa": 1, "1": 1,
               "Empate": 2, "X": 2,
@@ -323,13 +369,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             estrategia: arb.estrategia,
             contexto_operacional: arb.contexto_operacional,
             stake: arb.stake,
+            stake_bonus: arb.stake_bonus,
+            bonus_id: arb.bonus_id,
             odd: arb.odd,
             selecao: arb.selecao,
             bookmaker_id: arb.bookmaker_id,
             // Para apostas simples, buscar do join; para surebets, usar a primeira perna
             bookmaker_nome: isSimples 
               ? ((arb as any).bookmaker?.nome || "—")
-              : (pernas[0]?.bookmaker_nome || "—"),
+              : (pernasRaw[0]?.bookmaker_nome || "—"),
             parceiro_nome: isSimples
               ? ((arb as any).bookmaker?.parceiro?.nome || undefined)
               : undefined,
