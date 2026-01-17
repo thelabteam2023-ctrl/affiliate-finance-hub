@@ -217,6 +217,15 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
   // Get pending bonuses (not yet credited)
   const pendingBonuses = bonuses.filter(b => b.status === 'pending');
 
+  // Get bookmakers that need action: credited bonus but zero balance (consumed)
+  const bookmakersNeedingAction = useMemo(() => {
+    return bookmakers.filter(bk => {
+      const activeBonuses = bk.bonuses.filter(b => b.status === 'credited');
+      // Has credited bonus but zero or negative real balance = needs finalization
+      return activeBonuses.length > 0 && bk.saldo_real <= 0;
+    });
+  }, [bookmakers]);
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -250,6 +259,60 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
+
+      {/* ACTION REQUIRED ALERT - Bookmakers with zero balance needing finalization */}
+      {bookmakersNeedingAction.length > 0 && (
+        <Card className="border-red-500/50 bg-red-500/10 animate-pulse-subtle">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-400">
+              <AlertTriangle className="h-4 w-4" />
+              Ação Necessária ({bookmakersNeedingAction.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground mb-3">
+              Estas casas têm bônus ativo, mas saldo zerado. Finalize o bônus para registrar o resultado.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {bookmakersNeedingAction.map((bk) => {
+                const activeBonuses = bk.bonuses.filter(b => b.status === 'credited');
+                return activeBonuses.map((bonus) => (
+                  <div 
+                    key={bonus.id} 
+                    className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-red-500/30"
+                  >
+                    {bk.logo_url ? (
+                      <img
+                        src={bk.logo_url}
+                        alt={bk.nome}
+                        className="h-8 w-8 rounded-lg object-contain bg-white p-0.5"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                        <AlertTriangle className="h-4 w-4 text-red-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{bk.nome}</p>
+                      <p className="text-xs text-muted-foreground truncate">{bonus.title}</p>
+                      <p className="text-xs text-red-400">Saldo: {formatCurrency(bk.saldo_real, bk.moeda)}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-500/30 hover:bg-red-500/20 text-red-400"
+                      onClick={() => handleFinalizeClick(bonus)}
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      Finalizar
+                    </Button>
+                  </div>
+                ));
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pending Bonuses Section */}
       {pendingBonuses.length > 0 && (
