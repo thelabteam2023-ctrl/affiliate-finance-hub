@@ -241,11 +241,11 @@ export async function updateBookmakerBalance(
     const moeda = bookmaker.moeda || "BRL";
     const usaUsd = isUsdCurrency(moeda);
     
-    // Calcular novo saldo
+    // Calcular novo saldo (permitindo saldos negativos para refletir prejuízo real)
     const saldoAtual = usaUsd 
       ? (bookmaker.saldo_usd || 0) 
       : (bookmaker.saldo_atual || 0);
-    const novoSaldo = Math.max(0, saldoAtual + delta);
+    const novoSaldo = saldoAtual + delta;
     
     // Atualizar campo correto
     const updateData = usaUsd 
