@@ -36,6 +36,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
+import { pernasToInserts } from "@/types/apostasPernas";
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
@@ -1985,6 +1986,32 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
 
         if (error) throw error;
         
+        // CRÍTICO: DUAL-WRITE - Sincronizar apostas_pernas (delete + re-insert)
+        // Isso garante que o saldo_em_aposta seja calculado corretamente pela RPC
+        if (surebet.id && novasPernas.length > 0) {
+          // 5a. Deletar pernas antigas
+          const { error: deleteError } = await supabase
+            .from("apostas_pernas")
+            .delete()
+            .eq("aposta_id", surebet.id);
+          
+          if (deleteError) {
+            console.error("[SurebetDialog] Erro ao deletar pernas antigas:", deleteError);
+          }
+          
+          // 5b. Inserir novas pernas
+          const pernasInsert = pernasToInserts(surebet.id, novasPernas);
+          const { error: pernasError } = await supabase
+            .from("apostas_pernas")
+            .insert(pernasInsert);
+          
+          if (pernasError) {
+            console.error("[SurebetDialog] Erro ao re-inserir pernas normalizadas:", pernasError);
+          } else {
+            console.log("[SurebetDialog] Dual-write edit: pernas sincronizadas:", pernasInsert.length);
+          }
+        }
+        
         // Invalidar cache de saldos
         invalidateSaldos(projetoId);
         
@@ -2139,7 +2166,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           return;
         }
         
-        const { error: insertError } = await supabase
+        const { data: insertedData, error: insertError } = await supabase
           .from("apostas_unificada")
           .insert({
             user_id: user.id,
@@ -2172,9 +2199,27 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
             resultado: "PENDENTE",
             pernas: pernasToSave as any,
             data_aposta: new Date().toISOString()
-          });
+          })
+          .select("id")
+          .single();
 
         if (insertError) throw insertError;
+        
+        // CRÍTICO: DUAL-WRITE - Inserir pernas na tabela normalizada apostas_pernas
+        // Isso garante que o saldo_em_aposta seja calculado corretamente pela RPC
+        if (insertedData?.id && pernasToSave.length > 0) {
+          const pernasInsert = pernasToInserts(insertedData.id, pernasToSave);
+          const { error: pernasError } = await supabase
+            .from("apostas_pernas")
+            .insert(pernasInsert);
+          
+          if (pernasError) {
+            console.error("[SurebetDialog] Erro ao inserir pernas normalizadas:", pernasError);
+            // Não falhar a operação principal, mas logar para auditoria
+          } else {
+            console.log("[SurebetDialog] Dual-write: pernas inseridas em apostas_pernas:", pernasInsert.length);
+          }
+        }
 
         toast.success("Operação registrada com sucesso!");
       }
