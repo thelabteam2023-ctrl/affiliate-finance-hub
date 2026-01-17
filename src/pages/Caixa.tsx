@@ -138,7 +138,7 @@ export default function Caixa() {
   const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; titular: string }>>([]);
   const [wallets, setWallets] = useState<{ [key: string]: string }>({});
   const [walletsDetalhes, setWalletsDetalhes] = useState<Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>>([]);
-  const [bookmakers, setBookmakers] = useState<{ [key: string]: { nome: string; status: string; login_username?: string } }>({});
+  const [bookmakers, setBookmakers] = useState<{ [key: string]: { nome: string; status: string; parceiro_id?: string } }>({});
   const [operadoresMap, setOperadoresMap] = useState<{ [key: string]: string }>({});
 
   const fetchData = async () => {
@@ -170,7 +170,7 @@ export default function Caixa() {
       
       const { data: bookmakersData } = await supabase
         .from("bookmakers")
-        .select("id, nome, status, login_username");
+        .select("id, nome, status, parceiro_id");
 
       // Fetch operadores for operator payment traceability
       const { data: operadoresData } = await supabase
@@ -192,8 +192,8 @@ export default function Caixa() {
       setWallets(walletsMap);
       setWalletsDetalhes(walletsData || []);
 
-      const bookmakersMap: { [key: string]: { nome: string; status: string; login_username?: string } } = {};
-      bookmakersData?.forEach(b => bookmakersMap[b.id] = { nome: b.nome, status: b.status, login_username: b.login_username });
+      const bookmakersMap: { [key: string]: { nome: string; status: string; parceiro_id?: string } } = {};
+      bookmakersData?.forEach(b => bookmakersMap[b.id] = { nome: b.nome, status: b.status, parceiro_id: b.parceiro_id ?? undefined });
       setBookmakers(bookmakersMap);
 
       const operadoresLookup: { [key: string]: string } = {};
@@ -422,9 +422,10 @@ export default function Caixa() {
     
     if (transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id) {
       const bookmaker = bookmakers[transacao.origem_bookmaker_id];
+      const parceiroNome = bookmaker?.parceiro_id ? parceiros[bookmaker.parceiro_id] : undefined;
       return { 
         primary: bookmaker?.nome || "Bookmaker",
-        secondary: bookmaker?.login_username
+        secondary: parceiroNome
       };
     }
     
@@ -483,9 +484,10 @@ export default function Caixa() {
     
     if (transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id) {
       const bookmaker = bookmakers[transacao.destino_bookmaker_id];
+      const parceiroNome = bookmaker?.parceiro_id ? parceiros[bookmaker.parceiro_id] : undefined;
       return { 
         primary: bookmaker?.nome || "Bookmaker",
-        secondary: bookmaker?.login_username
+        secondary: parceiroNome
       };
     }
     
