@@ -876,25 +876,65 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       : ["Sim", "Não"];
   };
 
-  // Carregar pernas do JSONB da operação (nova tabela unificada)
+  // Carregar pernas da tabela normalizada apostas_pernas (com fallback para JSONB legado)
   const fetchLinkedPernas = async (surebetId: string, surebetModelo: string) => {
+    // Primeiro tenta buscar da tabela normalizada
+    const { data: pernasData, error: pernasError } = await supabase
+      .from("apostas_pernas")
+      .select(`
+        *,
+        bookmakers (
+          nome
+        )
+      `)
+      .eq("aposta_id", surebetId)
+      .order("ordem", { ascending: true });
+
+    // Buscar mercado da operação
     const { data: operacaoData } = await supabase
       .from("apostas_unificada")
-      .select("pernas, mercado")
+      .select("mercado")
       .eq("id", surebetId)
       .single();
     
-    if (!operacaoData?.pernas || !Array.isArray(operacaoData.pernas) || operacaoData.pernas.length === 0) {
-      setLinkedApostas([]);
-      return;
-    }
+    const operacaoMercado = operacaoData?.mercado || "";
 
-    const pernas = operacaoData.pernas as unknown as SurebetPerna[];
-    const operacaoMercado = operacaoData.mercado || "";
+    let sortedPernas: any[] = [];
+
+    if (pernasData && pernasData.length > 0) {
+      // Usar dados da tabela normalizada
+      sortedPernas = pernasData.map((p: any) => ({
+        bookmaker_id: p.bookmaker_id,
+        bookmaker_nome: p.bookmakers?.nome || "Casa",
+        selecao: p.selecao,
+        selecao_livre: p.selecao_livre,
+        odd: p.odd,
+        stake: p.stake,
+        moeda: p.moeda,
+        resultado: p.resultado,
+        lucro_prejuizo: p.lucro_prejuizo,
+        gerou_freebet: p.gerou_freebet,
+        valor_freebet_gerada: p.valor_freebet_gerada,
+      }));
+    } else {
+      // Fallback para JSONB legado
+      const { data: legacyData } = await supabase
+        .from("apostas_unificada")
+        .select("pernas")
+        .eq("id", surebetId)
+        .single();
+      
+      if (!legacyData?.pernas || !Array.isArray(legacyData.pernas) || legacyData.pernas.length === 0) {
+        setLinkedApostas([]);
+        return;
+      }
+
+      sortedPernas = legacyData.pernas as any[];
+    }
     
     // Ordenar pela ordem fixa do modelo E mercado (para labels corretos)
     const ordemFixa = getOrdemFixa(surebetModelo as "1-X-2" | "1-2", operacaoMercado);
-    const sortedPernas = [...pernas].sort((a, b) => {
+    sortedPernas = [...sortedPernas].sort((a, b) => {
       const indexA = ordemFixa.indexOf(a.selecao);
       const indexB = ordemFixa.indexOf(b.selecao);
       if (indexA === -1 && indexB === -1) return 0;
@@ -935,7 +975,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       valorFreebetGerada: perna.valor_freebet_gerada?.toString() || "",
       index,
       // Carregar entradas adicionais se existirem (com selecaoLivre por entrada)
-      additionalEntries: perna.entries?.slice(1).map(e => ({
+      additionalEntries: perna.entries?.slice(1).map((e: any) => ({
         bookmaker_id: e.bookmaker_id,
         moeda: e.moeda,
         odd: e.odd.toString(),
