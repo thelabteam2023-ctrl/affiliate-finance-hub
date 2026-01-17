@@ -5,8 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, bonusQueryKeys } from "@/hooks/useProjectBonuses";
 import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
-import { useSaldoOperavel } from "@/hooks/useSaldoOperavel";
-import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt, Wallet } from "lucide-react";
+import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt } from "lucide-react";
+import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay } from "date-fns";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
 import { BonusContaminationAlert } from "./BonusContaminationAlert";
@@ -46,15 +46,6 @@ interface BonusResultEntry {
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false }: BonusVisaoGeralTabProps) {
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
-  const { 
-    saldoOperavel: totalSaldoOperavel, 
-    saldoReal, 
-    saldoBonus, 
-    saldoFreebet, 
-    saldoEmAposta,
-    totalCasas,
-    isLoading: saldoLoading 
-  } = useSaldoOperavel(projetoId);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -251,93 +242,32 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
       {/* KPIs with hierarchy - Saldo Operável is primary */}
       <div className="grid gap-4 md:grid-cols-4">
+        <SaldoOperavelCard projetoId={projetoId} />
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Casas com Bônus</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.bookmakers_with_active_bonus}</div>
+            <p className="text-xs text-muted-foreground">Em modo bônus ativo</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Bônus Ativo</CardTitle>
+            <Coins className="h-4 w-4 text-warning" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(activeBonusTotalConsolidated)}</div>
+            <p className="text-xs text-muted-foreground">{summary.count_credited} bônus creditados</p>
+          </CardContent>
+        </Card>
+
+        {/* Nova KPI: Performance de Bônus com % */}
         <TooltipProvider>
-          <Card className={`border-primary/30 bg-primary/5 lg:col-span-1 ${isContaminated ? 'ring-1 ring-amber-500/30' : ''}`}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-                Saldo Operável
-                <TooltipUI>
-                  <TooltipTrigger asChild>
-                    <Wallet className="h-4 w-4 text-primary cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-[300px]">
-                    <p className="text-xs font-medium mb-2">Composição do Saldo</p>
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Saldo Real:</span>
-                        <span>{formatCurrency(saldoReal)}</span>
-                      </div>
-                      {saldoBonus > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-yellow-400">+ Bônus Creditado:</span>
-                          <span className="text-yellow-400">{formatCurrency(saldoBonus)}</span>
-                        </div>
-                      )}
-                      {saldoFreebet > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-amber-400">+ Freebet:</span>
-                          <span className="text-amber-400">{formatCurrency(saldoFreebet)}</span>
-                        </div>
-                      )}
-                      {saldoEmAposta > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-red-400">- Em Aposta:</span>
-                          <span className="text-red-400">{formatCurrency(saldoEmAposta)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between pt-1.5 border-t border-border/50 font-medium">
-                        <span>= Operável:</span>
-                        <span className="text-primary">{formatCurrency(totalSaldoOperavel)}</span>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-2">
-                      Valor total disponível para apostas agora
-                    </p>
-                  </TooltipContent>
-                </TooltipUI>
-                {isContaminated && (
-                  <TooltipUI>
-                    <TooltipTrigger asChild>
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[200px]">
-                      <p className="text-xs">Este valor pode incluir resultados de outras estratégias além de bônus</p>
-                    </TooltipContent>
-                  </TooltipUI>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{formatCurrency(totalSaldoOperavel)}</div>
-              <p className="text-xs text-muted-foreground">
-                {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{saldoBonus > 0 ? ' + Bônus' : ''}{saldoFreebet > 0 ? ' + FB' : ''}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Casas com Bônus</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.bookmakers_with_active_bonus}</div>
-              <p className="text-xs text-muted-foreground">Em modo bônus ativo</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Bônus Ativo</CardTitle>
-              <Coins className="h-4 w-4 text-warning" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(activeBonusTotalConsolidated)}</div>
-              <p className="text-xs text-muted-foreground">{summary.count_credited} bônus creditados</p>
-            </CardContent>
-          </Card>
-
-          {/* Nova KPI: Performance de Bônus com % */}
           <Card className={bonusPerformance.total >= 0 ? "border-primary/30 bg-primary/5" : "border-destructive/30 bg-destructive/5"}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
@@ -384,7 +314,6 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               </p>
             </CardContent>
           </Card>
-
         </TooltipProvider>
       </div>
 
