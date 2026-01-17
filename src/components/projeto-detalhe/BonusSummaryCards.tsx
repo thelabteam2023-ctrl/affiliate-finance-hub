@@ -1,0 +1,206 @@
+import { useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Building2, Coins, TrendingUp, TrendingDown, Receipt } from "lucide-react";
+import { useProjectBonuses } from "@/hooks/useProjectBonuses";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { subDays } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface BonusSummaryCardsProps {
+  projetoId: string;
+  /** Se true, mostra versão compacta (2 cards) ao invés de 4 */
+  compact?: boolean;
+}
+
+export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCardsProps) {
+  const { bonuses, getSummary, loading: bonusesLoading } = useProjectBonuses({ projectId: projetoId });
+  const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
+
+  const summary = getSummary();
+
+  // Total de bônus ativo consolidado
+  const activeBonusTotalConsolidated = useMemo(() => {
+    return bonuses
+      .filter((b) => b.status === "credited" && (b.saldo_atual || 0) > 0)
+      .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
+  }, [bonuses, convertToConsolidation]);
+
+  // Fetch apostas com bônus para calcular juice
+  const { data: bonusBetsData = [], isLoading: betsLoading } = useQuery({
+    queryKey: ["bonus-bets-summary", projetoId],
+    queryFn: async () => {
+      const startDate = subDays(new Date(), 365).toISOString();
+      
+      const { data, error } = await supabase
+        .from("apostas_unificada")
+        .select("id, pl_consolidado, lucro_prejuizo")
+        .eq("projeto_id", projetoId)
+        .gte("data_aposta", startDate.split('T')[0])
+        .not("bonus_id", "is", null);
+
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 30000,
+  });
+
+  // Performance de Bônus = Total de bônus creditados + Juice das operações
+  const bonusPerformance = useMemo(() => {
+    const totalBonusCreditado = bonuses
+      .filter(b => b.status === "credited" || b.status === "finalized")
+      .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
+    
+    const totalJuice = bonusBetsData.reduce((acc, bet) => {
+      return acc + (bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0);
+    }, 0);
+    
+    const total = totalBonusCreditado + totalJuice;
+    const performancePercent = totalBonusCreditado > 0 
+      ? (total / totalBonusCreditado) * 100 
+      : 0;
+    
+    return { totalBonusCreditado, totalJuice, total, performancePercent };
+  }, [bonuses, bonusBetsData, convertToConsolidation]);
+
+  const isLoading = bonusesLoading || betsLoading;
+
+  if (isLoading) {
+    return (
+      <>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-24" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-3 w-28 mt-2" />
+          </CardContent>
+        </Card>
+        {!compact && (
+          <>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-3 w-28 mt-2" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-28" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-3 w-32 mt-2" />
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </>
+    );
+  }
+
+  // Se não há bônus, não renderizar
+  const totalBonuses = summary.count_credited + summary.count_pending + summary.count_finalized;
+  if (totalBonuses === 0) {
+    return null;
+  }
+
+  if (compact) {
+    // Versão compacta: apenas 1 card combinado
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Bônus Ativo</CardTitle>
+          <Coins className="h-4 w-4 text-warning" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{formatCurrency(activeBonusTotalConsolidated)}</div>
+          <p className="text-xs text-muted-foreground">
+            {summary.bookmakers_with_active_bonus} casa{summary.bookmakers_with_active_bonus !== 1 ? 's' : ''} • {summary.count_credited} bônus
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Versão completa: 3 cards
+  return (
+    <TooltipProvider>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Casas com Bônus</CardTitle>
+          <Building2 className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{summary.bookmakers_with_active_bonus}</div>
+          <p className="text-xs text-muted-foreground">Em modo bônus ativo</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Bônus Ativo</CardTitle>
+          <Coins className="h-4 w-4 text-warning" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{formatCurrency(activeBonusTotalConsolidated)}</div>
+          <p className="text-xs text-muted-foreground">{summary.count_credited} bônus creditados</p>
+        </CardContent>
+      </Card>
+
+      <Card className={bonusPerformance.total >= 0 ? "border-primary/30 bg-primary/5" : "border-destructive/30 bg-destructive/5"}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+            Performance de Bônus
+            <TooltipUI>
+              <TooltipTrigger asChild>
+                <Receipt className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[280px]">
+                <div className="text-xs space-y-1">
+                  <p><strong>Resultado:</strong> Bônus creditados + Juice</p>
+                  <p><strong>Eficiência:</strong> % do bônus convertido</p>
+                  <p className="text-muted-foreground">100% = conversão total | &gt;100% = lucro adicional</p>
+                </div>
+              </TooltipContent>
+            </TooltipUI>
+          </CardTitle>
+          {bonusPerformance.total >= 0 ? (
+            <TrendingUp className="h-4 w-4 text-primary" />
+          ) : (
+            <TrendingDown className="h-4 w-4 text-destructive" />
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-baseline gap-2">
+            <span className={`text-2xl font-bold ${bonusPerformance.total >= 0 ? "text-primary" : "text-destructive"}`}>
+              {formatCurrency(bonusPerformance.total)}
+            </span>
+            <Badge 
+              variant="outline"
+              className={`text-xs font-semibold ${
+                bonusPerformance.performancePercent >= 70 
+                  ? "border-emerald-500/50 text-emerald-500 bg-emerald-500/10" 
+                  : bonusPerformance.performancePercent >= 60
+                    ? "border-warning/50 text-warning bg-warning/10"
+                    : "border-destructive/50 text-destructive bg-destructive/10"
+              }`}
+            >
+              {bonusPerformance.performancePercent.toFixed(1)}%
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Bônus: {formatCurrency(bonusPerformance.totalBonusCreditado)} | Juice: {formatCurrency(bonusPerformance.totalJuice)}
+          </p>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
+  );
+}

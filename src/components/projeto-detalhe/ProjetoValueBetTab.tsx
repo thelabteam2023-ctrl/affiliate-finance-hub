@@ -55,6 +55,7 @@ import { OperationalFiltersBar } from "./OperationalFiltersBar";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
+import { BonusSummaryCards } from "./BonusSummaryCards";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -706,8 +707,9 @@ export function ProjetoValueBetTab({
   const renderVisaoGeral = () => (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-6">
         <SaldoOperavelCard projetoId={projetoId} />
+        <BonusSummaryCards projetoId={projetoId} compact />
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Apostas ValueBet</CardTitle>

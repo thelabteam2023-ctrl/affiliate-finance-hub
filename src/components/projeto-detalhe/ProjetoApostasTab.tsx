@@ -50,6 +50,8 @@ import { parsePernaFromJson } from "@/types/apostasUnificada";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
+import { SaldoOperavelCard } from "./SaldoOperavelCard";
+import { BonusSummaryCards } from "./BonusSummaryCards";
 
 // Contextos de aposta para filtro unificado
 type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
@@ -972,7 +974,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   return (
     <div className="space-y-4">
-
+      {/* Cards de Saldo e Bônus */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <SaldoOperavelCard projetoId={projetoId} />
+        <BonusSummaryCards projetoId={projetoId} compact />
+      </div>
 
       {/* Card de Histórico com Filtros */}
       <Card>
