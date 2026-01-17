@@ -227,42 +227,127 @@ export function HistoricoMovimentacoes({
                                   <Building2 className="h-4 w-4 text-muted-foreground" />
                                 );
                               })()}
-                              <span className="text-sm text-muted-foreground">{bookmakers[transacao.origem_bookmaker_id]?.nome || 'Bookmaker'}</span>
+                              <div className="flex flex-col">
+                                <span className="text-sm text-muted-foreground">{bookmakers[transacao.origem_bookmaker_id]?.nome || 'Bookmaker'}</span>
+                                {(() => {
+                                  const origemInfo = getOrigemInfo ? getOrigemInfo(transacao) : null;
+                                  return origemInfo?.secondary && (
+                                    <span className="text-xs text-muted-foreground/70">{origemInfo.secondary}</span>
+                                  );
+                                })()}
+                              </div>
                             </>
                           )}
                         </div>
                         <ArrowRight className="h-4 w-4 text-primary" />
                         <div className="flex items-center gap-2">
                           <Wallet className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            {transacao.destino_wallet_id ? walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.exchange || 'Wallet' : transacao.destino_conta_bancaria_id ? contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.banco || 'Conta' : 'Destino'}
-                          </span>
+                          {(() => {
+                            const destinoInfo = getDestinoInfo ? getDestinoInfo(transacao) : null;
+                            const walletName = transacao.destino_wallet_id 
+                              ? walletsDetalhes.find(w => w.id === transacao.destino_wallet_id)?.exchange || 'Wallet' 
+                              : transacao.destino_conta_bancaria_id 
+                                ? contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.banco || 'Conta' 
+                                : 'Destino';
+                            return (
+                              <div className="flex flex-col">
+                                <span className="text-sm text-muted-foreground">{walletName}</span>
+                                {destinoInfo?.secondary && (
+                                  <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </>
+                    ) : transacao.tipo_transacao === "DEPOSITO" ? (
+                      <>
+                        {/* Origem para depósito */}
+                        <div className="flex items-center gap-2">
+                          {transacao.origem_wallet_id ? (
+                            <Wallet className="h-4 w-4 text-muted-foreground" />
+                          ) : transacao.origem_conta_bancaria_id ? (
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                          ) : null}
+                          {(() => {
+                            const origemInfo = getOrigemInfo ? getOrigemInfo(transacao) : { primary: getOrigemLabel(transacao) };
+                            return (
+                              <div className="flex flex-col">
+                                <span className="text-sm text-muted-foreground">{origemInfo.primary}</span>
+                                {origemInfo.secondary && (
+                                  <span className="text-xs text-muted-foreground/70">{origemInfo.secondary}</span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-primary" />
+                        {/* Destino com logo da bookmaker */}
+                        <div className="flex items-center gap-2">
+                          {transacao.destino_bookmaker_id && bookmakers[transacao.destino_bookmaker_id] && (
+                            <>
+                              {(() => {
+                                const bookmakerNome = bookmakers[transacao.destino_bookmaker_id]?.nome;
+                                const logoUrl = getLogoUrl(bookmakerNome || '');
+                                return logoUrl ? (
+                                  <img src={logoUrl} alt={bookmakerNome} className="h-5 w-5 rounded object-contain bg-background" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                ) : (
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                );
+                              })()}
+                              <div className="flex flex-col">
+                                <span className="text-sm text-muted-foreground">{bookmakers[transacao.destino_bookmaker_id]?.nome || 'Bookmaker'}</span>
+                                {(() => {
+                                  const destinoInfo = getDestinoInfo ? getDestinoInfo(transacao) : null;
+                                  return destinoInfo?.secondary && (
+                                    <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
+                                  );
+                                })()}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </>
                     ) : (
                       <>
-                        {/* Origem com nome secundário */}
+                        {/* Origem com nome secundário e possível logo */}
                         {(() => {
                           const origemInfo = getOrigemInfo ? getOrigemInfo(transacao) : { primary: getOrigemLabel(transacao) };
+                          const isBookmaker = transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id;
+                          const bookmakerNome = isBookmaker ? bookmakers[transacao.origem_bookmaker_id]?.nome : null;
+                          const logoUrl = isBookmaker ? getLogoUrl(bookmakerNome || '') : null;
                           return (
-                            <div className="flex flex-col">
-                              <span className="text-sm text-muted-foreground">{origemInfo.primary}</span>
-                              {origemInfo.secondary && (
-                                <span className="text-xs text-muted-foreground/70">{origemInfo.secondary}</span>
+                            <div className="flex items-center gap-2">
+                              {logoUrl && (
+                                <img src={logoUrl} alt={bookmakerNome || ''} className="h-5 w-5 rounded object-contain bg-background" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                               )}
+                              <div className="flex flex-col">
+                                <span className="text-sm text-muted-foreground">{origemInfo.primary}</span>
+                                {origemInfo.secondary && (
+                                  <span className="text-xs text-muted-foreground/70">{origemInfo.secondary}</span>
+                                )}
+                              </div>
                             </div>
                           );
                         })()}
                         <ArrowRight className="h-4 w-4 text-primary flex-shrink-0" />
-                        {/* Destino com nome secundário */}
+                        {/* Destino com nome secundário e possível logo */}
                         {(() => {
                           const destinoInfo = getDestinoInfo ? getDestinoInfo(transacao) : { primary: getDestinoLabel(transacao) };
+                          const isBookmaker = transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id;
+                          const bookmakerNome = isBookmaker ? bookmakers[transacao.destino_bookmaker_id]?.nome : null;
+                          const logoUrl = isBookmaker ? getLogoUrl(bookmakerNome || '') : null;
                           return (
-                            <div className="flex flex-col">
-                              <span className="text-sm text-muted-foreground">{destinoInfo.primary}</span>
-                              {destinoInfo.secondary && (
-                                <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
+                            <div className="flex items-center gap-2">
+                              {logoUrl && (
+                                <img src={logoUrl} alt={bookmakerNome || ''} className="h-5 w-5 rounded object-contain bg-background" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                               )}
+                              <div className="flex flex-col">
+                                <span className="text-sm text-muted-foreground">{destinoInfo.primary}</span>
+                                {destinoInfo.secondary && (
+                                  <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
+                                )}
+                              </div>
                             </div>
                           );
                         })()}
