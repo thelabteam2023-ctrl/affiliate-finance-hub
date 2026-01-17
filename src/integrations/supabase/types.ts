@@ -4778,6 +4778,7 @@ export type Database = {
           finalized_at: string | null
           finalized_by: string | null
           id: string
+          migrado_para_saldo_unificado: boolean | null
           min_odds: number | null
           notes: string | null
           project_id: string
@@ -4793,6 +4794,7 @@ export type Database = {
           updated_at: string
           user_id: string
           valor_brl_referencia: number | null
+          valor_creditado_no_saldo: number | null
           workspace_id: string
         }
         Insert: {
@@ -4811,6 +4813,7 @@ export type Database = {
           finalized_at?: string | null
           finalized_by?: string | null
           id?: string
+          migrado_para_saldo_unificado?: boolean | null
           min_odds?: number | null
           notes?: string | null
           project_id: string
@@ -4826,6 +4829,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           valor_brl_referencia?: number | null
+          valor_creditado_no_saldo?: number | null
           workspace_id: string
         }
         Update: {
@@ -4844,6 +4848,7 @@ export type Database = {
           finalized_at?: string | null
           finalized_by?: string | null
           id?: string
+          migrado_para_saldo_unificado?: boolean | null
           min_odds?: number | null
           notes?: string | null
           project_id?: string
@@ -4859,6 +4864,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor_brl_referencia?: number | null
+          valor_creditado_no_saldo?: number | null
           workspace_id?: string
         }
         Relationships: [
