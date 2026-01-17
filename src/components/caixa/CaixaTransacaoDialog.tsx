@@ -3107,7 +3107,8 @@ export function CaixaTransacaoDialog({
         crypto: saldosCaixaCrypto.filter(s => s.saldo_coin > 0).map(s => ({
           value: s.coin,
           label: MOEDAS_CRYPTO.find(m => m.value === s.coin)?.label || s.coin,
-          saldo: s.saldo_usd
+          saldo: s.saldo_usd,
+          saldoCoin: s.saldo_coin
         }))
       };
     }
@@ -3395,7 +3396,10 @@ export function CaixaTransacaoDialog({
                           {m.label}
                           {tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "LIQUIDACAO" && 'saldo' in m && typeof m.saldo === 'number' && (
                             <span className="text-xs text-muted-foreground ml-2">
-                              (Saldo: {formatCurrency(m.saldo)})
+                              {'saldoCoin' in m && typeof m.saldoCoin === 'number' 
+                                ? `(${m.saldoCoin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })} ${m.value} ≈ ${formatCurrency(m.saldo)})`
+                                : `(Saldo: ${formatCurrency(m.saldo)})`
+                              }
                             </span>
                           )}
                         </SelectItem>
