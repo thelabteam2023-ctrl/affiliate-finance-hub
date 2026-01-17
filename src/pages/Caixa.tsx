@@ -492,11 +492,24 @@ export default function Caixa() {
     }
     
     // Pagamentos para parceiros, indicadores, operadores
-    if (transacao.destino_tipo === "PARCEIRO" && transacao.destino_parceiro_id) {
-      return { primary: parceiros[transacao.destino_parceiro_id] || "Parceiro" };
+    if (transacao.destino_tipo === "PARCEIRO") {
+      if (transacao.destino_parceiro_id && parceiros[transacao.destino_parceiro_id]) {
+        return { primary: parceiros[transacao.destino_parceiro_id] };
+      }
+      // Fallback: extrair nome do parceiro da descrição
+      const match = transacao.descricao?.match(/parceiro\s+(.+)/i);
+      if (match) {
+        return { primary: match[1].trim() };
+      }
+      return { primary: "Parceiro" };
     }
     
     if (transacao.destino_tipo === "INDICADOR") {
+      // Extrair nome do indicador da descrição
+      const match = transacao.descricao?.match(/indicação\s+(?:de\s+)?(.+)/i);
+      if (match) {
+        return { primary: match[1].trim() };
+      }
       return { primary: transacao.descricao?.split(" - ")[0] || "Indicador" };
     }
     
@@ -507,6 +520,19 @@ export default function Caixa() {
       }
       // Fallback para descrição (registros antigos)
       return { primary: transacao.descricao?.split(" - ")[0] || "Operador" };
+    }
+    
+    // Fallback: tentar extrair nome da descrição para transações com descrição formatada
+    if (transacao.descricao) {
+      // "Pagamento ao parceiro NOME" ou "Comissão por indicação de NOME"
+      const parceiroMatch = transacao.descricao.match(/parceiro\s+(.+)/i);
+      if (parceiroMatch) {
+        return { primary: parceiroMatch[1].trim() };
+      }
+      const indicadorMatch = transacao.descricao.match(/indicação\s+(?:de\s+)?(.+)/i);
+      if (indicadorMatch) {
+        return { primary: indicadorMatch[1].trim() };
+      }
     }
     
     // Despesas administrativas - destino externo
