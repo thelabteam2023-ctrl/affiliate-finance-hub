@@ -33,7 +33,7 @@ import {
   Camera
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab, type ApostaEstrategia, type ContextoOperacional, type FormaRegistro } from "./RegistroApostaFields";
+import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
@@ -638,9 +638,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         // CRÍTICO: Restaurar estratégia e contexto operacional ORIGINAIS da aposta
         // Isso garante que ao editar, o contexto real em que a aposta foi criada seja preservado
         setRegistroValues({
-          forma_registro: (surebet.forma_registro as FormaRegistro) || 'ARBITRAGEM',
-          estrategia: (surebet.estrategia as ApostaEstrategia) || null,
-          contexto_operacional: (surebet.contexto_operacional as ContextoOperacional) || 'NORMAL',
+          forma_registro: (surebet.forma_registro as RegistroApostaValues['forma_registro']) || 'ARBITRAGEM',
+          estrategia: (surebet.estrategia as RegistroApostaValues['estrategia']) || null,
+          contexto_operacional: (surebet.contexto_operacional as RegistroApostaValues['contexto_operacional']) || 'NORMAL',
         });
         
         // Buscar apostas vinculadas passando o modelo correto
