@@ -444,6 +444,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "apostas_unificada_bonus_id_fkey"
+            columns: ["bonus_id"]
+            isOneToOne: false
+            referencedRelation: "v_bonus_historico"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
@@ -6674,6 +6681,90 @@ export type Database = {
           user_id: string | null
         }
         Relationships: []
+      }
+      v_bonus_historico: {
+        Row: {
+          bonus_amount: number | null
+          bookmaker_catalogo_nome: string | null
+          bookmaker_id: string | null
+          bookmaker_logo: string | null
+          bookmaker_moeda: string | null
+          bookmaker_nome: string | null
+          cotacao_credito_snapshot: number | null
+          created_at: string | null
+          credited_at: string | null
+          currency: string | null
+          deadline_days: number | null
+          deposit_amount: number | null
+          expirado: boolean | null
+          expires_at: string | null
+          finalize_reason: string | null
+          finalized_at: string | null
+          id: string | null
+          migrado_para_saldo_unificado: boolean | null
+          min_odds: number | null
+          notes: string | null
+          project_id: string | null
+          projeto_nome: string | null
+          rollover_base: string | null
+          rollover_completo: boolean | null
+          rollover_multiplier: number | null
+          rollover_percentual: number | null
+          rollover_progress: number | null
+          rollover_target_amount: number | null
+          saldo_residual: number | null
+          source: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          valor_brl_referencia: number | null
+          valor_creditado_no_saldo: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_bookmaker_disponibilidade: {
         Row: {
