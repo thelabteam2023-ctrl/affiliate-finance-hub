@@ -1,5 +1,6 @@
 // Hook para operações CRUD na tabela apostas_unificada
 // Suporte completo a multi-moeda (BRL + USD/USDT)
+// REFACTOR: Dual-write para apostas_pernas (tabela normalizada)
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,6 +19,7 @@ import {
   determinarResultadoArbitragem,
   parsePernaFromJson
 } from "@/types/apostasUnificada";
+import { pernasToInserts } from "@/types/apostasPernas";
 import { SupportedCurrency } from "@/types/currency";
 import { useCurrencySnapshot } from "./useCurrencySnapshot";
 import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
@@ -166,6 +168,19 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
 
       if (error) throw error;
       
+      // DUAL-WRITE: Inserir pernas na tabela normalizada
+      if (data?.id && params.pernas.length > 0) {
+        const pernasInsert = pernasToInserts(data.id, params.pernas);
+        const { error: pernasError } = await supabase
+          .from("apostas_pernas")
+          .insert(pernasInsert);
+        
+        if (pernasError) {
+          console.error("[useApostasUnificada] Erro ao inserir pernas normalizadas:", pernasError);
+          // Não falhar a operação principal, apenas logar
+        }
+      }
+      
       const isForeign = isForeignCurrency(moedaOperacao);
       toast.success(
         isForeign 
@@ -209,6 +224,26 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         .eq("id", params.id);
 
       if (error) throw error;
+      
+      // DUAL-WRITE: Atualizar pernas na tabela normalizada
+      if (params.pernas !== undefined) {
+        // Deletar pernas existentes e reinserir
+        await supabase
+          .from("apostas_pernas")
+          .delete()
+          .eq("aposta_id", params.id);
+        
+        if (params.pernas.length > 0) {
+          const pernasInsert = pernasToInserts(params.id, params.pernas);
+          const { error: pernasError } = await supabase
+            .from("apostas_pernas")
+            .insert(pernasInsert);
+          
+          if (pernasError) {
+            console.error("[useApostasUnificada] Erro ao atualizar pernas normalizadas:", pernasError);
+          }
+        }
+      }
       
       toast.success("Operação atualizada!");
       return true;
@@ -291,7 +326,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
       const resultadoGeral = determinarResultadoArbitragem(pernasAtuais);
       const lucroReal = calcularLucroReal(pernasAtuais);
       const stakeTotal = calcularStakeTotalPernas(pernasAtuais);
-      const roiReal = stakeTotal > 0 ? (lucroReal / stakeTotal) * 100 : 0;
+      const roiReal = stakeTotal && stakeTotal > 0 ? (lucroReal / stakeTotal) * 100 : 0;
 
       // Determinar se todas as pernas estão liquidadas
       const todasLiquidadas = pernasAtuais.every(p => 
@@ -312,6 +347,25 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         .eq("id", params.id);
 
       if (updateError) throw updateError;
+
+      // DUAL-WRITE: Atualizar pernas na tabela normalizada
+      // Atualizar resultado e lucro_prejuizo em cada perna
+      for (const update of params.pernas) {
+        if (update.index >= 0 && update.index < pernasAtuais.length) {
+          const { error: pernaUpdateError } = await supabase
+            .from("apostas_pernas")
+            .update({
+              resultado: update.resultado,
+              lucro_prejuizo: update.lucro_prejuizo ?? null,
+            })
+            .eq("aposta_id", params.id)
+            .eq("ordem", update.index);
+          
+          if (pernaUpdateError) {
+            console.error("[useApostasUnificada] Erro ao atualizar perna normalizada:", pernaUpdateError);
+          }
+        }
+      }
 
       // Atualizar saldos das bookmakers se liquidado
       // Passa projetoId para verificar se há bônus ativo
@@ -374,6 +428,19 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
           updated_at: new Date().toISOString()
         })
         .eq("id", id);
+
+      // DUAL-WRITE: Resetar pernas na tabela normalizada
+      const { error: pernasResetError } = await supabase
+        .from("apostas_pernas")
+        .update({
+          resultado: null,
+          lucro_prejuizo: null,
+        })
+        .eq("aposta_id", id);
+      
+      if (pernasResetError) {
+        console.error("[useApostasUnificada] Erro ao resetar pernas normalizadas:", pernasResetError);
+      }
 
       if (updateError) throw updateError;
 
