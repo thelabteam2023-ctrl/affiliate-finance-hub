@@ -384,7 +384,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
               <TableRow>
                 <TableHead>Bookmaker</TableHead>
                 <TableHead>Parceiro</TableHead>
-                <TableHead className="text-right">Saldo Operável</TableHead>
+                <TableHead className="text-right">Saldo Unificado</TableHead>
                 <TableHead className="text-right">Bônus Ativo</TableHead>
                 <TableHead className="min-w-[180px]">Rollover</TableHead>
                 <TableHead className="text-center">Expiração</TableHead>
@@ -429,7 +429,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{bk.parceiro_nome || "—"}</TableCell>
                     <TableCell className="text-right font-semibold text-primary">
-                      {formatCurrency(bk.saldo_real + bk.bonus_ativo, bk.moeda)}
+                      {formatCurrency(bk.saldo_real, bk.moeda)}
                     </TableCell>
                     <TableCell className="text-right text-amber-400 font-semibold">
                       {formatCurrency(bk.bonus_ativo, bk.moeda)}
@@ -546,15 +546,15 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                             <div className="flex items-center justify-between p-2 rounded bg-primary/10 border border-primary/20">
                               <span className="text-xs font-medium text-primary flex items-center gap-1">
                                 <TrendingUp className="h-3 w-3" />
-                                Saldo Operável
+                                Saldo Unificado
                               </span>
                               <span className="text-sm font-bold text-primary">
-                                {formatCurrency(bk.saldo_real + bk.bonus_ativo, bk.moeda)}
+                                {formatCurrency(bk.saldo_real, bk.moeda)}
                               </span>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Real + Bônus Ativo</p>
+                            <p>Saldo total da conta (real + bônus misturados)</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
