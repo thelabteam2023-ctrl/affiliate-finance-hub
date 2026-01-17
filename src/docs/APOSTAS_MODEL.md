@@ -3,6 +3,33 @@
 ## Visão Geral
 
 A tabela `apostas_unificada` é a entidade central para todas as apostas do sistema.
+As pernas de operações multi-bookmaker são normalizadas na tabela `apostas_pernas`.
+
+## IMPORTANTE: Tabela Normalizada `apostas_pernas`
+
+A partir de 2026-01-17, pernas de operações multi-pernas (SUREBET, DUPLO_GREEN, etc.) 
+são armazenadas na tabela normalizada `apostas_pernas`.
+
+### Benefícios
+- Índices nativos por `bookmaker_id` (performance em queries financeiras)
+- Queries SQL simples sem `jsonb_array_elements`
+- Não depende de filtro por estratégia para cálculos
+- Auditável externamente (tabela relacional padrão)
+
+### Hook Principal
+```typescript
+import { useApostasPernas, usePernasDeAposta, usePernasProjetoAnalise } from "@/hooks/useApostasPernas";
+
+// Buscar pernas de uma aposta específica
+const { data: pernas } = usePernasDeAposta(apostaId);
+
+// Buscar todas pernas de um projeto para análises
+const { data: pernasProjeto } = usePernasProjetoAnalise(projetoId);
+```
+
+### Dual-Write (Período de Transição)
+O hook `useApostasUnificada` ainda escreve no campo JSONB `pernas` para compatibilidade.
+Após validação em produção, o campo JSONB será removido.
 
 ## Campos Chave
 
