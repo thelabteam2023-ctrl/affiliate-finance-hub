@@ -183,7 +183,7 @@ export default function Caixa() {
       setParceiros(parceirosMap);
 
       const contasMap: { [key: string]: string } = {};
-      contasData?.forEach(c => contasMap[c.id] = c.banco);
+      contasData?.forEach(c => contasMap[c.id] = c.titular ? `${c.banco}, ${c.titular}` : c.banco);
       setContas(contasMap);
       setContasBancarias(contasData || []);
 
