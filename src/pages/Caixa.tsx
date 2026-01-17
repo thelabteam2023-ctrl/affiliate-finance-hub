@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
 import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal } from "lucide-react";
@@ -82,6 +83,7 @@ export default function Caixa() {
   const location = useLocation();
   const navigate = useNavigate();
   const locationState = location.state as LocationState | null;
+  const { workspaceId } = useWorkspace();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
@@ -199,21 +201,29 @@ export default function Caixa() {
       operadoresData?.forEach(op => operadoresLookup[op.id] = op.nome);
       setOperadoresMap(operadoresLookup);
 
-      // Fetch FIAT balances
-      const { data: saldosFiatData, error: fiatError } = await supabase
-        .from("v_saldo_caixa_fiat")
-        .select("*");
+      // Fetch FIAT balances (filtrado por workspace)
+      let saldosFiatData: SaldoFiat[] = [];
+      if (workspaceId) {
+        const { data, error } = await supabase
+          .from("v_saldo_caixa_fiat")
+          .select("moeda, saldo, workspace_id, user_id")
+          .eq("workspace_id", workspaceId);
+        if (error) throw error;
+        saldosFiatData = (data || []) as SaldoFiat[];
+      }
+      setSaldosFiat(saldosFiatData);
 
-      if (fiatError) throw fiatError;
-      setSaldosFiat(saldosFiatData || []);
-
-      // Fetch CRYPTO balances
-      const { data: saldosCryptoData, error: cryptoError } = await supabase
-        .from("v_saldo_caixa_crypto")
-        .select("*");
-
-      if (cryptoError) throw cryptoError;
-      setSaldosCrypto(saldosCryptoData || []);
+      // Fetch CRYPTO balances (filtrado por workspace)
+      let saldosCryptoData: SaldoCrypto[] = [];
+      if (workspaceId) {
+        const { data, error } = await supabase
+          .from("v_saldo_caixa_crypto")
+          .select("coin, saldo_coin, saldo_usd, workspace_id, user_id")
+          .eq("workspace_id", workspaceId);
+        if (error) throw error;
+        saldosCryptoData = (data || []) as SaldoCrypto[];
+      }
+      setSaldosCrypto(saldosCryptoData);
 
       // Fetch total bookmaker balance (BRL + USD separados)
       const { data: bookmakersBalanceData } = await supabase
