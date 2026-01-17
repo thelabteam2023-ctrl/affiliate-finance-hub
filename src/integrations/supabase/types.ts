@@ -217,6 +217,108 @@ export type Database = {
           },
         ]
       }
+      apostas_pernas: {
+        Row: {
+          aposta_id: string
+          bookmaker_id: string
+          cotacao_snapshot: number | null
+          cotacao_snapshot_at: string | null
+          created_at: string | null
+          gerou_freebet: boolean | null
+          id: string
+          lucro_prejuizo: number | null
+          lucro_prejuizo_brl_referencia: number | null
+          moeda: string
+          odd: number
+          ordem: number
+          resultado: string | null
+          selecao: string
+          selecao_livre: string | null
+          stake: number
+          stake_brl_referencia: number | null
+          updated_at: string | null
+          valor_freebet_gerada: number | null
+        }
+        Insert: {
+          aposta_id: string
+          bookmaker_id: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
+          created_at?: string | null
+          gerou_freebet?: boolean | null
+          id?: string
+          lucro_prejuizo?: number | null
+          lucro_prejuizo_brl_referencia?: number | null
+          moeda?: string
+          odd: number
+          ordem?: number
+          resultado?: string | null
+          selecao: string
+          selecao_livre?: string | null
+          stake: number
+          stake_brl_referencia?: number | null
+          updated_at?: string | null
+          valor_freebet_gerada?: number | null
+        }
+        Update: {
+          aposta_id?: string
+          bookmaker_id?: string
+          cotacao_snapshot?: number | null
+          cotacao_snapshot_at?: string | null
+          created_at?: string | null
+          gerou_freebet?: boolean | null
+          id?: string
+          lucro_prejuizo?: number | null
+          lucro_prejuizo_brl_referencia?: number | null
+          moeda?: string
+          odd?: number
+          ordem?: number
+          resultado?: string | null
+          selecao?: string
+          selecao_livre?: string | null
+          stake?: number
+          stake_brl_referencia?: number | null
+          updated_at?: string | null
+          valor_freebet_gerada?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apostas_pernas_aposta_id_fkey"
+            columns: ["aposta_id"]
+            isOneToOne: false
+            referencedRelation: "apostas_unificada"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_pernas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_pernas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apostas_pernas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_pernas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       apostas_unificada: {
         Row: {
           aposta_relacionada_id: string | null
