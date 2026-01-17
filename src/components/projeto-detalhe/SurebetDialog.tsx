@@ -997,7 +997,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     setLinkedApostas(apostaLikeData);
     
     // Popular o array de odds com os dados das pernas para cálculos
-    const newOdds: OddEntry[] = sortedPernas.map((perna, index) => ({
+    // CORREÇÃO CRÍTICA: Garantir que o array tenha o número correto de slots para o modelo
+    const modeloTyped = surebetModelo as "1-X-2" | "1-2";
+    const slotsNecessarios = modeloTyped === "1-X-2" ? 3 : 2;
+    const selecoesModelo = getSelecoesPorMercado(operacaoMercado, modeloTyped);
+    
+    // Primeiro, mapear as pernas existentes
+    const pernasOdds: OddEntry[] = sortedPernas.map((perna, index) => ({
       bookmaker_id: perna.bookmaker_id || "",
       moeda: (perna.moeda || "BRL") as SupportedCurrency,
       odd: perna.odd?.toString() || "",
@@ -1021,7 +1027,48 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       })) || []
     }));
     
-    setOdds(newOdds);
+    // CORREÇÃO: Se o modelo é 1-X-2 mas só temos 2 pernas, adicionar slot vazio para a perna faltante
+    // Isso permite ao usuário preencher a terceira perna durante a edição
+    let finalOdds: OddEntry[] = [...pernasOdds];
+    
+    if (finalOdds.length < slotsNecessarios) {
+      // Identificar quais seleções já existem
+      const selecoesExistentes = new Set(finalOdds.map(o => o.selecao));
+      
+      // Adicionar slots vazios para as seleções faltantes
+      for (let i = finalOdds.length; i < slotsNecessarios; i++) {
+        // Encontrar a próxima seleção que está faltando
+        const selecaoFaltante = selecoesModelo.find(s => !selecoesExistentes.has(s)) || selecoesModelo[i];
+        selecoesExistentes.add(selecaoFaltante);
+        
+        finalOdds.push({
+          bookmaker_id: "",
+          moeda: "BRL" as SupportedCurrency,
+          odd: "",
+          stake: "",
+          selecao: selecaoFaltante,
+          selecaoLivre: "",
+          isReference: false,
+          isManuallyEdited: false, // Permitir cálculo automático se o usuário preencher
+          index: i,
+          additionalEntries: []
+        });
+      }
+      
+      console.log(`[SurebetDialog] Modo edição: modelo ${modeloTyped} tinha ${pernasOdds.length} pernas, completado para ${slotsNecessarios}`);
+    }
+    
+    // Garantir que as seleções estejam na ordem correta do modelo
+    finalOdds = finalOdds.sort((a, b) => {
+      const indexA = selecoesModelo.indexOf(a.selecao);
+      const indexB = selecoesModelo.indexOf(b.selecao);
+      if (indexA === -1 && indexB === -1) return 0;
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+    
+    setOdds(finalOdds);
   };
 
   const updateOdd = (index: number, field: keyof OddEntry, value: string | boolean) => {
