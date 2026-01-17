@@ -292,12 +292,16 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         .eq("id", projectId)
         .single();
 
+      // MODELO UNIFICADO: saldo_atual do bônus sempre = 0
+      // O valor do bônus é creditado diretamente no saldo_atual do bookmaker
       const bonusData = {
         project_id: projectId,
         bookmaker_id: data.bookmaker_id,
         title: data.title || "",
         bonus_amount: data.bonus_amount,
-        saldo_atual: data.status === "credited" ? data.bonus_amount : 0,
+        saldo_atual: 0, // Sempre 0 - saldo unificado no bookmaker
+        valor_creditado_no_saldo: data.status === "credited" ? data.bonus_amount : 0,
+        migrado_para_saldo_unificado: true, // Marca como modelo unificado
         currency: data.currency,
         status: data.status,
         credited_at: data.status === "credited" ? (data.credited_at || new Date().toISOString()) : null,
@@ -321,6 +325,34 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         .insert(bonusData as any);
 
       if (error) throw error;
+
+      // MODELO UNIFICADO: Se status = credited, creditar diretamente no saldo do bookmaker
+      if (data.status === "credited") {
+        const { error: updateError } = await supabase
+          .from("bookmakers")
+          .update({ 
+            saldo_atual: supabase.rpc ? undefined : undefined // Placeholder - usamos RPC abaixo
+          })
+          .eq("id", data.bookmaker_id);
+
+        // Incrementar saldo do bookmaker
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("saldo_atual")
+          .eq("id", data.bookmaker_id)
+          .single();
+
+        if (bookmaker) {
+          const novoSaldo = Number(bookmaker.saldo_atual || 0) + data.bonus_amount;
+          await supabase
+            .from("bookmakers")
+            .update({ 
+              saldo_atual: novoSaldo,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", data.bookmaker_id);
+        }
+      }
     },
     onSuccess: () => {
       toast.success("Bônus registrado com sucesso");
@@ -342,17 +374,36 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         updateData.credited_at = new Date().toISOString();
       }
 
+      // MODELO UNIFICADO: saldo_atual do bônus sempre = 0
+      // Se status muda para credited, creditar no bookmaker
       if (existingBonus && data.status && data.status !== existingBonus.status) {
         if (data.status === "credited") {
-          updateData.saldo_atual =
-            updateData.saldo_atual ??
-            data.bonus_amount ??
-            existingBonus.bonus_amount;
-        } else {
-          updateData.saldo_atual = 0;
-          if (typeof data.credited_at === "undefined") {
-            updateData.credited_at = null;
+          // Creditar no bookmaker
+          const bonusAmount = data.bonus_amount ?? existingBonus.bonus_amount;
+          const { data: bookmaker } = await supabase
+            .from("bookmakers")
+            .select("saldo_atual")
+            .eq("id", existingBonus.bookmaker_id)
+            .single();
+
+          if (bookmaker) {
+            const novoSaldo = Number(bookmaker.saldo_atual || 0) + bonusAmount;
+            await supabase
+              .from("bookmakers")
+              .update({ 
+                saldo_atual: novoSaldo,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", existingBonus.bookmaker_id);
           }
+
+          updateData.valor_creditado_no_saldo = bonusAmount;
+          updateData.migrado_para_saldo_unificado = true;
+        }
+        // saldo_atual sempre 0 no modelo unificado
+        updateData.saldo_atual = 0;
+        if (data.status !== "credited" && typeof data.credited_at === "undefined") {
+          updateData.credited_at = null;
         }
       }
 

@@ -163,12 +163,11 @@ export function ProjetoValueBetTab({
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
   
-  // Hook para gerenciamento de bônus/rollover
+  // Hook para gerenciamento de rollover (bônus)
+  // NOTA: processarLiquidacaoBonus e reverterLiquidacaoBonus removidos - modelo unificado
   const { 
     hasActiveRolloverBonus, 
-    atualizarProgressoRollover,
-    processarLiquidacaoBonus,
-    reverterLiquidacaoBonus 
+    atualizarProgressoRollover
   } = useBonusBalanceManager();
   
   // Hook global de logos de bookmakers (busca do catálogo)
@@ -333,18 +332,17 @@ export function ProjetoValueBetTab({
       // 1. Calcular delta financeiro (PENDENTE → novo resultado)
       const delta = calcularImpactoResultado(stake, odd, resultado);
 
-      // 2. Verificar se há bônus com stake
-      const temBonusComStake = bonusId && stakeBonus > 0;
+      // 2. MODELO UNIFICADO: Não há mais separação de stake real/bonus
+      // A lógica de consumo de bônus foi removida - saldo já está unificado
 
       // 3. Atualizar saldo da bookmaker via helper canônico
-      // Se há bônus com stake, skipBonusCheck=true para evitar dupla atualização
       if (bookmakerId && delta !== 0) {
         const balanceUpdated = await updateBookmakerBalance(
           bookmakerId, 
           delta, 
           projetoId, 
           undefined, // sem auditInfo
-          temBonusComStake // skipBonusCheck
+          false // skipBonusCheck - não mais relevante
         );
         if (!balanceUpdated) {
           toast.error("Erro ao atualizar saldo da bookmaker. Liquidação cancelada.");
@@ -352,13 +350,7 @@ export function ProjetoValueBetTab({
         }
       }
 
-      // 4. Processar consumo de bônus se houver stake de bônus
-      if (temBonusComStake) {
-        const stakeReal = stake - stakeBonus;
-        await processarLiquidacaoBonus(resultado, stakeReal, stakeBonus, bonusId, lucro, bookmakerId);
-      }
-
-      // 5. Atualizar aposta no banco
+      // 4. Atualizar aposta no banco (removido processamento de bônus separado)
       const { error } = await supabase
         .from("apostas_unificada")
         .update({
@@ -402,7 +394,7 @@ export function ProjetoValueBetTab({
       console.error("Erro ao resolver aposta:", error);
       toast.error("Erro ao atualizar resultado");
     }
-  }, [apostas, onDataChange, projetoId, invalidateSaldos, processarLiquidacaoBonus, hasActiveRolloverBonus, atualizarProgressoRollover]);
+  }, [apostas, onDataChange, projetoId, invalidateSaldos, hasActiveRolloverBonus, atualizarProgressoRollover]);
 
   const metricas = useMemo(() => {
     const todasApostas = apostas.map((a) => ({
