@@ -570,12 +570,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   
   // Registro explícito - usa sugestões baseadas na aba ativa
   // Forma de registro é sempre ARBITRAGEM, estratégia e contexto vêm da aba
+  // Registro explícito - estratégia NUNCA é inferida automaticamente
+  // Se a aba não define estratégia (ex: Apostas Livres), fica null e o usuário DEVE escolher
   const [registroValues, setRegistroValues] = useState<RegistroApostaValues>(() => {
     const suggestions = getSuggestionsForTab(activeTab);
     return {
       forma_registro: 'ARBITRAGEM',
-      estrategia: suggestions.estrategia || 'SUREBET',
-      contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
+      estrategia: suggestions.estrategia ?? null, // CRÍTICO: null se não definido, NUNCA fallback
+      contexto_operacional: suggestions.contexto_operacional ?? 'NORMAL',
     };
   });
   
@@ -845,12 +847,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     })));
     setLinkedApostas([]);
     setExpandedResultados({}); // Reset expansão de resultados avançados
-    // Reset registro values - usa sugestões baseadas na aba ativa
+    // Reset registro values - estratégia NUNCA é inferida
+    // Se aba não define estratégia, fica null e usuário DEVE escolher manualmente
     const suggestions = getSuggestionsForTab(activeTab);
     setRegistroValues({
       forma_registro: 'ARBITRAGEM',
-      estrategia: suggestions.estrategia || 'SUREBET',
-      contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
+      estrategia: suggestions.estrategia ?? null, // CRÍTICO: null se não definido
+      contexto_operacional: suggestions.contexto_operacional ?? 'NORMAL',
     });
   };
   
