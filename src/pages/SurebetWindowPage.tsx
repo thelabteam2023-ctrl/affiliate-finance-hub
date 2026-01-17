@@ -63,7 +63,10 @@ export default function SurebetWindowPage() {
             roi_real,
             status,
             resultado,
-            observacoes
+            observacoes,
+            forma_registro,
+            estrategia,
+            contexto_operacional
           `)
           .eq("id", id)
           .maybeSingle();
@@ -91,7 +94,11 @@ export default function SurebetWindowPage() {
           roi_real: data.roi_real,
           status: data.status || "PENDENTE",
           resultado: data.resultado,
-          observacoes: data.observacoes
+          observacoes: data.observacoes,
+          // CRÍTICO: manter contexto/estratégia original como fonte da verdade
+          forma_registro: data.forma_registro,
+          estrategia: data.estrategia,
+          contexto_operacional: data.contexto_operacional,
         });
       } catch (err: any) {
         console.error("Erro ao buscar surebet:", err);
