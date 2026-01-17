@@ -260,13 +260,14 @@ export function ApostaMultiplaDialog({
   const [dataAposta, setDataAposta] = useState("");
   const [observacoes, setObservacoes] = useState("");
 
-  // Registro explícito
+  // Registro explícito - estratégia NUNCA é inferida automaticamente
+  // Se a aba não define estratégia (ex: Apostas Livres), fica null e o usuário DEVE escolher
   const [registroValues, setRegistroValues] = useState<RegistroApostaValues>(() => {
     const suggestions = getSuggestionsForTab(activeTab);
     return {
       forma_registro: 'MULTIPLA',
-      estrategia: suggestions.estrategia || defaultEstrategia as any,
-      contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
+      estrategia: suggestions.estrategia ?? null, // CRÍTICO: null se não definido, NUNCA fallback
+      contexto_operacional: suggestions.contexto_operacional ?? 'NORMAL',
     };
   });
 
