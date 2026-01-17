@@ -247,22 +247,27 @@ export function ConciliacaoSaldos({
             .single();
           
           if (bookmaker) {
-            const usaUsd = bookmaker.moeda === "USD" || bookmaker.moeda === "USDT";
-            const saldoAtual = usaUsd ? (bookmaker.saldo_usd || 0) : (bookmaker.saldo_atual || 0);
-            const novoSaldo = saldoAtual + diferenca; // diferença é negativa se perda
+            const isUsdCurrency = ['USD', 'USDT', 'USDC'].includes(bookmaker.moeda?.toUpperCase());
+            
+            // Para casas USD/USDT/USDC: atualizar AMBOS saldo_atual e saldo_usd
+            // Para outras moedas: atualizar apenas saldo_atual
+            const novoSaldoAtual = (bookmaker.saldo_atual || 0) + diferenca;
+            const novoSaldoUsd = (bookmaker.saldo_usd || 0) + diferenca;
 
-            const updateField = usaUsd ? { saldo_usd: novoSaldo } : { saldo_atual: novoSaldo };
+            const updateFields = isUsdCurrency 
+              ? { saldo_atual: novoSaldoAtual, saldo_usd: novoSaldoUsd }
+              : { saldo_atual: novoSaldoAtual };
             
             const { error: balanceError } = await supabase
               .from("bookmakers")
-              .update(updateField)
+              .update(updateFields)
               .eq("id", bookmakerId);
             
             if (balanceError) {
               console.error("Erro ao atualizar saldo do bookmaker:", balanceError);
               toast.error("Erro ao atualizar saldo da casa");
             } else {
-              console.log(`[Conciliação] Saldo bookmaker ${bookmakerId}: ${saldoAtual} → ${novoSaldo} (diferença: ${diferenca})`);
+              console.log(`[Conciliação] Saldo bookmaker ${bookmakerId}: saldo_atual ${bookmaker.saldo_atual} → ${novoSaldoAtual}, saldo_usd ${bookmaker.saldo_usd} → ${novoSaldoUsd} (diferença: ${diferenca})`);
             }
           }
         }
