@@ -83,6 +83,7 @@ export async function criarAposta(
   // ETAPA 2: PREPARAR DADOS
   // ================================================================
   const isArbitragem = input.forma_registro === 'ARBITRAGEM';
+  const isMultipla = input.forma_registro === 'MULTIPLA';
   const pernas = input.pernas || [];
 
   // Calcular valores agregados para arbitragem
@@ -114,8 +115,24 @@ export async function criarAposta(
     lucroEsperado = (stakeTotal || valorBrlReferencia || 0) * (roiEsperado / 100);
   }
 
+  // Calcular odd_final para múltiplas (se não fornecida)
+  let oddFinalCalculada = input.odd_final;
+  let retornoPotencialCalculado = input.retorno_potencial;
+  
+  if (isMultipla && input.selecoes && input.selecoes.length > 0) {
+    if (!oddFinalCalculada) {
+      oddFinalCalculada = input.selecoes.reduce((acc, s) => {
+        const odd = typeof s.odd === 'string' ? parseFloat(s.odd) : s.odd;
+        return acc * (odd || 1);
+      }, 1);
+    }
+    if (!retornoPotencialCalculado && input.stake && oddFinalCalculada) {
+      retornoPotencialCalculado = input.stake * oddFinalCalculada;
+    }
+  }
+
   // Montar objeto para inserção
-  const apostaData = {
+  const apostaData: Record<string, unknown> = {
     projeto_id: input.projeto_id,
     workspace_id: input.workspace_id,
     user_id: input.user_id,
@@ -130,11 +147,22 @@ export async function criarAposta(
     status: 'PENDENTE',
     resultado: 'PENDENTE',
     
-    // Para simples
+    // Para simples e múltipla
     bookmaker_id: isArbitragem ? null : input.bookmaker_id,
-    selecao: isArbitragem ? null : input.selecao,
-    odd: isArbitragem ? null : input.odd,
+    selecao: isArbitragem || isMultipla ? null : input.selecao,
+    odd: isArbitragem || isMultipla ? null : input.odd,
     stake: isArbitragem ? null : input.stake,
+    
+    // Para múltipla (JSONB selecoes)
+    tipo_multipla: isMultipla ? input.tipo_multipla : null,
+    selecoes: isMultipla && input.selecoes ? input.selecoes : null,
+    odd_final: isMultipla ? oddFinalCalculada : null,
+    retorno_potencial: isMultipla ? retornoPotencialCalculado : null,
+    
+    // Freebet
+    tipo_freebet: input.tipo_freebet || null,
+    gerou_freebet: input.gerou_freebet || false,
+    valor_freebet_gerada: input.valor_freebet_gerada || null,
     
     // Para arbitragem
     pernas: isArbitragem ? JSON.stringify(pernas) : null,

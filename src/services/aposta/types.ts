@@ -63,6 +63,18 @@ export interface PernaInput {
 /**
  * Dados da aposta para criação
  */
+/**
+ * Seleção para apostas múltiplas (JSONB)
+ */
+export interface SelecaoMultipla {
+  descricao: string;
+  odd: string | number;
+  resultado?: string;
+}
+
+/**
+ * Dados da aposta para criação
+ */
 export interface CriarApostaInput {
   projeto_id: string;
   workspace_id: string;
@@ -85,8 +97,19 @@ export interface CriarApostaInput {
   odd?: number | null;
   stake?: number | null;
   
-  // Para apostas múltiplas ou arbitragem
+  // Para apostas múltiplas (forma_registro = MULTIPLA)
+  tipo_multipla?: 'DUPLA' | 'TRIPLA' | null;
+  selecoes?: SelecaoMultipla[] | null;
+  odd_final?: number | null;
+  retorno_potencial?: number | null;
+  
+  // Para arbitragem (forma_registro = ARBITRAGEM)
   pernas?: PernaInput[];
+  
+  // Freebet
+  tipo_freebet?: string | null;
+  gerou_freebet?: boolean;
+  valor_freebet_gerada?: number | null;
   
   // Metadados opcionais
   observacoes?: string | null;
