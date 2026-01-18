@@ -3,7 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
+import { 
+  registrarCashbackViaLedger, 
+  estornarCashbackViaLedger 
+} from "@/lib/ledgerService";
 import {
   CashbackManualComBookmaker,
   CashbackManualFormData,
@@ -254,20 +257,21 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
 
         if (insertError) throw insertError;
 
-        // 3. Atualizar saldo da casa imediatamente
-        const saldoAtualizado = await updateBookmakerBalance(
-          data.bookmaker_id,
-          data.valor,
-          projetoId,
-          {
-            origem: "cashback_manual",
-            referenciaId: novoCashback.id,
-            observacoes: `Cashback manual: ${data.observacoes || "Sem observações"}`,
-          }
-        );
+        // 3. Registrar via ledger (trigger atualiza saldo automaticamente)
+        const ledgerResult = await registrarCashbackViaLedger({
+          bookmakerId: data.bookmaker_id,
+          valor: data.valor,
+          moeda: moedaOperacao,
+          workspaceId: workspaceId,
+          userId: user.id,
+          descricao: `Cashback manual: ${data.observacoes || "Sem observações"}`,
+          dataCredito: dataCredito,
+          cotacao: cotacaoSnapshot || undefined,
+          referenciaId: novoCashback.id,
+        });
 
-        if (!saldoAtualizado) {
-          console.warn("Aviso: Saldo da casa não foi atualizado automaticamente");
+        if (!ledgerResult.success) {
+          console.warn("Aviso: Saldo da casa não foi atualizado via ledger:", ledgerResult.error);
         }
 
         toast.success("Cashback lançado com sucesso! Saldo atualizado.");
@@ -295,18 +299,23 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
 
         if (fetchError) throw fetchError;
 
-        // 2. Reverter saldo da casa (subtrair valor)
+        // 2. Estornar via ledger (trigger atualiza saldo automaticamente)
         if (registro) {
-          await updateBookmakerBalance(
-            registro.bookmaker_id,
-            -Number(registro.valor),
-            projetoId,
-            {
-              origem: "cashback_manual_estorno",
-              referenciaId: id,
-              observacoes: "Estorno de cashback manual deletado",
-            }
-          );
+          const { data: bookmaker } = await supabase
+            .from("bookmakers")
+            .select("moeda, workspace_id")
+            .eq("id", registro.bookmaker_id)
+            .single();
+          
+          await estornarCashbackViaLedger({
+            bookmakerId: registro.bookmaker_id,
+            valor: Number(registro.valor),
+            moeda: bookmaker?.moeda || 'BRL',
+            workspaceId: bookmaker?.workspace_id || workspaceId,
+            userId: user?.id || '',
+            descricao: "Estorno de cashback manual deletado",
+            referenciaId: id,
+          });
         }
 
         // 3. Deletar registro
