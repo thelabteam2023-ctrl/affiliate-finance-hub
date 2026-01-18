@@ -206,7 +206,7 @@ export async function updateBookmakerBalance(
       console.log(`[updateBookmakerBalance] skipBonusCheck=true, bônus será tratado externamente`);
     }
     
-    // Sem bônus ativo: usar função RPC com auditoria se disponível
+    // Usar função RPC com auditoria se disponível
     if (auditInfo) {
       const { error: rpcError } = await supabase.rpc('adjust_bookmaker_balance_with_audit', {
         p_bookmaker_id: bookmakerId,
@@ -222,47 +222,32 @@ export async function updateBookmakerBalance(
         return true;
       }
       
-      // Se RPC falhar, continuar com método fallback
-      console.warn("[updateBookmakerBalance] RPC falhou, usando fallback:", rpcError);
+      // Se RPC falhar, logar erro mas não fazer fallback direto
+      console.error("[updateBookmakerBalance] RPC falhou:", rpcError);
+      // NOTA: Removido fallback direto para garantir que toda alteração de saldo 
+      // passe por auditoria. Se o RPC não existe, é um erro de configuração.
     }
     
-    // Fallback: atualização direta sem auditoria
-    const { data: bookmaker, error: fetchError } = await supabase
-      .from("bookmakers")
-      .select("moeda, saldo_atual, saldo_usd")
-      .eq("id", bookmakerId)
-      .maybeSingle();
+    // DEPRECADO: Não fazer mais updates diretos sem auditoria
+    // A arquitetura canônica é usar ledgerService ou RPCs com auditoria.
+    console.warn(`[updateBookmakerBalance] Chamada sem auditoria para bookmaker ${bookmakerId}. Considere usar ledgerService.`);
     
-    if (fetchError || !bookmaker) {
-      console.error("[updateBookmakerBalance] Erro ao buscar bookmaker:", fetchError);
+    // Para manter compatibilidade temporária, usamos RPC padrão
+    const { error: rpcError2 } = await supabase.rpc('adjust_bookmaker_balance_with_audit', {
+      p_bookmaker_id: bookmakerId,
+      p_delta: delta,
+      p_origem: 'LEGACY_NO_AUDIT',
+      p_referencia_id: null,
+      p_referencia_tipo: null,
+      p_observacoes: 'Chamada via updateBookmakerBalance sem auditInfo - migrar para ledgerService',
+    });
+    
+    if (rpcError2) {
+      console.error("[updateBookmakerBalance] RPC fallback falhou:", rpcError2);
       return false;
     }
     
-    const moeda = bookmaker.moeda || "BRL";
-    const usaUsd = isUsdCurrency(moeda);
-    
-    // Calcular novo saldo (permitindo saldos negativos para refletir prejuízo real)
-    const saldoAtual = usaUsd 
-      ? (bookmaker.saldo_usd || 0) 
-      : (bookmaker.saldo_atual || 0);
-    const novoSaldo = saldoAtual + delta;
-    
-    // Atualizar campo correto
-    const updateData = usaUsd 
-      ? { saldo_usd: novoSaldo }
-      : { saldo_atual: novoSaldo };
-    
-    const { error: updateError } = await supabase
-      .from("bookmakers")
-      .update(updateData)
-      .eq("id", bookmakerId);
-    
-    if (updateError) {
-      console.error("[updateBookmakerBalance] Erro ao atualizar:", updateError);
-      return false;
-    }
-    
-    console.log(`[updateBookmakerBalance] Bookmaker ${bookmakerId}: ${usaUsd ? 'saldo_usd' : 'saldo_atual'} ${saldoAtual} → ${novoSaldo} (delta: ${delta})`);
+    console.log(`[updateBookmakerBalance] Bookmaker ${bookmakerId}: delta ${delta} aplicado (legacy mode)`);
     return true;
   } catch (error) {
     console.error("[updateBookmakerBalance] Exceção:", error);
