@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2, Save, Trash2, Camera, CheckCircle2, Gift, FileText } from "lucide-react";
-import { useApostaRascunho, type RascunhoSelecaoData } from "@/hooks/useApostaRascunho";
+import { useApostaRascunho, type RascunhoSelecaoData, type ApostaRascunho } from "@/hooks/useApostaRascunho";
 import {
   Tooltip,
   TooltipContent,
@@ -112,6 +112,8 @@ interface ApostaMultiplaDialogProps {
   activeTab?: string;
   /** Quando true, renderiza apenas o conteúdo interno (sem Dialog wrapper) para uso em janelas flutuantes */
   embedded?: boolean;
+  /** Rascunho para pré-preencher o formulário (de localStorage) */
+  rascunho?: ApostaRascunho | null;
 }
 
 export function ApostaMultiplaDialog({
@@ -123,6 +125,7 @@ export function ApostaMultiplaDialog({
   defaultEstrategia = 'PUNTER',
   activeTab = 'apostas',
   embedded = false,
+  rascunho = null,
 }: ApostaMultiplaDialogProps) {
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
