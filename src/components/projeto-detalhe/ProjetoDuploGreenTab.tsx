@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { reliquidarAposta } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { Badge } from "@/components/ui/badge";
@@ -293,7 +294,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     }
   };
 
-  // Resolução rápida de apostas simples - USA HELPER FINANCEIRO + BÔNUS/ROLLOVER
+  // Resolução rápida de apostas simples - USA RPC ATÔMICA + ROLLOVER
   const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
     try {
       const aposta = apostas.find(a => a.id === apostaId);
@@ -305,47 +306,20 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
       const stake = typeof aposta.stake_total === "number" ? aposta.stake_total : aposta.stake;
       const odd = aposta.odd || 1;
-      const stakeBonus = aposta.stake_bonus || 0;
-      const bonusId = aposta.bonus_id || null;
       const bookmakerId = aposta.bookmaker_id;
       
       // Calcular lucro usando função canônica
       const lucro = calcularImpactoResultado(stake, odd, resultado);
 
-      // 1. Calcular delta financeiro (PENDENTE → novo resultado)
-      const delta = calcularImpactoResultado(stake, odd, resultado);
-
-      // 2. MODELO UNIFICADO: Não há mais separação de stake real/bonus
-      // A lógica de consumo de bônus foi removida - saldo já está unificado
-
-      // 3. Atualizar saldo da bookmaker via helper canônico
-      if (bookmakerId && delta !== 0) {
-        const balanceUpdated = await updateBookmakerBalance(
-          bookmakerId, 
-          delta, 
-          projetoId, 
-          undefined, // sem auditInfo
-          false // skipBonusCheck - não mais relevante
-        );
-        if (!balanceUpdated) {
-          toast.error("Erro ao atualizar saldo da bookmaker. Liquidação cancelada.");
-          return;
-        }
+      // 1. Liquidar via RPC atômica (atualiza aposta + registra no ledger + trigger atualiza saldo)
+      const rpcResult = await reliquidarAposta(apostaId, resultado, lucro);
+      
+      if (!rpcResult.success) {
+        toast.error(rpcResult.error?.message || "Erro ao liquidar aposta");
+        return;
       }
 
-      // 4. Atualizar aposta no banco (removido processamento de bônus separado)
-      const { error } = await supabase
-        .from("apostas_unificada")
-        .update({
-          resultado,
-          lucro_prejuizo: lucro,
-          status: "LIQUIDADA",
-        })
-        .eq("id", apostaId);
-
-      if (error) throw error;
-
-      // 6. Atualizar rollover se houver bônus ativo para a casa
+      // 2. Atualizar rollover se houver bônus ativo para a casa
       if (bookmakerId && resultado !== "VOID") {
         const temBonusAtivo = await hasActiveRolloverBonus(projetoId, bookmakerId);
         if (temBonusAtivo) {
@@ -353,14 +327,14 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
         }
       }
 
-      // 7. Atualizar estado local
+      // 3. Atualizar estado local
       setApostas(prev => prev.map(a => 
         a.id === apostaId 
           ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
           : a
       ));
 
-      // 8. Invalidar cache de saldos
+      // 4. Invalidar cache de saldos
       invalidateSaldos(projetoId);
 
       const resultLabel = {

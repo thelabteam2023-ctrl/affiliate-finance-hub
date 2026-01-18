@@ -47,7 +47,8 @@ import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
-import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { reliquidarAposta } from "@/services/aposta/ApostaService";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useInvalidateBookmakerSaldos, useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
@@ -400,7 +401,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     onDataChange?.();
   };
 
-  // Resolução rápida de apostas simples - atualiza saldo da bookmaker + BÔNUS/ROLLOVER
+  // Resolução rápida de apostas simples - USA RPC ATÔMICA + ROLLOVER
   const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
     try {
       const operacao = surebets.find(s => s.id === apostaId);
@@ -411,47 +412,20 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
       const stake = operacao.stake || operacao.stake_total || 0;
       const odd = operacao.odd || 1;
-      const stakeBonus = operacao.stake_bonus || 0;
-      const bonusId = operacao.bonus_id || null;
       const bookmakerId = operacao.bookmaker_id;
       
       // Calcular lucro usando função canônica
       const lucro = calcularImpactoResultado(stake, odd, resultado);
 
-      // 1. Calcular delta financeiro (PENDENTE → novo resultado)
-      const delta = calcularImpactoResultado(stake, odd, resultado);
-
-      // 2. MODELO UNIFICADO: Não há mais separação de stake real/bonus
-      // A lógica de consumo de bônus foi removida - saldo já está unificado
-
-      // 3. Atualizar saldo da bookmaker via helper canônico
-      if (bookmakerId && delta !== 0) {
-        const balanceUpdated = await updateBookmakerBalance(
-          bookmakerId, 
-          delta, 
-          projetoId, 
-          undefined, // sem auditInfo
-          false // skipBonusCheck - não mais relevante
-        );
-        if (!balanceUpdated) {
-          toast.error("Erro ao atualizar saldo da bookmaker. Liquidação cancelada.");
-          return;
-        }
+      // 1. Liquidar via RPC atômica (atualiza aposta + registra no ledger + trigger atualiza saldo)
+      const rpcResult = await reliquidarAposta(apostaId, resultado, lucro);
+      
+      if (!rpcResult.success) {
+        toast.error(rpcResult.error?.message || "Erro ao liquidar aposta");
+        return;
       }
 
-      // 4. Atualizar aposta no banco (removido processamento de bônus separado)
-      const { error } = await supabase
-        .from("apostas_unificada")
-        .update({
-          resultado,
-          lucro_prejuizo: lucro,
-          status: "LIQUIDADA",
-        })
-        .eq("id", apostaId);
-
-      if (error) throw error;
-
-      // 6. Atualizar rollover se houver bônus ativo para a casa
+      // 2. Atualizar rollover se houver bônus ativo para a casa
       if (bookmakerId && resultado !== "VOID") {
         const temBonusAtivo = await hasActiveRolloverBonus(projetoId, bookmakerId);
         if (temBonusAtivo) {
@@ -459,14 +433,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         }
       }
 
-      // 7. Atualizar estado local
+      // 3. Atualizar estado local
       setSurebets(prev => prev.map(s => 
         s.id === apostaId 
           ? { ...s, resultado, lucro_real: lucro, status: "LIQUIDADA" }
           : s
       ));
 
-      // 8. Invalidar cache de saldos
+      // 4. Invalidar cache de saldos
       invalidateSaldos(projetoId);
 
       const resultLabel = {

@@ -8948,6 +8948,14 @@ export type Database = {
         Args: { p_email: string; p_ip_address?: string; p_success: boolean }
         Returns: undefined
       }
+      reliquidar_aposta_atomica: {
+        Args: {
+          p_aposta_id: string
+          p_lucro_prejuizo?: number
+          p_resultado_novo: string
+        }
+        Returns: Json
+      }
       renew_subscription: {
         Args: { p_new_price_id?: string; p_workspace_id: string }
         Returns: string

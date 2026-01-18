@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Loader2, Pencil, CheckCircle2, XCircle, CircleDot, X, Check } from "lucide-react";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
-import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
+import { reliquidarAposta } from "@/services/aposta/ApostaService";
 
 type OperationType = "bookmaker" | "back" | "lay" | "cobertura";
 
@@ -463,65 +463,24 @@ export function ResultadoPill({
   };
 
   /**
-   * Atualiza o saldo do bookmaker baseado na mudança de resultado
+   * Liquida ou reliquida a aposta usando RPC atômica
+   * O RPC cuida de:
+   * - Atualizar status da aposta para LIQUIDADA
+   * - Atualizar resultado
+   * - Inserir no cash_ledger para cada perna
+   * - Trigger atualiza saldos automaticamente
    * 
-   * ARQUITETURA CANÔNICA:
-   * - Se a aposta usou stake_bonus (bonusId + stakeBonus > 0), o consumo do bônus
-   *   é tratado EXCLUSIVAMENTE por processarLiquidacaoBonus.
-   * - Nesse caso, passamos skipBonusCheck=true para evitar dupla atualização.
-   * - O ajuste de saldo aqui refere-se APENAS à parte de saldo real da aposta.
+   * NOTA: Para cobertura, o RPC processa cada perna individualmente
    */
-  const atualizarSaldoBookmaker = async (
-    resultadoAnterior: string | null,
-    resultadoNovo: string
-  ) => {
-    try {
-      // Determinar se há bônus ativo sendo usado nesta aposta
-      const temBonusComStake = bonusId && stakeBonus > 0;
-      
-      let saldoAjuste = 0;
-
-      // Reverter efeito do resultado anterior (se havia um resultado definido)
-      if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
-        saldoAjuste -= calcularAjusteSaldo(resultadoAnterior);
-      }
-
-      // Aplicar efeito do novo resultado
-      saldoAjuste += calcularAjusteSaldo(resultadoNovo);
-
-      // CORREÇÃO: Quando há bônus com stake, skipBonusCheck=true para evitar dupla atualização
-      // O processarLiquidacaoBonus já trata o consumo do bônus separadamente
-      if (saldoAjuste !== 0) {
-        console.log(`[ResultadoPill] atualizarSaldoBookmaker: delta=${saldoAjuste}, temBonusComStake=${temBonusComStake}`);
-        await updateBookmakerBalance(
-          bookmarkerId, 
-          saldoAjuste, 
-          projetoId, 
-          undefined, // sem auditInfo
-          temBonusComStake // skipBonusCheck = true quando há bônus
-        );
-      }
-
-      // Para Cobertura, também atualizar o saldo da Exchange
-      if (operationType === "cobertura" && layExchangeBookmakerId) {
-        let saldoAjusteExchange = 0;
-
-        // Reverter efeito do resultado anterior na exchange
-        if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
-          saldoAjusteExchange -= calcularAjusteSaldoExchange(resultadoAnterior);
-        }
-
-        // Aplicar efeito do novo resultado na exchange
-        saldoAjusteExchange += calcularAjusteSaldoExchange(resultadoNovo);
-
-        // CORREÇÃO: Exchange não usa bônus, então não precisa de skipBonusCheck
-        if (saldoAjusteExchange !== 0) {
-          await updateBookmakerBalance(layExchangeBookmakerId, saldoAjusteExchange, projetoId);
-        }
-      }
-    } catch (error) {
-      console.error("Erro ao atualizar saldo do bookmaker:", error);
+  const liquidarViaRPC = async (novoResultado: string, lucroPrejuizo: number) => {
+    const result = await reliquidarAposta(apostaId, novoResultado, lucroPrejuizo);
+    
+    if (!result.success) {
+      throw new Error(result.error?.message || 'Erro ao liquidar aposta');
     }
+    
+    console.log(`[ResultadoPill] Aposta ${apostaId} liquidada via RPC: ${novoResultado}`);
+    return result;
   };
 
   const handleResultadoSelect = async (novoResultado: string) => {
@@ -531,25 +490,19 @@ export function ResultadoPill({
       const lucroPrejuizo = calcularLucroPrejuizo(novoResultado);
       const valorRetorno = calcularValorRetorno(novoResultado);
 
-      // Atualizar a aposta no banco
-      const { error } = await supabase
+      // ====== LIQUIDAÇÃO VIA RPC ATÔMICA ======
+      // O RPC cuida de: atualizar aposta, registrar no ledger, trigger atualiza saldo
+      await liquidarViaRPC(novoResultado, lucroPrejuizo);
+      
+      // Atualizar valor_retorno separadamente (RPC não trata esse campo)
+      await supabase
         .from("apostas_unificada")
-        .update({
-          resultado: novoResultado,
-          status: "LIQUIDADA",
-          lucro_prejuizo: lucroPrejuizo,
-          valor_retorno: valorRetorno,
-        })
+        .update({ valor_retorno: valorRetorno })
         .eq("id", apostaId);
 
-      if (error) throw error;
-
-      // ====== ATUALIZAÇÃO DE SALDOS ======
-      // Ordem importante: primeiro saldo real, depois bônus (se houver)
-      
-      // 1. Atualizar saldo do bookmaker (saldo real)
-      // Se há bônus com stake, skipBonusCheck=true para evitar dupla atualização
-      await atualizarSaldoBookmaker(resultado, novoResultado);
+      // ====== LÓGICA DE CONSUMO DE BÔNUS ======
+      // Se a aposta usou saldo de bônus, processar consumo proporcional
+      // NOTA: Esta é a ÚNICA fonte de verdade para consumo de bônus
 
       // 2. LÓGICA DE CONSUMO DE BÔNUS
       // Se a aposta usou saldo de bônus, processar consumo proporcional

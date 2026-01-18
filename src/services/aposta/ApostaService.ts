@@ -511,6 +511,95 @@ export async function liquidarAposta(
 }
 
 // ============================================================================
+// RELIQUIDAR APOSTA (mudar resultado de aposta já liquidada)
+// ============================================================================
+
+/**
+ * Reliquida uma aposta (muda resultado de uma aposta já liquidada)
+ * 
+ * Usa reliquidar_aposta_atomica que:
+ * 1. Reverte o resultado anterior via cash_ledger
+ * 2. Aplica o novo resultado via cash_ledger
+ * 3. Trigger atualiza saldos automaticamente
+ * 
+ * @param apostaId - ID da aposta
+ * @param novoResultado - Novo resultado a aplicar
+ * @param lucroPrejuizo - Lucro/prejuízo calculado (opcional)
+ */
+export async function reliquidarAposta(
+  apostaId: string,
+  novoResultado: string,
+  lucroPrejuizo?: number
+): Promise<ApostaServiceResult<{ resultado_anterior?: string; impacto_total?: number }>> {
+  console.log("[ApostaService] Iniciando reliquidação:", apostaId, novoResultado);
+
+  try {
+    const { data, error } = await supabase.rpc('reliquidar_aposta_atomica', {
+      p_aposta_id: apostaId,
+      p_resultado_novo: novoResultado,
+      p_lucro_prejuizo: lucroPrejuizo ?? null,
+    });
+
+    if (error) {
+      console.error("[ApostaService] Erro RPC reliquidar_aposta_atomica:", error);
+      return {
+        success: false,
+        error: {
+          code: 'RELIQUIDATION_RPC_ERROR',
+          message: `Falha ao reliquidar aposta: ${error.message}`,
+          details: { error },
+        },
+      };
+    }
+
+    const result = data as {
+      success: boolean;
+      error?: string;
+      message?: string;
+      resultado_anterior?: string;
+      resultado_novo?: string;
+      impacto_total?: number;
+    };
+
+    if (!result.success) {
+      console.error("[ApostaService] RPC retornou erro:", result);
+      return {
+        success: false,
+        error: {
+          code: result.error || 'RELIQUIDATION_FAILED',
+          message: result.message || 'Falha ao reliquidar aposta',
+        },
+      };
+    }
+
+    console.log("[ApostaService] Aposta reliquidada com sucesso:", apostaId, {
+      resultado_anterior: result.resultado_anterior,
+      resultado_novo: result.resultado_novo,
+      impacto_total: result.impacto_total,
+    });
+    
+    return { 
+      success: true,
+      data: {
+        resultado_anterior: result.resultado_anterior,
+        impacto_total: result.impacto_total,
+      }
+    };
+
+  } catch (err: any) {
+    console.error("[ApostaService] Exceção na reliquidação:", err);
+    return {
+      success: false,
+      error: {
+        code: 'UNEXPECTED_ERROR',
+        message: err.message || 'Erro inesperado ao reliquidar aposta',
+        details: { error: err },
+      },
+    };
+  }
+}
+
+// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 
