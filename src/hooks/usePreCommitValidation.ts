@@ -1,12 +1,15 @@
 /**
  * Hook para validação pré-commit de apostas
  * 
- * Garante integridade de dados através de:
- * 1. Validação server-side via RPC antes do commit
- * 2. Controle otimista de versão para prevenir race conditions
- * 3. Verificação de vínculos projeto-bookmaker em tempo real
- * 4. Verificação de saldos atualizados
- * 5. Lock pessimista para prevenir débitos simultâneos
+ * @deprecated FASE 1 - Este hook está sendo substituído por criar_aposta_atomica
+ * 
+ * A função debitMultiple NÃO deve mais ser usada para apostas.
+ * Apostas pendentes NÃO debitam saldo - stake fica em saldo_em_aposta.
+ * Débito real acontece apenas na LIQUIDAÇÃO via cash_ledger.
+ * 
+ * Este hook ainda pode ser usado para:
+ * - Validação rápida de bookmaker (quickValidateBookmaker)
+ * - Exibição de erros (showValidationErrors, showDebitError)
  * 
  * @module usePreCommitValidation
  */
@@ -139,10 +142,12 @@ export function usePreCommitValidation() {
   }, []);
 
   /**
-   * Débito atômico de múltiplas bookmakers em uma única transação
-   * Garante que TODAS as operações são bem-sucedidas ou NENHUMA é aplicada
+   * @deprecated NÃO USE PARA APOSTAS
    * 
-   * CRÍTICO: Previne saldo negativo mesmo com operações simultâneas
+   * Apostas pendentes NÃO debitam saldo - stake fica reservado em saldo_em_aposta.
+   * Débito real acontece apenas na LIQUIDAÇÃO via liquidar_aposta_atomica.
+   * 
+   * Este método só deve ser usado para operações legadas que ainda não foram migradas.
    */
   const debitMultiple = useCallback(async (
     debits: DebitInput[],
@@ -188,8 +193,10 @@ export function usePreCommitValidation() {
   }, []);
 
   /**
-   * Fluxo completo de validação + débito atômico
-   * Use esta função para garantir integridade total
+   * @deprecated NÃO USE PARA APOSTAS
+   * 
+   * Fluxo antigo de validação + débito. Para apostas, use criar_aposta_atomica.
+   * Mantido apenas para compatibilidade com código legado.
    */
   const validateAndDebit = useCallback(async (
     projetoId: string,
