@@ -43,7 +43,11 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
+import { 
+  registrarGanhoCambialViaLedger, 
+  registrarPerdaCambialViaLedger,
+  getBookmakerMoeda 
+} from "@/lib/ledgerService";
 
 interface ConciliacaoSaldosProps {
   transacoes: any[];
@@ -236,38 +240,45 @@ export function ConciliacaoSaldos({
           console.error("Erro ao registrar ajuste cambial:", adjError);
         }
 
-        // CORRIGIR SALDO DO BOOKMAKER: Aplicar diferença cambial
-        // Ex: se depositou $100.13 nominal mas casa recebeu só $100.08, diferença é -$0.05
-        // Precisamos reduzir o saldo do bookmaker em $0.05
+        // USAR LEDGER: Registrar ajuste cambial via ledger (trigger atualiza saldo automaticamente)
         if (bookmakerId) {
-          const { data: bookmaker } = await supabase
-            .from("bookmakers")
-            .select("moeda, saldo_atual, saldo_usd")
-            .eq("id", bookmakerId)
-            .single();
+          const moeda = await getBookmakerMoeda(bookmakerId);
           
-          if (bookmaker) {
-            const isUsdCurrency = ['USD', 'USDT', 'USDC'].includes(bookmaker.moeda?.toUpperCase());
+          if (diferenca > 0) {
+            // Ganho cambial - crédito
+            const result = await registrarGanhoCambialViaLedger({
+              bookmakerId,
+              valor: diferenca,
+              moeda,
+              workspaceId: workspace.id,
+              userId: user.id,
+              descricao: `Ganho cambial em conciliação: ${formatCurrency(valorNominal)} nominal → ${formatCurrency(valorReal)} confirmado`,
+              transacaoOrigemId: selectedTransaction.id,
+            });
             
-            // Para casas USD/USDT/USDC: atualizar AMBOS saldo_atual e saldo_usd
-            // Para outras moedas: atualizar apenas saldo_atual
-            const novoSaldoAtual = (bookmaker.saldo_atual || 0) + diferenca;
-            const novoSaldoUsd = (bookmaker.saldo_usd || 0) + diferenca;
-
-            const updateFields = isUsdCurrency 
-              ? { saldo_atual: novoSaldoAtual, saldo_usd: novoSaldoUsd }
-              : { saldo_atual: novoSaldoAtual };
-            
-            const { error: balanceError } = await supabase
-              .from("bookmakers")
-              .update(updateFields)
-              .eq("id", bookmakerId);
-            
-            if (balanceError) {
-              console.error("Erro ao atualizar saldo do bookmaker:", balanceError);
-              toast.error("Erro ao atualizar saldo da casa");
+            if (!result.success) {
+              console.error("[Conciliação] Erro ao registrar ganho cambial:", result.error);
+              toast.error("Erro ao registrar ganho cambial");
             } else {
-              console.log(`[Conciliação] Saldo bookmaker ${bookmakerId}: saldo_atual ${bookmaker.saldo_atual} → ${novoSaldoAtual}, saldo_usd ${bookmaker.saldo_usd} → ${novoSaldoUsd} (diferença: ${diferenca})`);
+              console.log(`[Conciliação] Ganho cambial registrado via ledger: ${diferenca}`);
+            }
+          } else {
+            // Perda cambial - débito
+            const result = await registrarPerdaCambialViaLedger({
+              bookmakerId,
+              valor: Math.abs(diferenca),
+              moeda,
+              workspaceId: workspace.id,
+              userId: user.id,
+              descricao: `Perda cambial em conciliação: ${formatCurrency(valorNominal)} nominal → ${formatCurrency(valorReal)} confirmado`,
+              transacaoOrigemId: selectedTransaction.id,
+            });
+            
+            if (!result.success) {
+              console.error("[Conciliação] Erro ao registrar perda cambial:", result.error);
+              toast.error("Erro ao registrar perda cambial");
+            } else {
+              console.log(`[Conciliação] Perda cambial registrada via ledger: ${Math.abs(diferenca)}`);
             }
           }
         }

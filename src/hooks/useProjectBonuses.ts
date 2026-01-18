@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { registrarBonusCreditadoViaLedger, getBookmakerMoeda } from "@/lib/ledgerService";
 
 export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
 
@@ -330,36 +331,29 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
 
       if (error) throw error;
 
-      // MODELO UNIFICADO: Se status = credited, creditar diretamente no saldo do bookmaker
+      // MODELO UNIFICADO: Se status = credited, creditar via ledger
       if (data.status === "credited") {
-        const { error: updateError } = await supabase
-          .from("bookmakers")
-          .update({ 
-            saldo_atual: supabase.rpc ? undefined : undefined // Placeholder - usamos RPC abaixo
-          })
-          .eq("id", data.bookmaker_id);
-
-        // Incrementar saldo do bookmaker (considerando moeda USD/USDT)
-        const { data: bookmaker } = await supabase
-          .from("bookmakers")
-          .select("saldo_atual, saldo_usd, moeda")
-          .eq("id", data.bookmaker_id)
+        const { data: projectData2 } = await supabase
+          .from("projetos")
+          .select("workspace_id")
+          .eq("id", projectId)
           .single();
-
-        if (bookmaker) {
-          const isUsdCurrency = ['USD', 'USDT', 'USDC'].includes(bookmaker.moeda?.toUpperCase());
-          const novoSaldo = Number(bookmaker.saldo_atual || 0) + data.bonus_amount;
-          const novoSaldoUsd = Number(bookmaker.saldo_usd || 0) + data.bonus_amount;
-          
-          // CORREÇÃO: Atualizar ambos os campos para garantir consistência
-          await supabase
-            .from("bookmakers")
-            .update({ 
-              saldo_atual: novoSaldo,
-              saldo_usd: isUsdCurrency ? novoSaldoUsd : bookmaker.saldo_usd,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", data.bookmaker_id);
+        
+        const moeda = await getBookmakerMoeda(data.bookmaker_id);
+        
+        const result = await registrarBonusCreditadoViaLedger({
+          bookmakerId: data.bookmaker_id,
+          valor: data.bonus_amount,
+          moeda,
+          workspaceId: projectData2?.workspace_id || '',
+          userId: userData.user.id,
+          descricao: `Crédito de bônus: ${data.title || 'Sem título'}`,
+        });
+        
+        if (!result.success) {
+          console.error("[useProjectBonuses] Erro ao creditar bônus via ledger:", result.error);
+        } else {
+          console.log(`[useProjectBonuses] Bônus creditado via ledger: ${data.bonus_amount}`);
         }
       }
     },
@@ -384,31 +378,35 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       }
 
       // MODELO UNIFICADO: saldo_atual do bônus sempre = 0
-      // Se status muda para credited, creditar no bookmaker
+      // Se status muda para credited, creditar no bookmaker via ledger
       if (existingBonus && data.status && data.status !== existingBonus.status) {
         if (data.status === "credited") {
-          // Creditar no bookmaker (considerando moeda USD/USDT)
+          // Creditar via ledger
           const bonusAmount = data.bonus_amount ?? existingBonus.bonus_amount;
-          const { data: bookmaker } = await supabase
-            .from("bookmakers")
-            .select("saldo_atual, saldo_usd, moeda")
-            .eq("id", existingBonus.bookmaker_id)
+          const { data: userData } = await supabase.auth.getUser();
+          
+          const { data: projectData } = await supabase
+            .from("projetos")
+            .select("workspace_id")
+            .eq("id", projectId)
             .single();
-
-          if (bookmaker) {
-            const isUsdCurrency = ['USD', 'USDT', 'USDC'].includes(bookmaker.moeda?.toUpperCase());
-            const novoSaldo = Number(bookmaker.saldo_atual || 0) + bonusAmount;
-            const novoSaldoUsd = Number(bookmaker.saldo_usd || 0) + bonusAmount;
-            
-            // CORREÇÃO: Atualizar ambos os campos para garantir consistência
-            await supabase
-              .from("bookmakers")
-              .update({ 
-                saldo_atual: novoSaldo,
-                saldo_usd: isUsdCurrency ? novoSaldoUsd : bookmaker.saldo_usd,
-                updated_at: new Date().toISOString()
-              })
-              .eq("id", existingBonus.bookmaker_id);
+          
+          const moeda = await getBookmakerMoeda(existingBonus.bookmaker_id);
+          
+          const result = await registrarBonusCreditadoViaLedger({
+            bookmakerId: existingBonus.bookmaker_id,
+            valor: bonusAmount,
+            moeda,
+            workspaceId: projectData?.workspace_id || '',
+            userId: userData?.user?.id || '',
+            descricao: `Crédito de bônus: ${existingBonus.title || 'Sem título'}`,
+            bonusId: id,
+          });
+          
+          if (!result.success) {
+            console.error("[useProjectBonuses] Erro ao creditar bônus via ledger:", result.error);
+          } else {
+            console.log(`[useProjectBonuses] Bônus atualizado e creditado via ledger: ${bonusAmount}`);
           }
 
           updateData.valor_creditado_no_saldo = bonusAmount;
