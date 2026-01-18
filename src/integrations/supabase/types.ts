@@ -8640,6 +8640,10 @@ export type Database = {
         }
         Returns: Json
       }
+      criar_aposta_atomica: {
+        Args: { p_aposta_data: Json; p_pernas?: Json }
+        Returns: Json
+      }
       debit_bookmaker_with_lock: {
         Args: {
           p_bookmaker_id: string
@@ -8854,6 +8858,15 @@ export type Database = {
         Returns: boolean
       }
       is_system_owner: { Args: { _user_id: string }; Returns: boolean }
+      liquidar_aposta_atomica: {
+        Args: {
+          p_aposta_id: string
+          p_lucro_prejuizo?: number
+          p_resultado: string
+          p_resultados_pernas?: Json
+        }
+        Returns: Json
+      }
       marcar_para_saque: {
         Args: { p_bookmaker_id: string }
         Returns: undefined
