@@ -13,10 +13,10 @@
 
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { criarAposta, atualizarAposta, deletarAposta } from "@/services/aposta";
+import { criarAposta, atualizarAposta, deletarAposta, reliquidarAposta } from "@/services/aposta";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
-import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
-import { toast } from "sonner";
+import { registrarAjusteViaLedger } from "@/lib/ledgerService";
+
 import type { CriarApostaInput, PernaInput } from "@/services/aposta/types";
 import type { SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 
@@ -226,36 +226,9 @@ export function useSurebetService() {
   ): Promise<SurebetResult> => {
     console.log("[useSurebetService] Atualizando surebet:", params.id);
 
-    // Se houve mudança de bookmaker em perna liquidada, ajustar saldos
-    if (params.pernas && params.pernas_originais) {
-      for (let i = 0; i < Math.min(params.pernas_originais.length, params.pernas.length); i++) {
-        const original = params.pernas_originais[i];
-        const nova = params.pernas[i];
-
-        if (
-          original?.resultado &&
-          original.resultado !== "PENDENTE" &&
-          original.bookmaker_id !== nova.bookmaker_id
-        ) {
-          const stake = original.stake || 0;
-          const odd = original.odd || 0;
-          const resultado = original.resultado;
-
-          let delta = 0;
-          if (resultado === "GREEN") delta = stake * (odd - 1);
-          else if (resultado === "MEIO_GREEN") delta = (stake * (odd - 1)) / 2;
-          else if (resultado === "RED") delta = -stake;
-          else if (resultado === "MEIO_RED") delta = -stake / 2;
-
-          if (delta !== 0) {
-            // Reverter do original
-            await updateBookmakerBalance(original.bookmaker_id, -delta, params.projeto_id);
-            // Aplicar no novo
-            await updateBookmakerBalance(nova.bookmaker_id, delta, params.projeto_id);
-          }
-        }
-      }
-    }
+    // Se houve mudança de bookmaker em perna liquidada, a reliquidação é feita via RPC
+    // Não precisamos mais ajustar manualmente - o RPC reliquidar_aposta_atomica cuida disso
+    // Aqui apenas atualizamos os dados da aposta
 
     // Recalcular totais
     let moedaOperacao = "BRL";
@@ -334,7 +307,7 @@ export function useSurebetService() {
   }, [invalidateSaldos]);
 
   /**
-   * Deleta uma Surebet, revertendo saldos se necessário
+   * Deleta uma Surebet, revertendo saldos se necessário via RPC
    */
   const deletarSurebet = useCallback(async (
     id: string,
@@ -343,20 +316,27 @@ export function useSurebetService() {
   ): Promise<SurebetResult> => {
     console.log("[useSurebetService] Deletando surebet:", id);
 
-    // Reverter saldos de pernas liquidadas
+    // Se há pernas liquidadas, usar RPC para reverter via ledger
+    // A exclusão vai usar reliquidarAposta para cada perna que tinha resultado
     if (pernas) {
       for (const perna of pernas) {
         if (perna.resultado && perna.resultado !== "PENDENTE") {
-          const stake = perna.stake || 0;
-          const odd = perna.odd || 0;
-          let delta = 0;
-
-          if (perna.resultado === "GREEN") delta = -(stake * (odd - 1));
-          else if (perna.resultado === "RED") delta = stake;
-          // VOID = 0
-
-          if (delta !== 0) {
-            await updateBookmakerBalance(perna.bookmaker_id, delta, projetoId);
+          // Reverter para VOID (sem impacto) antes de deletar
+          // Isso cria os registros de reversão no ledger
+          const { data: pernaData } = await supabase
+            .from("apostas_pernas")
+            .select("id")
+            .eq("aposta_id", id)
+            .eq("bookmaker_id", perna.bookmaker_id)
+            .maybeSingle();
+          
+          if (pernaData?.id) {
+            // O RPC reliquidar_aposta_atomica já cuida da reversão
+            await supabase.rpc('reliquidar_aposta_atomica', {
+              p_aposta_id: id,
+              p_resultado_novo: 'VOID',
+              p_lucro_prejuizo: 0,
+            });
           }
         }
       }

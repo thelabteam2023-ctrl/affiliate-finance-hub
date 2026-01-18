@@ -17,6 +17,7 @@ export {
   atualizarAposta,
   deletarAposta,
   liquidarAposta,
+  reliquidarAposta,
   healthCheck,
 } from './ApostaService';
 

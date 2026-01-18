@@ -52,6 +52,7 @@ import {
   formatCurrency as formatCurrencyCanonical,
   getCurrencyTextColor 
 } from "@/components/bookmakers/BookmakerSelectOption";
+import { reliquidarAposta } from "@/services/aposta";
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 import { useImportMultiplaBetPrint } from "@/hooks/useImportMultiplaBetPrint";
 import { GerouFreebetInput } from "./GerouFreebetInput";

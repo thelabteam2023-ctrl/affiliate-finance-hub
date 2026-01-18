@@ -68,6 +68,7 @@ import {
   MultiCurrencyIndicator, 
   MultiCurrencyWarning 
 } from "@/components/projeto-detalhe/MultiCurrencyIndicator";
+import { reliquidarAposta } from "@/services/aposta";
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
