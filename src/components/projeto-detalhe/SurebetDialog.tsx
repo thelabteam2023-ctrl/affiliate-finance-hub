@@ -47,7 +47,8 @@ import {
   Plus,
   ChevronDown,
   ChevronUp,
-  Camera
+  Camera,
+  FileText
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
@@ -55,6 +56,7 @@ import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
 import { pernasToInserts } from "@/types/apostasPernas";
 import { useSurebetService, type SurebetPerna as SurebetPernaService } from "@/hooks/useSurebetService";
+import { useApostaRascunho, type RascunhoPernaData } from "@/hooks/useApostaRascunho";
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
@@ -586,6 +588,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   // Delega operações de persistência para o ApostaService
   const { criarSurebet, atualizarSurebet, deletarSurebet } = useSurebetService();
   
+  // ========== HOOK DE RASCUNHOS (LOCALSTORAGE) ==========
+  // Permite salvar surebets incompletas (1 perna, sem stake) sem tocar no banco
+  const { criarRascunho, listarPorTipo } = useApostaRascunho(projetoId, workspaceId || '');
+  const rascunhosSurebet = useMemo(() => listarPorTipo('SUREBET'), [listarPorTipo]);
   // Form state
   const [evento, setEvento] = useState("");
   const [mercado, setMercado] = useState("");
@@ -1797,6 +1803,55 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       return hasOdd && hasStake && hasBookmaker;
     }).length;
   }, [odds]);
+  
+  // Verificar se tem pelo menos 1 perna com dados parciais (para salvar como rascunho)
+  const temDadosParciais = useMemo(() => {
+    return odds.some(entry => {
+      const hasAnyOdd = entry.odd && parseFloat(entry.odd) > 1;
+      const hasAnyStake = entry.stake && parseFloat(entry.stake) > 0;
+      const hasAnyBookmaker = entry.bookmaker_id && entry.bookmaker_id.trim() !== "";
+      // Tem pelo menos um campo preenchido
+      return hasAnyOdd || hasAnyStake || hasAnyBookmaker;
+    });
+  }, [odds]);
+  
+  // Pode salvar como rascunho: tem dados parciais, mas não tem 2+ pernas completas
+  const podeSalvarRascunho = !isEditing && temDadosParciais && pernasCompletasCount < 2;
+  
+  // Handler para salvar como rascunho
+  const handleSalvarRascunho = useCallback(() => {
+    if (!workspaceId) {
+      toast.error("Workspace não identificado");
+      return;
+    }
+    
+    // Converter odds para formato de rascunho
+    const pernasRascunho: RascunhoPernaData[] = odds.map(entry => ({
+      bookmaker_id: entry.bookmaker_id || undefined,
+      bookmaker_nome: bookmakerSaldos.find(b => b.id === entry.bookmaker_id)?.nome,
+      selecao: entry.selecao || undefined,
+      selecao_livre: entry.selecaoLivre || undefined,
+      odd: parseFloat(entry.odd) || undefined,
+      stake: parseFloat(entry.stake) || undefined,
+      moeda: entry.moeda,
+    }));
+    
+    const rascunho = criarRascunho('SUREBET', {
+      evento: evento || undefined,
+      mercado: mercado || undefined,
+      esporte: esporte || undefined,
+      observacoes: observacoes || undefined,
+      pernas: pernasRascunho,
+    });
+    
+    toast.success(
+      `Rascunho salvo! ${rascunho.motivo_incompleto ? `(${rascunho.motivo_incompleto})` : ''}`,
+      { description: 'Acesse seus rascunhos para continuar depois' }
+    );
+    
+    // Fechar o dialog
+    onOpenChange(false);
+  }, [odds, evento, mercado, esporte, observacoes, workspaceId, bookmakerSaldos, criarRascunho, onOpenChange]);
 
   const handleSave = async () => {
     // Validação dos campos de registro obrigatórios
@@ -3992,6 +4047,17 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
+            {/* Botão de Rascunho: aparece quando tem dados mas não pode salvar como aposta real */}
+            {podeSalvarRascunho && (
+              <Button 
+                variant="secondary"
+                onClick={handleSalvarRascunho}
+                disabled={saving}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                Salvar Rascunho
+              </Button>
+            )}
             <Button 
               onClick={handleSave} 
               disabled={saving || !analysis || analysis.stakeTotal <= 0 || pernasCompletasCount < 2}
