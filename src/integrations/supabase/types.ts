@@ -8641,7 +8641,7 @@ export type Database = {
         Returns: Json
       }
       criar_aposta_atomica: {
-        Args: { p_aposta_data: Json; p_pernas?: Json }
+        Args: { p_aposta_data: Json; p_pernas_data: Json }
         Returns: Json
       }
       debit_bookmaker_with_lock: {
@@ -9037,6 +9037,10 @@ export type Database = {
           p_projeto_id: string
           p_stakes: number[]
         }
+        Returns: Json
+      }
+      validate_bet_creation_v2: {
+        Args: { p_bookmaker_stakes: Json; p_projeto_id: string }
         Returns: Json
       }
       validate_operator_eligibility: {
