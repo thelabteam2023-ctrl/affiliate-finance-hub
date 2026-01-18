@@ -594,8 +594,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   
-  // Estado para confirmação de cobertura incompleta (menos de 3 pernas preenchidas no modelo 1-X-2)
-  const [showIncompleteCoverageConfirm, setShowIncompleteCoverageConfirm] = useState(false);
+  // Estado removido: showIncompleteCoverageConfirm - botão agora desabilita para < 2 pernas
   
   // Registro explícito - usa sugestões baseadas na aba ativa
   // Forma de registro é sempre ARBITRAGEM, estratégia e contexto vêm da aba
@@ -1787,6 +1786,18 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     };
   }, [odds]);
 
+  // Contar pernas completas (bookmaker + odd > 1 + stake > 0)
+  const pernasCompletasCount = useMemo(() => {
+    return odds.filter(entry => {
+      const odd = parseFloat(entry.odd);
+      const stake = parseFloat(entry.stake);
+      const hasOdd = entry.odd && !isNaN(odd) && odd > 1;
+      const hasStake = entry.stake && !isNaN(stake) && stake > 0;
+      const hasBookmaker = entry.bookmaker_id && entry.bookmaker_id.trim() !== "";
+      return hasOdd && hasStake && hasBookmaker;
+    }).length;
+  }, [odds]);
+
   const handleSave = async () => {
     // Validação dos campos de registro obrigatórios
     if (!registroValues.forma_registro || !registroValues.estrategia || !registroValues.contexto_operacional) {
@@ -1901,9 +1912,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       }
     }
     
-    // Validação: precisa ter pelo menos 1 perna preenchida
-    if (pernasPreenchidas === 0) {
-      toast.error("Preencha pelo menos uma perna da operação");
+    // Validação: precisa ter pelo menos 2 pernas preenchidas (invariante do domínio Surebet)
+    if (pernasPreenchidas < 2) {
+      toast.error("Surebet requer pelo menos 2 pernas completas");
       return;
     }
 
@@ -1913,15 +1924,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       return;
     }
     
-    // NOVO: Verificar se há cobertura incompleta no modelo 1-X-2 (menos de 3 pernas)
-    const totalPernasModelo = modelo === "1-X-2" ? 3 : 2;
-    if (pernasPreenchidas < totalPernasModelo && !isEditing) {
-      // Mostrar modal de confirmação antes de salvar
-      setShowIncompleteCoverageConfirm(true);
-      return;
-    }
-    
-    // Executar salvamento diretamente
+    // Executar salvamento diretamente (modal de confirmação removido - botão já desabilitado para < 2 pernas)
     await executeSaveLogic();
   };
   
@@ -3991,7 +3994,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
             </Button>
             <Button 
               onClick={handleSave} 
-              disabled={saving || !analysis || analysis.stakeTotal <= 0}
+              disabled={saving || !analysis || analysis.stakeTotal <= 0 || pernasCompletasCount < 2}
             >
               <Save className="h-4 w-4 mr-1" />
               {isEditing ? "Salvar" : "Registrar"}
@@ -4013,36 +4016,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         </DialogContent>
       </Dialog>
       
-      {/* Modal de confirmação para cobertura incompleta */}
-      <AlertDialog open={showIncompleteCoverageConfirm} onOpenChange={setShowIncompleteCoverageConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-              Cobertura Incompleta
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-left">
-              Você está registrando uma operação com cobertura incompleta (menos de {modelo === "1-X-2" ? "3" : "2"} pernas preenchidas).
-              <br /><br />
-              <strong>Isso significa que há cenários de resultado sem proteção.</strong>
-              <br /><br />
-              Deseja prosseguir mesmo assim?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={async () => {
-                setShowIncompleteCoverageConfirm(false);
-                await executeSaveLogic();
-              }}
-              className="bg-amber-600 hover:bg-amber-700"
-            >
-              Sim, registrar assim
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Modal de cobertura incompleta removido - botão já desabilitado para < 2 pernas */}
     </Dialog>
   );
 }

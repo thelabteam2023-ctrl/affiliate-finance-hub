@@ -567,6 +567,34 @@ export function ApostaMultiplaDialog({
     return retornoPotencial - stakeNum;
   }, [retornoPotencial, stake]);
 
+  // Contar seleções válidas (descrição + odd > 1)
+  const selecoesValidasCount = useMemo(() => {
+    const numSelecoes = tipoMultipla === "DUPLA" ? 2 : 3;
+    let count = 0;
+    for (let i = 0; i < numSelecoes; i++) {
+      const sel = selecoes[i];
+      if (sel?.descricao?.trim() && parseFloat(sel?.odd) > 1) {
+        count++;
+      }
+    }
+    return count;
+  }, [selecoes, tipoMultipla]);
+
+  // Verificar se formulário está pronto para salvar
+  const canSave = useMemo(() => {
+    const numSelecoes = tipoMultipla === "DUPLA" ? 2 : 3;
+    const stakeNum = parseFloat(stake);
+    return (
+      bookmakerId && 
+      !isNaN(stakeNum) && 
+      stakeNum > 0 && 
+      selecoesValidasCount >= numSelecoes &&
+      registroValues.forma_registro &&
+      registroValues.estrategia &&
+      registroValues.contexto_operacional
+    );
+  }, [bookmakerId, stake, selecoesValidasCount, tipoMultipla, registroValues]);
+
   // Usar formatCurrency canônico com suporte multi-moeda
   const formatCurrency = (value: number, moeda?: string) => {
     return formatCurrencyCanonical(value, moeda || bookmakerSaldo?.moeda || "BRL");
@@ -1546,7 +1574,7 @@ export function ApostaMultiplaDialog({
             >
               Cancelar
             </Button>
-            <Button type="button" onClick={handleSubmit} disabled={loading}>
+            <Button type="button" onClick={handleSubmit} disabled={loading || !canSave}>
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
