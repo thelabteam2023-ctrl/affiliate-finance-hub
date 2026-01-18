@@ -415,52 +415,85 @@ export async function deletarAposta(
 // ============================================================================
 
 /**
- * Liquida uma aposta (define resultado final)
+ * Liquida uma aposta usando RPC atômica
+ * 
+ * FASE 1: Usa liquidar_aposta_atomica que:
+ * 1. Atualiza aposta para LIQUIDADA
+ * 2. Atualiza resultado de cada perna
+ * 3. Insere registros no cash_ledger (GREEN/RED/VOID)
+ * 4. Trigger atualiza saldo automaticamente
+ * 
+ * O impacto financeiro REAL só acontece aqui, não na criação!
  */
 export async function liquidarAposta(
   input: LiquidarApostaInput
 ): Promise<ApostaServiceResult> {
-  console.log("[ApostaService] Iniciando liquidação:", input.id, input.resultado);
+  console.log("[ApostaService] Iniciando liquidação atômica:", input.id, input.resultado);
 
   try {
-    // 1. Atualizar aposta principal
-    const { error: updateError } = await supabase
-      .from('apostas_unificada')
-      .update({
-        status: 'LIQUIDADA',
-        resultado: input.resultado,
-        lucro_prejuizo: input.lucro_prejuizo,
-        lucro_prejuizo_brl_referencia: input.lucro_prejuizo_brl_referencia,
-      })
-      .eq('id', input.id);
+    // Preparar resultados por perna se fornecidos
+    let resultadosPernasMap: Record<string, string> | null = null;
+    
+    if (input.resultados_pernas && input.resultados_pernas.length > 0) {
+      // Buscar IDs das pernas pela ordem
+      const { data: pernas } = await supabase
+        .from('apostas_pernas')
+        .select('id, ordem')
+        .eq('aposta_id', input.id);
+      
+      if (pernas) {
+        resultadosPernasMap = {};
+        for (const perna of pernas) {
+          const resultadoPerna = input.resultados_pernas.find(r => r.ordem === perna.ordem);
+          if (resultadoPerna) {
+            resultadosPernasMap[perna.id] = resultadoPerna.resultado;
+          }
+        }
+      }
+    }
 
-    if (updateError) {
+    // Chamar RPC atômica
+    const { data, error } = await supabase.rpc('liquidar_aposta_atomica', {
+      p_aposta_id: input.id,
+      p_resultado: input.resultado,
+      p_lucro_prejuizo: input.lucro_prejuizo || null,
+      p_resultados_pernas: resultadosPernasMap,
+    });
+
+    if (error) {
+      console.error("[ApostaService] Erro RPC liquidar_aposta_atomica:", error);
       return {
         success: false,
         error: {
-          code: 'LIQUIDATION_FAILED',
-          message: `Falha ao liquidar aposta: ${updateError.message}`,
-          details: { error: updateError },
+          code: 'LIQUIDATION_RPC_ERROR',
+          message: `Falha ao liquidar aposta: ${error.message}`,
+          details: { error },
         },
       };
     }
 
-    // 2. Atualizar pernas (se fornecidas)
-    if (input.resultados_pernas && input.resultados_pernas.length > 0) {
-      for (const perna of input.resultados_pernas) {
-        await supabase
-          .from('apostas_pernas')
-          .update({
-            resultado: perna.resultado,
-            lucro_prejuizo: perna.lucro_prejuizo,
-            lucro_prejuizo_brl_referencia: perna.lucro_prejuizo_brl_referencia,
-          })
-          .eq('aposta_id', input.id)
-          .eq('ordem', perna.ordem);
-      }
+    const result = data as {
+      success: boolean;
+      error?: string;
+      message?: string;
+      impacto_total?: number;
+    };
+
+    if (!result.success) {
+      console.error("[ApostaService] RPC retornou erro:", result);
+      return {
+        success: false,
+        error: {
+          code: result.error || 'LIQUIDATION_FAILED',
+          message: result.message || 'Falha ao liquidar aposta',
+        },
+      };
     }
 
-    console.log("[ApostaService] Aposta liquidada com sucesso:", input.id);
+    console.log("[ApostaService] Aposta liquidada com sucesso:", input.id, {
+      resultado: input.resultado,
+      impacto_total: result.impacto_total,
+    });
     
     return { success: true };
 
