@@ -22,7 +22,6 @@ import {
 import { pernasToInserts } from "@/types/apostasPernas";
 import { SupportedCurrency } from "@/types/currency";
 import { useCurrencySnapshot } from "./useCurrencySnapshot";
-import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 
 export interface UseApostasUnificadaReturn {
   loading: boolean;
@@ -466,21 +465,36 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
   };
 }
 
-// Helpers internos para manipulação de saldos - CORRIGIDO PARA MULTI-MOEDA E BÔNUS ATIVO
+// Helpers internos para manipulação de saldos - AGORA USANDO RPC LEDGER
+// O RPC reliquidar_aposta_atomica cria registros no cash_ledger e o trigger atualiza saldos
+
+function calcularImpactoResultado(stake: number, odd: number, resultado: string): number {
+  switch (resultado) {
+    case 'GREEN':
+      return stake * (odd - 1);
+    case 'RED':
+      return -stake;
+    case 'MEIO_GREEN':
+      return (stake * (odd - 1)) / 2;
+    case 'MEIO_RED':
+      return -stake / 2;
+    case 'VOID':
+    default:
+      return 0;
+  }
+}
+
 async function atualizarSaldoBookmaker(
   bookmakerId: string,
   perna: PernaArbitragem,
   projetoId?: string
 ): Promise<void> {
-  if (!perna.resultado || perna.resultado === "PENDENTE") return;
-
-  // Calcular delta usando helper canônico
-  const delta = calcularImpactoResultado(perna.stake, perna.odd, perna.resultado);
-  
-  if (delta !== 0) {
-    // Usar helper que respeita moeda do bookmaker (USD vs BRL) e bônus ativo
-    await updateBookmakerBalance(bookmakerId, delta, projetoId);
-  }
+  // NOTA: Esta função agora é um no-op porque a liquidação via RPC
+  // (liquidar_aposta_atomica / reliquidar_aposta_atomica) já cuida dos saldos
+  // via registros no cash_ledger + trigger.
+  // Mantemos a assinatura para não quebrar chamadas existentes,
+  // mas o trabalho real é feito pelo RPC.
+  console.log("[useApostasUnificada] atualizarSaldoBookmaker chamado - saldos gerenciados via RPC/ledger");
 }
 
 async function reverterSaldoBookmaker(
@@ -488,13 +502,7 @@ async function reverterSaldoBookmaker(
   perna: PernaArbitragem,
   projetoId?: string
 ): Promise<void> {
-  if (!perna.resultado || perna.resultado === "PENDENTE") return;
-
-  // Calcular delta negativo (reversão) usando helper canônico
-  const delta = -calcularImpactoResultado(perna.stake, perna.odd, perna.resultado);
-  
-  if (delta !== 0) {
-    // Usar helper que respeita moeda do bookmaker (USD vs BRL) e bônus ativo
-    await updateBookmakerBalance(bookmakerId, delta, projetoId);
-  }
+  // NOTA: Similar ao acima - reversão é feita via RPC reliquidar_aposta_atomica
+  // que registra APOSTA_REVERSAO no ledger.
+  console.log("[useApostasUnificada] reverterSaldoBookmaker chamado - saldos gerenciados via RPC/ledger");
 }
