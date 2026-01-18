@@ -8895,6 +8895,17 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      processar_bonus_aposta: {
+        Args: {
+          p_aposta_id: string
+          p_bonus_id: string
+          p_bookmaker_id: string
+          p_lucro_prejuizo?: number
+          p_resultado: string
+          p_stake_bonus: number
+        }
+        Returns: Json
+      }
       recalcular_saldo_bookmaker: {
         Args: { p_bookmaker_id: string }
         Returns: {
