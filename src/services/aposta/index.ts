@@ -27,6 +27,7 @@ export type {
   AtualizarApostaInput,
   LiquidarApostaInput,
   PernaInput,
+  SelecaoMultipla,
   ApostaServiceResult,
   ValidationResult,
   InvariantViolation,

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
+import { criarAposta, type SelecaoMultipla } from "@/services/aposta";
 import {
   Dialog,
   DialogContent,
@@ -800,16 +801,32 @@ export function ApostaMultiplaDialog({
 
         toast.success("Aposta múltipla atualizada!");
       } else {
-        // Insert - capturar o ID da aposta inserida
-        const { data: insertedData, error } = await supabase
-          .from("apostas_unificada")
-          .insert(apostaData)
-          .select("id")
-          .single();
+        // ========== USAR criarAposta DO SERVIÇO CENTRALIZADO ==========
+        const result = await criarAposta({
+          projeto_id: projetoId,
+          workspace_id: workspaceId,
+          user_id: user.id,
+          forma_registro: 'MULTIPLA',
+          estrategia: registroValues.estrategia as any,
+          contexto_operacional: registroValues.contexto_operacional as any,
+          data_aposta: toLocalISOString(dataAposta),
+          bookmaker_id: bookmakerId,
+          stake: stakeNum,
+          tipo_multipla: tipoMultipla,
+          selecoes: selecoesFormatadas as SelecaoMultipla[],
+          odd_final: oddFinal,
+          retorno_potencial: retornoPotencial,
+          tipo_freebet: usarFreebet ? "freebet_snr" : null,
+          gerou_freebet: gerouFreebet,
+          valor_freebet_gerada: gerouFreebet ? parseFloat(valorFreebetGerada) || 0 : null,
+          observacoes: observacoes || null,
+        });
 
-        if (error) throw error;
+        if (!result.success) {
+          throw new Error(result.error?.message || "Erro ao criar aposta múltipla");
+        }
 
-        const novaApostaId = insertedData?.id;
+        const novaApostaId = result.data?.id;
 
         // NOTA: Não debitar saldo_atual na criação de apostas PENDENTES!
         // O modelo contábil correto é:
