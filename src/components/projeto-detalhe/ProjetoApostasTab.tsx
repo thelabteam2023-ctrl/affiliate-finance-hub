@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { updateBookmakerBalance, calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { reliquidarAposta } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 // useBookmakerLogoMap movido para ProjetoDashboardTab
 import { Button } from "@/components/ui/button";
@@ -588,7 +589,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     onDataChange?.();
   };
 
-  // Resolução rápida de apostas simples (sem pernas multi) - USA HELPER FINANCEIRO
+  // Resolução rápida de apostas simples (sem pernas multi) - USA RPC ATÔMICA
   const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
     try {
       const aposta = apostas.find(a => a.id === apostaId);
@@ -600,38 +601,22 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       // Calcular lucro usando função canônica
       const lucro = calcularImpactoResultado(stake, odd, resultado);
 
-      // 1. Calcular delta financeiro (PENDENTE → novo resultado)
-      const delta = calcularImpactoResultado(stake, odd, resultado);
-
-      // 2. Atualizar saldo da bookmaker via helper canônico
-      if (aposta.bookmaker_id && delta !== 0) {
-        const balanceUpdated = await updateBookmakerBalance(aposta.bookmaker_id, delta);
-        if (!balanceUpdated) {
-          toast.error("Erro ao atualizar saldo da bookmaker. Liquidação cancelada.");
-          return;
-        }
+      // 1. Liquidar via RPC atômica (atualiza aposta + registra no ledger + trigger atualiza saldo)
+      const result = await reliquidarAposta(apostaId, resultado, lucro);
+      
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao liquidar aposta");
+        return;
       }
 
-      // 3. Atualizar aposta no banco
-      const { error } = await supabase
-        .from("apostas_unificada")
-        .update({
-          resultado,
-          lucro_prejuizo: lucro,
-          status: "LIQUIDADA",
-        })
-        .eq("id", apostaId);
-
-      if (error) throw error;
-
-      // 4. Atualizar estado local
+      // 2. Atualizar estado local
       setApostas(prev => prev.map(a => 
         a.id === apostaId 
           ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
           : a
       ));
 
-      // 5. Invalidar cache de saldos
+      // 3. Invalidar cache de saldos
       invalidateSaldos(projetoId);
 
       const resultLabel = {
