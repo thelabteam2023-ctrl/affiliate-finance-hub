@@ -29,8 +29,8 @@ export interface RascunhoPernaData {
 
 // Estrutura de uma seleção de múltipla
 export interface RascunhoSelecaoData {
-  descricao: string;
-  odd: number;
+  descricao?: string;
+  odd?: number;
 }
 
 // Estrutura base do rascunho
@@ -54,7 +54,10 @@ export interface ApostaRascunho {
   
   // Para Múltipla
   bookmaker_id?: string;
+  bookmaker_nome?: string;
   stake?: number;
+  moeda?: string;
+  tipo_multipla?: string;
   selecoes?: RascunhoSelecaoData[];
   
   // Metadados

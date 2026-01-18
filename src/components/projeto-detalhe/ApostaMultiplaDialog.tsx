@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, Camera, CheckCircle2, Gift } from "lucide-react";
+import { Loader2, Save, Trash2, Camera, CheckCircle2, Gift, FileText } from "lucide-react";
+import { useApostaRascunho, type RascunhoSelecaoData } from "@/hooks/useApostaRascunho";
 import {
   Tooltip,
   TooltipContent,
@@ -160,7 +161,10 @@ export function ApostaMultiplaDialog({
     }));
   }, [bookmakerSaldos]);
 
-  // ========== IMPORT BY PRINT ==========
+  // ========== HOOK DE RASCUNHOS (LOCALSTORAGE) ==========
+  // Permite salvar múltiplas incompletas (sem casa, sem stake, 1 seleção) sem tocar no banco
+  const { criarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const {
@@ -596,11 +600,58 @@ export function ApostaMultiplaDialog({
     );
   }, [bookmakerId, stake, selecoesValidasCount, tipoMultipla, registroValues]);
 
+  // Verificar se tem dados parciais (para salvar como rascunho)
+  const temDadosParciais = useMemo(() => {
+    const hasAnySelecao = selecoes.some(s => s.descricao?.trim() || (parseFloat(s.odd) > 1));
+    const hasBookmaker = bookmakerId?.trim() !== "";
+    const hasStake = parseFloat(stake) > 0;
+    return hasAnySelecao || hasBookmaker || hasStake;
+  }, [selecoes, bookmakerId, stake]);
+  
+  // Pode salvar como rascunho: tem dados parciais, mas não pode salvar como aposta real
+  const podeSalvarRascunho = !aposta && temDadosParciais && !canSave;
+  
+  // Handler para salvar como rascunho
+  const handleSalvarRascunho = useCallback(() => {
+    if (!workspaceId) {
+      toast.error("Workspace não identificado");
+      return;
+    }
+    
+    // Converter seleções para formato de rascunho
+    const selecoesRascunho: RascunhoSelecaoData[] = selecoes.map(s => ({
+      descricao: s.descricao || undefined,
+      odd: parseFloat(s.odd) || undefined,
+    }));
+    
+    // Pegar nome do bookmaker se selecionado
+    const bookmakerNome = bookmakerId 
+      ? bookmakers.find(b => b.id === bookmakerId)?.nome 
+      : undefined;
+    
+    const rascunho = criarRascunho('MULTIPLA', {
+      bookmaker_id: bookmakerId || undefined,
+      bookmaker_nome: bookmakerNome,
+      stake: parseFloat(stake) || undefined,
+      moeda: bookmakerSaldo?.moeda,
+      tipo_multipla: tipoMultipla,
+      observacoes: observacoes || undefined,
+      selecoes: selecoesRascunho,
+    });
+    
+    toast.success(
+      `Rascunho salvo! ${rascunho.motivo_incompleto ? `(${rascunho.motivo_incompleto})` : ''}`,
+      { description: 'Acesse seus rascunhos para continuar depois' }
+    );
+    
+    // Fechar o dialog
+    onOpenChange(false);
+  }, [selecoes, bookmakerId, stake, tipoMultipla, observacoes, workspaceId, bookmakers, bookmakerSaldo, criarRascunho, onOpenChange]);
+
   // Usar formatCurrency canônico com suporte multi-moeda
   const formatCurrency = (value: number, moeda?: string) => {
     return formatCurrencyCanonical(value, moeda || bookmakerSaldo?.moeda || "BRL");
   };
-
 
   const handleSelecaoChange = (
     index: number,
@@ -1591,6 +1642,17 @@ export function ApostaMultiplaDialog({
             >
               Cancelar
             </Button>
+            {/* Botão de Rascunho: aparece quando tem dados mas não pode salvar como aposta real */}
+            {podeSalvarRascunho && (
+              <Button 
+                variant="secondary"
+                onClick={handleSalvarRascunho}
+                disabled={loading}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                Salvar Rascunho
+              </Button>
+            )}
             <Button type="button" onClick={handleSubmit} disabled={loading || !canSave}>
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
