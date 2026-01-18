@@ -38,9 +38,14 @@ export type LedgerTransactionType =
   | 'APOSTA_VOID'
   | 'APOSTA_MEIO_GREEN'
   | 'APOSTA_MEIO_RED'
+  | 'APOSTA_REVERSAO'
   | 'DEPOSITO'
   | 'SAQUE'
-  | 'TRANSFERENCIA';
+  | 'TRANSFERENCIA'
+  | 'BONUS_CREDITADO'
+  | 'BONUS_ESTORNO'
+  | 'GANHO_CAMBIAL'
+  | 'PERDA_CAMBIAL';
 
 export interface LedgerEntryInput {
   /** Tipo da transação - determina como o trigger processa */
@@ -266,6 +271,108 @@ export async function registrarAjusteViaLedger(params: {
     descricao: params.descricao || `Ajuste manual: ${params.motivo || 'Sem motivo'}`,
     impactaCaixaOperacional: true,
     auditoriaMetadata: { ajuste_direcao: isCredito ? 'credito' : 'debito', ajuste_motivo: params.motivo },
+  });
+}
+
+/**
+ * Registra crédito de bônus via ledger.
+ */
+export async function registrarBonusCreditadoViaLedger(params: {
+  bookmakerId: string;
+  valor: number;
+  moeda: string;
+  workspaceId: string;
+  userId: string;
+  descricao?: string;
+  bonusId?: string;
+}): Promise<LedgerEntryResult> {
+  return insertLedgerEntry({
+    tipoTransacao: 'BONUS_CREDITADO',
+    valor: params.valor,
+    moeda: params.moeda,
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+    destinoBookmakerId: params.bookmakerId,
+    descricao: params.descricao || 'Crédito de bônus',
+    impactaCaixaOperacional: true,
+    auditoriaMetadata: params.bonusId ? { bonus_id: params.bonusId } : undefined,
+  });
+}
+
+/**
+ * Registra estorno de bônus via ledger.
+ */
+export async function estornarBonusViaLedger(params: {
+  bookmakerId: string;
+  valor: number;
+  moeda: string;
+  workspaceId: string;
+  userId: string;
+  descricao?: string;
+  bonusId?: string;
+}): Promise<LedgerEntryResult> {
+  return insertLedgerEntry({
+    tipoTransacao: 'BONUS_ESTORNO',
+    valor: params.valor,
+    moeda: params.moeda,
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+    origemBookmakerId: params.bookmakerId,
+    descricao: params.descricao || 'Estorno de bônus',
+    impactaCaixaOperacional: true,
+    auditoriaMetadata: params.bonusId ? { bonus_id: params.bonusId } : undefined,
+  });
+}
+
+/**
+ * Registra ganho cambial via ledger (diferença positiva em conciliação).
+ */
+export async function registrarGanhoCambialViaLedger(params: {
+  bookmakerId: string;
+  valor: number;
+  moeda: string;
+  workspaceId: string;
+  userId: string;
+  descricao?: string;
+  transacaoOrigemId?: string;
+}): Promise<LedgerEntryResult> {
+  return insertLedgerEntry({
+    tipoTransacao: 'GANHO_CAMBIAL',
+    valor: params.valor,
+    moeda: params.moeda,
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+    destinoBookmakerId: params.bookmakerId,
+    descricao: params.descricao || 'Ganho cambial em conciliação',
+    impactaCaixaOperacional: true,
+    referenciaTransacaoId: params.transacaoOrigemId,
+    auditoriaMetadata: { tipo: 'ganho_cambial' },
+  });
+}
+
+/**
+ * Registra perda cambial via ledger (diferença negativa em conciliação).
+ */
+export async function registrarPerdaCambialViaLedger(params: {
+  bookmakerId: string;
+  valor: number;
+  moeda: string;
+  workspaceId: string;
+  userId: string;
+  descricao?: string;
+  transacaoOrigemId?: string;
+}): Promise<LedgerEntryResult> {
+  return insertLedgerEntry({
+    tipoTransacao: 'PERDA_CAMBIAL',
+    valor: params.valor,
+    moeda: params.moeda,
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+    origemBookmakerId: params.bookmakerId,
+    descricao: params.descricao || 'Perda cambial em conciliação',
+    impactaCaixaOperacional: true,
+    referenciaTransacaoId: params.transacaoOrigemId,
+    auditoriaMetadata: { tipo: 'perda_cambial' },
   });
 }
 
