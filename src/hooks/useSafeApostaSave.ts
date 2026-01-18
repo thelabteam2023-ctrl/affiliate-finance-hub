@@ -109,7 +109,7 @@ export function useSafeApostaSave() {
       // Chamar RPC atômica
       const { data, error } = await supabase.rpc('criar_aposta_atomica', {
         p_aposta_data: apostaData,
-        p_pernas: pernas.length > 0 ? pernas : null,
+        p_pernas_data: pernas.length > 0 ? pernas : null,
       });
 
       if (error) {

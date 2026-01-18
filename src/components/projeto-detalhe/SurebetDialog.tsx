@@ -1848,8 +1848,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     });
   }, [odds]);
   
-  // Pode salvar como rascunho: tem dados parciais, mas não tem 2+ pernas completas
-  const podeSalvarRascunho = !isEditing && temDadosParciais && pernasCompletasCount < 2;
+  // Pode salvar como rascunho: tem dados parciais, mas não tem TODAS as pernas completas
+  // Para modelo 1-2: precisa de 2 pernas completas; para 1-X-2: precisa de 3 pernas completas
+  const totalPernasNecessarias = odds.length;
+  const podeSalvarRascunho = !isEditing && temDadosParciais && pernasCompletasCount < totalPernasNecessarias;
   
   // Handler para salvar como rascunho
   const handleSalvarRascunho = useCallback(() => {
