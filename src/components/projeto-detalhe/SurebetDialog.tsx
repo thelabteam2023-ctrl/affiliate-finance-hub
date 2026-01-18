@@ -550,7 +550,7 @@ const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2"): string
   return ["Sim", "Não"];
 };
 
-export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSuccess, activeTab = 'surebet', embedded = false }: SurebetDialogProps) {
+export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSuccess, activeTab = 'surebet', embedded = false, rascunho = null }: SurebetDialogProps) {
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
   
@@ -678,6 +678,37 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         // Buscar apostas vinculadas passando o modelo correto
         fetchLinkedPernas(surebet.id, surebet.modelo);
         // Não inicializar prints em modo edição
+      } else if (rascunho && rascunho.tipo === 'SUREBET') {
+        // PRÉ-PREENCHER COM DADOS DO RASCUNHO
+        setEvento(rascunho.evento || "");
+        setEsporte(rascunho.esporte || "Futebol");
+        setMercado(rascunho.mercado || "");
+        setObservacoes(rascunho.observacoes || "");
+        
+        // Determinar modelo baseado no número de pernas
+        const numPernas = rascunho.pernas?.length || 2;
+        const modeloRascunho = numPernas >= 3 ? "1-X-2" : "1-2";
+        setModelo(modeloRascunho);
+        initializeLegPrints(numPernas);
+        
+        // Preencher pernas
+        if (rascunho.pernas && rascunho.pernas.length > 0) {
+          const novasOdds: OddEntry[] = rascunho.pernas.map((perna, i) => ({
+            bookmaker_id: perna.bookmaker_id || "",
+            moeda: (perna.moeda as SupportedCurrency) || "BRL",
+            odd: perna.odd?.toString() || "",
+            stake: perna.stake?.toString() || "",
+            selecao: perna.selecao || (modeloRascunho === "1-X-2" ? ["Casa", "Empate", "Fora"][i] : ["Sim", "Não"][i]),
+            selecaoLivre: perna.selecao_livre || "",
+            isReference: i === 0,
+            isManuallyEdited: !!perna.stake,
+            stakeOrigem: perna.stake ? "manual" : undefined,
+            additionalEntries: []
+          }));
+          setOdds(novasOdds);
+        }
+        
+        setLinkedApostas([]);
       } else {
         // CRÍTICO: Modo criação - SEMPRE resetar o formulário completamente
         resetForm();
@@ -686,7 +717,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         initializeLegPrints(2);
       }
     }
-  }, [open, surebet]); // Usar surebet diretamente para detectar mudanças de null<->objeto
+  }, [open, surebet, rascunho]); // Usar surebet e rascunho diretamente para detectar mudanças
   
   // Limpar estado quando dialog fecha
   useEffect(() => {

@@ -362,8 +362,40 @@ export function ApostaMultiplaDialog({
           setResultadoManual(null);
         }
       }, 100);
+    } else if (rascunho && rascunho.tipo === 'MULTIPLA' && open && !aposta) {
+      // PRÉ-PREENCHER COM DADOS DO RASCUNHO
+      setBookmakerId(rascunho.bookmaker_id || "");
+      setTipoMultipla((rascunho.tipo_multipla as "DUPLA" | "TRIPLA") || "DUPLA");
+      setStake(rascunho.stake?.toString() || "");
+      setObservacoes(rascunho.observacoes || "");
+      setDataAposta(getLocalDateTimeString());
+      setStatusResultado("PENDENTE");
+      
+      // Preencher seleções
+      if (rascunho.selecoes && rascunho.selecoes.length > 0) {
+        const novasSelecoes: Selecao[] = rascunho.selecoes.map(sel => ({
+          descricao: sel.descricao?.toUpperCase() || "",
+          odd: sel.odd?.toString() || "",
+          resultado: "PENDENTE" as const
+        }));
+        // Garantir número mínimo de seleções
+        while (novasSelecoes.length < 2) {
+          novasSelecoes.push({ descricao: "", odd: "", resultado: "PENDENTE" });
+        }
+        setSelecoes(novasSelecoes);
+        
+        // Ajustar tipo de múltipla baseado no número de seleções
+        if (rascunho.selecoes.length >= 3) {
+          setTipoMultipla("TRIPLA");
+        }
+      }
+      
+      setUsarFreebet(false);
+      setGerouFreebet(false);
+      setValorFreebetGerada("");
+      setResultadoManual(null);
     }
-  }, [aposta, open]);
+  }, [aposta, open, rascunho]);
 
   // Atualizar número de seleções quando tipo muda
   useEffect(() => {
