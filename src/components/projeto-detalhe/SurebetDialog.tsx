@@ -56,7 +56,7 @@ import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
 import { pernasToInserts } from "@/types/apostasPernas";
 import { useSurebetService, type SurebetPerna as SurebetPernaService } from "@/hooks/useSurebetService";
-import { useApostaRascunho, type RascunhoPernaData } from "@/hooks/useApostaRascunho";
+import { useApostaRascunho, type RascunhoPernaData, type ApostaRascunho } from "@/hooks/useApostaRascunho";
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
@@ -107,6 +107,8 @@ interface SurebetDialogProps {
   activeTab?: string;
   /** Quando true, renderiza apenas o conteúdo interno (sem Dialog wrapper) para uso em janelas flutuantes */
   embedded?: boolean;
+  /** Rascunho para pré-preencher o formulário (de localStorage) */
+  rascunho?: ApostaRascunho | null;
 }
 
 // Estrutura de entrada individual (fill) dentro de uma perna

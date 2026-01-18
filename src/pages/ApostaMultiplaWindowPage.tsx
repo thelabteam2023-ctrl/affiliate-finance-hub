@@ -3,8 +3,10 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { ApostaMultiplaDialog } from '@/components/projeto-detalhe/ApostaMultiplaDialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, CheckCircle2, X, Layers } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle2, X, Layers, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { useApostaRascunho, type ApostaRascunho } from '@/hooks/useApostaRascunho';
 
 /**
  * Página standalone para o formulário de Aposta Múltipla.
@@ -13,23 +15,45 @@ import { toast } from 'sonner';
  * COMPORTAMENTO:
  * - Novo registro: após salvar, formulário é resetado e janela permanece aberta
  * - Edição: após salvar, janela é fechada automaticamente
+ * - Rascunho: carrega dados do localStorage e deleta ao salvar com sucesso
  * - Toast de confirmação visual ao salvar
  */
 export default function ApostaMultiplaWindowPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const { workspaceId } = useWorkspace();
   
   const projetoId = searchParams.get('projetoId') || '';
   const activeTab = searchParams.get('tab') || 'apostas';
   const estrategia = searchParams.get('estrategia') || 'PUNTER';
+  const rascunhoId = searchParams.get('rascunhoId');
   
   const isEditing = id && id !== 'novo';
+  const isFromRascunho = !!rascunhoId && !isEditing;
   
   const [aposta, setAposta] = useState<any>(null);
   const [loading, setLoading] = useState(!!isEditing);
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [saveCount, setSaveCount] = useState(0);
+  const [rascunhoCarregado, setRascunhoCarregado] = useState<ApostaRascunho | null>(null);
+  
+  // Hook de rascunhos
+  const { buscarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
+  
+  // Carregar rascunho se tiver rascunhoId
+  useEffect(() => {
+    if (!isFromRascunho || !rascunhoId || !workspaceId) return;
+    
+    const rascunho = buscarRascunho(rascunhoId);
+    if (rascunho) {
+      setRascunhoCarregado(rascunho);
+      toast.info("Rascunho carregado", {
+        description: rascunho.motivo_incompleto || "Continue de onde parou",
+        icon: <FileText className="h-5 w-5 text-blue-500" />,
+      });
+    }
+  }, [rascunhoId, isFromRascunho, workspaceId, buscarRascunho]);
 
   // Buscar dados da aposta se estiver editando
   useEffect(() => {
@@ -77,6 +101,12 @@ export default function ApostaMultiplaWindowPage() {
       });
       setTimeout(() => window.close(), 1500);
     } else {
+      // Se veio de rascunho, deletar o rascunho após salvar com sucesso
+      if (isFromRascunho && rascunhoCarregado) {
+        deletarRascunho(rascunhoCarregado.id);
+        setRascunhoCarregado(null);
+      }
+      
       setSaveCount(prev => prev + 1);
       setAposta(null);
       setFormKey(prev => prev + 1);
@@ -87,7 +117,7 @@ export default function ApostaMultiplaWindowPage() {
         duration: 3000,
       });
     }
-  }, [isEditing, projetoId, saveCount]);
+  }, [isEditing, projetoId, saveCount, isFromRascunho, rascunhoCarregado, deletarRascunho]);
 
   const handleClose = useCallback(() => {
     window.close();
@@ -168,6 +198,7 @@ export default function ApostaMultiplaWindowPage() {
           onSuccess={handleSuccess}
           defaultEstrategia={estrategia as any}
           activeTab={activeTab}
+          rascunho={rascunhoCarregado}
         />
       </div>
     </div>

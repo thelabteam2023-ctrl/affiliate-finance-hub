@@ -3,12 +3,14 @@ import { useSearchParams, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
 import { Button } from "@/components/ui/button";
-import { X, RefreshCcw, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { X, RefreshCcw, Loader2, AlertTriangle, CheckCircle2, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { useApostaRascunho, type ApostaRascunho } from "@/hooks/useApostaRascunho";
 
 /**
  * Página standalone para o formulário de Surebet.
- * Rota: /janela/surebet/novo?projetoId=...&tab=...
+ * Rota: /janela/surebet/novo?projetoId=...&tab=...&rascunhoId=...
  * Rota: /janela/surebet/:id?projetoId=...&tab=...
  * 
  * Esta página abre em uma janela separada do navegador,
@@ -17,22 +19,44 @@ import { toast } from "sonner";
  * COMPORTAMENTO:
  * - Novo registro: após salvar, formulário é resetado e janela permanece aberta
  * - Edição: após salvar, janela é fechada automaticamente
+ * - Rascunho: carrega dados do localStorage e deleta ao salvar com sucesso
  * - Toast de confirmação visual ao salvar
  */
 export default function SurebetWindowPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const { workspaceId } = useWorkspace();
   
   const projetoId = searchParams.get("projetoId") || "";
   const activeTab = searchParams.get("tab") || "surebet";
+  const rascunhoId = searchParams.get("rascunhoId");
   
   const isEditing = !!id && id !== "novo";
+  const isFromRascunho = !!rascunhoId && !isEditing;
   
   const [surebet, setSurebet] = useState<any>(null);
   const [loading, setLoading] = useState(isEditing);
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [saveCount, setSaveCount] = useState(0); // Contador de salvamentos
+  const [rascunhoCarregado, setRascunhoCarregado] = useState<ApostaRascunho | null>(null);
+  
+  // Hook de rascunhos
+  const { buscarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
+  
+  // Carregar rascunho se tiver rascunhoId
+  useEffect(() => {
+    if (!isFromRascunho || !rascunhoId || !workspaceId) return;
+    
+    const rascunho = buscarRascunho(rascunhoId);
+    if (rascunho) {
+      setRascunhoCarregado(rascunho);
+      toast.info("Rascunho carregado", {
+        description: rascunho.motivo_incompleto || "Continue de onde parou",
+        icon: <FileText className="h-5 w-5 text-blue-500" />,
+      });
+    }
+  }, [rascunhoId, isFromRascunho, workspaceId, buscarRascunho]);
   
   // Buscar dados da surebet se estiver editando
   useEffect(() => {
@@ -139,6 +163,12 @@ export default function SurebetWindowPage() {
       });
       setTimeout(() => window.close(), 1500);
     } else {
+      // Se veio de rascunho, deletar o rascunho após salvar com sucesso
+      if (isFromRascunho && rascunhoCarregado) {
+        deletarRascunho(rascunhoCarregado.id);
+        setRascunhoCarregado(null);
+      }
+      
       // Novo registro: manter aberta e resetar formulário
       setSaveCount(prev => prev + 1);
       setSurebet(null);
@@ -151,7 +181,7 @@ export default function SurebetWindowPage() {
         duration: 3000,
       });
     }
-  }, [isEditing, projetoId, id, saveCount]);
+  }, [isEditing, projetoId, id, saveCount, isFromRascunho, rascunhoCarregado, deletarRascunho]);
   
   // Handler de fechamento com confirmação
   const handleClose = useCallback(() => {
@@ -239,6 +269,7 @@ export default function SurebetWindowPage() {
           surebet={surebet}
           onSuccess={handleSuccess}
           activeTab={activeTab}
+          rascunho={rascunhoCarregado}
         />
       </div>
     </div>
