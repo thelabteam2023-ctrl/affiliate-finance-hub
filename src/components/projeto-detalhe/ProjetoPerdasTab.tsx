@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
+import { 
+  registrarPerdaOperacionalViaLedger, 
+  reverterPerdaOperacionalViaLedger 
+} from "@/lib/ledgerService";
+import { useAuth } from "@/hooks/useAuth";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +99,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
 
 export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: formatCurrencyProp }: ProjetoPerdasTabProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
+  const { user } = useAuth();
+  const { workspaceId } = useWorkspace();
   const [perdas, setPerdas] = useState<Perda[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -120,7 +127,7 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
           data_confirmacao,
           data_reversao,
           bookmaker_id,
-          bookmaker:bookmakers(nome)
+          bookmaker:bookmakers(nome, moeda, workspace_id)
         `)
         .eq("projeto_id", projetoId)
         .order("data_registro", { ascending: false });
@@ -134,8 +141,19 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
     }
   };
 
+  // Helper to get bookmaker info for ledger operations
+  const getBookmakerInfo = async (bookmakerId: string) => {
+    const { data } = await supabase
+      .from("bookmakers")
+      .select("moeda, workspace_id")
+      .eq("id", bookmakerId)
+      .single();
+    return data;
+  };
+
   const handleStatusChange = async (perdaId: string, newStatus: string, perda: Perda) => {
     if (perda.status === newStatus) return;
+    if (!user) return;
     
     try {
       setUpdatingStatus(perdaId);
@@ -146,24 +164,52 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
         updates.data_confirmacao = new Date().toISOString();
         updates.data_reversao = null;
         
-        // When confirming, deduct from bookmaker balance using helper
+        // When confirming, register loss via ledger (trigger debits balance)
         if (perda.bookmaker_id) {
-          await updateBookmakerBalance(perda.bookmaker_id, -perda.valor);
+          const bookmakerInfo = await getBookmakerInfo(perda.bookmaker_id);
+          await registrarPerdaOperacionalViaLedger({
+            bookmakerId: perda.bookmaker_id,
+            valor: perda.valor,
+            moeda: bookmakerInfo?.moeda || 'BRL',
+            workspaceId: bookmakerInfo?.workspace_id || workspaceId || '',
+            userId: user.id,
+            descricao: `Perda operacional confirmada: ${perda.categoria}`,
+            perdaId: perda.id,
+            categoria: perda.categoria,
+          });
         }
       } else if (newStatus === 'REVERSA') {
         updates.data_reversao = new Date().toISOString();
         
-        // When reversing a confirmed loss, add back to bookmaker balance
+        // When reversing a confirmed loss, credit back via ledger
         if (perda.status === 'CONFIRMADA' && perda.bookmaker_id) {
-          await updateBookmakerBalance(perda.bookmaker_id, perda.valor);
+          const bookmakerInfo = await getBookmakerInfo(perda.bookmaker_id);
+          await reverterPerdaOperacionalViaLedger({
+            bookmakerId: perda.bookmaker_id,
+            valor: perda.valor,
+            moeda: bookmakerInfo?.moeda || 'BRL',
+            workspaceId: bookmakerInfo?.workspace_id || workspaceId || '',
+            userId: user.id,
+            descricao: `Reversão de perda operacional: ${perda.categoria}`,
+            perdaId: perda.id,
+          });
         }
       } else if (newStatus === 'PENDENTE') {
         updates.data_confirmacao = null;
         updates.data_reversao = null;
         
-        // If going back to pending from confirmed, add back to balance
+        // If going back to pending from confirmed, credit back via ledger
         if (perda.status === 'CONFIRMADA' && perda.bookmaker_id) {
-          await updateBookmakerBalance(perda.bookmaker_id, perda.valor);
+          const bookmakerInfo = await getBookmakerInfo(perda.bookmaker_id);
+          await reverterPerdaOperacionalViaLedger({
+            bookmakerId: perda.bookmaker_id,
+            valor: perda.valor,
+            moeda: bookmakerInfo?.moeda || 'BRL',
+            workspaceId: bookmakerInfo?.workspace_id || workspaceId || '',
+            userId: user.id,
+            descricao: `Perda voltou para pendente: ${perda.categoria}`,
+            perdaId: perda.id,
+          });
         }
       }
 
@@ -191,16 +237,25 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
   };
 
   const handleDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteId || !user) return;
     
     const perda = perdas.find(p => p.id === deleteId);
     
     try {
       setDeleting(true);
       
-      // If deleting a confirmed loss, add back to bookmaker balance
+      // If deleting a confirmed loss, credit back via ledger
       if (perda && perda.status === 'CONFIRMADA' && perda.bookmaker_id) {
-        await updateBookmakerBalance(perda.bookmaker_id, perda.valor);
+        const bookmakerInfo = await getBookmakerInfo(perda.bookmaker_id);
+        await reverterPerdaOperacionalViaLedger({
+          bookmakerId: perda.bookmaker_id,
+          valor: perda.valor,
+          moeda: bookmakerInfo?.moeda || 'BRL',
+          workspaceId: bookmakerInfo?.workspace_id || workspaceId || '',
+          userId: user.id,
+          descricao: `Perda deletada: ${perda.categoria}`,
+          perdaId: perda.id,
+        });
       }
       
       const { error } = await supabase
