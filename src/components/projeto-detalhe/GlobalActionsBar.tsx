@@ -19,6 +19,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { BonusDialog } from "./BonusDialog";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
+import { useAuth } from "@/hooks/useAuth";
+import { RascunhosBadge, RascunhosPanel } from "./rascunhos";
+import type { ApostaRascunho } from "@/hooks/useApostaRascunho";
 
 interface GlobalActionsBarProps {
   projetoId: string;
@@ -71,13 +74,15 @@ export function GlobalActionsBar({
   onBonusCreated,
   onNavigateToTab 
 }: GlobalActionsBarProps) {
+  const { workspaceId } = useAuth();
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   
   // Verificação centralizada: botão só aparece em abas operacionais
   const showNovaApostaButton = ABAS_OPERACIONAIS_APOSTA.includes(activeTab || "");
   
-  // Dialog states (apenas para bônus agora)
+  // Dialog states
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
+  const [rascunhosOpen, setRascunhosOpen] = useState(false);
 
   // Bonus hook
   const { bonuses, createBonus, saving: bonusSaving } = useProjectBonuses({ projectId: projetoId });
@@ -142,10 +147,31 @@ export function GlobalActionsBar({
     window.open(url, '_blank', windowFeatures);
   };
 
-  const handleOpenSurebet = () => {
-    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab || 'surebet')}`;
+  const handleOpenSurebet = (rascunhoId?: string) => {
+    let url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab || 'surebet')}`;
+    if (rascunhoId) {
+      url += `&rascunhoId=${encodeURIComponent(rascunhoId)}`;
+    }
     const windowFeatures = 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
     window.open(url, '_blank', windowFeatures);
+  };
+
+  const handleOpenMultipla = (rascunhoId?: string) => {
+    let url = `/janela/multipla/novo?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab || 'apostas')}&estrategia=PUNTER`;
+    if (rascunhoId) {
+      url += `&rascunhoId=${encodeURIComponent(rascunhoId)}`;
+    }
+    const windowFeatures = 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+    window.open(url, '_blank', windowFeatures);
+  };
+
+  // Handlers para continuar rascunhos
+  const handleContinuarSurebet = (rascunho: ApostaRascunho) => {
+    handleOpenSurebet(rascunho.id);
+  };
+
+  const handleContinuarMultipla = (rascunho: ApostaRascunho) => {
+    handleOpenMultipla(rascunho.id);
   };
 
   const handleBonusSubmit = async (data: any) => {
@@ -210,7 +236,7 @@ export function GlobalActionsBar({
               {activeTab !== "valuebet" && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleOpenSurebet}>
+                  <DropdownMenuItem onClick={() => handleOpenSurebet()}>
                     <ArrowLeftRight className="mr-2 h-4 w-4" />
                     Surebet
                   </DropdownMenuItem>
@@ -232,6 +258,15 @@ export function GlobalActionsBar({
             Novo Bônus
           </Button>
         )}
+
+        {/* Rascunhos Badge - mostra contador de rascunhos pendentes */}
+        {workspaceId && (
+          <RascunhosBadge
+            projetoId={projetoId}
+            workspaceId={workspaceId}
+            onClick={() => setRascunhosOpen(true)}
+          />
+        )}
       </div>
 
       {/* Bonus Dialog - único que permanece como Dialog tradicional */}
@@ -243,6 +278,18 @@ export function GlobalActionsBar({
         saving={bonusSaving}
         onSubmit={handleBonusSubmit}
       />
+
+      {/* Rascunhos Panel */}
+      {workspaceId && (
+        <RascunhosPanel
+          projetoId={projetoId}
+          workspaceId={workspaceId}
+          open={rascunhosOpen}
+          onOpenChange={setRascunhosOpen}
+          onContinuarSurebet={handleContinuarSurebet}
+          onContinuarMultipla={handleContinuarMultipla}
+        />
+      )}
     </>
   );
 }
