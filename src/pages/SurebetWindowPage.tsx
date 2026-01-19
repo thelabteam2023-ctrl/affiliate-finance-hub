@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
+import { SurebetDialogCompact } from "@/components/surebet";
 import { Button } from "@/components/ui/button";
 import { X, RefreshCcw, Loader2, AlertTriangle, CheckCircle2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useApostaRascunho, type ApostaRascunho } from "@/hooks/useApostaRascunho";
-
 /**
  * Página standalone para o formulário de Surebet.
  * Rota: /janela/surebet/novo?projetoId=...&tab=...&rascunhoId=...
@@ -259,7 +258,7 @@ export default function SurebetWindowPage() {
       
       {/* Conteúdo - SurebetDialog como modal sempre aberto */}
       <div className="p-2 sm:p-4">
-        <SurebetDialog
+        <SurebetDialogCompact
           key={formKey}
           open={true}
           onOpenChange={(open) => {
@@ -269,7 +268,6 @@ export default function SurebetWindowPage() {
           surebet={surebet}
           onSuccess={handleSuccess}
           activeTab={activeTab}
-          rascunho={rascunhoCarregado}
         />
       </div>
     </div>
