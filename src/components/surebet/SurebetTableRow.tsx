@@ -127,7 +127,7 @@ export function SurebetTableRow({
               {selectedBookmaker?.nome || "—"}
             </div>
             {selectedBookmaker?.parceiro_nome && (
-              <div className="text-[9px] text-muted-foreground truncate">
+              <div className="text-[9px] text-muted-foreground truncate text-center">
                 {getFirstLastName(selectedBookmaker.parceiro_nome)}
               </div>
             )}
@@ -167,7 +167,7 @@ export function SurebetTableRow({
               </SelectContent>
             </Select>
             {selectedBookmaker?.parceiro_nome && (
-              <div className="text-[9px] text-muted-foreground truncate mt-0.5 pl-1">
+              <div className="text-[9px] text-muted-foreground truncate mt-0.5 text-center">
                 {getFirstLastName(selectedBookmaker.parceiro_nome)}
               </div>
             )}
