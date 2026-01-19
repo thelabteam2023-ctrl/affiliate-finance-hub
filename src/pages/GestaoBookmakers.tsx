@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen, Filter, UserCheck, UserX, Users } from "lucide-react";
+import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen, Filter, UserCheck, UserX, Users, History } from "lucide-react";
+import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
@@ -71,6 +72,7 @@ export default function GestaoBookmakers() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [limitadaPopoverOpen, setLimitadaPopoverOpen] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
+  const [historicoProjetoDialog, setHistoricoProjetoDialog] = useState<{ open: boolean; bookmaker: Bookmaker | null }>({ open: false, bookmaker: null });
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSystemOwner } = useAuth();
