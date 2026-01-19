@@ -366,18 +366,62 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
 
   const fetchSurebetsInternal = async (projId: string, bonusIds: string[]) => {
     try {
+      // Buscar operações multi-leg (ARBITRAGEM ou SUREBET) com estratégia BONUS ou contexto BONUS
       const { data: surebetsData, error } = await supabase
         .from("apostas_unificada")
         .select("*")
         .eq("projeto_id", projId)
-        .eq("forma_registro", "ARBITRAGEM")
+        .or(`forma_registro.eq.ARBITRAGEM,forma_registro.eq.SUREBET`)
         .or(`estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS`)
         .order("data_aposta", { ascending: false });
 
       if (error) throw error;
       
+      // Buscar pernas da tabela normalizada para operações multi-leg
+      const surebetIds = (surebetsData || []).map((s: any) => s.id);
+      let pernasMap: Record<string, any[]> = {};
+      
+      if (surebetIds.length > 0) {
+        const { data: pernasData } = await supabase
+          .from("apostas_pernas")
+          .select(`
+            aposta_id,
+            bookmaker_id,
+            selecao,
+            selecao_livre,
+            odd,
+            stake,
+            resultado,
+            lucro_prejuizo,
+            bookmakers (nome, parceiro:parceiros(nome))
+          `)
+          .in("aposta_id", surebetIds)
+          .order("ordem", { ascending: true });
+        
+        (pernasData || []).forEach((p: any) => {
+          if (!pernasMap[p.aposta_id]) {
+            pernasMap[p.aposta_id] = [];
+          }
+          const bookmaker = p.bookmakers as any;
+          const parceiroNome = bookmaker?.parceiro?.nome;
+          pernasMap[p.aposta_id].push({
+            bookmaker_id: p.bookmaker_id,
+            bookmaker_nome: parceiroNome 
+              ? `${bookmaker?.nome || "—"} - ${parceiroNome}` 
+              : (bookmaker?.nome || "—"),
+            selecao: p.selecao,
+            selecao_livre: p.selecao_livre,
+            odd: p.odd,
+            stake: p.stake,
+            resultado: p.resultado,
+            lucro_prejuizo: p.lucro_prejuizo,
+          });
+        });
+      }
+      
       const surebetsComPernas = (surebetsData || []).map((surebet: any) => {
-        const pernas = Array.isArray(surebet.pernas) ? surebet.pernas : [];
+        // Usar pernas da tabela normalizada (com fallback para JSONB legado)
+        const pernas = pernasMap[surebet.id] || (Array.isArray(surebet.pernas) ? surebet.pernas : []);
         return {
           id: surebet.id,
           evento: surebet.evento || '',
@@ -406,7 +450,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           .from("apostas_unificada")
           .select("*")
           .eq("projeto_id", projId)
-          .eq("forma_registro", "ARBITRAGEM")
+          .or(`forma_registro.eq.ARBITRAGEM,forma_registro.eq.SUREBET`)
           .eq("estrategia", "SUREBET")
           .order("data_aposta", { ascending: false });
           
