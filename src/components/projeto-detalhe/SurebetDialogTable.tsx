@@ -32,7 +32,9 @@ import {
   Minus,
   Upload,
   Target,
-  Check
+  Check,
+  AlertTriangle,
+  ArrowRight
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
@@ -351,6 +353,10 @@ export function SurebetDialogTable({
   const [arredondarValor, setArredondarValor] = useState("1");
   const [saving, setSaving] = useState(false);
   
+  // Estado para conversão de operação parcial para apostas simples
+  const [showConversionDialog, setShowConversionDialog] = useState(false);
+  const [conversionInProgress, setConversionInProgress] = useState(false);
+  
   const [linkedApostas, setLinkedApostas] = useState<any[]>([]);
   
   // Refs para navegação por teclado
@@ -543,15 +549,28 @@ export function SurebetDialogTable({
         setEsporte(rascunho.esporte || "Futebol");
         setMercado(rascunho.mercado || "");
         
-        // Determinar modelo baseado no número de pernas
-        const numPernasRascunho = rascunho.pernas?.length || 2;
-        if (numPernasRascunho === 2) {
-          setModeloTipo("2");
-        } else if (numPernasRascunho === 3) {
-          setModeloTipo("3");
+        // Carregar campos de contexto obrigatórios
+        setEstrategia(rascunho.estrategia || "SUREBET");
+        setContexto(rascunho.contexto_operacional || "NORMAL");
+        
+        // Determinar modelo baseado no novo campo modelo_tipo ou fallback para pernas
+        const numPernasRascunho = rascunho.quantidade_pernas || rascunho.pernas?.length || 2;
+        
+        if (rascunho.modelo_tipo) {
+          setModeloTipo(rascunho.modelo_tipo);
+          if (rascunho.modelo_tipo === "4+") {
+            setNumPernasCustom(numPernasRascunho);
+          }
         } else {
-          setModeloTipo("4+");
-          setNumPernasCustom(numPernasRascunho);
+          // Fallback: inferir modelo_tipo do número de pernas
+          if (numPernasRascunho === 2) {
+            setModeloTipo("2");
+          } else if (numPernasRascunho === 3) {
+            setModeloTipo("3");
+          } else {
+            setModeloTipo("4+");
+            setNumPernasCustom(numPernasRascunho);
+          }
         }
         
         // Carregar pernas do rascunho
@@ -565,11 +584,27 @@ export function SurebetDialogTable({
             selecao: perna.selecao || defaultSelecoes[i] || "",
             selecaoLivre: perna.selecao_livre || "",
             isReference: i === 0,
-            isManuallyEdited: false,
+            isManuallyEdited: !!(perna.odd && perna.stake),
             stakeOrigem: undefined,
             additionalEntries: []
           }));
           setOdds(rascunhoOdds);
+          setDirectedProfitLegs(Array.from({ length: numPernasRascunho }, (_, i) => i));
+        } else {
+          // Criar pernas vazias se não houver no rascunho
+          const defaultSelecoes = getDefaultSelecoes(numPernasRascunho);
+          setOdds(defaultSelecoes.map((sel, i) => ({
+            bookmaker_id: "",
+            moeda: "BRL" as SupportedCurrency,
+            odd: "",
+            stake: "",
+            selecao: sel,
+            selecaoLivre: "",
+            isReference: i === 0,
+            isManuallyEdited: false,
+            stakeOrigem: undefined,
+            additionalEntries: []
+          })));
           setDirectedProfitLegs(Array.from({ length: numPernasRascunho }, (_, i) => i));
         }
         
@@ -1009,6 +1044,20 @@ export function SurebetDialogTable({
     }).length;
   }, [odds]);
 
+  // Detectar operação parcial: tem 2+ pernas completas mas não cobre todos os desfechos
+  const isOperacaoParcial = useMemo(() => {
+    return pernasCompletasCount >= 2 && pernasCompletasCount < numPernas;
+  }, [pernasCompletasCount, numPernas]);
+
+  // Pernas válidas para potencial conversão
+  const pernasValidas = useMemo(() => {
+    return odds.filter(entry => {
+      const odd = parseFloat(entry.odd);
+      const stake = parseFloat(entry.stake);
+      return !isNaN(odd) && odd > 1 && !isNaN(stake) && stake > 0 && entry.bookmaker_id;
+    });
+  }, [odds]);
+
   // ============================================
   // SALVAR E DELETAR
   // ============================================
@@ -1124,6 +1173,88 @@ export function SurebetDialogTable({
       toast.error("Erro ao salvar: " + error.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Conversão de operação parcial para apostas simples
+  const handleConvertToSimpleBets = async () => {
+    if (!estrategia) {
+      toast.error("Selecione uma estratégia");
+      return;
+    }
+    if (!evento.trim()) {
+      toast.error("Informe o evento");
+      return;
+    }
+    if (pernasValidas.length < 2) {
+      toast.error("Mínimo de 2 pernas válidas para conversão");
+      return;
+    }
+
+    try {
+      setConversionInProgress(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const getBookmakerMoeda = (bookmakerId: string): SupportedCurrency => {
+        const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
+        return (bk?.moeda as SupportedCurrency) || "BRL";
+      };
+
+      // Gerar operation_group_id para agrupar as apostas
+      const operationGroupId = crypto.randomUUID();
+      
+      const apostasSimples = pernasValidas.map((entry) => {
+        const stake = parseFloat(entry.stake) || 0;
+        const moeda = getBookmakerMoeda(entry.bookmaker_id);
+        const snapshotFields = getSnapshotFields(stake, moeda);
+        
+        return {
+          user_id: user.id,
+          workspace_id: workspaceId,
+          projeto_id: projetoId,
+          bookmaker_id: entry.bookmaker_id,
+          forma_registro: 'SIMPLES',
+          estrategia: estrategia,
+          contexto_operacional: contexto,
+          evento,
+          esporte,
+          mercado,
+          selecao: entry.selecao,
+          selecao_livre: entry.selecaoLivre || null,
+          moeda_operacao: moeda,
+          stake: stake,
+          odd: parseFloat(entry.odd),
+          valor_brl_referencia: snapshotFields.valor_brl_referencia,
+          cotacao_snapshot: snapshotFields.cotacao_snapshot,
+          cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
+          status: "PENDENTE",
+          resultado: "PENDENTE",
+          data_aposta: new Date().toISOString(),
+          observacoes: `Convertida de operação parcial (grupo: ${operationGroupId.slice(0, 8)})`
+        };
+      });
+
+      // Inserir todas as apostas simples
+      const { error: insertError } = await supabase
+        .from("apostas_unificada")
+        .insert(apostasSimples);
+
+      if (insertError) throw insertError;
+
+      // Se houver rascunho, deletar
+      if (rascunho?.id) {
+        // O rascunho será deletado pelo componente pai via onSuccess
+      }
+
+      toast.success(`${apostasSimples.length} apostas simples registradas!`);
+      setShowConversionDialog(false);
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast.error("Erro ao converter: " + error.message);
+    } finally {
+      setConversionInProgress(false);
     }
   };
 
@@ -1833,7 +1964,7 @@ export function SurebetDialogTable({
             </Button>
             <Button 
               onClick={handleSave} 
-              disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < 2}
+              disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < numPernas}
             >
               <Save className="h-4 w-4 mr-1" />
               {isEditing ? "Salvar" : "Registrar"}
@@ -1849,57 +1980,131 @@ export function SurebetDialogTable({
   // ============================================
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[1200px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader className="pb-2">
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Calculator className="h-4 w-4 text-amber-500" />
-            {isEditing ? "Editar Arbitragem" : "Arbitragem"}
-            <Badge variant="outline" className="text-[10px] ml-2">{numPernas} pernas</Badge>
-          </DialogTitle>
-        </DialogHeader>
-
-        {dialogContent}
-
-        <DialogFooter className="flex justify-between mt-4">
-          <div>
-            {isEditing && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm">
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Excluir
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir Arbitragem?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação não pode ser desfeita.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleSave} 
-              disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < 2}
+    <>
+      {/* AlertDialog para conversão de operação parcial */}
+      <AlertDialog open={showConversionDialog} onOpenChange={setShowConversionDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Operação Parcial Detectada
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Esta operação tem apenas <strong>{pernasCompletasCount}</strong> de <strong>{numPernas}</strong> pernas preenchidas, 
+                o que não configura uma arbitragem válida.
+              </p>
+              <p>
+                Deseja registrar as <strong>{pernasValidas.length} pernas válidas</strong> como apostas simples independentes?
+              </p>
+              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs">
+                <div className="font-medium mb-1">Pernas que serão registradas:</div>
+                {pernasValidas.map((p, i) => (
+                  <div key={i} className="flex items-center gap-2 py-0.5">
+                    <ArrowRight className="h-3 w-3 text-primary" />
+                    <span>{p.selecao} • {getBookmakerNome(p.bookmaker_id)} • Odd {p.odd} • Stake {p.stake}</span>
+                  </div>
+                ))}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={conversionInProgress}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConvertToSimpleBets}
+              disabled={conversionInProgress}
+              className="bg-primary"
             >
-              <Save className="h-4 w-4 mr-1" />
-              {isEditing ? "Salvar" : "Registrar"}
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              {conversionInProgress ? "Registrando..." : "Registrar como Apostas Simples"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-[1200px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Calculator className="h-4 w-4 text-amber-500" />
+              {isEditing ? "Editar Arbitragem" : "Arbitragem"}
+              <Badge variant="outline" className="text-[10px] ml-2">{numPernas} pernas</Badge>
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Banner de operação parcial */}
+          {isOperacaoParcial && !isEditing && (
+            <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
+              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+              <div className="flex-1">
+                <span className="font-medium text-amber-500">Operação parcial:</span>{" "}
+                <span className="text-muted-foreground">
+                  {pernasCompletasCount}/{numPernas} pernas preenchidas. Não é uma arbitragem válida.
+                </span>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="shrink-0 h-7 text-xs border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                onClick={() => setShowConversionDialog(true)}
+              >
+                Registrar como simples
+              </Button>
+            </div>
+          )}
+
+          {dialogContent}
+
+          <DialogFooter className="flex flex-col sm:flex-row justify-between gap-3 mt-4">
+            <div className="flex gap-2">
+              {isEditing && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Excluir
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir Arbitragem?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              {/* Botão de conversão alternativo quando operação é parcial */}
+              {isOperacaoParcial && !isEditing && (
+                <Button 
+                  variant="secondary"
+                  onClick={() => setShowConversionDialog(true)}
+                  disabled={saving || pernasValidas.length < 2}
+                >
+                  <ArrowRight className="h-4 w-4 mr-1" />
+                  Simples ({pernasValidas.length})
+                </Button>
+              )}
+              <Button 
+                onClick={handleSave} 
+                disabled={saving || analysis.stakeTotal <= 0 || pernasCompletasCount < numPernas}
+              >
+                <Save className="h-4 w-4 mr-1" />
+                {isEditing ? "Salvar" : "Registrar"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

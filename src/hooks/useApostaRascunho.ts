@@ -49,6 +49,13 @@ export interface ApostaRascunho {
   esporte?: string;
   observacoes?: string;
   
+  // Novos campos obrigatórios para Surebet
+  estrategia?: string;
+  contexto_operacional?: string;
+  modelo?: string; // "1-2", "1-X-2", "4-way", etc.
+  modelo_tipo?: "2" | "3" | "4+";
+  quantidade_pernas?: number;
+  
   // Para Surebet
   pernas?: RascunhoPernaData[];
   
