@@ -344,8 +344,13 @@ export function SurebetDialogTable({
     { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Não", selecaoLivre: "", isReference: false, isManuallyEdited: false, stakeOrigem: undefined, additionalEntries: [] }
   ]);
   
-  // Estado para direcionar lucro a pernas específicas (como na coluna "D" da imagem de referência)
-  const [directedProfitLegs, setDirectedProfitLegs] = useState<number[]>([]);
+  // Direcionar lucro: por padrão TODAS as pernas ficam marcadas (neutro).
+  // Ao DESMARCAR uma perna, ela passa a ter a stake recalculada para ficar ~break-even,
+  // direcionando o lucro para as pernas que permanecem marcadas.
+  const [directedProfitLegs, setDirectedProfitLegs] = useState<number[]>(() => [0, 1]);
+
+  // “Ativo” quando existe pelo menos uma perna desmarcada (aí sim há recálculo especial)
+  const profitDirectionActive = !isEditing && directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
   
   const [linkedApostas, setLinkedApostas] = useState<any[]>([]);
   
@@ -452,6 +457,8 @@ export function SurebetDialogTable({
           stakeOrigem: undefined,
           additionalEntries: []
         })));
+        // por padrão: todas marcadas no novo modelo
+        setDirectedProfitLegs(Array.from({ length: numSlots }, (_, i) => i));
       }
     }
   }, [modelo, esporte, isEditing]);
@@ -468,6 +475,8 @@ export function SurebetDialogTable({
     setOdds(defaultSelecoes.map((sel, i) => ({
       bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, selecaoLivre: "", isReference: i === 0, isManuallyEdited: false, stakeOrigem: undefined, additionalEntries: []
     })));
+    // por padrão: todas marcadas
+    setDirectedProfitLegs([0, 1]);
     setLinkedApostas([]);
     const suggestions = getSuggestionsForTab(activeTab);
     setRegistroValues({
@@ -616,11 +625,11 @@ export function SurebetDialogTable({
     return saldoLivre;
   };
 
-  // Auto-cálculo de stakes (DESABILITADO quando há direcionamento de lucro)
+  // Auto-cálculo de stakes (DESABILITADO quando há direcionamento de lucro ativo)
   useEffect(() => {
     if (isEditing) return;
-    // Se há direcionamento de lucro ativo, o cálculo é feito pelo directedStakes
-    if (directedProfitLegs.length > 0) return;
+    // Se há direcionamento de lucro ativo, o cálculo é feito pelo bloco de directedStakes
+    if (profitDirectionActive) return;
     
     const pernaData = odds.map(perna => ({
       oddMedia: getOddMediaPerna(perna),
@@ -637,8 +646,6 @@ export function SurebetDialogTable({
     if (refStake <= 0 || refOdd <= 1) return;
     
     const validOddsCount = pernaData.filter(p => p.oddMedia > 1).length;
-    const numPernasEsperadas = modelo === "1-X-2" ? 3 : 2;
-    
     if (modelo === "1-X-2" && validOddsCount < 3) return;
     if (modelo === "1-2" && validOddsCount < 2) return;
     
@@ -673,8 +680,9 @@ export function SurebetDialogTable({
     arredondarAtivado,
     arredondarValor,
     isEditing,
-    directedProfitLegs.length
+    profitDirectionActive
   ]);
+
 
   // Calcular stakes quando há direcionamento de lucro
   // Quando uma perna é marcada para receber o lucro, as outras pernas devem ter stakes
@@ -1256,7 +1264,7 @@ export function SurebetDialogTable({
                       )}
                     </td>
                     
-                    {/* Direcionar lucro (CheckCircle moderno) */}
+                    {/* Direcionar lucro (padrão: marcado, cor neutra) */}
                     {!isEditing && (
                       <td className="py-1 px-2 text-center">
                         <button
@@ -1268,10 +1276,10 @@ export function SurebetDialogTable({
                               setDirectedProfitLegs(prev => [...prev, pernaIndex]);
                             }
                           }}
-                          className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                          className={`w-5 h-5 rounded-full flex items-center justify-center transition-all border ${
                             directedProfitLegs.includes(pernaIndex)
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "border-2 border-muted-foreground/30 hover:border-primary/50 text-transparent"
+                              ? "bg-muted text-foreground border-border"
+                              : "bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-muted-foreground/60"
                           }`}
                           title="Direcionar lucro para esta perna"
                         >
