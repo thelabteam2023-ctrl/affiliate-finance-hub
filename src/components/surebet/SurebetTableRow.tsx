@@ -89,10 +89,10 @@ export function SurebetTableRow({
 
   return (
     <tr 
-      className={`border-b border-border/30 h-10 relative ${
+      className={`border-b border-border/30 relative ${
         isFocused ? "bg-muted/30" : "hover:bg-muted/20"
       }`}
-      style={{ height: '40px' }}
+      style={{ height: '44px' }}
       onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
       onMouseLeave={() => !isEditing && onBlur()}
     >
@@ -108,7 +108,7 @@ export function SurebetTableRow({
       
       {/* Perna Label */}
       {rowSpan > 0 && (
-        <td rowSpan={rowSpan} className="px-2 text-center align-middle" style={{ height: '40px' }}>
+        <td rowSpan={rowSpan} className="px-2 text-center align-middle" style={{ height: '44px' }}>
           <div className={`inline-flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm ${getPernaColor()}`}>
             {label}
           </div>
@@ -119,49 +119,63 @@ export function SurebetTableRow({
       )}
       
       {/* Casa */}
-      <td className="px-2" style={{ height: '40px' }}>
+      <td className="px-2" style={{ height: '44px' }}>
         {isEditing ? (
-          <div className="text-xs font-medium uppercase truncate">
-            {selectedBookmaker?.nome || "—"}
+          <div>
+            <div className="text-xs font-medium uppercase truncate">
+              {selectedBookmaker?.nome || "—"}
+            </div>
+            {selectedBookmaker?.parceiro_nome && (
+              <div className="text-[9px] text-muted-foreground truncate">
+                {selectedBookmaker.parceiro_nome}
+              </div>
+            )}
           </div>
         ) : (
-          <Select 
-            value={entry.bookmaker_id}
-            onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", v)}
-          >
-            <SelectTrigger className="h-7 text-[10px] w-full">
-              <SelectValue placeholder="Selecione">
-                {selectedBookmaker?.nome && (
-                  <span className="truncate uppercase">{selectedBookmaker.nome}</span>
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="max-w-[300px]">
-              {bookmakers.map(bk => (
-                <SelectItem key={bk.id} value={bk.id}>
-                  <BookmakerSelectOption
-                    bookmaker={{
-                      id: bk.id,
-                      nome: bk.nome,
-                      parceiro_nome: bk.parceiro_nome,
-                      moeda: bk.moeda,
-                      saldo_operavel: bk.saldo_operavel,
-                      saldo_disponivel: bk.saldo_disponivel,
-                      saldo_freebet: bk.saldo_freebet,
-                      saldo_bonus: bk.saldo_bonus,
-                      logo_url: bk.logo_url,
-                      bonus_rollover_started: bk.bonus_rollover_started,
-                    }}
-                  />
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col">
+            <Select 
+              value={entry.bookmaker_id}
+              onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", v)}
+            >
+              <SelectTrigger className="h-7 text-[10px] w-full">
+                <SelectValue placeholder="Selecione">
+                  {selectedBookmaker?.nome && (
+                    <span className="truncate uppercase">{selectedBookmaker.nome}</span>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-w-[300px]">
+                {bookmakers.map(bk => (
+                  <SelectItem key={bk.id} value={bk.id}>
+                    <BookmakerSelectOption
+                      bookmaker={{
+                        id: bk.id,
+                        nome: bk.nome,
+                        parceiro_nome: bk.parceiro_nome,
+                        moeda: bk.moeda,
+                        saldo_operavel: bk.saldo_operavel,
+                        saldo_disponivel: bk.saldo_disponivel,
+                        saldo_freebet: bk.saldo_freebet,
+                        saldo_bonus: bk.saldo_bonus,
+                        logo_url: bk.logo_url,
+                        bonus_rollover_started: bk.bonus_rollover_started,
+                      }}
+                    />
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedBookmaker?.parceiro_nome && (
+              <div className="text-[9px] text-muted-foreground truncate mt-0.5 pl-1">
+                {selectedBookmaker.parceiro_nome}
+              </div>
+            )}
+          </div>
         )}
       </td>
       
       {/* Odd */}
-      <td className="px-2" style={{ height: '40px' }}>
+      <td className="px-2" style={{ height: '44px' }}>
         {isEditing ? (
           <div className="text-xs font-medium text-center">{entry.odd || "—"}</div>
         ) : (
@@ -180,7 +194,7 @@ export function SurebetTableRow({
       </td>
       
       {/* Stake */}
-      <td className="px-2" style={{ height: '40px' }}>
+      <td className="px-2" style={{ height: '44px' }}>
         {isEditing ? (
           <div className="text-xs font-medium text-center">
             {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
@@ -199,7 +213,7 @@ export function SurebetTableRow({
       </td>
       
       {/* Linha */}
-      <td className="px-2" style={{ height: '40px' }}>
+      <td className="px-2" style={{ height: '44px' }}>
         {isEditing ? (
           <div className="text-[10px] text-muted-foreground text-center truncate">
             {entry.selecaoLivre || "—"}
@@ -215,7 +229,7 @@ export function SurebetTableRow({
       </td>
       
       {/* Referência (Target) */}
-      <td className="px-2 text-center" style={{ height: '40px' }}>
+      <td className="px-2 text-center" style={{ height: '44px' }}>
         {!isEditing && (
           <button
             type="button"
@@ -233,7 +247,7 @@ export function SurebetTableRow({
       
       {/* Checkbox D — Distribuição de lucro */}
       {!isEditing && (
-        <td className="px-2 text-center" style={{ height: '40px' }}>
+        <td className="px-2 text-center" style={{ height: '44px' }}>
           <button
             type="button"
             onClick={() => onToggleDirected(pernaIndex)}
@@ -250,7 +264,7 @@ export function SurebetTableRow({
       )}
       
       {/* Lucro */}
-      <td className="px-2 text-center" style={{ height: '40px' }}>
+      <td className="px-2 text-center" style={{ height: '44px' }}>
         <span className={`text-xs font-medium ${
           lucro >= 0 ? "text-emerald-500" : "text-red-500"
         }`}>
@@ -259,7 +273,7 @@ export function SurebetTableRow({
       </td>
       
       {/* ROI */}
-      <td className="px-2 text-center" style={{ height: '40px' }}>
+      <td className="px-2 text-center" style={{ height: '44px' }}>
         <span className={`text-[10px] ${
           roi >= 0 ? "text-emerald-500" : "text-red-500"
         }`}>
@@ -269,7 +283,7 @@ export function SurebetTableRow({
       
       {/* Ações */}
       {!isEditing && (
-        <td className="px-1" style={{ height: '40px' }}>
+        <td className="px-1" style={{ height: '44px' }}>
           <Button
             type="button"
             variant="ghost"
