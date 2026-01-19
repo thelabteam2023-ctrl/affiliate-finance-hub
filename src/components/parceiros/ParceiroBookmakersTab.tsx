@@ -18,9 +18,11 @@ import {
   Copy,
   Check,
   RefreshCw,
+  History,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
 
 interface BookmakerVinculado {
   id: string;
@@ -72,6 +74,7 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
   const [showAllVinculados, setShowAllVinculados] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
+  const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmaker: BookmakerVinculado | null }>({ open: false, bookmaker: null });
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -236,6 +239,23 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
                       <span className="text-[10px] font-medium">{maskCurrency(getSaldoCorreto(bm), bm.moeda)}</span>
                     </div>
                   </div>
+                  {/* Botão Histórico */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-1.5"
+                        onClick={() => setHistoricoDialog({ open: true, bookmaker: bm })}
+                      >
+                        <History className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Ver histórico de projetos</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  {/* Botão Status */}
                   <Popover>
                     <PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-6 px-1.5" disabled={editingStatus === bm.id}>{bm.status === "ativo" ? <ShieldCheck className="h-4 w-4 text-success" /> : <ShieldAlert className="h-4 w-4 text-warning" />}</Button></PopoverTrigger>
                     <PopoverContent className="w-auto p-3" align="end">
@@ -284,6 +304,15 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
           </div>
 
         </div>
+
+        {/* Dialog de Histórico */}
+        <BookmakerHistoricoDialog
+          open={historicoDialog.open}
+          onOpenChange={(open) => setHistoricoDialog({ open, bookmaker: open ? historicoDialog.bookmaker : null })}
+          bookmakerId={historicoDialog.bookmaker?.id || ""}
+          bookmakerNome={historicoDialog.bookmaker?.nome || ""}
+          logoUrl={historicoDialog.bookmaker?.logo_url}
+        />
       </div>
     </TooltipProvider>
   );
