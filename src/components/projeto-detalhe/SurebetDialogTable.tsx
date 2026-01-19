@@ -363,10 +363,10 @@ export function SurebetDialogTable({
     applyLegData,
   } = useSurebetPrintImport();
   
-  // Handler para navegação por teclado entre campos Odd (O) e Stake (S)
+  // Handler para navegação por teclado entre campos Odd (Q) e Stake (S)
   const handleFieldKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
     const key = e.key.toLowerCase();
-    if ((key === 'o' && fieldType === 'odd') || (key === 's' && fieldType === 'stake')) {
+    if ((key === 'q' && fieldType === 'odd') || (key === 's' && fieldType === 'stake')) {
       e.preventDefault();
       const container = tableContainerRef.current;
       if (!container) return;
@@ -673,7 +673,7 @@ export function SurebetDialogTable({
     isEditing
   ]);
 
-  // Análise em tempo real
+  // Análise em tempo real com suporte a direcionamento de lucro
   const analysis = useMemo(() => {
     const consolidatedPerPerna = odds.map(perna => ({
       oddMedia: calcularOddMedia({ odd: perna.odd, stake: perna.stake }, perna.additionalEntries),
@@ -695,7 +695,8 @@ export function SurebetDialogTable({
     
     const stakeTotal = isMultiCurrency ? 0 : actualStakes.reduce((a, b) => a + b, 0);
     
-    const scenarios = parsedOdds.map((odd, i) => {
+    // Calcular lucro base por cenário
+    const baseScenarios = parsedOdds.map((odd, i) => {
       const stakeNesseLado = actualStakes[i];
       const retorno = odd > 1 ? stakeNesseLado * odd : 0;
       const lucro = retorno - stakeTotal;
@@ -711,6 +712,43 @@ export function SurebetDialogTable({
       };
     });
     
+    // Se há pernas com direcionamento, recalcular lucros
+    // A lógica: quando marcamos uma perna para direcionar lucro,
+    // o lucro total da operação vai para aquela perna e as outras ficam com lucro 0 ou negativo
+    let scenarios = baseScenarios;
+    
+    if (directedProfitLegs.length > 0 && stakeTotal > 0) {
+      // Calcular o lucro mínimo (lucro garantido da surebet)
+      const lucros = baseScenarios.map(s => s.lucro);
+      const lucroGarantido = Math.min(...lucros);
+      
+      // Se há direcionamento, redistribuir: pernas marcadas recebem o lucro, outras recebem 0
+      const totalDirected = directedProfitLegs.length;
+      scenarios = baseScenarios.map((s, i) => {
+        if (directedProfitLegs.includes(i)) {
+          // Perna direcionada recebe sua parte do lucro
+          const lucroParaEstaPerna = lucroGarantido / totalDirected;
+          return {
+            ...s,
+            lucro: lucroParaEstaPerna,
+            roi: stakeTotal > 0 ? (lucroParaEstaPerna / stakeTotal) * 100 : 0,
+            isPositive: lucroParaEstaPerna >= 0
+          };
+        } else {
+          // Pernas não direcionadas: mostram lucro se ganhar, mas o lucro "vai" para as direcionadas
+          // Mostrar como lucro potencial menos a stake das outras pernas
+          const lucroSeGanhar = s.retorno - stakeTotal;
+          const lucroDirecionado = lucroSeGanhar - lucroGarantido;
+          return {
+            ...s,
+            lucro: lucroDirecionado,
+            roi: stakeTotal > 0 ? (lucroDirecionado / stakeTotal) * 100 : 0,
+            isPositive: lucroDirecionado >= 0
+          };
+        }
+      });
+    }
+    
     const lucros = scenarios.map(s => s.lucro);
     const minLucro = lucros.length > 0 ? Math.min(...lucros) : 0;
     const minRoi = stakeTotal > 0 ? (minLucro / stakeTotal) * 100 : 0;
@@ -723,9 +761,10 @@ export function SurebetDialogTable({
       isMultiCurrency,
       moedaDominante,
       validOddsCount,
-      suggestedStakes: actualStakes
+      suggestedStakes: actualStakes,
+      hasDirectedProfit: directedProfitLegs.length > 0
     };
-  }, [odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}`).join(',')]);
+  }, [odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}`).join(','), directedProfitLegs]);
 
   const pernasCompletasCount = useMemo(() => {
     return odds.filter(entry => {
@@ -1158,21 +1197,27 @@ export function SurebetDialogTable({
                       )}
                     </td>
                     
-                    {/* Direcionar lucro (checkbox) */}
+                    {/* Direcionar lucro (CheckCircle moderno) */}
                     {!isEditing && (
                       <td className="py-1 px-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={directedProfitLegs.includes(pernaIndex)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setDirectedProfitLegs(prev => [...prev, pernaIndex]);
-                            } else {
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (directedProfitLegs.includes(pernaIndex)) {
                               setDirectedProfitLegs(prev => prev.filter(i => i !== pernaIndex));
+                            } else {
+                              setDirectedProfitLegs(prev => [...prev, pernaIndex]);
                             }
                           }}
-                          className="w-4 h-4 rounded border-muted-foreground/50 text-primary focus:ring-primary/50 cursor-pointer"
-                        />
+                          className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                            directedProfitLegs.includes(pernaIndex)
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "border-2 border-muted-foreground/30 hover:border-primary/50 text-transparent"
+                          }`}
+                          title="Direcionar lucro para esta perna"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
                       </td>
                     )}
                     
