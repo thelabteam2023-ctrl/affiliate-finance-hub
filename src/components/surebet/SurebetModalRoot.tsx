@@ -1,9 +1,10 @@
 /**
- * SurebetModalRoot - Modal raiz único para Arbitragem
+ * SurebetModalRoot - Painel de Operação de Arbitragem
  * 
  * ARQUITETURA:
- * - Modal único sem nested dialogs
- * - Responsivo (desktop: modal centralizado, mobile: fullscreen)
+ * - Painel fullscreen (não modal tradicional)
+ * - Sem overlay clicável - fecha apenas por X ou Cancelar
+ * - Comportamento de calculadora profissional (surebet.com)
  * - Integra formulário completo
  * - Suporte a N pernas dinâmico
  * - Checkbox D para distribuição de lucro
@@ -828,18 +829,9 @@ export function SurebetModalRoot({
 
   return (
     <>
-      {/* Overlay */}
-      <div 
-        className="fixed inset-0 bg-black/60 z-50 animate-in fade-in-0"
-        onClick={() => onOpenChange(false)}
-      />
-      
-      {/* Modal Container */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 lg:p-8 pointer-events-none">
-        <div 
-          className="relative w-full max-w-[1100px] max-h-[90vh] bg-background border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col pointer-events-auto animate-in slide-in-from-bottom-4 fade-in-0 duration-300"
-          onClick={(e) => e.stopPropagation()}
-        >
+      {/* Painel Fullscreen - Sem overlay clicável */}
+      <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in-0 duration-200">
+        <div className="relative w-full h-full flex flex-col overflow-hidden">
           {/* Hidden file input */}
           <input
             type="file"
