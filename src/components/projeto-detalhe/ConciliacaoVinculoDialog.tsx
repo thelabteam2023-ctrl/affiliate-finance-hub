@@ -25,6 +25,7 @@ import {
   Scale,
   ShieldCheck,
 } from "lucide-react";
+import { registrarAjusteViaLedger } from "@/lib/ledgerService";
 
 interface ConciliacaoVinculoDialogProps {
   open: boolean;
@@ -83,36 +84,21 @@ export function ConciliacaoVinculoDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // 1. Se houver diferença, registrar ajuste de auditoria
+      // 1. Se houver diferença, registrar ajuste via ledger (NÃO update direto)
       if (temDiferenca) {
-        const { error: auditError } = await supabase
-          .from("bookmaker_balance_audit")
-          .insert({
-            bookmaker_id: vinculo.id,
-            workspace_id: workspaceId,
-            user_id: user.id,
-            saldo_anterior: saldoSistema,
-            saldo_novo: saldoRealNum,
-            origem: "CONCILIACAO_VINCULO",
-            referencia_id: projetoId,
-            referencia_tipo: "projeto",
-            observacoes: observacoes || `Conciliação na liberação do vínculo. Projeto ID: ${projetoId}`,
-          });
+        const result = await registrarAjusteViaLedger({
+          bookmakerId: vinculo.id,
+          delta: diferenca, // positivo = crédito, negativo = débito
+          moeda: vinculo.moeda,
+          workspaceId: workspaceId,
+          userId: user.id,
+          descricao: `Conciliação na liberação do vínculo. Projeto ID: ${projetoId}`,
+          motivo: observacoes || "Conciliação de vínculo",
+        });
 
-        if (auditError) throw auditError;
-
-        // 2. Atualizar o saldo da bookmaker para o valor real
-        const isUSD = vinculo.moeda === "USD" || vinculo.moeda === "USDT";
-        const updatePayload = isUSD 
-          ? { saldo_usd: saldoRealNum }
-          : { saldo_atual: saldoRealNum };
-
-        const { error: updateError } = await supabase
-          .from("bookmakers")
-          .update(updatePayload)
-          .eq("id", vinculo.id);
-
-        if (updateError) throw updateError;
+        if (!result.success) {
+          throw new Error(result.error || "Erro ao registrar ajuste no ledger");
+        }
 
         toast.success(
           `Saldo conciliado: ajuste de ${formatCurrency(diferenca, vinculo.moeda)} aplicado`,
