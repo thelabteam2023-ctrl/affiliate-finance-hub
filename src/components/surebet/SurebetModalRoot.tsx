@@ -528,7 +528,11 @@ export function SurebetModalRoot({
   }, []);
 
   const handleFieldKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
-    if (e.key === 'Enter' || e.key === 'Tab') {
+    const key = e.key.toLowerCase();
+    
+    // Atalhos Q (próximo odd) e S (próximo stake)
+    if ((key === 'q' && fieldType === 'odd') || (key === 's' && fieldType === 'stake')) {
+      e.preventDefault();
       const container = tableContainerRef.current;
       if (!container) return;
       
@@ -539,12 +543,26 @@ export function SurebetModalRoot({
       
       const currentIndex = allFields.indexOf(e.currentTarget);
       const nextIndex = (currentIndex + 1) % allFields.length;
+      allFields[nextIndex]?.focus();
+      allFields[nextIndex]?.select();
+      return;
+    }
+    
+    // Enter também navega para próximo campo do mesmo tipo
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const container = tableContainerRef.current;
+      if (!container) return;
       
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        allFields[nextIndex]?.focus();
-        allFields[nextIndex]?.select();
-      }
+      const selector = `input[data-field-type="${fieldType}"]`;
+      const allFields = Array.from(container.querySelectorAll<HTMLInputElement>(selector));
+      
+      if (allFields.length === 0) return;
+      
+      const currentIndex = allFields.indexOf(e.currentTarget);
+      const nextIndex = (currentIndex + 1) % allFields.length;
+      allFields[nextIndex]?.focus();
+      allFields[nextIndex]?.select();
     }
   }, []);
 
