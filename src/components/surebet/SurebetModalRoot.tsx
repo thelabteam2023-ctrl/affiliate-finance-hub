@@ -106,6 +106,7 @@ import {
   APOSTA_ESTRATEGIA,
   CONTEXTO_OPERACIONAL,
   getEstrategiaFromTab,
+  isAbaEstrategiaFixa,
   type ApostaEstrategia,
   type ContextoOperacional,
 } from "@/lib/apostaConstants";
@@ -296,11 +297,24 @@ export function SurebetModalRoot({
       
       initializeLegPrints(numPernasRascunho);
     } else {
-      // Novo formulário - NÃO pré-selecionar estratégia (usuário deve escolher explicitamente)
+      // Novo formulário
       resetToNewForm(2);
       setModeloTipo("2");
-      setEstrategia(null); // NUNCA pré-selecionar estratégia
-      setContexto(CONTEXTO_OPERACIONAL.NORMAL);
+      
+      // Se a aba tiver estratégia fixa, pré-selecionar automaticamente
+      // Em "apostas-livres" ou "apostas", o usuário deve escolher manualmente
+      const estrategiaFromTab = getEstrategiaFromTab(activeTab);
+      setEstrategia(estrategiaFromTab);
+      
+      // Contexto baseado na aba
+      if (activeTab === 'bonus') {
+        setContexto(CONTEXTO_OPERACIONAL.BONUS);
+      } else if (activeTab === 'freebets') {
+        setContexto(CONTEXTO_OPERACIONAL.FREEBET);
+      } else {
+        setContexto(CONTEXTO_OPERACIONAL.NORMAL);
+      }
+      
       setEsporte("Futebol");
       setEvento("");
       setMercado("");
@@ -1015,14 +1029,25 @@ export function SurebetModalRoot({
               </div>
             )}
 
-            {/* Estratégia e Contexto - SEMPRE editáveis (mesmo após salvar) */}
+            {/* Estratégia e Contexto - travados quando aberto de aba específica */}
             <div className="grid grid-cols-2 gap-3 pb-3 border-b border-border/50">
               <div>
                 <Label className="text-xs text-muted-foreground">
                   Estratégia <span className="text-red-400">*</span>
+                  {!isEditing && isAbaEstrategiaFixa(activeTab) && (
+                    <span className="ml-1 text-[10px] text-primary">(fixo)</span>
+                  )}
                 </Label>
-                <Select value={estrategia || ""} onValueChange={(v) => setEstrategia(v as ApostaEstrategia)}>
-                  <SelectTrigger className={cn("h-8 text-xs", !estrategia && "border-red-500/50")}>
+                <Select 
+                  value={estrategia || ""} 
+                  onValueChange={(v) => setEstrategia(v as ApostaEstrategia)}
+                  disabled={!isEditing && isAbaEstrategiaFixa(activeTab)}
+                >
+                  <SelectTrigger className={cn(
+                    "h-8 text-xs", 
+                    !estrategia && "border-red-500/50",
+                    !isEditing && isAbaEstrategiaFixa(activeTab) && "opacity-70 cursor-not-allowed"
+                  )}>
                     <SelectValue placeholder="Selecione uma estratégia" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1036,9 +1061,21 @@ export function SurebetModalRoot({
                 )}
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Contexto</Label>
-                <Select value={contexto} onValueChange={(v) => setContexto(v as ContextoOperacional)}>
-                  <SelectTrigger className="h-8 text-xs">
+                <Label className="text-xs text-muted-foreground">
+                  Contexto
+                  {!isEditing && isAbaEstrategiaFixa(activeTab) && (
+                    <span className="ml-1 text-[10px] text-primary">(fixo)</span>
+                  )}
+                </Label>
+                <Select 
+                  value={contexto} 
+                  onValueChange={(v) => setContexto(v as ContextoOperacional)}
+                  disabled={!isEditing && isAbaEstrategiaFixa(activeTab)}
+                >
+                  <SelectTrigger className={cn(
+                    "h-8 text-xs",
+                    !isEditing && isAbaEstrategiaFixa(activeTab) && "opacity-70 cursor-not-allowed"
+                  )}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
