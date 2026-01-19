@@ -1334,37 +1334,8 @@ export function SurebetDialogTable({
         className="hidden"
       />
       
-      {/* TOPO: CONTEXTO COMPLETO */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pb-3 border-b border-border/50">
-        {/* Estratégia */}
-        <div>
-          <Label className="text-xs text-muted-foreground">Estratégia</Label>
-          <Select value={estrategia} onValueChange={setEstrategia} disabled={isEditing}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ESTRATEGIAS.map(e => (
-                <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        {/* Contexto */}
-        <div>
-          <Label className="text-xs text-muted-foreground">Contexto</Label>
-          <Select value={contexto} onValueChange={setContexto} disabled={isEditing}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CONTEXTOS.map(c => (
-                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {/* TOPO: CONTEXTO DO EVENTO */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-3 border-b border-border/50">
 
         {/* Esporte */}
         <div>
@@ -1382,7 +1353,7 @@ export function SurebetDialogTable({
         </div>
 
         {/* Evento */}
-        <div className="col-span-2 sm:col-span-1 lg:col-span-2">
+        <div className="col-span-2">
           <Label className="text-xs text-muted-foreground">Evento</Label>
           <Input 
             placeholder="Ex: Brasil x Argentina" 
@@ -2024,11 +1995,43 @@ export function SurebetDialogTable({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-[1200px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="pb-2">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Calculator className="h-4 w-4 text-amber-500" />
-              {isEditing ? "Editar Arbitragem" : "Arbitragem"}
-              <Badge variant="outline" className="text-[10px] ml-2">{numPernas} pernas</Badge>
-            </DialogTitle>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Calculator className="h-4 w-4 text-amber-500" />
+                {isEditing ? "Editar Arbitragem" : "Arbitragem"}
+                <Badge variant="outline" className="text-[10px] ml-2">{numPernas} pernas</Badge>
+              </DialogTitle>
+              
+              {/* Estratégia e Contexto inline no header */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Estratégia</Label>
+                  <Select value={estrategia} onValueChange={setEstrategia} disabled={isEditing}>
+                    <SelectTrigger className="h-7 w-28 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ESTRATEGIAS.map(e => (
+                        <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-[10px] text-muted-foreground whitespace-nowrap">Contexto</Label>
+                  <Select value={contexto} onValueChange={setContexto} disabled={isEditing}>
+                    <SelectTrigger className="h-7 w-28 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONTEXTOS.map(c => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
           </DialogHeader>
 
           {/* Banner de operação parcial */}
