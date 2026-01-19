@@ -616,9 +616,11 @@ export function SurebetDialogTable({
     return saldoLivre;
   };
 
-  // Auto-cálculo de stakes
+  // Auto-cálculo de stakes (DESABILITADO quando há direcionamento de lucro)
   useEffect(() => {
     if (isEditing) return;
+    // Se há direcionamento de lucro ativo, o cálculo é feito pelo directedStakes
+    if (directedProfitLegs.length > 0) return;
     
     const pernaData = odds.map(perna => ({
       oddMedia: getOddMediaPerna(perna),
@@ -670,12 +672,100 @@ export function SurebetDialogTable({
     modelo,
     arredondarAtivado,
     arredondarValor,
-    isEditing
+    isEditing,
+    directedProfitLegs.length
   ]);
+
+  // Calcular stakes quando há direcionamento de lucro
+  // Quando uma perna é marcada para receber o lucro, as outras pernas devem ter stakes
+  // calculadas para que se essa perna ganhar, o lucro total vá para ela
+  // e se as outras ganharem, o lucro seja ~0
+  const directedStakes = useMemo(() => {
+    if (directedProfitLegs.length === 0) return null;
+    
+    const parsedOdds = odds.map(o => calcularOddMedia({ odd: o.odd, stake: o.stake }, o.additionalEntries));
+    const validOddsCount = parsedOdds.filter(o => o > 1).length;
+    
+    // Precisamos de todas as odds válidas
+    if (validOddsCount !== odds.length) return null;
+    
+    // Encontrar a primeira perna direcionada com stake válida como referência
+    const directedWithStake = directedProfitLegs.find(i => {
+      const stake = parseFloat(odds[i].stake);
+      return !isNaN(stake) && stake > 0;
+    });
+    
+    if (directedWithStake === undefined) return null;
+    
+    const refIndex = directedWithStake;
+    const refStake = parseFloat(odds[refIndex].stake) || 0;
+    const refOdd = parsedOdds[refIndex];
+    
+    if (refStake <= 0 || refOdd <= 1) return null;
+    
+    // O retorno se a perna direcionada ganhar
+    const retornoRef = refStake * refOdd;
+    
+    // Para pernas NÃO direcionadas: calcular stake para que se elas ganharem,
+    // o retorno seja igual ao stake total (lucro = 0)
+    // Para isso: stake_i * odd_i = stakeTotal
+    // Mas stakeTotal = refStake + sum(stake_outras)
+    // Para simplificar: stake_i = retornoRef / odd_i
+    // Isso garante que todas as pernas tenham o mesmo retorno potencial
+    
+    const newStakes: number[] = [];
+    
+    for (let i = 0; i < odds.length; i++) {
+      const oddI = parsedOdds[i];
+      if (oddI <= 1) {
+        newStakes.push(0);
+      } else if (i === refIndex) {
+        // Perna de referência mantém stake original
+        newStakes.push(refStake);
+      } else if (directedProfitLegs.includes(i)) {
+        // Outra perna direcionada: proporcional ao retorno
+        newStakes.push(arredondarStake(retornoRef / oddI));
+      } else {
+        // Perna NÃO direcionada: stake para ter mesmo retorno
+        newStakes.push(arredondarStake(retornoRef / oddI));
+      }
+    }
+    
+    return newStakes;
+  }, [odds.map(o => `${o.odd}|${o.stake}`).join(','), directedProfitLegs, arredondarAtivado, arredondarValor]);
+  
+  // Efeito para aplicar stakes direcionadas automaticamente
+  useEffect(() => {
+    if (isEditing) return;
+    if (!directedStakes || directedProfitLegs.length === 0) return;
+    
+    // Encontrar a primeira perna direcionada (é a referência)
+    const refIndex = directedProfitLegs[0];
+    
+    let needsUpdate = false;
+    const newOdds = odds.map((o, i) => {
+      // Não alterar a perna de referência direcionada
+      if (directedProfitLegs.includes(i) && parseFloat(o.stake) > 0) return o;
+      
+      const suggestedStake = directedStakes[i];
+      const currentStake = parseFloat(o.stake) || 0;
+      
+      // Só atualiza se a diferença for significativa
+      if (Math.abs(suggestedStake - currentStake) > 0.5) {
+        needsUpdate = true;
+        return { ...o, stake: suggestedStake.toFixed(2), stakeOrigem: "referencia" as StakeOrigem, isManuallyEdited: false };
+      }
+      return o;
+    });
+    
+    if (needsUpdate) {
+      setOdds(newOdds);
+    }
+  }, [directedStakes, directedProfitLegs, isEditing]);
 
   // Análise em tempo real com suporte a direcionamento de lucro
   const analysis = useMemo(() => {
-    const consolidatedPerPerna = odds.map(perna => ({
+    const consolidatedPerPerna = odds.map((perna, i) => ({
       oddMedia: calcularOddMedia({ odd: perna.odd, stake: perna.stake }, perna.additionalEntries),
       stakeTotal: calcularStakeTotal({ stake: perna.stake }, perna.additionalEntries)
     }));
@@ -695,12 +785,17 @@ export function SurebetDialogTable({
     
     const stakeTotal = isMultiCurrency ? 0 : actualStakes.reduce((a, b) => a + b, 0);
     
-    // Calcular lucro base por cenário
-    const baseScenarios = parsedOdds.map((odd, i) => {
+    // Calcular lucro por cenário
+    const scenarios = parsedOdds.map((odd, i) => {
       const stakeNesseLado = actualStakes[i];
       const retorno = odd > 1 ? stakeNesseLado * odd : 0;
       const lucro = retorno - stakeTotal;
       const roi = stakeTotal > 0 ? (lucro / stakeTotal) * 100 : 0;
+      
+      // Se há direcionamento e esta perna está direcionada, ela recebe o lucro
+      // Se não está direcionada, o lucro dela deve ser ~0
+      const isDirected = directedProfitLegs.includes(i);
+      
       return {
         selecao: odds[i].selecao,
         stake: stakeNesseLado,
@@ -708,46 +803,10 @@ export function SurebetDialogTable({
         retorno,
         lucro,
         roi,
-        isPositive: lucro >= 0
+        isPositive: lucro >= 0,
+        isDirected
       };
     });
-    
-    // Se há pernas com direcionamento, recalcular lucros
-    // A lógica: quando marcamos uma perna para direcionar lucro,
-    // o lucro total da operação vai para aquela perna e as outras ficam com lucro 0 ou negativo
-    let scenarios = baseScenarios;
-    
-    if (directedProfitLegs.length > 0 && stakeTotal > 0) {
-      // Calcular o lucro mínimo (lucro garantido da surebet)
-      const lucros = baseScenarios.map(s => s.lucro);
-      const lucroGarantido = Math.min(...lucros);
-      
-      // Se há direcionamento, redistribuir: pernas marcadas recebem o lucro, outras recebem 0
-      const totalDirected = directedProfitLegs.length;
-      scenarios = baseScenarios.map((s, i) => {
-        if (directedProfitLegs.includes(i)) {
-          // Perna direcionada recebe sua parte do lucro
-          const lucroParaEstaPerna = lucroGarantido / totalDirected;
-          return {
-            ...s,
-            lucro: lucroParaEstaPerna,
-            roi: stakeTotal > 0 ? (lucroParaEstaPerna / stakeTotal) * 100 : 0,
-            isPositive: lucroParaEstaPerna >= 0
-          };
-        } else {
-          // Pernas não direcionadas: mostram lucro se ganhar, mas o lucro "vai" para as direcionadas
-          // Mostrar como lucro potencial menos a stake das outras pernas
-          const lucroSeGanhar = s.retorno - stakeTotal;
-          const lucroDirecionado = lucroSeGanhar - lucroGarantido;
-          return {
-            ...s,
-            lucro: lucroDirecionado,
-            roi: stakeTotal > 0 ? (lucroDirecionado / stakeTotal) * 100 : 0,
-            isPositive: lucroDirecionado >= 0
-          };
-        }
-      });
-    }
     
     const lucros = scenarios.map(s => s.lucro);
     const minLucro = lucros.length > 0 ? Math.min(...lucros) : 0;
