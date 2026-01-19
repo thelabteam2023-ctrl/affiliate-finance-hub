@@ -59,7 +59,7 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
   RECURSOS_HUMANOS: {
     value: "RECURSOS_HUMANOS",
     label: "Recursos Humanos",
-    description: "Pagamentos de colaboradores, salários, comissões",
+    description: "Pagamentos de colaboradores (selecione subcategoria)",
     icon: Users,
     color: "bg-pink-500/10 text-pink-600 border-pink-500/20",
   },
@@ -76,6 +76,53 @@ export type GrupoDespesa = keyof typeof GRUPOS_DESPESA;
 
 // Lista ordenada para selects
 export const GRUPOS_DESPESA_LIST = Object.values(GRUPOS_DESPESA) as GrupoDespesaInfo[];
+
+// ============================================================
+// SUBCATEGORIAS DE RH - para detalhamento de despesas de pessoal
+// ============================================================
+export interface SubcategoriaRHInfo {
+  value: string;
+  label: string;
+  description: string;
+  isFixo: boolean; // true = custo fixo mensal, false = custo variável
+}
+
+export const SUBCATEGORIAS_RH: Record<string, SubcategoriaRHInfo> = {
+  SALARIO_MENSAL: {
+    value: "SALARIO_MENSAL",
+    label: "Salário Mensal",
+    description: "Pagamento fixo mensal de colaboradores",
+    isFixo: true,
+  },
+  COMISSAO: {
+    value: "COMISSAO",
+    label: "Comissão",
+    description: "Pagamento variável por performance/produção",
+    isFixo: false,
+  },
+  ADIANTAMENTO: {
+    value: "ADIANTAMENTO",
+    label: "Adiantamento",
+    description: "Antecipação de valores a colaboradores",
+    isFixo: false,
+  },
+  BONIFICACAO: {
+    value: "BONIFICACAO",
+    label: "Bonificação",
+    description: "Bônus e gratificações eventuais",
+    isFixo: false,
+  },
+} as const;
+
+export type SubcategoriaRH = keyof typeof SUBCATEGORIAS_RH;
+
+// Lista ordenada para selects
+export const SUBCATEGORIAS_RH_LIST = Object.values(SUBCATEGORIAS_RH) as SubcategoriaRHInfo[];
+
+// Função helper para obter info da subcategoria
+export function getSubcategoriaRHInfo(subcategoria: string): SubcategoriaRHInfo | null {
+  return SUBCATEGORIAS_RH[subcategoria as SubcategoriaRH] || null;
+}
 
 // Mapeamento de categorias antigas para grupos (para referência)
 export const CATEGORIA_TO_GRUPO: Record<string, GrupoDespesa> = {

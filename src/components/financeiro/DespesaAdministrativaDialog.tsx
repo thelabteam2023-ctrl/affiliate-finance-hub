@@ -25,12 +25,13 @@ import { Loader2 } from "lucide-react";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { GRUPOS_DESPESA_LIST, getGrupoInfo } from "@/lib/despesaGrupos";
+import { GRUPOS_DESPESA_LIST, getGrupoInfo, SUBCATEGORIAS_RH_LIST, getSubcategoriaRHInfo } from "@/lib/despesaGrupos";
 
 interface DespesaAdministrativa {
   id?: string;
   categoria: string;
   grupo?: string;
+  subcategoria_rh?: string | null;
   descricao: string;
   valor: number;
   data_despesa: string;
@@ -71,6 +72,7 @@ export function DespesaAdministrativaDialog({
   const [formData, setFormData] = useState<DespesaAdministrativa>({
     categoria: "", // Agora preenchido automaticamente pelo grupo
     grupo: "UTILIDADES_E_SERVICOS_BASICOS",
+    subcategoria_rh: null,
     descricao: "",
     valor: 0,
     data_despesa: new Date().toISOString().split("T")[0],
@@ -95,6 +97,7 @@ export function DespesaAdministrativaDialog({
         ...despesa,
         data_despesa: despesa.data_despesa.split("T")[0],
         grupo: despesa.grupo || "OUTROS",
+        subcategoria_rh: (despesa as any).subcategoria_rh || null,
       });
       // Set origem data from existing despesa
       setOrigemData({
@@ -112,6 +115,7 @@ export function DespesaAdministrativaDialog({
       setFormData({
         categoria: "",
         grupo: "UTILIDADES_E_SERVICOS_BASICOS",
+        subcategoria_rh: null,
         descricao: "",
         valor: 0,
         data_despesa: new Date().toISOString().split("T")[0],
@@ -147,6 +151,16 @@ export function DespesaAdministrativaDialog({
       return;
     }
 
+    // Validação: RH requer subcategoria
+    if (formData.grupo === "RECURSOS_HUMANOS" && !formData.subcategoria_rh) {
+      toast({
+        title: "Subcategoria obrigatória",
+        description: "Para despesas de RH, selecione o tipo: Salário, Comissão, etc.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // 🔒 VALIDAÇÃO CENTRAL: Bloquear se saldo insuficiente para status CONFIRMADO (dupla verificação)
     if (formData.status === "CONFIRMADO") {
       const saldoRealInsuficiente = Boolean(origemData.saldoInsuficiente) || (formData.valor > 0 && origemData.saldoDisponivel < formData.valor);
@@ -168,9 +182,17 @@ export function DespesaAdministrativaDialog({
       if (!workspaceId) throw new Error("Workspace não encontrado");
 
       const grupoInfo = getGrupoInfo(formData.grupo || "OUTROS");
+      const subcategoriaInfo = formData.subcategoria_rh ? getSubcategoriaRHInfo(formData.subcategoria_rh) : null;
+      
+      // Categoria personalizada para RH incluindo subcategoria
+      const categoriaLabel = formData.grupo === "RECURSOS_HUMANOS" && subcategoriaInfo
+        ? `${grupoInfo.label} - ${subcategoriaInfo.label}`
+        : grupoInfo.label;
+      
       const payload: any = {
-        categoria: grupoInfo.label, // Categoria recebe o label do grupo para compatibilidade
+        categoria: categoriaLabel, // Categoria recebe o label do grupo para compatibilidade
         grupo: formData.grupo,
+        subcategoria_rh: formData.grupo === "RECURSOS_HUMANOS" ? formData.subcategoria_rh : null,
         descricao: formData.descricao || null,
         valor: formData.valor,
         data_despesa: formData.data_despesa,
@@ -578,7 +600,12 @@ export function DespesaAdministrativaDialog({
               <Select
                 value={formData.grupo || "OUTROS"}
                 onValueChange={(value) => {
-                  setFormData({ ...formData, grupo: value });
+                  setFormData({ 
+                    ...formData, 
+                    grupo: value,
+                    // Limpar subcategoria se mudar de grupo
+                    subcategoria_rh: value === "RECURSOS_HUMANOS" ? formData.subcategoria_rh : null
+                  });
                 }}
               >
                 <SelectTrigger>
@@ -602,6 +629,47 @@ export function DespesaAdministrativaDialog({
                 {getGrupoInfo(formData.grupo || "OUTROS").description}
               </p>
             </div>
+
+            {/* Subcategoria de RH - aparece apenas quando grupo = RECURSOS_HUMANOS */}
+            {formData.grupo === "RECURSOS_HUMANOS" && (
+              <div className="space-y-2 pl-4 border-l-2 border-pink-500/30">
+                <Label>Tipo de Pagamento RH *</Label>
+                <Select
+                  value={formData.subcategoria_rh || ""}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, subcategoria_rh: value });
+                  }}
+                >
+                  <SelectTrigger className={!formData.subcategoria_rh ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Selecione o tipo de pagamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUBCATEGORIAS_RH_LIST.map((sub) => (
+                      <SelectItem key={sub.value} value={sub.value}>
+                        <span className="flex items-center gap-2">
+                          <span>{sub.label}</span>
+                          {sub.isFixo && (
+                            <span className="text-xs bg-green-500/10 text-green-600 px-1.5 py-0.5 rounded">
+                              Fixo
+                            </span>
+                          )}
+                          {!sub.isFixo && (
+                            <span className="text-xs bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded">
+                              Variável
+                            </span>
+                          )}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.subcategoria_rh && (
+                  <p className="text-xs text-muted-foreground">
+                    {getSubcategoriaRHInfo(formData.subcategoria_rh)?.description}
+                  </p>
+                )}
+              </div>
+            )}
 
           <div className="space-y-2">
             <Label>Valor *</Label>

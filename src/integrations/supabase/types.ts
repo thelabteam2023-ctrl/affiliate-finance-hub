@@ -2078,6 +2078,7 @@ export type Database = {
           qtd_coin: number | null
           recorrente: boolean | null
           status: string
+          subcategoria_rh: string | null
           tipo_moeda: string | null
           updated_at: string
           user_id: string
@@ -2101,6 +2102,7 @@ export type Database = {
           qtd_coin?: number | null
           recorrente?: boolean | null
           status?: string
+          subcategoria_rh?: string | null
           tipo_moeda?: string | null
           updated_at?: string
           user_id: string
@@ -2124,6 +2126,7 @@ export type Database = {
           qtd_coin?: number | null
           recorrente?: boolean | null
           status?: string
+          subcategoria_rh?: string | null
           tipo_moeda?: string | null
           updated_at?: string
           user_id?: string
