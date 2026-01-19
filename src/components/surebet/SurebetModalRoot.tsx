@@ -624,6 +624,11 @@ export function SurebetModalRoot({
   // ============================================
   // APLICAR STAKES DIRECIONADAS (CHECKBOX D)
   // ============================================
+  // 
+  // REGRA DE NEGÓCIO:
+  // - Pernas DESMARCADAS (D=false): stakes FIXAS, lucro ≈ 0
+  // - Perna MARCADA (D=true): stake pode ser REDUZIDA para compensar
+  // ============================================
 
   useEffect(() => {
     // Só aplicar se há direcionamento parcial ativo
@@ -633,9 +638,17 @@ export function SurebetModalRoot({
     // Verificar se temos stakes calculadas
     if (!directedStakes || directedStakes.length !== odds.length) return;
     
-    // Verificar se há diferença real para atualizar
+    // Identificar pernas marcadas (apenas essas terão stake alterada)
+    const markedIndices = directedProfitLegs;
+    
+    // Verificar se há diferença real para atualizar (APENAS nas marcadas)
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
+      // Só altera stakes das pernas MARCADAS
+      if (!markedIndices.includes(i)) {
+        return o; // Pernas desmarcadas: stakes FIXAS
+      }
+      
       const calculatedStake = directedStakes[i];
       const currentStake = parseFloat(o.stake) || 0;
       
@@ -658,7 +671,8 @@ export function SurebetModalRoot({
   }, [
     directedProfitLegs.join(','),
     directedStakes?.join(','),
-    odds.map(o => o.odd).join(','), // Re-calcular quando odds mudam
+    odds.map(o => o.odd).join(','),
+    odds.map(o => o.stake).join(','), // Re-calcular quando stakes das desmarcadas mudam
     arredondarAtivado,
     arredondarValor
   ]);

@@ -158,7 +158,20 @@ function calcularStakesEqualizadas(
 }
 
 // ============================================
-// CÁLCULO CHECKBOX D — DISTRIBUIÇÃO DE LUCRO
+// CÁLCULO CHECKBOX D — REDISTRIBUIÇÃO DE LUCRO
+// ============================================
+// 
+// REGRA DE NEGÓCIO CORRETA:
+// - Pernas DESMARCADAS (D=false): stakes permanecem FIXAS, lucro deve ser ≈ 0
+// - Perna MARCADA (D=true): única que pode ter stake ajustada (REDUZIDA)
+//
+// O objetivo é concentrar todo o lucro na perna marcada,
+// zerando o lucro das pernas desmarcadas.
+//
+// Lógica:
+// 1. Manter stakes fixas das pernas desmarcadas
+// 2. Calcular o retorno necessário para zerar lucro das desmarcadas
+// 3. Ajustar (reduzir) a stake da perna marcada para atingir esse retorno
 // ============================================
 
 function calcularStakesDirecionadas(
@@ -167,62 +180,145 @@ function calcularStakesDirecionadas(
   directedProfitLegs: number[],
   arredondarFn: (value: number) => number
 ): number[] | null {
-  // Se todas ou nenhuma marcada, não há direcionamento
-  if (directedProfitLegs.length === parsedOdds.length) return null;
+  const n = parsedOdds.length;
+  
+  // Não há direcionamento se:
+  // - Todas marcadas (comportamento padrão equalizado)
+  // - Nenhuma marcada (impossível redistribuir)
   if (directedProfitLegs.length === 0) return null;
+  if (directedProfitLegs.length === n) return null;
   
+  // Validar que todas as odds são válidas
   const validOddsCount = parsedOdds.filter(o => o > 1).length;
-  if (validOddsCount !== parsedOdds.length) return null;
+  if (validOddsCount !== n) return null;
   
-  // Encontrar perna de referência (primeira D=true com stake)
-  const refIndex = directedProfitLegs.find(i => {
-    const stake = parseFloat(odds[i].stake);
-    return !isNaN(stake) && stake > 0;
-  });
+  // Identificar pernas marcadas e desmarcadas
+  const markedIndices = directedProfitLegs;
+  const unmarkedIndices = parsedOdds.map((_, i) => i).filter(i => !markedIndices.includes(i));
   
-  if (refIndex === undefined) return null;
+  // VALIDAÇÃO: Deve haver exatamente UMA perna marcada
+  // (múltiplas marcadas seria comportamento ambíguo)
+  if (markedIndices.length !== 1) {
+    // Se múltiplas marcadas, comportar como equalizado para elas
+    // Mas mantemos a lógica original por compatibilidade
+    return calcularMultipleMarkedLegs(parsedOdds, odds, markedIndices, unmarkedIndices, arredondarFn);
+  }
   
-  const refStake = parseFloat(odds[refIndex].stake) || 0;
-  const refOdd = parsedOdds[refIndex];
+  const markedIndex = markedIndices[0];
+  const markedOdd = parsedOdds[markedIndex];
   
-  if (refStake <= 0 || refOdd <= 1) return null;
+  // Stakes atuais de TODAS as pernas (permanecem fixas para desmarcadas)
+  const currentStakes = odds.map(o => parseFloat(o.stake) || 0);
   
-  const retornoAlvo = refStake * refOdd;
+  // Validar que temos stakes válidas nas pernas desmarcadas
+  const stakesUnmarkedValid = unmarkedIndices.every(i => currentStakes[i] > 0);
+  if (!stakesUnmarkedValid) return null;
   
-  // Calcular stakes para pernas D=true
-  const stakesDirected: { [key: number]: number } = {};
-  for (const i of directedProfitLegs) {
-    const oddI = parsedOdds[i];
-    if (oddI > 1) {
-      stakesDirected[i] = retornoAlvo / oddI;
+  // CÁLCULO:
+  // Para lucro = 0 nas pernas desmarcadas:
+  // retorno_desmarcada = stake_total
+  // stake_desmarcada * odd_desmarcada = stake_total
+  //
+  // Soma das stakes = stake_marcada + soma_stakes_desmarcadas
+  // Para cada perna desmarcada: stake_i * odd_i = stake_total
+  // Então: stake_total = stake_i * odd_i (para qualquer i desmarcada)
+  //
+  // Dado que as stakes das desmarcadas são FIXAS:
+  // Precisamos calcular a stake_marcada tal que o retorno dela
+  // seja igual ao retorno esperado quando ela vencer.
+  
+  // Soma das stakes desmarcadas (fixas)
+  const somaStakesDesmarcadas = unmarkedIndices.reduce((acc, i) => acc + currentStakes[i], 0);
+  
+  // Para cada perna desmarcada, calculamos qual seria o stake_total
+  // necessário para que seu lucro seja zero (retorno = stake_total)
+  // retorno_i = stake_i * odd_i = stake_total
+  // stake_marcada = stake_total - soma_desmarcadas = stake_i * odd_i - soma_desmarcadas
+  
+  // Para lucro ≈ 0 em TODAS as desmarcadas, precisamos que:
+  // stake_i * odd_i = stake_j * odd_j para todo i,j desmarcados
+  // Isso geralmente não é possível com stakes fixas...
+  //
+  // Solução: calcular a stake_marcada que MINIMIZA o erro
+  // O retorno alvo é o maior dos retornos das pernas desmarcadas
+  // (garantindo lucro >= 0 em todas)
+  
+  const retornosDesmarcadas = unmarkedIndices.map(i => currentStakes[i] * parsedOdds[i]);
+  const retornoAlvo = Math.max(...retornosDesmarcadas);
+  
+  // Stake total necessário = retorno alvo (para lucro = 0 no pior caso)
+  const stakeTotalNecessario = retornoAlvo;
+  
+  // Stake da perna marcada = stake_total - soma das fixas
+  let stakeMarkedCalculada = stakeTotalNecessario - somaStakesDesmarcadas;
+  
+  // VALIDAÇÃO: A stake não pode ser negativa
+  if (stakeMarkedCalculada < 0) {
+    // As stakes das desmarcadas já são suficientes para cobrir
+    // Nesse caso, stake marcada = 0 (ou mínimo)
+    stakeMarkedCalculada = 0;
+  }
+  
+  // Arredondar
+  stakeMarkedCalculada = arredondarFn(stakeMarkedCalculada);
+  
+  // Montar array de stakes finais
+  const newStakes: number[] = [];
+  for (let i = 0; i < n; i++) {
+    if (i === markedIndex) {
+      newStakes.push(stakeMarkedCalculada);
+    } else {
+      // Stakes das desmarcadas permanecem FIXAS
+      newStakes.push(currentStakes[i]);
     }
   }
   
-  const somaStakesDirected = Object.values(stakesDirected).reduce((a, b) => a + b, 0);
+  return newStakes;
+}
+
+/**
+ * Caso especial: múltiplas pernas marcadas
+ * Distribui lucro entre as marcadas, zerando as desmarcadas
+ */
+function calcularMultipleMarkedLegs(
+  parsedOdds: number[],
+  odds: OddEntry[],
+  markedIndices: number[],
+  unmarkedIndices: number[],
+  arredondarFn: (value: number) => number
+): number[] | null {
+  const n = parsedOdds.length;
+  const currentStakes = odds.map(o => parseFloat(o.stake) || 0);
   
-  // Índices das pernas não direcionadas (D=false)
-  const undirectedIndices = parsedOdds.map((_, i) => i).filter(i => !directedProfitLegs.includes(i));
+  // Soma das stakes das desmarcadas (fixas)
+  const somaStakesDesmarcadas = unmarkedIndices.reduce((acc, i) => acc + currentStakes[i], 0);
   
-  if (undirectedIndices.length === 0) return null;
+  // Calcular retorno alvo baseado nas desmarcadas
+  const retornosDesmarcadas = unmarkedIndices.map(i => currentStakes[i] * parsedOdds[i]);
   
-  // Resolver sistema para pernas D=false (lucro = 0)
-  const sumInvOdds = undirectedIndices.reduce((acc, i) => acc + 1 / parsedOdds[i], 0);
+  if (retornosDesmarcadas.length === 0) {
+    // Todas marcadas - comportamento padrão
+    return null;
+  }
   
-  if (sumInvOdds >= 1) return null;
+  const retornoAlvo = Math.max(...retornosDesmarcadas);
+  const stakeTotalNecessario = retornoAlvo;
   
-  const S = (somaStakesDirected * sumInvOdds) / (1 - sumInvOdds);
-  const stakeTotal = somaStakesDirected + S;
+  // Stake disponível para as marcadas
+  const stakeDisponivelMarcadas = Math.max(0, stakeTotalNecessario - somaStakesDesmarcadas);
+  
+  // Distribuir proporcionalmente entre as marcadas (baseado em 1/odd)
+  const somaInvOdds = markedIndices.reduce((acc, i) => acc + 1 / parsedOdds[i], 0);
   
   const newStakes: number[] = [];
-  
-  for (let i = 0; i < parsedOdds.length; i++) {
-    const oddI = parsedOdds[i];
-    if (oddI <= 1) {
-      newStakes.push(0);
-    } else if (directedProfitLegs.includes(i)) {
-      newStakes.push(arredondarFn(stakesDirected[i] || retornoAlvo / oddI));
+  for (let i = 0; i < n; i++) {
+    if (markedIndices.includes(i)) {
+      // Proporcional ao inverso da odd
+      const proporcao = (1 / parsedOdds[i]) / somaInvOdds;
+      newStakes.push(arredondarFn(stakeDisponivelMarcadas * proporcao));
     } else {
-      newStakes.push(arredondarFn(stakeTotal / oddI));
+      // Desmarcadas mantêm stake fixa
+      newStakes.push(currentStakes[i]);
     }
   }
   
