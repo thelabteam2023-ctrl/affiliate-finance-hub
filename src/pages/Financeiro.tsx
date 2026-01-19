@@ -821,7 +821,7 @@ export default function Financeiro() {
     return Object.values(agrupado).sort((a, b) => b.valor - a.valor);
   }, [filteredDespesas]);
 
-  // Infraestrutura por categoria - com suporte a CRYPTO
+  // Infraestrutura por categoria - com suporte a CRYPTO (exclui RH)
   const infraestruturaDetalhes = useMemo((): InfraestruturaDetalhe[] => {
     const agrupado: Record<string, { 
       categoria: string; 
@@ -830,7 +830,8 @@ export default function Financeiro() {
       hasCrypto: boolean;
     }> = {};
     
-    filteredDespesasAdmin.forEach((d: any) => {
+    // Apenas despesas de infraestrutura (exclui RH que vai para operadores)
+    despesasInfraestrutura.forEach((d: any) => {
       const categoria = d.categoria || "Outros";
       const isCrypto = d.tipo_moeda === "CRYPTO";
       
@@ -852,12 +853,13 @@ export default function Financeiro() {
     });
     
     return Object.values(agrupado).sort((a, b) => b.valor - a.valor);
-  }, [filteredDespesasAdmin]);
+  }, [despesasInfraestrutura, convertFromBRL]);
 
-  // Operadores por nome
+  // Operadores por nome (inclui pagamentos de operadores + despesas de RH com subcategorias)
   const operadoresDetalhes = useMemo((): OperadorDetalhe[] => {
     const agrupado: Record<string, { operadorNome: string; valor: number }> = {};
     
+    // Pagamentos de operadores tradicionais
     filteredPagamentosOp.forEach((p: any) => {
       const operadorNome = p.operadores?.nome || "Operador não identificado";
       if (!agrupado[operadorNome]) {
@@ -866,8 +868,31 @@ export default function Financeiro() {
       agrupado[operadorNome].valor += p.valor;
     });
     
+    // Despesas de RH (agrupadas por subcategoria para visualização)
+    despesasRH.forEach((d: any) => {
+      // Usar subcategoria para categorizar: "RH - Salário Mensal", "RH - Comissão", etc.
+      let subcategoriaLabel = "RH - Outros";
+      if (d.subcategoria_rh) {
+        const subcatMap: Record<string, string> = {
+          SALARIO_MENSAL: "RH - Salário Mensal",
+          COMISSAO: "RH - Comissões",
+          ADIANTAMENTO: "RH - Adiantamentos",
+          BONIFICACAO: "RH - Bonificações",
+        };
+        subcategoriaLabel = subcatMap[d.subcategoria_rh] || `RH - ${d.subcategoria_rh}`;
+      } else if (d.categoria) {
+        // Fallback para categoria se não tiver subcategoria
+        subcategoriaLabel = `RH - ${d.categoria}`;
+      }
+      
+      if (!agrupado[subcategoriaLabel]) {
+        agrupado[subcategoriaLabel] = { operadorNome: subcategoriaLabel, valor: 0 };
+      }
+      agrupado[subcategoriaLabel].valor += d.valor;
+    });
+    
     return Object.values(agrupado).sort((a, b) => b.valor - a.valor);
-  }, [filteredPagamentosOp]);
+  }, [filteredPagamentosOp, despesasRH]);
 
   // Total período anterior
   const getMesAnteriorCustos = () => {
