@@ -1320,9 +1320,9 @@ export function SurebetDialogTable({
             <Input
               type="number"
               min="4"
-              max="20"
+              max="10"
               value={numPernasCustom}
-              onChange={(e) => setNumPernasCustom(Math.max(4, parseInt(e.target.value) || 4))}
+              onChange={(e) => setNumPernasCustom(Math.min(10, Math.max(4, parseInt(e.target.value) || 4)))}
               className="h-8 w-16 text-xs text-center"
             />
           </div>
