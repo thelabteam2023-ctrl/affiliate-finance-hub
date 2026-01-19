@@ -8643,10 +8643,19 @@ export type Database = {
         }
         Returns: Json
       }
-      criar_aposta_atomica: {
-        Args: { p_aposta_data: Json; p_pernas_data: Json }
-        Returns: Json
-      }
+      criar_aposta_atomica:
+        | { Args: { p_aposta_data: Json; p_pernas_data: Json }; Returns: Json }
+        | {
+            Args: {
+              p_aposta_data: Json
+              p_atualizar_saldos?: boolean
+              p_pernas_data?: Json
+              p_projeto_id: string
+              p_user_id: string
+              p_workspace_id: string
+            }
+            Returns: Json
+          }
       debit_bookmaker_with_lock: {
         Args: {
           p_bookmaker_id: string
@@ -9040,19 +9049,41 @@ export type Database = {
         Args: { check_user_id: string }
         Returns: boolean
       }
-      validate_and_reserve_stakes: {
-        Args: { p_bookmaker_stakes: Json; p_projeto_id: string }
-        Returns: Json
-      }
-      validate_aposta_pre_commit: {
-        Args: {
-          p_bookmaker_ids: string[]
-          p_expected_versions?: number[]
-          p_projeto_id: string
-          p_stakes: number[]
-        }
-        Returns: Json
-      }
+      validate_and_reserve_stakes:
+        | {
+            Args: { p_bookmaker_stakes: Json; p_projeto_id: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_bookmaker_ids: string[]
+              p_odds?: number[]
+              p_projeto_id: string
+              p_selecoes?: string[]
+              p_stakes: number[]
+              p_workspace_id: string
+            }
+            Returns: Json
+          }
+      validate_aposta_pre_commit:
+        | {
+            Args: {
+              p_bookmaker_ids: string[]
+              p_expected_versions?: number[]
+              p_projeto_id: string
+              p_stakes: number[]
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_bookmaker_ids: string[]
+              p_projeto_id: string
+              p_stakes: number[]
+              p_workspace_id: string
+            }
+            Returns: Json
+          }
       validate_bet_creation_v2: {
         Args: { p_bookmaker_stakes: Json; p_projeto_id: string }
         Returns: Json
