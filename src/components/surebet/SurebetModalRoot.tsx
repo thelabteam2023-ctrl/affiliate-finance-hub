@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import { SurebetTableRow } from "./SurebetTableRow";
 import { SurebetTableFooter } from "./SurebetTableFooter";
@@ -252,10 +253,11 @@ export function SurebetModalRoot({
       fetchLinkedPernas(surebet.id);
     } else if (rascunho) {
       // Modo rascunho: carregar TODOS os dados
+      // IMPORTANTE: NÃO pré-selecionar estratégia se não estava definida no rascunho
       setEvento(rascunho.evento || "");
       setEsporte(rascunho.esporte || "Futebol");
       setMercado(rascunho.mercado || "");
-      setEstrategia((rascunho.estrategia || APOSTA_ESTRATEGIA.SUREBET) as ApostaEstrategia);
+      setEstrategia(rascunho.estrategia ? (rascunho.estrategia as ApostaEstrategia) : null);
       setContexto((rascunho.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
       
       const numPernasRascunho = rascunho.quantidade_pernas || rascunho.pernas?.length || 2;
@@ -294,10 +296,10 @@ export function SurebetModalRoot({
       
       initializeLegPrints(numPernasRascunho);
     } else {
-      // Novo formulário - usar estratégia da aba ativa
+      // Novo formulário - NÃO pré-selecionar estratégia (usuário deve escolher explicitamente)
       resetToNewForm(2);
       setModeloTipo("2");
-      setEstrategia(getEstrategiaFromTab(activeTab));
+      setEstrategia(null); // NUNCA pré-selecionar estratégia
       setContexto(CONTEXTO_OPERACIONAL.NORMAL);
       setEsporte("Futebol");
       setEvento("");
@@ -1013,13 +1015,15 @@ export function SurebetModalRoot({
               </div>
             )}
 
-            {/* Estratégia e Contexto - sempre visíveis com labels */}
+            {/* Estratégia e Contexto - SEMPRE editáveis (mesmo após salvar) */}
             <div className="grid grid-cols-2 gap-3 pb-3 border-b border-border/50">
               <div>
-                <Label className="text-xs text-muted-foreground">Estratégia</Label>
-                <Select value={estrategia || ""} onValueChange={(v) => setEstrategia(v as ApostaEstrategia)} disabled={isEditing}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Selecione" />
+                <Label className="text-xs text-muted-foreground">
+                  Estratégia <span className="text-red-400">*</span>
+                </Label>
+                <Select value={estrategia || ""} onValueChange={(v) => setEstrategia(v as ApostaEstrategia)}>
+                  <SelectTrigger className={cn("h-8 text-xs", !estrategia && "border-red-500/50")}>
+                    <SelectValue placeholder="Selecione uma estratégia" />
                   </SelectTrigger>
                   <SelectContent>
                     {ESTRATEGIAS_LIST.map(e => (
@@ -1027,10 +1031,13 @@ export function SurebetModalRoot({
                     ))}
                   </SelectContent>
                 </Select>
+                {!estrategia && (
+                  <p className="text-[10px] text-red-400 mt-0.5">Obrigatório</p>
+                )}
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Contexto</Label>
-                <Select value={contexto} onValueChange={(v) => setContexto(v as ContextoOperacional)} disabled={isEditing}>
+                <Select value={contexto} onValueChange={(v) => setContexto(v as ContextoOperacional)}>
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -1043,11 +1050,11 @@ export function SurebetModalRoot({
               </div>
             </div>
 
-            {/* Campos do Evento */}
+            {/* Campos do Evento - SEMPRE editáveis */}
             <div className="grid grid-cols-3 gap-3 pb-3 border-b border-border/50">
               <div>
                 <Label className="text-xs text-muted-foreground">Esporte</Label>
-                <Select value={esporte} onValueChange={setEsporte} disabled={isEditing}>
+                <Select value={esporte} onValueChange={setEsporte}>
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -1066,7 +1073,6 @@ export function SurebetModalRoot({
                   value={evento}
                   onChange={(e) => setEvento(e.target.value)}
                   className="h-8 text-xs uppercase"
-                  disabled={isEditing}
                 />
               </div>
               
@@ -1077,7 +1083,6 @@ export function SurebetModalRoot({
                   value={mercado}
                   onChange={(e) => setMercado(e.target.value)}
                   className="h-8 text-xs"
-                  disabled={isEditing}
                 />
               </div>
             </div>
