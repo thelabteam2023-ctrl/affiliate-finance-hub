@@ -352,50 +352,73 @@ export function SurebetDialogTable({
   const tableContainerRef = useRef<HTMLDivElement>(null);
   
   // Print import
-  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   const {
     legPrints,
     isProcessingAny,
     sharedContext,
     processLegImage,
+    processLegFromClipboard,
     clearLegPrint,
     clearAllPrints,
     initializeLegPrints,
     applyLegData,
   } = useSurebetPrintImport();
   
-  // Estado para drag-and-drop por perna
-  const [draggingOverLeg, setDraggingOverLeg] = useState<number | null>(null);
+  // Estado para indicar qual perna está em foco para paste
+  const [focusedLeg, setFocusedLeg] = useState<number | null>(null);
   
-  // Handler para drag-and-drop de prints
-  const handleDragOver = useCallback((e: React.DragEvent, legIndex: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDraggingOverLeg(legIndex);
+  // Handler global de paste (Ctrl+V) para processar imagem na perna focada
+  useEffect(() => {
+    if (isEditing || !open) return;
+    
+    const handlePaste = async (e: ClipboardEvent) => {
+      // Só processa se tiver uma perna em foco
+      if (focusedLeg === null) return;
+      
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            await processLegImage(focusedLeg, file);
+            break;
+          }
+        }
+      }
+    };
+    
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [open, isEditing, focusedLeg, processLegImage]);
+  
+  // Handler para carregar arquivo via botão Print
+  const handlePrintButtonClick = useCallback((legIndex?: number) => {
+    setSelectedLegForPrint(legIndex ?? 0);
+    fileInputRef.current?.click();
   }, []);
   
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDraggingOverLeg(null);
-  }, []);
-  
-  const handleDrop = useCallback(async (e: React.DragEvent, legIndex: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDraggingOverLeg(null);
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || selectedLegForPrint === null) return;
     
-    const files = e.dataTransfer.files;
-    if (files.length === 0) return;
-    
-    const file = files[0];
     if (!file.type.startsWith('image/')) {
-      toast.error('Por favor, solte apenas imagens');
+      toast.error('Por favor, selecione uma imagem');
       return;
     }
     
-    await processLegImage(legIndex, file);
-  }, [processLegImage]);
+    await processLegImage(selectedLegForPrint, file);
+    
+    // Limpar input para permitir selecionar o mesmo arquivo novamente
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [selectedLegForPrint, processLegImage]);
   
   // Aplicar dados do OCR quando disponível
   useEffect(() => {
@@ -1205,6 +1228,15 @@ export function SurebetDialogTable({
 
   const dialogContent = (
     <div className="space-y-4">
+      {/* Input hidden para carregar arquivo */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+      
       {/* HEADER: Modelo + Esporte + Evento + Mercado */}
       <div className="flex flex-wrap items-end gap-3 pb-3 border-b border-border/50">
         {/* Modelo Toggle */}
@@ -1312,26 +1344,30 @@ export function SurebetDialogTable({
                 const entry = row.entry as OddEntry;
                 const selectedBookmaker = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
                 const isLegProcessing = legPrints[pernaIndex]?.isProcessing || false;
-                const isDragOver = draggingOverLeg === pernaIndex;
                 
                 return (
                   <tr 
                     key={rowIndex} 
-                    className={`border-b border-border/30 transition-colors relative ${
-                      isDragOver 
-                        ? "bg-primary/10 border-primary/50" 
+                    tabIndex={0}
+                    className={`border-b border-border/30 transition-colors relative outline-none ${
+                      focusedLeg === pernaIndex 
+                        ? "bg-primary/5 ring-1 ring-inset ring-primary/30" 
                         : "hover:bg-muted/30"
                     }`}
-                    onDragOver={(e) => !isEditing && handleDragOver(e, pernaIndex)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => !isEditing && handleDrop(e, pernaIndex)}
+                    onFocus={() => !isEditing && setFocusedLeg(pernaIndex)}
+                    onBlur={(e) => {
+                      // Só limpa o foco se o novo elemento focado não está dentro da mesma linha
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        setFocusedLeg(null);
+                      }
+                    }}
+                    onClick={() => !isEditing && setFocusedLeg(pernaIndex)}
                   >
-                    {/* Overlay de drop */}
-                    {isDragOver && (
-                      <td colSpan={99} className="absolute inset-0 z-10 flex items-center justify-center bg-primary/10 pointer-events-none">
-                        <div className="flex items-center gap-2 text-primary text-xs font-medium">
-                          <Camera className="h-4 w-4" />
-                          Solte para importar print da perna {row.label}
+                    {/* Indicador de foco para paste */}
+                    {focusedLeg === pernaIndex && !isEditing && (
+                      <td colSpan={99} className="absolute -top-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                        <div className="bg-primary/90 text-primary-foreground text-[9px] px-2 py-0.5 rounded whitespace-nowrap">
+                          Ctrl+V para colar print
                         </div>
                       </td>
                     )}
@@ -1718,11 +1754,16 @@ export function SurebetDialogTable({
             </div>
           )}
 
-          {/* Importar Print */}
+          {/* Carregar Print da máquina */}
           {!isEditing && (
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] gap-1 text-muted-foreground hover:text-foreground">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-6 px-2 text-[10px] gap-1 text-muted-foreground hover:text-foreground"
+              onClick={() => handlePrintButtonClick(focusedLeg ?? 0)}
+            >
               <Camera className="h-3 w-3" />
-              Print
+              Carregar Print
             </Button>
           )}
         </div>
