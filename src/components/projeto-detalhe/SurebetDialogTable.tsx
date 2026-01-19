@@ -1,15 +1,14 @@
 /**
- * SurebetDialogTable - Versão com Layout de Tabela Compacta
+ * SurebetDialogTable - Calculadora de Arbitragem N-Pernas
  * 
- * Este componente é uma versão alternativa do SurebetDialog com layout de tabela minimalista.
- * Mantém TODA a lógica, campos e funcionalidades do original, apenas com UI redesenhada.
- * 
- * CARACTERÍSTICAS:
- * - Layout de tabela horizontal compacto
- * - Múltiplas entradas por perna (coberturas)
- * - Todos os campos originais preservados
- * - BookmakerSelectOption com saldos
- * - Suporte a freebets, print import, resultados
+ * REESTRUTURAÇÃO COMPLETA:
+ * - Suporte nativo para 2, 3, 4 ou mais pernas sem limitação estrutural
+ * - Modelo parametrizado (não mais fixo em 1-2 / 1-X-2)
+ * - Layout de tabela minimalista estilo planilha
+ * - Múltiplas casas por perna (divisão de stake)
+ * - Checkbox D para distribuição de lucro N-pernas
+ * - Compatível com rascunhos
+ * - Preparado para OCR/importação de imagem
  */
 import { useState, useEffect, useMemo, useRef, useCallback, KeyboardEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +21,6 @@ import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -32,7 +30,7 @@ import {
   Trash2,
   Plus,
   Minus,
-  Camera,
+  Upload,
   Target,
   Check
 } from "lucide-react";
@@ -49,8 +47,17 @@ import { type MoedaOperacao } from "@/types/apostasUnificada";
 import { useApostaRascunho, type ApostaRascunho } from "@/hooks/useApostaRascunho";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-// Tipos reutilizados do SurebetDialog original
+// ============================================
+// TIPOS
+// ============================================
+
 interface Surebet {
   id: string;
   data_operacao: string;
@@ -145,7 +152,10 @@ interface OddEntry {
   additionalEntries?: OddFormEntry[];
 }
 
-// Funções utilitárias
+// ============================================
+// FUNÇÕES UTILITÁRIAS
+// ============================================
+
 function calcularOddMedia(mainEntry: { odd: string; stake: string }, additionalEntries?: OddFormEntry[]): number {
   const allEntries = [
     { odd: mainEntry.odd, stake: mainEntry.stake, isMain: true },
@@ -178,52 +188,13 @@ function calcularStakeTotal(mainEntry: { stake: string }, additionalEntries?: Od
   return mainStake + additionalStakes;
 }
 
-function calcularStakes12(
+// Cálculo de stakes para arbitragem N-pernas com lucro equalizado
+function calcularStakesNPernas(
   odds: { oddMedia: number; stakeAtual: number; isReference: boolean }[],
   arredondarFn: (value: number) => number
 ): { stakes: number[]; isValid: boolean; lucroIgualado: number } {
-  if (odds.length !== 2) {
-    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
-  }
-  
-  const refIndex = odds.findIndex(o => o.isReference);
-  if (refIndex === -1) {
-    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
-  }
-  
-  const refOdd = odds[refIndex].oddMedia;
-  const refStake = odds[refIndex].stakeAtual;
-  
-  if (refStake <= 0 || refOdd <= 1) {
-    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
-  }
-  
-  const otherIndex = refIndex === 0 ? 1 : 0;
-  const otherOdd = odds[otherIndex].oddMedia;
-  
-  if (otherOdd <= 1) {
-    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
-  }
-  
-  const targetReturn = refStake * refOdd;
-  const otherStake = arredondarFn(targetReturn / otherOdd);
-  
-  const calculatedStakes = odds.map((_, i) => {
-    if (i === refIndex) return refStake;
-    return otherStake;
-  });
-  
-  const stakeTotal = calculatedStakes.reduce((a, b) => a + b, 0);
-  const lucroIgualado = targetReturn - stakeTotal;
-  
-  return { stakes: calculatedStakes, isValid: true, lucroIgualado };
-}
-
-function calcularStakes1X2(
-  odds: { oddMedia: number; stakeAtual: number; isReference: boolean }[],
-  arredondarFn: (value: number) => number
-): { stakes: number[]; isValid: boolean; lucroIgualado: number } {
-  if (odds.length !== 3) {
+  const n = odds.length;
+  if (n < 2) {
     return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
   }
   
@@ -244,8 +215,10 @@ function calcularStakes1X2(
     return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
   }
   
+  // Retorno-alvo (se a perna de referência ganhar)
   const targetReturn = refStake * refOdd;
   
+  // Para igualar lucro em todas as pernas: stake[i] = targetReturn / odd[i]
   const calculatedStakes = odds.map((o, i) => {
     if (i === refIndex) return refStake;
     return arredondarFn(targetReturn / o.oddMedia);
@@ -257,30 +230,49 @@ function calcularStakes1X2(
   return { stakes: calculatedStakes, isValid: true, lucroIgualado };
 }
 
+// ============================================
+// CONSTANTES
+// ============================================
+
 const ESPORTES = [
   "Futebol", "Basquete", "Tênis", "Baseball", "Hockey", 
   "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe",
   "League of Legends", "Counter-Strike", "Dota 2", "eFootball"
 ];
 
-const SELECOES_POR_MERCADO: Record<string, string[]> = {
-  "1X2": ["Casa", "Empate", "Fora"],
-  "Moneyline": ["Casa", "Fora"],
-  "Over/Under Gols": ["Over", "Under"],
-  "Ambas Marcam": ["Sim", "Não"],
-  "Handicap Asiático": ["+ Handicap", "- Handicap"],
-  "Vencedor da Partida": ["Jogador 1", "Jogador 2"],
+const ESTRATEGIAS = [
+  { value: "SUREBET", label: "Surebet" },
+  { value: "FREEBET_CONVERSION", label: "Conversão de Freebet" },
+  { value: "MATCHED_BETTING", label: "Matched Betting" },
+  { value: "BONUS_ABUSE", label: "Bonus Abuse" },
+  { value: "LOW_RISK", label: "Low Risk" },
+  { value: "ARBITRAGEM", label: "Arbitragem" },
+];
+
+const CONTEXTOS = [
+  { value: "NORMAL", label: "Saldo Real" },
+  { value: "FREEBET", label: "Freebet" },
+  { value: "SIMULACAO", label: "Simulação" },
+  { value: "BONUS", label: "Bônus" },
+];
+
+// Labels para pernas baseado no número
+const getPernaLabel = (index: number, total: number): string => {
+  if (total === 2) return index === 0 ? "1" : "2";
+  if (total === 3) return index === 0 ? "1" : index === 1 ? "X" : "2";
+  return String(index + 1);
 };
 
-const getSelecoesPorMercado = (mercado: string, modelo: "1-X-2" | "1-2"): string[] => {
-  if (mercado && SELECOES_POR_MERCADO[mercado]) {
-    return SELECOES_POR_MERCADO[mercado];
-  }
-  if (modelo === "1-X-2") {
-    return ["Casa", "Empate", "Fora"];
-  }
-  return ["Sim", "Não"];
+// Seleções padrão por número de pernas
+const getDefaultSelecoes = (numPernas: number): string[] => {
+  if (numPernas === 2) return ["Sim", "Não"];
+  if (numPernas === 3) return ["Casa", "Empate", "Fora"];
+  return Array.from({ length: numPernas }, (_, i) => `Opção ${i + 1}`);
 };
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 
 export function SurebetDialogTable({ 
   open, 
@@ -313,45 +305,58 @@ export function SurebetDialogTable({
   const { atualizarProgressoRollover, reverterProgressoRollover, hasActiveRolloverBonus } = useBonusBalanceManager();
   const { criarRascunho, listarPorTipo } = useApostaRascunho(projetoId, workspaceId || '');
 
-  // Estados do formulário
+  // ============================================
+  // ESTADOS DO FORMULÁRIO
+  // ============================================
+  
+  // Contexto do topo
+  const [estrategia, setEstrategia] = useState<string>("SUREBET");
+  const [contexto, setContexto] = useState<string>("NORMAL");
+  const [esporte, setEsporte] = useState("Futebol");
   const [evento, setEvento] = useState("");
   const [mercado, setMercado] = useState("");
-  const [esporte, setEsporte] = useState("Futebol");
-  const [modelo, setModelo] = useState<"1-X-2" | "1-2">("1-2");
-  const [observacoes, setObservacoes] = useState("");
-  const [saving, setSaving] = useState(false);
   
-  const [registroValues, setRegistroValues] = useState<RegistroApostaValues>(() => {
-    const suggestions = getSuggestionsForTab(activeTab);
-    return {
-      forma_registro: 'ARBITRAGEM',
-      estrategia: suggestions.estrategia ?? null,
-      contexto_operacional: suggestions.contexto_operacional ?? 'NORMAL',
-    };
-  });
+  // Modelo de arbitragem parametrizado
+  const [modeloTipo, setModeloTipo] = useState<"2" | "3" | "4+">("2");
+  const [numPernasCustom, setNumPernasCustom] = useState<number>(4);
   
+  // Número efetivo de pernas
+  const numPernas = useMemo(() => {
+    if (modeloTipo === "2") return 2;
+    if (modeloTipo === "3") return 3;
+    return numPernasCustom;
+  }, [modeloTipo, numPernasCustom]);
+  
+  // Pernas e odds
+  const [odds, setOdds] = useState<OddEntry[]>(() => 
+    getDefaultSelecoes(2).map((sel, i) => ({
+      bookmaker_id: "",
+      moeda: "BRL" as SupportedCurrency,
+      odd: "",
+      stake: "",
+      selecao: sel,
+      selecaoLivre: "",
+      isReference: i === 0,
+      isManuallyEdited: false,
+      stakeOrigem: undefined,
+      additionalEntries: []
+    }))
+  );
+  
+  // Checkbox D: por padrão TODAS marcadas (neutro)
+  const [directedProfitLegs, setDirectedProfitLegs] = useState<number[]>([0, 1]);
+  
+  // Controles
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("1");
-  
-  const [odds, setOdds] = useState<OddEntry[]>([
-    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Sim", selecaoLivre: "", isReference: true, isManuallyEdited: false, stakeOrigem: undefined, additionalEntries: [] },
-    { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Não", selecaoLivre: "", isReference: false, isManuallyEdited: false, stakeOrigem: undefined, additionalEntries: [] }
-  ]);
-  
-  // Direcionar lucro: por padrão TODAS as pernas ficam marcadas (neutro).
-  // Ao DESMARCAR uma perna, ela passa a ter a stake recalculada para ficar ~break-even,
-  // direcionando o lucro para as pernas que permanecem marcadas.
-  const [directedProfitLegs, setDirectedProfitLegs] = useState<number[]>(() => [0, 1]);
-
-  // “Ativo” quando existe pelo menos uma perna desmarcada (aí sim há recálculo especial)
-  const profitDirectionActive = !isEditing && directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
+  const [saving, setSaving] = useState(false);
   
   const [linkedApostas, setLinkedApostas] = useState<any[]>([]);
   
-  // Refs para navegação por teclado (O = odds, S = stakes)
+  // Refs para navegação por teclado
   const tableContainerRef = useRef<HTMLDivElement>(null);
   
-  // Print import
+  // Import de print
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   const {
@@ -359,7 +364,6 @@ export function SurebetDialogTable({
     isProcessingAny,
     sharedContext,
     processLegImage,
-    processLegFromClipboard,
     clearLegPrint,
     clearAllPrints,
     initializeLegPrints,
@@ -369,12 +373,18 @@ export function SurebetDialogTable({
   // Estado para indicar qual perna está em foco para paste
   const [focusedLeg, setFocusedLeg] = useState<number | null>(null);
   
+  // "Ativo" quando existe pelo menos uma perna desmarcada
+  const profitDirectionActive = !isEditing && directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
+  
+  // ============================================
+  // HANDLERS GLOBAIS
+  // ============================================
+  
   // Handler global de paste (Ctrl+V) para processar imagem na perna focada
   useEffect(() => {
     if (isEditing || !open) return;
     
     const handlePaste = async (e: ClipboardEvent) => {
-      // Só processa se tiver uma perna em foco
       if (focusedLeg === null) return;
       
       const items = e.clipboardData?.items;
@@ -397,11 +407,11 @@ export function SurebetDialogTable({
     return () => document.removeEventListener("paste", handlePaste);
   }, [open, isEditing, focusedLeg, processLegImage]);
   
-  // Handler para carregar arquivo via botão Print
-  const handlePrintButtonClick = useCallback((legIndex?: number) => {
-    setSelectedLegForPrint(legIndex ?? 0);
+  // Handler para carregar arquivo via botão Importar
+  const handleImportButtonClick = useCallback((legIndex?: number) => {
+    setSelectedLegForPrint(legIndex ?? focusedLeg ?? 0);
     fileInputRef.current?.click();
-  }, []);
+  }, [focusedLeg]);
   
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -414,7 +424,6 @@ export function SurebetDialogTable({
     
     await processLegImage(selectedLegForPrint, file);
     
-    // Limpar input para permitir selecionar o mesmo arquivo novamente
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -430,11 +439,9 @@ export function SurebetDialogTable({
       const legData = applyLegData(legIndex);
       if (!legData) return;
       
-      // Atualizar a perna com os dados parseados
       setOdds(prev => {
         const newOdds = [...prev];
         if (newOdds[legIndex]) {
-          // Só atualizar campos que têm valor
           if (legData.odd) {
             newOdds[legIndex] = { 
               ...newOdds[legIndex], 
@@ -460,11 +467,10 @@ export function SurebetDialogTable({
         return newOdds;
       });
       
-      // Limpar o print depois de aplicar
       clearLegPrint(legIndex);
     });
     
-    // Aplicar contexto compartilhado (evento, esporte, mercado)
+    // Aplicar contexto compartilhado
     if (sharedContext.evento && !evento) {
       setEvento(sharedContext.evento);
     }
@@ -476,7 +482,7 @@ export function SurebetDialogTable({
     }
   }, [legPrints, applyLegData, clearLegPrint, sharedContext, evento, esporte, mercado]);
   
-  // Handler para navegação por teclado entre campos Odd (Q) e Stake (S)
+  // Handler para navegação por teclado entre campos
   const handleFieldKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
     const key = e.key.toLowerCase();
     if ((key === 'q' && fieldType === 'odd') || (key === 's' && fieldType === 'stake')) {
@@ -496,43 +502,61 @@ export function SurebetDialogTable({
     }
   }, []);
 
+  // ============================================
+  // BOOKMAKERS DISPONÍVEIS
+  // ============================================
+
   const bookmakersDisponiveis = useMemo(() => {
     return bookmakerSaldos.filter((bk) => bk.saldo_operavel >= 0.50);
   }, [bookmakerSaldos]);
 
-  // Inicialização
+  // ============================================
+  // INICIALIZAÇÃO E RESET
+  // ============================================
+
   useEffect(() => {
     if (open) {
       if (surebet && surebet.id) {
         // Modo edição: carregar surebet existente
         setEvento(surebet.evento);
         setEsporte(surebet.esporte);
-        setModelo(surebet.modelo as "1-X-2" | "1-2");
         setMercado(surebet.mercado || "");
-        setObservacoes(surebet.observacoes || "");
+        setEstrategia(surebet.estrategia || "SUREBET");
+        setContexto(surebet.contexto_operacional || "NORMAL");
         
-        setRegistroValues({
-          forma_registro: (surebet.forma_registro as RegistroApostaValues['forma_registro']) || 'ARBITRAGEM',
-          estrategia: (surebet.estrategia as RegistroApostaValues['estrategia']) || null,
-          contexto_operacional: (surebet.contexto_operacional as RegistroApostaValues['contexto_operacional']) || 'NORMAL',
-        });
+        // Determinar modelo baseado no modelo salvo
+        const modeloSalvo = surebet.modelo || "1-2";
+        if (modeloSalvo === "1-2") {
+          setModeloTipo("2");
+        } else if (modeloSalvo === "1-X-2") {
+          setModeloTipo("3");
+        } else {
+          setModeloTipo("4+");
+          const match = modeloSalvo.match(/(\d+)/);
+          if (match) setNumPernasCustom(parseInt(match[1]));
+        }
         
         fetchLinkedPernas(surebet.id, surebet.modelo);
       } else if (rascunho) {
-        // Modo rascunho: carregar dados do rascunho
+        // Modo rascunho: carregar dados do rascunho COMPLETAMENTE
         setEvento(rascunho.evento || "");
         setEsporte(rascunho.esporte || "Futebol");
         setMercado(rascunho.mercado || "");
-        setObservacoes(rascunho.observacoes || "");
         
         // Determinar modelo baseado no número de pernas
-        const numPernas = rascunho.pernas?.length || 2;
-        const modeloRascunho = numPernas === 3 ? "1-X-2" : "1-2";
-        setModelo(modeloRascunho as "1-X-2" | "1-2");
+        const numPernasRascunho = rascunho.pernas?.length || 2;
+        if (numPernasRascunho === 2) {
+          setModeloTipo("2");
+        } else if (numPernasRascunho === 3) {
+          setModeloTipo("3");
+        } else {
+          setModeloTipo("4+");
+          setNumPernasCustom(numPernasRascunho);
+        }
         
         // Carregar pernas do rascunho
         if (rascunho.pernas && rascunho.pernas.length > 0) {
-          const defaultSelecoes = getSelecoesPorMercado(rascunho.mercado || "", modeloRascunho);
+          const defaultSelecoes = getDefaultSelecoes(numPernasRascunho);
           const rascunhoOdds: OddEntry[] = rascunho.pernas.map((perna, i) => ({
             bookmaker_id: perna.bookmaker_id || "",
             moeda: (perna.moeda as SupportedCurrency) || "BRL",
@@ -546,10 +570,10 @@ export function SurebetDialogTable({
             additionalEntries: []
           }));
           setOdds(rascunhoOdds);
-          setDirectedProfitLegs(Array.from({ length: numPernas }, (_, i) => i));
+          setDirectedProfitLegs(Array.from({ length: numPernasRascunho }, (_, i) => i));
         }
         
-        initializeLegPrints(numPernas);
+        initializeLegPrints(numPernasRascunho);
         setLinkedApostas([]);
       } else {
         // Modo novo: resetar formulário
@@ -571,24 +595,24 @@ export function SurebetDialogTable({
     }
   }, [open]);
 
+  // Atualizar odds quando número de pernas muda
   useEffect(() => {
-    if (!isEditing) {
-      if (mercado && !isMercadoCompativelComModelo(mercado, modelo, esporte)) {
-        setMercado("");
-      }
+    if (isEditing) return;
+    
+    const currentNumPernas = odds.length;
+    if (numPernas !== currentNumPernas) {
+      const defaultSelecoes = getDefaultSelecoes(numPernas);
       
-      const selecoes = getSelecoesPorMercado(mercado, modelo);
-      const numSlots = modelo === "1-X-2" ? 3 : 2;
-      const currentNumSlots = odds.length;
-      
-      initializeLegPrints(numSlots);
-      
-      if (numSlots !== currentNumSlots) {
-        const newSelecoes = selecoes.slice(0, numSlots);
-        while (newSelecoes.length < numSlots) {
-          newSelecoes.push(modelo === "1-X-2" ? ["Casa", "Empate", "Fora"][newSelecoes.length] : ["Opção 1", "Opção 2"][newSelecoes.length]);
+      // Preservar dados existentes quando possível
+      const newOdds: OddEntry[] = defaultSelecoes.map((sel, i) => {
+        if (i < currentNumPernas && odds[i]) {
+          // Manter dados existentes, só atualizar seleção se necessário
+          return {
+            ...odds[i],
+            selecao: sel
+          };
         }
-        setOdds(newSelecoes.map((sel, i) => ({
+        return {
           bookmaker_id: "",
           moeda: "BRL" as SupportedCurrency,
           odd: "",
@@ -599,34 +623,41 @@ export function SurebetDialogTable({
           isManuallyEdited: false,
           stakeOrigem: undefined,
           additionalEntries: []
-        })));
-        // por padrão: todas marcadas no novo modelo
-        setDirectedProfitLegs(Array.from({ length: numSlots }, (_, i) => i));
-      }
+        };
+      });
+      
+      setOdds(newOdds);
+      setDirectedProfitLegs(Array.from({ length: numPernas }, (_, i) => i));
+      initializeLegPrints(numPernas);
     }
-  }, [modelo, esporte, isEditing]);
+  }, [numPernas, isEditing]);
 
   const resetForm = () => {
     setEvento("");
     setMercado("");
     setEsporte("Futebol");
-    setModelo("1-2");
-    setObservacoes("");
+    setEstrategia("SUREBET");
+    setContexto("NORMAL");
+    setModeloTipo("2");
+    setNumPernasCustom(4);
     setArredondarAtivado(true);
     setArredondarValor("1");
-    const defaultSelecoes = getSelecoesPorMercado("", "1-2");
+    
+    const defaultSelecoes = getDefaultSelecoes(2);
     setOdds(defaultSelecoes.map((sel, i) => ({
-      bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, selecaoLivre: "", isReference: i === 0, isManuallyEdited: false, stakeOrigem: undefined, additionalEntries: []
+      bookmaker_id: "",
+      moeda: "BRL" as SupportedCurrency,
+      odd: "",
+      stake: "",
+      selecao: sel,
+      selecaoLivre: "",
+      isReference: i === 0,
+      isManuallyEdited: false,
+      stakeOrigem: undefined,
+      additionalEntries: []
     })));
-    // por padrão: todas marcadas
     setDirectedProfitLegs([0, 1]);
     setLinkedApostas([]);
-    const suggestions = getSuggestionsForTab(activeTab);
-    setRegistroValues({
-      forma_registro: 'ARBITRAGEM',
-      estrategia: suggestions.estrategia ?? null,
-      contexto_operacional: suggestions.contexto_operacional ?? 'NORMAL',
-    });
   };
 
   const arredondarStake = (valor: number): number => {
@@ -661,8 +692,13 @@ export function SurebetDialogTable({
       }));
       setOdds(pernasOdds);
       setLinkedApostas(pernasData);
+      setDirectedProfitLegs(Array.from({ length: pernasOdds.length }, (_, i) => i));
     }
   };
+
+  // ============================================
+  // MANIPULAÇÃO DE ODDS
+  // ============================================
 
   const updateOdd = (index: number, field: keyof OddEntry, value: string | boolean) => {
     const newOdds = [...odds];
@@ -748,30 +784,12 @@ export function SurebetDialogTable({
     return bk?.nome || "";
   };
 
-  const getSaldoDisponivelParaPosicao = (bookmakerId: string, currentIndex: number): number | null => {
-    if (!bookmakerId) return null;
-    const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
-    if (!bk) return null;
-    
-    let saldoLivre = bk.saldo_operavel;
-    odds.forEach((entry, idx) => {
-      if (idx !== currentIndex && entry.bookmaker_id === bookmakerId) {
-        saldoLivre -= parseFloat(entry.stake) || 0;
-      }
-      (entry.additionalEntries || []).forEach((ae) => {
-        if (ae.bookmaker_id === bookmakerId) {
-          saldoLivre -= parseFloat(ae.stake) || 0;
-        }
-      });
-    });
-    
-    return saldoLivre;
-  };
+  // ============================================
+  // AUTO-CÁLCULO DE STAKES (N-PERNAS)
+  // ============================================
 
-  // Auto-cálculo de stakes (DESABILITADO quando há direcionamento de lucro ativo)
   useEffect(() => {
     if (isEditing) return;
-    // Se há direcionamento de lucro ativo, o cálculo é feito pelo bloco de directedStakes
     if (profitDirectionActive) return;
     
     const pernaData = odds.map(perna => ({
@@ -789,12 +807,9 @@ export function SurebetDialogTable({
     if (refStake <= 0 || refOdd <= 1) return;
     
     const validOddsCount = pernaData.filter(p => p.oddMedia > 1).length;
-    if (modelo === "1-X-2" && validOddsCount < 3) return;
-    if (modelo === "1-2" && validOddsCount < 2) return;
+    if (validOddsCount < odds.length) return;
     
-    const resultado = modelo === "1-X-2" 
-      ? calcularStakes1X2(pernaData, arredondarStake)
-      : calcularStakes12(pernaData, arredondarStake);
+    const resultado = calcularStakesNPernas(pernaData, arredondarStake);
     
     if (!resultado.isValid) return;
     
@@ -819,37 +834,25 @@ export function SurebetDialogTable({
   }, [
     odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}`).join(','),
     odds.map(o => o.isReference).join(','),
-    modelo,
     arredondarAtivado,
     arredondarValor,
     isEditing,
     profitDirectionActive
   ]);
 
+  // ============================================
+  // LÓGICA DO CHECKBOX D — DISTRIBUIÇÃO N-PERNAS
+  // ============================================
 
-  // ========================================
-  // LÓGICA DO CHECKBOX D — "Direcionar Lucro"
-  // ========================================
-  // Pernas com D = true (marcadas): RECEBEM o lucro-alvo
-  // Pernas com D = false (desmarcadas): são HEDGE, lucro ≈ 0 ou negativo
-  // 
-  // Matemática:
-  // - Para pernas D=true: stake calculada para que lucro[i] = lucro_alvo
-  // - Para pernas D=false: stake calculada para que retorno[i] = stake_total (lucro = 0)
-  
   const directedStakes = useMemo(() => {
-    // Se todas as pernas estão marcadas, não há redistribuição especial
     if (directedProfitLegs.length === odds.length) return null;
-    // Se nenhuma perna está marcada, também não faz sentido
     if (directedProfitLegs.length === 0) return null;
     
     const parsedOdds = odds.map(o => calcularOddMedia({ odd: o.odd, stake: o.stake }, o.additionalEntries));
     const validOddsCount = parsedOdds.filter(o => o > 1).length;
     
-    // Precisamos de todas as odds válidas
     if (validOddsCount !== odds.length) return null;
     
-    // Encontrar uma perna MARCADA (D=true) com stake válida como referência
     const refIndex = directedProfitLegs.find(i => {
       const stake = parseFloat(odds[i].stake);
       return !isNaN(stake) && stake > 0;
@@ -862,19 +865,9 @@ export function SurebetDialogTable({
     
     if (refStake <= 0 || refOdd <= 1) return null;
     
-    // Retorno esperado se a perna de referência ganhar
     const retornoAlvo = refStake * refOdd;
     
-    // Para cada perna, calcular a stake necessária:
-    // - Pernas D=true (marcadas): devem ter retorno = retornoAlvo (lucro positivo igual)
-    // - Pernas D=false (desmarcadas): devem ter retorno = stake_total (lucro = 0)
-    //
-    // Para pernas D=true: stake[i] = retornoAlvo / odd[i]
-    // Para pernas D=false: stake[i] tal que stake[i] * odd[i] = stake_total
-    //   => stake[i] = stake_total / odd[i]
-    //   Como stake_total depende de stake[i], resolvemos iterativamente
-    
-    // Primeiro passo: calcular stakes para pernas D=true
+    // Calcular stakes para pernas D=true
     const stakesDirected: { [key: number]: number } = {};
     for (const i of directedProfitLegs) {
       const oddI = parsedOdds[i];
@@ -883,48 +876,21 @@ export function SurebetDialogTable({
       }
     }
     
-    // Soma das stakes das pernas D=true
     const somaStakesDirected = Object.values(stakesDirected).reduce((a, b) => a + b, 0);
     
-    // Para pernas D=false: queremos lucro = 0
-    // Se essa perna ganhar: retorno = stake[i] * odd[i]
-    // lucro = retorno - stake_total = 0
-    // => stake[i] * odd[i] = stake_total
-    // stake_total = somaStakesDirected + soma(stakes D=false)
-    //
-    // Para cada perna j não direcionada:
-    // stake[j] * odd[j] = somaStakesDirected + stake[j] + soma(stakes outras não direcionadas)
-    //
-    // Simplificação: resolver sistema onde cada perna não direcionada
-    // tem retorno = stake_total
-    
-    // Índices das pernas não direcionadas
+    // Índices das pernas não direcionadas (D=false)
     const undirectedIndices = odds.map((_, i) => i).filter(i => !directedProfitLegs.includes(i));
     
     if (undirectedIndices.length === 0) return null;
     
-    // Para resolver: queremos que para perna j (não direcionada):
-    // stake[j] * odd[j] = stake_total
-    // stake_total = somaStakesDirected + sum(stake[k] para k não direcionado)
-    //
-    // Chamando S = sum(stake[k]) para k não direcionado
-    // Para cada j: stake[j] * odd[j] = somaStakesDirected + S
-    // => stake[j] = (somaStakesDirected + S) / odd[j]
-    // => S = sum((somaStakesDirected + S) / odd[k])
-    // => S = sum(somaStakesDirected / odd[k]) + S * sum(1/odd[k])
-    // => S - S * sum(1/odd[k]) = sum(somaStakesDirected / odd[k])
-    // => S * (1 - sum(1/odd[k])) = somaStakesDirected * sum(1/odd[k])
-    // => S = somaStakesDirected * sum(1/odd[k]) / (1 - sum(1/odd[k]))
-    
+    // Resolver sistema para pernas D=false (lucro = 0)
     const sumInvOdds = undirectedIndices.reduce((acc, i) => acc + 1 / parsedOdds[i], 0);
     
-    // Se sumInvOdds >= 1, a equação não tem solução positiva válida
     if (sumInvOdds >= 1) return null;
     
     const S = (somaStakesDirected * sumInvOdds) / (1 - sumInvOdds);
     const stakeTotal = somaStakesDirected + S;
     
-    // Agora calcular cada stake
     const newStakes: number[] = [];
     
     for (let i = 0; i < odds.length; i++) {
@@ -932,10 +898,8 @@ export function SurebetDialogTable({
       if (oddI <= 1) {
         newStakes.push(0);
       } else if (directedProfitLegs.includes(i)) {
-        // Perna D=true: mantém o cálculo para lucro positivo
         newStakes.push(arredondarStake(stakesDirected[i] || retornoAlvo / oddI));
       } else {
-        // Perna D=false: stake para lucro = 0
         newStakes.push(arredondarStake(stakeTotal / oddI));
       }
     }
@@ -943,14 +907,12 @@ export function SurebetDialogTable({
     return newStakes;
   }, [odds.map(o => `${o.odd}|${o.stake}`).join(','), directedProfitLegs, arredondarAtivado, arredondarValor]);
   
-  // Efeito para aplicar stakes calculadas quando há direcionamento
+  // Aplicar stakes calculadas quando há direcionamento
   useEffect(() => {
     if (isEditing) return;
     if (!directedStakes) return;
-    // Só aplica se há pelo menos uma perna desmarcada (direcionamento ativo)
     if (directedProfitLegs.length === odds.length) return;
     
-    // Encontrar a perna de referência (primeira marcada com stake)
     const refIndex = directedProfitLegs.find(i => {
       const stake = parseFloat(odds[i].stake);
       return !isNaN(stake) && stake > 0;
@@ -958,20 +920,18 @@ export function SurebetDialogTable({
     
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
-      // Não alterar a perna de referência
       if (i === refIndex) return o;
       
-      const suggestedStake = directedStakes[i];
+      const targetStake = directedStakes[i];
       const currentStake = parseFloat(o.stake) || 0;
       
-      // Só atualiza se a diferença for significativa (> R$0.50)
-      if (Math.abs(suggestedStake - currentStake) > 0.5) {
+      if (Math.abs(targetStake - currentStake) > 0.01) {
         needsUpdate = true;
         return { 
           ...o, 
-          stake: suggestedStake.toFixed(2), 
-          stakeOrigem: "referencia" as StakeOrigem, 
-          isManuallyEdited: false 
+          stake: targetStake.toFixed(2),
+          isManuallyEdited: false,
+          stakeOrigem: "referencia" as StakeOrigem
         };
       }
       return o;
@@ -980,22 +940,21 @@ export function SurebetDialogTable({
     if (needsUpdate) {
       setOdds(newOdds);
     }
-  }, [directedStakes, directedProfitLegs, isEditing]);
+  }, [directedStakes, isEditing]);
 
-  // Análise em tempo real com suporte a direcionamento de lucro
+  // ============================================
+  // ANÁLISE E MÉTRICAS
+  // ============================================
+
   const analysis = useMemo(() => {
-    const consolidatedPerPerna = odds.map((perna, i) => ({
-      oddMedia: calcularOddMedia({ odd: perna.odd, stake: perna.stake }, perna.additionalEntries),
-      stakeTotal: calcularStakeTotal({ stake: perna.stake }, perna.additionalEntries)
-    }));
-    
-    const parsedOdds = consolidatedPerPerna.map(c => c.oddMedia);
-    const actualStakes = consolidatedPerPerna.map(c => c.stakeTotal);
+    const parsedOdds = odds.map(o => getOddMediaPerna(o));
     const validOddsCount = parsedOdds.filter(o => o > 1).length;
     
-    const moedasSelecionadas: SupportedCurrency[] = [];
-    odds.forEach(perna => {
-      if (perna.bookmaker_id) moedasSelecionadas.push(perna.moeda);
+    const actualStakes = directedStakes || odds.map(o => getStakeTotalPerna(o));
+    
+    const moedasSelecionadas = odds.map(o => {
+      const bk = bookmakerSaldos.find(b => b.id === o.bookmaker_id);
+      return bk?.moeda as SupportedCurrency;
     });
     
     const moedasUnicas = [...new Set(moedasSelecionadas.filter(Boolean))];
@@ -1011,8 +970,6 @@ export function SurebetDialogTable({
       const lucro = retorno - stakeTotal;
       const roi = stakeTotal > 0 ? (lucro / stakeTotal) * 100 : 0;
       
-      // Se há direcionamento e esta perna está direcionada, ela recebe o lucro
-      // Se não está direcionada, o lucro dela deve ser ~0
       const isDirected = directedProfitLegs.includes(i);
       
       return {
@@ -1042,7 +999,7 @@ export function SurebetDialogTable({
       suggestedStakes: actualStakes,
       hasDirectedProfit: directedProfitLegs.length > 0
     };
-  }, [odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}`).join(','), directedProfitLegs]);
+  }, [odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}`).join(','), directedProfitLegs, directedStakes]);
 
   const pernasCompletasCount = useMemo(() => {
     return odds.filter(entry => {
@@ -1052,9 +1009,17 @@ export function SurebetDialogTable({
     }).length;
   }, [odds]);
 
+  // ============================================
+  // SALVAR E DELETAR
+  // ============================================
+
   const handleSave = async () => {
-    if (!registroValues.forma_registro || !registroValues.estrategia || !registroValues.contexto_operacional) {
-      toast.error("Preencha todos os campos obrigatórios");
+    if (!estrategia) {
+      toast.error("Selecione uma estratégia");
+      return;
+    }
+    if (!contexto) {
+      toast.error("Selecione um contexto");
       return;
     }
     if (!evento.trim()) {
@@ -1062,7 +1027,7 @@ export function SurebetDialogTable({
       return;
     }
     if (pernasCompletasCount < 2) {
-      toast.error("Surebet requer pelo menos 2 pernas completas");
+      toast.error("Arbitragem requer pelo menos 2 pernas completas");
       return;
     }
 
@@ -1115,6 +1080,9 @@ export function SurebetDialogTable({
       const valorBRLReferencia = pernasToSave.reduce((acc, p) => acc + (p.stake_brl_referencia || 0), 0);
       const stakeTotal = moedaOperacao !== "MULTI" ? pernasToSave.reduce((acc, p) => acc + p.stake, 0) : null;
 
+      // Modelo string para salvar
+      const modeloString = modeloTipo === "2" ? "1-2" : modeloTipo === "3" ? "1-X-2" : `${numPernasCustom}-way`;
+
       const { data: insertedData, error: insertError } = await supabase
         .from("apostas_unificada")
         .insert({
@@ -1122,11 +1090,11 @@ export function SurebetDialogTable({
           workspace_id: workspaceId,
           projeto_id: projetoId,
           forma_registro: 'ARBITRAGEM',
-          estrategia: registroValues.estrategia,
-          contexto_operacional: registroValues.contexto_operacional,
+          estrategia: estrategia,
+          contexto_operacional: contexto,
           evento,
           esporte,
-          modelo,
+          modelo: modeloString,
           mercado,
           moeda_operacao: moedaOperacao,
           stake_total: stakeTotal,
@@ -1134,7 +1102,6 @@ export function SurebetDialogTable({
           spread_calculado: null,
           roi_esperado: analysis?.minRoi || null,
           lucro_esperado: analysis?.minLucro || null,
-          observacoes,
           status: "PENDENTE",
           resultado: "PENDENTE",
           pernas: pernasToSave as any,
@@ -1150,7 +1117,7 @@ export function SurebetDialogTable({
         await supabase.from("apostas_pernas").insert(pernasInsert);
       }
 
-      toast.success("Operação registrada com sucesso!");
+      toast.success("Arbitragem registrada com sucesso!");
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
@@ -1179,11 +1146,10 @@ export function SurebetDialogTable({
     }
   };
 
-  // =====================================================
-  // RENDERIZAÇÃO - LAYOUT DE TABELA COMPACTA
-  // =====================================================
-  
-  // Flatten entries para a tabela
+  // ============================================
+  // FLATTEN ROWS PARA TABELA
+  // ============================================
+
   const tableRows = useMemo(() => {
     const rows: Array<{
       pernaIndex: number;
@@ -1198,19 +1164,15 @@ export function SurebetDialogTable({
       const additionalCount = (perna.additionalEntries?.length || 0);
       const totalEntriesForPerna = 1 + additionalCount;
       
-      // Entrada principal
       rows.push({
         pernaIndex,
         entryIndex: null,
         isMain: true,
         rowSpan: totalEntriesForPerna,
-        label: modelo === "1-X-2" 
-          ? (pernaIndex === 0 ? "1" : pernaIndex === 1 ? "X" : "2") 
-          : (pernaIndex === 0 ? "1" : "2"),
+        label: getPernaLabel(pernaIndex, odds.length),
         entry: perna
       });
       
-      // Entradas adicionais
       (perna.additionalEntries || []).forEach((ae, aeIndex) => {
         rows.push({
           pernaIndex,
@@ -1224,7 +1186,11 @@ export function SurebetDialogTable({
     });
     
     return rows;
-  }, [odds, modelo]);
+  }, [odds]);
+
+  // ============================================
+  // RENDERIZAÇÃO
+  // ============================================
 
   const dialogContent = (
     <div className="space-y-4">
@@ -1237,37 +1203,42 @@ export function SurebetDialogTable({
         className="hidden"
       />
       
-      {/* HEADER: Modelo + Esporte + Evento + Mercado */}
-      <div className="flex flex-wrap items-end gap-3 pb-3 border-b border-border/50">
-        {/* Modelo Toggle */}
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground">Modelo</Label>
-          <div className={`flex bg-muted/50 rounded p-0.5 ${isEditing ? 'opacity-60' : ''}`}>
-            <button
-              type="button"
-              onClick={() => !isEditing && setModelo("1-2")}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                modelo === "1-2" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              1–2
-            </button>
-            <button
-              type="button"
-              onClick={() => !isEditing && setModelo("1-X-2")}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                modelo === "1-X-2" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              1–X–2
-            </button>
-          </div>
+      {/* TOPO: CONTEXTO COMPLETO */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pb-3 border-b border-border/50">
+        {/* Estratégia */}
+        <div>
+          <Label className="text-xs text-muted-foreground">Estratégia</Label>
+          <Select value={estrategia} onValueChange={setEstrategia} disabled={isEditing}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ESTRATEGIAS.map(e => (
+                <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* Contexto */}
+        <div>
+          <Label className="text-xs text-muted-foreground">Contexto</Label>
+          <Select value={contexto} onValueChange={setContexto} disabled={isEditing}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CONTEXTOS.map(c => (
+                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Esporte */}
-        <div className="flex-1 min-w-[120px]">
+        <div>
           <Label className="text-xs text-muted-foreground">Esporte</Label>
-          <Select value={esporte} onValueChange={setEsporte}>
+          <Select value={esporte} onValueChange={setEsporte} disabled={isEditing}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
@@ -1280,39 +1251,95 @@ export function SurebetDialogTable({
         </div>
 
         {/* Evento */}
-        <div className="flex-[2] min-w-[200px]">
+        <div className="col-span-2 sm:col-span-1 lg:col-span-2">
           <Label className="text-xs text-muted-foreground">Evento</Label>
           <Input 
             placeholder="Ex: Brasil x Argentina" 
             value={evento}
             onChange={(e) => setEvento(e.target.value)}
             className="h-8 text-xs uppercase"
+            disabled={isEditing}
           />
         </div>
 
         {/* Mercado */}
-        <div className="flex-1 min-w-[140px]">
+        <div>
           <Label className="text-xs text-muted-foreground">Mercado</Label>
-          <Select value={mercado} onValueChange={setMercado}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {getMarketsForSportAndModel(esporte, modelo).map(m => (
-                <SelectItem key={m} value={m}>{m}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input
+            placeholder="Mercado"
+            value={mercado}
+            onChange={(e) => setMercado(e.target.value)}
+            className="h-8 text-xs"
+            disabled={isEditing}
+          />
         </div>
       </div>
+      
+      {/* MODELO DE ARBITRAGEM PARAMETRIZADO */}
+      <div className="flex flex-wrap items-center gap-4 pb-3 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground whitespace-nowrap">Modelo</Label>
+          <div className={`flex bg-muted/50 rounded p-0.5 ${isEditing ? 'opacity-60' : ''}`}>
+            <button
+              type="button"
+              onClick={() => !isEditing && setModeloTipo("2")}
+              disabled={isEditing}
+              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                modeloTipo === "2" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              2 pernas
+            </button>
+            <button
+              type="button"
+              onClick={() => !isEditing && setModeloTipo("3")}
+              disabled={isEditing}
+              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                modeloTipo === "3" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              3 pernas
+            </button>
+            <button
+              type="button"
+              onClick={() => !isEditing && setModeloTipo("4+")}
+              disabled={isEditing}
+              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                modeloTipo === "4+" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              4+ pernas
+            </button>
+          </div>
+        </div>
+        
+        {/* Campo numérico para 4+ pernas */}
+        {modeloTipo === "4+" && !isEditing && (
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground">Quantidade:</Label>
+            <Input
+              type="number"
+              min="4"
+              max="20"
+              value={numPernasCustom}
+              onChange={(e) => setNumPernasCustom(Math.max(4, parseInt(e.target.value) || 4))}
+              className="h-8 w-16 text-xs text-center"
+            />
+          </div>
+        )}
+        
+        <Badge variant="secondary" className="text-[10px]">
+          {numPernas} pernas
+        </Badge>
+      </div>
 
-      {/* TABELA PRINCIPAL */}
+      {/* TABELA PRINCIPAL N-PERNAS */}
       <div className="overflow-x-auto" ref={tableContainerRef}>
         <table className="w-full text-xs border-collapse">
           <thead>
             <tr className="border-b border-border/50">
               <th className="py-2 px-2 text-left font-medium text-muted-foreground w-12">Perna</th>
-              <th className="py-2 px-2 text-left font-medium text-muted-foreground min-w-[160px]">Casa</th>
+              <th className="py-2 px-2 text-left font-medium text-muted-foreground min-w-[160px]">Casa(s)</th>
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-24">Stake</th>
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Linha</th>
@@ -1320,7 +1347,7 @@ export function SurebetDialogTable({
                 <Target className="h-3.5 w-3.5 mx-auto" />
               </th>
               {!isEditing && (
-                <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Direcionar lucro">
+                <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Distribuição de lucro">
                   D
                 </th>
               )}
@@ -1333,9 +1360,7 @@ export function SurebetDialogTable({
             {tableRows.map((row, rowIndex) => {
               const isMainEntry = row.isMain;
               const pernaIndex = row.pernaIndex;
-              const pernaData = odds[pernaIndex];
               
-              // Calcular lucro e ROI para esta perna
               const scenario = analysis.scenarios[pernaIndex];
               const lucro = scenario?.lucro || 0;
               const roi = scenario?.roi || 0;
@@ -1356,7 +1381,6 @@ export function SurebetDialogTable({
                     }`}
                     onFocus={() => !isEditing && setFocusedLeg(pernaIndex)}
                     onBlur={(e) => {
-                      // Só limpa o foco se o novo elemento focado não está dentro da mesma linha
                       if (!e.currentTarget.contains(e.relatedTarget as Node)) {
                         setFocusedLeg(null);
                       }
@@ -1371,6 +1395,7 @@ export function SurebetDialogTable({
                         </div>
                       </td>
                     )}
+                    
                     {/* Loading de processamento OCR */}
                     {isLegProcessing && (
                       <td colSpan={99} className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none">
@@ -1380,6 +1405,7 @@ export function SurebetDialogTable({
                         </div>
                       </td>
                     )}
+                    
                     {/* Perna Label */}
                     {row.rowSpan > 0 && (
                       <td 
@@ -1388,12 +1414,13 @@ export function SurebetDialogTable({
                       >
                         <div className={`inline-flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm ${
                           pernaIndex === 0 ? "bg-blue-500/20 text-blue-400" :
-                          pernaIndex === 1 && modelo === "1-X-2" ? "bg-amber-500/20 text-amber-400" :
-                          "bg-emerald-500/20 text-emerald-400"
+                          pernaIndex === 1 && odds.length === 3 ? "bg-amber-500/20 text-amber-400" :
+                          pernaIndex === odds.length - 1 ? "bg-emerald-500/20 text-emerald-400" :
+                          "bg-purple-500/20 text-purple-400"
                         }`}>
                           {row.label}
                         </div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                        <div className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[60px]">
                           {entry.selecao}
                         </div>
                       </td>
@@ -1444,9 +1471,7 @@ export function SurebetDialogTable({
                     {/* Odd */}
                     <td className="py-1 px-2">
                       {isEditing ? (
-                        <div className="text-center font-medium">
-                          {parseFloat(entry.odd).toFixed(2)}
-                        </div>
+                        <div className="text-xs font-medium text-center">{entry.odd || "—"}</div>
                       ) : (
                         <Input 
                           type="number"
@@ -1465,7 +1490,7 @@ export function SurebetDialogTable({
                     {/* Stake */}
                     <td className="py-1 px-2">
                       {isEditing ? (
-                        <div className="text-center font-medium">
+                        <div className="text-xs font-medium text-center">
                           {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
                         </div>
                       ) : (
@@ -1474,9 +1499,7 @@ export function SurebetDialogTable({
                           onChange={(val) => updateOdd(pernaIndex, "stake", val)}
                           currency={entry.moeda}
                           minDigits={5}
-                          className={`h-7 text-xs text-center ${
-                            entry.stakeOrigem === "print" ? "border-emerald-500 ring-1 ring-emerald-500/30" : ""
-                          }`}
+                          className="h-7 text-xs text-center"
                           data-field-type="stake"
                           onKeyDown={(e) => handleFieldKeyDown(e as any, 'stake')}
                         />
@@ -1486,12 +1509,12 @@ export function SurebetDialogTable({
                     {/* Linha */}
                     <td className="py-1 px-2">
                       {isEditing ? (
-                        <div className="text-center text-muted-foreground truncate">
+                        <div className="text-[10px] text-muted-foreground text-center truncate">
                           {entry.selecaoLivre || "—"}
                         </div>
                       ) : (
                         <Input
-                          placeholder="Ov.2,5"
+                          placeholder="Linha"
                           value={entry.selecaoLivre}
                           onChange={(e) => updateOdd(pernaIndex, "selecaoLivre", e.target.value)}
                           className="h-7 text-[10px] px-1 border-dashed w-16"
@@ -1518,7 +1541,7 @@ export function SurebetDialogTable({
                       )}
                     </td>
                     
-                    {/* Direcionar lucro (padrão: marcado, cor neutra) */}
+                    {/* Checkbox D — Distribuição de lucro */}
                     {!isEditing && (
                       <td className="py-1 px-2 text-center">
                         <button
@@ -1535,7 +1558,7 @@ export function SurebetDialogTable({
                               ? "bg-transparent text-foreground border-muted-foreground/40"
                               : "bg-red-400/15 border-red-300/30"
                           }`}
-                          title="Direcionar lucro para esta perna"
+                          title="Distribuição de lucro"
                         >
                           {directedProfitLegs.includes(pernaIndex) && (
                             <Check className="h-3 w-3" />
@@ -1562,7 +1585,7 @@ export function SurebetDialogTable({
                       )}
                     </td>
                     
-                    {/* Ações */}
+                    {/* Ações - Adicionar casa */}
                     {!isEditing && (
                       <td className="py-1 px-1">
                         <Button
@@ -1571,7 +1594,7 @@ export function SurebetDialogTable({
                           size="sm"
                           onClick={() => addAdditionalEntry(pernaIndex)}
                           className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
-                          title="Adicionar cobertura"
+                          title="Adicionar casa"
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
@@ -1580,7 +1603,7 @@ export function SurebetDialogTable({
                   </tr>
                 );
               } else {
-                // Entrada adicional (cobertura)
+                // Entrada adicional (casa extra na mesma perna)
                 const ae = row.entry as OddFormEntry;
                 const entryIndex = row.entryIndex!;
                 const selectedBookmaker = bookmakerSaldos.find(b => b.id === ae.bookmaker_id);
@@ -1661,16 +1684,16 @@ export function SurebetDialogTable({
                       />
                     </td>
                     
-                    {/* Target - vazio para coberturas */}
+                    {/* Target - vazio */}
                     <td className="py-1 px-2"></td>
                     
-                    {/* Direcionar - vazio para coberturas */}
+                    {/* D - vazio */}
                     {!isEditing && <td className="py-1 px-2"></td>}
                     
-                    {/* Lucro - vazio para coberturas */}
+                    {/* Lucro - vazio */}
                     <td className="py-1 px-2"></td>
                     
-                    {/* ROI - vazio para coberturas */}
+                    {/* ROI - vazio */}
                     <td className="py-1 px-2"></td>
                     
                     {/* Remover */}
@@ -1695,7 +1718,7 @@ export function SurebetDialogTable({
         </table>
       </div>
 
-      {/* FOOTER: Totais + Arredondamento */}
+      {/* FOOTER: Totais + Controles simplificados */}
       <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-border/50">
         {/* Totais */}
         <div className="flex items-center gap-6">
@@ -1717,18 +1740,9 @@ export function SurebetDialogTable({
               }
             </div>
           </div>
-          <div className="text-center">
-            <div className="text-[10px] text-muted-foreground uppercase">ROI</div>
-            <div className={`text-lg font-bold ${analysis.minRoi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-              {analysis.stakeTotal > 0 
-                ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(2)}%`
-                : "—"
-              }
-            </div>
-          </div>
         </div>
 
-        {/* Controles */}
+        {/* Controles Simplificados */}
         <div className="flex items-center gap-4">
           {/* Arredondamento */}
           {!isEditing && (
@@ -1754,22 +1768,35 @@ export function SurebetDialogTable({
             </div>
           )}
 
-          {/* Carregar Print da máquina */}
+          {/* Importar */}
           {!isEditing && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-6 px-2 text-[10px] gap-1 text-muted-foreground hover:text-foreground"
-              onClick={() => handlePrintButtonClick(focusedLeg ?? 0)}
-            >
-              <Camera className="h-3 w-3" />
-              Carregar Print
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-7 px-3 text-xs gap-1.5"
+                    onClick={() => handleImportButtonClick()}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    Importar
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Cole com Ctrl+V ou selecione imagem do bilhete</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
       </div>
     </div>
   );
+
+  // ============================================
+  // MODO EMBEDDED
+  // ============================================
 
   if (embedded) {
     return (
@@ -1787,7 +1814,7 @@ export function SurebetDialogTable({
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir Surebet?</AlertDialogTitle>
+                    <AlertDialogTitle>Excluir Arbitragem?</AlertDialogTitle>
                     <AlertDialogDescription>
                       Esta ação não pode ser desfeita.
                     </AlertDialogDescription>
@@ -1817,14 +1844,18 @@ export function SurebetDialogTable({
     );
   }
 
+  // ============================================
+  // MODO DIALOG
+  // ============================================
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[1200px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Calculator className="h-4 w-4 text-amber-500" />
-            {isEditing ? "Editar Arbitragem" : "Arbitragem"}
-            <Badge variant="outline" className="text-[10px] ml-2">Layout Tabela</Badge>
+            {isEditing ? "Editar Arbitragem" : "Arbitragem N-Pernas"}
+            <Badge variant="outline" className="text-[10px] ml-2">{numPernas} pernas</Badge>
           </DialogTitle>
         </DialogHeader>
 
@@ -1842,7 +1873,7 @@ export function SurebetDialogTable({
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir Surebet?</AlertDialogTitle>
+                    <AlertDialogTitle>Excluir Arbitragem?</AlertDialogTitle>
                     <AlertDialogDescription>
                       Esta ação não pode ser desfeita.
                     </AlertDialogDescription>
