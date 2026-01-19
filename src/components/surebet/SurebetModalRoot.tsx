@@ -153,7 +153,7 @@ export function SurebetModalRoot({
   // ESTADOS DO FORMULÁRIO
   // ============================================
   
-  const [estrategia, setEstrategia] = useState<ApostaEstrategia>(APOSTA_ESTRATEGIA.SUREBET);
+  const [estrategia, setEstrategia] = useState<ApostaEstrategia | null>(null);
   const [contexto, setContexto] = useState<ContextoOperacional>(CONTEXTO_OPERACIONAL.NORMAL);
   const [esporte, setEsporte] = useState("Futebol");
   const [evento, setEvento] = useState("");
@@ -943,9 +943,9 @@ export function SurebetModalRoot({
             <div className="grid grid-cols-2 gap-3 pb-3 border-b border-border/50">
               <div>
                 <Label className="text-xs text-muted-foreground">Estratégia</Label>
-                <Select value={estrategia} onValueChange={(v) => setEstrategia(v as ApostaEstrategia)} disabled={isEditing}>
+                <Select value={estrategia || ""} onValueChange={(v) => setEstrategia(v as ApostaEstrategia)} disabled={isEditing}>
                   <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
                     {ESTRATEGIAS_LIST.map(e => (

@@ -176,20 +176,20 @@ export const isAbaEstrategiaFixa = (activeTab: string): boolean => {
 
 /**
  * Mapeia a aba ativa para a estratégia default
+ * Retorna null para abas que exigem seleção manual (apostas livres)
  */
-export const getEstrategiaFromTab = (activeTab: string): ApostaEstrategia => {
-  const tabToEstrategia: Record<string, ApostaEstrategia> = {
-    apostas: 'PUNTER',
+export const getEstrategiaFromTab = (activeTab: string): ApostaEstrategia | null => {
+  const tabToEstrategia: Record<string, ApostaEstrategia | null> = {
+    apostas: null, // Apostas livres: exige seleção manual
+    'apostas-livres': null, // Apostas livres: exige seleção manual
+    'visao-geral': null, // Visão geral: exige seleção manual
     freebets: 'EXTRACAO_FREEBET',
     bonus: 'EXTRACAO_BONUS',
     surebet: 'SUREBET',
     valuebet: 'VALUEBET',
     duplogreen: 'DUPLO_GREEN',
-    // Aliases para garantir compatibilidade
-    'apostas-livres': 'PUNTER',
-    'visao-geral': 'PUNTER',
   };
-  return tabToEstrategia[activeTab] || 'PUNTER';
+  return tabToEstrategia[activeTab] ?? null;
 };
 
 /**
