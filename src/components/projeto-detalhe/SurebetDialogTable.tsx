@@ -36,8 +36,8 @@ import {
   FileText,
   Target,
   Gift,
-  CheckCircle2,
-  XCircle
+  Check,
+  Circle
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
@@ -1346,12 +1346,14 @@ export function SurebetDialogTable({
                           }}
                           className={`w-5 h-5 rounded-full flex items-center justify-center transition-all border ${
                             directedProfitLegs.includes(pernaIndex)
-                              ? "bg-white text-muted-foreground border-border"
-                              : "bg-red-500/20 text-red-400/60 border-red-400/30"
+                              ? "bg-transparent text-foreground border-muted-foreground/40"
+                              : "bg-red-400/15 border-red-300/30"
                           }`}
                           title="Direcionar lucro para esta perna"
                         >
-                          <CheckCircle2 className="h-4 w-4" />
+                          {directedProfitLegs.includes(pernaIndex) && (
+                            <Check className="h-3 w-3" />
+                          )}
                         </button>
                       </td>
                     )}
