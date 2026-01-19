@@ -1854,7 +1854,7 @@ export function SurebetDialogTable({
         <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Calculator className="h-4 w-4 text-amber-500" />
-            {isEditing ? "Editar Arbitragem" : "Arbitragem N-Pernas"}
+            {isEditing ? "Editar Arbitragem" : "Arbitragem"}
             <Badge variant="outline" className="text-[10px] ml-2">{numPernas} pernas</Badge>
           </DialogTitle>
         </DialogHeader>
