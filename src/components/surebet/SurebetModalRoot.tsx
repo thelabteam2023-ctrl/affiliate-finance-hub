@@ -84,6 +84,7 @@ interface SurebetModalRootProps {
   projetoId: string;
   surebet?: Surebet | null;
   rascunho?: ApostaRascunho | null;
+  activeTab?: string;
   onSuccess: () => void;
 }
 
@@ -103,6 +104,7 @@ import {
   CONTEXTOS_LIST,
   APOSTA_ESTRATEGIA,
   CONTEXTO_OPERACIONAL,
+  getEstrategiaFromTab,
   type ApostaEstrategia,
   type ContextoOperacional,
 } from "@/lib/apostaConstants";
@@ -129,6 +131,7 @@ export function SurebetModalRoot({
   projetoId, 
   surebet = null,
   rascunho = null,
+  activeTab = 'surebet',
   onSuccess 
 }: SurebetModalRootProps) {
   const isEditing = !!surebet;
@@ -288,17 +291,17 @@ export function SurebetModalRoot({
       
       initializeLegPrints(numPernasRascunho);
     } else {
-      // Novo formulário
+      // Novo formulário - usar estratégia da aba ativa
       resetToNewForm(2);
       setModeloTipo("2");
-      setEstrategia(APOSTA_ESTRATEGIA.SUREBET);
+      setEstrategia(getEstrategiaFromTab(activeTab));
       setContexto(CONTEXTO_OPERACIONAL.NORMAL);
       setEsporte("Futebol");
       setEvento("");
       setMercado("");
       initializeLegPrints(2);
     }
-  }, [open, surebet, rascunho]);
+  }, [open, surebet, rascunho, activeTab]);
 
   // Atualizar pernas quando numPernas muda
   useEffect(() => {

@@ -89,25 +89,19 @@ export function SurebetTableRow({
 
   return (
     <tr 
-      tabIndex={0}
-      className={`border-b border-border/30 transition-colors relative outline-none ${
+      className={`border-b border-border/30 transition-colors relative ${
         isFocused 
-          ? "bg-primary/5 ring-1 ring-inset ring-primary/30" 
-          : "hover:bg-muted/30"
+          ? "bg-muted/40" 
+          : "hover:bg-muted/20"
       }`}
-      onFocus={() => !isEditing && onFocus(pernaIndex)}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-          onBlur();
-        }
-      }}
-      onClick={() => !isEditing && onFocus(pernaIndex)}
+      onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
+      onMouseLeave={() => !isEditing && onBlur()}
     >
-      {/* Indicador de foco para paste */}
+      {/* Indicador sutil para paste - apenas quando hover */}
       {isFocused && !isEditing && (
-        <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-          <div className="bg-primary/90 text-primary-foreground text-[9px] px-2 py-0.5 rounded whitespace-nowrap">
-            Ctrl+V para colar print
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          <div className="bg-muted text-muted-foreground text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap border border-border/50">
+            Ctrl+V
           </div>
         </div>
       )}
