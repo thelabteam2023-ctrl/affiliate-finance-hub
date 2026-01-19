@@ -679,7 +679,7 @@ export function SurebetModalRoot({
         await supabase.from("apostas_pernas").delete().eq("aposta_id", surebet.id);
 
         // Inserir novas pernas
-        const pernasInsert = pernasToInserts(pernasToSave, surebet.id);
+        const pernasInsert = pernasToInserts(surebet.id, pernasToSave);
         const { error: insertPernasError } = await supabase
           .from("apostas_pernas")
           .insert(pernasInsert);
@@ -714,7 +714,7 @@ export function SurebetModalRoot({
 
         if (insertError) throw insertError;
 
-        const pernasInsert = pernasToInserts(pernasToSave, newAposta.id);
+        const pernasInsert = pernasToInserts(newAposta.id, pernasToSave);
         const { error: insertPernasError } = await supabase
           .from("apostas_pernas")
           .insert(pernasInsert);
