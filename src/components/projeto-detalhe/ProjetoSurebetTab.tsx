@@ -280,38 +280,49 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       if (error) throw error;
       
       if (arbitragensData && arbitragensData.length > 0) {
-        // Buscar pernas da tabela normalizada para apostas de arbitragem
-        const apostaIdsArbitragem = arbitragensData
-          .filter((arb: any) => arb.forma_registro === 'ARBITRAGEM')
+        // Buscar pernas da tabela normalizada para TODAS as apostas multi-leg
+        // Incluir ARBITRAGEM e operações com modelo multi-leg (1-2, 1-X-2, etc.)
+        const apostaIdsMultiLeg = arbitragensData
+          .filter((arb: any) => 
+            arb.forma_registro === 'ARBITRAGEM' || 
+            arb.forma_registro === 'SUREBET' ||
+            (arb.modelo && arb.modelo !== 'SIMPLES')
+          )
           .map((arb: any) => arb.id);
         
         let pernasMap: Record<string, any[]> = {};
-        if (apostaIdsArbitragem.length > 0) {
+        if (apostaIdsMultiLeg.length > 0) {
           const { data: pernasData } = await supabase
             .from("apostas_pernas")
             .select(`
               aposta_id,
               bookmaker_id,
               selecao,
+              selecao_livre,
               odd,
               stake,
               resultado,
               lucro_prejuizo,
               gerou_freebet,
               valor_freebet_gerada,
-              bookmakers (nome)
+              bookmakers (nome, parceiro:parceiros(nome))
             `)
-            .in("aposta_id", apostaIdsArbitragem)
+            .in("aposta_id", apostaIdsMultiLeg)
             .order("ordem", { ascending: true });
           
           (pernasData || []).forEach((p: any) => {
             if (!pernasMap[p.aposta_id]) {
               pernasMap[p.aposta_id] = [];
             }
+            const bookmaker = p.bookmakers as any;
+            const parceiroNome = bookmaker?.parceiro?.nome;
             pernasMap[p.aposta_id].push({
               bookmaker_id: p.bookmaker_id,
-              bookmaker_nome: p.bookmakers?.nome || "—",
+              bookmaker_nome: parceiroNome 
+                ? `${bookmaker?.nome || "—"} - ${parceiroNome}` 
+                : (bookmaker?.nome || "—"),
               selecao: p.selecao,
+              selecao_livre: p.selecao_livre,
               odd: p.odd,
               stake: p.stake,
               resultado: p.resultado,
@@ -338,6 +349,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           const pernasSurebetCard: SurebetPerna[] = pernasOrdenadas.map((p, idx) => ({
             id: `perna-${idx}`,
             selecao: p.selecao,
+            selecao_livre: p.selecao_livre,
             odd: p.odd,
             stake: p.stake,
             resultado: p.resultado,
@@ -345,8 +357,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             bookmaker_id: p.bookmaker_id
           }));
           
-          // Verificar se é uma aposta simples (forma_registro = 'SIMPLES')
-          const isSimples = arb.forma_registro === "SIMPLES";
+          // Verificar se é uma aposta simples: forma_registro = 'SIMPLES' E não tem pernas
+          const hasValidPernas = pernasSurebetCard.length > 0;
+          const isSimples = arb.forma_registro === "SIMPLES" && !hasValidPernas;
 
           return {
             id: arb.id,
@@ -364,7 +377,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             status: arb.status,
             resultado: arb.resultado,
             observacoes: arb.observacoes,
-            pernas: isSimples ? [] : pernasSurebetCard,
+            pernas: pernasSurebetCard,
             // Campos extras para apostas simples
             forma_registro: arb.forma_registro,
             estrategia: arb.estrategia,
@@ -988,8 +1001,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         <ScrollArea className="h-[calc(100vh-400px)]">
           <div className={viewMode === "cards" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-2"}>
             {surebetsListaAtual.map((operacao) => {
-              // Diferenciar: aposta simples usa ApostaCard, surebet usa SurebetCard
-              const isSimples = operacao.forma_registro === "SIMPLES";
+              // Diferenciar: aposta com pernas usa SurebetCard, simples usa ApostaCard
+              const hasPernas = operacao.pernas && operacao.pernas.length > 0;
+              const isSimples = !hasPernas;
               
               if (isSimples) {
                 // Converter para formato ApostaCardData
