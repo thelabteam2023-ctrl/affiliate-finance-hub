@@ -684,11 +684,20 @@ export function SurebetDialogTable({
   ]);
 
 
-  // Calcular stakes quando há direcionamento de lucro
-  // Quando uma perna é marcada para receber o lucro, as outras pernas devem ter stakes
-  // calculadas para que se essa perna ganhar, o lucro total vá para ela
-  // e se as outras ganharem, o lucro seja ~0
+  // ========================================
+  // LÓGICA DO CHECKBOX D — "Direcionar Lucro"
+  // ========================================
+  // Pernas com D = true (marcadas): RECEBEM o lucro-alvo
+  // Pernas com D = false (desmarcadas): são HEDGE, lucro ≈ 0 ou negativo
+  // 
+  // Matemática:
+  // - Para pernas D=true: stake calculada para que lucro[i] = lucro_alvo
+  // - Para pernas D=false: stake calculada para que retorno[i] = stake_total (lucro = 0)
+  
   const directedStakes = useMemo(() => {
+    // Se todas as pernas estão marcadas, não há redistribuição especial
+    if (directedProfitLegs.length === odds.length) return null;
+    // Se nenhuma perna está marcada, também não faz sentido
     if (directedProfitLegs.length === 0) return null;
     
     const parsedOdds = odds.map(o => calcularOddMedia({ odd: o.odd, stake: o.stake }, o.additionalEntries));
@@ -697,71 +706,130 @@ export function SurebetDialogTable({
     // Precisamos de todas as odds válidas
     if (validOddsCount !== odds.length) return null;
     
-    // Encontrar a primeira perna direcionada com stake válida como referência
-    const directedWithStake = directedProfitLegs.find(i => {
+    // Encontrar uma perna MARCADA (D=true) com stake válida como referência
+    const refIndex = directedProfitLegs.find(i => {
       const stake = parseFloat(odds[i].stake);
       return !isNaN(stake) && stake > 0;
     });
     
-    if (directedWithStake === undefined) return null;
+    if (refIndex === undefined) return null;
     
-    const refIndex = directedWithStake;
     const refStake = parseFloat(odds[refIndex].stake) || 0;
     const refOdd = parsedOdds[refIndex];
     
     if (refStake <= 0 || refOdd <= 1) return null;
     
-    // O retorno se a perna direcionada ganhar
-    const retornoRef = refStake * refOdd;
+    // Retorno esperado se a perna de referência ganhar
+    const retornoAlvo = refStake * refOdd;
     
-    // Para pernas NÃO direcionadas: calcular stake para que se elas ganharem,
-    // o retorno seja igual ao stake total (lucro = 0)
-    // Para isso: stake_i * odd_i = stakeTotal
-    // Mas stakeTotal = refStake + sum(stake_outras)
-    // Para simplificar: stake_i = retornoRef / odd_i
-    // Isso garante que todas as pernas tenham o mesmo retorno potencial
+    // Para cada perna, calcular a stake necessária:
+    // - Pernas D=true (marcadas): devem ter retorno = retornoAlvo (lucro positivo igual)
+    // - Pernas D=false (desmarcadas): devem ter retorno = stake_total (lucro = 0)
+    //
+    // Para pernas D=true: stake[i] = retornoAlvo / odd[i]
+    // Para pernas D=false: stake[i] tal que stake[i] * odd[i] = stake_total
+    //   => stake[i] = stake_total / odd[i]
+    //   Como stake_total depende de stake[i], resolvemos iterativamente
     
+    // Primeiro passo: calcular stakes para pernas D=true
+    const stakesDirected: { [key: number]: number } = {};
+    for (const i of directedProfitLegs) {
+      const oddI = parsedOdds[i];
+      if (oddI > 1) {
+        stakesDirected[i] = retornoAlvo / oddI;
+      }
+    }
+    
+    // Soma das stakes das pernas D=true
+    const somaStakesDirected = Object.values(stakesDirected).reduce((a, b) => a + b, 0);
+    
+    // Para pernas D=false: queremos lucro = 0
+    // Se essa perna ganhar: retorno = stake[i] * odd[i]
+    // lucro = retorno - stake_total = 0
+    // => stake[i] * odd[i] = stake_total
+    // stake_total = somaStakesDirected + soma(stakes D=false)
+    //
+    // Para cada perna j não direcionada:
+    // stake[j] * odd[j] = somaStakesDirected + stake[j] + soma(stakes outras não direcionadas)
+    //
+    // Simplificação: resolver sistema onde cada perna não direcionada
+    // tem retorno = stake_total
+    
+    // Índices das pernas não direcionadas
+    const undirectedIndices = odds.map((_, i) => i).filter(i => !directedProfitLegs.includes(i));
+    
+    if (undirectedIndices.length === 0) return null;
+    
+    // Para resolver: queremos que para perna j (não direcionada):
+    // stake[j] * odd[j] = stake_total
+    // stake_total = somaStakesDirected + sum(stake[k] para k não direcionado)
+    //
+    // Chamando S = sum(stake[k]) para k não direcionado
+    // Para cada j: stake[j] * odd[j] = somaStakesDirected + S
+    // => stake[j] = (somaStakesDirected + S) / odd[j]
+    // => S = sum((somaStakesDirected + S) / odd[k])
+    // => S = sum(somaStakesDirected / odd[k]) + S * sum(1/odd[k])
+    // => S - S * sum(1/odd[k]) = sum(somaStakesDirected / odd[k])
+    // => S * (1 - sum(1/odd[k])) = somaStakesDirected * sum(1/odd[k])
+    // => S = somaStakesDirected * sum(1/odd[k]) / (1 - sum(1/odd[k]))
+    
+    const sumInvOdds = undirectedIndices.reduce((acc, i) => acc + 1 / parsedOdds[i], 0);
+    
+    // Se sumInvOdds >= 1, a equação não tem solução positiva válida
+    if (sumInvOdds >= 1) return null;
+    
+    const S = (somaStakesDirected * sumInvOdds) / (1 - sumInvOdds);
+    const stakeTotal = somaStakesDirected + S;
+    
+    // Agora calcular cada stake
     const newStakes: number[] = [];
     
     for (let i = 0; i < odds.length; i++) {
       const oddI = parsedOdds[i];
       if (oddI <= 1) {
         newStakes.push(0);
-      } else if (i === refIndex) {
-        // Perna de referência mantém stake original
-        newStakes.push(refStake);
       } else if (directedProfitLegs.includes(i)) {
-        // Outra perna direcionada: proporcional ao retorno
-        newStakes.push(arredondarStake(retornoRef / oddI));
+        // Perna D=true: mantém o cálculo para lucro positivo
+        newStakes.push(arredondarStake(stakesDirected[i] || retornoAlvo / oddI));
       } else {
-        // Perna NÃO direcionada: stake para ter mesmo retorno
-        newStakes.push(arredondarStake(retornoRef / oddI));
+        // Perna D=false: stake para lucro = 0
+        newStakes.push(arredondarStake(stakeTotal / oddI));
       }
     }
     
     return newStakes;
   }, [odds.map(o => `${o.odd}|${o.stake}`).join(','), directedProfitLegs, arredondarAtivado, arredondarValor]);
   
-  // Efeito para aplicar stakes direcionadas automaticamente
+  // Efeito para aplicar stakes calculadas quando há direcionamento
   useEffect(() => {
     if (isEditing) return;
-    if (!directedStakes || directedProfitLegs.length === 0) return;
+    if (!directedStakes) return;
+    // Só aplica se há pelo menos uma perna desmarcada (direcionamento ativo)
+    if (directedProfitLegs.length === odds.length) return;
     
-    // Encontrar a primeira perna direcionada (é a referência)
-    const refIndex = directedProfitLegs[0];
+    // Encontrar a perna de referência (primeira marcada com stake)
+    const refIndex = directedProfitLegs.find(i => {
+      const stake = parseFloat(odds[i].stake);
+      return !isNaN(stake) && stake > 0;
+    });
     
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
-      // Não alterar a perna de referência direcionada
-      if (directedProfitLegs.includes(i) && parseFloat(o.stake) > 0) return o;
+      // Não alterar a perna de referência
+      if (i === refIndex) return o;
       
       const suggestedStake = directedStakes[i];
       const currentStake = parseFloat(o.stake) || 0;
       
-      // Só atualiza se a diferença for significativa
+      // Só atualiza se a diferença for significativa (> R$0.50)
       if (Math.abs(suggestedStake - currentStake) > 0.5) {
         needsUpdate = true;
-        return { ...o, stake: suggestedStake.toFixed(2), stakeOrigem: "referencia" as StakeOrigem, isManuallyEdited: false };
+        return { 
+          ...o, 
+          stake: suggestedStake.toFixed(2), 
+          stakeOrigem: "referencia" as StakeOrigem, 
+          isManuallyEdited: false 
+        };
       }
       return o;
     });
