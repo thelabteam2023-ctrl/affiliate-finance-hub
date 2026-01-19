@@ -687,7 +687,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
               onEdit={(surebet) => {
                 // Abrir em janela externa
                 const url = `/janela/surebet/${surebet.id}?projetoId=${encodeURIComponent(projetoId)}&tab=bonus`;
-                window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+                window.open(url, '_blank', 'width=680,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
               }}
             />
           );
