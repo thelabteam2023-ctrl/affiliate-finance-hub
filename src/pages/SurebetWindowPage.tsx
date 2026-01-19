@@ -258,7 +258,7 @@ export default function SurebetWindowPage() {
       
       {/* Conteúdo - SurebetDialog como modal sempre aberto */}
       <div className="p-2 sm:p-4">
-        <SurebetDialog
+        <SurebetDialogTable
           key={formKey}
           open={true}
           onOpenChange={(open) => {
@@ -268,7 +268,6 @@ export default function SurebetWindowPage() {
           surebet={surebet}
           onSuccess={handleSuccess}
           activeTab={activeTab}
-          rascunho={rascunhoCarregado}
         />
       </div>
     </div>
