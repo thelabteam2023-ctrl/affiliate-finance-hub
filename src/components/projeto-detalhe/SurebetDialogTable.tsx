@@ -344,6 +344,9 @@ export function SurebetDialogTable({
     { bookmaker_id: "", moeda: "BRL", odd: "", stake: "", selecao: "Não", selecaoLivre: "", isReference: false, isManuallyEdited: false, stakeOrigem: undefined, additionalEntries: [] }
   ]);
   
+  // Estado para direcionar lucro a pernas específicas (como na coluna "D" da imagem de referência)
+  const [directedProfitLegs, setDirectedProfitLegs] = useState<number[]>([]);
+  
   const [linkedApostas, setLinkedApostas] = useState<any[]>([]);
   
   // Print import
@@ -963,12 +966,17 @@ export function SurebetDialogTable({
               <th className="py-2 px-2 text-left font-medium text-muted-foreground min-w-[160px]">Casa</th>
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-24">Stake</th>
-              <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10">
+              <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Linha</th>
+              <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Referência">
                 <Target className="h-3.5 w-3.5 mx-auto" />
               </th>
+              {!isEditing && (
+                <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Direcionar lucro">
+                  D
+                </th>
+              )}
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Lucro</th>
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-16">ROI</th>
-              <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Linha</th>
               {!isEditing && <th className="py-2 px-2 w-8"></th>}
             </tr>
           </thead>
@@ -1088,6 +1096,22 @@ export function SurebetDialogTable({
                       )}
                     </td>
                     
+                    {/* Linha */}
+                    <td className="py-1 px-2">
+                      {isEditing ? (
+                        <div className="text-center text-muted-foreground truncate">
+                          {entry.selecaoLivre || "—"}
+                        </div>
+                      ) : (
+                        <Input
+                          placeholder="Ov.2,5"
+                          value={entry.selecaoLivre}
+                          onChange={(e) => updateOdd(pernaIndex, "selecaoLivre", e.target.value)}
+                          className="h-7 text-[10px] px-1 border-dashed w-16"
+                        />
+                      )}
+                    </td>
+                    
                     {/* Referência (Target) */}
                     <td className="py-1 px-2 text-center">
                       {!isEditing && (
@@ -1107,6 +1131,24 @@ export function SurebetDialogTable({
                       )}
                     </td>
                     
+                    {/* Direcionar lucro (checkbox) */}
+                    {!isEditing && (
+                      <td className="py-1 px-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={directedProfitLegs.includes(pernaIndex)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setDirectedProfitLegs(prev => [...prev, pernaIndex]);
+                            } else {
+                              setDirectedProfitLegs(prev => prev.filter(i => i !== pernaIndex));
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-muted-foreground/50 text-primary focus:ring-primary/50 cursor-pointer"
+                        />
+                      </td>
+                    )}
+                    
                     {/* Lucro */}
                     <td className="py-1 px-2 text-center">
                       {analysis.stakeTotal > 0 && (
@@ -1122,22 +1164,6 @@ export function SurebetDialogTable({
                         <span className={`text-[10px] font-medium ${roi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                           {roi >= 0 ? "+" : ""}{roi.toFixed(1)}%
                         </span>
-                      )}
-                    </td>
-                    
-                    {/* Linha */}
-                    <td className="py-1 px-2">
-                      {isEditing ? (
-                        <div className="text-center text-muted-foreground truncate">
-                          {entry.selecaoLivre || "—"}
-                        </div>
-                      ) : (
-                        <Input
-                          placeholder="Ov.2,5"
-                          value={entry.selecaoLivre}
-                          onChange={(e) => updateOdd(pernaIndex, "selecaoLivre", e.target.value)}
-                          className="h-7 text-[10px] px-1 border-dashed"
-                        />
                       )}
                     </td>
                     
@@ -1226,24 +1252,27 @@ export function SurebetDialogTable({
                       />
                     </td>
                     
-                    {/* Target - vazio para coberturas */}
-                    <td className="py-1 px-2"></td>
-                    
-                    {/* Lucro - vazio para coberturas */}
-                    <td className="py-1 px-2"></td>
-                    
-                    {/* ROI - vazio para coberturas */}
-                    <td className="py-1 px-2"></td>
-                    
                     {/* Linha */}
                     <td className="py-1 px-2">
                       <Input
                         placeholder="Linha"
                         value={ae.selecaoLivre}
                         onChange={(e) => updateAdditionalEntry(pernaIndex, entryIndex, "selecaoLivre", e.target.value)}
-                        className="h-7 text-[10px] px-1 border-dashed"
+                        className="h-7 text-[10px] px-1 border-dashed w-16"
                       />
                     </td>
+                    
+                    {/* Target - vazio para coberturas */}
+                    <td className="py-1 px-2"></td>
+                    
+                    {/* Direcionar - vazio para coberturas */}
+                    {!isEditing && <td className="py-1 px-2"></td>}
+                    
+                    {/* Lucro - vazio para coberturas */}
+                    <td className="py-1 px-2"></td>
+                    
+                    {/* ROI - vazio para coberturas */}
+                    <td className="py-1 px-2"></td>
                     
                     {/* Remover */}
                     {!isEditing && (
@@ -1328,9 +1357,9 @@ export function SurebetDialogTable({
 
           {/* Importar Print */}
           {!isEditing && (
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] gap-1 text-muted-foreground hover:text-foreground">
               <Camera className="h-3 w-3" />
-              Importar print
+              Print
             </Button>
           )}
         </div>
