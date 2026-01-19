@@ -3,7 +3,7 @@
 // ============================================================
 // Uma boa taxonomia não cresce em opções, cresce em clareza.
 
-import { Zap, Wifi, Landmark, Building2, Cpu, Package, MoreHorizontal, LucideIcon } from 'lucide-react';
+import { Zap, Wifi, Landmark, Building2, Cpu, Package, MoreHorizontal, Users, LucideIcon } from 'lucide-react';
 
 export interface GrupoDespesaInfo {
   value: string;
@@ -55,6 +55,13 @@ export const GRUPOS_DESPESA: Record<string, GrupoDespesaInfo> = {
     description: "Equipamentos, hardware, móveis",
     icon: Package,
     color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+  },
+  RECURSOS_HUMANOS: {
+    value: "RECURSOS_HUMANOS",
+    label: "Recursos Humanos",
+    description: "Pagamentos de colaboradores, salários, comissões",
+    icon: Users,
+    color: "bg-pink-500/10 text-pink-600 border-pink-500/20",
   },
   OUTROS: {
     value: "OUTROS",
@@ -124,6 +131,16 @@ export const CATEGORIA_TO_GRUPO: Record<string, GrupoDespesa> = {
   MOVEIS: "ATIVOS",
   COMPUTADOR: "ATIVOS",
   MONITOR: "ATIVOS",
+  
+  // RECURSOS_HUMANOS
+  SALARIO: "RECURSOS_HUMANOS",
+  COLABORADOR: "RECURSOS_HUMANOS",
+  COMISSAO_COLABORADOR: "RECURSOS_HUMANOS",
+  BONUS_COLABORADOR: "RECURSOS_HUMANOS",
+  ADIANTAMENTO: "RECURSOS_HUMANOS",
+  REEMBOLSO: "RECURSOS_HUMANOS",
+  FERIAS: "RECURSOS_HUMANOS",
+  DECIMO_TERCEIRO: "RECURSOS_HUMANOS",
 };
 
 // Função helper para obter grupo a partir de categoria
