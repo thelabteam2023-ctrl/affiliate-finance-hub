@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
+import { SurebetDialogTable } from "@/components/projeto-detalhe/SurebetDialogTable";
 import { Button } from "@/components/ui/button";
 import { X, RefreshCcw, Loader2, AlertTriangle, CheckCircle2, FileText } from "lucide-react";
 import { toast } from "sonner";
