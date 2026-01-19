@@ -1223,6 +1223,7 @@ export default function Financeiro() {
               despesasAdministrativas={totalDespesasAdmin}
               pagamentosOperadores={totalPagamentosOperadores}
               formatCurrency={formatCurrency}
+              operadoresDetalhes={operadoresDetalhes}
             />
             <RentabilidadeCaptacaoCard
               totalLucroParceiros={totalLucroParceiros}
