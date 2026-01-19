@@ -8,6 +8,8 @@ interface MoneyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElemen
   currency?: string;
   /** Mínimo de dígitos visíveis (para largura) */
   minDigits?: number;
+  /** Tipo do campo para navegação por teclado */
+  "data-field-type"?: string;
 }
 
 /**
@@ -19,7 +21,7 @@ interface MoneyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElemen
  * Regra de ouro: Máscara é apresentação, não controle.
  */
 const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
-  ({ className, value, onChange, currency = "BRL", minDigits = 5, onFocus, onBlur, ...props }, ref) => {
+  ({ className, value, onChange, currency = "BRL", minDigits = 5, onFocus, onBlur, "data-field-type": dataFieldType, ...props }, ref) => {
     const [isFocused, setIsFocused] = React.useState(false);
     const [displayValue, setDisplayValue] = React.useState(value);
     
@@ -89,6 +91,7 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
         data-lpignore="true"
         data-form-type="other"
         data-1p-ignore="true"
+        data-field-type={dataFieldType}
         aria-autocomplete="none"
         value={valueToShow}
         onChange={handleChange}
