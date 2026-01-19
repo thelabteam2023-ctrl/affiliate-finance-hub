@@ -829,9 +829,9 @@ export function SurebetModalRoot({
 
   return (
     <>
-      {/* Painel Centralizado - Dimensão fixa como calculadora */}
-      <div className="fixed inset-0 z-50 bg-background/95 flex items-start justify-center pt-4 sm:pt-8 animate-in fade-in-0 duration-200 overflow-y-auto">
-        <div className="relative w-full max-w-[680px] mx-4 mb-4 bg-background border border-border rounded-lg shadow-xl flex flex-col">
+      {/* Painel Fullscreen - Ocupa 100% da janela */}
+      <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in-0 duration-200">
+        <div className="relative w-full h-full flex flex-col overflow-hidden">
           {/* Hidden file input */}
           <input
             type="file"
