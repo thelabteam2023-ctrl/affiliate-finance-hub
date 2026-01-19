@@ -18,7 +18,7 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
-import { useApostaRascunho, type ApostaRascunho } from "@/hooks/useApostaRascunho";
+import { useApostaRascunho, type ApostaRascunho, type RascunhoPernaData } from "@/hooks/useApostaRascunho";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 import { useSurebetCalculator, type OddEntry, type OddFormEntry } from "@/hooks/useSurebetCalculator";
 import { pernasToInserts } from "@/types/apostasPernas";
@@ -30,7 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target } from "lucide-react";
+import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText } from "lucide-react";
 
 import { SurebetTableRow } from "./SurebetTableRow";
 import { SurebetTableFooter } from "./SurebetTableFooter";
@@ -136,6 +136,9 @@ export function SurebetModalRoot({
 }: SurebetModalRootProps) {
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
+  
+  // Hook de rascunhos
+  const { criarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
   
   const { getSnapshotFields } = useCurrencySnapshot();
   const { moedaConsolidacao } = useProjetoConsolidacao({ projetoId });
@@ -816,6 +819,66 @@ export function SurebetModalRoot({
     }
   };
 
+  // ============================================
+  // RASCUNHO
+  // ============================================
+
+  // Verifica se tem dados parciais para salvar como rascunho
+  const temDadosParciais = useMemo(() => {
+    const hasAnyPerna = odds.some(entry => {
+      return entry.bookmaker_id || parseFloat(entry.odd) > 0 || parseFloat(entry.stake) > 0;
+    });
+    const hasEvento = evento.trim() !== "";
+    return hasAnyPerna || hasEvento;
+  }, [odds, evento]);
+
+  // Pode salvar como rascunho: tem dados parciais, mas não tem todas as pernas completas
+  const podeSalvarRascunho = !isEditing && !rascunho && temDadosParciais && analysis.pernasCompletasCount < numPernas;
+
+  // Handler para salvar como rascunho
+  const handleSalvarRascunho = useCallback(() => {
+    if (!workspaceId) {
+      toast.error("Workspace não identificado");
+      return;
+    }
+    
+    // Converter odds para formato de rascunho
+    const pernasRascunho: RascunhoPernaData[] = odds.map(entry => ({
+      bookmaker_id: entry.bookmaker_id || undefined,
+      bookmaker_nome: bookmakerSaldos.find(b => b.id === entry.bookmaker_id)?.nome,
+      selecao: entry.selecao || undefined,
+      selecao_livre: entry.selecaoLivre || undefined,
+      odd: parseFloat(entry.odd) || undefined,
+      stake: parseFloat(entry.stake) || undefined,
+      moeda: entry.moeda,
+    }));
+    
+    const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
+    
+    const rascunhoSalvo = criarRascunho('SUREBET', {
+      evento: evento || undefined,
+      mercado: mercado || undefined,
+      esporte: esporte || undefined,
+      estrategia: estrategia || undefined,
+      contexto_operacional: contexto || undefined,
+      modelo,
+      modelo_tipo: modeloTipo,
+      quantidade_pernas: numPernas,
+      pernas: pernasRascunho,
+    });
+    
+    toast.success(
+      `Rascunho salvo!`,
+      { 
+        description: rascunhoSalvo.motivo_incompleto || 'Acesse seus rascunhos para continuar depois',
+        icon: <FileText className="h-4 w-4 text-blue-500" />
+      }
+    );
+    
+    // Fechar o formulário
+    onOpenChange(false);
+  }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, workspaceId, bookmakerSaldos, criarRascunho, onOpenChange]);
+
   const getBookmakerNome = (id: string) => bookmakerSaldos.find(b => b.id === id)?.nome || "";
 
   // ============================================
@@ -1073,6 +1136,17 @@ export function SurebetModalRoot({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
+              {podeSalvarRascunho && (
+                <Button 
+                  variant="outline"
+                  onClick={handleSalvarRascunho}
+                  disabled={saving}
+                  className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
+                >
+                  <FileText className="h-4 w-4 mr-1" />
+                  Rascunho
+                </Button>
+              )}
               {analysis.isOperacaoParcial && !isEditing && (
                 <Button 
                   variant="secondary"
