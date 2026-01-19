@@ -89,47 +89,35 @@ export function SurebetTableRow({
 
   return (
     <tr 
-      className={`border-b border-border/30 transition-colors relative ${
-        isFocused 
-          ? "bg-muted/40" 
-          : "hover:bg-muted/20"
-      }`}
+      className="border-b border-border/30 h-10 relative"
+      style={{ height: '40px' }}
       onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
       onMouseLeave={() => !isEditing && onBlur()}
     >
-      {/* Indicador sutil para paste - apenas quando hover */}
-      {isFocused && !isEditing && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-          <div className="bg-muted text-muted-foreground text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap border border-border/50">
-            Ctrl+V
-          </div>
-        </div>
-      )}
-      
-      {/* Loading OCR */}
+      {/* Loading OCR - posicionado absolutamente para não afetar layout */}
       {isProcessing && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none">
+        <td colSpan={10} className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none">
           <div className="flex items-center gap-2 text-muted-foreground text-xs">
             <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             Analisando print...
           </div>
-        </div>
+        </td>
       )}
       
       {/* Perna Label */}
       {rowSpan > 0 && (
-        <td rowSpan={rowSpan} className="py-2 px-2 text-center align-middle">
+        <td rowSpan={rowSpan} className="px-2 text-center align-middle" style={{ height: '40px' }}>
           <div className={`inline-flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm ${getPernaColor()}`}>
             {label}
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[60px]">
+          <div className="text-[10px] text-muted-foreground truncate max-w-[60px]">
             {entry.selecao}
           </div>
         </td>
       )}
       
       {/* Casa */}
-      <td className="py-1 px-2">
+      <td className="px-2" style={{ height: '40px' }}>
         {isEditing ? (
           <div className="text-xs font-medium uppercase truncate">
             {selectedBookmaker?.nome || "—"}
@@ -171,7 +159,7 @@ export function SurebetTableRow({
       </td>
       
       {/* Odd */}
-      <td className="py-1 px-2">
+      <td className="px-2" style={{ height: '40px' }}>
         {isEditing ? (
           <div className="text-xs font-medium text-center">{entry.odd || "—"}</div>
         ) : (
@@ -190,7 +178,7 @@ export function SurebetTableRow({
       </td>
       
       {/* Stake */}
-      <td className="py-1 px-2">
+      <td className="px-2" style={{ height: '40px' }}>
         {isEditing ? (
           <div className="text-xs font-medium text-center">
             {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
@@ -209,7 +197,7 @@ export function SurebetTableRow({
       </td>
       
       {/* Linha */}
-      <td className="py-1 px-2">
+      <td className="px-2" style={{ height: '40px' }}>
         {isEditing ? (
           <div className="text-[10px] text-muted-foreground text-center truncate">
             {entry.selecaoLivre || "—"}
@@ -225,15 +213,15 @@ export function SurebetTableRow({
       </td>
       
       {/* Referência (Target) */}
-      <td className="py-1 px-2 text-center">
+      <td className="px-2 text-center" style={{ height: '40px' }}>
         {!isEditing && (
           <button
             type="button"
             onClick={() => onSetReference(pernaIndex)}
-            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
               entry.isReference 
                 ? "border-primary bg-primary" 
-                : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                : "border-muted-foreground/30"
             }`}
           >
             {entry.isReference && <div className="w-2 h-2 rounded-full bg-white" />}
@@ -243,14 +231,14 @@ export function SurebetTableRow({
       
       {/* Checkbox D — Distribuição de lucro */}
       {!isEditing && (
-        <td className="py-1 px-2 text-center">
+        <td className="px-2 text-center" style={{ height: '40px' }}>
           <button
             type="button"
             onClick={() => onToggleDirected(pernaIndex)}
-            className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+            className={`w-5 h-5 rounded border flex items-center justify-center ${
               isDirected 
                 ? "border-primary bg-primary text-primary-foreground" 
-                : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                : "border-muted-foreground/30"
             }`}
             title={isDirected ? "Lucro direcionado para esta perna" : "Lucro não direcionado para esta perna"}
           >
@@ -260,7 +248,7 @@ export function SurebetTableRow({
       )}
       
       {/* Lucro */}
-      <td className="py-1 px-2 text-center">
+      <td className="px-2 text-center" style={{ height: '40px' }}>
         <span className={`text-xs font-medium ${
           lucro >= 0 ? "text-emerald-500" : "text-red-500"
         }`}>
@@ -269,7 +257,7 @@ export function SurebetTableRow({
       </td>
       
       {/* ROI */}
-      <td className="py-1 px-2 text-center">
+      <td className="px-2 text-center" style={{ height: '40px' }}>
         <span className={`text-[10px] ${
           roi >= 0 ? "text-emerald-500" : "text-red-500"
         }`}>
@@ -279,7 +267,7 @@ export function SurebetTableRow({
       
       {/* Ações */}
       {!isEditing && (
-        <td className="py-1 px-1">
+        <td className="px-1" style={{ height: '40px' }}>
           <Button
             type="button"
             variant="ghost"
