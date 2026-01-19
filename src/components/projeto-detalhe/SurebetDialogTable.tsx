@@ -11,7 +11,7 @@
  * - BookmakerSelectOption com saldos
  * - Suporte a freebets, print import, resultados
  */
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, KeyboardEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
@@ -349,6 +349,9 @@ export function SurebetDialogTable({
   
   const [linkedApostas, setLinkedApostas] = useState<any[]>([]);
   
+  // Refs para navegação por teclado (O = odds, S = stakes)
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  
   // Print import
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const {
@@ -359,6 +362,26 @@ export function SurebetDialogTable({
     initializeLegPrints,
     applyLegData,
   } = useSurebetPrintImport();
+  
+  // Handler para navegação por teclado entre campos Odd (O) e Stake (S)
+  const handleFieldKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
+    const key = e.key.toLowerCase();
+    if ((key === 'o' && fieldType === 'odd') || (key === 's' && fieldType === 'stake')) {
+      e.preventDefault();
+      const container = tableContainerRef.current;
+      if (!container) return;
+      
+      const selector = fieldType === 'odd' ? 'input[data-field-type="odd"]' : 'input[data-field-type="stake"]';
+      const allFields = Array.from(container.querySelectorAll<HTMLInputElement>(selector));
+      
+      if (allFields.length === 0) return;
+      
+      const currentIndex = allFields.indexOf(e.currentTarget);
+      const nextIndex = (currentIndex + 1) % allFields.length;
+      allFields[nextIndex]?.focus();
+      allFields[nextIndex]?.select();
+    }
+  }, []);
 
   const bookmakersDisponiveis = useMemo(() => {
     return bookmakerSaldos.filter((bk) => bk.saldo_operavel >= 0.50);
@@ -958,7 +981,7 @@ export function SurebetDialogTable({
       </div>
 
       {/* TABELA PRINCIPAL */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" ref={tableContainerRef}>
         <table className="w-full text-xs border-collapse">
           <thead>
             <tr className="border-b border-border/50">
@@ -1073,6 +1096,8 @@ export function SurebetDialogTable({
                           onChange={(e) => updateOdd(pernaIndex, "odd", e.target.value)}
                           className="h-7 text-xs text-center px-1"
                           onWheel={(e) => e.currentTarget.blur()}
+                          data-field-type="odd"
+                          onKeyDown={(e) => handleFieldKeyDown(e, 'odd')}
                         />
                       )}
                     </td>
@@ -1092,6 +1117,8 @@ export function SurebetDialogTable({
                           className={`h-7 text-xs text-center ${
                             entry.stakeOrigem === "print" ? "border-emerald-500 ring-1 ring-emerald-500/30" : ""
                           }`}
+                          data-field-type="stake"
+                          onKeyDown={(e) => handleFieldKeyDown(e as any, 'stake')}
                         />
                       )}
                     </td>
@@ -1238,6 +1265,8 @@ export function SurebetDialogTable({
                         onChange={(e) => updateAdditionalEntry(pernaIndex, entryIndex, "odd", e.target.value)}
                         className="h-7 text-xs text-center px-1"
                         onWheel={(e) => e.currentTarget.blur()}
+                        data-field-type="odd"
+                        onKeyDown={(e) => handleFieldKeyDown(e, 'odd')}
                       />
                     </td>
                     
@@ -1249,6 +1278,8 @@ export function SurebetDialogTable({
                         currency={ae.moeda}
                         minDigits={5}
                         className="h-7 text-xs text-center"
+                        data-field-type="stake"
+                        onKeyDown={(e) => handleFieldKeyDown(e as any, 'stake')}
                       />
                     </td>
                     
