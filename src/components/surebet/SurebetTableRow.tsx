@@ -17,6 +17,7 @@ import { Plus, Minus, Check } from 'lucide-react';
 import { BookmakerSelectOption, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
+import { getFirstLastName } from '@/lib/utils';
 
 interface BookmakerOption {
   id: string;
@@ -127,7 +128,7 @@ export function SurebetTableRow({
             </div>
             {selectedBookmaker?.parceiro_nome && (
               <div className="text-[9px] text-muted-foreground truncate">
-                {selectedBookmaker.parceiro_nome}
+                {getFirstLastName(selectedBookmaker.parceiro_nome)}
               </div>
             )}
           </div>
@@ -167,7 +168,7 @@ export function SurebetTableRow({
             </Select>
             {selectedBookmaker?.parceiro_nome && (
               <div className="text-[9px] text-muted-foreground truncate mt-0.5 pl-1">
-                {selectedBookmaker.parceiro_nome}
+                {getFirstLastName(selectedBookmaker.parceiro_nome)}
               </div>
             )}
           </div>
@@ -185,7 +186,7 @@ export function SurebetTableRow({
             placeholder="0.00"
             value={entry.odd}
             onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
-            className="h-8 text-sm text-center px-1"
+            className="h-8 text-sm text-center px-1 w-16"
             onWheel={(e) => e.currentTarget.blur()}
             data-field-type="odd"
             onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
