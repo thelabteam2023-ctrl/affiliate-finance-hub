@@ -10,6 +10,7 @@ import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Bui
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
+import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
 import { ParceiroBookmakersTab } from "./ParceiroBookmakersTab";
 import { useToast } from "@/hooks/use-toast";
 import { TabKey } from "@/hooks/useParceiroFinanceiroCache";
@@ -59,6 +60,7 @@ export function ParceiroDetalhesPanel({
   const { toast } = useToast();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
+  const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null });
   const { canEdit, canDelete } = useActionAccess();
 
   const handleBookmakersDataChange = useCallback(() => {
@@ -150,6 +152,7 @@ export function ParceiroDetalhesPanel({
   const bookmakersLimitados = data.bookmakers.filter(b => b.status === "limitada").length;
 
   return (
+    <>
     <TooltipProvider>
       {/* MainPanel: flex-col, altura 100%, sem scroll próprio */}
       <div className="h-full flex flex-col">
@@ -417,8 +420,9 @@ export function ParceiroDetalhesPanel({
                   ) : (
                     <>
                       {/* Header da tabela */}
-                      <div className="grid grid-cols-6 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border">
+                      <div className="grid grid-cols-7 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border">
                         <div className="col-span-2">Casa</div>
+                        <div className="text-center"></div>
                         <div className="text-right">Dep.</div>
                         <div className="text-right">Saq.</div>
                         <div className="text-right">Result.</div>
@@ -430,7 +434,7 @@ export function ParceiroDetalhesPanel({
                         {data.bookmakers.map((bm) => (
                           <div
                             key={bm.bookmaker_id}
-                            className="grid grid-cols-6 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center"
+                            className="grid grid-cols-7 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center"
                           >
                             <div className="col-span-2 flex items-center gap-2 min-w-0">
                               {bm.logo_url ? (
@@ -557,6 +561,29 @@ export function ParceiroDetalhesPanel({
                                   </Badge>
                                 </div>
                               </div>
+                            </div>
+                            {/* Botão Histórico de Projetos */}
+                            <div className="flex justify-center">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-7 p-0"
+                                    onClick={() => setHistoricoDialog({
+                                      open: true,
+                                      bookmakerId: bm.bookmaker_id,
+                                      bookmakerNome: bm.bookmaker_nome,
+                                      logoUrl: bm.logo_url
+                                    })}
+                                  >
+                                    <History className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Histórico de projetos</p>
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
                             {/* Depósito */}
                             <Tooltip>
@@ -691,5 +718,15 @@ export function ParceiroDetalhesPanel({
         </Tabs>
       </div>
     </TooltipProvider>
+
+      {/* Dialog de Histórico de Projetos */}
+      <BookmakerHistoricoDialog
+        open={historicoDialog.open}
+        onOpenChange={(open) => setHistoricoDialog(prev => ({ ...prev, open }))}
+        bookmakerId={historicoDialog.bookmakerId}
+        bookmakerNome={historicoDialog.bookmakerNome}
+        logoUrl={historicoDialog.logoUrl}
+      />
+    </>
   );
 }
