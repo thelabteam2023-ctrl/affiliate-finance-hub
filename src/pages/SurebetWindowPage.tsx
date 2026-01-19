@@ -239,6 +239,7 @@ export default function SurebetWindowPage() {
       projetoId={projetoId}
       surebet={surebet}
       rascunho={rascunhoCarregado}
+      activeTab={activeTab}
       onSuccess={handleSuccess}
     />
   );
