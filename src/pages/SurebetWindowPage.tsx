@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { SurebetDialogCompact } from "@/components/surebet";
+import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
 import { Button } from "@/components/ui/button";
 import { X, RefreshCcw, Loader2, AlertTriangle, CheckCircle2, FileText } from "lucide-react";
 import { toast } from "sonner";
@@ -258,7 +258,7 @@ export default function SurebetWindowPage() {
       
       {/* Conteúdo - SurebetDialog como modal sempre aberto */}
       <div className="p-2 sm:p-4">
-        <SurebetDialogCompact
+        <SurebetDialog
           key={formKey}
           open={true}
           onOpenChange={(open) => {
@@ -268,6 +268,7 @@ export default function SurebetWindowPage() {
           surebet={surebet}
           onSuccess={handleSuccess}
           activeTab={activeTab}
+          rascunho={rascunhoCarregado}
         />
       </div>
     </div>
