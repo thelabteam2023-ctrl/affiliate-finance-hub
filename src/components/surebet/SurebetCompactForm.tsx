@@ -1,24 +1,22 @@
 /**
- * SurebetCompactForm - Formulário de Surebet redesenhado com foco em velocidade operacional
+ * SurebetCompactForm - Formulário minimalista para Surebet/Arbitragem
  * 
- * Design Philosophy:
- * - Interface clean, compacta, horizontal
- * - Formato de tabela, não cards
- * - Desktop first, mas responsivo
- * - Pensado para apostas ao vivo
+ * Design: Tabular, compacto, focado em velocidade operacional
+ * - Múltiplas entradas por perna
+ * - Sem cards grandes
+ * - Sem observações, comissões, câmbio
  */
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Save, Trash2, FileText, ChevronDown, ChevronUp } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Save, Trash2 } from 'lucide-react';
 import { SurebetCompactHeader } from './SurebetCompactHeader';
-import { SurebetExecutionTable } from './SurebetExecutionTable';
-import { SurebetProfitDistribution } from './SurebetProfitDistribution';
+import { SurebetExecutionTable, type Leg, type LegEntry } from './SurebetExecutionTable';
 import type { SupportedCurrency } from '@/hooks/useCurrencySnapshot';
-import { cn } from '@/lib/utils';
 
-// Types
+// Gera ID único
+const generateId = () => Math.random().toString(36).substring(2, 9);
+
+// Tipo legado para compatibilidade (pode ser removido depois)
 export interface OddEntry {
   bookmaker_id: string;
   moeda: SupportedCurrency;
@@ -55,10 +53,14 @@ interface SurebetCompactFormProps {
   setMercado: (value: string) => void;
   modelo: "1-X-2" | "1-2";
   setModelo: (value: "1-X-2" | "1-2") => void;
-  observacoes: string;
-  setObservacoes: (value: string) => void;
-  odds: OddEntry[];
-  setOdds: React.Dispatch<React.SetStateAction<OddEntry[]>>;
+  observacoes?: string;
+  setObservacoes?: (value: string) => void;
+  
+  // Pode usar odds (legado) ou legs (novo)
+  odds?: OddEntry[];
+  setOdds?: React.Dispatch<React.SetStateAction<OddEntry[]>>;
+  legs?: Leg[];
+  setLegs?: React.Dispatch<React.SetStateAction<Leg[]>>;
   
   // Arredondamento
   arredondarAtivado: boolean;
@@ -77,6 +79,7 @@ interface SurebetCompactFormProps {
   onDelete?: () => void;
   onCancel: () => void;
   onLiquidarPerna?: (index: number, resultado: "GREEN" | "RED" | "VOID" | null) => void;
+  onImportPrint?: () => void;
   
   // Helpers
   formatCurrency: (valor: number, moeda?: string) => string;
@@ -85,6 +88,27 @@ interface SurebetCompactFormProps {
   // Flags
   canSave: boolean;
   canSaveRascunho?: boolean;
+}
+
+// Criar pernas iniciais baseado no modelo
+function createInitialLegs(modelo: "1-X-2" | "1-2"): Leg[] {
+  const labels = modelo === "1-X-2" ? ["1", "X", "2"] : ["1", "2"];
+  const selecoes = modelo === "1-X-2" 
+    ? ["Casa", "Empate", "Fora"] 
+    : ["Casa", "Fora"];
+  
+  return labels.map((label, idx) => ({
+    label,
+    selecao: selecoes[idx],
+    entries: [{
+      id: generateId(),
+      bookmaker_id: '',
+      moeda: 'BRL' as SupportedCurrency,
+      odd: '',
+      stake: '',
+      isTargeted: false
+    }]
+  }));
 }
 
 export function SurebetCompactForm({
@@ -96,10 +120,8 @@ export function SurebetCompactForm({
   setMercado,
   modelo,
   setModelo,
-  observacoes,
-  setObservacoes,
-  odds,
-  setOdds,
+  legs: externalLegs,
+  setLegs: externalSetLegs,
   arredondarAtivado,
   setArredondarAtivado,
   arredondarValor,
@@ -108,48 +130,54 @@ export function SurebetCompactForm({
   isEditing,
   saving,
   onSave,
-  onSaveRascunho,
   onDelete,
   onCancel,
-  onLiquidarPerna,
+  onImportPrint,
   formatCurrency,
   getBookmakerMoeda,
   canSave,
-  canSaveRascunho = false,
 }: SurebetCompactFormProps) {
   
-  // Estado para distribuição de lucro
-  const [distributionMode, setDistributionMode] = useState<'auto' | 'directed'>('auto');
-  const [targetLegIndex, setTargetLegIndex] = useState<number | null>(null);
+  // Estado interno para legs se não fornecido externamente
+  const [internalLegs, setInternalLegs] = useState<Leg[]>(() => createInitialLegs(modelo));
   
-  // Estado para seções colapsáveis
-  const [showObservacoes, setShowObservacoes] = useState(false);
-  const [showDistribution, setShowDistribution] = useState(false);
+  const legs = externalLegs || internalLegs;
+  const setLegs = externalSetLegs || setInternalLegs;
 
-  // Handler para definir perna de referência
-  const setReferenceIndex = useCallback((index: number) => {
-    setOdds(prev => prev.map((entry, i) => ({
-      ...entry,
-      isReference: i === index
-    })));
-  }, [setOdds]);
+  // Atualizar legs quando modelo muda
+  const handleModeloChange = useCallback((newModelo: "1-X-2" | "1-2") => {
+    setModelo(newModelo);
+    // Recriar legs para o novo modelo
+    setLegs(createInitialLegs(newModelo));
+  }, [setModelo, setLegs]);
 
-  // Calcular análise rápida
-  const quickAnalysis = useMemo(() => {
-    const stakeTotal = odds.reduce((acc, e) => acc + (parseFloat(e.stake) || 0), 0);
-    const pernasCompletas = odds.filter(e => 
-      e.bookmaker_id && 
-      parseFloat(e.odd) > 1 && 
-      parseFloat(e.stake) > 0
+  // Calcular se pode salvar
+  const computedCanSave = useMemo(() => {
+    const totalEntries = legs.reduce((acc, leg) => acc + leg.entries.length, 0);
+    const completeEntries = legs.reduce((acc, leg) => {
+      return acc + leg.entries.filter(e => 
+        e.bookmaker_id && 
+        parseFloat(e.odd) > 1 && 
+        parseFloat(e.stake) > 0
+      ).length;
+    }, 0);
+    
+    // Precisa de pelo menos 2 pernas completas
+    const completeLegs = legs.filter(leg => 
+      leg.entries.some(e => 
+        e.bookmaker_id && 
+        parseFloat(e.odd) > 1 && 
+        parseFloat(e.stake) > 0
+      )
     ).length;
     
-    return { stakeTotal, pernasCompletas };
-  }, [odds]);
+    return completeLegs >= 2;
+  }, [legs]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full gap-4">
       {/* Header compacto */}
-      <div className="pb-4 border-b border-border/30">
+      <div className="pb-3 border-b border-border/30">
         <SurebetCompactHeader
           esporte={esporte}
           setEsporte={setEsporte}
@@ -158,73 +186,31 @@ export function SurebetCompactForm({
           mercado={mercado}
           setMercado={setMercado}
           modelo={modelo}
-          setModelo={setModelo}
+          setModelo={handleModeloChange}
           isEditing={isEditing}
         />
       </div>
 
-      {/* Área principal - Tabela de execução */}
-      <div className="flex-1 py-4 overflow-auto">
+      {/* Tabela de execução */}
+      <div className="flex-1 overflow-auto">
         <SurebetExecutionTable
-          odds={odds}
-          setOdds={setOdds}
+          legs={legs}
+          setLegs={setLegs}
           modelo={modelo}
-          mercado={mercado}
           bookmakers={bookmakers}
           isEditing={isEditing}
           arredondarAtivado={arredondarAtivado}
           setArredondarAtivado={setArredondarAtivado}
           arredondarValor={arredondarValor}
           setArredondarValor={setArredondarValor}
-          onLiquidarPerna={onLiquidarPerna}
           formatCurrency={formatCurrency}
           getBookmakerMoeda={getBookmakerMoeda}
-          setReferenceIndex={setReferenceIndex}
+          onImportPrint={onImportPrint}
         />
-
-        {/* Distribuição de lucro (colapsável) */}
-        {!isEditing && (
-          <Collapsible open={showDistribution} onOpenChange={setShowDistribution}>
-            <CollapsibleTrigger asChild>
-              <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-4 transition-colors">
-                {showDistribution ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                Distribuição de lucro
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SurebetProfitDistribution
-                mode={distributionMode}
-                setMode={setDistributionMode}
-                targetLegIndex={targetLegIndex}
-                setTargetLegIndex={setTargetLegIndex}
-                odds={odds}
-                bookmakers={bookmakers}
-              />
-            </CollapsibleContent>
-          </Collapsible>
-        )}
-
-        {/* Observações (colapsável) */}
-        <Collapsible open={showObservacoes} onOpenChange={setShowObservacoes}>
-          <CollapsibleTrigger asChild>
-            <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-4 transition-colors">
-              {showObservacoes ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              Observações
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <Textarea
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              placeholder="Notas adicionais..."
-              className="mt-2 min-h-[60px] text-xs resize-none border-muted bg-muted/20"
-            />
-          </CollapsibleContent>
-        </Collapsible>
       </div>
 
       {/* Footer com ações */}
-      <div className="pt-4 border-t border-border/30 flex items-center justify-between gap-3">
+      <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
         <div>
           {isEditing && onDelete && (
             <Button 
@@ -249,23 +235,10 @@ export function SurebetCompactForm({
             Cancelar
           </Button>
           
-          {canSaveRascunho && onSaveRascunho && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onSaveRascunho}
-              disabled={saving}
-              className="h-8 text-xs"
-            >
-              <FileText className="h-3.5 w-3.5 mr-1" />
-              Rascunho
-            </Button>
-          )}
-          
           <Button
             size="sm"
             onClick={onSave}
-            disabled={saving || !canSave}
+            disabled={saving || !(canSave || computedCanSave)}
             className="h-8 text-xs"
           >
             <Save className="h-3.5 w-3.5 mr-1" />

@@ -1,18 +1,19 @@
 /**
- * SurebetExecutionTable - Tabela de execução compacta e otimizada para velocidade operacional
+ * SurebetExecutionTable - Tabela de execução com múltiplas entradas por perna
  * 
- * Design: Layout horizontal em formato de tabela, ideal para apostas ao vivo
- * - Colunas: Direção | Casa | Odd | Stake | Lucro | ROI
+ * Design: Layout tabular minimalista para apostas ao vivo
+ * - Cada perna (1, X, 2) pode ter múltiplas casas
+ * - Colunas: Perna | Casa | Odd | Stake | 🎯 | Lucro | ROI
+ * - Botão rádio 🎯 entre Stake e Lucro para direcionar lucro
  * - Valores positivos em verde, negativos em vermelho
- * - ROI por perna, não apenas global
  */
 import React, { useMemo, useCallback } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { ChevronDown, ChevronUp, RotateCcw, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Plus, Trash2, Target, ImagePlus } from 'lucide-react';
 import type { SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { cn } from '@/lib/utils';
 
@@ -23,41 +24,40 @@ interface BookmakerOption {
   saldo_operavel: number;
 }
 
-interface OddEntry {
+// Entrada individual (uma casa dentro de uma perna)
+export interface LegEntry {
+  id: string;
   bookmaker_id: string;
   moeda: SupportedCurrency;
   odd: string;
   stake: string;
+  isTargeted: boolean; // Se o lucro está direcionado para esta entrada
+}
+
+// Perna completa (pode ter múltiplas entradas)
+export interface Leg {
+  label: string; // "1", "X", "2"
   selecao: string;
-  selecaoLivre: string;
-  isReference: boolean;
-  isManuallyEdited: boolean;
-  stakeOrigem?: "print" | "referencia" | "manual";
-  resultado?: string | null;
-  lucro_prejuizo?: number | null;
-  gerouFreebet?: boolean;
-  valorFreebetGerada?: string;
-  freebetStatus?: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA" | null;
-  index?: number;
-  additionalEntries?: any[];
+  entries: LegEntry[];
 }
 
 interface SurebetExecutionTableProps {
-  odds: OddEntry[];
-  setOdds: React.Dispatch<React.SetStateAction<OddEntry[]>>;
+  legs: Leg[];
+  setLegs: React.Dispatch<React.SetStateAction<Leg[]>>;
   modelo: "1-X-2" | "1-2";
-  mercado: string;
   bookmakers: BookmakerOption[];
   isEditing: boolean;
   arredondarAtivado: boolean;
   setArredondarAtivado: (value: boolean) => void;
   arredondarValor: string;
   setArredondarValor: (value: string) => void;
-  onLiquidarPerna?: (index: number, resultado: "GREEN" | "RED" | "VOID" | null) => void;
   formatCurrency: (valor: number, moeda?: string) => string;
   getBookmakerMoeda: (id: string) => SupportedCurrency;
-  setReferenceIndex: (index: number) => void;
+  onImportPrint?: () => void;
 }
+
+// Gera ID único
+const generateId = () => Math.random().toString(36).substring(2, 9);
 
 // Formata valor para exibição
 function formatValue(value: number, showSign: boolean = false): string {
@@ -69,108 +69,155 @@ function formatValue(value: number, showSign: boolean = false): string {
   return formatted;
 }
 
-// Calcula lucro para uma perna
-function calcularLucroPerna(
-  stake: number, 
-  odd: number, 
-  stakeTotal: number
-): number {
-  if (stake <= 0 || odd <= 1 || stakeTotal <= 0) return 0;
-  return (stake * odd) - stakeTotal;
-}
-
-// Calcula ROI para uma perna
-function calcularRoiPerna(lucro: number, stakeTotal: number): number {
-  if (stakeTotal <= 0) return 0;
-  return (lucro / stakeTotal) * 100;
-}
-
 export function SurebetExecutionTable({
-  odds,
-  setOdds,
+  legs,
+  setLegs,
   modelo,
-  mercado,
   bookmakers,
   isEditing,
   arredondarAtivado,
   setArredondarAtivado,
   arredondarValor,
   setArredondarValor,
-  onLiquidarPerna,
   formatCurrency,
   getBookmakerMoeda,
-  setReferenceIndex,
+  onImportPrint,
 }: SurebetExecutionTableProps) {
   
-  // Calcular stake total
+  // Calcular stake total de todas as entradas
   const stakeTotal = useMemo(() => {
-    return odds.reduce((acc, entry) => {
-      const stake = parseFloat(entry.stake) || 0;
-      return acc + stake;
+    return legs.reduce((acc, leg) => {
+      return acc + leg.entries.reduce((sum, entry) => sum + (parseFloat(entry.stake) || 0), 0);
     }, 0);
-  }, [odds]);
+  }, [legs]);
 
-  // Calcular lucro e ROI por perna
-  const pernasAnalysis = useMemo(() => {
-    return odds.map((entry, index) => {
-      const stake = parseFloat(entry.stake) || 0;
-      const odd = parseFloat(entry.odd) || 0;
-      const lucro = calcularLucroPerna(stake, odd, stakeTotal);
-      const roi = calcularRoiPerna(lucro, stakeTotal);
-      return { stake, odd, lucro, roi };
-    });
-  }, [odds, stakeTotal]);
-
-  // Lucro total (mínimo dos cenários)
-  const lucroTotal = useMemo(() => {
-    if (pernasAnalysis.length === 0) return 0;
-    return Math.min(...pernasAnalysis.map(p => p.lucro));
-  }, [pernasAnalysis]);
-
-  // Handler para atualizar odd
-  const handleOddChange = useCallback((index: number, value: string) => {
-    setOdds(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], odd: value };
-      return updated;
-    });
-  }, [setOdds]);
-
-  // Handler para atualizar stake
-  const handleStakeChange = useCallback((index: number, value: string) => {
-    setOdds(prev => {
-      const updated = [...prev];
-      updated[index] = { 
-        ...updated[index], 
-        stake: value,
-        isManuallyEdited: true,
-        stakeOrigem: 'manual'
-      };
-      return updated;
-    });
-  }, [setOdds]);
-
-  // Handler para atualizar bookmaker
-  const handleBookmakerChange = useCallback((index: number, bookmarkerId: string) => {
-    const bk = bookmakers.find(b => b.id === bookmarkerId);
-    setOdds(prev => {
-      const updated = [...prev];
-      updated[index] = { 
-        ...updated[index], 
-        bookmaker_id: bookmarkerId,
-        moeda: bk?.moeda || 'BRL'
-      };
-      return updated;
-    });
-  }, [bookmakers, setOdds]);
-
-  // Direção label
-  const getDirecaoLabel = useCallback((index: number) => {
-    if (modelo === "1-X-2") {
-      return index === 0 ? "1" : index === 1 ? "X" : "2";
+  // Calcular lucro e ROI por entrada
+  const calculateEntryProfit = useCallback((entry: LegEntry, legEntries: LegEntry[]): { lucro: number; roi: number } => {
+    const stake = parseFloat(entry.stake) || 0;
+    const odd = parseFloat(entry.odd) || 0;
+    
+    if (stake <= 0 || odd <= 1 || stakeTotal <= 0) {
+      return { lucro: 0, roi: 0 };
     }
-    return index === 0 ? "1" : "2";
-  }, [modelo]);
+    
+    // Lucro = (stake * odd) - stake total de todas as pernas
+    const retorno = stake * odd;
+    const lucro = retorno - stakeTotal;
+    const roi = (lucro / stakeTotal) * 100;
+    
+    return { lucro, roi };
+  }, [stakeTotal]);
+
+  // Lucro total mínimo (cenário pessimista)
+  const lucroTotal = useMemo(() => {
+    if (stakeTotal <= 0) return 0;
+    
+    // Para cada perna, calcular o retorno total se aquela perna ganhar
+    const lucrosPorPerna = legs.map(leg => {
+      const retornoTotal = leg.entries.reduce((sum, entry) => {
+        const stake = parseFloat(entry.stake) || 0;
+        const odd = parseFloat(entry.odd) || 0;
+        return sum + (stake * odd);
+      }, 0);
+      return retornoTotal - stakeTotal;
+    });
+    
+    // Retorna o menor lucro (pior cenário)
+    return lucrosPorPerna.length > 0 ? Math.min(...lucrosPorPerna) : 0;
+  }, [legs, stakeTotal]);
+
+  // Handler para atualizar entrada
+  const updateEntry = useCallback((legIndex: number, entryIndex: number, field: keyof LegEntry, value: string | boolean) => {
+    setLegs(prev => {
+      const updated = [...prev];
+      const leg = { ...updated[legIndex] };
+      const entries = [...leg.entries];
+      entries[entryIndex] = { ...entries[entryIndex], [field]: value };
+      
+      // Se está definindo moeda pelo bookmaker
+      if (field === 'bookmaker_id' && typeof value === 'string') {
+        const bk = bookmakers.find(b => b.id === value);
+        if (bk) {
+          entries[entryIndex].moeda = bk.moeda;
+        }
+      }
+      
+      leg.entries = entries;
+      updated[legIndex] = leg;
+      return updated;
+    });
+  }, [bookmakers, setLegs]);
+
+  // Handler para direcionar lucro para uma entrada
+  const setTargetedEntry = useCallback((legIndex: number, entryIndex: number) => {
+    setLegs(prev => {
+      const updated = [...prev];
+      const leg = { ...updated[legIndex] };
+      leg.entries = leg.entries.map((entry, idx) => ({
+        ...entry,
+        isTargeted: idx === entryIndex
+      }));
+      updated[legIndex] = leg;
+      return updated;
+    });
+  }, [setLegs]);
+
+  // Handler para adicionar entrada em uma perna
+  const addEntry = useCallback((legIndex: number) => {
+    setLegs(prev => {
+      const updated = [...prev];
+      const leg = { ...updated[legIndex] };
+      leg.entries = [...leg.entries, {
+        id: generateId(),
+        bookmaker_id: '',
+        moeda: 'BRL' as SupportedCurrency,
+        odd: '',
+        stake: '',
+        isTargeted: false
+      }];
+      updated[legIndex] = leg;
+      return updated;
+    });
+  }, [setLegs]);
+
+  // Handler para remover entrada
+  const removeEntry = useCallback((legIndex: number, entryIndex: number) => {
+    setLegs(prev => {
+      const updated = [...prev];
+      const leg = { ...updated[legIndex] };
+      if (leg.entries.length <= 1) return prev; // Manter pelo menos 1 entrada
+      leg.entries = leg.entries.filter((_, idx) => idx !== entryIndex);
+      updated[legIndex] = leg;
+      return updated;
+    });
+  }, [setLegs]);
+
+  // Flatten entries para renderização com rowspan
+  const flatRows = useMemo(() => {
+    const rows: Array<{
+      legIndex: number;
+      entryIndex: number;
+      leg: Leg;
+      entry: LegEntry;
+      isFirstInLeg: boolean;
+      legRowSpan: number;
+    }> = [];
+
+    legs.forEach((leg, legIndex) => {
+      leg.entries.forEach((entry, entryIndex) => {
+        rows.push({
+          legIndex,
+          entryIndex,
+          leg,
+          entry,
+          isFirstInLeg: entryIndex === 0,
+          legRowSpan: leg.entries.length
+        });
+      });
+    });
+
+    return rows;
+  }, [legs]);
 
   return (
     <div className="w-full space-y-3">
@@ -179,67 +226,71 @@ export function SurebetExecutionTable({
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-border/50">
-              <th className="text-left py-2 px-2 text-xs font-medium text-muted-foreground w-10">Dir.</th>
-              <th className="text-left py-2 px-2 text-xs font-medium text-muted-foreground min-w-[140px]">Casa</th>
-              <th className="text-right py-2 px-2 text-xs font-medium text-muted-foreground w-20">Odd</th>
-              <th className="text-right py-2 px-2 text-xs font-medium text-muted-foreground w-24">Stake</th>
-              <th className="text-right py-2 px-2 text-xs font-medium text-muted-foreground w-24">Lucro</th>
-              <th className="text-right py-2 px-2 text-xs font-medium text-muted-foreground w-20">ROI</th>
-              {isEditing && (
-                <th className="text-center py-2 px-2 text-xs font-medium text-muted-foreground w-24">Resultado</th>
-              )}
+              <th className="text-center py-2 px-1.5 text-xs font-medium text-muted-foreground w-8">Perna</th>
+              <th className="text-left py-2 px-1.5 text-xs font-medium text-muted-foreground min-w-[120px]">Casa</th>
+              <th className="text-right py-2 px-1.5 text-xs font-medium text-muted-foreground w-16">Odd</th>
+              <th className="text-right py-2 px-1.5 text-xs font-medium text-muted-foreground w-20">Stake</th>
+              <th className="text-center py-2 px-1.5 text-xs font-medium text-muted-foreground w-8" title="Direcionar lucro">🎯</th>
+              <th className="text-right py-2 px-1.5 text-xs font-medium text-muted-foreground w-20">Lucro</th>
+              <th className="text-right py-2 px-1.5 text-xs font-medium text-muted-foreground w-16">ROI</th>
+              <th className="w-16"></th>
             </tr>
           </thead>
           <tbody>
-            {odds.map((entry, index) => {
-              const analysis = pernasAnalysis[index];
-              const isPositive = analysis.lucro >= 0;
-              const hasResult = entry.resultado && entry.resultado !== 'PENDENTE';
+            {flatRows.map((row, rowIndex) => {
+              const { legIndex, entryIndex, leg, entry, isFirstInLeg, legRowSpan } = row;
+              const { lucro, roi } = calculateEntryProfit(entry, leg.entries);
+              const isPositive = lucro >= 0;
+              const hasData = entry.bookmaker_id && parseFloat(entry.odd) > 1 && parseFloat(entry.stake) > 0;
               
               return (
                 <tr 
-                  key={index} 
+                  key={`${legIndex}-${entryIndex}`}
                   className={cn(
-                    "border-b border-border/30 hover:bg-muted/30 transition-colors",
-                    entry.isReference && "bg-primary/5"
+                    "border-b border-border/20 hover:bg-muted/20 transition-colors",
+                    isFirstInLeg && "border-t border-border/40"
                   )}
                 >
-                  {/* Direção */}
-                  <td className="py-2 px-2">
-                    <button
-                      type="button"
-                      onClick={() => setReferenceIndex(index)}
-                      className={cn(
-                        "w-8 h-8 rounded-md font-bold text-sm transition-all flex items-center justify-center",
-                        entry.isReference 
-                          ? "bg-primary text-primary-foreground" 
-                          : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                      )}
-                      title={entry.isReference ? "Perna de referência" : "Definir como referência"}
+                  {/* Perna (com rowspan) */}
+                  {isFirstInLeg && (
+                    <td 
+                      rowSpan={legRowSpan}
+                      className="py-1.5 px-1.5 text-center align-middle border-r border-border/30"
                     >
-                      {getDirecaoLabel(index)}
-                    </button>
-                  </td>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className={cn(
+                          "w-7 h-7 rounded font-bold text-sm flex items-center justify-center",
+                          "bg-primary/10 text-primary"
+                        )}>
+                          {leg.label}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0 text-muted-foreground hover:text-primary"
+                          onClick={() => addEntry(legIndex)}
+                          title="Adicionar casa"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  )}
                   
                   {/* Casa (Bookmaker) */}
-                  <td className="py-2 px-2">
+                  <td className="py-1 px-1.5">
                     <Select
                       value={entry.bookmaker_id}
-                      onValueChange={(val) => handleBookmakerChange(index, val)}
-                      disabled={isEditing && hasResult}
+                      onValueChange={(val) => updateEntry(legIndex, entryIndex, 'bookmaker_id', val)}
                     >
-                      <SelectTrigger className="h-8 text-xs border-0 bg-muted/30 hover:bg-muted/50 focus:ring-1">
-                        <SelectValue placeholder="Selecionar..." />
+                      <SelectTrigger className="h-7 text-xs border-0 bg-muted/20 hover:bg-muted/40 focus:ring-1">
+                        <SelectValue placeholder="Casa..." />
                       </SelectTrigger>
                       <SelectContent>
                         {bookmakers.map(bk => (
                           <SelectItem key={bk.id} value={bk.id} className="text-xs">
-                            <div className="flex items-center justify-between gap-2 w-full">
-                              <span className="truncate">{bk.nome}</span>
-                              <span className="text-muted-foreground text-[10px] tabular-nums">
-                                {bk.moeda} {formatValue(bk.saldo_operavel)}
-                              </span>
-                            </div>
+                            <span className="truncate">{bk.nome}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -247,119 +298,83 @@ export function SurebetExecutionTable({
                   </td>
                   
                   {/* Odd */}
-                  <td className="py-2 px-2">
+                  <td className="py-1 px-1.5">
                     <Input
                       type="text"
                       inputMode="decimal"
                       value={entry.odd}
-                      onChange={(e) => handleOddChange(index, e.target.value)}
+                      onChange={(e) => updateEntry(legIndex, entryIndex, 'odd', e.target.value)}
                       placeholder="0.00"
-                      disabled={isEditing && hasResult}
-                      className="h-8 text-right text-xs font-mono border-0 bg-muted/30 hover:bg-muted/50 focus:ring-1 tabular-nums"
+                      className="h-7 text-right text-xs font-mono border-0 bg-muted/20 hover:bg-muted/40 focus:ring-1 tabular-nums"
                     />
                   </td>
                   
                   {/* Stake */}
-                  <td className="py-2 px-2">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-muted-foreground">{entry.moeda}</span>
+                  <td className="py-1 px-1.5">
+                    <div className="flex items-center gap-0.5">
+                      <span className="text-[9px] text-muted-foreground">{entry.moeda}</span>
                       <Input
                         type="text"
                         inputMode="decimal"
                         value={entry.stake}
-                        onChange={(e) => handleStakeChange(index, e.target.value)}
-                        placeholder="0.00"
-                        disabled={isEditing && hasResult}
-                        className={cn(
-                          "h-8 text-right text-xs font-mono border-0 hover:bg-muted/50 focus:ring-1 tabular-nums flex-1",
-                          entry.isReference ? "bg-primary/10" : "bg-muted/30"
-                        )}
+                        onChange={(e) => updateEntry(legIndex, entryIndex, 'stake', e.target.value)}
+                        placeholder="0"
+                        className="h-7 text-right text-xs font-mono border-0 bg-muted/20 hover:bg-muted/40 focus:ring-1 tabular-nums flex-1"
                       />
                     </div>
                   </td>
                   
+                  {/* Target (direcionar lucro) */}
+                  <td className="py-1 px-1.5 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setTargetedEntry(legIndex, entryIndex)}
+                      className={cn(
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                        entry.isTargeted 
+                          ? "border-primary bg-primary text-primary-foreground" 
+                          : "border-muted-foreground/30 hover:border-muted-foreground/60"
+                      )}
+                      title="Direcionar lucro para esta entrada"
+                    >
+                      {entry.isTargeted && <Target className="h-3 w-3" />}
+                    </button>
+                  </td>
+                  
                   {/* Lucro */}
-                  <td className="py-2 px-2 text-right">
+                  <td className="py-1 px-1.5 text-right">
                     <span className={cn(
                       "text-xs font-medium tabular-nums",
-                      isPositive ? "text-emerald-500" : "text-red-500"
+                      hasData ? (isPositive ? "text-emerald-500" : "text-red-500") : "text-muted-foreground"
                     )}>
-                      {stakeTotal > 0 && analysis.odd > 1 
-                        ? formatValue(analysis.lucro, true)
-                        : "—"
-                      }
+                      {hasData ? formatValue(lucro, true) : "—"}
                     </span>
                   </td>
                   
                   {/* ROI */}
-                  <td className="py-2 px-2 text-right">
+                  <td className="py-1 px-1.5 text-right">
                     <span className={cn(
-                      "text-xs font-medium tabular-nums",
-                      isPositive ? "text-emerald-400" : "text-red-400"
+                      "text-xs tabular-nums",
+                      hasData ? (isPositive ? "text-emerald-400" : "text-red-400") : "text-muted-foreground"
                     )}>
-                      {stakeTotal > 0 && analysis.odd > 1 
-                        ? `${formatValue(analysis.roi, true)}%`
-                        : "—"
-                      }
+                      {hasData ? `${formatValue(roi, true)}%` : "—"}
                     </span>
                   </td>
                   
-                  {/* Resultado (apenas em edição) */}
-                  {isEditing && (
-                    <td className="py-2 px-2">
-                      {hasResult ? (
-                        <div className="flex items-center justify-center gap-1">
-                          <span className={cn(
-                            "text-xs font-medium px-2 py-0.5 rounded",
-                            entry.resultado === "GREEN" && "bg-emerald-500/20 text-emerald-400",
-                            entry.resultado === "RED" && "bg-red-500/20 text-red-400",
-                            entry.resultado === "VOID" && "bg-muted text-muted-foreground"
-                          )}>
-                            {entry.resultado}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0"
-                            onClick={() => onLiquidarPerna?.(index, null)}
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-emerald-500 hover:bg-emerald-500/20"
-                            onClick={() => onLiquidarPerna?.(index, "GREEN")}
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-red-500 hover:bg-red-500/20"
-                            onClick={() => onLiquidarPerna?.(index, "RED")}
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-muted-foreground hover:bg-muted"
-                            onClick={() => onLiquidarPerna?.(index, "VOID")}
-                          >
-                            <span className="text-[10px] font-bold">V</span>
-                          </Button>
-                        </div>
-                      )}
-                    </td>
-                  )}
+                  {/* Ações */}
+                  <td className="py-1 px-1.5">
+                    {leg.entries.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeEntry(legIndex, entryIndex)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
@@ -368,54 +383,64 @@ export function SurebetExecutionTable({
       </div>
 
       {/* Rodapé: Totais */}
-      <div className="flex items-end justify-end gap-6 pt-2 border-t border-border/30">
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground mb-0.5">LUCRO TOTAL</p>
-          <p className={cn(
-            "text-lg font-bold tabular-nums",
-            lucroTotal >= 0 ? "text-emerald-500" : "text-red-500"
-          )}>
-            {stakeTotal > 0 ? formatValue(lucroTotal, true) : "—"}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground mb-0.5">TOTAL APOSTADO</p>
-          <p className="text-lg font-semibold text-foreground tabular-nums">
-            {stakeTotal > 0 ? `${formatValue(stakeTotal)} ${odds[0]?.moeda || 'BRL'}` : "—"}
-          </p>
-        </div>
-      </div>
-
-      {/* Controles Auxiliares */}
-      {!isEditing && (
-        <div className="flex items-center gap-4 pt-3 border-t border-border/30">
+      <div className="flex items-center justify-between pt-3 border-t border-border/40">
+        {/* Lado esquerdo: Controles */}
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Switch
               id="arredondar-table"
               checked={arredondarAtivado}
               onCheckedChange={setArredondarAtivado}
-              className="scale-90"
+              className="scale-75"
             />
-            <Label htmlFor="arredondar-table" className="text-xs text-muted-foreground cursor-pointer">
-              Arredondar apostas
+            <Label htmlFor="arredondar-table" className="text-[11px] text-muted-foreground cursor-pointer">
+              Arredondar
             </Label>
-          </div>
-          
-          {arredondarAtivado && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Casas decimais:</span>
+            {arredondarAtivado && (
               <Input
                 type="number"
                 min="0"
                 max="2"
                 value={arredondarValor}
                 onChange={(e) => setArredondarValor(e.target.value)}
-                className="h-6 w-12 text-center text-xs border-muted bg-muted/30"
+                className="h-5 w-10 text-center text-[10px] border-muted bg-muted/30 px-1"
               />
-            </div>
+            )}
+          </div>
+          
+          {onImportPrint && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-6 text-[11px] gap-1 px-2"
+              onClick={onImportPrint}
+            >
+              <ImagePlus className="h-3 w-3" />
+              Importar print
+            </Button>
           )}
         </div>
-      )}
+        
+        {/* Lado direito: Totais */}
+        <div className="flex items-center gap-6">
+          <div className="text-right">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro Total</p>
+            <p className={cn(
+              "text-base font-bold tabular-nums",
+              lucroTotal >= 0 ? "text-emerald-500" : "text-red-500"
+            )}>
+              {stakeTotal > 0 ? formatValue(lucroTotal, true) : "—"}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Apostado</p>
+            <p className="text-base font-semibold tabular-nums">
+              {stakeTotal > 0 ? formatValue(stakeTotal) : "—"}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -2,18 +2,20 @@
  * SurebetDialogCompact - Versão redesenhada do SurebetDialog
  * com foco em velocidade operacional e layout de tabela
  * 
- * Este componente é uma alternativa ao SurebetDialog original,
- * usando o novo design minimalista otimizado para apostas ao vivo.
+ * Features:
+ * - Múltiplas entradas por perna
+ * - Layout tabular minimalista
+ * - Sem observações, comissões, câmbio
+ * - Botão importar print
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useBookmakerSaldosQuery } from '@/hooks/useBookmakerSaldosQuery';
 import { useCurrencySnapshot, type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
-import { SurebetCompactForm, type OddEntry } from '@/components/surebet';
+import { SurebetCompactForm } from './SurebetCompactForm';
+import { type Leg, type LegEntry } from './SurebetExecutionTable';
 import { toast } from 'sonner';
-// Seleções são definidas localmente neste componente
 import { useSurebetService } from '@/hooks/useSurebetService';
 
 interface Surebet {
@@ -46,30 +48,29 @@ interface SurebetDialogCompactProps {
   activeTab?: string;
 }
 
-// Helper para obter seleções por mercado (simplificado)
-function getSelecoes(mercado: string, modelo: "1-X-2" | "1-2"): string[] {
-  if (modelo === "1-X-2") {
-    return ["Casa", "Empate", "Fora"];
-  }
-  
-  const selecoes = SELECOES_POR_MERCADO_LOCAL[mercado];
-  if (selecoes) {
-    return selecoes.slice(0, 2);
-  }
-  
-  return ["Sim", "Não"];
-}
+// Gera ID único
+const generateId = () => Math.random().toString(36).substring(2, 9);
 
-// Mapeamento de seleções por mercado
-const SELECOES_POR_MERCADO_LOCAL: Record<string, string[]> = {
-  "1X2": ["Casa", "Empate", "Fora"],
-  "Dupla Chance": ["Casa/Empate", "Casa/Fora", "Empate/Fora"],
-  "Ambas Marcam": ["Sim", "Não"],
-  "Over/Under Gols": ["Over", "Under"],
-  "Moneyline": ["Casa", "Fora"],
-  "Vencedor da Partida": ["Jogador 1", "Jogador 2"],
-  "Handicap Asiático": ["+ Handicap", "- Handicap"],
-};
+// Criar pernas iniciais baseado no modelo
+function createInitialLegs(modelo: "1-X-2" | "1-2"): Leg[] {
+  const labels = modelo === "1-X-2" ? ["1", "X", "2"] : ["1", "2"];
+  const selecoes = modelo === "1-X-2" 
+    ? ["Casa", "Empate", "Fora"] 
+    : ["Casa", "Fora"];
+  
+  return labels.map((label, idx) => ({
+    label,
+    selecao: selecoes[idx],
+    entries: [{
+      id: generateId(),
+      bookmaker_id: '',
+      moeda: 'BRL' as SupportedCurrency,
+      odd: '',
+      stake: '',
+      isTargeted: false
+    }]
+  }));
+}
 
 export function SurebetDialogCompact({
   open,
@@ -81,7 +82,6 @@ export function SurebetDialogCompact({
 }: SurebetDialogCompactProps) {
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
-  const { formatCurrency: formatCurrencySnapshot } = useCurrencySnapshot();
   
   // Hooks de dados
   const { data: bookmakerSaldos = [], isLoading: saldosLoading } = useBookmakerSaldosQuery({
@@ -97,29 +97,14 @@ export function SurebetDialogCompact({
   const [mercado, setMercado] = useState("");
   const [esporte, setEsporte] = useState("Futebol");
   const [modelo, setModelo] = useState<"1-X-2" | "1-2">("1-2");
-  const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   
   // Arredondamento
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("1");
   
-  // Odds entries
-  const [odds, setOdds] = useState<OddEntry[]>(() => {
-    const selecoes = getSelecoes("", "1-2");
-    return selecoes.slice(0, 2).map((sel, i) => ({
-      bookmaker_id: "",
-      moeda: "BRL" as SupportedCurrency,
-      odd: "",
-      stake: "",
-      selecao: sel,
-      selecaoLivre: "",
-      isReference: i === 0,
-      isManuallyEdited: false,
-      stakeOrigem: undefined,
-      additionalEntries: []
-    }));
-  });
+  // Legs (nova estrutura)
+  const [legs, setLegs] = useState<Leg[]>(() => createInitialLegs("1-2"));
 
   // Reset formulário
   const resetForm = useCallback(() => {
@@ -127,23 +112,9 @@ export function SurebetDialogCompact({
     setMercado("");
     setEsporte("Futebol");
     setModelo("1-2");
-    setObservacoes("");
     setArredondarAtivado(true);
     setArredondarValor("1");
-    
-    const selecoes = getSelecoes("", "1-2");
-    setOdds(selecoes.slice(0, 2).map((sel, i) => ({
-      bookmaker_id: "",
-      moeda: "BRL" as SupportedCurrency,
-      odd: "",
-      stake: "",
-      selecao: sel,
-      selecaoLivre: "",
-      isReference: i === 0,
-      isManuallyEdited: false,
-      stakeOrigem: undefined,
-      additionalEntries: []
-    })));
+    setLegs(createInitialLegs("1-2"));
   }, []);
 
   // Inicializar quando abre
@@ -155,10 +126,9 @@ export function SurebetDialogCompact({
         setEsporte(surebet.esporte);
         setModelo(surebet.modelo as "1-X-2" | "1-2");
         setMercado(surebet.mercado || "");
-        setObservacoes(surebet.observacoes || "");
         
-        // Carregar pernas...
-        fetchLinkedPernas(surebet.id, surebet.modelo);
+        // TODO: Carregar pernas do banco e converter para Leg[]
+        setLegs(createInitialLegs(surebet.modelo as "1-X-2" | "1-2"));
       } else {
         resetForm();
       }
@@ -173,65 +143,17 @@ export function SurebetDialogCompact({
     }
   }, [open, resetForm]);
 
-  // Atualizar slots quando modelo muda
-  useEffect(() => {
-    if (!isEditing) {
-      const numSlots = modelo === "1-X-2" ? 3 : 2;
-      const selecoes = getSelecoes(mercado, modelo);
-      
-      if (odds.length !== numSlots) {
-        setOdds(selecoes.slice(0, numSlots).map((sel, i) => ({
-          bookmaker_id: "",
-          moeda: "BRL" as SupportedCurrency,
-          odd: "",
-          stake: "",
-          selecao: sel,
-          selecaoLivre: "",
-          isReference: i === 0,
-          isManuallyEdited: false,
-          stakeOrigem: undefined,
-          additionalEntries: []
-        })));
-      }
-    }
-  }, [modelo, mercado, isEditing]);
-
-  // Carregar pernas existentes
-  const fetchLinkedPernas = async (surebetId: string, surebetModelo: string) => {
-    const { data: pernasData } = await supabase
-      .from("apostas_pernas")
-      .select(`*, bookmakers (nome)`)
-      .eq("aposta_id", surebetId)
-      .order("ordem", { ascending: true });
-
-    if (pernasData && pernasData.length > 0) {
-      setOdds(pernasData.map((p: any, idx: number) => ({
-        bookmaker_id: p.bookmaker_id || "",
-        moeda: (p.moeda || "BRL") as SupportedCurrency,
-        odd: p.odd?.toString() || "",
-        stake: p.stake?.toString() || "",
-        selecao: p.selecao || "",
-        selecaoLivre: p.selecao_livre || "",
-        isReference: idx === 0,
-        isManuallyEdited: true,
-        resultado: p.resultado,
-        lucro_prejuizo: p.lucro_prejuizo,
-        additionalEntries: []
-      })));
-    }
-  };
-
   // Bookmakers disponíveis
   const bookmakersDisponiveis = useMemo(() => {
     return bookmakerSaldos
-      .filter((bk) => bk.saldo_operavel >= 0.50)
+      .filter((bk) => bk.saldo_operavel >= 0.50 || isEditing)
       .map(bk => ({
         id: bk.id,
         nome: bk.nome,
         moeda: bk.moeda as SupportedCurrency,
         saldo_operavel: bk.saldo_operavel,
       }));
-  }, [bookmakerSaldos]);
+  }, [bookmakerSaldos, isEditing]);
 
   // Helper para obter moeda do bookmaker
   const getBookmakerMoeda = useCallback((id: string): SupportedCurrency => {
@@ -248,20 +170,18 @@ export function SurebetDialogCompact({
     });
   }, []);
 
-  // Análise rápida
-  const analysis = useMemo(() => {
-    const stakeTotal = odds.reduce((acc, e) => acc + (parseFloat(e.stake) || 0), 0);
-    const pernasCompletas = odds.filter(e => 
-      e.bookmaker_id && 
-      parseFloat(e.odd) > 1 && 
-      parseFloat(e.stake) > 0
+  // Pode salvar
+  const canSave = useMemo(() => {
+    const completeLegs = legs.filter(leg => 
+      leg.entries.some(e => 
+        e.bookmaker_id && 
+        parseFloat(e.odd) > 1 && 
+        parseFloat(e.stake) > 0
+      )
     ).length;
     
-    return { stakeTotal, pernasCompletas };
-  }, [odds]);
-
-  // Pode salvar
-  const canSave = analysis.stakeTotal > 0 && analysis.pernasCompletas >= 2;
+    return completeLegs >= 2;
+  }, [legs]);
 
   // Handler para salvar
   const handleSave = async () => {
@@ -269,7 +189,7 @@ export function SurebetDialogCompact({
     
     setSaving(true);
     try {
-      // Implementar lógica de salvamento usando criarSurebet/atualizarSurebet
+      // TODO: Implementar lógica de salvamento convertendo Leg[] para formato do banco
       toast.success(isEditing ? "Operação atualizada!" : "Operação registrada!");
       onSuccess();
       onOpenChange(false);
@@ -294,29 +214,22 @@ export function SurebetDialogCompact({
     }
   };
 
-  // Handler para liquidar perna
-  const handleLiquidarPerna = useCallback(async (index: number, resultado: "GREEN" | "RED" | "VOID" | null) => {
-    // Atualizar estado local
-    setOdds(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], resultado };
-      return updated;
-    });
-    
-    // TODO: Implementar persistência
-    toast.success(resultado ? `Perna ${index + 1} liquidada como ${resultado}` : "Resultado removido");
+  // Handler para importar print
+  const handleImportPrint = useCallback(() => {
+    toast.info("Importação de print em desenvolvimento");
+    // TODO: Implementar importação de print
   }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col p-4">
         <DialogHeader className="pb-2 border-b border-border/30">
-          <DialogTitle className="text-base font-medium">
+          <DialogTitle className="text-sm font-medium">
             {isEditing ? "Editar Surebet" : "Nova Surebet"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-auto py-4">
+        <div className="flex-1 overflow-auto py-3">
           <SurebetCompactForm
             evento={evento}
             setEvento={setEvento}
@@ -326,10 +239,8 @@ export function SurebetDialogCompact({
             setMercado={setMercado}
             modelo={modelo}
             setModelo={setModelo}
-            observacoes={observacoes}
-            setObservacoes={setObservacoes}
-            odds={odds}
-            setOdds={setOdds}
+            legs={legs}
+            setLegs={setLegs}
             arredondarAtivado={arredondarAtivado}
             setArredondarAtivado={setArredondarAtivado}
             arredondarValor={arredondarValor}
@@ -340,11 +251,10 @@ export function SurebetDialogCompact({
             onSave={handleSave}
             onDelete={handleDelete}
             onCancel={() => onOpenChange(false)}
-            onLiquidarPerna={handleLiquidarPerna}
+            onImportPrint={handleImportPrint}
             formatCurrency={formatCurrency}
             getBookmakerMoeda={getBookmakerMoeda}
             canSave={canSave}
-            canSaveRascunho={false}
           />
         </div>
       </DialogContent>
