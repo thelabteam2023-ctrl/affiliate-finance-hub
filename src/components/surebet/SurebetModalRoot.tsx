@@ -97,21 +97,15 @@ const ESPORTES = [
   "League of Legends", "Counter-Strike", "Dota 2", "eFootball"
 ];
 
-const ESTRATEGIAS = [
-  { value: "SUREBET", label: "Surebet" },
-  { value: "FREEBET_CONVERSION", label: "Conversão Freebet" },
-  { value: "MATCHED_BETTING", label: "Matched Betting" },
-  { value: "BONUS_ABUSE", label: "Bonus Abuse" },
-  { value: "LOW_RISK", label: "Low Risk" },
-  { value: "ARBITRAGEM", label: "Arbitragem" },
-];
-
-const CONTEXTOS = [
-  { value: "NORMAL", label: "Saldo Real" },
-  { value: "FREEBET", label: "Freebet" },
-  { value: "SIMULACAO", label: "Simulação" },
-  { value: "BONUS", label: "Bônus" },
-];
+// Importar constantes canônicas do sistema
+import {
+  ESTRATEGIAS_LIST,
+  CONTEXTOS_LIST,
+  APOSTA_ESTRATEGIA,
+  CONTEXTO_OPERACIONAL,
+  type ApostaEstrategia,
+  type ContextoOperacional,
+} from "@/lib/apostaConstants";
 
 const getPernaLabel = (index: number, total: number): string => {
   if (total === 2) return index === 0 ? "1" : "2";
@@ -153,8 +147,8 @@ export function SurebetModalRoot({
   // ESTADOS DO FORMULÁRIO
   // ============================================
   
-  const [estrategia, setEstrategia] = useState<string>("SUREBET");
-  const [contexto, setContexto] = useState<string>("NORMAL");
+  const [estrategia, setEstrategia] = useState<ApostaEstrategia>(APOSTA_ESTRATEGIA.SUREBET);
+  const [contexto, setContexto] = useState<ContextoOperacional>(CONTEXTO_OPERACIONAL.NORMAL);
   const [esporte, setEsporte] = useState("Futebol");
   const [evento, setEvento] = useState("");
   const [mercado, setMercado] = useState("");
@@ -237,8 +231,8 @@ export function SurebetModalRoot({
       setEvento(surebet.evento);
       setEsporte(surebet.esporte);
       setMercado(surebet.mercado || "");
-      setEstrategia(surebet.estrategia || "SUREBET");
-      setContexto(surebet.contexto_operacional || "NORMAL");
+      setEstrategia((surebet.estrategia || APOSTA_ESTRATEGIA.SUREBET) as ApostaEstrategia);
+      setContexto((surebet.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
       
       const modeloSalvo = surebet.modelo || "1-2";
       if (modeloSalvo === "1-2") setModeloTipo("2");
@@ -255,8 +249,8 @@ export function SurebetModalRoot({
       setEvento(rascunho.evento || "");
       setEsporte(rascunho.esporte || "Futebol");
       setMercado(rascunho.mercado || "");
-      setEstrategia(rascunho.estrategia || "SUREBET");
-      setContexto(rascunho.contexto_operacional || "NORMAL");
+      setEstrategia((rascunho.estrategia || APOSTA_ESTRATEGIA.SUREBET) as ApostaEstrategia);
+      setContexto((rascunho.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
       
       const numPernasRascunho = rascunho.quantidade_pernas || rascunho.pernas?.length || 2;
       
@@ -297,8 +291,8 @@ export function SurebetModalRoot({
       // Novo formulário
       resetToNewForm(2);
       setModeloTipo("2");
-      setEstrategia("SUREBET");
-      setContexto("NORMAL");
+      setEstrategia(APOSTA_ESTRATEGIA.SUREBET);
+      setContexto(CONTEXTO_OPERACIONAL.NORMAL);
       setEsporte("Futebol");
       setEvento("");
       setMercado("");
@@ -883,12 +877,12 @@ export function SurebetModalRoot({
             <div className="grid grid-cols-2 gap-3 pb-3 border-b border-border/50">
               <div>
                 <Label className="text-xs text-muted-foreground">Estratégia</Label>
-                <Select value={estrategia} onValueChange={setEstrategia} disabled={isEditing}>
+                <Select value={estrategia} onValueChange={(v) => setEstrategia(v as ApostaEstrategia)} disabled={isEditing}>
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ESTRATEGIAS.map(e => (
+                    {ESTRATEGIAS_LIST.map(e => (
                       <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -896,12 +890,12 @@ export function SurebetModalRoot({
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Contexto</Label>
-                <Select value={contexto} onValueChange={setContexto} disabled={isEditing}>
+                <Select value={contexto} onValueChange={(v) => setContexto(v as ContextoOperacional)} disabled={isEditing}>
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CONTEXTOS.map(c => (
+                    {CONTEXTOS_LIST.map(c => (
                       <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                     ))}
                   </SelectContent>
