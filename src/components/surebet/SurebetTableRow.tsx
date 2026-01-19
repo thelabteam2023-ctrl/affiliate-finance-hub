@@ -234,13 +234,13 @@ export function SurebetTableRow({
           <button
             type="button"
             onClick={() => onSetReference(pernaIndex)}
-            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
               entry.isReference 
                 ? "border-primary bg-primary" 
-                : "border-muted-foreground/30"
+                : "border-muted-foreground/30 hover:border-muted-foreground/50"
             }`}
           >
-            {entry.isReference && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+            {entry.isReference && <div className="w-2 h-2 rounded-full bg-white" />}
           </button>
         )}
       </td>
@@ -251,14 +251,14 @@ export function SurebetTableRow({
           <button
             type="button"
             onClick={() => onToggleDirected(pernaIndex)}
-            className={`w-4 h-4 rounded border flex items-center justify-center ${
+            className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
               isDirected 
                 ? "border-primary bg-primary text-primary-foreground" 
-                : "border-muted-foreground/30"
+                : "border-muted-foreground/30 hover:border-muted-foreground/50"
             }`}
             title={isDirected ? "Lucro direcionado para esta perna" : "Lucro não direcionado para esta perna"}
           >
-            {isDirected && <Check className="h-2.5 w-2.5" />}
+            {isDirected && <Check className="h-3 w-3" />}
           </button>
         </td>
       )}
