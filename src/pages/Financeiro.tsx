@@ -653,11 +653,14 @@ export default function Financeiro() {
   // Custos Operacionais Totais (Aquisição + Indicação)
   const totalCustosOperacionais = totalCustosAquisicao + totalDespesasIndicacao;
   
-  // Despesas administrativas
-  const totalDespesasAdmin = filteredDespesasAdmin.reduce((acc, d) => acc + d.valor, 0);
+  // Despesas administrativas (infraestrutura - exclui RH que vai para operadores)
+  const despesasInfraestrutura = filteredDespesasAdmin.filter(d => d.grupo !== 'RECURSOS_HUMANOS');
+  const despesasRH = filteredDespesasAdmin.filter(d => d.grupo === 'RECURSOS_HUMANOS');
+  const totalDespesasAdmin = despesasInfraestrutura.reduce((acc, d) => acc + d.valor, 0);
+  const totalDespesasRH = despesasRH.reduce((acc, d) => acc + d.valor, 0);
 
-  // Pagamentos de operadores
-  const totalPagamentosOperadores = filteredPagamentosOp.reduce((acc, p) => acc + p.valor, 0);
+  // Pagamentos de operadores (inclui despesas de RH)
+  const totalPagamentosOperadores = filteredPagamentosOp.reduce((acc, p) => acc + p.valor, 0) + totalDespesasRH;
 
   // ==================== FLUXO DE CAIXA REAL (CORRIGIDO) ====================
   // Separa MOVIMENTAÇÃO DE CAPITAL (depósitos/saques bookmakers) de FLUXO REAL
