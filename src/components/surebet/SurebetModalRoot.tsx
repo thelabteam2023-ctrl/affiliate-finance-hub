@@ -216,7 +216,7 @@ export function SurebetModalRoot({
   // CALCULATOR HOOK
   // ============================================
 
-  const { analysis, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna } = useSurebetCalculator({
+  const { analysis, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
     odds,
     directedProfitLegs,
     numPernas,
@@ -619,6 +619,48 @@ export function SurebetModalRoot({
     arredondarValor,
     isEditing,
     directedProfitLegs
+  ]);
+
+  // ============================================
+  // APLICAR STAKES DIRECIONADAS (CHECKBOX D)
+  // ============================================
+
+  useEffect(() => {
+    // Só aplicar se há direcionamento parcial ativo
+    const hasCustomDirection = directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
+    if (!hasCustomDirection) return;
+    
+    // Verificar se temos stakes calculadas
+    if (!directedStakes || directedStakes.length !== odds.length) return;
+    
+    // Verificar se há diferença real para atualizar
+    let needsUpdate = false;
+    const newOdds = odds.map((o, i) => {
+      const calculatedStake = directedStakes[i];
+      const currentStake = parseFloat(o.stake) || 0;
+      
+      // Só atualiza se a diferença for significativa
+      if (Math.abs(calculatedStake - currentStake) > 0.01) {
+        needsUpdate = true;
+        return { 
+          ...o, 
+          stake: calculatedStake.toFixed(2), 
+          stakeOrigem: "referencia" as const,
+          isManuallyEdited: false
+        };
+      }
+      return o;
+    });
+    
+    if (needsUpdate) {
+      setOdds(newOdds);
+    }
+  }, [
+    directedProfitLegs.join(','),
+    directedStakes?.join(','),
+    odds.map(o => o.odd).join(','), // Re-calcular quando odds mudam
+    arredondarAtivado,
+    arredondarValor
   ]);
 
   // ============================================
