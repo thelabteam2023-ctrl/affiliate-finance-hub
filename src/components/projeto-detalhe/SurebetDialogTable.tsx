@@ -1389,21 +1389,21 @@ export function SurebetDialogTable({
                   >
                     {/* Indicador de foco para paste */}
                     {focusedLeg === pernaIndex && !isEditing && (
-                      <td colSpan={99} className="absolute -top-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                      <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
                         <div className="bg-primary/90 text-primary-foreground text-[9px] px-2 py-0.5 rounded whitespace-nowrap">
                           Ctrl+V para colar print
                         </div>
-                      </td>
+                      </div>
                     )}
                     
                     {/* Loading de processamento OCR */}
                     {isLegProcessing && (
-                      <td colSpan={99} className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none">
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none">
                         <div className="flex items-center gap-2 text-muted-foreground text-xs">
                           <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                           Analisando print...
                         </div>
-                      </td>
+                      </div>
                     )}
                     
                     {/* Perna Label */}
