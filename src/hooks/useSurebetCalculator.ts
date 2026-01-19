@@ -389,7 +389,13 @@ export function useSurebetCalculator({
     const parsedOdds = odds.map(o => getOddMediaPerna(o));
     const validOddsCount = parsedOdds.filter(o => o > 1).length;
     
-    const actualStakes = directedStakes || calculatedStakes;
+    // CORREÇÃO: Para cálculo de lucro, SEMPRE usar as stakes REAIS inseridas pelo usuário
+    // (que incluem entries adicionais), não as stakes recalculadas/equalizadas
+    const realStakes = odds.map(o => getStakeTotalPerna(o));
+    
+    // Para distribuição de stakes (direcionamento), usamos calculatedStakes
+    // Mas para ANÁLISE de lucro, usamos as stakes REAIS da tela
+    const actualStakes = directedStakes || realStakes;
     
     // Detectar multi-moeda
     const moedasSelecionadas = odds.map(o => {
@@ -401,11 +407,13 @@ export function useSurebetCalculator({
     const isMultiCurrency = moedasUnicas.length > 1;
     const moedaDominante: SupportedCurrency = moedasUnicas.length === 1 ? moedasUnicas[0] : 'BRL';
     
-    const stakeTotal = isMultiCurrency ? 0 : actualStakes.reduce((a, b) => a + b, 0);
+    // CORREÇÃO: Usar realStakes para cálculo de stakeTotal (soma das stakes inseridas)
+    const stakeTotal = isMultiCurrency ? 0 : realStakes.reduce((a, b) => a + b, 0);
     
     // Calcular cenários por perna
+    // CORREÇÃO: Usar realStakes para cálculo de lucro (stakes reais inseridas pelo usuário)
     const scenarios: LegScenario[] = parsedOdds.map((odd, i) => {
-      const stakeNesseLado = actualStakes[i];
+      const stakeNesseLado = realStakes[i]; // Stake REAL inserida pelo usuário
       const retorno = odd > 1 ? stakeNesseLado * odd : 0;
       const lucro = retorno - stakeTotal;
       const roi = stakeTotal > 0 ? (lucro / stakeTotal) * 100 : 0;
@@ -454,7 +462,7 @@ export function useSurebetCalculator({
       isValidArbitrage,
       isOperacaoParcial
     };
-  }, [odds, directedProfitLegs, numPernas, directedStakes, calculatedStakes, bookmakerSaldos, getOddMediaPerna]);
+  }, [odds, directedProfitLegs, numPernas, directedStakes, bookmakerSaldos, getOddMediaPerna, getStakeTotalPerna]);
 
   // Pernas válidas para conversão
   const pernasValidas = useMemo(() => {
