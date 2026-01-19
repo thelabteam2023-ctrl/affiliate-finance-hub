@@ -89,7 +89,9 @@ export function SurebetTableRow({
 
   return (
     <tr 
-      className="border-b border-border/30 h-10 relative"
+      className={`border-b border-border/30 h-10 relative ${
+        isFocused ? "bg-muted/30" : "hover:bg-muted/20"
+      }`}
       style={{ height: '40px' }}
       onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
       onMouseLeave={() => !isEditing && onBlur()}
