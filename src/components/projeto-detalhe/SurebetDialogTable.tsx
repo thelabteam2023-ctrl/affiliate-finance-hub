@@ -33,26 +33,20 @@ import {
   Plus,
   Minus,
   Camera,
-  FileText,
   Target,
-  Gift,
-  Check,
-  Circle
+  Check
 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
-import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
-import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
-import { pernasToInserts } from "@/types/apostasPernas";
-import { useApostaRascunho, type RascunhoPernaData, type ApostaRascunho } from "@/hooks/useApostaRascunho";
-import { getMarketsForSportAndModel, isMercadoCompativelComModelo, resolveMarketToOptions } from "@/lib/marketNormalizer";
+import { RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
+import { getMarketsForSportAndModel, isMercadoCompativelComModelo } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
-  formatCurrency, 
-  getCurrencySymbol 
+  formatCurrency
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
-import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
+import { pernasToInserts } from "@/types/apostasPernas";
+import { type MoedaOperacao } from "@/types/apostasUnificada";
+import { useApostaRascunho, type ApostaRascunho } from "@/hooks/useApostaRascunho";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 
@@ -361,12 +355,103 @@ export function SurebetDialogTable({
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const {
     legPrints,
+    isProcessingAny,
+    sharedContext,
     processLegImage,
     clearLegPrint,
     clearAllPrints,
     initializeLegPrints,
     applyLegData,
   } = useSurebetPrintImport();
+  
+  // Estado para drag-and-drop por perna
+  const [draggingOverLeg, setDraggingOverLeg] = useState<number | null>(null);
+  
+  // Handler para drag-and-drop de prints
+  const handleDragOver = useCallback((e: React.DragEvent, legIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingOverLeg(legIndex);
+  }, []);
+  
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingOverLeg(null);
+  }, []);
+  
+  const handleDrop = useCallback(async (e: React.DragEvent, legIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingOverLeg(null);
+    
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+    
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, solte apenas imagens');
+      return;
+    }
+    
+    await processLegImage(legIndex, file);
+  }, [processLegImage]);
+  
+  // Aplicar dados do OCR quando disponível
+  useEffect(() => {
+    if (!legPrints || legPrints.length === 0) return;
+    
+    legPrints.forEach((legPrint, legIndex) => {
+      if (!legPrint.parsedData || legPrint.isProcessing) return;
+      
+      const legData = applyLegData(legIndex);
+      if (!legData) return;
+      
+      // Atualizar a perna com os dados parseados
+      setOdds(prev => {
+        const newOdds = [...prev];
+        if (newOdds[legIndex]) {
+          // Só atualizar campos que têm valor
+          if (legData.odd) {
+            newOdds[legIndex] = { 
+              ...newOdds[legIndex], 
+              odd: legData.odd,
+              isManuallyEdited: false 
+            };
+          }
+          if (legData.stake) {
+            newOdds[legIndex] = { 
+              ...newOdds[legIndex], 
+              stake: legData.stake,
+              isManuallyEdited: false,
+              isReference: legIndex === 0 
+            };
+          }
+          if (legData.selecaoLivre) {
+            newOdds[legIndex] = { 
+              ...newOdds[legIndex], 
+              selecaoLivre: legData.selecaoLivre 
+            };
+          }
+        }
+        return newOdds;
+      });
+      
+      // Limpar o print depois de aplicar
+      clearLegPrint(legIndex);
+    });
+    
+    // Aplicar contexto compartilhado (evento, esporte, mercado)
+    if (sharedContext.evento && !evento) {
+      setEvento(sharedContext.evento);
+    }
+    if (sharedContext.esporte && esporte === "Futebol") {
+      setEsporte(sharedContext.esporte);
+    }
+    if (sharedContext.mercado && !mercado) {
+      setMercado(sharedContext.mercado);
+    }
+  }, [legPrints, applyLegData, clearLegPrint, sharedContext, evento, esporte, mercado]);
   
   // Handler para navegação por teclado entre campos Odd (Q) e Stake (S)
   const handleFieldKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
@@ -396,6 +481,7 @@ export function SurebetDialogTable({
   useEffect(() => {
     if (open) {
       if (surebet && surebet.id) {
+        // Modo edição: carregar surebet existente
         setEvento(surebet.evento);
         setEsporte(surebet.esporte);
         setModelo(surebet.modelo as "1-X-2" | "1-2");
@@ -409,7 +495,41 @@ export function SurebetDialogTable({
         });
         
         fetchLinkedPernas(surebet.id, surebet.modelo);
+      } else if (rascunho) {
+        // Modo rascunho: carregar dados do rascunho
+        setEvento(rascunho.evento || "");
+        setEsporte(rascunho.esporte || "Futebol");
+        setMercado(rascunho.mercado || "");
+        setObservacoes(rascunho.observacoes || "");
+        
+        // Determinar modelo baseado no número de pernas
+        const numPernas = rascunho.pernas?.length || 2;
+        const modeloRascunho = numPernas === 3 ? "1-X-2" : "1-2";
+        setModelo(modeloRascunho as "1-X-2" | "1-2");
+        
+        // Carregar pernas do rascunho
+        if (rascunho.pernas && rascunho.pernas.length > 0) {
+          const defaultSelecoes = getSelecoesPorMercado(rascunho.mercado || "", modeloRascunho);
+          const rascunhoOdds: OddEntry[] = rascunho.pernas.map((perna, i) => ({
+            bookmaker_id: perna.bookmaker_id || "",
+            moeda: (perna.moeda as SupportedCurrency) || "BRL",
+            odd: perna.odd?.toString() || "",
+            stake: perna.stake?.toString() || "",
+            selecao: perna.selecao || defaultSelecoes[i] || "",
+            selecaoLivre: perna.selecao_livre || "",
+            isReference: i === 0,
+            isManuallyEdited: false,
+            stakeOrigem: undefined,
+            additionalEntries: []
+          }));
+          setOdds(rascunhoOdds);
+          setDirectedProfitLegs(Array.from({ length: numPernas }, (_, i) => i));
+        }
+        
+        initializeLegPrints(numPernas);
+        setLinkedApostas([]);
       } else {
+        // Modo novo: resetar formulário
         resetForm();
         setLinkedApostas([]);
         initializeLegPrints(2);
@@ -1191,9 +1311,39 @@ export function SurebetDialogTable({
               if (isMainEntry) {
                 const entry = row.entry as OddEntry;
                 const selectedBookmaker = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
+                const isLegProcessing = legPrints[pernaIndex]?.isProcessing || false;
+                const isDragOver = draggingOverLeg === pernaIndex;
                 
                 return (
-                  <tr key={rowIndex} className="border-b border-border/30 hover:bg-muted/30">
+                  <tr 
+                    key={rowIndex} 
+                    className={`border-b border-border/30 transition-colors relative ${
+                      isDragOver 
+                        ? "bg-primary/10 border-primary/50" 
+                        : "hover:bg-muted/30"
+                    }`}
+                    onDragOver={(e) => !isEditing && handleDragOver(e, pernaIndex)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => !isEditing && handleDrop(e, pernaIndex)}
+                  >
+                    {/* Overlay de drop */}
+                    {isDragOver && (
+                      <td colSpan={99} className="absolute inset-0 z-10 flex items-center justify-center bg-primary/10 pointer-events-none">
+                        <div className="flex items-center gap-2 text-primary text-xs font-medium">
+                          <Camera className="h-4 w-4" />
+                          Solte para importar print da perna {row.label}
+                        </div>
+                      </td>
+                    )}
+                    {/* Loading de processamento OCR */}
+                    {isLegProcessing && (
+                      <td colSpan={99} className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none">
+                        <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                          <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          Analisando print...
+                        </div>
+                      </td>
+                    )}
                     {/* Perna Label */}
                     {row.rowSpan > 0 && (
                       <td 
@@ -1577,20 +1727,6 @@ export function SurebetDialogTable({
           )}
         </div>
       </div>
-
-      {/* Observações (colapsável) */}
-      <details className="group">
-        <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-          <span>Observações</span>
-          <span className="text-[10px]">(opcional)</span>
-        </summary>
-        <Textarea
-          placeholder="Observações..."
-          value={observacoes}
-          onChange={(e) => setObservacoes(e.target.value)}
-          className="mt-2 text-xs min-h-[60px]"
-        />
-      </details>
     </div>
   );
 
