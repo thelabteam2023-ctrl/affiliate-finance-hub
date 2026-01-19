@@ -1346,8 +1346,8 @@ export function SurebetDialogTable({
                           }}
                           className={`w-5 h-5 rounded-full flex items-center justify-center transition-all border ${
                             directedProfitLegs.includes(pernaIndex)
-                              ? "bg-muted text-foreground border-border"
-                              : "bg-transparent text-muted-foreground border-muted-foreground/30 hover:border-muted-foreground/60"
+                              ? "bg-white text-muted-foreground border-border"
+                              : "bg-red-500/20 text-red-400/60 border-red-400/30"
                           }`}
                           title="Direcionar lucro para esta perna"
                         >
