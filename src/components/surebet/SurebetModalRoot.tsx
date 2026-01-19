@@ -829,9 +829,9 @@ export function SurebetModalRoot({
 
   return (
     <>
-      {/* Painel Fullscreen - Sem overlay clicável */}
-      <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in-0 duration-200">
-        <div className="relative w-full h-full flex flex-col overflow-hidden">
+      {/* Painel Centralizado - Dimensão fixa como calculadora */}
+      <div className="fixed inset-0 z-50 bg-background/95 flex items-start justify-center pt-4 sm:pt-8 animate-in fade-in-0 duration-200 overflow-y-auto">
+        <div className="relative w-full max-w-[680px] mx-4 mb-4 bg-background border border-border rounded-lg shadow-xl flex flex-col">
           {/* Hidden file input */}
           <input
             type="file"
@@ -842,39 +842,13 @@ export function SurebetModalRoot({
           />
           
           {/* HEADER */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Calculator className="h-5 w-5 text-amber-500" />
-                <h2 className="font-semibold text-base">
-                  {isEditing ? "Editar Arbitragem" : "Arbitragem"}
-                </h2>
-                <Badge variant="outline" className="text-[10px]">{numPernas} pernas</Badge>
-              </div>
-              
-              {/* Estratégia e Contexto inline */}
-              <div className="hidden sm:flex items-center gap-3 ml-4 pl-4 border-l border-border/50">
-                <Select value={estrategia} onValueChange={setEstrategia} disabled={isEditing}>
-                  <SelectTrigger className="h-7 w-32 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ESTRATEGIAS.map(e => (
-                      <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={contexto} onValueChange={setContexto} disabled={isEditing}>
-                  <SelectTrigger className="h-7 w-28 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CONTEXTOS.map(c => (
-                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Calculator className="h-5 w-5 text-amber-500" />
+              <h2 className="font-semibold text-base">
+                {isEditing ? "Editar Arbitragem" : "Arbitragem"}
+              </h2>
+              <Badge variant="outline" className="text-[10px]">{numPernas} pernas</Badge>
             </div>
             
             <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-8 w-8 p-0">
@@ -905,38 +879,38 @@ export function SurebetModalRoot({
               </div>
             )}
 
-            {/* Campos do Evento */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-3 border-b border-border/50">
-              {/* Mobile: Estratégia e Contexto */}
-              <div className="sm:hidden col-span-2 grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Estratégia</Label>
-                  <Select value={estrategia} onValueChange={setEstrategia} disabled={isEditing}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ESTRATEGIAS.map(e => (
-                        <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Contexto</Label>
-                  <Select value={contexto} onValueChange={setContexto} disabled={isEditing}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CONTEXTOS.map(c => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            {/* Estratégia e Contexto - sempre visíveis com labels */}
+            <div className="grid grid-cols-2 gap-3 pb-3 border-b border-border/50">
+              <div>
+                <Label className="text-xs text-muted-foreground">Estratégia</Label>
+                <Select value={estrategia} onValueChange={setEstrategia} disabled={isEditing}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ESTRATEGIAS.map(e => (
+                      <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              
+              <div>
+                <Label className="text-xs text-muted-foreground">Contexto</Label>
+                <Select value={contexto} onValueChange={setContexto} disabled={isEditing}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONTEXTOS.map(c => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Campos do Evento */}
+            <div className="grid grid-cols-3 gap-3 pb-3 border-b border-border/50">
               <div>
                 <Label className="text-xs text-muted-foreground">Esporte</Label>
                 <Select value={esporte} onValueChange={setEsporte} disabled={isEditing}>
@@ -951,7 +925,7 @@ export function SurebetModalRoot({
                 </Select>
               </div>
               
-              <div className="col-span-2">
+              <div>
                 <Label className="text-xs text-muted-foreground">Evento</Label>
                 <Input 
                   placeholder="Ex: Brasil x Argentina" 
