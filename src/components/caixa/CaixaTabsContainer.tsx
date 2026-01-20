@@ -17,10 +17,13 @@ interface CaixaTabsContainerProps {
   contasBancarias: Array<{ id: string; banco: string; titular: string }>;
   wallets: { [key: string]: string };
   walletsDetalhes: Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>;
-  bookmakers: { [key: string]: { nome: string; status: string } };
+  bookmakers: { [key: string]: { nome: string; status: string; projeto_id?: string } };
   loading: boolean;
   filtroTipo: string;
   setFiltroTipo: (tipo: string) => void;
+  filtroProjeto: string;
+  setFiltroProjeto: (projeto: string) => void;
+  projetos: Array<{ id: string; nome: string }>;
   dataInicio: Date | undefined;
   setDataInicio: (date: Date | undefined) => void;
   dataFim: Date | undefined;
@@ -49,6 +52,9 @@ export function CaixaTabsContainer({
   loading,
   filtroTipo,
   setFiltroTipo,
+  filtroProjeto,
+  setFiltroProjeto,
+  projetos,
   dataInicio,
   setDataInicio,
   dataFim,
@@ -122,6 +128,9 @@ export function CaixaTabsContainer({
             loading={loading}
             filtroTipo={filtroTipo}
             setFiltroTipo={setFiltroTipo}
+            filtroProjeto={filtroProjeto}
+            setFiltroProjeto={setFiltroProjeto}
+            projetos={projetos}
             dataInicio={dataInicio}
             setDataInicio={setDataInicio}
             dataFim={dataFim}
