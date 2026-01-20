@@ -54,6 +54,7 @@ export function ConciliacaoVinculoDialog({
   const [saldoReal, setSaldoReal] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingAjuste, setSavingAjuste] = useState(false);
 
   const saldoSistema = vinculo?.saldo_atual || 0;
   const saldoRealNum = parseFloat(saldoReal.replace(",", ".")) || 0;
@@ -68,6 +69,59 @@ export function ConciliacaoVinculoDialog({
       style: "currency",
       currency: "BRL",
     }).format(value);
+  };
+
+  // Apenas ajustar saldo SEM liberar vínculo
+  const handleApenasAjustar = async () => {
+    if (!vinculo || !workspaceId) return;
+
+    if (saldoReal === "") {
+      toast.error("Informe o saldo real da bookmaker");
+      return;
+    }
+
+    if (!temDiferenca) {
+      toast.info("Os saldos já conferem, nenhum ajuste necessário");
+      return;
+    }
+
+    try {
+      setSavingAjuste(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Registrar ajuste via ledger
+      const result = await registrarAjusteViaLedger({
+        bookmakerId: vinculo.id,
+        delta: diferenca,
+        moeda: vinculo.moeda,
+        workspaceId: workspaceId,
+        userId: user.id,
+        descricao: `Ajuste de conciliação manual. Projeto ID: ${projetoId}`,
+        motivo: observacoes || "Ajuste de conciliação",
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Erro ao registrar ajuste no ledger");
+      }
+
+      toast.success(
+        `Saldo ajustado: ${diferenca > 0 ? "+" : ""}${formatCurrency(diferenca, vinculo.moeda)}`,
+        { duration: 4000 }
+      );
+
+      // Limpar estado e fechar
+      setSaldoReal("");
+      setObservacoes("");
+      onOpenChange(false);
+      onConciliado();
+    } catch (error: any) {
+      console.error("Erro no ajuste:", error);
+      toast.error("Erro ao ajustar saldo: " + error.message);
+    } finally {
+      setSavingAjuste(false);
+    }
   };
 
   const handleConciliar = async () => {
@@ -319,11 +373,28 @@ export function ConciliacaoVinculoDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || savingAjuste}>
             Cancelar
           </Button>
-          <Button onClick={handleConciliar} disabled={saving || saldoReal === ""}>
+          <Button 
+            variant="secondary" 
+            onClick={handleApenasAjustar} 
+            disabled={saving || savingAjuste || saldoReal === "" || !temDiferenca}
+          >
+            {savingAjuste ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Ajustando...
+              </>
+            ) : (
+              <>
+                <Scale className="mr-2 h-4 w-4" />
+                Apenas Ajustar Saldo
+              </>
+            )}
+          </Button>
+          <Button onClick={handleConciliar} disabled={saving || savingAjuste || saldoReal === ""}>
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
