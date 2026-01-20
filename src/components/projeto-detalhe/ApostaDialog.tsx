@@ -1599,6 +1599,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       const resultadoAnterior = resultadoAnteriorBruto || null; // Mantém null se era PENDENTE
       const stakeAnterior = aposta?.stake || 0;
       const oddAnterior = aposta?.odd || 0;
+      const bookmakerAnteriorId = aposta?.bookmaker_id;
 
       if (aposta) {
         // Verificar se gerouFreebet mudou de false para true na edição
@@ -1612,36 +1613,118 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         const eraPendente = resultadoAnterior === null || resultadoAnterior === "PENDENTE";
         const agoraPendente = novoResultado === null || statusResultado === "PENDENTE";
         
-        
-        const { error } = await supabase
-          .from("apostas_unificada")
-          .update(apostaData)
-          .eq("id", aposta.id);
-        if (error) throw error;
-
-        // Atualizar saldo do bookmaker se resultado mudou - para todos os tipos de operação
-        const bookmakerIdParaAtualizar = tipoAposta === "bookmaker" 
+        // Determinar bookmaker atual do formulário
+        const bookmakerAtualId = tipoAposta === "bookmaker" 
           ? bookmakerId 
           : tipoOperacaoExchange === "cobertura" 
             ? coberturaBackBookmakerId 
             : exchangeBookmakerId;
-            
-        if (bookmakerIdParaAtualizar) {
-          await atualizarSaldoBookmaker(
-            bookmakerIdParaAtualizar,
-            resultadoAnterior,
-            statusResultado,
-            stakeAnterior,
-            oddAnterior,
-            apostaData.stake,
-            apostaData.odd,
-            tipoAposta === "exchange" ? tipoOperacaoExchange : "bookmaker",
-            apostaData.lay_liability,
-            apostaData.lay_comissao,
-            // Novos parâmetros para atualização do LAY em cobertura
-            tipoOperacaoExchange === "cobertura" ? apostaData.lay_exchange : null,
-            tipoOperacaoExchange === "cobertura" ? apostaData.lay_stake : null
+        
+        // ================================================================
+        // VERIFICAÇÃO: Aposta liquidada com mudança financeira?
+        // Se SIM, usar RPC atômico para reversão + re-liquidação
+        // ================================================================
+        const apostaEstaLiquidada = aposta.status === "LIQUIDADA";
+        const houveMudancaBookmaker = bookmakerAnteriorId !== bookmakerAtualId;
+        const houveMudancaStake = stakeAnterior !== apostaData.stake;
+        const houveMudancaOdd = oddAnterior !== apostaData.odd;
+        const houveMudancaResultado = resultadoAnterior !== novoResultado;
+        const houveMudancaFinanceira = houveMudancaBookmaker || houveMudancaStake || houveMudancaOdd || houveMudancaResultado;
+        
+        if (apostaEstaLiquidada && houveMudancaFinanceira) {
+          // Usar RPC atômico que faz reversão + re-liquidação via ledger
+          console.log("[ApostaDialog] Aposta LIQUIDADA com mudança financeira - usando RPC atômico");
+          console.log("[ApostaDialog] Mudanças detectadas:", {
+            bookmaker: houveMudancaBookmaker ? `${bookmakerAnteriorId} -> ${bookmakerAtualId}` : 'sem mudança',
+            stake: houveMudancaStake ? `${stakeAnterior} -> ${apostaData.stake}` : 'sem mudança',
+            odd: houveMudancaOdd ? `${oddAnterior} -> ${apostaData.odd}` : 'sem mudança',
+            resultado: houveMudancaResultado ? `${resultadoAnterior} -> ${novoResultado}` : 'sem mudança'
+          });
+          
+          const { data: rpcResult, error: rpcError } = await supabase.rpc(
+            'atualizar_aposta_liquidada_atomica',
+            {
+              p_aposta_id: aposta.id,
+              p_novo_bookmaker_id: houveMudancaBookmaker ? bookmakerAtualId : null,
+              p_novo_stake: houveMudancaStake ? apostaData.stake : null,
+              p_nova_odd: houveMudancaOdd ? apostaData.odd : null,
+              p_novo_resultado: houveMudancaResultado ? novoResultado : null,
+              p_nova_moeda: null // Será detectada automaticamente do bookmaker
+            }
           );
+          
+          if (rpcError) {
+            console.error("[ApostaDialog] Erro no RPC atualizar_aposta_liquidada_atomica:", rpcError);
+            throw new Error(`Erro ao atualizar aposta liquidada: ${rpcError.message}`);
+          }
+          
+          const result = rpcResult as { success: boolean; error?: string; message?: string };
+          if (!result.success) {
+            throw new Error(result.error || 'Erro desconhecido ao atualizar aposta liquidada');
+          }
+          
+          console.log("[ApostaDialog] RPC atualizar_aposta_liquidada_atomica sucesso:", result);
+          
+          // Agora atualizar campos que o RPC não atualiza (evento, mercado, observações, etc.)
+          const { error: updateError } = await supabase
+            .from("apostas_unificada")
+            .update({
+              evento: apostaData.evento,
+              mercado: apostaData.mercado,
+              esporte: apostaData.esporte,
+              selecao: apostaData.selecao,
+              observacoes: apostaData.observacoes,
+              data_aposta: apostaData.data_aposta,
+              // Campos de exchange/cobertura
+              modo_entrada: apostaData.modo_entrada,
+              lay_exchange: apostaData.lay_exchange,
+              lay_odd: apostaData.lay_odd,
+              lay_stake: apostaData.lay_stake,
+              lay_liability: apostaData.lay_liability,
+              lay_comissao: apostaData.lay_comissao,
+              back_em_exchange: apostaData.back_em_exchange,
+              back_comissao: apostaData.back_comissao,
+              // Campos de freebet
+              gerou_freebet: apostaData.gerou_freebet,
+              valor_freebet_gerada: apostaData.valor_freebet_gerada,
+              tipo_freebet: apostaData.tipo_freebet,
+            })
+            .eq("id", aposta.id);
+          
+          if (updateError) {
+            console.warn("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
+          }
+          
+          // Invalidar caches de saldo
+          await invalidateSaldos();
+          
+        } else {
+          // Aposta NÃO liquidada OU sem mudança financeira: update direto
+          const { error } = await supabase
+            .from("apostas_unificada")
+            .update(apostaData)
+            .eq("id", aposta.id);
+          if (error) throw error;
+
+          // Atualizar saldo do bookmaker se resultado mudou - para apostas NÃO liquidadas
+          // (Para liquidadas, o RPC já cuida de tudo)
+          if (bookmakerAtualId && !apostaEstaLiquidada) {
+            await atualizarSaldoBookmaker(
+              bookmakerAtualId,
+              resultadoAnterior,
+              statusResultado,
+              stakeAnterior,
+              oddAnterior,
+              apostaData.stake,
+              apostaData.odd,
+              tipoAposta === "exchange" ? tipoOperacaoExchange : "bookmaker",
+              apostaData.lay_liability,
+              apostaData.lay_comissao,
+              // Novos parâmetros para atualização do LAY em cobertura
+              tipoOperacaoExchange === "cobertura" ? apostaData.lay_exchange : null,
+              tipoOperacaoExchange === "cobertura" ? apostaData.lay_stake : null
+            );
+          }
         }
 
         // Verificar se resultado mudou e atualizar status da freebet

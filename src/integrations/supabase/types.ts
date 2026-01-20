@@ -8521,6 +8521,17 @@ export type Database = {
         }
         Returns: string
       }
+      atualizar_aposta_liquidada_atomica: {
+        Args: {
+          p_aposta_id: string
+          p_nova_moeda?: string
+          p_nova_odd?: number
+          p_novo_bookmaker_id?: string
+          p_novo_resultado?: string
+          p_novo_stake?: number
+        }
+        Returns: Json
+      }
       calcular_proxima_conciliacao: {
         Args: {
           p_data_entrada: string
