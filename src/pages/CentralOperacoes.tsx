@@ -187,9 +187,11 @@ interface SaquePendenteConfirmacao {
   origem_bookmaker_id: string | null;
   destino_parceiro_id: string | null;
   destino_conta_bancaria_id: string | null;
+  destino_wallet_id: string | null;
   bookmaker_nome?: string;
   parceiro_nome?: string;
   banco_nome?: string;
+  wallet_nome?: string;
 }
 
 interface AlertaLucroParceiro {
@@ -374,7 +376,7 @@ export default function CentralOperacoes() {
         canSeeFinancialData
           ? supabase
               .from("cash_ledger")
-              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id`)
+              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id, destino_wallet_id`)
               .eq("tipo_transacao", "SAQUE")
               .eq("status", "PENDENTE")
               .order("data_transacao", { ascending: false })
@@ -584,22 +586,26 @@ export default function CentralOperacoes() {
         const bookmakersIds = saquesPendentesResult.data.map((s: any) => s.origem_bookmaker_id).filter(Boolean);
         const parceirosIds = saquesPendentesResult.data.map((s: any) => s.destino_parceiro_id).filter(Boolean);
         const contasIds = saquesPendentesResult.data.map((s: any) => s.destino_conta_bancaria_id).filter(Boolean);
+        const walletsIds = saquesPendentesResult.data.map((s: any) => s.destino_wallet_id).filter(Boolean);
 
-        const [bookmakersNomes, parceirosNomes, contasNomes] = await Promise.all([
+        const [bookmakersNomes, parceirosNomes, contasNomes, walletsNomes] = await Promise.all([
           bookmakersIds.length > 0 ? supabase.from("bookmakers").select("id, nome").in("id", bookmakersIds) : Promise.resolve({ data: [] }),
           parceirosIds.length > 0 ? supabase.from("parceiros").select("id, nome").in("id", parceirosIds) : Promise.resolve({ data: [] }),
           contasIds.length > 0 ? supabase.from("contas_bancarias").select("id, banco, titular").in("id", contasIds) : Promise.resolve({ data: [] }),
+          walletsIds.length > 0 ? supabase.from("wallets_crypto").select("id, nome, coin").in("id", walletsIds) : Promise.resolve({ data: [] }),
         ]);
 
         const bookmakersMap = Object.fromEntries((bookmakersNomes.data || []).map((b: any) => [b.id, b.nome]));
         const parceirosMap = Object.fromEntries((parceirosNomes.data || []).map((p: any) => [p.id, p.nome]));
         const contasMap = Object.fromEntries((contasNomes.data || []).map((c: any) => [c.id, `${c.banco} - ${c.titular}`]));
+        const walletsMap = Object.fromEntries((walletsNomes.data || []).map((w: any) => [w.id, `${w.nome} (${w.coin})`]));
 
         const saquesEnriquecidos: SaquePendenteConfirmacao[] = saquesPendentesResult.data.map((s: any) => ({
           ...s,
           bookmaker_nome: bookmakersMap[s.origem_bookmaker_id] || "Bookmaker",
           parceiro_nome: parceirosMap[s.destino_parceiro_id] || "",
-          banco_nome: contasMap[s.destino_conta_bancaria_id] || "Conta Bancária",
+          banco_nome: s.destino_conta_bancaria_id ? contasMap[s.destino_conta_bancaria_id] : undefined,
+          wallet_nome: s.destino_wallet_id ? walletsMap[s.destino_wallet_id] : undefined,
         }));
 
         setSaquesPendentes(saquesEnriquecidos);

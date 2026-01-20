@@ -33,6 +33,7 @@ import {
   ArrowRight,
   User,
   Clock,
+  Wallet,
 } from "lucide-react";
 
 interface SaquePendente {
@@ -44,9 +45,11 @@ interface SaquePendente {
   origem_bookmaker_id: string | null;
   destino_parceiro_id: string | null;
   destino_conta_bancaria_id: string | null;
+  destino_wallet_id: string | null;
   bookmaker_nome?: string;
   parceiro_nome?: string;
   banco_nome?: string;
+  wallet_nome?: string;
 }
 
 interface ConfirmarSaqueDialogProps {
@@ -260,11 +263,17 @@ export function ConfirmarSaqueDialog({
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Landmark className="h-4 w-4" />
+                    {saque.destino_wallet_id ? (
+                      <Wallet className="h-4 w-4" />
+                    ) : (
+                      <Landmark className="h-4 w-4" />
+                    )}
                     <span>Destino</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-medium">{saque.banco_nome || "Conta Bancária"}</span>
+                    <span className="font-medium">
+                      {saque.wallet_nome || saque.banco_nome || (saque.destino_wallet_id ? "Wallet Crypto" : "Conta Bancária")}
+                    </span>
                     {saque.parceiro_nome && (
                       <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
                         <User className="h-3 w-3" />
