@@ -36,6 +36,8 @@ export interface BookmakerSaldo {
   saldo_operavel: number;    // saldo_disponivel + saldo_freebet + saldo_bonus
   // Estado do rollover
   bonus_rollover_started: boolean; // true se rollover_progress > 0 em algum bônus creditado
+  // Estado de conciliação
+  has_pending_transactions: boolean; // true se há transações pendentes de conciliação
 }
 
 interface UseBookmakerSaldosQueryOptions {
@@ -83,7 +85,8 @@ export function useBookmakerSaldosQuery({
         saldo_em_aposta: Number(row.saldo_em_aposta) || 0,
         saldo_disponivel: Number(row.saldo_disponivel) || 0,
         saldo_operavel: Number(row.saldo_operavel) || 0,
-        bonus_rollover_started: Boolean(row.bonus_rollover_started)
+        bonus_rollover_started: Boolean(row.bonus_rollover_started),
+        has_pending_transactions: Boolean(row.has_pending_transactions)
       }));
 
       // Filtrar por saldo operável > 0, exceto se for o bookmaker atual ou includeZeroBalance
@@ -179,6 +182,21 @@ export function createSaldosMap(
  */
 export function hasActiveBonus(bookmaker: BookmakerSaldo): boolean {
   return bookmaker.saldo_bonus > 0;
+}
+
+/**
+ * Helper para verificar se um bookmaker precisa de conciliação
+ * Casas com transações pendentes NÃO PODEM ser usadas operacionalmente
+ */
+export function requiresReconciliation(bookmaker: BookmakerSaldo): boolean {
+  return bookmaker.has_pending_transactions;
+}
+
+/**
+ * Filtrar bookmakers disponíveis para operação (sem pendências de conciliação)
+ */
+export function filterOperationalBookmakers(bookmakers: BookmakerSaldo[]): BookmakerSaldo[] {
+  return bookmakers.filter(bk => !bk.has_pending_transactions);
 }
 
 /**
