@@ -112,7 +112,7 @@ export async function insertLedgerEntry(
       cotacao: input.cotacao || null,
       referencia_transacao_id: input.referenciaTransacaoId || null,
       auditoria_metadata: input.auditoriaMetadata || null,
-      status: 'confirmado',
+      status: 'CONFIRMADO',
     };
     
     const { data, error } = await supabase

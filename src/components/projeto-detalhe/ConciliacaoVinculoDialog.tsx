@@ -237,7 +237,7 @@ export function ConciliacaoVinculoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Scale className="h-5 w-5 text-primary" />
@@ -373,14 +373,20 @@ export function ConciliacaoVinculoDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || savingAjuste}>
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)} 
+            disabled={saving || savingAjuste}
+            className="w-full sm:w-auto"
+          >
             Cancelar
           </Button>
           <Button 
             variant="secondary" 
             onClick={handleApenasAjustar} 
             disabled={saving || savingAjuste || saldoReal === "" || !temDiferenca}
+            className="w-full sm:w-auto"
           >
             {savingAjuste ? (
               <>
@@ -390,11 +396,15 @@ export function ConciliacaoVinculoDialog({
             ) : (
               <>
                 <Scale className="mr-2 h-4 w-4" />
-                Apenas Ajustar Saldo
+                Ajustar
               </>
             )}
           </Button>
-          <Button onClick={handleConciliar} disabled={saving || savingAjuste || saldoReal === ""}>
+          <Button 
+            onClick={handleConciliar} 
+            disabled={saving || savingAjuste || saldoReal === ""}
+            className="w-full sm:w-auto"
+          >
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
