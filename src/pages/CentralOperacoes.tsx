@@ -42,6 +42,7 @@ import {
   UserPlus,
   ShieldAlert,
   Unlink,
+  Wallet,
 } from "lucide-react";
 import { CardInfoTooltip } from "@/components/ui/card-info-tooltip";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
@@ -592,13 +593,20 @@ export default function CentralOperacoes() {
           bookmakersIds.length > 0 ? supabase.from("bookmakers").select("id, nome").in("id", bookmakersIds) : Promise.resolve({ data: [] }),
           parceirosIds.length > 0 ? supabase.from("parceiros").select("id, nome").in("id", parceirosIds) : Promise.resolve({ data: [] }),
           contasIds.length > 0 ? supabase.from("contas_bancarias").select("id, banco, titular").in("id", contasIds) : Promise.resolve({ data: [] }),
-          walletsIds.length > 0 ? supabase.from("wallets_crypto").select("id, nome, coin").in("id", walletsIds) : Promise.resolve({ data: [] }),
+          walletsIds.length > 0 ? supabase.from("wallets_crypto").select("id, exchange, moeda, network").in("id", walletsIds) : Promise.resolve({ data: [] }),
         ]);
 
         const bookmakersMap = Object.fromEntries((bookmakersNomes.data || []).map((b: any) => [b.id, b.nome]));
         const parceirosMap = Object.fromEntries((parceirosNomes.data || []).map((p: any) => [p.id, p.nome]));
         const contasMap = Object.fromEntries((contasNomes.data || []).map((c: any) => [c.id, `${c.banco} - ${c.titular}`]));
-        const walletsMap = Object.fromEntries((walletsNomes.data || []).map((w: any) => [w.id, `${w.nome} (${w.coin})`]));
+        const walletsMap = Object.fromEntries(
+          (walletsNomes.data || []).map((w: any) => {
+            const moedas = Array.isArray(w.moeda) && w.moeda.length > 0 ? w.moeda.join(", ") : undefined;
+            const exchange = w.exchange ? String(w.exchange).replace(/-/g, " ").toUpperCase() : "WALLET";
+            const label = moedas ? `${exchange} (${moedas})` : exchange;
+            return [w.id, label];
+          })
+        );
 
         const saquesEnriquecidos: SaquePendenteConfirmacao[] = saquesPendentesResult.data.map((s: any) => ({
           ...s,
@@ -869,10 +877,16 @@ export default function CentralOperacoes() {
                 {saquesPendentes.slice(0, 4).map((saque) => (
                   <div key={saque.id} className="flex items-center justify-between p-2 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Building2 className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+                      {saque.destino_wallet_id ? (
+                        <Wallet className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+                      ) : (
+                        <Building2 className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+                      )}
                       <div className="min-w-0">
                         <p className="text-xs font-medium truncate">{saque.bookmaker_nome}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">→ {saque.banco_nome}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          → {saque.destino_wallet_id ? (saque.wallet_nome || "Wallet Crypto") : (saque.banco_nome || "Conta Bancária")}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
