@@ -85,6 +85,12 @@ export function ConciliacaoVinculoDialog({
       return;
     }
 
+    // Observações obrigatórias quando há diferença
+    if (!observacoes.trim()) {
+      toast.error("Informe o motivo da diferença nas observações");
+      return;
+    }
+
     try {
       setSavingAjuste(true);
 
@@ -99,7 +105,7 @@ export function ConciliacaoVinculoDialog({
         workspaceId: workspaceId,
         userId: user.id,
         descricao: `Ajuste de conciliação manual. Projeto ID: ${projetoId}`,
-        motivo: observacoes || "Ajuste de conciliação",
+        motivo: observacoes.trim(),
       });
 
       if (!result.success) {
@@ -132,6 +138,12 @@ export function ConciliacaoVinculoDialog({
       return;
     }
 
+    // Observações obrigatórias quando há diferença
+    if (temDiferenca && !observacoes.trim()) {
+      toast.error("Informe o motivo da diferença nas observações");
+      return;
+    }
+
     try {
       setSaving(true);
 
@@ -147,7 +159,7 @@ export function ConciliacaoVinculoDialog({
           workspaceId: workspaceId,
           userId: user.id,
           descricao: `Conciliação na liberação do vínculo. Projeto ID: ${projetoId}`,
-          motivo: observacoes || "Conciliação de vínculo",
+          motivo: observacoes.trim(),
         });
 
         if (!result.success) {
@@ -343,11 +355,11 @@ export function ConciliacaoVinculoDialog({
 
           <Separator />
 
-          {/* Observações (opcional, obrigatório se houver diferença) */}
+          {/* Observações (obrigatório se houver diferença) */}
           <div className="space-y-2">
             <Label htmlFor="observacoes" className="flex items-center gap-1">
               Observações
-              {temDiferenca && <span className="text-xs text-amber-400">(recomendado)</span>}
+              {temDiferenca && <span className="text-xs text-destructive">* obrigatório</span>}
             </Label>
             <Textarea
               id="observacoes"
@@ -358,6 +370,7 @@ export function ConciliacaoVinculoDialog({
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
               rows={2}
+              className={temDiferenca && !observacoes.trim() ? "border-destructive" : ""}
             />
           </div>
 
@@ -385,7 +398,7 @@ export function ConciliacaoVinculoDialog({
           <Button 
             variant="secondary" 
             onClick={handleApenasAjustar} 
-            disabled={saving || savingAjuste || saldoReal === "" || !temDiferenca}
+            disabled={saving || savingAjuste || saldoReal === "" || !temDiferenca || !observacoes.trim()}
             className="w-full sm:w-auto"
           >
             {savingAjuste ? (
@@ -402,7 +415,7 @@ export function ConciliacaoVinculoDialog({
           </Button>
           <Button 
             onClick={handleConciliar} 
-            disabled={saving || savingAjuste || saldoReal === ""}
+            disabled={saving || savingAjuste || saldoReal === "" || (temDiferenca && !observacoes.trim())}
             className="w-full sm:w-auto"
           >
             {saving ? (
