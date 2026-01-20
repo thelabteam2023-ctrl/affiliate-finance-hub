@@ -21,6 +21,7 @@ import {
   BarChart3,
   Layers
 } from "lucide-react";
+import { useCotacoes } from "@/hooks/useCotacoes";
 
 interface VinculoFinanceiroSheetProps {
   open: boolean;
@@ -70,7 +71,10 @@ export function VinculoFinanceiroSheet({
   const [eventosRisco, setEventosRisco] = useState<EventoRisco[]>();
   
   const moeda = bookmaker?.moeda || 'BRL';
-  const USD_TO_BRL = 6.1;
+  
+  // COTAÇÃO CENTRALIZADA - Usa PTAX do BCB, nunca hardcoded
+  const { cotacaoUSD } = useCotacoes();
+  const USD_TO_BRL = cotacaoUSD;
 
   useEffect(() => {
     if (open && bookmaker) {
