@@ -61,6 +61,7 @@ interface BookmakerInfo {
   id: string;
   nome: string;
   logo_url: string | null;
+  parceiro_id: string | null;
 }
 
 interface ContaBancariaInfo {
@@ -73,6 +74,12 @@ interface WalletInfo {
   id: string;
   exchange: string;
   rede: string;
+  parceiro_id: string | null;
+}
+
+interface ParceiroInfo {
+  id: string;
+  nome: string;
 }
 
 const getTipoConfig = (tipo: string) => {
@@ -161,8 +168,10 @@ const getStatusBadge = (status: string) => {
 export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabProps) {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [bookmakers, setBookmakers] = useState<Record<string, BookmakerInfo>>({});
+  const [allBookmakers, setAllBookmakers] = useState<Record<string, BookmakerInfo>>({});
   const [contasBancarias, setContasBancarias] = useState<Record<string, ContaBancariaInfo>>({});
   const [wallets, setWallets] = useState<Record<string, WalletInfo>>({});
+  const [parceiros, setParceiros] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [filtroTipo, setFiltroTipo] = useState("TODOS");
   const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
@@ -175,7 +184,7 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
   const fetchBookmakers = useCallback(async () => {
     const { data, error } = await supabase
       .from("bookmakers")
-      .select("id, nome, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url)")
+      .select("id, nome, parceiro_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url)")
       .eq("projeto_id", projetoId);
 
     if (!error && data) {
@@ -184,7 +193,8 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
         map[b.id] = {
           id: b.id,
           nome: b.nome,
-          logo_url: b.bookmakers_catalogo?.logo_url || null
+          logo_url: b.bookmakers_catalogo?.logo_url || null,
+          parceiro_id: b.parceiro_id
         };
       });
       setBookmakers(map);
@@ -192,6 +202,41 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     }
     return [];
   }, [projetoId]);
+
+  // Buscar todas as bookmakers (para transações que referenciam outras)
+  const fetchAllBookmakers = useCallback(async () => {
+    const { data } = await supabase
+      .from("bookmakers")
+      .select("id, nome, parceiro_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url)");
+
+    if (data) {
+      const map: Record<string, BookmakerInfo> = {};
+      data.forEach((b: any) => {
+        map[b.id] = {
+          id: b.id,
+          nome: b.nome,
+          logo_url: b.bookmakers_catalogo?.logo_url || null,
+          parceiro_id: b.parceiro_id
+        };
+      });
+      setAllBookmakers(map);
+    }
+  }, []);
+
+  // Buscar parceiros para nomes secundários
+  const fetchParceiros = useCallback(async () => {
+    const { data } = await supabase
+      .from("parceiros")
+      .select("id, nome");
+
+    if (data) {
+      const map: Record<string, string> = {};
+      data.forEach((p: any) => {
+        map[p.id] = p.nome;
+      });
+      setParceiros(map);
+    }
+  }, []);
 
   // Buscar contas bancárias
   const fetchContasBancarias = useCallback(async () => {
@@ -212,12 +257,12 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
   const fetchWallets = useCallback(async () => {
     const { data } = await supabase
       .from("wallets_crypto")
-      .select("id, exchange, rede");
+      .select("id, exchange, rede, parceiro_id");
 
     if (data) {
       const map: Record<string, WalletInfo> = {};
       data.forEach((w: any) => {
-        map[w.id] = { id: w.id, exchange: w.exchange, rede: w.rede };
+        map[w.id] = { id: w.id, exchange: w.exchange, rede: w.rede, parceiro_id: w.parceiro_id };
       });
       setWallets(map);
     }
@@ -236,7 +281,7 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
       }
 
       // Buscar dados auxiliares em paralelo
-      await Promise.all([fetchContasBancarias(), fetchWallets()]);
+      await Promise.all([fetchContasBancarias(), fetchWallets(), fetchAllBookmakers(), fetchParceiros()]);
 
       // Buscar transações onde origem OU destino é uma bookmaker do projeto
       let query = supabase
@@ -261,7 +306,7 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     } finally {
       setLoading(false);
     }
-  }, [projetoId, dataInicio, dataFim, fetchBookmakers, fetchContasBancarias, fetchWallets]);
+  }, [projetoId, dataInicio, dataFim, fetchBookmakers, fetchContasBancarias, fetchWallets, fetchAllBookmakers, fetchParceiros]);
 
   useEffect(() => {
     fetchTransacoes();
@@ -312,39 +357,79 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     return "custom";
   };
 
-  const getOrigemLabel = (transacao: Transacao) => {
-    if (transacao.origem_bookmaker_id && bookmakers[transacao.origem_bookmaker_id]) {
-      return bookmakers[transacao.origem_bookmaker_id].nome;
-    }
-    if (transacao.origem_conta_bancaria_id && contasBancarias[transacao.origem_conta_bancaria_id]) {
-      return contasBancarias[transacao.origem_conta_bancaria_id].banco;
-    }
-    if (transacao.origem_wallet_id && wallets[transacao.origem_wallet_id]) {
-      return wallets[transacao.origem_wallet_id].exchange;
-    }
-    if (transacao.origem_tipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
-    if (transacao.nome_investidor) return transacao.nome_investidor;
-    return "Origem";
+  // Função para obter bookmaker (do projeto ou global)
+  const getBookmaker = (id: string | null) => {
+    if (!id) return null;
+    return bookmakers[id] || allBookmakers[id] || null;
   };
 
-  const getDestinoLabel = (transacao: Transacao) => {
-    if (transacao.destino_bookmaker_id && bookmakers[transacao.destino_bookmaker_id]) {
-      return bookmakers[transacao.destino_bookmaker_id].nome;
+  const getOrigemInfo = (transacao: Transacao): { primary: string; secondary?: string } => {
+    if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
+      return { primary: "Caixa Operacional" };
     }
+    
+    if (transacao.origem_bookmaker_id) {
+      const bk = getBookmaker(transacao.origem_bookmaker_id);
+      const parceiroNome = bk?.parceiro_id ? parceiros[bk.parceiro_id] : undefined;
+      return { 
+        primary: bk?.nome || "Bookmaker",
+        secondary: parceiroNome
+      };
+    }
+    
+    if (transacao.origem_conta_bancaria_id && contasBancarias[transacao.origem_conta_bancaria_id]) {
+      const conta = contasBancarias[transacao.origem_conta_bancaria_id];
+      return { primary: conta.banco, secondary: conta.titular };
+    }
+    
+    if (transacao.origem_wallet_id && wallets[transacao.origem_wallet_id]) {
+      const wallet = wallets[transacao.origem_wallet_id];
+      const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
+      return { 
+        primary: wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET',
+        secondary: parceiroNome
+      };
+    }
+    
+    if (transacao.nome_investidor) return { primary: transacao.nome_investidor };
+    return { primary: "Origem" };
+  };
+
+  const getDestinoInfo = (transacao: Transacao): { primary: string; secondary?: string } => {
+    if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
+      return { primary: "Caixa Operacional" };
+    }
+    
+    if (transacao.destino_bookmaker_id) {
+      const bk = getBookmaker(transacao.destino_bookmaker_id);
+      const parceiroNome = bk?.parceiro_id ? parceiros[bk.parceiro_id] : undefined;
+      return { 
+        primary: bk?.nome || "Bookmaker",
+        secondary: parceiroNome
+      };
+    }
+    
     if (transacao.destino_conta_bancaria_id && contasBancarias[transacao.destino_conta_bancaria_id]) {
-      return contasBancarias[transacao.destino_conta_bancaria_id].banco;
+      const conta = contasBancarias[transacao.destino_conta_bancaria_id];
+      return { primary: conta.banco, secondary: conta.titular };
     }
+    
     if (transacao.destino_wallet_id && wallets[transacao.destino_wallet_id]) {
-      return wallets[transacao.destino_wallet_id].exchange;
+      const wallet = wallets[transacao.destino_wallet_id];
+      const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
+      return { 
+        primary: wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET',
+        secondary: parceiroNome
+      };
     }
-    if (transacao.destino_tipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
-    if (transacao.nome_investidor) return transacao.nome_investidor;
-    return "Destino";
+    
+    if (transacao.nome_investidor) return { primary: transacao.nome_investidor };
+    return { primary: "Destino" };
   };
 
   const getOrigemIcon = (transacao: Transacao) => {
     if (transacao.origem_bookmaker_id) {
-      const bk = bookmakers[transacao.origem_bookmaker_id];
+      const bk = getBookmaker(transacao.origem_bookmaker_id);
       const logoUrl = bk?.logo_url || getLogoUrl(bk?.nome || '');
       if (logoUrl) {
         return (
@@ -356,7 +441,6 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
           />
         );
       }
-      return <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />;
     }
     if (transacao.origem_wallet_id) {
       return <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />;
@@ -372,7 +456,7 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
 
   const getDestinoIcon = (transacao: Transacao) => {
     if (transacao.destino_bookmaker_id) {
-      const bk = bookmakers[transacao.destino_bookmaker_id];
+      const bk = getBookmaker(transacao.destino_bookmaker_id);
       const logoUrl = bk?.logo_url || getLogoUrl(bk?.nome || '');
       if (logoUrl) {
         return (
@@ -384,7 +468,6 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
           />
         );
       }
-      return <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />;
     }
     if (transacao.destino_wallet_id) {
       return <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />;
@@ -570,22 +653,38 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
                         {/* Origem → Destino */}
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           {/* Origem */}
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            {getOrigemIcon(transacao)}
-                            <span className="text-sm text-muted-foreground truncate">
-                              {getOrigemLabel(transacao)}
-                            </span>
-                          </div>
+                          {(() => {
+                            const origemInfo = getOrigemInfo(transacao);
+                            return (
+                              <div className="flex items-center gap-2">
+                                {getOrigemIcon(transacao)}
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-sm text-muted-foreground truncate">{origemInfo.primary}</span>
+                                  {origemInfo.secondary && (
+                                    <span className="text-xs text-muted-foreground/70 truncate">{origemInfo.secondary}</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           <ArrowRight className="h-4 w-4 text-primary shrink-0" />
 
                           {/* Destino */}
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            {getDestinoIcon(transacao)}
-                            <span className="text-sm text-muted-foreground truncate">
-                              {getDestinoLabel(transacao)}
-                            </span>
-                          </div>
+                          {(() => {
+                            const destinoInfo = getDestinoInfo(transacao);
+                            return (
+                              <div className="flex items-center gap-2">
+                                {getDestinoIcon(transacao)}
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-sm text-muted-foreground truncate">{destinoInfo.primary}</span>
+                                  {destinoInfo.secondary && (
+                                    <span className="text-xs text-muted-foreground/70 truncate">{destinoInfo.secondary}</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
 
