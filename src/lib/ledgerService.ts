@@ -125,6 +125,14 @@ export async function insertLedgerEntry(
       ajuste_direcao: input.ajusteDirecao || null,
     };
     
+    console.log('[insertLedgerEntry] Tentando inserir:', {
+      tipo: input.tipoTransacao,
+      valor: input.valor,
+      workspaceId: input.workspaceId,
+      destinoBookmakerId: input.destinoBookmakerId,
+      origemBookmakerId: input.origemBookmakerId,
+    });
+    
     const { data, error } = await supabase
       .from('cash_ledger')
       .insert(insertPayload as any)
@@ -132,14 +140,20 @@ export async function insertLedgerEntry(
       .single();
 
     if (error) {
-      console.error('[insertLedgerEntry] Erro ao inserir:', error);
+      console.error('[insertLedgerEntry] Erro ao inserir:', {
+        errorMessage: error.message,
+        errorCode: error.code,
+        errorDetails: error.details,
+        errorHint: error.hint,
+        payload: insertPayload,
+      });
       return { success: false, error: error.message };
     }
 
-    console.log(`[insertLedgerEntry] Entrada criada: ${data.id} (${input.tipoTransacao})`);
+    console.log(`[insertLedgerEntry] ✅ Entrada criada com sucesso: ${data.id} (${input.tipoTransacao})`);
     return { success: true, entryId: data.id };
   } catch (err: any) {
-    console.error('[insertLedgerEntry] Exceção:', err);
+    console.error('[insertLedgerEntry] Exceção não tratada:', err);
     return { success: false, error: err.message };
   }
 }
