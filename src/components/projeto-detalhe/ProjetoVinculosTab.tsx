@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
 import { useProjectResponsibilities } from "@/hooks/useProjectResponsibilities";
+import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,10 +88,12 @@ interface Vinculo {
   parceiro_nome: string | null;
   projeto_id: string | null;
   bookmaker_status: string;
-  saldo_atual: number;
+  saldo_real: number;      // Saldo real (sem bônus)
   saldo_em_aposta: number;
-  saldo_livre: number;
+  saldo_disponivel: number; // Real - Em Aposta
   saldo_freebet: number;
+  saldo_bonus: number;      // NOVO: saldo de bônus creditados
+  saldo_operavel: number;   // NOVO: total operável (real + freebet + bonus - em_aposta)
   moeda: string;
   login_username: string;
   login_password_encrypted: string | null;
@@ -199,82 +202,87 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     try {
       setLoading(true);
 
-      // Fetch bookmakers linked to this project
-      const { data: vinculosData, error: vinculosError } = await supabase
-        .from("bookmakers")
-        .select(`
-          id,
-          nome,
-          parceiro_id,
-          projeto_id,
-          status,
-          saldo_atual,
-          saldo_usd,
-          saldo_freebet,
-          moeda,
-          login_username,
-          login_password_encrypted,
-          bookmaker_catalogo_id,
-          parceiros!bookmakers_parceiro_id_fkey (nome),
-          bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
-        `)
-        .eq("projeto_id", projetoId);
+      // FONTE ÚNICA DE VERDADE: usar RPC get_bookmaker_saldos para saldos
+      const { data: saldosData, error: saldosError } = await supabase.rpc("get_bookmaker_saldos", {
+        p_projeto_id: projetoId
+      });
 
-      if (vinculosError) throw vinculosError;
+      if (saldosError) throw saldosError;
 
-      // Fetch apostas count and pending stakes per bookmaker (simples + multiplas)
-      const bookmakerIds = (vinculosData || []).map((v: any) => v.id);
+      // Buscar dados complementares (credenciais, status, etc) que a RPC não retorna
+      const bookmakerIds = (saldosData || []).map((s: any) => s.id);
       
+      let credentialsMap: Record<string, { 
+        status: string; 
+        login_username: string; 
+        login_password_encrypted: string | null;
+        bookmaker_catalogo_id: string | null;
+      }> = {};
       let apostasCount: Record<string, number> = {};
-      let saldoEmAposta: Record<string, number> = {};
-      
+
       if (bookmakerIds.length > 0) {
-        // Usar apostas_unificada
+        // Buscar credenciais e status das bookmakers
+        const { data: bookmarkersDetails } = await supabase
+          .from("bookmakers")
+          .select("id, status, login_username, login_password_encrypted, bookmaker_catalogo_id")
+          .in("id", bookmakerIds);
+
+        if (bookmarkersDetails) {
+          bookmarkersDetails.forEach((b: any) => {
+            credentialsMap[b.id] = {
+              status: b.status,
+              login_username: b.login_username,
+              login_password_encrypted: b.login_password_encrypted,
+              bookmaker_catalogo_id: b.bookmaker_catalogo_id
+            };
+          });
+        }
+
+        // Contar apostas por bookmaker
         const { data: apostasData } = await supabase
           .from("apostas_unificada")
-          .select("bookmaker_id, stake, status")
+          .select("bookmaker_id")
           .eq("projeto_id", projetoId)
           .not("bookmaker_id", "is", null)
           .in("bookmaker_id", bookmakerIds);
 
-        // Process apostas
         if (apostasData) {
           apostasData.forEach((a: any) => {
             if (a.bookmaker_id) {
               apostasCount[a.bookmaker_id] = (apostasCount[a.bookmaker_id] || 0) + 1;
-              if (a.status === "PENDENTE") {
-                saldoEmAposta[a.bookmaker_id] = (saldoEmAposta[a.bookmaker_id] || 0) + (a.stake || 0);
-              }
             }
           });
         }
       }
 
-      const mappedVinculos: Vinculo[] = (vinculosData || []).map((v: any) => {
-        const emAposta = saldoEmAposta[v.id] || 0;
-        const saldoAtual = getSaldoBookmaker({
-          moeda: v.moeda,
-          saldo_atual: v.saldo_atual,
-          saldo_usd: v.saldo_usd,
-        });
+      // Mapear para interface Vinculo usando dados da RPC + complementos
+      const mappedVinculos: Vinculo[] = (saldosData || []).map((s: any) => {
+        const creds = credentialsMap[s.id] || {
+          status: "ativo",
+          login_username: "",
+          login_password_encrypted: null,
+          bookmaker_catalogo_id: null
+        };
 
         return {
-          id: v.id,
-          nome: v.nome,
-          parceiro_id: v.parceiro_id,
-          parceiro_nome: v.parceiros?.nome || null,
-          projeto_id: v.projeto_id,
-          bookmaker_status: v.status,
-          saldo_atual: saldoAtual,
-          saldo_em_aposta: emAposta,
-          saldo_livre: saldoAtual - emAposta,
-          saldo_freebet: v.saldo_freebet || 0,
-          moeda: v.moeda || "BRL",
-          login_username: v.login_username,
-          login_password_encrypted: v.login_password_encrypted || null,
-          bookmaker_catalogo_id: v.bookmaker_catalogo_id,
-          logo_url: v.bookmakers_catalogo?.logo_url || null,
-          totalApostas: apostasCount[v.id] || 0,
+          id: s.id,
+          nome: s.nome,
+          parceiro_id: s.parceiro_id,
+          parceiro_nome: s.parceiro_nome || null,
+          projeto_id: projetoId,
+          bookmaker_status: creds.status,
+          saldo_real: Number(s.saldo_real) || 0,
+          saldo_em_aposta: Number(s.saldo_em_aposta) || 0,
+          saldo_disponivel: Number(s.saldo_disponivel) || 0,
+          saldo_freebet: Number(s.saldo_freebet) || 0,
+          saldo_bonus: Number(s.saldo_bonus) || 0,
+          saldo_operavel: Number(s.saldo_operavel) || 0,
+          moeda: s.moeda || "BRL",
+          login_username: creds.login_username,
+          login_password_encrypted: creds.login_password_encrypted,
+          bookmaker_catalogo_id: creds.bookmaker_catalogo_id,
+          logo_url: s.logo_url || null,
+          totalApostas: apostasCount[s.id] || 0,
         };
       });
 
@@ -483,28 +491,27 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     loading: cotacoesLoading 
   } = useProjectCurrencyFormat();
 
-  // Agrupar saldos por moeda para KPIs
+  // Agrupar saldos por moeda para KPIs - usando saldo_operavel como base
   const balancesByMoeda = useMemo(() => {
     return groupBalancesByMoeda(
-      vinculos.map(v => ({ saldo: v.saldo_atual, moeda: v.moeda }))
+      vinculos.map(v => ({ saldo: v.saldo_operavel, moeda: v.moeda }))
     );
   }, [vinculos, groupBalancesByMoeda]);
 
   // Calcular totais consolidados em BRL
-  // NOTA: O bônus já está incluído no saldo_atual/saldo_livre de cada bookmaker
-  // Portanto, NÃO somamos bônus novamente no Saldo Operável
+  // NOVO: saldo_operavel já inclui real + freebet + bônus - apostas pendentes
   const consolidatedTotals = useMemo(() => {
-    // saldo_atual já inclui o bônus creditado - usar diretamente
-    const totalRealBRL = vinculos.reduce((acc, v) => acc + convertToBRL(v.saldo_atual, v.moeda), 0);
+    const totalRealBRL = vinculos.reduce((acc, v) => acc + convertToBRL(v.saldo_real, v.moeda), 0);
     const totalFreebetBRL = vinculos.reduce((acc, v) => acc + convertToBRL(v.saldo_freebet || 0, v.moeda), 0);
-    // Saldo Operável = Real + Freebet (bônus já está no Real)
-    const totalOperavelBRL = totalRealBRL + totalFreebetBRL;
+    const totalBonusBRL = vinculos.reduce((acc, v) => acc + convertToBRL(v.saldo_bonus || 0, v.moeda), 0);
+    const totalOperavelBRL = vinculos.reduce((acc, v) => acc + convertToBRL(v.saldo_operavel, v.moeda), 0);
     
     const hasForeignCurrency = vinculos.some(v => v.moeda !== "BRL");
     
     return {
       totalRealBRL,
       totalFreebetBRL,
+      totalBonusBRL,
       totalOperavelBRL,
       hasForeignCurrency,
     };
@@ -1100,12 +1107,12 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                                 Saldo Operável
                               </span>
                               <span className="text-sm font-bold text-primary">
-                                {formatCurrency(vinculo.saldo_atual + (vinculo.saldo_freebet || 0) + (bonusTotalsByBookmaker[vinculo.id] || 0), vinculo.moeda)}
+                                {formatCurrency(vinculo.saldo_operavel, vinculo.moeda)}
                               </span>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Real + Freebet + Bônus Ativo</p>
+                            <p>Real + Freebet + Bônus - Em Aposta</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1116,10 +1123,10 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         Saldo Real
                       </span>
                       <div className="text-right">
-                        <span className="text-sm font-semibold">{formatCurrency(vinculo.saldo_atual, vinculo.moeda)}</span>
+                        <span className="text-sm font-semibold">{formatCurrency(vinculo.saldo_real, vinculo.moeda)}</span>
                         {vinculo.moeda !== "BRL" && (
                           <p className="text-[10px] text-muted-foreground">
-                            ≈ {formatCurrency(convertToBRL(vinculo.saldo_atual, vinculo.moeda), "BRL")}
+                            ≈ {formatCurrency(convertToBRL(vinculo.saldo_real, vinculo.moeda), "BRL")}
                           </p>
                         )}
                       </div>
@@ -1129,14 +1136,14 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         <Clock className="h-3 w-3" />
                         Em Aposta
                       </span>
-                      <span className="text-sm font-medium text-yellow-400">{formatCurrency(vinculo.saldo_em_aposta, vinculo.moeda)}</span>
+                      <span className="text-sm font-medium text-warning">{formatCurrency(vinculo.saldo_em_aposta, vinculo.moeda)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <DollarSign className="h-3 w-3" />
-                        Livre
+                        Disponível
                       </span>
-                      <span className="text-sm font-medium text-emerald-400">{formatCurrency(vinculo.saldo_livre, vinculo.moeda)}</span>
+                      <span className="text-sm font-medium text-accent-foreground">{formatCurrency(vinculo.saldo_disponivel, vinculo.moeda)}</span>
                     </div>
                     {vinculo.saldo_freebet > 0 && (
                       <div className="flex items-center justify-between">
@@ -1145,6 +1152,15 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                           Freebet
                         </span>
                         <span className="text-sm font-medium text-amber-400">{formatCurrency(vinculo.saldo_freebet, vinculo.moeda)}</span>
+                      </div>
+                    )}
+                    {vinculo.saldo_bonus > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Coins className="h-3 w-3 text-purple-400" />
+                          Bônus
+                        </span>
+                        <span className="text-sm font-medium text-purple-400">{formatCurrency(vinculo.saldo_bonus, vinculo.moeda)}</span>
                       </div>
                     )}
                   </div>
@@ -1322,47 +1338,50 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     </p>
                   </div>
 
-                  {/* Saldo Total = Saldo Livre (bônus já incluído) */}
+                  {/* Saldo Operável (inclui bônus) */}
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="text-right flex-shrink-0 min-w-[80px] cursor-help">
                           <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
-                            Saldo Total
-                            {(bonusTotalsByBookmaker[vinculo.id] || 0) > 0 && (
+                            Saldo Operável
+                            {vinculo.saldo_bonus > 0 && (
                               <Coins className="h-3 w-3 text-purple-400" />
                             )}
                           </p>
-                          <p className="font-semibold">{formatCurrency(vinculo.saldo_livre, vinculo.moeda)}</p>
+                          <p className="font-semibold">{formatCurrency(vinculo.saldo_operavel, vinculo.moeda)}</p>
                         </div>
                       </TooltipTrigger>
-                      {(bonusTotalsByBookmaker[vinculo.id] || 0) > 0 && (
-                        <TooltipContent side="top" className="max-w-xs">
-                          <div className="space-y-1">
+                      <TooltipContent side="top" className="max-w-xs">
+                        <div className="space-y-1">
+                          <p className="text-xs">Real: {formatCurrency(vinculo.saldo_real, vinculo.moeda)}</p>
+                          {vinculo.saldo_freebet > 0 && (
+                            <p className="text-xs">Freebet: {formatCurrency(vinculo.saldo_freebet, vinculo.moeda)}</p>
+                          )}
+                          {vinculo.saldo_bonus > 0 && (
                             <p className="text-xs font-medium flex items-center gap-1">
                               <Coins className="h-3 w-3 text-purple-400" />
-                              Inclui {formatCurrency(bonusTotalsByBookmaker[vinculo.id], vinculo.moeda)} em bônus creditados
+                              Bônus: {formatCurrency(vinculo.saldo_bonus, vinculo.moeda)}
                             </p>
-                            <p className="text-[10px] text-muted-foreground">
-                              Valor histórico de bônus já incorporado ao saldo.
-                              Pode variar conforme regras da casa.
-                            </p>
-                          </div>
-                        </TooltipContent>
-                      )}
+                          )}
+                          {vinculo.saldo_em_aposta > 0 && (
+                            <p className="text-xs text-muted-foreground">Em Aposta: -{formatCurrency(vinculo.saldo_em_aposta, vinculo.moeda)}</p>
+                          )}
+                        </div>
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
 
                   {/* Em Aposta */}
                   <div className="text-right flex-shrink-0 min-w-[80px]">
                     <p className="text-xs text-muted-foreground">Em Aposta</p>
-                    <p className="font-medium text-yellow-400">{formatCurrency(vinculo.saldo_em_aposta, vinculo.moeda)}</p>
+                    <p className="font-medium text-warning">{formatCurrency(vinculo.saldo_em_aposta, vinculo.moeda)}</p>
                   </div>
 
-                  {/* Livre */}
+                  {/* Disponível */}
                   <div className="text-right flex-shrink-0 min-w-[80px]">
-                    <p className="text-xs text-muted-foreground">Livre</p>
-                    <p className="font-medium text-emerald-400">{formatCurrency(vinculo.saldo_livre, vinculo.moeda)}</p>
+                    <p className="text-xs text-muted-foreground">Disponível</p>
+                    <p className="font-medium text-accent-foreground">{formatCurrency(vinculo.saldo_disponivel, vinculo.moeda)}</p>
                   </div>
 
                   {/* Freebet (condicional) */}
@@ -1373,6 +1392,17 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         Freebet
                       </p>
                       <p className="font-medium text-amber-400">{formatCurrency(vinculo.saldo_freebet, vinculo.moeda)}</p>
+                    </div>
+                  )}
+
+                  {/* Bônus (condicional) */}
+                  {vinculo.saldo_bonus > 0 && (
+                    <div className="text-right flex-shrink-0 min-w-[80px]">
+                      <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+                        <Coins className="h-3 w-3 text-purple-400" />
+                        Bônus
+                      </p>
+                      <p className="font-medium text-purple-400">{formatCurrency(vinculo.saldo_bonus, vinculo.moeda)}</p>
                     </div>
                   )}
 
@@ -1667,7 +1697,14 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           setConciliacaoDialogOpen(open);
           if (!open) setVinculoParaConciliar(null);
         }}
-        vinculo={vinculoParaConciliar}
+        vinculo={vinculoParaConciliar ? {
+          id: vinculoParaConciliar.id,
+          nome: vinculoParaConciliar.nome,
+          parceiro_nome: vinculoParaConciliar.parceiro_nome,
+          saldo_atual: vinculoParaConciliar.saldo_real, // Conciliação usa saldo_real
+          moeda: vinculoParaConciliar.moeda,
+          bookmaker_status: vinculoParaConciliar.bookmaker_status
+        } : null}
         projetoId={projetoId}
         workspaceId={workspaceId}
         onConciliado={() => {
