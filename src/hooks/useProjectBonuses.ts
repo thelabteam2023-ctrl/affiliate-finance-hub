@@ -297,16 +297,17 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         .eq("id", projectId)
         .single();
 
-      // MODELO UNIFICADO: saldo_atual do bônus sempre = 0
-      // O valor do bônus é creditado diretamente no saldo_atual do bookmaker
+      // CORREÇÃO: saldo_atual do bônus deve refletir o valor creditado
+      // A RPC get_bookmaker_saldos calcula saldo_bonus via SUM(saldo_atual) dos bônus creditados
       const bonusData = {
         project_id: projectId,
         bookmaker_id: data.bookmaker_id,
         title: data.title || "",
         bonus_amount: data.bonus_amount,
-        saldo_atual: 0, // Sempre 0 - saldo unificado no bookmaker
+        // saldo_atual = valor do bônus quando creditado, 0 quando pendente
+        saldo_atual: data.status === "credited" ? data.bonus_amount : 0,
         valor_creditado_no_saldo: data.status === "credited" ? data.bonus_amount : 0,
-        migrado_para_saldo_unificado: true, // Marca como modelo unificado
+        migrado_para_saldo_unificado: true,
         currency: data.currency,
         status: data.status,
         credited_at: data.status === "credited" ? (data.credited_at || new Date().toISOString()) : null,
@@ -377,11 +378,11 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         updateData.credited_at = new Date().toISOString();
       }
 
-      // MODELO UNIFICADO: saldo_atual do bônus sempre = 0
-      // Se status muda para credited, creditar no bookmaker via ledger
+      // CORREÇÃO: saldo_atual do bônus deve refletir o valor creditado
+      // A RPC get_bookmaker_saldos calcula saldo_bonus via SUM(saldo_atual) dos bônus creditados
       if (existingBonus && data.status && data.status !== existingBonus.status) {
         if (data.status === "credited") {
-          // Creditar via ledger
+          // Creditar via ledger (para impactar saldo_real)
           const bonusAmount = data.bonus_amount ?? existingBonus.bonus_amount;
           const { data: userData } = await supabase.auth.getUser();
           
@@ -411,9 +412,12 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
 
           updateData.valor_creditado_no_saldo = bonusAmount;
           updateData.migrado_para_saldo_unificado = true;
+          // CORREÇÃO: saldo_atual = valor do bônus quando creditado
+          updateData.saldo_atual = bonusAmount;
+        } else {
+          // Se status muda de credited para outro, zerar saldo_atual
+          updateData.saldo_atual = 0;
         }
-        // saldo_atual sempre 0 no modelo unificado
-        updateData.saldo_atual = 0;
         if (data.status !== "credited" && typeof data.credited_at === "undefined") {
           updateData.credited_at = null;
         }
