@@ -69,25 +69,7 @@ export function useCentralAlertsCount() {
         const canSeeProjectData = allowedDomains.includes('project_event');
 
         // Fetch all alert sources in parallel, respecting role restrictions
-        const [
-          alertasResult,
-          entregasResult,
-          saquesPendentesResult,
-          parceriasResult,
-          movimentacoesResult,
-          alertasLucroResult,
-          pagamentosOperadorResult,
-          participacoesResult,
-          encerResult,
-          todosParceirosResult,
-          todasParceriasResult,
-          custosResult,
-          acordosResult,
-          comissoesResult,
-          indicacoesResult,
-          casasDesvinculadasResult,
-          propostasPagamentoResult,
-        ] = await Promise.all([
+        const results = await Promise.all([
           // Alertas do painel operacional (saques e casas limitadas) - financial_event
           canSeeFinancialData
             ? supabase.from("v_painel_operacional").select("entidade_id", { count: "exact", head: true })
@@ -172,7 +154,32 @@ export function useCentralAlertsCount() {
           canSeeProjectData
             ? supabase.from("pagamentos_propostos").select("id", { count: "exact", head: true }).eq("status", "PENDENTE")
             : Promise.resolve({ count: 0, error: null }),
+          // Casas pendentes de conciliação - financial_event
+          canSeeFinancialData
+            ? supabase.rpc("get_bookmakers_pendentes_conciliacao", { p_workspace_id: workspaceId })
+            : Promise.resolve({ data: [], error: null }),
         ]);
+
+        const [
+          alertasResult,
+          entregasResult,
+          saquesPendentesResult,
+          parceriasResult,
+          movimentacoesResult,
+          alertasLucroResult,
+          pagamentosOperadorResult,
+          participacoesResult,
+          encerResult,
+          todosParceirosResult,
+          todasParceriasResult,
+          custosResult,
+          acordosResult,
+          comissoesResult,
+          indicacoesResult,
+          casasDesvinculadasResult,
+          propostasPagamentoResult,
+          conciliacaoPendenteResult,
+        ] = results as any[];
 
         let totalCount = 0;
 
@@ -288,6 +295,11 @@ export function useCentralAlertsCount() {
 
         // Count propostas de pagamento pendentes (project_event)
         if (propostasPagamentoResult.count) totalCount += propostasPagamentoResult.count;
+
+        // Count casas pendentes de conciliação (financial_event)
+        if (conciliacaoPendenteResult.data && Array.isArray(conciliacaoPendenteResult.data)) {
+          totalCount += conciliacaoPendenteResult.data.length;
+        }
 
         setCount(totalCount);
       } catch (error) {
