@@ -49,8 +49,8 @@ export function CasasPendentesConciliacaoCard({
 
   const handleConciliar = (casa: CasaPendenteConciliacao) => {
     if (casa.projeto_id) {
-      // Navegar para a aba de vínculos do projeto com a casa selecionada
-      navigate(`/projeto/${casa.projeto_id}?tab=vinculos&highlight=${casa.bookmaker_id}`);
+      // Navegar para a aba de conciliação do projeto com a casa selecionada
+      navigate(`/projeto/${casa.projeto_id}?tab=conciliacao&highlight=${casa.bookmaker_id}`);
     }
     onNavigate?.(casa.projeto_id || "", casa.bookmaker_id);
   };
