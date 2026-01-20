@@ -71,7 +71,7 @@ export interface LedgerEntryInput {
   /** Se impacta caixa operacional */
   impactaCaixaOperacional?: boolean;
   /** Tipo de moeda: fiat ou crypto */
-  tipoMoeda?: 'fiat' | 'crypto';
+  tipoMoeda?: 'FIAT' | 'CRYPTO';
   /** Cotação snapshot (para conversão) */
   cotacao?: number;
   /** Referência a outra transação */
@@ -108,7 +108,7 @@ export async function insertLedgerEntry(
       descricao: input.descricao || null,
       data_transacao: dataTransacao,
       impacta_caixa_operacional: input.impactaCaixaOperacional ?? true,
-      tipo_moeda: input.tipoMoeda || 'fiat',
+      tipo_moeda: input.tipoMoeda || 'FIAT',
       cotacao: input.cotacao || null,
       referencia_transacao_id: input.referenciaTransacaoId || null,
       auditoria_metadata: input.auditoriaMetadata || null,
