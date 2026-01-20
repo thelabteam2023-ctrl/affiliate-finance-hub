@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
 import { FinalizeBonusDialog } from "../FinalizeBonusDialog";
 import { BonusDialog } from "../BonusDialog";
 import { BonusFormData } from "@/hooks/useProjectBonuses";
+import { BookmakerBonusAnalyticsTab } from "./analytics-por-casa";
 import {
   Table,
   TableBody,
@@ -41,7 +43,8 @@ import {
   History,
   XCircle,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  BarChart3
 } from "lucide-react";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -205,6 +208,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"list" | "cards">("list");
+  const [subTab, setSubTab] = useState<"operacional" | "analytics">("operacional");
   
   // Drawer state
   const [bonusDrawerOpen, setBonusDrawerOpen] = useState(false);
@@ -389,28 +393,43 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
     );
   }
 
+
   return (
     <div className="space-y-4">
-      {/* Search and View Toggle */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, login ou parceiro..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "list" | "cards")}>
-          <ToggleGroupItem value="list" aria-label="Visualização em lista">
-            <List className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem value="cards" aria-label="Visualização em cards">
-            <LayoutGrid className="h-4 w-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
+      {/* Sub-tabs Navigation */}
+      <Tabs value={subTab} onValueChange={(v) => setSubTab(v as "operacional" | "analytics")}>
+        <TabsList className="bg-muted/30 border border-border/50">
+          <TabsTrigger value="operacional" className="data-[state=active]:bg-background gap-2">
+            <Building2 className="h-4 w-4" />
+            Operacional
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="data-[state=active]:bg-background gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Análise Global
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="operacional" className="mt-4 space-y-4">
+          {/* Search and View Toggle */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, login ou parceiro..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "list" | "cards")}>
+              <ToggleGroupItem value="list" aria-label="Visualização em lista">
+                <List className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="cards" aria-label="Visualização em cards">
+                <LayoutGrid className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
 
       {/* Pending Bonuses Section */}
       {pendingBonuses.length > 0 && (
@@ -878,6 +897,13 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
         bonuses={bonuses} 
         formatCurrency={formatCurrency}
       />
+
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-4">
+          <BookmakerBonusAnalyticsTab />
+        </TabsContent>
+      </Tabs>
 
       {/* Bonus Drawer */}
       {selectedBookmaker && (
