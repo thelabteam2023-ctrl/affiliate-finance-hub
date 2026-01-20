@@ -84,7 +84,9 @@ export function useProjetoResultado({
         .single();
       
       const moedaConsolidacao = projetoData?.moeda_consolidacao || 'BRL';
-      const cotacaoTrabalho = projetoData?.cotacao_trabalho || 5.0;
+      // IMPORTANTE: Se não há cotação de trabalho, significa que deve usar PTAX
+      // O valor 0 indica "usar fonte externa" - a camada de frontend resolve isso
+      const cotacaoTrabalho = projetoData?.cotacao_trabalho || 0;
 
       // 1. Fetch lucro bruto das apostas (USANDO VALORES CONSOLIDADOS QUANDO DISPONÍVEIS)
       const grossProfitFromBets = await fetchGrossProfitFromBets(projetoId, dataInicio, dataFim, moedaConsolidacao, cotacaoTrabalho);
@@ -150,6 +152,7 @@ export function useProjetoResultado({
 // Funções auxiliares de fetch
 
 // Helper para converter valor para moeda de consolidação
+// IMPORTANTE: Se cotacao <= 0, retorna o valor original (sem conversão)
 function convertToConsolidation(
   valor: number,
   moedaOrigem: string | null,
@@ -158,6 +161,13 @@ function convertToConsolidation(
 ): number {
   if (!valor) return 0;
   if (!moedaOrigem || moedaOrigem === moedaConsolidacao) return valor;
+  
+  // PROTEÇÃO: Se cotação inválida, retornar valor sem conversão
+  // Isso evita erros de divisão por zero e valores incorretos
+  if (!cotacao || cotacao <= 0) {
+    console.warn('[convertToConsolidation] Cotação inválida:', cotacao, '- retornando valor original');
+    return valor;
+  }
   
   // BRL -> USD
   if (moedaOrigem === "BRL" && moedaConsolidacao === "USD") {

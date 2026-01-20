@@ -43,6 +43,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useActionAccess } from "@/hooks/useModuleAccess";
+import { useCotacoes } from "@/hooks/useCotacoes";
 
 interface SaldoByMoeda {
   BRL: number;
@@ -89,6 +90,9 @@ export default function GestaoProjetos() {
   const [projetoParaVisualizar, setProjetoParaVisualizar] = useState<Projeto | null>(null);
   const { isFavorite, toggleFavorite } = useProjectFavorites();
   const { canCreate, canEdit, canDelete } = useActionAccess();
+  
+  // COTAÇÃO CENTRALIZADA - Usa PTAX do BCB, nunca hardcoded
+  const { cotacaoUSD, loading: loadingCotacao } = useCotacoes();
 
   // Check if user is operator (should only see linked projects)
   const isOperator = role === 'operator';
@@ -197,8 +201,9 @@ export default function GestaoProjetos() {
           .eq("status", "ATIVO")
       ]);
       
-      // Taxa de conversão USD->BRL aproximada (idealmente vir de uma API ou cache)
-      const USD_TO_BRL = 6.1;
+      // COTAÇÃO CENTRALIZADA - Usa PTAX do BCB obtida via hook
+      // NUNCA usar valores hardcoded conforme regra do sistema
+      const USD_TO_BRL = cotacaoUSD;
       
       // Mapear saldos da RPC canônica por projeto
       const bookmakersByProjeto: Record<string, { 
@@ -354,7 +359,7 @@ export default function GestaoProjetos() {
     } finally {
       setLoading(false);
     }
-  }, [user, isOperator]);
+  }, [user, isOperator, cotacaoUSD]);
 
   useEffect(() => {
     fetchProjetos();
