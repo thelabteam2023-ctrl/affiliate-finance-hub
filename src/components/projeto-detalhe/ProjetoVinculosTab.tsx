@@ -100,6 +100,7 @@ interface Vinculo {
   bookmaker_catalogo_id: string | null;
   logo_url?: string | null;
   totalApostas: number;
+  has_pending_transactions: boolean; // NOVO: indica se há transações pendentes de conciliação
 }
 
 interface BookmakerDisponivel {
@@ -283,6 +284,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           bookmaker_catalogo_id: creds.bookmaker_catalogo_id,
           logo_url: s.logo_url || null,
           totalApostas: apostasCount[s.id] || 0,
+          has_pending_transactions: Boolean(s.has_pending_transactions),
         };
       });
 
@@ -1035,6 +1037,23 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Badge de conciliação pendente */}
+                    {vinculo.has_pending_transactions && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge className="bg-destructive/20 text-destructive border-destructive/30 animate-pulse cursor-pointer">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Conciliar
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-sm">Esta casa possui transações pendentes de conciliação.</p>
+                            <p className="text-xs text-muted-foreground mt-1">Operações bloqueadas até conciliar.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                     {getStatusBadge(vinculo.bookmaker_status)}
                     <Popover 
                       open={statusPopoverId === vinculo.id} 
@@ -1249,8 +1268,25 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium truncate">{vinculo.nome}</span>
+                      {/* Badge de conciliação pendente na lista */}
+                      {vinculo.has_pending_transactions && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge className="bg-destructive/20 text-destructive border-destructive/30 animate-pulse text-[10px] px-1.5 py-0">
+                                <AlertTriangle className="h-3 w-3 mr-0.5" />
+                                Conciliar
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-sm">Transações pendentes de conciliação.</p>
+                              <p className="text-xs text-muted-foreground mt-1">Operações bloqueadas.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       {/* Badge de moeda para moedas estrangeiras na lista */}
                       {vinculo.moeda !== "BRL" && (
                         <Badge 

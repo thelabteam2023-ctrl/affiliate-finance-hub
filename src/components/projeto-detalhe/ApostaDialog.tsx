@@ -397,22 +397,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const { atualizarProgressoRollover } = useBonusBalanceManager();
   
   // Mapear saldos canônicos para formato local (retrocompatibilidade)
+  // IMPORTANTE: Filtrar casas com transações pendentes (bloqueio de conciliação)
   const bookmakers = useMemo((): Bookmaker[] => {
-    return bookmakerSaldos.map(bk => ({
-      id: bk.id,
-      nome: bk.nome,
-      parceiro_id: bk.parceiro_id,
-      parceiro_nome: bk.parceiro_nome,
-      saldo_atual: bk.saldo_real,
-      saldo_total: bk.saldo_real,
-      saldo_disponivel: bk.saldo_disponivel,
-      saldo_freebet: bk.saldo_freebet,
-      saldo_bonus: bk.saldo_bonus,
-      saldo_operavel: bk.saldo_operavel,
-      moeda: bk.moeda,
-      logo_url: bk.logo_url,
-      bonus_rollover_started: bk.bonus_rollover_started
-    }));
+    return bookmakerSaldos
+      .filter(bk => !bk.has_pending_transactions) // Bloquear casas não conciliadas
+      .map(bk => ({
+        id: bk.id,
+        nome: bk.nome,
+        parceiro_id: bk.parceiro_id,
+        parceiro_nome: bk.parceiro_nome,
+        saldo_atual: bk.saldo_real,
+        saldo_total: bk.saldo_real,
+        saldo_disponivel: bk.saldo_disponivel,
+        saldo_freebet: bk.saldo_freebet,
+        saldo_bonus: bk.saldo_bonus,
+        saldo_operavel: bk.saldo_operavel,
+        moeda: bk.moeda,
+        logo_url: bk.logo_url,
+        bonus_rollover_started: bk.bonus_rollover_started
+      }));
   }, [bookmakerSaldos]);
 
   // Import by Print

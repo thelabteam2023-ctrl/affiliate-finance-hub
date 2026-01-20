@@ -8748,6 +8748,7 @@ export type Database = {
         Args: { p_projeto_id: string }
         Returns: {
           bonus_rollover_started: boolean
+          has_pending_transactions: boolean
           id: string
           logo_url: string
           moeda: string
