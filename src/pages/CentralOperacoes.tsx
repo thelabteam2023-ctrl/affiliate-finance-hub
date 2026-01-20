@@ -939,11 +939,9 @@ export default function CentralOperacoes() {
                         size="sm" 
                         variant="outline"
                         onClick={() => {
-                          if (casa.projeto_id) {
-                            navigate(`/projeto/${casa.projeto_id}?tab=vinculos&highlight=${casa.bookmaker_id}`);
-                          }
+                          // Navegar para a aba de conciliação do Caixa Operacional
+                          navigate(`/caixa?tab=conciliacao&bookmaker=${casa.bookmaker_id}`);
                         }}
-                        disabled={!casa.projeto_id}
                         className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10 h-6 text-xs px-2"
                       >
                         Conciliar
