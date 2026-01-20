@@ -154,9 +154,10 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
   const [bonusToDelete, setBonusToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Re-fetch bookmakers when project changes OR when bonuses change (ensures newly linked bookmakers appear)
   useEffect(() => {
     fetchBookmakers();
-  }, [projetoId]);
+  }, [projetoId, bonuses.length]);
 
   const fetchBookmakers = async () => {
     try {
@@ -546,7 +547,10 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
         bookmakers={
           editingBonus
             ? bookmakers
-            : bookmakers.filter((b) => !pendingBonusBookmakerIds.has(b.id))
+            : bookmakers.filter((b) => 
+                !pendingBonusBookmakerIds.has(b.id) && 
+                !activeBonusBookmakerIds.has(b.id)
+              )
         }
         bonus={editingBonus}
         saving={saving}

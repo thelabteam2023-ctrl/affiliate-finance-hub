@@ -104,9 +104,10 @@ export function GlobalActionsBar({
     );
   }, [bonuses]);
 
+  // Re-fetch bookmakers when project changes OR when bonuses change (ensures newly linked bookmakers appear)
   useEffect(() => {
     fetchBookmakers();
-  }, [projetoId]);
+  }, [projetoId, bonuses]);
 
   const fetchBookmakers = async () => {
     try {
