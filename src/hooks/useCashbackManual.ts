@@ -304,38 +304,69 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
   );
 
   // Deletar lançamento de cashback (reverte saldo)
+  // PROTEÇÃO: Valida vínculo projeto-bookmaker antes de estornar
   const deletarCashback = useCallback(
     async (id: string): Promise<boolean> => {
       try {
-        // 1. Buscar registro para reverter saldo
+        // 1. Buscar registro completo para validações
         const { data: registro, error: fetchError } = await supabase
           .from("cashback_manual")
-          .select("bookmaker_id, valor")
+          .select("bookmaker_id, valor, projeto_id")
           .eq("id", id)
           .single();
 
         if (fetchError) throw fetchError;
-
-        // 2. Estornar via ledger (trigger atualiza saldo automaticamente)
-        if (registro) {
-          const { data: bookmaker } = await supabase
-            .from("bookmakers")
-            .select("moeda, workspace_id")
-            .eq("id", registro.bookmaker_id)
-            .single();
-          
-          await estornarCashbackViaLedger({
-            bookmakerId: registro.bookmaker_id,
-            valor: Number(registro.valor),
-            moeda: bookmaker?.moeda || 'BRL',
-            workspaceId: bookmaker?.workspace_id || workspaceId,
-            userId: user?.id || '',
-            descricao: "Estorno de cashback manual deletado",
-            referenciaId: id,
-          });
+        if (!registro) {
+          toast.error("Registro de cashback não encontrado");
+          return false;
         }
 
-        // 3. Deletar registro
+        // 2. Buscar bookmaker e verificar vínculo com projeto
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("moeda, workspace_id, projeto_id, nome")
+          .eq("id", registro.bookmaker_id)
+          .single();
+
+        if (!bookmaker) {
+          toast.error("Bookmaker não encontrada. Registro será removido sem estorno.");
+          // Apenas remove o registro, sem estorno (bookmaker deletada)
+          await supabase.from("cashback_manual").delete().eq("id", id);
+          await fetchRegistros();
+          return true;
+        }
+
+        // 3. PROTEÇÃO: Verificar se bookmaker ainda está vinculada ao projeto do cashback
+        const bookmakerVinculada = bookmaker.projeto_id === registro.projeto_id;
+        
+        if (!bookmakerVinculada) {
+          // Bookmaker foi desvinculada - NÃO estornar (evita alteração misteriosa de saldo)
+          console.warn(`[deletarCashback] Bookmaker ${bookmaker.nome} desvinculada do projeto. Removendo registro SEM estorno.`);
+          toast.warning(`Bookmaker "${bookmaker.nome}" foi desvinculada. Registro removido sem alterar saldo.`);
+          
+          await supabase.from("cashback_manual").delete().eq("id", id);
+          await fetchRegistros();
+          return true;
+        }
+
+        // 4. Bookmaker vinculada - Estornar via ledger (trigger atualiza saldo automaticamente)
+        const estornoResult = await estornarCashbackViaLedger({
+          bookmakerId: registro.bookmaker_id,
+          valor: Number(registro.valor),
+          moeda: bookmaker.moeda || 'BRL',
+          workspaceId: bookmaker.workspace_id || workspaceId,
+          userId: user?.id || '',
+          descricao: "Estorno de cashback manual deletado",
+          referenciaId: id,
+        });
+
+        if (!estornoResult.success) {
+          console.error("[deletarCashback] Falha no estorno:", estornoResult.error);
+          toast.error(`Erro ao estornar: ${estornoResult.error}`);
+          return false;
+        }
+
+        // 5. Deletar registro após estorno bem-sucedido
         const { error: deleteError } = await supabase
           .from("cashback_manual")
           .delete()
@@ -352,7 +383,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         return false;
       }
     },
-    [projetoId, fetchRegistros]
+    [projetoId, workspaceId, user, fetchRegistros]
   );
 
   return {
