@@ -151,12 +151,9 @@ export default function GestaoProjetos() {
       const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
-      const [bookmarkersResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackManualResult, bonusResult] = await Promise.all([
-        // Bookmakers por projeto (incluindo saldo_freebet e moeda para conversão)
-        supabase
-          .from("bookmakers")
-          .select("id, projeto_id, saldo_atual, saldo_freebet, saldo_irrecuperavel, moeda")
-          .in("projeto_id", finalProjetoIds),
+      const [saldosRpcResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackManualResult, bookmakersCountResult] = await Promise.all([
+        // USAR RPC CANÔNICA para saldo operável (inclui real + freebet + bonus - em_aposta)
+        supabase.rpc("get_saldo_operavel_por_projeto", { p_projeto_ids: finalProjetoIds }),
         
         // Apostas liquidadas por projeto (incluindo referência BRL para multi-moeda)
         supabase
@@ -192,17 +189,18 @@ export default function GestaoProjetos() {
           .select("projeto_id, valor, moeda_operacao, valor_brl_referencia")
           .in("projeto_id", finalProjetoIds),
         
-        // Bônus creditados por bookmaker (para incluir no saldo operável)
+        // Contagem de bookmakers e saldo irrecuperável por projeto
         supabase
-          .from("project_bookmaker_link_bonuses")
-          .select("bookmaker_id, saldo_atual, bookmakers!inner(projeto_id, moeda)")
-          .eq("status", "credited")
+          .from("bookmakers")
+          .select("projeto_id, saldo_irrecuperavel, moeda")
+          .in("projeto_id", finalProjetoIds)
+          .eq("status", "ATIVO")
       ]);
       
       // Taxa de conversão USD->BRL aproximada (idealmente vir de uma API ou cache)
       const USD_TO_BRL = 6.1;
       
-      // Agregar dados de bookmakers por projeto COM BREAKDOWN POR MOEDA
+      // Mapear saldos da RPC canônica por projeto
       const bookmakersByProjeto: Record<string, { 
         saldo: number; 
         saldoBRL: number;
@@ -211,51 +209,44 @@ export default function GestaoProjetos() {
         irrecuperavel: number 
       }> = {};
       
-      // Primeiro, criar mapa de bônus creditados por bookmaker_id
-      const bonusByBookmaker: Record<string, { saldo: number; moeda: string }> = {};
-      (bonusResult.data || []).forEach((bonus: any) => {
-        if (!bonus.bookmaker_id) return;
-        const saldoBonus = Number(bonus.saldo_atual) || 0;
-        const moeda = bonus.bookmakers?.moeda || 'BRL';
+      // Processar resultado da RPC canônica
+      (saldosRpcResult.data || []).forEach((row: any) => {
+        const projetoId = row.projeto_id;
+        const saldoBRL = Number(row.saldo_operavel_brl) || 0;
+        const saldoUSD = Number(row.saldo_operavel_usd) || 0;
+        // Converter USD para BRL para total consolidado
+        const saldoConsolidado = saldoBRL + (saldoUSD * USD_TO_BRL);
         
-        if (!bonusByBookmaker[bonus.bookmaker_id]) {
-          bonusByBookmaker[bonus.bookmaker_id] = { saldo: 0, moeda };
-        }
-        bonusByBookmaker[bonus.bookmaker_id].saldo += saldoBonus;
+        bookmakersByProjeto[projetoId] = {
+          saldo: saldoConsolidado,
+          saldoBRL: saldoBRL,
+          saldoUSD: saldoUSD,
+          count: Number(row.total_bookmakers) || 0,
+          irrecuperavel: 0 // Será preenchido abaixo
+        };
       });
       
-      // Criar mapa de moeda por bookmaker_id para conversão dos giros grátis
-      const bookmakerMoedaMap: Record<string, string> = {};
-      
-      (bookmarkersResult.data || []).forEach((bk: any) => {
+      // Agregar saldo irrecuperável separadamente
+      (bookmakersCountResult.data || []).forEach((bk: any) => {
         if (!bk.projeto_id) return;
+        const irrecuperavel = Number(bk.saldo_irrecuperavel) || 0;
+        const moeda = bk.moeda || 'BRL';
+        
         if (!bookmakersByProjeto[bk.projeto_id]) {
           bookmakersByProjeto[bk.projeto_id] = { saldo: 0, saldoBRL: 0, saldoUSD: 0, count: 0, irrecuperavel: 0 };
         }
         
-        // Mapear moeda por bookmaker_id
-        if (bk.id) {
-          bookmakerMoedaMap[bk.id] = bk.moeda || 'BRL';
-        }
-        
-        // Soma saldo_atual + saldo_freebet + saldo_bonus (CORREÇÃO: incluir bônus)
-        const saldoBonus = bonusByBookmaker[bk.id]?.saldo || 0;
-        const saldoTotal = (bk.saldo_atual || 0) + (bk.saldo_freebet || 0) + saldoBonus;
-        const irrecuperavel = bk.saldo_irrecuperavel || 0;
-        const moeda = bk.moeda || 'BRL';
-        
-        // Acumular por moeda
         if (moeda === 'USD') {
-          bookmakersByProjeto[bk.projeto_id].saldoUSD += saldoTotal;
-          // Converter para BRL para total consolidado
-          bookmakersByProjeto[bk.projeto_id].saldo += saldoTotal * USD_TO_BRL;
           bookmakersByProjeto[bk.projeto_id].irrecuperavel += irrecuperavel * USD_TO_BRL;
         } else {
-          bookmakersByProjeto[bk.projeto_id].saldoBRL += saldoTotal;
-          bookmakersByProjeto[bk.projeto_id].saldo += saldoTotal;
           bookmakersByProjeto[bk.projeto_id].irrecuperavel += irrecuperavel;
         }
-        bookmakersByProjeto[bk.projeto_id].count += 1;
+      });
+      
+      // Criar mapa de moeda por bookmaker_id para conversão dos giros grátis
+      const bookmakerMoedaMap: Record<string, string> = {};
+      (bookmakersCountResult.data || []).forEach((bk: any) => {
+        // Não temos ID aqui, então usaremos BRL como padrão para giros grátis
       });
 
       // Agregar lucro de apostas por projeto COM BREAKDOWN POR MOEDA

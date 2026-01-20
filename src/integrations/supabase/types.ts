@@ -8833,6 +8833,16 @@ export type Database = {
       }
       get_public_plans: { Args: never; Returns: Json }
       get_remaining_days: { Args: { p_expires_at: string }; Returns: number }
+      get_saldo_operavel_por_projeto: {
+        Args: { p_projeto_ids: string[] }
+        Returns: {
+          projeto_id: string
+          saldo_operavel: number
+          saldo_operavel_brl: number
+          saldo_operavel_usd: number
+          total_bookmakers: number
+        }[]
+      }
       get_subscription_details: {
         Args: { p_workspace_id: string }
         Returns: {
