@@ -799,9 +799,13 @@ export default function Caixa() {
           origem_bookmaker_id: saqueParaConfirmar.origem_bookmaker_id,
           destino_parceiro_id: saqueParaConfirmar.destino_parceiro_id,
           destino_conta_bancaria_id: saqueParaConfirmar.destino_conta_bancaria_id,
+          destino_wallet_id: saqueParaConfirmar.destino_wallet_id || null,
           bookmaker_nome: bookmakers[saqueParaConfirmar.origem_bookmaker_id]?.nome,
           parceiro_nome: parceiros[saqueParaConfirmar.destino_parceiro_id],
-          banco_nome: contasBancarias.find(c => c.id === saqueParaConfirmar.destino_conta_bancaria_id)?.banco,
+          banco_nome: saqueParaConfirmar.destino_conta_bancaria_id 
+            ? contasBancarias.find(c => c.id === saqueParaConfirmar.destino_conta_bancaria_id)?.banco 
+            : undefined,
+          wallet_nome: saqueParaConfirmar.wallet_nome || undefined,
         } : null}
       />
 
