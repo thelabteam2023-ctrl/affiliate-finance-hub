@@ -36,7 +36,9 @@ interface HistoricoVinculo {
   moeda: string; // Moeda do bookmaker (BRL ou USD) - ÚNICO VALOR
   // Valores NA MOEDA ORIGINAL do bookmaker - SEM CONVERSÃO
   total_depositado: number;
+  total_depositado_pendente: number; // NOVO: depósitos ainda não confirmados
   total_sacado: number;
+  total_sacado_pendente: number; // NOVO: saques ainda não confirmados
   lucro_operacional: number;
 }
 
@@ -96,16 +98,27 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         .in("bookmaker_id", bookmakerIds);
 
       // Agregar por bookmaker - valores originais SEM conversão
-      const depositosMap: Record<string, number> = {};
-      const saquesMap: Record<string, number> = {};
+      // Separar CONFIRMADO de PENDENTE para clareza
+      const depositosConfirmadosMap: Record<string, number> = {};
+      const depositosPendentesMap: Record<string, number> = {};
+      const saquesConfirmadosMap: Record<string, number> = {};
+      const saquesPendentesMap: Record<string, number> = {};
       const lucroMap: Record<string, number> = {};
 
-      depositos?.forEach((d) => {
-        depositosMap[d.destino_bookmaker_id] = (depositosMap[d.destino_bookmaker_id] || 0) + Number(d.valor);
+      depositos?.forEach((d: any) => {
+        if (d.status === "CONFIRMADO") {
+          depositosConfirmadosMap[d.destino_bookmaker_id] = (depositosConfirmadosMap[d.destino_bookmaker_id] || 0) + Number(d.valor);
+        } else if (d.status === "PENDENTE") {
+          depositosPendentesMap[d.destino_bookmaker_id] = (depositosPendentesMap[d.destino_bookmaker_id] || 0) + Number(d.valor);
+        }
       });
 
-      saques?.forEach((s) => {
-        saquesMap[s.origem_bookmaker_id] = (saquesMap[s.origem_bookmaker_id] || 0) + Number(s.valor);
+      saques?.forEach((s: any) => {
+        if (s.status === "CONFIRMADO") {
+          saquesConfirmadosMap[s.origem_bookmaker_id] = (saquesConfirmadosMap[s.origem_bookmaker_id] || 0) + Number(s.valor);
+        } else if (s.status === "PENDENTE") {
+          saquesPendentesMap[s.origem_bookmaker_id] = (saquesPendentesMap[s.origem_bookmaker_id] || 0) + Number(s.valor);
+        }
       });
 
       apostasData?.forEach((a) => {
@@ -125,8 +138,10 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         data_desvinculacao: h.data_desvinculacao,
         status_final: h.status_final,
         moeda: h.bookmaker?.moeda || 'BRL',
-        total_depositado: depositosMap[h.bookmaker_id] || 0,
-        total_sacado: saquesMap[h.bookmaker_id] || 0,
+        total_depositado: depositosConfirmadosMap[h.bookmaker_id] || 0,
+        total_depositado_pendente: depositosPendentesMap[h.bookmaker_id] || 0,
+        total_sacado: saquesConfirmadosMap[h.bookmaker_id] || 0,
+        total_sacado_pendente: saquesPendentesMap[h.bookmaker_id] || 0,
         lucro_operacional: lucroMap[h.bookmaker_id] || 0,
       }));
 
@@ -150,15 +165,30 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
   };
 
   // Renderiza valor simples na moeda original do bookmaker
-  const renderValueInCurrency = (value: number, moeda: string, label: string, colorClass: string) => {
+  // Com suporte a valor pendente adicional
+  const renderValueInCurrency = (
+    value: number, 
+    moeda: string, 
+    label: string, 
+    colorClass: string,
+    pendingValue?: number
+  ) => {
     const isUSD = moeda === 'USD';
+    const hasPending = pendingValue !== undefined && pendingValue > 0;
+    const totalValue = value + (pendingValue || 0);
+    
     return (
       <div className="text-right flex-shrink-0 min-w-[100px]">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={`font-medium ${colorClass}`}>
-          {formatCurrency(value, moeda)}
+        <p className={`font-medium ${hasPending ? "text-muted-foreground" : colorClass}`}>
+          {formatCurrency(totalValue, moeda)}
         </p>
-        {isUSD && (
+        {hasPending && (
+          <p className="text-[10px] text-yellow-400">
+            ({formatCurrency(pendingValue, moeda)} pendente)
+          </p>
+        )}
+        {isUSD && !hasPending && (
           <Badge variant="outline" className="text-[9px] px-1 py-0 mt-0.5 border-emerald-500/30 text-emerald-400">
             USD
           </Badge>
@@ -325,7 +355,10 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
                 <div className="divide-y divide-border">
                   {historico.map((item) => {
                     const isActive = item.data_desvinculacao === null;
-                    const resultadoCaixa = item.total_sacado - item.total_depositado;
+                    // Resultado de caixa considera total (confirmado + pendente) para visão completa
+                    const totalDepositado = item.total_depositado + item.total_depositado_pendente;
+                    const totalSacado = item.total_sacado + item.total_sacado_pendente;
+                    const resultadoCaixa = totalSacado - totalDepositado;
                     const moeda = item.moeda;
 
                     return (
@@ -373,20 +406,22 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
                             </div>
                           </div>
 
-                          {/* Depósitos - valor na moeda ORIGINAL */}
+                          {/* Depósitos - valor na moeda ORIGINAL (com pendentes) */}
                           {renderValueInCurrency(
                             item.total_depositado,
                             moeda,
                             "Depositado",
-                            "text-blue-400"
+                            "text-blue-400",
+                            item.total_depositado_pendente
                           )}
 
-                          {/* Saques - valor na moeda ORIGINAL */}
+                          {/* Saques - valor na moeda ORIGINAL (com pendentes) */}
                           {renderValueInCurrency(
                             item.total_sacado,
                             moeda,
                             "Sacado",
-                            "text-emerald-400"
+                            "text-emerald-400",
+                            item.total_sacado_pendente
                           )}
 
                           {/* Resultado Caixa - valor na moeda ORIGINAL */}
