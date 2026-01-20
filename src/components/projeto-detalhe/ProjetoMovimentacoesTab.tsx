@@ -63,6 +63,18 @@ interface BookmakerInfo {
   logo_url: string | null;
 }
 
+interface ContaBancariaInfo {
+  id: string;
+  banco: string;
+  titular: string;
+}
+
+interface WalletInfo {
+  id: string;
+  exchange: string;
+  rede: string;
+}
+
 const getTipoConfig = (tipo: string) => {
   const configs: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     DEPOSITO: { 
@@ -149,6 +161,8 @@ const getStatusBadge = (status: string) => {
 export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabProps) {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [bookmakers, setBookmakers] = useState<Record<string, BookmakerInfo>>({});
+  const [contasBancarias, setContasBancarias] = useState<Record<string, ContaBancariaInfo>>({});
+  const [wallets, setWallets] = useState<Record<string, WalletInfo>>({});
   const [loading, setLoading] = useState(true);
   const [filtroTipo, setFiltroTipo] = useState("TODOS");
   const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
@@ -179,6 +193,36 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     return [];
   }, [projetoId]);
 
+  // Buscar contas bancárias
+  const fetchContasBancarias = useCallback(async () => {
+    const { data } = await supabase
+      .from("contas_bancarias")
+      .select("id, banco, titular");
+
+    if (data) {
+      const map: Record<string, ContaBancariaInfo> = {};
+      data.forEach((c: any) => {
+        map[c.id] = { id: c.id, banco: c.banco, titular: c.titular };
+      });
+      setContasBancarias(map);
+    }
+  }, []);
+
+  // Buscar wallets
+  const fetchWallets = useCallback(async () => {
+    const { data } = await supabase
+      .from("wallets_crypto")
+      .select("id, exchange, rede");
+
+    if (data) {
+      const map: Record<string, WalletInfo> = {};
+      data.forEach((w: any) => {
+        map[w.id] = { id: w.id, exchange: w.exchange, rede: w.rede };
+      });
+      setWallets(map);
+    }
+  }, []);
+
   // Buscar transações do cash_ledger relacionadas às bookmakers do projeto
   const fetchTransacoes = useCallback(async () => {
     setLoading(true);
@@ -190,6 +234,9 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
         setLoading(false);
         return;
       }
+
+      // Buscar dados auxiliares em paralelo
+      await Promise.all([fetchContasBancarias(), fetchWallets()]);
 
       // Buscar transações onde origem OU destino é uma bookmaker do projeto
       let query = supabase
@@ -214,7 +261,7 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     } finally {
       setLoading(false);
     }
-  }, [projetoId, dataInicio, dataFim, fetchBookmakers]);
+  }, [projetoId, dataInicio, dataFim, fetchBookmakers, fetchContasBancarias, fetchWallets]);
 
   useEffect(() => {
     fetchTransacoes();
@@ -269,6 +316,12 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     if (transacao.origem_bookmaker_id && bookmakers[transacao.origem_bookmaker_id]) {
       return bookmakers[transacao.origem_bookmaker_id].nome;
     }
+    if (transacao.origem_conta_bancaria_id && contasBancarias[transacao.origem_conta_bancaria_id]) {
+      return contasBancarias[transacao.origem_conta_bancaria_id].banco;
+    }
+    if (transacao.origem_wallet_id && wallets[transacao.origem_wallet_id]) {
+      return wallets[transacao.origem_wallet_id].exchange;
+    }
     if (transacao.origem_tipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
     if (transacao.nome_investidor) return transacao.nome_investidor;
     return "Origem";
@@ -278,9 +331,71 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     if (transacao.destino_bookmaker_id && bookmakers[transacao.destino_bookmaker_id]) {
       return bookmakers[transacao.destino_bookmaker_id].nome;
     }
+    if (transacao.destino_conta_bancaria_id && contasBancarias[transacao.destino_conta_bancaria_id]) {
+      return contasBancarias[transacao.destino_conta_bancaria_id].banco;
+    }
+    if (transacao.destino_wallet_id && wallets[transacao.destino_wallet_id]) {
+      return wallets[transacao.destino_wallet_id].exchange;
+    }
     if (transacao.destino_tipo === "CAIXA_OPERACIONAL") return "Caixa Operacional";
     if (transacao.nome_investidor) return transacao.nome_investidor;
     return "Destino";
+  };
+
+  const getOrigemIcon = (transacao: Transacao) => {
+    if (transacao.origem_bookmaker_id) {
+      const bk = bookmakers[transacao.origem_bookmaker_id];
+      const logoUrl = bk?.logo_url || getLogoUrl(bk?.nome || '');
+      if (logoUrl) {
+        return (
+          <img 
+            src={logoUrl} 
+            alt={bk?.nome} 
+            className="h-5 w-5 rounded object-contain bg-background shrink-0"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+        );
+      }
+      return <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />;
+    }
+    if (transacao.origem_wallet_id) {
+      return <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />;
+    }
+    if (transacao.origem_conta_bancaria_id) {
+      return <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />;
+    }
+    if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
+      return <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />;
+    }
+    return <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />;
+  };
+
+  const getDestinoIcon = (transacao: Transacao) => {
+    if (transacao.destino_bookmaker_id) {
+      const bk = bookmakers[transacao.destino_bookmaker_id];
+      const logoUrl = bk?.logo_url || getLogoUrl(bk?.nome || '');
+      if (logoUrl) {
+        return (
+          <img 
+            src={logoUrl} 
+            alt={bk?.nome} 
+            className="h-5 w-5 rounded object-contain bg-background shrink-0"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+        );
+      }
+      return <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />;
+    }
+    if (transacao.destino_wallet_id) {
+      return <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />;
+    }
+    if (transacao.destino_conta_bancaria_id) {
+      return <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />;
+    }
+    if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
+      return <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />;
+    }
+    return <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />;
   };
 
   if (loading) {
@@ -456,18 +571,7 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           {/* Origem */}
                           <div className="flex items-center gap-1.5 min-w-0">
-                            {origemBookmaker?.logo_url || getLogoUrl(origemBookmaker?.nome || '') ? (
-                              <img 
-                                src={origemBookmaker?.logo_url || getLogoUrl(origemBookmaker?.nome || '')} 
-                                alt={origemBookmaker?.nome} 
-                                className="h-5 w-5 rounded object-contain bg-background shrink-0"
-                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                              />
-                            ) : transacao.origem_tipo === "CAIXA_OPERACIONAL" ? (
-                              <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />
-                            ) : (
-                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                            )}
+                            {getOrigemIcon(transacao)}
                             <span className="text-sm text-muted-foreground truncate">
                               {getOrigemLabel(transacao)}
                             </span>
@@ -477,18 +581,7 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
 
                           {/* Destino */}
                           <div className="flex items-center gap-1.5 min-w-0">
-                            {destinoBookmaker?.logo_url || getLogoUrl(destinoBookmaker?.nome || '') ? (
-                              <img 
-                                src={destinoBookmaker?.logo_url || getLogoUrl(destinoBookmaker?.nome || '')} 
-                                alt={destinoBookmaker?.nome} 
-                                className="h-5 w-5 rounded object-contain bg-background shrink-0"
-                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                              />
-                            ) : transacao.destino_tipo === "CAIXA_OPERACIONAL" ? (
-                              <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />
-                            ) : (
-                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                            )}
+                            {getDestinoIcon(transacao)}
                             <span className="text-sm text-muted-foreground truncate">
                               {getDestinoLabel(transacao)}
                             </span>
