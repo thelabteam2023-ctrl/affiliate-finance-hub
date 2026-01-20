@@ -690,11 +690,13 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
 
                       {/* Valor e Data */}
                       <div className="flex items-center gap-4 shrink-0">
-                        {transacao.tipo_transacao === "SAQUE" && getStatusBadge(transacao.status)}
+                        {/* Mostrar badge de status para TODOS os tipos com status não-confirmado */}
+                        {transacao.status !== "CONFIRMADO" && getStatusBadge(transacao.status)}
                         <div className="text-right">
                           <p className={`font-semibold ${
-                            transacao.tipo_transacao === "DEPOSITO" ? "text-emerald-400" :
-                            transacao.tipo_transacao === "SAQUE" ? "text-red-400" : ""
+                            transacao.tipo_transacao === "DEPOSITO" 
+                              ? (transacao.status === "CONFIRMADO" ? "text-emerald-400" : "text-yellow-400")
+                              : transacao.tipo_transacao === "SAQUE" ? "text-red-400" : ""
                           }`}>
                             {formatCurrency(transacao.valor, transacao.moeda)}
                           </p>
