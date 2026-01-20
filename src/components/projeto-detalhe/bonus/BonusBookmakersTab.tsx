@@ -13,7 +13,7 @@ import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
 import { FinalizeBonusDialog } from "../FinalizeBonusDialog";
 import { BonusDialog } from "../BonusDialog";
 import { BonusFormData } from "@/hooks/useProjectBonuses";
-import { BookmakerBonusAnalyticsTab } from "./analytics-por-casa";
+import { ProjectBonusAnalyticsTab } from "./analytics-por-casa";
 import {
   Table,
   TableBody,
@@ -405,7 +405,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           </TabsTrigger>
           <TabsTrigger value="analytics" className="data-[state=active]:bg-background gap-2">
             <BarChart3 className="h-4 w-4" />
-            Análise Global
+            Análise por Casa
           </TabsTrigger>
         </TabsList>
 
@@ -901,7 +901,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-4">
-          <BookmakerBonusAnalyticsTab />
+          <ProjectBonusAnalyticsTab projectId={projetoId} />
         </TabsContent>
       </Tabs>
 
