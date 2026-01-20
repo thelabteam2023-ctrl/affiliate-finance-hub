@@ -30,8 +30,12 @@ export type LedgerTransactionType =
   | 'CASHBACK_ESTORNO'
   | 'PERDA_OPERACIONAL'
   | 'PERDA_REVERSAO'
+  | 'AJUSTE_SALDO'
+  | 'AJUSTE_MANUAL'
   | 'AJUSTE_POSITIVO'
   | 'AJUSTE_NEGATIVO'
+  | 'CONCILIACAO'
+  | 'ESTORNO'
   | 'EVENTO_PROMOCIONAL'
   | 'APOSTA_GREEN'
   | 'APOSTA_RED'
@@ -78,6 +82,10 @@ export interface LedgerEntryInput {
   referenciaTransacaoId?: string;
   /** Metadados de auditoria */
   auditoriaMetadata?: Record<string, unknown>;
+  /** Motivo do ajuste (obrigatório para tipos de ajuste) */
+  ajusteMotivo?: string;
+  /** Direção do ajuste: ENTRADA ou SAIDA */
+  ajusteDirecao?: 'ENTRADA' | 'SAIDA';
 }
 
 export interface LedgerEntryResult {
@@ -113,6 +121,8 @@ export async function insertLedgerEntry(
       referencia_transacao_id: input.referenciaTransacaoId || null,
       auditoria_metadata: input.auditoriaMetadata || null,
       status: 'CONFIRMADO',
+      ajuste_motivo: input.ajusteMotivo || null,
+      ajuste_direcao: input.ajusteDirecao || null,
     };
     
     const { data, error } = await supabase
@@ -248,6 +258,7 @@ export async function reverterPerdaOperacionalViaLedger(params: {
 
 /**
  * Registra ajuste manual de saldo via ledger.
+ * Usa AJUSTE_SALDO com ajuste_motivo e ajuste_direcao obrigatórios.
  */
 export async function registrarAjusteViaLedger(params: {
   bookmakerId: string;
@@ -259,18 +270,25 @@ export async function registrarAjusteViaLedger(params: {
   motivo?: string;
 }): Promise<LedgerEntryResult> {
   const isCredito = params.delta > 0;
+  const motivoFinal = params.motivo || params.descricao || 'Ajuste de saldo';
   
   return insertLedgerEntry({
-    tipoTransacao: isCredito ? 'AJUSTE_POSITIVO' : 'AJUSTE_NEGATIVO',
+    tipoTransacao: 'AJUSTE_SALDO',
     valor: Math.abs(params.delta),
     moeda: params.moeda,
     workspaceId: params.workspaceId,
     userId: params.userId,
     destinoBookmakerId: isCredito ? params.bookmakerId : undefined,
     origemBookmakerId: isCredito ? undefined : params.bookmakerId,
-    descricao: params.descricao || `Ajuste manual: ${params.motivo || 'Sem motivo'}`,
+    descricao: params.descricao || `Ajuste de saldo: ${motivoFinal}`,
     impactaCaixaOperacional: true,
-    auditoriaMetadata: { ajuste_direcao: isCredito ? 'credito' : 'debito', ajuste_motivo: params.motivo },
+    ajusteMotivo: motivoFinal,
+    ajusteDirecao: isCredito ? 'ENTRADA' : 'SAIDA',
+    auditoriaMetadata: { 
+      delta: params.delta,
+      tipo: 'ajuste_saldo',
+      motivo: motivoFinal 
+    },
   });
 }
 
