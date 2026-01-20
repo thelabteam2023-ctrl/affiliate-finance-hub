@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -135,6 +136,7 @@ export function CaixaTransacaoDialog({
   defaultCoin,
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
 
   // Form state
@@ -1522,15 +1524,15 @@ export function CaixaTransacaoDialog({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userData.user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      // Validar workspace ativo
+      if (!workspaceId) {
+        toast({
+          title: "Erro",
+          description: "Workspace não definido. Recarregue a página.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Find investor name if APORTE_FINANCEIRO
       const investidor = investidores.find(inv => inv.id === investidorId);

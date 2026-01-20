@@ -96,15 +96,15 @@ export function PagamentoParceiroDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      // Validar workspace ativo (já vem do hook useWorkspace)
+      if (!workspaceId) {
+        toast({
+          title: "Erro",
+          description: "Workspace não definido. Recarregue a página.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // PASSO 1: Debitar da origem selecionada via cash_ledger
       // 🔒 REGRA DE CONVERSÃO CRYPTO:
