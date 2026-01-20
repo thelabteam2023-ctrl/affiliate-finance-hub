@@ -69,19 +69,21 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
       const bookmakerIds = historicoData.map((h) => h.bookmaker_id);
 
       // Depósitos - SEM conversão, valor original
+      // INCLUI CONFIRMADO e PENDENTE para refletir capital comprometido/em trânsito
       const { data: depositos } = await supabase
         .from("cash_ledger")
-        .select("destino_bookmaker_id, valor")
+        .select("destino_bookmaker_id, valor, status")
         .eq("tipo_transacao", "DEPOSITO")
-        .eq("status", "CONFIRMADO")
+        .in("status", ["CONFIRMADO", "PENDENTE"])
         .in("destino_bookmaker_id", bookmakerIds);
 
       // Saques - SEM conversão, valor original
+      // INCLUI CONFIRMADO e PENDENTE para refletir capital em movimento
       const { data: saques } = await supabase
         .from("cash_ledger")
-        .select("origem_bookmaker_id, valor")
+        .select("origem_bookmaker_id, valor, status")
         .eq("tipo_transacao", "SAQUE")
-        .eq("status", "CONFIRMADO")
+        .in("status", ["CONFIRMADO", "PENDENTE"])
         .in("origem_bookmaker_id", bookmakerIds);
 
       // Lucro de apostas - valor original (lucro_prejuizo)
