@@ -408,19 +408,29 @@ async function fetchCapitalData(
   totalDepositos: number;
   totalSaques: number;
 }> {
-  // Buscar bookmakers do projeto com moeda
-  const { data: bookmakers } = await supabase
-    .from('bookmakers')
-    .select('saldo_atual, saldo_irrecuperavel, moeda')
-    .eq('projeto_id', projetoId);
+  // CRITICAL: Usar RPC canônica que inclui saldo_operavel (real + freebet + bonus - em_aposta)
+  const { data: rpcData, error: rpcError } = await supabase.rpc("get_bookmaker_saldos", {
+    p_projeto_id: projetoId
+  });
 
-  // Converter saldos para moeda de consolidação
-  const saldoBookmakers = bookmakers?.reduce((acc, b) => {
+  if (rpcError) {
+    console.error("[fetchCapitalData] Erro na RPC get_bookmaker_saldos:", rpcError);
+  }
+
+  // Usar saldo_operavel que já inclui real + freebet + bonus - em_aposta
+  // Converter para moeda de consolidação do projeto
+  const saldoBookmakers = rpcData?.reduce((acc: number, b: any) => {
     const moedaOrigem = b.moeda || 'BRL';
-    return acc + convertToConsolidation(Number(b.saldo_atual || 0), moedaOrigem, moedaConsolidacao, cotacao);
+    return acc + convertToConsolidation(Number(b.saldo_operavel || 0), moedaOrigem, moedaConsolidacao, cotacao);
   }, 0) || 0;
   
-  const saldoIrrecuperavel = bookmakers?.reduce((acc, b) => {
+  // Buscar saldo irrecuperável separadamente (não está na RPC)
+  const { data: bookmarkersIrrec } = await supabase
+    .from('bookmakers')
+    .select('saldo_irrecuperavel, moeda')
+    .eq('projeto_id', projetoId);
+
+  const saldoIrrecuperavel = bookmarkersIrrec?.reduce((acc, b) => {
     const moedaOrigem = b.moeda || 'BRL';
     return acc + convertToConsolidation(Number(b.saldo_irrecuperavel || 0), moedaOrigem, moedaConsolidacao, cotacao);
   }, 0) || 0;

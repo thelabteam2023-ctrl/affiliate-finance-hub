@@ -105,16 +105,21 @@ export function useProjetoPerformance({
   }, [projetoId, periodo]);
 
   const fetchSaldoBookmakers = useCallback(async (): Promise<number> => {
-    // CRITICAL: Sempre filtrar por workspace
-    if (!workspaceId) return 0;
+    // CRITICAL: Usar RPC canônica que inclui saldo_operavel (real + freebet + bonus - em_aposta)
+    if (!projetoId) return 0;
     
-    // Buscar apenas bookmakers ATUALMENTE vinculados ao projeto E ao workspace
-    let query = supabase.from('bookmakers').select('saldo_atual').eq('workspace_id', workspaceId);
-    if (projetoId) query = query.eq('projeto_id', projetoId);
+    const { data, error } = await supabase.rpc("get_bookmaker_saldos", {
+      p_projeto_id: projetoId
+    });
 
-    const { data } = await query;
-    return data?.reduce((acc, b) => acc + Number(b.saldo_atual || 0), 0) || 0;
-  }, [projetoId, workspaceId]);
+    if (error) {
+      console.error("[useProjetoPerformance] Erro na RPC get_bookmaker_saldos:", error);
+      return 0;
+    }
+
+    // Usar saldo_operavel que já inclui real + freebet + bonus - em_aposta
+    return data?.reduce((acc: number, b: any) => acc + Number(b.saldo_operavel || 0), 0) || 0;
+  }, [projetoId]);
 
   const calculateMetrics = useCallback(async () => {
     // CRITICAL: Não calcular métricas sem workspace
