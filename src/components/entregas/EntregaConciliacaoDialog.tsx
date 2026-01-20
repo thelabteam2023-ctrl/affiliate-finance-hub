@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Dialog,
   DialogContent,
@@ -67,6 +68,7 @@ export function EntregaConciliacaoDialog({
   percentual = 0,
   onSuccess,
 }: EntregaConciliacaoDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     resultado_real: "",
@@ -156,15 +158,11 @@ export function EntregaConciliacaoDialog({
 
       const userId = session.session.user.id;
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      // Validar workspace ativo
+      if (!workspaceId) {
+        toast.error("Workspace não definido. Recarregue a página.");
+        return;
+      }
 
       let cashLedgerId: string | null = null;
 

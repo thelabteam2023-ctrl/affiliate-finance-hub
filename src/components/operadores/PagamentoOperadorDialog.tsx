@@ -185,15 +185,11 @@ export function PagamentoOperadorDialog({
       const userId = session.session.user.id;
       let cashLedgerId: string | null = null;
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      // Validar workspace ativo
+      if (!workspaceId) {
+        toast.error("Workspace não definido. Recarregue a página.");
+        return;
+      }
 
       // Se status for CONFIRMADO, criar registro no cash_ledger para debitar a origem
       if (formData.status === "CONFIRMADO") {

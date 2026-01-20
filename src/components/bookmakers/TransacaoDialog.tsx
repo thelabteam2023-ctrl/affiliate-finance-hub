@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,7 @@ interface TransacaoDialogProps {
 }
 
 export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo = "deposito" }: TransacaoDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [tipo, setTipo] = useState(defaultTipo);
   const [valor, setValor] = useState("");
@@ -145,15 +147,11 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
 
       const userId = session.session.user.id;
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      // Validar workspace ativo
+      if (!workspaceId) {
+        toast.error("Workspace não definido. Recarregue a página.");
+        return;
+      }
 
       // Definir status_valor baseado no tipo de conversão
       let statusValor = "CONFIRMADO";

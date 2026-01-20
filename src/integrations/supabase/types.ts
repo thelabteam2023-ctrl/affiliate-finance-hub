@@ -8920,12 +8920,20 @@ export type Database = {
         Args: { _route: string; _user_id: string; _workspace_id?: string }
         Returns: Json
       }
+      is_active_workspace_member: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       is_master: { Args: { _user_id: string }; Returns: boolean }
       is_owner_or_admin: {
         Args: { _user_id: string; _workspace_id?: string }
         Returns: boolean
       }
       is_system_owner: { Args: { _user_id: string }; Returns: boolean }
+      is_workspace_owner_or_admin: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       liquidar_aposta_atomica: {
         Args: {
           p_aposta_id: string
