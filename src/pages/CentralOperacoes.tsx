@@ -70,6 +70,7 @@ const ROLE_VISIBILITY: Record<string, EventDomain[]> = {
 const CARD_DOMAIN_MAP: Record<string, EventDomain> = {
   'alertas-criticos': 'admin_event',
   'propostas-pagamento': 'project_event',
+  'casas-pendentes-conciliacao': 'financial_event',
   'saques-aguardando': 'financial_event',
   'saques-processamento': 'financial_event',
   'casas-limitadas': 'financial_event',
@@ -85,6 +86,18 @@ const CARD_DOMAIN_MAP: Record<string, EventDomain> = {
   'comissoes-pendentes': 'partner_event',
   'parcerias-encerrando': 'partner_event',
 };
+
+interface CasaPendenteConciliacao {
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  bookmaker_logo_url: string | null;
+  moeda: string;
+  saldo_atual: number;
+  projeto_id: string | null;
+  projeto_nome: string | null;
+  qtd_transacoes_pendentes: number;
+  valor_total_pendente: number;
+}
 
 interface Alerta {
   tipo_alerta: string;
@@ -256,6 +269,7 @@ export default function CentralOperacoes() {
   const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperadorPendente[]>([]);
   const [participacoesPendentes, setParticipacoesPendentes] = useState<ParticipacaoPendente[]>([]);
   const [casasDesvinculadas, setCasasDesvinculadas] = useState<BookmakerDesvinculado[]>([]);
+  const [casasPendentesConciliacao, setCasasPendentesConciliacao] = useState<CasaPendenteConciliacao[]>([]);
   const [propostasPagamentoCount, setPropostasPagamentoCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -687,9 +701,19 @@ export default function CentralOperacoes() {
         if (!casasResult.error && casasResult.data) {
           setCasasDesvinculadas(casasResult.data as BookmakerDesvinculado[]);
         }
+
+        // Buscar casas pendentes de conciliação (globalmente no workspace)
+        const conciliacaoResult = await supabase.rpc("get_bookmakers_pendentes_conciliacao", {
+          p_workspace_id: workspaceId,
+        });
+
+        if (!conciliacaoResult.error && conciliacaoResult.data) {
+          setCasasPendentesConciliacao(conciliacaoResult.data as CasaPendenteConciliacao[]);
+        }
       } else {
         setParticipacoesPendentes([]);
         setCasasDesvinculadas([]);
+        setCasasPendentesConciliacao([]);
       }
 
       // Propostas de pagamento - buscar contagem para renderização condicional
@@ -861,6 +885,81 @@ export default function CentralOperacoes() {
         priority: PRIORITY.HIGH,
         domain: 'project_event',
         component: <PropostasPagamentoCard key="propostas-pagamento" />,
+      });
+    }
+
+    // 2.5. Casas Pendentes de Conciliação - financial_event (PRIORIDADE ALTA)
+    // REGRA: Casas com transações pendentes bloqueiam operação
+    if (casasPendentesConciliacao.length > 0 && allowedDomains.includes('financial_event')) {
+      cards.push({
+        id: "casas-pendentes-conciliacao",
+        priority: PRIORITY.CRITICAL, // Prioridade crítica - bloqueia operação
+        domain: 'financial_event',
+        component: (
+          <Card key="casas-pendentes-conciliacao" className="border-amber-500/50 bg-amber-500/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <ShieldAlert className="h-4 w-4 text-amber-500" />
+                Conciliação Pendente
+                <CardInfoTooltip 
+                  title="Conciliação Obrigatória"
+                  description="Casas com transações pendentes não podem ser utilizadas para apostas ou bônus até que a conciliação seja realizada."
+                  flow="Transações pendentes (depósitos, saques em processamento) devem ser conciliadas para liberar a casa para operação."
+                />
+                <Badge className="ml-auto bg-amber-500/20 text-amber-600 animate-pulse">{casasPendentesConciliacao.length}</Badge>
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground">
+                Casas bloqueadas até conciliar transações
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {casasPendentesConciliacao.slice(0, 4).map((casa) => (
+                  <div key={casa.bookmaker_id} className="flex items-center justify-between p-2 rounded-lg border border-amber-500/30 bg-amber-500/10">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0 animate-pulse" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">{casa.bookmaker_nome}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {casa.projeto_nome ? (
+                            <span className="text-primary/80">{casa.projeto_nome}</span>
+                          ) : (
+                            <span className="text-amber-600 italic">Sem vínculo</span>
+                          )}
+                          <span className="mx-1">•</span>
+                          {casa.qtd_transacoes_pendentes} {casa.qtd_transacoes_pendentes === 1 ? "transação" : "transações"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-amber-500">
+                        {formatCurrency(casa.valor_total_pendente, casa.moeda)}
+                      </span>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          if (casa.projeto_id) {
+                            navigate(`/projeto/${casa.projeto_id}?tab=vinculos&highlight=${casa.bookmaker_id}`);
+                          }
+                        }}
+                        disabled={!casa.projeto_id}
+                        className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10 h-6 text-xs px-2"
+                      >
+                        Conciliar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {casasPendentesConciliacao.length > 4 && (
+                  <p className="text-[10px] text-muted-foreground text-center pt-1">
+                    +{casasPendentesConciliacao.length - 4} outras casas pendentes
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ),
       });
     }
 
