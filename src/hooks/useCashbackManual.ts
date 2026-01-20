@@ -258,6 +258,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         if (insertError) throw insertError;
 
         // 3. Registrar via ledger (trigger atualiza saldo automaticamente)
+        // CRÍTICO: Se falhar aqui, precisamos reverter o cashback_manual
         const ledgerResult = await registrarCashbackViaLedger({
           bookmakerId: data.bookmaker_id,
           valor: data.valor,
@@ -271,7 +272,23 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         });
 
         if (!ledgerResult.success) {
-          console.warn("Aviso: Saldo da casa não foi atualizado via ledger:", ledgerResult.error);
+          // ROLLBACK: Deletar o registro de cashback_manual já criado
+          console.error("[Cashback] Falha ao registrar no ledger:", ledgerResult.error);
+          await supabase
+            .from("cashback_manual")
+            .delete()
+            .eq("id", novoCashback.id);
+          
+          toast.error(`Erro ao registrar cashback: ${ledgerResult.error || "Falha no ledger financeiro"}`);
+          return false;
+        }
+
+        // 4. Atualizar o registro de cashback_manual com o ID do ledger
+        if (ledgerResult.entryId) {
+          await supabase
+            .from("cashback_manual")
+            .update({ cash_ledger_id: ledgerResult.entryId })
+            .eq("id", novoCashback.id);
         }
 
         toast.success("Cashback lançado com sucesso! Saldo atualizado.");
