@@ -1,4 +1,3 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -12,30 +11,6 @@ function formatDateBCB(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   const year = date.getFullYear();
   return `${month}-${day}-${year}`;
-}
-
-// Busca cotação de uma moeda específica no BCB
-async function fetchBCBRate(currencyCode: number, dateStr: string): Promise<number | null> {
-  try {
-    // API do BCB para cotações de moedas
-    // Códigos: USD=220, EUR=978, GBP=540
-    const bcbUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda='${currencyCode}'&@dataCotacao='${dateStr}'&$format=json`;
-    
-    const response = await fetch(bcbUrl, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      if (data.value && data.value.length > 0) {
-        return data.value[data.value.length - 1].cotacaoVenda;
-      }
-    }
-  } catch (e) {
-    console.error(`Erro ao buscar cotação BCB para código ${currencyCode}:`, e);
-  }
-  return null;
 }
 
 serve(async (req) => {
@@ -61,15 +36,12 @@ serve(async (req) => {
       
       console.log(`Tentando BCB para ${dateStr}`);
 
-      // Buscar USD/BRL usando a API PTAX (mais confiável)
+      // Buscar USD/BRL usando a API PTAX
       if (!rates.USDBRL) {
         try {
           const bcbUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='${dateStr}'&$format=json`;
           
-          const bcbResponse = await fetch(bcbUrl, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-          });
+          const bcbResponse = await fetch(bcbUrl);
           
           if (bcbResponse.ok) {
             const bcbData = await bcbResponse.json();
@@ -83,18 +55,14 @@ serve(async (req) => {
         }
       }
 
-      // Buscar EUR/BRL e GBP/BRL usando API de moedas do BCB
-      if (!rates.EURBRL || !rates.GBPBRL) {
+      // Buscar EUR/BRL
+      if (!rates.EURBRL) {
         try {
-          // Usar API alternativa do BCB para outras moedas
           const moedaUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaPeriodo(moeda=@moeda,dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@moeda='EUR'&@dataInicial='${dateStr}'&@dataFinalCotacao='${dateStr}'&$format=json`;
           
-          const eurResponse = await fetch(moedaUrl, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-          });
+          const eurResponse = await fetch(moedaUrl);
           
-          if (eurResponse.ok && !rates.EURBRL) {
+          if (eurResponse.ok) {
             const eurData = await eurResponse.json();
             if (eurData.value && eurData.value.length > 0) {
               rates.EURBRL = eurData.value[eurData.value.length - 1].cotacaoVenda;
@@ -104,16 +72,16 @@ serve(async (req) => {
         } catch (e) {
           console.error(`Erro BCB EUR (${dateStr}):`, e);
         }
+      }
 
+      // Buscar GBP/BRL
+      if (!rates.GBPBRL) {
         try {
           const gbpUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaPeriodo(moeda=@moeda,dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@moeda='GBP'&@dataInicial='${dateStr}'&@dataFinalCotacao='${dateStr}'&$format=json`;
           
-          const gbpResponse = await fetch(gbpUrl, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-          });
+          const gbpResponse = await fetch(gbpUrl);
           
-          if (gbpResponse.ok && !rates.GBPBRL) {
+          if (gbpResponse.ok) {
             const gbpData = await gbpResponse.json();
             if (gbpData.value && gbpData.value.length > 0) {
               rates.GBPBRL = gbpData.value[gbpData.value.length - 1].cotacaoVenda;
