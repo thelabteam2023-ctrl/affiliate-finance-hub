@@ -39,6 +39,7 @@ interface CaixaTabsContainerProps {
   onConfirmarSaque?: (transacao: any) => void;
   saldoBookmakers: number;
   onRefresh: () => void;
+  initialTab?: string;
 }
 
 export function CaixaTabsContainer({
@@ -70,6 +71,7 @@ export function CaixaTabsContainer({
   onConfirmarSaque,
   saldoBookmakers,
   onRefresh,
+  initialTab = "analise",
 }: CaixaTabsContainerProps) {
   // Conta transações pendentes de conciliação
   // Suporta tanto "pendente" (minúsculo) quanto "PENDENTE" (maiúsculo)
@@ -82,7 +84,7 @@ export function CaixaTabsContainer({
 
   return (
     <Card className="bg-card/50 backdrop-blur border-border/50">
-      <Tabs defaultValue="analise" className="w-full">
+      <Tabs defaultValue={initialTab} className="w-full">
         <div className="px-4 pt-4 border-b border-border/50">
           <TabsList className="bg-muted/30">
             <TabsTrigger value="analise" className="gap-2">

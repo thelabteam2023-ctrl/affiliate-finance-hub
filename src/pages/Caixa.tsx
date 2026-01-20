@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -81,7 +81,11 @@ export default function Caixa() {
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const locationState = location.state as LocationState | null;
+  
+  // Ler aba inicial da URL (?tab=conciliacao)
+  const initialTab = searchParams.get("tab") || "analise";
   // Note: workspaceId não é necessário aqui pois as views usam get_current_workspace()
   
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -754,6 +758,7 @@ export default function Caixa() {
             }}
             saldoBookmakers={saldoBookmakers}
             onRefresh={fetchData}
+            initialTab={initialTab}
           />
         </div>
       </div>
