@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { useProjetoResultado } from "@/hooks/useProjetoResultado";
 import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { useProjectModules } from "@/hooks/useProjectModules";
+import { useProjectTabPreference } from "@/hooks/useProjectTabPreference";
 import { 
   ArrowLeft, 
   FolderKanban, 
@@ -63,6 +64,7 @@ import { ProjetoGestaoTab } from "@/components/projeto-detalhe/ProjetoGestaoTab"
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
 import { ModuleActivationDialog } from "@/components/projeto-detalhe/ModuleActivationDialog";
+import { SetDefaultTabButton } from "@/components/projeto-detalhe/SetDefaultTabButton";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { OperationalFiltersProvider } from "@/contexts/OperationalFiltersContext";
 
@@ -137,6 +139,10 @@ export default function ProjetoDetalhe() {
   
   // Hook de formatação de moeda do projeto
   const { formatCurrency, formatChartAxis } = useProjetoCurrency(id);
+  
+  // Project tab preference (página inicial por projeto)
+  const { defaultTab, loading: tabPreferenceLoading, isDefaultTab } = useProjectTabPreference(id);
+  const hasAppliedDefaultTab = useRef(false);
   
   // KPIs sempre mostram dados completos (sem filtro de período - cada aba usa seu próprio)
   const [activeTab, setActiveTab] = useState("apostas");
@@ -234,6 +240,70 @@ export default function ProjetoDetalhe() {
 
     setActiveTab(tabValue);
   };
+
+  // Map tab keys to their labels for SetDefaultTabButton
+  const getTabLabel = (tabKey: string): string => {
+    const tabLabels: Record<string, string> = {
+      "visao-geral": "Visão Geral",
+      "apostas": "Apostas Livres",
+      "vinculos": "Vínculos",
+      "promocoes": "Promoções",
+      "bonus": "Bônus",
+      "surebet": "Surebet",
+      "valuebet": "ValueBet",
+      "duplogreen": "Duplo Green",
+      "cashback": "Cashback",
+      "modulos": "Módulos",
+      "ciclos": "Ciclos",
+      "perdas": "Perdas",
+    };
+    return tabLabels[tabKey] || tabKey;
+  };
+
+  // Check if a tab is valid (exists in dynamicTabs or tabGroups)
+  const isValidTab = (tabKey: string): boolean => {
+    const baseTabs = ["visao-geral", "apostas", "vinculos", "modulos", "ciclos", "perdas"];
+    if (baseTabs.includes(tabKey)) return true;
+    
+    // Check module tabs
+    const moduleTabMap: Record<string, string> = {
+      promocoes: "freebets",
+      bonus: "bonus",
+      surebet: "surebet",
+      valuebet: "valuebet",
+      duplogreen: "duplogreen",
+      cashback: "cashback",
+    };
+    
+    const moduleId = moduleTabMap[tabKey];
+    if (moduleId && !modulesLoading && !modulesError) {
+      return isModuleActive(moduleId);
+    }
+    
+    return false;
+  };
+
+  // Apply default tab preference on initial load
+  useEffect(() => {
+    if (
+      !tabPreferenceLoading && 
+      !modulesLoading && 
+      !hasAppliedDefaultTab.current && 
+      defaultTab
+    ) {
+      hasAppliedDefaultTab.current = true;
+      
+      // Verify the default tab is still valid (module might have been deactivated)
+      if (isValidTab(defaultTab)) {
+        setActiveTab(defaultTab);
+      } else {
+        // Fallback: show toast and use default tab
+        toast.info("Página inicial indisponível", {
+          description: `"${getTabLabel(defaultTab)}" não está mais disponível. Você pode definir outra página inicial.`,
+        });
+      }
+    }
+  }, [defaultTab, tabPreferenceLoading, modulesLoading, modulesError, isModuleActive]);
   
   // Função centralizada para disparar refresh em todas as abas
   const triggerGlobalRefresh = () => {
@@ -693,6 +763,13 @@ export default function ProjetoDetalhe() {
 
         {/* Action Bar - Logo abaixo das abas */}
         <div className="flex items-center gap-2 md:gap-3 pt-1 md:pt-2 pb-2 border-b border-border/50 flex-shrink-0 overflow-x-auto">
+          {/* Set Default Tab Button */}
+          <SetDefaultTabButton
+            projectId={id!}
+            tabKey={activeTab}
+            tabLabel={getTabLabel(activeTab)}
+          />
+          
           <GlobalActionsBar 
             projetoId={id!}
             activeTab={activeTab}

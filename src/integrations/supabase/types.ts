@@ -5160,6 +5160,51 @@ export type Database = {
         }
         Relationships: []
       }
+      project_user_preferences: {
+        Row: {
+          created_at: string
+          default_tab: string
+          id: string
+          project_id: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_tab: string
+          id?: string
+          project_id: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          default_tab?: string
+          id?: string
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_user_preferences_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_user_preferences_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projeto_bookmaker_historico: {
         Row: {
           bookmaker_id: string
