@@ -8764,6 +8764,20 @@ export type Database = {
           saldo_real: number
         }[]
       }
+      get_bookmakers_pendentes_conciliacao: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          bookmaker_id: string
+          bookmaker_logo_url: string
+          bookmaker_nome: string
+          moeda: string
+          projeto_id: string
+          projeto_nome: string
+          qtd_transacoes_pendentes: number
+          saldo_atual: number
+          valor_total_pendente: number
+        }[]
+      }
       get_current_workspace: { Args: never; Returns: string }
       get_effective_access: {
         Args: { _user_id: string; _workspace_id?: string }
