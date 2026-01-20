@@ -129,6 +129,7 @@ export default function Caixa() {
   
   // Filters
   const [filtroTipo, setFiltroTipo] = useState<string>("TODOS");
+  const [filtroProjeto, setFiltroProjeto] = useState<string>("TODOS");
   const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
   const [dataFim, setDataFim] = useState<Date | undefined>(new Date());
   
@@ -138,8 +139,9 @@ export default function Caixa() {
   const [contasBancarias, setContasBancarias] = useState<Array<{ id: string; banco: string; titular: string }>>([]);
   const [wallets, setWallets] = useState<{ [key: string]: string }>({});
   const [walletsDetalhes, setWalletsDetalhes] = useState<Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>>([]);
-  const [bookmakers, setBookmakers] = useState<{ [key: string]: { nome: string; status: string; parceiro_id?: string } }>({});
+  const [bookmakers, setBookmakers] = useState<{ [key: string]: { nome: string; status: string; parceiro_id?: string; projeto_id?: string } }>({});
   const [operadoresMap, setOperadoresMap] = useState<{ [key: string]: string }>({});
+  const [projetos, setProjetos] = useState<Array<{ id: string; nome: string }>>([]);
 
   const fetchData = async () => {
     try {
@@ -170,12 +172,18 @@ export default function Caixa() {
       
       const { data: bookmakersData } = await supabase
         .from("bookmakers")
-        .select("id, nome, status, parceiro_id");
+        .select("id, nome, status, parceiro_id, projeto_id");
 
       // Fetch operadores for operator payment traceability
       const { data: operadoresData } = await supabase
         .from("operadores")
         .select("id, nome");
+
+      // Fetch projetos for project filter
+      const { data: projetosData } = await supabase
+        .from("projetos")
+        .select("id, nome")
+        .order("nome");
 
       // Create lookup maps
       const parceirosMap: { [key: string]: string } = {};
@@ -192,9 +200,11 @@ export default function Caixa() {
       setWallets(walletsMap);
       setWalletsDetalhes(walletsData || []);
 
-      const bookmakersMap: { [key: string]: { nome: string; status: string; parceiro_id?: string } } = {};
-      bookmakersData?.forEach(b => bookmakersMap[b.id] = { nome: b.nome, status: b.status, parceiro_id: b.parceiro_id ?? undefined });
+      const bookmakersMap: { [key: string]: { nome: string; status: string; parceiro_id?: string; projeto_id?: string } } = {};
+      bookmakersData?.forEach(b => bookmakersMap[b.id] = { nome: b.nome, status: b.status, parceiro_id: b.parceiro_id ?? undefined, projeto_id: b.projeto_id ?? undefined });
       setBookmakers(bookmakersMap);
+
+      setProjetos(projetosData || []);
 
       const operadoresLookup: { [key: string]: string } = {};
       operadoresData?.forEach(op => operadoresLookup[op.id] = op.nome);
@@ -298,7 +308,22 @@ export default function Caixa() {
         (filtroTipo === "APORTE_FINANCEIRO" && (t.tipo_transacao === "APORTE" || t.tipo_transacao === "LIQUIDACAO")) ||
         t.tipo_transacao === filtroTipo;
       
-      return matchTipo && matchDataInicio && matchDataFim;
+      // Filtro por projeto via bookmaker origem/destino
+      let matchProjeto = true;
+      if (filtroProjeto !== "TODOS") {
+        const origemProjetoId = t.origem_bookmaker_id ? bookmakers[t.origem_bookmaker_id]?.projeto_id : null;
+        const destinoProjetoId = t.destino_bookmaker_id ? bookmakers[t.destino_bookmaker_id]?.projeto_id : null;
+        
+        if (filtroProjeto === "SEM_PROJETO") {
+          // Transações sem bookmaker vinculada a projeto
+          matchProjeto = !origemProjetoId && !destinoProjetoId;
+        } else {
+          // Transações do projeto específico
+          matchProjeto = origemProjetoId === filtroProjeto || destinoProjetoId === filtroProjeto;
+        }
+      }
+      
+      return matchTipo && matchDataInicio && matchDataFim && matchProjeto;
     });
   };
 
@@ -708,6 +733,9 @@ export default function Caixa() {
             loading={loading}
             filtroTipo={filtroTipo}
             setFiltroTipo={setFiltroTipo}
+            filtroProjeto={filtroProjeto}
+            setFiltroProjeto={setFiltroProjeto}
+            projetos={projetos}
             dataInicio={dataInicio}
             setDataInicio={setDataInicio}
             dataFim={dataFim}

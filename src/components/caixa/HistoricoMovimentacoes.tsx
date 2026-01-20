@@ -63,10 +63,13 @@ interface HistoricoMovimentacoesProps {
   contasBancarias: ContaBancaria[];
   wallets: { [key: string]: string };
   walletsDetalhes: WalletDetalhe[];
-  bookmakers: { [key: string]: { nome: string; status: string } };
+  bookmakers: { [key: string]: { nome: string; status: string; projeto_id?: string } };
   loading: boolean;
   filtroTipo: string;
   setFiltroTipo: (tipo: string) => void;
+  filtroProjeto: string;
+  setFiltroProjeto: (projeto: string) => void;
+  projetos: Array<{ id: string; nome: string }>;
   dataInicio: Date | undefined;
   setDataInicio: (date: Date | undefined) => void;
   dataFim: Date | undefined;
@@ -86,6 +89,9 @@ export function HistoricoMovimentacoes({
   loading,
   filtroTipo,
   setFiltroTipo,
+  filtroProjeto,
+  setFiltroProjeto,
+  projetos,
   dataInicio,
   setDataInicio,
   dataFim,
@@ -143,7 +149,7 @@ export function HistoricoMovimentacoes({
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Tipo de transação" />
                 </SelectTrigger>
                 <SelectContent>
@@ -152,6 +158,20 @@ export function HistoricoMovimentacoes({
                   <SelectItem value="DEPOSITO">Depósito</SelectItem>
                   <SelectItem value="SAQUE">Saque</SelectItem>
                   <SelectItem value="APORTE_FINANCEIRO">Aporte & Liquidação</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={filtroProjeto} onValueChange={setFiltroProjeto}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TODOS">Todos os projetos</SelectItem>
+                  <SelectItem value="SEM_PROJETO">Sem projeto vinculado</SelectItem>
+                  {projetos.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
