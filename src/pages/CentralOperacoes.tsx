@@ -193,6 +193,7 @@ interface SaquePendenteConfirmacao {
   parceiro_nome?: string;
   banco_nome?: string;
   wallet_nome?: string;
+  projeto_nome?: string;
 }
 
 interface AlertaLucroParceiro {
@@ -589,14 +590,21 @@ export default function CentralOperacoes() {
         const contasIds = saquesPendentesResult.data.map((s: any) => s.destino_conta_bancaria_id).filter(Boolean);
         const walletsIds = saquesPendentesResult.data.map((s: any) => s.destino_wallet_id).filter(Boolean);
 
-        const [bookmakersNomes, parceirosNomes, contasNomes, walletsNomes] = await Promise.all([
-          bookmakersIds.length > 0 ? supabase.from("bookmakers").select("id, nome").in("id", bookmakersIds) : Promise.resolve({ data: [] }),
+        const [bookmakersData, parceirosNomes, contasNomes, walletsNomes] = await Promise.all([
+          bookmakersIds.length > 0 ? supabase.from("bookmakers").select("id, nome, projeto_id").in("id", bookmakersIds) : Promise.resolve({ data: [] }),
           parceirosIds.length > 0 ? supabase.from("parceiros").select("id, nome").in("id", parceirosIds) : Promise.resolve({ data: [] }),
           contasIds.length > 0 ? supabase.from("contas_bancarias").select("id, banco, titular").in("id", contasIds) : Promise.resolve({ data: [] }),
           walletsIds.length > 0 ? supabase.from("wallets_crypto").select("id, exchange, moeda, network").in("id", walletsIds) : Promise.resolve({ data: [] }),
         ]);
 
-        const bookmakersMap = Object.fromEntries((bookmakersNomes.data || []).map((b: any) => [b.id, b.nome]));
+        // Buscar nomes dos projetos vinculados às bookmakers
+        const projetosIds = (bookmakersData.data || []).map((b: any) => b.projeto_id).filter(Boolean);
+        const projetosNomes = projetosIds.length > 0 
+          ? await supabase.from("projetos").select("id, nome").in("id", projetosIds)
+          : { data: [] };
+
+        const bookmakersMap = Object.fromEntries((bookmakersData.data || []).map((b: any) => [b.id, { nome: b.nome, projeto_id: b.projeto_id }]));
+        const projetosMap = Object.fromEntries((projetosNomes.data || []).map((p: any) => [p.id, p.nome]));
         const parceirosMap = Object.fromEntries((parceirosNomes.data || []).map((p: any) => [p.id, p.nome]));
         const contasMap = Object.fromEntries((contasNomes.data || []).map((c: any) => [c.id, `${c.banco} - ${c.titular}`]));
         const walletsMap = Object.fromEntries(
@@ -608,13 +616,17 @@ export default function CentralOperacoes() {
           })
         );
 
-        const saquesEnriquecidos: SaquePendenteConfirmacao[] = saquesPendentesResult.data.map((s: any) => ({
-          ...s,
-          bookmaker_nome: bookmakersMap[s.origem_bookmaker_id] || "Bookmaker",
-          parceiro_nome: parceirosMap[s.destino_parceiro_id] || "",
-          banco_nome: s.destino_conta_bancaria_id ? contasMap[s.destino_conta_bancaria_id] : undefined,
-          wallet_nome: s.destino_wallet_id ? walletsMap[s.destino_wallet_id] : undefined,
-        }));
+        const saquesEnriquecidos: SaquePendenteConfirmacao[] = saquesPendentesResult.data.map((s: any) => {
+          const bkData = bookmakersMap[s.origem_bookmaker_id] || { nome: "Bookmaker", projeto_id: null };
+          return {
+            ...s,
+            bookmaker_nome: bkData.nome,
+            parceiro_nome: parceirosMap[s.destino_parceiro_id] || "",
+            banco_nome: s.destino_conta_bancaria_id ? contasMap[s.destino_conta_bancaria_id] : undefined,
+            wallet_nome: s.destino_wallet_id ? walletsMap[s.destino_wallet_id] : undefined,
+            projeto_nome: bkData.projeto_id ? projetosMap[bkData.projeto_id] : undefined,
+          };
+        });
 
         setSaquesPendentes(saquesEnriquecidos);
       } else {
@@ -883,7 +895,14 @@ export default function CentralOperacoes() {
                         <Building2 className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
                       )}
                       <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{saque.bookmaker_nome}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-medium truncate">{saque.bookmaker_nome}</p>
+                          {saque.projeto_nome && (
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-yellow-500/30 text-yellow-300">
+                              {saque.projeto_nome}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-[10px] text-muted-foreground truncate">
                           → {saque.destino_wallet_id ? (saque.wallet_nome || "Wallet Crypto") : (saque.banco_nome || "Conta Bancária")}
                         </p>
