@@ -894,11 +894,11 @@ export default function CentralOperacoes() {
                       ) : (
                         <Building2 className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
                       )}
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-medium truncate">{saque.bookmaker_nome}</p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-xs font-medium truncate max-w-[100px]">{saque.bookmaker_nome}</p>
                           {saque.projeto_nome && (
-                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-yellow-500/30 text-yellow-300">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-yellow-500/30 text-yellow-300 shrink-0 whitespace-nowrap">
                               {saque.projeto_nome}
                             </Badge>
                           )}
