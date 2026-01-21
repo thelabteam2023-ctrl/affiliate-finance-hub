@@ -542,7 +542,7 @@ export default function GestaoProjetos() {
             </CardContent>
           </Card>
         ) : viewMode === "cards" ? (
-          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProjetos.map((projeto) => (
               <Card 
                 key={projeto.id} 
@@ -557,7 +557,7 @@ export default function GestaoProjetos() {
                         <FolderKanban className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm md:text-base truncate">{projeto.nome}</CardTitle>
+                        <CardTitle className="text-sm md:text-base break-words">{projeto.nome}</CardTitle>
                         {projeto.descricao && (
                           <p className="text-xs md:text-sm text-muted-foreground line-clamp-1">
                             {projeto.descricao}
