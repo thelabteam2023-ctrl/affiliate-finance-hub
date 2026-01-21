@@ -67,40 +67,58 @@ export function ProjectFinancialDisplay({
     ? "text-muted-foreground" 
     : (isPositive ? "text-emerald-500" : "text-red-500");
 
-  // Se não for multimoeda, exibir layout simplificado
+  // Se não for multimoeda (apenas BRL), exibir layout simplificado
   if (!showMultiCurrency) {
     const displayValue = isSaldo 
       ? formatBRL(totalConsolidado)
       : `${lucroDisplay?.isPositive ? '+' : ''}${formatBRL(totalConsolidado)}`;
     
     return (
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-2 text-muted-foreground">
+      <div className="flex flex-col items-center gap-1 py-2">
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
           <Icon className={`h-4 w-4 ${iconColor}`} />
           <span>{label}</span>
         </div>
-        <span className={`font-medium ${!isSaldo ? lucroDisplay?.colorClass : ''}`}>
+        <span className={`text-lg font-semibold ${!isSaldo ? lucroDisplay?.colorClass : ''}`}>
           {displayValue}
         </span>
+        {/* Badge BRL mesmo em mono-moeda para consistência visual */}
+        {hasBRL && (
+          <Badge 
+            variant="outline" 
+            className={`text-sm px-3 py-1 ${
+              !isSaldo && breakdown.BRL < 0 
+                ? 'border-red-500/40 text-red-400 bg-red-500/10' 
+                : !isSaldo && breakdown.BRL > 0
+                  ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
+                  : 'border-border'
+            }`}
+          >
+            <span className="font-medium">💰 BRL:</span>
+            <span className="ml-1.5 font-semibold">
+              {!isSaldo && breakdown.BRL > 0 ? '+' : ''}{formatBRL(breakdown.BRL)}
+            </span>
+          </Badge>
+        )}
       </div>
     );
   }
 
-  // Layout multimoeda com hierarquia visual clara
+  // Layout multimoeda com hierarquia visual clara - CENTRALIZADO
   return (
-    <div className="space-y-2">
-      {/* Header com label e ícone */}
+    <div className="flex flex-col items-center gap-2 py-2">
+      {/* Header com label e ícone - CENTRALIZADO */}
       <div className="flex items-center gap-2 text-muted-foreground text-sm">
         <Icon className={`h-4 w-4 ${iconColor}`} />
         <span>{label}</span>
       </div>
       
-      {/* Badges de moeda - VALORES REAIS (elemento dominante) */}
-      <div className="flex items-center gap-2 justify-end">
+      {/* Badges de moeda - VALORES REAIS (elemento dominante) - CENTRALIZADOS */}
+      <div className="flex flex-wrap items-center justify-center gap-2">
         {hasBRL && (
           <Badge 
             variant="outline" 
-            className={`text-xs px-2 py-0.5 ${
+            className={`text-sm px-3 py-1 ${
               !isSaldo && breakdown.BRL < 0 
                 ? 'border-red-500/40 text-red-400 bg-red-500/10' 
                 : !isSaldo && breakdown.BRL > 0
@@ -118,7 +136,7 @@ export function ProjectFinancialDisplay({
         {hasUSD && (
           <Badge 
             variant="outline" 
-            className={`text-xs px-2 py-0.5 ${
+            className={`text-sm px-3 py-1 ${
               !isSaldo && breakdown.USD < 0 
                 ? 'border-red-500/40 text-red-400 bg-red-500/10' 
                 : !isSaldo && breakdown.USD > 0
@@ -134,48 +152,46 @@ export function ProjectFinancialDisplay({
         )}
       </div>
       
-      {/* Valor consolidado aproximado (referência analítica) */}
-      <div className="flex items-center justify-end gap-1.5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className={`flex items-center gap-1 text-xs cursor-help ${
-              isSaldo 
-                ? 'text-muted-foreground' 
-                : lucroDisplay?.colorClass
-            }`}>
-              <span className="opacity-70">≈</span>
-              <span className="font-medium">
-                {!isSaldo && totalConsolidado > 0 ? '+' : ''}{formatBRL(totalConsolidado)}
-              </span>
-              <Info className="h-3 w-3 opacity-50" />
+      {/* Valor consolidado aproximado (referência analítica) - CENTRALIZADO */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className={`flex items-center gap-1.5 text-sm cursor-help ${
+            isSaldo 
+              ? 'text-muted-foreground' 
+              : lucroDisplay?.colorClass
+          }`}>
+            <span className="opacity-70">≈</span>
+            <span className="font-semibold">
+              {!isSaldo && totalConsolidado > 0 ? '+' : ''}{formatBRL(totalConsolidado)}
+            </span>
+            <Info className="h-3.5 w-3.5 opacity-50" />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-[300px]">
+          <div className="space-y-2 text-xs">
+            <div className="font-medium">Valor Aproximado (Conversão Analítica)</div>
+            <div className="text-muted-foreground">
+              Este valor é uma <strong>referência aproximada</strong> calculada exclusivamente 
+              via cotação PTAX do Banco Central.
             </div>
-          </TooltipTrigger>
-          <TooltipContent side="left" className="max-w-[280px]">
-            <div className="space-y-2 text-xs">
-              <div className="font-medium">Valor Aproximado (Conversão Analítica)</div>
-              <div className="text-muted-foreground">
-                Este valor é uma <strong>referência aproximada</strong> calculada exclusivamente 
-                via cotação PTAX do Banco Central.
+            <div className="pt-1 border-t border-border/50 space-y-1">
+              <div className="flex justify-between">
+                <span>Cotação PTAX:</span>
+                <span className="font-mono">R$ {cotacaoPTAX.toFixed(4)}</span>
               </div>
-              <div className="pt-1 border-t border-border/50 space-y-1">
-                <div className="flex justify-between">
-                  <span>Cotação PTAX:</span>
-                  <span className="font-mono">R$ {cotacaoPTAX.toFixed(4)}</span>
+              {hasUSD && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{formatUSD(breakdown.USD)} × {cotacaoPTAX.toFixed(2)} =</span>
+                  <span>{formatBRL(breakdown.USD * cotacaoPTAX)}</span>
                 </div>
-                {hasUSD && (
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>{formatUSD(breakdown.USD)} × {cotacaoPTAX.toFixed(2)} =</span>
-                    <span>{formatBRL(breakdown.USD * cotacaoPTAX)}</span>
-                  </div>
-                )}
-              </div>
-              <div className="text-[10px] text-muted-foreground/70 pt-1">
-                ⚠️ Não substitui os valores reais por moeda
-              </div>
+              )}
             </div>
-          </TooltipContent>
-        </Tooltip>
-      </div>
+            <div className="text-[10px] text-muted-foreground/70 pt-1">
+              ⚠️ Não substitui os valores reais por moeda
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
