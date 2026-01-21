@@ -706,14 +706,6 @@ export default function GestaoProjetos() {
                         </>
                       );
                     })()}
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Receipt className="h-4 w-4" />
-                        <span>Gastos Operadores</span>
-                      </div>
-                      <span className="font-medium text-amber-500">{formatCurrency(projeto.total_gasto_operadores || 0)}</span>
-                    </div>
                   </div>
                 </div>
                   <div className="flex flex-wrap gap-1.5 md:gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t">
