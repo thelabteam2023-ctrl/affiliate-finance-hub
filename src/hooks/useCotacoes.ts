@@ -321,15 +321,16 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
   };
 
   // Compatibilidade com código legado - mapear sources para source
+  const sources = state.sources;
   const source = {
-    usd: state.sources.usd.label,
-    eur: state.sources.eur.label,
-    gbp: state.sources.gbp.label,
-    myr: state.sources.myr.label,
-    mxn: state.sources.mxn.label,
-    ars: state.sources.ars.label,
-    cop: state.sources.cop.label,
-    crypto: state.sources.crypto
+    usd: sources?.usd?.label ?? 'fallback',
+    eur: sources?.eur?.label ?? 'fallback',
+    gbp: sources?.gbp?.label ?? 'fallback',
+    myr: sources?.myr?.label ?? 'fallback',
+    mxn: sources?.mxn?.label ?? 'fallback',
+    ars: sources?.ars?.label ?? 'fallback',
+    cop: sources?.cop?.label ?? 'fallback',
+    crypto: sources?.crypto ?? 'fallback'
   };
 
   return {
