@@ -701,14 +701,18 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
                 <h3 className="text-lg font-semibold">Análise por Casa</h3>
                 <Badge variant="secondary">{statsPorCasa.length} casas</Badge>
               </div>
-              <ToggleGroup type="single" value={porCasaViewMode} onValueChange={(v) => v && setPorCasaViewMode(v as 'card' | 'list')}>
-                <ToggleGroupItem value="card" aria-label="Cards" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPorCasaViewMode(porCasaViewMode === "list" ? "card" : "list")}
+                className="h-8 w-8 p-0"
+              >
+                {porCasaViewMode === "list" ? (
                   <LayoutGrid className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="list" aria-label="Lista" size="sm">
+                ) : (
                   <List className="h-4 w-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
+                )}
+              </Button>
             </div>
             <FreebetResumoPorCasa 
               stats={statsPorCasa} 
