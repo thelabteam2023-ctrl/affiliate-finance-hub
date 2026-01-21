@@ -47,17 +47,17 @@ interface DeltaCambialCardProps {
 
 /**
  * Configuração de moedas
- * - primary: true = moedas principais (USD, EUR, GBP) - fonte PTAX
- * - primary: false = moedas secundárias (MYR, MXN, ARS, COP) - fonte FastForex
+ * Nova hierarquia: FastForex (primário) → PTAX (fallback USD/EUR/GBP) → Trabalho
+ * Todas as moedas usam FastForex como fonte primária unificada
  */
 const CURRENCY_CONFIG = {
-  USD: { symbol: "$", label: "Dólar", field: "cotacao_trabalho", default: 5.30, primary: true, officialSource: "PTAX BCB" },
-  EUR: { symbol: "€", label: "Euro", field: "cotacao_trabalho_eur", default: 6.10, primary: true, officialSource: "PTAX BCB" },
-  GBP: { symbol: "£", label: "Libra", field: "cotacao_trabalho_gbp", default: 7.10, primary: true, officialSource: "PTAX BCB" },
-  MYR: { symbol: "RM", label: "Ringgit", field: "cotacao_trabalho_myr", default: 1.20, primary: false, officialSource: "FastForex" },
-  MXN: { symbol: "MX$", label: "P. Mexicano", field: "cotacao_trabalho_mxn", default: 0.26, primary: false, officialSource: "FastForex" },
-  ARS: { symbol: "AR$", label: "P. Argentino", field: "cotacao_trabalho_ars", default: 0.005, primary: false, officialSource: "FastForex" },
-  COP: { symbol: "CO$", label: "P. Colombiano", field: "cotacao_trabalho_cop", default: 0.0013, primary: false, officialSource: "FastForex" },
+  USD: { symbol: "$", label: "Dólar", field: "cotacao_trabalho", default: 5.30, primary: true, hasPtaxFallback: true },
+  EUR: { symbol: "€", label: "Euro", field: "cotacao_trabalho_eur", default: 6.10, primary: true, hasPtaxFallback: true },
+  GBP: { symbol: "£", label: "Libra", field: "cotacao_trabalho_gbp", default: 7.10, primary: true, hasPtaxFallback: true },
+  MYR: { symbol: "RM", label: "Ringgit", field: "cotacao_trabalho_myr", default: 1.20, primary: false, hasPtaxFallback: false },
+  MXN: { symbol: "MX$", label: "P. Mexicano", field: "cotacao_trabalho_mxn", default: 0.26, primary: false, hasPtaxFallback: false },
+  ARS: { symbol: "AR$", label: "P. Argentino", field: "cotacao_trabalho_ars", default: 0.005, primary: false, hasPtaxFallback: false },
+  COP: { symbol: "CO$", label: "P. Colombiano", field: "cotacao_trabalho_cop", default: 0.0013, primary: false, hasPtaxFallback: false },
 } as const;
 
 type CurrencyKey = keyof typeof CURRENCY_CONFIG;
@@ -227,11 +227,19 @@ export function DeltaCambialCard({
     const isEditing = editingCurrency === key;
     
     // Verificar se está usando fonte oficial ou fallback
-    const isOfficialAvailable = sourceInfo.isOfficial;
-    const isFallback = sourceInfo.isFallback;
+    const isOfficialAvailable = sourceInfo?.isOfficial ?? false;
+    const isFallback = sourceInfo?.isFallback ?? true;
+    const isPtaxFallback = sourceInfo?.isPtaxFallback ?? false;
     
     // Valor exibido no topo: sempre a fonte oficial (ou trabalho se em fallback)
     const displayValue = isFallback ? work : official;
+    
+    // Determinar label da fonte
+    const getSourceLabel = () => {
+      if (isFallback) return 'Trabalho (fallback)';
+      if (isPtaxFallback) return 'PTAX (fallback)';
+      return 'FastForex';
+    };
     
     // Só mostrar botão de sincronizar se:
     // 1. Fonte oficial disponível
@@ -268,14 +276,29 @@ export function DeltaCambialCard({
                     Fonte oficial indisponível
                   </p>
                   <p className="text-muted-foreground mt-1">
-                    {config.officialSource} não disponível no momento.
+                    FastForex{config.hasPtaxFallback ? ' e PTAX' : ''} não disponível.
                     Exibindo cotação de trabalho como fallback.
                   </p>
                   <p className="mt-1">Trabalho: R$ {work.toFixed(6)}</p>
                 </>
+              ) : isPtaxFallback ? (
+                <>
+                  <p className="font-medium text-amber-400 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Usando PTAX como fallback
+                  </p>
+                  <p className="text-muted-foreground mt-1">
+                    FastForex indisponível. Usando PTAX do Banco Central.
+                  </p>
+                  <p className="mt-1">PTAX: R$ {official.toFixed(6)}</p>
+                  <p className="text-muted-foreground">Trabalho: R$ {work.toFixed(6)}</p>
+                  <p className="text-muted-foreground mt-1">
+                    Δ = {delta > 0 ? "+" : ""}{delta.toFixed(2)}%
+                  </p>
+                </>
               ) : (
                 <>
-                  <p className="font-medium text-primary">{sourceInfo.label}</p>
+                  <p className="font-medium text-primary">{getSourceLabel()}</p>
                   <p className="mt-1">Oficial: R$ {official.toFixed(6)}</p>
                   <p className="text-muted-foreground">Trabalho: R$ {work.toFixed(6)}</p>
                   <p className="text-muted-foreground mt-1">
@@ -360,7 +383,7 @@ export function DeltaCambialCard({
             disabled={saving || cotacaoLoading}
           >
             <RefreshCw className={`h-2 w-2 mr-0.5 ${saving ? "animate-spin" : ""}`} />
-            Usar {config.primary ? 'PTAX' : 'Oficial'}
+            Usar {isPtaxFallback ? 'PTAX' : 'FastForex'}
           </Button>
         )}
       </div>
@@ -384,28 +407,25 @@ export function DeltaCambialCard({
                 <h4 className="font-semibold text-sm">Fontes de Cotação</h4>
                 <div className="text-xs space-y-2">
                   <div>
-                    <p className="font-medium text-primary">USD, EUR, GBP</p>
-                    <p className="text-muted-foreground">Fonte: PTAX BCB (Banco Central)</p>
+                    <p className="font-medium text-primary">Todas as moedas</p>
+                    <p className="text-muted-foreground">Fonte primária: FastForex API</p>
                   </div>
                   <div>
-                    <p className="font-medium text-primary">MYR, MXN, ARS, COP</p>
-                    <p className="text-muted-foreground">Fonte: FastForex API</p>
+                    <p className="font-medium text-muted-foreground">USD, EUR, GBP (fallback)</p>
+                    <p className="text-muted-foreground">PTAX BCB se FastForex indisponível</p>
                   </div>
+                </div>
+                <div className="text-xs space-y-1 border-t pt-2">
+                  <p><strong>Hierarquia de fallback:</strong></p>
+                  <p className="text-muted-foreground">1. FastForex (primária)</p>
+                  <p className="text-muted-foreground">2. PTAX BCB (USD/EUR/GBP)</p>
+                  <p className="text-muted-foreground">3. Cotação de Trabalho</p>
                 </div>
                 <div className="text-xs space-y-1 border-t pt-2">
                   <p><strong>Delta (Δ):</strong> Diferença entre cotação oficial e de trabalho</p>
                   <p className="text-muted-foreground">• &lt;1%: Alinhado</p>
                   <p className="text-primary">• 1-3%: Atenção</p>
                   <p className="text-destructive">• ≥3%: Defasagem</p>
-                </div>
-                <div className="text-xs border-t pt-2">
-                  <p className="text-amber-600 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    Fallback
-                  </p>
-                  <p className="text-muted-foreground">
-                    Quando a fonte oficial está indisponível, exibe a cotação de trabalho.
-                  </p>
                 </div>
               </div>
             </PopoverContent>

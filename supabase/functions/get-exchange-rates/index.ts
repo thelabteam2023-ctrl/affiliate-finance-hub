@@ -16,11 +16,14 @@ function formatDateBCB(date: Date): string {
 
 /**
  * Moedas suportadas pelo sistema
- * PTAX: USD, EUR, GBP
- * FastForex: MYR, MXN, ARS, COP
+ * Nova hierarquia: FastForex (primário) → PTAX (fallback para USD/EUR/GBP) → Hardcoded
+ * 
+ * Todas as moedas usam FastForex como fonte primária
+ * USD, EUR, GBP têm PTAX como segunda opção de fallback
+ * Fallback hardcoded é a terceira opção
  */
 const CURRENCIES = {
-  USD: { code: 'USD', fallback: null, useDolarDia: true, hasPTAX: true },
+  USD: { code: 'USD', fallback: 5.31, useDolarDia: true, hasPTAX: true },
   EUR: { code: 'EUR', fallback: 6.10, useDolarDia: false, hasPTAX: true },
   GBP: { code: 'GBP', fallback: 7.10, useDolarDia: false, hasPTAX: true },
   MYR: { code: 'MYR', fallback: 1.20, useDolarDia: false, hasPTAX: false },
@@ -105,21 +108,22 @@ async function saveCachedRates(rates: Record<string, { rate: number; source: str
 }
 
 /**
- * Busca cotações via FastForex API
+ * Busca cotações via FastForex API para TODAS as moedas (fonte primária)
  */
 async function fetchFastForexRates(): Promise<Record<string, number>> {
   const apiKey = Deno.env.get('FASTFOREX_API_KEY');
   
   if (!apiKey) {
-    console.log('FastForex API key não configurada - usando fallback');
+    console.log('FastForex API key não configurada - tentando PTAX como fallback');
     return {};
   }
 
   try {
-    const currencies = 'MYR,MXN,ARS,COP,USD';
+    // Buscar TODAS as moedas via FastForex (fonte primária unificada)
+    const currencies = 'USD,EUR,GBP,MYR,MXN,ARS,COP';
     const url = `https://api.fastforex.io/fetch-multi?from=BRL&to=${currencies}&api_key=${apiKey}`;
     
-    console.log('Buscando cotações FastForex...');
+    console.log('Buscando cotações FastForex (fonte primária)...');
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -146,7 +150,7 @@ async function fetchFastForexRates(): Promise<Record<string, number>> {
       }
     }
     
-    console.log(`FastForex: ${Object.keys(rates).length} cotações obtidas`);
+    console.log(`FastForex: ${Object.keys(rates).length} cotações obtidas (fonte primária)`);
     return rates;
 
   } catch (error) {
@@ -208,13 +212,27 @@ serve(async (req) => {
       rates[key] = data.rate;
     }
 
-    // 2. Buscar PTAX para moedas que faltam
+    // 2. FONTE PRIMÁRIA: FastForex para TODAS as moedas faltando
+    if (missingCurrencies.length > 0) {
+      console.log('Buscando FastForex (fonte primária) para:', missingCurrencies.join(', '));
+      const fastForexRates = await fetchFastForexRates();
+      
+      for (const currency of missingCurrencies) {
+        const rateKey = `${currency}BRL`;
+        if (fastForexRates[rateKey]) {
+          rates[rateKey] = fastForexRates[rateKey];
+          newRatesToCache[rateKey] = { rate: fastForexRates[rateKey], source: 'FASTFOREX' };
+        }
+      }
+    }
+
+    // 3. FALLBACK SECUNDÁRIO: PTAX para USD, EUR, GBP que ainda faltam
     const ptaxCurrencies = Object.entries(CURRENCIES)
-      .filter(([key, config]) => config.hasPTAX && !cachedCurrencies.includes(key))
+      .filter(([key, config]) => config.hasPTAX && !rates[`${key}BRL`])
       .map(([key, config]) => ({ key, config }));
 
     if (ptaxCurrencies.length > 0) {
-      console.log('Buscando PTAX para:', ptaxCurrencies.map(p => p.key).join(', '));
+      console.log('Buscando PTAX (fallback) para:', ptaxCurrencies.map(p => p.key).join(', '));
       
       for (let i = 0; i < 5; i++) {
         const checkDate = new Date(today);
@@ -241,8 +259,8 @@ serve(async (req) => {
               if (data.value && data.value.length > 0) {
                 const rate = data.value[data.value.length - 1].cotacaoVenda;
                 rates[rateKey] = rate;
-                newRatesToCache[rateKey] = { rate, source: 'PTAX' };
-                console.log(`PTAX ${key}/BRL: ${rate}`);
+                newRatesToCache[rateKey] = { rate, source: 'PTAX_FALLBACK' };
+                console.log(`PTAX (fallback) ${key}/BRL: ${rate}`);
               }
             }
           } catch (e) {
@@ -250,25 +268,8 @@ serve(async (req) => {
           }
         }
 
-        const allPtaxFetched = ptaxCurrencies.every(({ key }) => rates[`${key}BRL`] !== null);
+        const allPtaxFetched = ptaxCurrencies.every(({ key }) => rates[`${key}BRL`] !== null && rates[`${key}BRL`] !== undefined);
         if (allPtaxFetched) break;
-      }
-    }
-
-    // 3. Buscar FastForex para moedas sem PTAX que faltam
-    const fastForexCurrencies = Object.entries(CURRENCIES)
-      .filter(([key, config]) => !config.hasPTAX && !cachedCurrencies.includes(key))
-      .map(([key]) => key);
-
-    if (fastForexCurrencies.length > 0) {
-      const fastForexRates = await fetchFastForexRates();
-      
-      for (const currency of fastForexCurrencies) {
-        const rateKey = `${currency}BRL`;
-        if (fastForexRates[rateKey]) {
-          rates[rateKey] = fastForexRates[rateKey];
-          newRatesToCache[rateKey] = { rate: fastForexRates[rateKey], source: 'FASTFOREX' };
-        }
       }
     }
 
