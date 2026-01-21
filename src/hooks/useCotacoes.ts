@@ -11,6 +11,29 @@ export interface ExchangeRates {
   COPBRL: number;
 }
 
+/**
+ * Tipos de fonte para cotações:
+ * - PTAX: Cotação oficial do Banco Central do Brasil (USD, EUR, GBP)
+ * - FASTFOREX: Cotação da API FastForex (MYR, MXN, ARS, COP)
+ * - TRABALHO_FALLBACK: Usando cotação de trabalho como fallback (fonte oficial indisponível)
+ * - FALLBACK: Usando valor fallback hardcoded
+ */
+export type CotacaoSource = 
+  | 'PTAX' 
+  | 'PTAX_CACHE' 
+  | 'FASTFOREX' 
+  | 'FASTFOREX_CACHE' 
+  | 'TRABALHO_FALLBACK' 
+  | 'FALLBACK'
+  | 'INDISPONIVEL';
+
+export interface CotacaoSourceInfo {
+  source: CotacaoSource;
+  label: string;
+  isOfficial: boolean;
+  isFallback: boolean;
+}
+
 interface CotacoesState {
   cotacaoUSD: number;
   cotacaoEUR: number;
@@ -22,14 +45,14 @@ interface CotacoesState {
   cryptoPrices: Record<string, number>;
   loading: boolean;
   lastUpdate: Date | null;
-  source: {
-    usd: string;
-    eur: string;
-    gbp: string;
-    myr: string;
-    mxn: string;
-    ars: string;
-    cop: string;
+  sources: {
+    usd: CotacaoSourceInfo;
+    eur: CotacaoSourceInfo;
+    gbp: CotacaoSourceInfo;
+    myr: CotacaoSourceInfo;
+    mxn: CotacaoSourceInfo;
+    ars: CotacaoSourceInfo;
+    cop: CotacaoSourceInfo;
     crypto: string;
   };
 }
@@ -47,6 +70,58 @@ const FALLBACK_RATES: ExchangeRates = {
   COPBRL: 0.0013
 };
 
+/**
+ * Mapeia a fonte retornada pela edge function para o tipo CotacaoSourceInfo
+ */
+function parseSource(rawSource: string, currency: 'PTAX' | 'FASTFOREX'): CotacaoSourceInfo {
+  const source = rawSource?.toUpperCase() || '';
+  
+  // PTAX oficial (USD, EUR, GBP)
+  if (source === 'PTAX' || source === 'PTAX_CACHE') {
+    return {
+      source: source.includes('CACHE') ? 'PTAX_CACHE' : 'PTAX',
+      label: 'PTAX BCB',
+      isOfficial: true,
+      isFallback: false
+    };
+  }
+  
+  // FastForex (MYR, MXN, ARS, COP)
+  if (source === 'FASTFOREX' || source === 'FASTFOREX_CACHE') {
+    return {
+      source: source.includes('CACHE') ? 'FASTFOREX_CACHE' : 'FASTFOREX',
+      label: 'FastForex',
+      isOfficial: true,
+      isFallback: false
+    };
+  }
+  
+  // Fallback quando fonte oficial indisponível
+  if (source === 'FALLBACK' || source === 'FALLBACK_ERRO') {
+    return {
+      source: 'FALLBACK',
+      label: currency === 'PTAX' ? 'Fallback (sem PTAX)' : 'Fallback (sem API)',
+      isOfficial: false,
+      isFallback: true
+    };
+  }
+  
+  // Indisponível
+  return {
+    source: 'INDISPONIVEL',
+    label: 'Indisponível',
+    isOfficial: false,
+    isFallback: true
+  };
+}
+
+const defaultSourceInfo: CotacaoSourceInfo = {
+  source: 'FALLBACK',
+  label: 'Carregando...',
+  isOfficial: false,
+  isFallback: true
+};
+
 export function useCotacoes(cryptoSymbols: string[] = []) {
   const [state, setState] = useState<CotacoesState>({
     cotacaoUSD: FALLBACK_RATES.USDBRL,
@@ -59,14 +134,14 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
     cryptoPrices: {},
     loading: true,
     lastUpdate: null,
-    source: {
-      usd: "fallback",
-      eur: "fallback",
-      gbp: "fallback",
-      myr: "fallback",
-      mxn: "fallback",
-      ars: "fallback",
-      cop: "fallback",
+    sources: {
+      usd: defaultSourceInfo,
+      eur: defaultSourceInfo,
+      gbp: defaultSourceInfo,
+      myr: defaultSourceInfo,
+      mxn: defaultSourceInfo,
+      ars: defaultSourceInfo,
+      cop: defaultSourceInfo,
       crypto: "fallback"
     }
   });
@@ -77,73 +152,61 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
       if (error) throw error;
       
       const newState: Partial<CotacoesState> = {};
-      const newSource = { ...state.source };
       
-      // sources contém informação detalhada por moeda
-      const sources = data?.sources || {};
-      // Moedas que precisam de cotação de trabalho (não têm PTAX)
-      const currenciesNeedingWorkRate = data?.currenciesNeedingWorkRate || [];
+      // sources contém informação detalhada por moeda vinda da edge function
+      const rawSources = data?.sources || {};
       
-      // Processar USD, EUR, GBP (têm PTAX)
+      // Processar USD, EUR, GBP (fonte primária: PTAX)
       if (data?.USDBRL) {
         newState.cotacaoUSD = data.USDBRL;
-        newSource.usd = sources.USD === 'PTAX' ? 'PTAX BCB' : 'fallback';
       }
       if (data?.EURBRL) {
         newState.cotacaoEUR = data.EURBRL;
-        newSource.eur = sources.EUR === 'PTAX' ? 'PTAX BCB' : 'fallback';
       }
       if (data?.GBPBRL) {
         newState.cotacaoGBP = data.GBPBRL;
-        newSource.gbp = sources.GBP === 'PTAX' ? 'PTAX BCB' : 'fallback';
       }
       
-      // Processar moedas SEM PTAX no BCB
-      // Para essas, retornamos null/fallback e sinalizamos que precisam cotação de trabalho
+      // Processar MYR, MXN, ARS, COP (fonte primária: FastForex)
       if (data?.MYRBRL !== null && data?.MYRBRL !== undefined) {
         newState.cotacaoMYR = data.MYRBRL;
-        newSource.myr = sources.MYR === 'PTAX' ? 'PTAX BCB' : 'SEM_PTAX_BCB';
-      } else {
-        newSource.myr = 'SEM_PTAX_BCB';
       }
-      
       if (data?.MXNBRL !== null && data?.MXNBRL !== undefined) {
         newState.cotacaoMXN = data.MXNBRL;
-        newSource.mxn = sources.MXN === 'PTAX' ? 'PTAX BCB' : 'SEM_PTAX_BCB';
-      } else {
-        newSource.mxn = 'SEM_PTAX_BCB';
       }
-      
       if (data?.ARSBRL !== null && data?.ARSBRL !== undefined) {
         newState.cotacaoARS = data.ARSBRL;
-        newSource.ars = sources.ARS === 'PTAX' ? 'PTAX BCB' : 'SEM_PTAX_BCB';
-      } else {
-        newSource.ars = 'SEM_PTAX_BCB';
       }
-      
       if (data?.COPBRL !== null && data?.COPBRL !== undefined) {
         newState.cotacaoCOP = data.COPBRL;
-        newSource.cop = sources.COP === 'PTAX' ? 'PTAX BCB' : 'SEM_PTAX_BCB';
-      } else {
-        newSource.cop = 'SEM_PTAX_BCB';
       }
+      
+      // Parsear sources com a lógica correta
+      const newSources = {
+        usd: parseSource(rawSources.USD, 'PTAX'),
+        eur: parseSource(rawSources.EUR, 'PTAX'),
+        gbp: parseSource(rawSources.GBP, 'PTAX'),
+        myr: parseSource(rawSources.MYR, 'FASTFOREX'),
+        mxn: parseSource(rawSources.MXN, 'FASTFOREX'),
+        ars: parseSource(rawSources.ARS, 'FASTFOREX'),
+        cop: parseSource(rawSources.COP, 'FASTFOREX'),
+        crypto: state.sources.crypto
+      };
       
       setState(prev => ({
         ...prev,
         ...newState,
-        source: newSource
+        sources: newSources
       }));
       
       console.log("Cotações atualizadas:", {
-        USD: data?.USDBRL,
-        EUR: data?.EURBRL,
-        GBP: data?.GBPBRL,
-        MYR: data?.MYRBRL,
-        MXN: data?.MXNBRL,
-        ARS: data?.ARSBRL,
-        COP: data?.COPBRL,
-        sources: data?.sources,
-        currenciesNeedingWorkRate
+        USD: { value: data?.USDBRL, source: rawSources.USD },
+        EUR: { value: data?.EURBRL, source: rawSources.EUR },
+        GBP: { value: data?.GBPBRL, source: rawSources.GBP },
+        MYR: { value: data?.MYRBRL, source: rawSources.MYR },
+        MXN: { value: data?.MXNBRL, source: rawSources.MXN },
+        ARS: { value: data?.ARSBRL, source: rawSources.ARS },
+        COP: { value: data?.COPBRL, source: rawSources.COP },
       });
     } catch (error) {
       console.error("Erro ao buscar cotações:", error);
@@ -161,7 +224,7 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
         setState(prev => ({
           ...prev,
           cryptoPrices: data.prices,
-          source: { ...prev.source, crypto: "Binance" }
+          sources: { ...prev.sources, crypto: "Binance" }
         }));
         console.log("Cotações crypto atualizadas:", data.prices);
       }
@@ -217,7 +280,7 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
       case "MXN": return valor * state.cotacaoMXN;
       case "ARS": return valor * state.cotacaoARS;
       case "COP": return valor * state.cotacaoCOP;
-      default: return valor; // Moeda desconhecida, retorna sem conversão
+      default: return valor;
     }
   }, [state.cotacaoUSD, state.cotacaoEUR, state.cotacaoGBP, state.cotacaoMYR, state.cotacaoMXN, state.cotacaoARS, state.cotacaoCOP]);
 
@@ -257,9 +320,23 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
     COPBRL: state.cotacaoCOP
   };
 
+  // Compatibilidade com código legado - mapear sources para source
+  const source = {
+    usd: state.sources.usd.label,
+    eur: state.sources.eur.label,
+    gbp: state.sources.gbp.label,
+    myr: state.sources.myr.label,
+    mxn: state.sources.mxn.label,
+    ars: state.sources.ars.label,
+    cop: state.sources.cop.label,
+    crypto: state.sources.crypto
+  };
+
   return {
     ...state,
     rates,
+    source, // Compatibilidade legado
+    sources: state.sources, // Novo formato com mais detalhes
     refreshAll,
     convertUSDtoBRL,
     convertBRLtoUSD,

@@ -26,8 +26,9 @@ import {
   DollarSign,
   ChevronDown,
   ChevronUp,
+  AlertTriangle,
 } from "lucide-react";
-import { useCotacoes } from "@/hooks/useCotacoes";
+import { useCotacoes, CotacaoSourceInfo } from "@/hooks/useCotacoes";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -44,15 +45,19 @@ interface DeltaCambialCardProps {
   onCotacaoUpdated?: () => void;
 }
 
-// Configuração de moedas - principais e secundárias
+/**
+ * Configuração de moedas
+ * - primary: true = moedas principais (USD, EUR, GBP) - fonte PTAX
+ * - primary: false = moedas secundárias (MYR, MXN, ARS, COP) - fonte FastForex
+ */
 const CURRENCY_CONFIG = {
-  USD: { symbol: "$", label: "Dólar", field: "cotacao_trabalho", default: 5.30, primary: true },
-  EUR: { symbol: "€", label: "Euro", field: "cotacao_trabalho_eur", default: 6.10, primary: true },
-  GBP: { symbol: "£", label: "Libra", field: "cotacao_trabalho_gbp", default: 7.10, primary: true },
-  MYR: { symbol: "RM", label: "Ringgit", field: "cotacao_trabalho_myr", default: 1.20, primary: false },
-  MXN: { symbol: "MX$", label: "P. Mexicano", field: "cotacao_trabalho_mxn", default: 0.26, primary: false },
-  ARS: { symbol: "AR$", label: "P. Argentino", field: "cotacao_trabalho_ars", default: 0.005, primary: false },
-  COP: { symbol: "CO$", label: "P. Colombiano", field: "cotacao_trabalho_cop", default: 0.0013, primary: false },
+  USD: { symbol: "$", label: "Dólar", field: "cotacao_trabalho", default: 5.30, primary: true, officialSource: "PTAX BCB" },
+  EUR: { symbol: "€", label: "Euro", field: "cotacao_trabalho_eur", default: 6.10, primary: true, officialSource: "PTAX BCB" },
+  GBP: { symbol: "£", label: "Libra", field: "cotacao_trabalho_gbp", default: 7.10, primary: true, officialSource: "PTAX BCB" },
+  MYR: { symbol: "RM", label: "Ringgit", field: "cotacao_trabalho_myr", default: 1.20, primary: false, officialSource: "FastForex" },
+  MXN: { symbol: "MX$", label: "P. Mexicano", field: "cotacao_trabalho_mxn", default: 0.26, primary: false, officialSource: "FastForex" },
+  ARS: { symbol: "AR$", label: "P. Argentino", field: "cotacao_trabalho_ars", default: 0.005, primary: false, officialSource: "FastForex" },
+  COP: { symbol: "CO$", label: "P. Colombiano", field: "cotacao_trabalho_cop", default: 0.0013, primary: false, officialSource: "FastForex" },
 } as const;
 
 type CurrencyKey = keyof typeof CURRENCY_CONFIG;
@@ -68,13 +73,13 @@ export function DeltaCambialCard({
   cotacaoTrabalhoCop,
   onCotacaoUpdated,
 }: DeltaCambialCardProps) {
-  const { rates, loading: cotacaoLoading, refreshAll, source } = useCotacoes();
+  const { rates, loading: cotacaoLoading, refreshAll, sources } = useCotacoes();
   const [editingCurrency, setEditingCurrency] = useState<CurrencyKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [showSecondary, setShowSecondary] = useState(false);
 
-  // Valores de trabalho para cada moeda
+  // Valores de trabalho para cada moeda (fonte secundária/comparação)
   const workRates: Record<CurrencyKey, number> = {
     USD: cotacaoTrabalho ?? CURRENCY_CONFIG.USD.default,
     EUR: cotacaoTrabalhoEur ?? CURRENCY_CONFIG.EUR.default,
@@ -85,8 +90,8 @@ export function DeltaCambialCard({
     COP: cotacaoTrabalhoCop ?? CURRENCY_CONFIG.COP.default,
   };
 
-  // Mapear rates para cada moeda
-  const ptaxRates: Record<CurrencyKey, number> = {
+  // Cotações oficiais (PTAX ou FastForex)
+  const officialRates: Record<CurrencyKey, number> = {
     USD: rates.USDBRL,
     EUR: rates.EURBRL,
     GBP: rates.GBPBRL,
@@ -96,27 +101,38 @@ export function DeltaCambialCard({
     COP: rates.COPBRL,
   };
 
-  // Mapear sources
-  const sourceMap: Record<CurrencyKey, string> = {
-    USD: source.usd,
-    EUR: source.eur,
-    GBP: source.gbp,
-    MYR: source.myr,
-    MXN: source.mxn,
-    ARS: source.ars,
-    COP: source.cop,
+  // Mapear sources para cada moeda
+  const sourceMap: Record<CurrencyKey, CotacaoSourceInfo> = {
+    USD: sources.usd,
+    EUR: sources.eur,
+    GBP: sources.gbp,
+    MYR: sources.myr,
+    MXN: sources.mxn,
+    ARS: sources.ars,
+    COP: sources.cop,
   };
 
-  // Calcular deltas
+  /**
+   * Calcular deltas: SEMPRE compara fonte oficial vs trabalho
+   * Nunca trabalho vs trabalho
+   */
   const deltas = useMemo(() => {
     const result: Record<CurrencyKey, number> = {} as Record<CurrencyKey, number>;
     (Object.keys(CURRENCY_CONFIG) as CurrencyKey[]).forEach(key => {
-      const ptax = ptaxRates[key];
+      const official = officialRates[key];
       const work = workRates[key];
-      result[key] = ptax && work ? ((ptax - work) / work) * 100 : 0;
+      const sourceInfo = sourceMap[key];
+      
+      // Só calcula delta se a fonte oficial estiver disponível
+      // Se estiver em fallback, o delta é 0 (evita comparar trabalho vs trabalho)
+      if (sourceInfo.isOfficial && official && work) {
+        result[key] = ((official - work) / work) * 100;
+      } else {
+        result[key] = 0;
+      }
     });
     return result;
-  }, [ptaxRates, workRates]);
+  }, [officialRates, workRates, sourceMap]);
 
   // Classificação do delta
   const getDeltaClassification = (delta: number) => {
@@ -169,20 +185,21 @@ export function DeltaCambialCard({
     }
   };
 
-  const handleUsePtax = async (currency: CurrencyKey) => {
-    const ptaxValue = ptaxRates[currency];
+  const handleUseOfficial = async (currency: CurrencyKey) => {
+    const officialValue = officialRates[currency];
     
     try {
       setSaving(true);
       const field = CURRENCY_CONFIG[currency].field;
       const { error } = await supabase
         .from("projetos")
-        .update({ [field]: ptaxValue })
+        .update({ [field]: officialValue })
         .eq("id", projetoId);
 
       if (error) throw error;
 
-      toast.success(`Cotação ${currency} sincronizada com PTAX`);
+      const sourceLabel = sourceMap[currency].label;
+      toast.success(`Cotação ${currency} sincronizada com ${sourceLabel}`);
       await Promise.resolve(onCotacaoUpdated?.());
     } catch (error: any) {
       toast.error("Erro ao atualizar cotação: " + error.message);
@@ -201,7 +218,7 @@ export function DeltaCambialCard({
 
   const renderCurrencyCard = (key: CurrencyKey, compact = false) => {
     const config = CURRENCY_CONFIG[key];
-    const ptax = ptaxRates[key];
+    const official = officialRates[key];
     const work = workRates[key];
     const delta = deltas[key];
     const sourceInfo = sourceMap[key];
@@ -209,25 +226,28 @@ export function DeltaCambialCard({
     const DeltaIcon = delta > 0 ? TrendingUp : delta < 0 ? TrendingDown : Minus;
     const isEditing = editingCurrency === key;
     
-    // Verificar se moeda usa cotação de trabalho (sem PTAX no BCB)
-    const isWorkRateOnly = sourceInfo === 'SEM_PTAX_BCB' || sourceInfo === 'fallback';
-    const hasPtaxAvailable = sourceInfo === 'PTAX BCB';
+    // Verificar se está usando fonte oficial ou fallback
+    const isOfficialAvailable = sourceInfo.isOfficial;
+    const isFallback = sourceInfo.isFallback;
     
-    // Só mostrar botão de sincronizar se houver PTAX disponível e delta significativo
-    const showSyncButton = hasPtaxAvailable && Math.abs(delta) >= 1 && !isEditing;
+    // Valor exibido no topo: sempre a fonte oficial (ou trabalho se em fallback)
+    const displayValue = isFallback ? work : official;
+    
+    // Só mostrar botão de sincronizar se:
+    // 1. Fonte oficial disponível
+    // 2. Delta significativo (>=1%)
+    // 3. Não está editando
+    const showSyncButton = isOfficialAvailable && Math.abs(delta) >= 1 && !isEditing;
 
     // Para moedas com valores muito pequenos (ARS, COP), mostrar mais decimais
-    const decimals = ptax < 0.1 ? 4 : 2;
-    
-    // Valor exibido: se não tem PTAX, mostrar cotação de trabalho
-    const displayValue = isWorkRateOnly ? work : ptax;
+    const decimals = displayValue < 0.1 ? 4 : 2;
 
     return (
       <div 
         key={key} 
         className={`flex flex-col gap-1.5 p-2 rounded-lg bg-background/50 border border-border/50 ${compact ? 'p-1.5' : ''}`}
       >
-        {/* Header: Moeda + Cotação */}
+        {/* Header: Moeda + Cotação Oficial */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -240,34 +260,42 @@ export function DeltaCambialCard({
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs max-w-[200px]">
-              {isWorkRateOnly ? (
+            <TooltipContent side="top" className="text-xs max-w-[220px]">
+              {isFallback ? (
                 <>
-                  <p className="font-medium text-primary">Sem PTAX no BCB</p>
-                  <p className="text-muted-foreground mt-1">
-                    O Banco Central não publica PTAX para {key}. 
-                    Usando cotação de trabalho preenchida manualmente.
+                  <p className="font-medium text-amber-500 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Fonte oficial indisponível
                   </p>
-                  <p className="mt-1">Valor: R$ {work.toFixed(6)}</p>
+                  <p className="text-muted-foreground mt-1">
+                    {config.officialSource} não disponível no momento.
+                    Exibindo cotação de trabalho como fallback.
+                  </p>
+                  <p className="mt-1">Trabalho: R$ {work.toFixed(6)}</p>
                 </>
               ) : (
                 <>
-                  <p>PTAX: R$ {ptax.toFixed(6)}</p>
-                  <p className="text-muted-foreground">Fonte: {sourceInfo}</p>
+                  <p className="font-medium text-primary">{sourceInfo.label}</p>
+                  <p className="mt-1">Oficial: R$ {official.toFixed(6)}</p>
+                  <p className="text-muted-foreground">Trabalho: R$ {work.toFixed(6)}</p>
+                  <p className="text-muted-foreground mt-1">
+                    Δ = {delta > 0 ? "+" : ""}{delta.toFixed(2)}%
+                  </p>
                 </>
               )}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
-        {/* Badge: Delta (se PTAX) ou "Trabalho" (se sem PTAX) */}
+        {/* Badge: Fonte + Delta */}
         <div className="flex justify-center">
-          {isWorkRateOnly ? (
+          {isFallback ? (
             <Badge 
               variant="outline" 
-              className="bg-primary/10 text-primary border-primary/30 font-mono text-[9px] px-1.5 py-0"
+              className="bg-amber-500/10 text-amber-600 border-amber-500/30 font-mono text-[9px] px-1.5 py-0"
             >
-              Trabalho
+              <AlertTriangle className="h-2 w-2 mr-0.5" />
+              Fallback
             </Badge>
           ) : (
             <Badge 
@@ -322,17 +350,17 @@ export function DeltaCambialCard({
           )}
         </div>
 
-        {/* Botão Sincronizar */}
+        {/* Botão Sincronizar - só aparece se fonte oficial disponível */}
         {showSyncButton && (
           <Button
             variant="ghost"
             size="sm"
             className="h-5 text-[9px] text-muted-foreground hover:text-foreground px-1"
-            onClick={() => handleUsePtax(key)}
+            onClick={() => handleUseOfficial(key)}
             disabled={saving || cotacaoLoading}
           >
             <RefreshCw className={`h-2 w-2 mr-0.5 ${saving ? "animate-spin" : ""}`} />
-            Usar PTAX
+            Usar {config.primary ? 'PTAX' : 'Oficial'}
           </Button>
         )}
       </div>
@@ -344,7 +372,7 @@ export function DeltaCambialCard({
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-1.5">
           <DollarSign className="h-4 w-4 text-primary" />
-          Cotações PTAX
+          Cotações Oficiais
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="h-4 w-4 rounded-full p-0">
@@ -353,16 +381,31 @@ export function DeltaCambialCard({
             </PopoverTrigger>
             <PopoverContent className="w-80" align="start">
               <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Cotações do Banco Central</h4>
-                <p className="text-xs text-muted-foreground">
-                  As cotações PTAX são obtidas em tempo real do BCB e atualizadas automaticamente.
-                  Suporte para USD, EUR, GBP, MYR, MXN, ARS e COP.
-                </p>
+                <h4 className="font-semibold text-sm">Fontes de Cotação</h4>
+                <div className="text-xs space-y-2">
+                  <div>
+                    <p className="font-medium text-primary">USD, EUR, GBP</p>
+                    <p className="text-muted-foreground">Fonte: PTAX BCB (Banco Central)</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-primary">MYR, MXN, ARS, COP</p>
+                    <p className="text-muted-foreground">Fonte: FastForex API</p>
+                  </div>
+                </div>
                 <div className="text-xs space-y-1 border-t pt-2">
-                  <p><strong>Delta (Δ):</strong> Diferença entre PTAX e cotação de trabalho</p>
+                  <p><strong>Delta (Δ):</strong> Diferença entre cotação oficial e de trabalho</p>
                   <p className="text-muted-foreground">• &lt;1%: Alinhado</p>
                   <p className="text-primary">• 1-3%: Atenção</p>
                   <p className="text-destructive">• ≥3%: Defasagem</p>
+                </div>
+                <div className="text-xs border-t pt-2">
+                  <p className="text-amber-600 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Fallback
+                  </p>
+                  <p className="text-muted-foreground">
+                    Quando a fonte oficial está indisponível, exibe a cotação de trabalho.
+                  </p>
                 </div>
               </div>
             </PopoverContent>
