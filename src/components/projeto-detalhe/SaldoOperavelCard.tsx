@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Wallet, ChevronDown, AlertTriangle, RefreshCw } from "lucide-react";
+import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Target } from "lucide-react";
 import { useSaldoOperavel } from "@/hooks/useSaldoOperavel";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface SaldoOperavelCardProps {
@@ -16,14 +19,16 @@ interface SaldoOperavelCardProps {
 }
 
 /**
- * Card do KPI "Saldo Operável"
+ * Card do KPI "Saldo Operável" - SIMPLIFICADO
  * 
- * Definição canônica:
- * Saldo Operável = Saldo Disponível + Freebet + Bônus Creditado
+ * Mostra:
+ * - Valor total operável (único número de destaque)
+ * - Badge "Rollover Ativo" quando há bônus com rollover pendente
+ * - Barra de progresso do rollover (se aplicável)
+ * - Tooltip/popover com breakdown detalhado
  * 
- * Onde Saldo Disponível = Saldo Real - Saldo em Aposta
- * 
- * Este é o valor TOTAL disponível para apostas agora.
+ * Filosofia: O saldo é UM SÓ para fins operacionais.
+ * Bônus é contexto informativo (rollover), não separação de saldo.
  */
 export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOperavelCardProps) {
   const { 
@@ -32,6 +37,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     saldoBonus, 
     saldoFreebet, 
     saldoEmAposta,
+    rollover,
     casasComSaldo,
     totalCasas, 
     isLoading,
@@ -98,117 +104,157 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     );
   }
 
-  // Verifica se há bônus ou freebet para mostrar breakdown detalhado
+  const hasCasas = casasComSaldo.length > 0;
   const hasBonus = saldoBonus > 0;
   const hasFreebet = saldoFreebet > 0;
-  const hasEmAposta = saldoEmAposta > 0;
-  const hasCasas = casasComSaldo.length > 0;
 
   // Conteúdo do detalhamento por casa
   const CasasBreakdown = () => (
-    <div className="space-y-2">
-      <p className="text-xs font-medium text-foreground mb-3">Saldo por Casa</p>
-      <ScrollArea className={cn(
-        casasComSaldo.length > 4 ? "h-[320px]" : "h-auto"
-      )}>
-        <div className="space-y-2 pr-2">
-          {casasComSaldo.map((casa) => (
-            <div 
-              key={casa.id} 
-              className="p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors space-y-1.5"
-            >
-              {/* Nome da casa */}
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
-                  {casa.nome}
-                  {casa.parceiroPrimeiroNome && (
-                    <span className="text-primary/80 ml-1 font-normal">
-                      {casa.parceiroPrimeiroNome}
-                    </span>
-                  )}
-                </span>
-                <span className="text-sm font-bold text-primary ml-2 whitespace-nowrap">
-                  {formatCurrency(casa.saldoOperavel)}
-                </span>
-              </div>
-              
-              {/* Breakdown: Livre + Em Aposta */}
-              <div className="flex justify-between items-center text-[10px] gap-3">
-                <div className="flex items-center gap-1">
-                  <span className="text-muted-foreground">Livre:</span>
-                  <span className="text-emerald-500 font-medium">
-                    {formatCurrency(casa.saldoDisponivel)}
+    <div className="space-y-3">
+      {/* Rollover Status - Destaque se ativo */}
+      {rollover.hasActiveRollover && (
+        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-amber-400 flex items-center gap-1.5">
+              <Target className="h-3.5 w-3.5" />
+              Rollover em Andamento
+            </span>
+            <span className="text-sm font-bold text-amber-400">
+              {rollover.percentual.toFixed(1)}%
+            </span>
+          </div>
+          <Progress 
+            value={rollover.percentual} 
+            className="h-2 bg-amber-500/20"
+          />
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>{formatCurrency(rollover.totalProgress)} apostado</span>
+            <span>Meta: {formatCurrency(rollover.totalTarget)}</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            {rollover.casasComRollover} casa{rollover.casasComRollover !== 1 ? 's' : ''} com rollover ativo
+          </p>
+        </div>
+      )}
+
+      {/* Composição do Saldo */}
+      <div className="space-y-1.5">
+        <p className="text-xs font-medium text-foreground">Composição do Saldo</p>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="p-2 rounded bg-muted/30">
+            <span className="text-muted-foreground">Saldo Real</span>
+            <p className="font-semibold">{formatCurrency(saldoReal)}</p>
+          </div>
+          {hasFreebet && (
+            <div className="p-2 rounded bg-cyan-500/10 border border-cyan-500/20">
+              <span className="text-cyan-400">Freebet</span>
+              <p className="font-semibold text-cyan-400">{formatCurrency(saldoFreebet)}</p>
+            </div>
+          )}
+          {hasBonus && (
+            <div className="p-2 rounded bg-purple-500/10 border border-purple-500/20">
+              <span className="text-purple-400">Bônus Creditado</span>
+              <p className="font-semibold text-purple-400">{formatCurrency(saldoBonus)}</p>
+            </div>
+          )}
+          {saldoEmAposta > 0 && (
+            <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20">
+              <span className="text-amber-500">Em Apostas</span>
+              <p className="font-semibold text-amber-500">-{formatCurrency(saldoEmAposta)}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Lista de casas */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-foreground">Saldo por Casa</p>
+        <ScrollArea className={cn(
+          casasComSaldo.length > 4 ? "h-[200px]" : "h-auto"
+        )}>
+          <div className="space-y-1.5 pr-2">
+            {casasComSaldo.map((casa) => (
+              <div 
+                key={casa.id} 
+                className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
+                    {casa.nome}
+                    {casa.parceiroPrimeiroNome && (
+                      <span className="text-primary/80 ml-1 font-normal">
+                        {casa.parceiroPrimeiroNome}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-sm font-bold text-primary ml-2 whitespace-nowrap">
+                    {formatCurrency(casa.saldoOperavel)}
                   </span>
                 </div>
-                {casa.saldoEmAposta > 0 && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">Pendente:</span>
-                    <span className="text-amber-500 font-medium">
-                      {formatCurrency(casa.saldoEmAposta)}
-                    </span>
+                {(casa.saldoFreebet > 0 || casa.saldoBonus > 0 || casa.saldoEmAposta > 0) && (
+                  <div className="flex gap-2 mt-1 text-[10px]">
+                    {casa.saldoFreebet > 0 && (
+                      <span className="text-cyan-400">FB: {formatCurrency(casa.saldoFreebet)}</span>
+                    )}
+                    {casa.saldoBonus > 0 && (
+                      <span className="text-purple-400">Bônus: {formatCurrency(casa.saldoBonus)}</span>
+                    )}
+                    {casa.saldoEmAposta > 0 && (
+                      <span className="text-amber-500">Pend: {formatCurrency(casa.saldoEmAposta)}</span>
+                    )}
                   </div>
                 )}
               </div>
-              
-              {/* Freebet/Bônus se houver */}
-              {(casa.saldoFreebet > 0 || casa.saldoBonus > 0) && (
-                <div className="flex gap-3 text-[10px]">
-                  {casa.saldoFreebet > 0 && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground">FB:</span>
-                      <span className="text-cyan-400 font-medium">
-                        {formatCurrency(casa.saldoFreebet)}
-                      </span>
-                    </div>
-                  )}
-                  {casa.saldoBonus > 0 && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground">Bônus:</span>
-                      <span className="text-purple-400 font-medium">
-                        {formatCurrency(casa.saldoBonus)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-      
-      {/* Totais consolidados */}
-      <div className="pt-3 mt-2 border-t border-border/50 space-y-1.5">
-        <div className="flex justify-between items-center text-xs">
-          <span className="text-muted-foreground">Saldo Livre Total</span>
-          <span className="font-medium text-emerald-500">
-            {formatCurrency(saldoOperavel - saldoEmAposta)}
-          </span>
-        </div>
-        {hasEmAposta && (
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-muted-foreground">Em Apostas Pendentes</span>
-            <span className="font-medium text-amber-500">
-              {formatCurrency(saldoEmAposta)}
-            </span>
+            ))}
           </div>
-        )}
-        <div className="flex justify-between items-center pt-1">
-          <span className="text-xs font-medium text-muted-foreground">Total Consolidado</span>
-          <span className="text-sm font-bold text-primary">{formatCurrency(saldoOperavel)}</span>
-        </div>
+        </ScrollArea>
       </div>
       
-      <p className="text-[10px] text-muted-foreground pt-1">
+      <p className="text-[10px] text-muted-foreground pt-1 border-t">
         {casasComSaldo.length} casa{casasComSaldo.length !== 1 ? 's' : ''} com saldo
       </p>
     </div>
   );
 
+  // Badge de rollover ativo
+  const RolloverBadge = () => {
+    if (!rollover.hasActiveRollover) return null;
+    
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge 
+              variant="outline" 
+              className={cn(
+                "text-[10px] h-5 gap-1 cursor-help",
+                rollover.isComplete 
+                  ? "border-emerald-500/50 text-emerald-500 bg-emerald-500/10" 
+                  : "border-amber-500/50 text-amber-500 bg-amber-500/10"
+              )}
+            >
+              <Gift className="h-3 w-3" />
+              {rollover.isComplete ? "Rollover Completo" : `${rollover.percentual.toFixed(0)}%`}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">
+              {rollover.isComplete 
+                ? "Rollover concluído! Saldo pode ser sacado."
+                : `Rollover: ${formatCurrency(rollover.totalProgress)} / ${formatCurrency(rollover.totalTarget)}`
+              }
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
   // Trigger para desktop (Popover) ou mobile (Dialog)
   const TriggerContent = ({ isCompact = false }: { isCompact?: boolean }) => (
     <div className={cn(
-      "flex items-center gap-1 cursor-pointer group",
-      isCompact && "gap-2 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20"
+      "flex items-center gap-2 cursor-pointer group",
+      isCompact && "px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20"
     )}>
       {isCompact && <Wallet className="h-4 w-4 text-primary" />}
       <span className={cn(
@@ -217,6 +263,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       )}>
         {formatCurrency(saldoOperavel)}
       </span>
+      {!isCompact && <RolloverBadge />}
       {hasCasas && (
         <ChevronDown className={cn(
           "h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:text-primary",
@@ -225,6 +272,24 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       )}
     </div>
   );
+
+  // Barra de progresso mini para rollover
+  const MiniRolloverProgress = () => {
+    if (!rollover.hasActiveRollover || rollover.isComplete) return null;
+    
+    return (
+      <div className="mt-2 space-y-1">
+        <Progress 
+          value={rollover.percentual} 
+          className="h-1.5 bg-amber-500/20"
+        />
+        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <Target className="h-3 w-3 text-amber-500" />
+          Rollover: {rollover.percentual.toFixed(0)}% concluído
+        </p>
+      </div>
+    );
+  };
 
   if (variant === "compact") {
     if (isMobile) {
@@ -255,7 +320,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
             <TriggerContent isCompact />
           </div>
         </PopoverTrigger>
-        <PopoverContent className="w-[280px] p-3" align="start">
+        <PopoverContent className="w-[320px] p-3" align="start">
           <CasasBreakdown />
         </PopoverContent>
       </Popover>
@@ -279,8 +344,10 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                 <TriggerContent />
               </div>
             </DialogTrigger>
+            <MiniRolloverProgress />
             <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
-              {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{hasBonus ? ' + Bônus' : ''}{hasFreebet ? ' + FB' : ''}
+              {totalCasas} casa{totalCasas !== 1 ? 's' : ''}
+              {(hasBonus || hasFreebet) && " • Inclui bônus/freebet"}
             </p>
           </CardContent>
         </Card>
@@ -312,8 +379,10 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               <TriggerContent />
             </div>
           </PopoverTrigger>
+          <MiniRolloverProgress />
           <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
-            {totalCasas} casa{totalCasas !== 1 ? 's' : ''} • Real{hasBonus ? ' + Bônus' : ''}{hasFreebet ? ' + FB' : ''}
+            {totalCasas} casa{totalCasas !== 1 ? 's' : ''}
+            {(hasBonus || hasFreebet) && " • Inclui bônus/freebet"}
           </p>
         </CardContent>
       </Card>

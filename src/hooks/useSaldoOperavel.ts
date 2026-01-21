@@ -39,6 +39,15 @@ interface BookmakerSaldoCompleto {
   bonus_rollover_started: boolean;
 }
 
+interface RolloverAgregado {
+  totalProgress: number;
+  totalTarget: number;
+  percentual: number;
+  isComplete: boolean;
+  hasActiveRollover: boolean;
+  casasComRollover: number;
+}
+
 export function useSaldoOperavel(projetoId: string) {
   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
 
@@ -70,6 +79,27 @@ export function useSaldoOperavel(projetoId: string) {
     retry: 2, // Retry até 2 vezes em caso de erro
   });
 
+  // Query separada para rollover agregado do projeto
+  const { data: rolloverData } = useQuery({
+    queryKey: ["rollover-agregado", projetoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .select("rollover_progress, rollover_target_amount, bookmaker_id")
+        .eq("project_id", projetoId)
+        .eq("status", "credited");
+
+      if (error) {
+        console.error("[useSaldoOperavel] Erro ao buscar rollover:", error);
+        return null;
+      }
+
+      return data || [];
+    },
+    enabled: !!projetoId,
+    staleTime: 10000,
+  });
+
   // Saldo Operável = soma do saldo_operavel de todas as casas (já inclui real + freebet + bonus - em_aposta)
   const totals = useMemo(() => {
     let saldoOperavel = 0;
@@ -97,6 +127,50 @@ export function useSaldoOperavel(projetoId: string) {
       saldoEmAposta,
     };
   }, [bookmakers, convertToConsolidation]);
+
+  // Calcular rollover agregado
+  const rollover = useMemo<RolloverAgregado>(() => {
+    if (!rolloverData || rolloverData.length === 0) {
+      return {
+        totalProgress: 0,
+        totalTarget: 0,
+        percentual: 0,
+        isComplete: false,
+        hasActiveRollover: false,
+        casasComRollover: 0,
+      };
+    }
+
+    let totalProgress = 0;
+    let totalTarget = 0;
+    const bookmakerIds = new Set<string>();
+
+    rolloverData.forEach((bonus) => {
+      const progress = Number(bonus.rollover_progress) || 0;
+      const target = Number(bonus.rollover_target_amount) || 0;
+      
+      if (target > 0) {
+        totalProgress += progress;
+        totalTarget += target;
+        if (bonus.bookmaker_id) {
+          bookmakerIds.add(bonus.bookmaker_id);
+        }
+      }
+    });
+
+    const hasActiveRollover = totalTarget > 0;
+    const percentual = hasActiveRollover ? Math.min(100, (totalProgress / totalTarget) * 100) : 0;
+    const isComplete = hasActiveRollover && percentual >= 100;
+
+    return {
+      totalProgress,
+      totalTarget,
+      percentual,
+      isComplete,
+      hasActiveRollover,
+      casasComRollover: bookmakerIds.size,
+    };
+  }, [rolloverData]);
 
   const totalCasas = bookmakers.length;
 
@@ -142,6 +216,9 @@ export function useSaldoOperavel(projetoId: string) {
     saldoBonus: totals.saldoBonus,
     saldoFreebet: totals.saldoFreebet,
     saldoEmAposta: totals.saldoEmAposta,
+    
+    // Rollover agregado do projeto
+    rollover,
     
     // Detalhamento por casa (para tooltip)
     casasComSaldo,
