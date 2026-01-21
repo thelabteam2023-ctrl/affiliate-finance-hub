@@ -7,9 +7,15 @@ import { SupportedCurrency, CURRENCY_SYMBOLS, isForeignCurrency } from "@/types/
  * DOCUMENTAÇÃO: SISTEMA DE CONVERSÃO MULTI-MOEDA
  * =============================================================================
  * 
- * FONTE DE COTAÇÃO:
- * - Banco Central do Brasil (BCB) - API PTAX oficial
- * - Endpoint: olinda.bcb.gov.br/olinda/servico/PTAX
+ * FONTE DE COTAÇÃO (HIERARQUIA PARA KPIs):
+ * 1. PTAX (primária) - Banco Central do Brasil (BCB) - API PTAX oficial
+ * 2. Cotação de Trabalho (fallback) - Definida no projeto, usada se PTAX falhar
+ * 
+ * Nota: Cotação de Trabalho será usada em formulários para conversão entre 
+ * operações com moedas diferentes (não para exibição de KPIs).
+ * 
+ * ENDPOINT BCB:
+ * - olinda.bcb.gov.br/olinda/servico/PTAX
  * - Cotação de venda (cotacaoVenda) do último dia útil
  * 
  * FREQUÊNCIA DE ATUALIZAÇÃO:
@@ -29,13 +35,9 @@ import { SupportedCurrency, CURRENCY_SYMBOLS, isForeignCurrency } from "@/types/
  * - Criptomoedas - API Binance (preço em USD × cotação BCB)
  * 
  * USO NO SISTEMA:
- * - Conversão acontece em TEMPO REAL para exibição de KPIs
- * - Valores de depósitos/saques mantêm snapshot da cotação no momento
- * - Relatórios financeiros devem considerar snapshots, não cotação atual
- * 
- * IMPACTO FINANCEIRO:
- * - ROI: calculado com cotação do momento da operação (snapshot)
- * - Saldo Operável: calculado com cotação em tempo real
+ * - KPIs: Usam PTAX em tempo real (primária), cotação de trabalho (fallback)
+ * - Formulários: Usarão cotação de trabalho para conversões operacionais
+ * - Snapshots: Valores de depósitos/saques mantêm snapshot da cotação no momento
  * - Relatórios: devem usar snapshots para auditoria
  * =============================================================================
  */
