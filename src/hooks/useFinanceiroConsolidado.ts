@@ -57,7 +57,9 @@ export interface ConsolidacaoInfo {
 
 export function useFinanceiroConsolidado(cryptoSymbols: string[] = []) {
   const { 
-    cotacaoUSD, 
+    cotacaoUSD,
+    cotacaoEUR,
+    cotacaoGBP,
     getCryptoUSDValue, 
     getCryptoPrice,
     loading, 
@@ -158,20 +160,25 @@ export function useFinanceiroConsolidado(cryptoSymbols: string[] = []) {
       };
     }
 
-    // EUR e outras moedas FIAT: usar USD como proxy
-    if (["EUR", "GBP"].includes(moeda)) {
-      // Para simplificar, usamos relações aproximadas
-      const ratioToUSD: Record<string, number> = {
-        EUR: 1.08,
-        GBP: 1.27,
-      };
-      const valorUSD = valor * (ratioToUSD[moeda] ?? 1);
+    // EUR e GBP: usar cotações PTAX reais do BCB
+    if (moeda === "EUR") {
       return {
         valorOriginal: valor,
-        moedaOriginal: moeda,
-        valorBRL: valorUSD * cotacaoUSD,
-        cotacaoUsada: cotacaoUSD,
-        fonteConversao: "proxy_usd",
+        moedaOriginal: "EUR",
+        valorBRL: valor * cotacaoEUR,
+        cotacaoUsada: cotacaoEUR,
+        fonteConversao: source.eur || "BCB",
+        isForeign: true,
+      };
+    }
+
+    if (moeda === "GBP") {
+      return {
+        valorOriginal: valor,
+        moedaOriginal: "GBP",
+        valorBRL: valor * cotacaoGBP,
+        cotacaoUsada: cotacaoGBP,
+        fonteConversao: source.gbp || "BCB",
         isForeign: true,
       };
     }

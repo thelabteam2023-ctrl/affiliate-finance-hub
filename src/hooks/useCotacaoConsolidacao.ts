@@ -1,5 +1,5 @@
 /**
- * Hook centralizado para obter cotação de conversão USD/BRL
+ * Hook centralizado para obter cotação de conversão multi-moeda
  * 
  * REGRA OBRIGATÓRIA DE CÂMBIO:
  * 
@@ -14,7 +14,7 @@ import { useMemo } from "react";
 import { useCotacoes } from "@/hooks/useCotacoes";
 
 export interface CotacaoInfo {
-  /** Taxa de conversão USD -> BRL */
+  /** Taxa de conversão MOEDA -> BRL */
   taxa: number;
   /** Fonte da cotação: 'TRABALHO', 'PTAX', ou 'INDISPONIVEL' */
   fonte: "TRABALHO" | "PTAX" | "INDISPONIVEL";
@@ -26,10 +26,16 @@ export interface CotacaoInfo {
   disponivel: boolean;
 }
 
+export interface CotacoesMultiMoeda {
+  USD: CotacaoInfo;
+  EUR: CotacaoInfo;
+  GBP: CotacaoInfo;
+}
+
 /**
  * Hook para obter cotação centralizada respeitando prioridades
  * 
- * @param cotacaoTrabalho - Cotação de trabalho do projeto (fallback se PTAX falhar)
+ * @param cotacaoTrabalho - Cotação de trabalho USD/BRL do projeto (fallback se PTAX falhar)
  * @param fonteCotacao - Ignorado - PTAX é sempre primária, trabalho é fallback
  */
 export function useCotacaoConsolidacao(
@@ -73,12 +79,73 @@ export function useCotacaoConsolidacao(
 }
 
 /**
+ * Hook para obter cotações de todas as moedas com prioridade PTAX > Trabalho
+ * 
+ * @param cotacaoTrabalhoUSD - Cotação de trabalho USD/BRL
+ * @param cotacaoTrabalhoEUR - Cotação de trabalho EUR/BRL
+ * @param cotacaoTrabalhoGBP - Cotação de trabalho GBP/BRL
+ */
+export function useCotacoesMultiMoeda(
+  cotacaoTrabalhoUSD?: number | null,
+  cotacaoTrabalhoEUR?: number | null,
+  cotacaoTrabalhoGBP?: number | null
+): CotacoesMultiMoeda & { loading: boolean } {
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, loading } = useCotacoes();
+
+  return useMemo(() => {
+    const buildCotacaoInfo = (
+      ptax: number,
+      trabalho: number | null | undefined,
+      symbol: string
+    ): CotacaoInfo => {
+      // Prioridade 1: PTAX (BCB)
+      if (ptax && ptax > 0) {
+        return {
+          taxa: ptax,
+          fonte: "PTAX",
+          loading,
+          descricao: `PTAX BCB: R$ ${ptax.toFixed(4)}`,
+          disponivel: true,
+        };
+      }
+
+      // Prioridade 2: Cotação de trabalho (fallback)
+      if (trabalho && trabalho > 0) {
+        return {
+          taxa: trabalho,
+          fonte: "TRABALHO",
+          loading: false,
+          descricao: `Cotação de Trabalho (${symbol}): R$ ${trabalho.toFixed(4)}`,
+          disponivel: true,
+        };
+      }
+
+      // Indisponível
+      return {
+        taxa: 0,
+        fonte: "INDISPONIVEL",
+        loading,
+        descricao: `Cotação ${symbol} indisponível`,
+        disponivel: false,
+      };
+    };
+
+    return {
+      USD: buildCotacaoInfo(cotacaoUSD, cotacaoTrabalhoUSD, "USD"),
+      EUR: buildCotacaoInfo(cotacaoEUR, cotacaoTrabalhoEUR, "EUR"),
+      GBP: buildCotacaoInfo(cotacaoGBP, cotacaoTrabalhoGBP, "GBP"),
+      loading,
+    };
+  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoTrabalhoUSD, cotacaoTrabalhoEUR, cotacaoTrabalhoGBP, loading]);
+}
+
+/**
  * Função pura para converter valor usando cotação
  * 
  * @param valor - Valor a converter
- * @param moedaOrigem - Moeda de origem (USD, BRL, etc)
+ * @param moedaOrigem - Moeda de origem (USD, BRL, EUR, GBP, etc)
  * @param moedaDestino - Moeda de destino (BRL, USD, etc)
- * @param taxa - Taxa de conversão USD/BRL
+ * @param taxa - Taxa de conversão MOEDA/BRL
  * @returns Valor convertido
  */
 export function converterValor(
@@ -109,6 +176,16 @@ export function converterValor(
     return valor;
   }
   
+  // EUR/GBP -> BRL
+  if ((moedaOrigem === "EUR" || moedaOrigem === "GBP") && moedaDestino === "BRL") {
+    return valor * taxa;
+  }
+  
+  // BRL -> EUR/GBP
+  if (moedaOrigem === "BRL" && (moedaDestino === "EUR" || moedaDestino === "GBP")) {
+    return valor / taxa;
+  }
+  
   return valor;
 }
 
@@ -117,7 +194,7 @@ export function converterValor(
  */
 export function formatarMoeda(valor: number, moeda: string = "BRL"): string {
   const isUSD = ["USD", "USDT", "USDC"].includes(moeda);
-  const symbol = isUSD ? "$" : "R$";
+  const symbol = isUSD ? "$" : moeda === "EUR" ? "€" : moeda === "GBP" ? "£" : "R$";
   
   return `${symbol} ${valor.toLocaleString("pt-BR", {
     minimumFractionDigits: 2,

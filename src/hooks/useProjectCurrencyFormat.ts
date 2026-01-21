@@ -62,21 +62,22 @@ interface CurrencyItem {
 }
 
 export function useProjectCurrencyFormat(cryptoSymbols: string[] = []) {
-  const { cotacaoUSD, cryptoPrices, loading, refreshAll, source } = useCotacoes(cryptoSymbols);
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cryptoPrices, loading, refreshAll, source } = useCotacoes(cryptoSymbols);
 
   /**
    * Obtém a cotação atual para uma moeda
+   * Usa cotações PTAX reais do BCB para USD, EUR e GBP
    */
   const getCurrentRate = useCallback((moeda: string): number => {
     const upperMoeda = moeda.toUpperCase();
     if (upperMoeda === "BRL") return 1;
-    if (upperMoeda === "USD") return cotacaoUSD;
-    if (upperMoeda === "EUR") return cotacaoUSD * 1.08; // Aproximação EUR/USD
-    if (upperMoeda === "GBP") return cotacaoUSD * 1.27; // Aproximação GBP/USD
+    if (upperMoeda === "USD" || upperMoeda === "USDT" || upperMoeda === "USDC") return cotacaoUSD;
+    if (upperMoeda === "EUR") return cotacaoEUR; // PTAX BCB
+    if (upperMoeda === "GBP") return cotacaoGBP; // PTAX BCB
     // Crypto
     if (cryptoPrices[upperMoeda]) return cryptoPrices[upperMoeda] * cotacaoUSD;
     return cotacaoUSD; // Fallback para USD
-  }, [cotacaoUSD, cryptoPrices]);
+  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cryptoPrices]);
 
   /**
    * Converte um valor para BRL usando cotação atual

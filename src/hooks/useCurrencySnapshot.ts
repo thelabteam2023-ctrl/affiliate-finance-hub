@@ -52,7 +52,9 @@ export function useCurrencySnapshot(props?: UseCurrencySnapshotProps) {
   const { cryptoSymbols = [] } = props || {};
   
   const { 
-    cotacaoUSD, 
+    cotacaoUSD,
+    cotacaoEUR,
+    cotacaoGBP,
     cryptoPrices, 
     loading, 
     lastUpdate, 
@@ -70,6 +72,7 @@ export function useCurrencySnapshot(props?: UseCurrencySnapshotProps) {
   /**
    * Obtém a cotação atual para uma moeda específica
    * Retorna a taxa de conversão: 1 [moeda] = X BRL
+   * Usa cotações PTAX reais do BCB para USD, EUR e GBP
    */
   const getCurrentRate = useCallback((moeda: SupportedCurrency): number => {
     switch (moeda) {
@@ -77,17 +80,16 @@ export function useCurrencySnapshot(props?: UseCurrencySnapshotProps) {
         return 1;
       case "USD":
       case "USDT":
+      case "USDC":
         return cotacaoUSD;
       case "EUR":
-        // EUR aproximado (EUR ~= 1.08 * USD)
-        return cotacaoUSD * 1.08;
+        return cotacaoEUR; // PTAX BCB
       case "GBP":
-        // GBP aproximado (GBP ~= 1.27 * USD)
-        return cotacaoUSD * 1.27;
+        return cotacaoGBP; // PTAX BCB
       default:
         return cotacaoUSD; // Fallback para USD
     }
-  }, [cotacaoUSD]);
+  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP]);
 
   /**
    * Cria um snapshot de conversão imutável
