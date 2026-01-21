@@ -25,7 +25,7 @@ import {
   X,
   AlertTriangle,
   Info,
-  ArrowUpDown,
+  DollarSign,
 } from "lucide-react";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,23 +37,30 @@ interface DeltaCambialCardProps {
   onCotacaoUpdated?: () => void;
 }
 
+// Símbolos de moeda para exibição
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+};
+
 export function DeltaCambialCard({
   projetoId,
   cotacaoTrabalho,
   onCotacaoUpdated,
 }: DeltaCambialCardProps) {
-  const { cotacaoUSD, loading: cotacaoLoading, refreshAll, source } = useCotacoes();
+  const { rates, loading: cotacaoLoading, refreshAll, source } = useCotacoes();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
 
   const cotacaoTrabalhoValue = cotacaoTrabalho ?? 5.30;
 
-  // Calcular delta cambial
+  // Calcular delta cambial (baseado no USD, que é a principal moeda de trabalho)
   const delta = useMemo(() => {
-    if (!cotacaoUSD || !cotacaoTrabalhoValue) return 0;
-    return ((cotacaoUSD - cotacaoTrabalhoValue) / cotacaoTrabalhoValue) * 100;
-  }, [cotacaoUSD, cotacaoTrabalhoValue]);
+    if (!rates.USDBRL || !cotacaoTrabalhoValue) return 0;
+    return ((rates.USDBRL - cotacaoTrabalhoValue) / cotacaoTrabalhoValue) * 100;
+  }, [rates.USDBRL, cotacaoTrabalhoValue]);
 
   const deltaAbs = Math.abs(delta);
 
@@ -136,7 +143,7 @@ export function DeltaCambialCard({
       setSaving(true);
       const { error } = await supabase
         .from("projetos")
-        .update({ cotacao_trabalho: cotacaoUSD })
+        .update({ cotacao_trabalho: rates.USDBRL })
         .eq("id", projetoId);
 
       if (error) throw error;
@@ -150,25 +157,38 @@ export function DeltaCambialCard({
     }
   };
 
+  // Lista de cotações para exibição
+  const ratesList = [
+    { key: "USD", label: "USD", value: rates.USDBRL, source: source.usd },
+    { key: "EUR", label: "EUR", value: rates.EURBRL, source: source.eur },
+    { key: "GBP", label: "GBP", value: rates.GBPBRL, source: source.gbp },
+  ];
+
   return (
     <Card className={`${classification.bgColor} ${classification.borderColor} border`}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-          Δ Cambial
+          Cotações PTAX
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="h-4 w-4 rounded-full p-0">
                 <HelpCircle className="h-3 w-3 text-muted-foreground" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-72" align="start">
-              <div className="space-y-2">
+            <PopoverContent className="w-80" align="start">
+              <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <HelpCircle className="h-4 w-4 text-primary" />
-                  <h4 className="font-semibold text-sm">Como usar?</h4>
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  <h4 className="font-semibold text-sm">Cotações do Banco Central</h4>
                 </div>
                 
-                <div className="space-y-2 text-xs">
+                <p className="text-xs text-muted-foreground">
+                  As cotações são obtidas em tempo real do Banco Central do Brasil (PTAX) 
+                  e atualizadas automaticamente a cada minuto.
+                </p>
+                
+                <div className="space-y-2 text-xs border-t border-border/50 pt-2">
+                  <p className="font-medium">Delta Cambial (Δ) - USD:</p>
                   <div className="flex gap-2 p-1.5 rounded bg-muted/50">
                     <span className="text-blue-400">🔵</span>
                     <div>
@@ -212,50 +232,77 @@ export function DeltaCambialCard({
           <RefreshCw className={`h-3 w-3 ${cotacaoLoading ? "animate-spin" : ""}`} />
         </Button>
       </CardHeader>
-      <CardContent className="space-y-1 pt-0">
-        {/* Delta Badge - Destaque principal */}
-        <div className="flex items-center justify-between">
-          <Badge 
-            variant="outline" 
-            className={`${classification.bgColor} ${classification.borderColor} ${classification.color} font-mono text-sm px-2 py-0.5`}
-          >
-            <DeltaIcon className="h-3 w-3 mr-1" />
-            {delta > 0 ? "+" : ""}{delta.toFixed(2)}%
-          </Badge>
-          <span className={`text-[10px] ${classification.color}`}>{classification.label}</span>
+      <CardContent className="space-y-2 pt-0">
+        {/* Grid de cotações */}
+        <div className="grid grid-cols-3 gap-2">
+          {ratesList.map((rate) => (
+            <TooltipProvider key={rate.key}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-center p-1.5 rounded-md bg-background/50 border border-border/50 cursor-help">
+                    <div className="text-[10px] text-muted-foreground font-medium">
+                      {CURRENCY_SYMBOLS[rate.key]} {rate.label}
+                    </div>
+                    <div className="text-sm font-mono font-semibold text-foreground">
+                      {cotacaoLoading ? "..." : rate.value.toFixed(2)}
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  <p>1 {rate.label} = R$ {rate.value.toFixed(4)}</p>
+                  <p className="text-muted-foreground">Fonte: {rate.source}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ))}
         </div>
-        
-        {/* Cotações lado a lado */}
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>PTAX: <span className="font-mono text-foreground">{cotacaoLoading ? "..." : cotacaoUSD.toFixed(2)}</span></span>
-          <span className="flex items-center gap-0.5">
-            Trab: <span className="font-mono text-foreground">{cotacaoTrabalhoValue.toFixed(2)}</span>
-            {isEditing ? (
-              <div className="flex items-center gap-0.5 ml-1">
-                <Input
-                  type="text"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  className="h-5 w-12 text-[10px] font-mono text-right px-1"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSaveEdit();
-                    if (e.key === "Escape") handleCancelEdit();
-                  }}
-                />
-                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={handleSaveEdit} disabled={saving}>
-                  <Check className="h-2.5 w-2.5 text-emerald-400" />
+
+        {/* Seção Delta USD */}
+        <div className="border-t border-border/50 pt-2 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground">Δ Cambial (USD)</span>
+            <Badge 
+              variant="outline" 
+              className={`${classification.bgColor} ${classification.borderColor} ${classification.color} font-mono text-[10px] px-1.5 py-0`}
+            >
+              <DeltaIcon className="h-2.5 w-2.5 mr-0.5" />
+              {delta > 0 ? "+" : ""}{delta.toFixed(2)}%
+              <span className="ml-1 opacity-70">{classification.label}</span>
+            </Badge>
+          </div>
+          
+          {/* Cotação de trabalho */}
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>PTAX USD: <span className="font-mono text-foreground">{cotacaoLoading ? "..." : rates.USDBRL.toFixed(2)}</span></span>
+            <span className="flex items-center gap-0.5">
+              Trabalho: <span className="font-mono text-foreground">{cotacaoTrabalhoValue.toFixed(2)}</span>
+              {isEditing ? (
+                <div className="flex items-center gap-0.5 ml-1">
+                  <Input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="h-5 w-12 text-[10px] font-mono text-right px-1"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveEdit();
+                      if (e.key === "Escape") handleCancelEdit();
+                    }}
+                  />
+                  <Button variant="ghost" size="icon" className="h-4 w-4" onClick={handleSaveEdit} disabled={saving}>
+                    <Check className="h-2.5 w-2.5 text-emerald-400" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-4 w-4" onClick={handleCancelEdit} disabled={saving}>
+                    <X className="h-2.5 w-2.5 text-red-400" />
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={handleStartEdit}>
+                  <Pencil className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-4 w-4" onClick={handleCancelEdit} disabled={saving}>
-                  <X className="h-2.5 w-2.5 text-red-400" />
-                </Button>
-              </div>
-            ) : (
-              <Button variant="ghost" size="icon" className="h-4 w-4" onClick={handleStartEdit}>
-                <Pencil className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground" />
-              </Button>
-            )}
-          </span>
+              )}
+            </span>
+          </div>
         </div>
 
         {/* Ação rápida - compacta */}
@@ -268,7 +315,7 @@ export function DeltaCambialCard({
             disabled={saving || cotacaoLoading}
           >
             <RefreshCw className={`h-2.5 w-2.5 mr-1 ${saving ? "animate-spin" : ""}`} />
-            Usar {cotacaoUSD.toFixed(2)}
+            Usar PTAX atual ({rates.USDBRL.toFixed(2)})
           </Button>
         )}
       </CardContent>
