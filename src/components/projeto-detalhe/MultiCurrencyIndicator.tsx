@@ -4,7 +4,7 @@
  * Exibe transparentemente:
  * - Moeda de consolidação do projeto
  * - Cotação utilizada
- * - Fonte da cotação (PTAX ou Trabalho)
+ * - Fonte da cotação (FastForex/PTAX ou Trabalho)
  * - Delta cambial (se aplicável)
  */
 
@@ -73,13 +73,13 @@ export function MultiCurrencyIndicator({
       <div className="flex justify-between gap-4">
         <span className="text-muted-foreground">Fonte:</span>
         <Badge variant="outline" className="text-xs">
-          {fonteCotacao === "PTAX" ? "PTAX (BCB)" : "Trabalho"}
+          {fonteCotacao === "TRABALHO" ? "Trabalho" : "Oficial (API)"}
         </Badge>
       </div>
       {fonteCotacao === "TRABALHO" && ptaxAtual && (
         <>
           <div className="flex justify-between gap-4">
-            <span className="text-muted-foreground">PTAX atual:</span>
+            <span className="text-muted-foreground">Cotação oficial atual:</span>
             <span className="font-mono text-muted-foreground">{ptaxAtual.toFixed(4)}</span>
           </div>
           {deltaCambial !== null && deltaCambial !== undefined && (
@@ -250,7 +250,7 @@ export function MultiCurrencyWarning({
         </span>
         . Conversões baseadas em{" "}
         <span className="font-medium">
-          {fonteCotacao === "PTAX" ? "PTAX" : `cotação de trabalho (${cotacao.toFixed(2)})`}
+          {fonteCotacao === "PTAX" ? "cotação oficial" : `cotação de trabalho (${cotacao.toFixed(2)})`}
         </span>
         .
       </span>

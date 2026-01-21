@@ -68,12 +68,12 @@ export function GirosGratisKPIs({
                 <TooltipTrigger asChild>
                   <Badge variant="secondary" className="text-xs gap-1 cursor-help">
                     <Info className="h-3 w-3" />
-                    {cotacaoInfo.fonte === "trabalho" ? "Cotação de Trabalho" : "PTAX"}
+                    {cotacaoInfo.fonte === "trabalho" ? "Cotação de Trabalho" : "Cotação Oficial"}
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs">
-                    Taxa: {cotacaoInfo.taxa.toFixed(4)} ({cotacaoInfo.fonte})
+                    Taxa USD/BRL: {cotacaoInfo.taxa.toFixed(4)}
                   </p>
                 </TooltipContent>
               </Tooltip>

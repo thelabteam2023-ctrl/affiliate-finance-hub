@@ -72,7 +72,7 @@ export function useCurrencySnapshot(props?: UseCurrencySnapshotProps) {
   /**
    * Obtém a cotação atual para uma moeda específica
    * Retorna a taxa de conversão: 1 [moeda] = X BRL
-   * Usa cotações PTAX reais do BCB para USD, EUR e GBP
+   * Usa cotações oficiais (FastForex/PTAX) para USD, EUR e GBP
    */
   const getCurrentRate = useCallback((moeda: SupportedCurrency): number => {
     switch (moeda) {
@@ -83,9 +83,9 @@ export function useCurrencySnapshot(props?: UseCurrencySnapshotProps) {
       case "USDC":
         return cotacaoUSD;
       case "EUR":
-        return cotacaoEUR; // PTAX BCB
+        return cotacaoEUR; // Cotação oficial
       case "GBP":
-        return cotacaoGBP; // PTAX BCB
+        return cotacaoGBP; // Cotação oficial
       default:
         return cotacaoUSD; // Fallback para USD
     }
