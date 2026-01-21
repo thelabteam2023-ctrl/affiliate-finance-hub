@@ -1079,6 +1079,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {periodFilterComponent}
           <Button
             variant="ghost"
             size="icon"
@@ -1129,9 +1130,6 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
               })}
             </nav>
           </div>
-          
-          {/* Period Filter in Sidebar */}
-          {periodFilterComponent}
         </div>
 
         {/* Content Area */}
