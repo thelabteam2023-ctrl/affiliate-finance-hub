@@ -40,6 +40,11 @@ export interface GiroGratisFormData {
   giro_disponivel_id?: string;
 }
 
+export interface RetornoPorMoeda {
+  moeda: string;
+  valor: number;
+}
+
 export interface GirosGratisMetrics {
   totalRetorno: number;
   totalGiros: number;
@@ -47,6 +52,7 @@ export interface GirosGratisMetrics {
   totalRegistros: number;
   registrosSimples: number;
   registrosDetalhados: number;
+  retornoPorMoeda: RetornoPorMoeda[];
 }
 
 export interface GirosGratisPorBookmaker {

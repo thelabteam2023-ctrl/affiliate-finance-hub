@@ -194,11 +194,19 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
       cotacaoTrabalho,
     });
 
+    // Agrupar valores por moeda original (sem conversão)
+    const porMoeda: Record<string, number> = {};
+    
     // CRÍTICO: Usar moedaConsolidacao e cotacaoTrabalho atuais
     const totalRetorno = confirmados.reduce((sum, g) => {
       const moedaOrigem = g.bookmaker_moeda || "BRL";
+      const valorOriginal = Number(g.valor_retorno);
+      
+      // Acumular por moeda original
+      porMoeda[moedaOrigem] = (porMoeda[moedaOrigem] || 0) + valorOriginal;
+      
       const valorConvertido = converterValor(
-        Number(g.valor_retorno), 
+        valorOriginal, 
         moedaOrigem, 
         moedaConsolidacao,
         cotacaoTrabalho
@@ -213,6 +221,12 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
       .filter(g => g.modo === "detalhado")
       .reduce((sum, g) => sum + (g.quantidade_giros || 0), 0);
     
+    // Converter para array de RetornoPorMoeda
+    const retornoPorMoeda = Object.entries(porMoeda).map(([moeda, valor]) => ({
+      moeda,
+      valor,
+    }));
+    
     return {
       totalRetorno,
       totalGiros,
@@ -220,6 +234,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
       totalRegistros: confirmados.length,
       registrosSimples: confirmados.filter(g => g.modo === "simples").length,
       registrosDetalhados: confirmados.filter(g => g.modo === "detalhado").length,
+      retornoPorMoeda,
     };
   }, [giros, moedaConsolidacao, cotacaoTrabalho, converterValor]);
 
