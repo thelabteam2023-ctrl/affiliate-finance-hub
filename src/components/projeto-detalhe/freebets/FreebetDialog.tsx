@@ -156,20 +156,80 @@ export function FreebetDialog({
       if (bkError) throw bkError;
 
       if (isEditing && freebet) {
-        // Update existing
+        // Calculate delta for saldo_freebet update
+        const oldValue = freebet.valor;
+        const oldStatus = freebet.status;
+        const newValue = data.valor;
+        const newStatus = data.status;
+        const oldBookmakerId = freebet.bookmaker_id;
+        const newBookmakerId = data.bookmaker_id;
+
+        // Update the freebet record
         const { error } = await supabase
           .from("freebets_recebidas")
           .update({
-            bookmaker_id: data.bookmaker_id,
-            valor: data.valor,
-            status: data.status,
+            bookmaker_id: newBookmakerId,
+            valor: newValue,
+            status: newStatus,
             data_validade: data.data_validade?.toISOString() || null,
           })
           .eq("id", freebet.id);
 
         if (error) throw error;
+
+        // Update saldo_freebet based on status changes
+        // Only LIBERADA status affects saldo_freebet
+        const oldContribution = oldStatus === "LIBERADA" ? oldValue : 0;
+        const newContribution = newStatus === "LIBERADA" ? newValue : 0;
+
+        if (oldBookmakerId === newBookmakerId) {
+          // Same bookmaker - just update the delta
+          const delta = newContribution - oldContribution;
+          if (delta !== 0) {
+            const { data: currentBk } = await supabase
+              .from("bookmakers")
+              .select("saldo_freebet")
+              .eq("id", newBookmakerId)
+              .single();
+            
+            const novoSaldo = Math.max(0, (currentBk?.saldo_freebet || 0) + delta);
+            await supabase
+              .from("bookmakers")
+              .update({ saldo_freebet: novoSaldo })
+              .eq("id", newBookmakerId);
+          }
+        } else {
+          // Different bookmaker - subtract from old, add to new
+          if (oldContribution > 0) {
+            const { data: oldBk } = await supabase
+              .from("bookmakers")
+              .select("saldo_freebet")
+              .eq("id", oldBookmakerId)
+              .single();
+            
+            const novoSaldoOld = Math.max(0, (oldBk?.saldo_freebet || 0) - oldContribution);
+            await supabase
+              .from("bookmakers")
+              .update({ saldo_freebet: novoSaldoOld })
+              .eq("id", oldBookmakerId);
+          }
+          
+          if (newContribution > 0) {
+            const { data: newBk } = await supabase
+              .from("bookmakers")
+              .select("saldo_freebet")
+              .eq("id", newBookmakerId)
+              .single();
+            
+            const novoSaldoNew = (newBk?.saldo_freebet || 0) + newContribution;
+            await supabase
+              .from("bookmakers")
+              .update({ saldo_freebet: novoSaldoNew })
+              .eq("id", newBookmakerId);
+          }
+        }
       } else {
-        // Create new
+        // Create new freebet
         const { error } = await supabase
           .from("freebets_recebidas")
           .insert({
@@ -187,6 +247,21 @@ export function FreebetDialog({
           });
 
         if (error) throw error;
+
+        // Update saldo_freebet only if status is LIBERADA
+        if (data.status === "LIBERADA") {
+          const { data: currentBk } = await supabase
+            .from("bookmakers")
+            .select("saldo_freebet")
+            .eq("id", data.bookmaker_id)
+            .single();
+          
+          const novoSaldo = (currentBk?.saldo_freebet || 0) + data.valor;
+          await supabase
+            .from("bookmakers")
+            .update({ saldo_freebet: novoSaldo })
+            .eq("id", data.bookmaker_id);
+        }
       }
 
       onSuccess();
