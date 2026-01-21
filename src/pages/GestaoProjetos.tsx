@@ -181,9 +181,10 @@ export default function GestaoProjetos() {
           .eq("status", "CONFIRMADA"),
         
         // Giros grátis confirmados por projeto (valor_retorno é o lucro do giro)
+        // Inclui dados da bookmaker para saber a moeda correta
         supabase
           .from("giros_gratis")
-          .select("projeto_id, valor_retorno, bookmaker_id")
+          .select("projeto_id, valor_retorno, bookmaker_id, bookmakers!inner(moeda)")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "confirmado"),
         
@@ -196,9 +197,9 @@ export default function GestaoProjetos() {
         // Contagem de bookmakers e saldo irrecuperável por projeto
         supabase
           .from("bookmakers")
-          .select("projeto_id, saldo_irrecuperavel, moeda")
+          .select("id, projeto_id, saldo_irrecuperavel, moeda")
           .in("projeto_id", finalProjetoIds)
-          .eq("status", "ATIVO")
+          .eq("status", "ativo")
       ]);
       
       // COTAÇÃO CENTRALIZADA - Usa PTAX do BCB obtida via hook
@@ -251,7 +252,9 @@ export default function GestaoProjetos() {
       // Criar mapa de moeda por bookmaker_id para conversão dos giros grátis
       const bookmakerMoedaMap: Record<string, string> = {};
       (bookmakersCountResult.data || []).forEach((bk: any) => {
-        // Não temos ID aqui, então usaremos BRL como padrão para giros grátis
+        if (bk.id) {
+          bookmakerMoedaMap[bk.id] = bk.moeda || 'BRL';
+        }
       });
 
       // Agregar lucro de apostas por projeto COM BREAKDOWN POR MOEDA
@@ -266,7 +269,7 @@ export default function GestaoProjetos() {
         const moeda = ap.moeda_operacao || 'BRL';
         
         // Acumular por moeda original
-        if (moeda === 'USD') {
+        if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
           lucroByProjeto[ap.projeto_id].USD += lucroOriginal;
           // Para total consolidado, usar BRL referência se existir, senão converter
           const valorBRL = ap.lucro_prejuizo_brl_referencia ?? (lucroOriginal * USD_TO_BRL);
@@ -278,6 +281,7 @@ export default function GestaoProjetos() {
       });
       
       // Agregar lucro de giros grátis confirmados por projeto
+      // CORREÇÃO: Usar moeda da bookmaker para conversão correta
       (girosGratisResult.data || []).forEach((giro: any) => {
         if (!giro.projeto_id) return;
         if (!lucroByProjeto[giro.projeto_id]) {
@@ -285,11 +289,17 @@ export default function GestaoProjetos() {
         }
         
         const valorRetorno = giro.valor_retorno || 0;
-        // Giros grátis são creditados em BRL (valor_retorno é sempre na moeda do bookmaker)
-        // Por simplicidade, assumimos BRL. Em uma implementação mais robusta,
-        // buscaríamos a moeda do bookmaker.
-        lucroByProjeto[giro.projeto_id].BRL += valorRetorno;
-        lucroByProjeto[giro.projeto_id].total += valorRetorno;
+        // Buscar moeda da bookmaker via join (bookmakers.moeda)
+        const moedaBookmaker = giro.bookmakers?.moeda || bookmakerMoedaMap[giro.bookmaker_id] || 'BRL';
+        
+        // Acumular por moeda da bookmaker
+        if (moedaBookmaker === 'USD' || moedaBookmaker === 'USDT' || moedaBookmaker === 'USDC') {
+          lucroByProjeto[giro.projeto_id].USD += valorRetorno;
+          lucroByProjeto[giro.projeto_id].total += valorRetorno * USD_TO_BRL;
+        } else {
+          lucroByProjeto[giro.projeto_id].BRL += valorRetorno;
+          lucroByProjeto[giro.projeto_id].total += valorRetorno;
+        }
       });
       
       // Agregar lucro de cashback manual por projeto
