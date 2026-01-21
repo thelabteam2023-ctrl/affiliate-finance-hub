@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Plus, Calculator, Gift, TrendingUp } from "lucide-react";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface Investidor {
   id: string;
@@ -63,6 +64,7 @@ export function ParticipacaoManualDialog({
   onOpenChange,
   onSuccess,
 }: ParticipacaoManualDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [investidores, setInvestidores] = useState<Investidor[]>([]);
   const [projetos, setProjetos] = useState<Projeto[]>([]);
@@ -205,15 +207,10 @@ export function ParticipacaoManualDialog({
         return;
       }
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", session.session.user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      if (!workspaceId) {
+        toast.error("Workspace não disponível nesta aba");
+        return;
+      }
 
       const defaultObservacao = tipoParticipacao === "REGULAR" 
         ? "Participação manual - criação direta"

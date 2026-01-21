@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/ui/date-picker";
 import { addDays, format } from "date-fns";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface EntregaDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ export function EntregaDialog({
   saldoInicial = 0,
   onSuccess,
 }: EntregaDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [nextNumero, setNextNumero] = useState(1);
   
@@ -93,15 +95,10 @@ export function EntregaDialog({
         return;
       }
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", session.session.user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      if (!workspaceId) {
+        toast.error("Workspace não disponível nesta aba");
+        return;
+      }
 
       const { error } = await supabase.from("entregas").insert({
         user_id: session.session.user.id,

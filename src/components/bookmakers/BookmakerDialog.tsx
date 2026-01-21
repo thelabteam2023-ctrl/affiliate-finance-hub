@@ -26,6 +26,7 @@ import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
 import { PasswordInput } from "@/components/parceiros/PasswordInput";
 import { FIAT_CURRENCIES, type FiatCurrency, CURRENCY_SYMBOLS } from "@/types/currency";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface BookmakerDialogProps {
   open: boolean;
@@ -71,6 +72,7 @@ export default function BookmakerDialog({
   const [observacoes, setObservacoes] = useState("");
   const [showObservacoesDialog, setShowObservacoesDialog] = useState(false);
   const { toast } = useToast();
+  const { workspaceId } = useWorkspace();
 
   // Função para carregar detalhes da bookmaker
   const fetchBookmakerDetails = async (bookmakerIdToFetch: string, presetLink?: string, preserveMoeda = false) => {
@@ -254,15 +256,9 @@ export default function BookmakerDialog({
         throw new Error("Selecione um link de cadastro");
       }
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      if (!workspaceId) {
+        throw new Error("Workspace não disponível nesta aba");
+      }
 
       const bookmakerData: any = {
         user_id: user.id,

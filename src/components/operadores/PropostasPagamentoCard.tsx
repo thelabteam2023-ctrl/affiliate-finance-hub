@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface PropostaPagamento {
   id: string;
@@ -48,6 +49,7 @@ interface PropostaPagamento {
 }
 
 export function PropostasPagamentoCard() {
+  const { workspaceId } = useWorkspace();
   const [propostas, setPropostas] = useState<PropostaPagamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false);
@@ -114,15 +116,10 @@ export function PropostasPagamentoCard() {
         return;
       }
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", session.session.user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      if (!workspaceId) {
+        toast.error("Workspace não disponível nesta aba");
+        return;
+      }
 
       // 1. Criar registro em pagamentos_operador
       const valorFinal = selectedProposta.valor_ajustado ?? selectedProposta.valor_calculado;

@@ -387,6 +387,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Atualizar sessionStorage desta aba
     setTabWorkspaceId(workspaceId);
+
+    // Revalidar sessão para garantir que o backend reconheça o novo contexto.
+    // (o request-scoped workspace é enviado via header, mas refresh evita estados limítrofes)
+    try {
+      await supabase.auth.refreshSession();
+    } catch (error) {
+      console.warn(`[Auth][${tabId}] Falha ao refreshSession após trocar workspace:`, error);
+    }
     
     // Carregar detalhes do novo workspace
     await fetchWorkspaceDetails(user.id, workspaceId);
