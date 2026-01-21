@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { usePromotionalCurrencyConversion } from "@/hooks/usePromotionalCurrencyConversion";
 import { 
   GiroGratis, 
   GiroGratisComBookmaker, 
@@ -22,23 +21,89 @@ interface GiroGratisComMoeda extends GiroGratisComBookmaker {
   bookmaker_moeda?: string;
 }
 
+/**
+ * Hook refatorado para Giros Grátis
+ * 
+ * CORREÇÃO CRÍTICA:
+ * - Busca a moeda de consolidação do projeto diretamente
+ * - NÃO aplica conversão quando moeda origem = moeda destino
+ * - Elimina race condition do hook anterior
+ */
 export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGratisOptions) {
   const [giros, setGiros] = useState<GiroGratisComMoeda[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<GirosGratisMetrics>({
-    totalRetorno: 0,
-    totalGiros: 0,
-    mediaRetornoPorGiro: 0,
-    totalRegistros: 0,
-    registrosSimples: 0,
-    registrosDetalhados: 0,
-  });
-  const [porBookmaker, setPorBookmaker] = useState<GirosGratisPorBookmaker[]>([]);
-  const [chartData, setChartData] = useState<GirosGratisChartData[]>([]);
+  const [moedaConsolidacao, setMoedaConsolidacao] = useState<string>("BRL");
+  const [cotacaoTrabalho, setCotacaoTrabalho] = useState<number | null>(null);
 
-  // Hook centralizado para conversão de moeda
-  const { converterParaConsolidacao, config: currencyConfig } = usePromotionalCurrencyConversion(projetoId);
+  // Buscar configuração de moeda do projeto PRIMEIRO
+  useEffect(() => {
+    if (!projetoId) return;
+
+    const fetchProjectConfig = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("projetos")
+          .select("moeda_consolidacao, cotacao_trabalho")
+          .eq("id", projetoId)
+          .single();
+
+        if (error) throw error;
+        
+        // CRÍTICO: Garantir que moeda seja lida corretamente
+        const moeda = data?.moeda_consolidacao || "BRL";
+        console.log("[useGirosGratis] Config do projeto:", { moeda, cotacao: data?.cotacao_trabalho });
+        
+        setMoedaConsolidacao(moeda);
+        setCotacaoTrabalho(data?.cotacao_trabalho || null);
+      } catch (err) {
+        console.error("[useGirosGratis] Erro ao buscar config:", err);
+      }
+    };
+
+    fetchProjectConfig();
+  }, [projetoId]);
+
+  /**
+   * Função de conversão SIMPLIFICADA e SEM RACE CONDITION
+   * Recebe moeda de consolidação como parâmetro para evitar closure stale
+   */
+  const converterValor = useCallback((
+    valor: number, 
+    moedaOrigem: string, 
+    moedaDestino: string,
+    cotacao: number | null
+  ): number => {
+    if (!valor || valor === 0) return 0;
+
+    // Normalizar stablecoins como USD
+    const normalizar = (m: string) => ["USD", "USDT", "USDC"].includes(m) ? "USD" : m;
+    const origemNorm = normalizar(moedaOrigem);
+    const destinoNorm = normalizar(moedaDestino);
+
+    // SEM CONVERSÃO se moedas são iguais
+    if (origemNorm === destinoNorm) {
+      return valor;
+    }
+
+    // Precisa de cotação para converter
+    if (!cotacao || cotacao <= 0) {
+      console.warn(`[useGirosGratis] Cotação indisponível para ${moedaOrigem} -> ${moedaDestino}`);
+      return valor;
+    }
+
+    // USD -> BRL
+    if (origemNorm === "USD" && destinoNorm === "BRL") {
+      return valor * cotacao;
+    }
+
+    // BRL -> USD
+    if (origemNorm === "BRL" && destinoNorm === "USD") {
+      return valor / cotacao;
+    }
+
+    return valor;
+  }, []);
 
   const fetchGiros = useCallback(async () => {
     if (!projetoId) return;
@@ -88,20 +153,13 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
         bookmaker_moeda: g.bookmakers?.moeda || "BRL",
       }));
 
+      console.log("[useGirosGratis] Giros carregados:", girosFormatados.map(g => ({
+        id: g.id,
+        valor: g.valor_retorno,
+        moeda: g.bookmaker_moeda,
+      })));
+
       setGiros(girosFormatados);
-
-      // Calcular métricas COM CONVERSÃO
-      const metricsData = calcularMetricas(girosFormatados);
-      setMetrics(metricsData);
-
-      // Calcular por bookmaker COM CONVERSÃO
-      const bookmakerData = calcularPorBookmaker(girosFormatados);
-      setPorBookmaker(bookmakerData);
-
-      // Calcular dados do gráfico COM CONVERSÃO
-      const chart = calcularChartData(girosFormatados);
-      setChartData(chart);
-
     } catch (err) {
       console.error("Erro ao buscar giros grátis:", err);
       setError("Erro ao carregar dados");
@@ -111,16 +169,30 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     }
   }, [projetoId, dataInicio, dataFim]);
 
-  /**
-   * MÉTRICAS COM CONVERSÃO PARA MOEDA DE CONSOLIDAÇÃO
-   */
-  const calcularMetricas = (data: GiroGratisComMoeda[]): GirosGratisMetrics => {
-    const confirmados = data.filter(g => g.status === "confirmado");
+  // Calcular métricas como MEMOIZAÇÃO para evitar recálculos desnecessários
+  // e garantir que usamos o valor mais recente de moedaConsolidacao
+  const metrics = useMemo((): GirosGratisMetrics => {
+    const confirmados = giros.filter(g => g.status === "confirmado");
     
-    // CRÍTICO: Converter cada valor para moeda de consolidação
+    console.log("[useGirosGratis] Calculando métricas:", {
+      total: confirmados.length,
+      moedaConsolidacao,
+      cotacaoTrabalho,
+    });
+
+    // CRÍTICO: Usar moedaConsolidacao e cotacaoTrabalho atuais
     const totalRetorno = confirmados.reduce((sum, g) => {
-      const moeda = g.bookmaker_moeda || "BRL";
-      return sum + converterParaConsolidacao(Number(g.valor_retorno), moeda);
+      const moedaOrigem = g.bookmaker_moeda || "BRL";
+      const valorConvertido = converterValor(
+        Number(g.valor_retorno), 
+        moedaOrigem, 
+        moedaConsolidacao,
+        cotacaoTrabalho
+      );
+      
+      console.log(`[useGirosGratis] Conversão: ${g.valor_retorno} ${moedaOrigem} -> ${valorConvertido} ${moedaConsolidacao}`);
+      
+      return sum + valorConvertido;
     }, 0);
     
     const totalGiros = confirmados
@@ -135,10 +207,10 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
       registrosSimples: confirmados.filter(g => g.modo === "simples").length,
       registrosDetalhados: confirmados.filter(g => g.modo === "detalhado").length,
     };
-  };
+  }, [giros, moedaConsolidacao, cotacaoTrabalho, converterValor]);
 
-  const calcularPorBookmaker = (data: GiroGratisComMoeda[]): GirosGratisPorBookmaker[] => {
-    const confirmados = data.filter(g => g.status === "confirmado");
+  const porBookmaker = useMemo((): GirosGratisPorBookmaker[] => {
+    const confirmados = giros.filter(g => g.status === "confirmado");
     const grouped = confirmados.reduce((acc, g) => {
       if (!acc[g.bookmaker_id]) {
         const moeda = g.bookmaker_moeda || "BRL";
@@ -151,12 +223,19 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
           total_giros: 0,
           total_registros: 0,
           media_retorno: 0,
-          moeda_original: moeda, // Guardar moeda original para transparência
+          moeda_original: moeda,
         };
       }
-      // CRÍTICO: Converter valor para moeda de consolidação
-      const moeda = g.bookmaker_moeda || "BRL";
-      acc[g.bookmaker_id].total_retorno += converterParaConsolidacao(Number(g.valor_retorno), moeda);
+      
+      const moedaOrigem = g.bookmaker_moeda || "BRL";
+      const valorConvertido = converterValor(
+        Number(g.valor_retorno), 
+        moedaOrigem, 
+        moedaConsolidacao,
+        cotacaoTrabalho
+      );
+      
+      acc[g.bookmaker_id].total_retorno += valorConvertido;
       acc[g.bookmaker_id].total_giros += g.quantidade_giros || 0;
       acc[g.bookmaker_id].total_registros += 1;
       return acc;
@@ -168,10 +247,10 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
         media_retorno: b.total_registros > 0 ? b.total_retorno / b.total_registros : 0,
       }))
       .sort((a, b) => b.total_retorno - a.total_retorno);
-  };
+  }, [giros, moedaConsolidacao, cotacaoTrabalho, converterValor]);
 
-  const calcularChartData = (data: GiroGratisComMoeda[]): GirosGratisChartData[] => {
-    const confirmados = data
+  const chartData = useMemo((): GirosGratisChartData[] => {
+    const confirmados = giros
       .filter(g => g.status === "confirmado")
       .sort((a, b) => new Date(a.data_registro).getTime() - new Date(b.data_registro).getTime());
 
@@ -179,9 +258,13 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     
     confirmados.forEach(g => {
       const date = new Date(g.data_registro).toISOString().split('T')[0];
-      // CRÍTICO: Converter valor para moeda de consolidação
-      const moeda = g.bookmaker_moeda || "BRL";
-      const valorConvertido = converterParaConsolidacao(Number(g.valor_retorno), moeda);
+      const moedaOrigem = g.bookmaker_moeda || "BRL";
+      const valorConvertido = converterValor(
+        Number(g.valor_retorno), 
+        moedaOrigem, 
+        moedaConsolidacao,
+        cotacaoTrabalho
+      );
       dailyData[date] = (dailyData[date] || 0) + valorConvertido;
     });
 
@@ -190,7 +273,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
       acumulado += valor;
       return { date, valor, acumulado };
     });
-  };
+  }, [giros, moedaConsolidacao, cotacaoTrabalho, converterValor]);
 
   const createGiro = async (formData: GiroGratisFormData): Promise<string | null> => {
     try {
@@ -213,7 +296,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
         modo: formData.modo,
         data_registro: formData.data_registro.toISOString(),
         valor_retorno: formData.valor_retorno,
-        status: "confirmado", // Sempre confirmar automaticamente - trigger gera lançamento financeiro
+        status: "confirmado", // Trigger gera lançamento financeiro automaticamente
         observacoes: formData.observacoes || null,
         giro_disponivel_id: formData.giro_disponivel_id || null,
       };
@@ -232,7 +315,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
       if (error) throw error;
 
-      toast.success("Giro grátis registrado com sucesso!");
+      toast.success("Giro grátis registrado! Saldo da casa atualizado.");
       await fetchGiros();
       return (data as any)?.id || null;
     } catch (err) {
@@ -296,7 +379,6 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     }
   };
 
-  // Confirmar giro - dispara trigger que gera lançamento financeiro
   const confirmarGiro = async (id: string): Promise<boolean> => {
     try {
       const { error } = await supabase
@@ -332,12 +414,11 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     updateGiro,
     deleteGiro,
     confirmarGiro,
-    // Expor configuração de moeda para transparência na UI
-    moedaConsolidacao: currencyConfig.moedaConsolidacao,
+    moedaConsolidacao,
     cotacaoInfo: {
-      fonte: currencyConfig.fonte,
-      taxa: currencyConfig.cotacaoAtual,
-      disponivel: currencyConfig.disponivel,
+      fonte: cotacaoTrabalho ? "TRABALHO" : "INDISPONIVEL",
+      taxa: cotacaoTrabalho || 0,
+      disponivel: !!cotacaoTrabalho,
     },
   };
 }
