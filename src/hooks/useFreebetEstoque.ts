@@ -21,6 +21,7 @@ export interface FreebetRecebidaCompleta {
   origem: "MANUAL" | "QUALIFICADORA" | "PROMOCAO";
   qualificadora_id: string | null;
   diasParaExpirar: number | null;
+  tem_rollover: boolean;
 }
 
 export interface BookmakerEstoque {
@@ -78,7 +79,7 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
         .from("freebets_recebidas")
         .select(`
           id, bookmaker_id, valor, moeda_operacao, motivo, data_recebida, data_validade,
-          utilizada, data_utilizacao, aposta_id, status, origem, qualificadora_id,
+          utilizada, data_utilizacao, aposta_id, status, origem, qualificadora_id, tem_rollover,
           bookmakers!freebets_recebidas_bookmaker_id_fkey (
             nome, moeda, parceiro_id,
             parceiros!bookmakers_parceiro_id_fkey (nome),
@@ -126,6 +127,7 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
           origem: fb.origem || "MANUAL",
           qualificadora_id: fb.qualificadora_id,
           diasParaExpirar,
+          tem_rollover: fb.tem_rollover || false,
         };
       });
 

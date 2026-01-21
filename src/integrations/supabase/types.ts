@@ -1580,6 +1580,7 @@ export type Database = {
           moeda_operacao: string
           observacoes: string | null
           projeto_id: string
+          tem_rollover: boolean | null
           updated_at: string
           user_id: string
           valor: number
@@ -1597,6 +1598,7 @@ export type Database = {
           moeda_operacao?: string
           observacoes?: string | null
           projeto_id: string
+          tem_rollover?: boolean | null
           updated_at?: string
           user_id: string
           valor: number
@@ -1614,6 +1616,7 @@ export type Database = {
           moeda_operacao?: string
           observacoes?: string | null
           projeto_id?: string
+          tem_rollover?: boolean | null
           updated_at?: string
           user_id?: string
           valor?: number
@@ -2668,6 +2671,7 @@ export type Database = {
           projeto_id: string
           qualificadora_id: string | null
           status: string
+          tem_rollover: boolean | null
           updated_at: string
           user_id: string
           utilizada: boolean | null
@@ -2693,6 +2697,7 @@ export type Database = {
           projeto_id: string
           qualificadora_id?: string | null
           status?: string
+          tem_rollover?: boolean | null
           updated_at?: string
           user_id: string
           utilizada?: boolean | null
@@ -2718,6 +2723,7 @@ export type Database = {
           projeto_id?: string
           qualificadora_id?: string | null
           status?: string
+          tem_rollover?: boolean | null
           updated_at?: string
           user_id?: string
           utilizada?: boolean | null

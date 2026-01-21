@@ -6,7 +6,8 @@ import {
   CalendarDays,
   MessageSquare,
   AlertCircle,
-  User
+  User,
+  Lock
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -117,6 +118,12 @@ export function CashbackManualList({
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                   {registro.moeda_operacao}
                 </Badge>
+                {(registro as any).tem_rollover && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400" title="Este cashback exige cumprimento de rollover">
+                    <Lock className="h-2.5 w-2.5 mr-0.5" />
+                    Rollover
+                  </Badge>
+                )}
               </div>
               
               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">

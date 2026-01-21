@@ -21,7 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, DollarSign, CalendarIcon, Info, ArrowRight } from "lucide-react";
+import { Loader2, DollarSign, CalendarIcon, Info, ArrowRight, Lock } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import BookmakerVinculoProjetoSelect, { BookmakerVinculoData } from "@/components/bookmakers/BookmakerVinculoProjetoSelect";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -54,6 +55,7 @@ const formSchema = z.object({
   valor: z.number().min(0.01, "Valor deve ser maior que zero"),
   data_credito: z.date().optional(),
   observacoes: z.string().nullable().optional(),
+  tem_rollover: z.boolean().optional(),
 });
 
 interface CashbackManualDialogProps {
@@ -79,6 +81,7 @@ export function CashbackManualDialog({
       valor: 0,
       data_credito: new Date(),
       observacoes: "",
+      tem_rollover: false,
     },
   });
 
@@ -89,6 +92,7 @@ export function CashbackManualDialog({
         valor: 0,
         data_credito: new Date(),
         observacoes: "",
+        tem_rollover: false,
       });
       setSelectedBookmaker(null);
     }
@@ -104,6 +108,7 @@ export function CashbackManualDialog({
           ? format(values.data_credito, "yyyy-MM-dd")
           : undefined,
         observacoes: values.observacoes || null,
+        tem_rollover: values.tem_rollover || false,
       };
       
       const success = await onSave(formData);
@@ -297,6 +302,31 @@ export function CashbackManualDialog({
                     />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Checkbox de Rollover */}
+            <FormField
+              control={form.control}
+              name="tem_rollover"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 bg-muted/30">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="flex items-center gap-1.5 text-sm font-normal cursor-pointer">
+                      <Lock className="h-3.5 w-3.5 text-amber-500" />
+                      Exige cumprimento de rollover
+                    </FormLabel>
+                    <FormDescription className="text-xs">
+                      O cashback possui restrição de saque até cumprir rollover
+                    </FormDescription>
+                  </div>
                 </FormItem>
               )}
             />
