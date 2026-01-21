@@ -1078,21 +1078,23 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
             Gerencie freebets recebidas e acompanhe o estoque
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={fetchData}
+              disabled={loading}
+              className="text-muted-foreground"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+            <Button onClick={() => setFreebetDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Freebet
+            </Button>
+          </div>
           {periodFilterComponent}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={fetchData}
-            disabled={loading}
-            className="text-muted-foreground"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
-          <Button onClick={() => setFreebetDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Freebet
-          </Button>
         </div>
       </div>
 
