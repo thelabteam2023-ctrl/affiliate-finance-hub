@@ -565,8 +565,8 @@ export default function GestaoProjetos() {
                       )}
                     </div>
                   </div>
-                  {/* Linha 2: Ações e badge de status */}
-                  <div className="flex items-center justify-end gap-1.5">
+                  {/* Linha 2: Ícones de ação (estrela e olho) */}
+                  <div className="flex items-center gap-1.5">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
@@ -604,6 +604,9 @@ export default function GestaoProjetos() {
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="z-[100]">Ver detalhes</TooltipContent>
                     </Tooltip>
+                  </div>
+                  {/* Linha 3: Badge de status alinhado à esquerda */}
+                  <div>
                     <Badge className={`${getStatusColor(projeto.status)} text-xs`}>
                       {getStatusLabel(projeto.status)}
                     </Badge>
