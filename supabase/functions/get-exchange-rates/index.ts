@@ -16,20 +16,13 @@ function formatDateBCB(date: Date): string {
 
 /**
  * Moedas suportadas pelo sistema
- * 
- * PTAX disponível no BCB: USD, EUR, GBP
- * 
- * Moedas via FastForex (sem PTAX no BCB):
- * - MYR (Ringgit Malaio)
- * - MXN (Peso Mexicano)
- * - ARS (Peso Argentino)
- * - COP (Peso Colombiano)
+ * PTAX: USD, EUR, GBP
+ * FastForex: MYR, MXN, ARS, COP
  */
 const CURRENCIES = {
   USD: { code: 'USD', fallback: null, useDolarDia: true, hasPTAX: true },
   EUR: { code: 'EUR', fallback: 6.10, useDolarDia: false, hasPTAX: true },
   GBP: { code: 'GBP', fallback: 7.10, useDolarDia: false, hasPTAX: true },
-  // Moedas via FastForex
   MYR: { code: 'MYR', fallback: 1.20, useDolarDia: false, hasPTAX: false },
   MXN: { code: 'MXN', fallback: 0.26, useDolarDia: false, hasPTAX: false },
   ARS: { code: 'ARS', fallback: 0.005, useDolarDia: false, hasPTAX: false },
@@ -38,14 +31,81 @@ const CURRENCIES = {
 
 type CurrencyKey = keyof typeof CURRENCIES;
 
-// Cache em memória (válido por instância da edge function)
-let cachedFastForexRates: Record<string, number> | null = null;
-let cacheTimestamp: number = 0;
-const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 horas de cache
+// TTL do cache: 4 horas
+const CACHE_TTL_HOURS = 4;
+
+/**
+ * Cria cliente Supabase com service role para acessar o cache
+ */
+function getSupabaseClient() {
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+}
+
+/**
+ * Busca cotações do cache no banco de dados
+ */
+async function getCachedRates(): Promise<Record<string, { rate: number; source: string }>> {
+  const supabase = getSupabaseClient();
+  const now = new Date().toISOString();
+  
+  const { data, error } = await supabase
+    .from('exchange_rate_cache')
+    .select('currency_pair, rate, source')
+    .gt('expires_at', now);
+  
+  if (error) {
+    console.error('Erro ao buscar cache:', error);
+    return {};
+  }
+  
+  const cached: Record<string, { rate: number; source: string }> = {};
+  for (const row of data || []) {
+    cached[row.currency_pair] = { 
+      rate: Number(row.rate), 
+      source: row.source 
+    };
+  }
+  
+  if (Object.keys(cached).length > 0) {
+    console.log(`Cache encontrado: ${Object.keys(cached).join(', ')}`);
+  }
+  
+  return cached;
+}
+
+/**
+ * Salva cotações no cache do banco de dados
+ */
+async function saveCachedRates(rates: Record<string, { rate: number; source: string }>) {
+  const supabase = getSupabaseClient();
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + CACHE_TTL_HOURS * 60 * 60 * 1000);
+  
+  const upserts = Object.entries(rates).map(([currencyPair, data]) => ({
+    currency_pair: currencyPair,
+    rate: data.rate,
+    source: data.source,
+    fetched_at: now.toISOString(),
+    expires_at: expiresAt.toISOString(),
+    updated_at: now.toISOString(),
+  }));
+  
+  const { error } = await supabase
+    .from('exchange_rate_cache')
+    .upsert(upserts, { onConflict: 'currency_pair' });
+  
+  if (error) {
+    console.error('Erro ao salvar cache:', error);
+  } else {
+    console.log(`Cache salvo: ${Object.keys(rates).length} cotações (expira em ${CACHE_TTL_HOURS}h)`);
+  }
+}
 
 /**
  * Busca cotações via FastForex API
- * Converte de X/BRL para usar nas conversões
  */
 async function fetchFastForexRates(): Promise<Record<string, number>> {
   const apiKey = Deno.env.get('FASTFOREX_API_KEY');
@@ -55,17 +115,7 @@ async function fetchFastForexRates(): Promise<Record<string, number>> {
     return {};
   }
 
-  // Verificar cache em memória
-  const now = Date.now();
-  if (cachedFastForexRates && (now - cacheTimestamp) < CACHE_TTL_MS) {
-    console.log('Usando cache FastForex em memória');
-    return cachedFastForexRates;
-  }
-
   try {
-    // Buscar cotação de BRL vs outras moedas
-    // FastForex retorna: 1 BRL = X moedas estrangeiras
-    // Precisamos inverter para: 1 moeda estrangeira = X BRL
     const currencies = 'MYR,MXN,ARS,COP,USD';
     const url = `https://api.fastforex.io/fetch-multi?from=BRL&to=${currencies}&api_key=${apiKey}`;
     
@@ -79,7 +129,6 @@ async function fetchFastForexRates(): Promise<Record<string, number>> {
     }
 
     const data = await response.json();
-    console.log('FastForex resposta:', JSON.stringify(data));
 
     if (data.error) {
       console.error('FastForex API error:', data.error);
@@ -88,22 +137,14 @@ async function fetchFastForexRates(): Promise<Record<string, number>> {
 
     const rates: Record<string, number> = {};
     
-    // Precisamos inverter as taxas
-    // FastForex retorna: 1 BRL = 0.18 USD (por exemplo)
-    // Precisamos: 1 USD = 5.55 BRL
     if (data.results) {
       for (const [currency, rate] of Object.entries(data.results)) {
         if (typeof rate === 'number' && rate > 0) {
-          // Inverter: 1/rate = quantos BRL por 1 unidade da moeda
           rates[`${currency}BRL`] = 1 / rate;
           console.log(`FastForex ${currency}/BRL: ${rates[`${currency}BRL`].toFixed(4)}`);
         }
       }
     }
-
-    // Atualizar cache em memória
-    cachedFastForexRates = rates;
-    cacheTimestamp = now;
     
     console.log(`FastForex: ${Object.keys(rates).length} cotações obtidas`);
     return rates;
@@ -120,143 +161,154 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Fetching exchange rates from Banco Central do Brasil');
+    console.log('Fetching exchange rates');
+
+    // 1. Verificar cache no banco de dados
+    const cachedRates = await getCachedRates();
+    const allCurrencies = Object.keys(CURRENCIES);
+    const cachedCurrencies = Object.keys(cachedRates).map(k => k.replace('BRL', ''));
+    const missingCurrencies = allCurrencies.filter(c => !cachedCurrencies.includes(c));
+    
+    // Se temos todas as moedas em cache, retornar direto
+    if (missingCurrencies.length === 0) {
+      console.log('Todas as cotações em cache válido');
+      const finalRates: Record<string, number | null> = {};
+      const sources: Record<string, string> = {};
+      
+      for (const [key] of Object.entries(CURRENCIES)) {
+        const rateKey = `${key}BRL`;
+        const cachedData = cachedRates[rateKey];
+        finalRates[rateKey] = cachedData?.rate ?? null;
+        sources[key] = cachedData ? cachedData.source + '_CACHE' : 'CACHE';
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          ...finalRates,
+          timestamp: new Date().toISOString(),
+          source: 'cache',
+          sources,
+          fromCache: true
+        }),
+        { 
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    console.log(`Moedas faltando no cache: ${missingCurrencies.join(', ')}`);
 
     const today = new Date();
     const rates: Record<string, number | null> = {};
+    const newRatesToCache: Record<string, { rate: number; source: string }> = {};
     
-    // Inicializar todas as moedas como null
-    Object.keys(CURRENCIES).forEach(key => {
-      rates[`${key}BRL`] = null;
-    });
+    // Usar cache existente
+    for (const [key, data] of Object.entries(cachedRates)) {
+      rates[key] = data.rate;
+    }
 
-    // Lista de moedas que têm PTAX disponível no BCB
+    // 2. Buscar PTAX para moedas que faltam
     const ptaxCurrencies = Object.entries(CURRENCIES)
-      .filter(([_, config]) => config.hasPTAX)
+      .filter(([key, config]) => config.hasPTAX && !cachedCurrencies.includes(key))
       .map(([key, config]) => ({ key, config }));
 
-    // Lista de moedas via FastForex
+    if (ptaxCurrencies.length > 0) {
+      console.log('Buscando PTAX para:', ptaxCurrencies.map(p => p.key).join(', '));
+      
+      for (let i = 0; i < 5; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(checkDate.getDate() - i);
+        const dateStr = formatDateBCB(checkDate);
+        
+        for (const { key, config } of ptaxCurrencies) {
+          const rateKey = `${key}BRL`;
+          if (rates[rateKey]) continue;
+
+          try {
+            let url: string;
+            
+            if (config.useDolarDia) {
+              url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='${dateStr}'&$format=json`;
+            } else {
+              url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaPeriodo(moeda=@moeda,dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@moeda='${config.code}'&@dataInicial='${dateStr}'&@dataFinalCotacao='${dateStr}'&$format=json`;
+            }
+
+            const response = await fetch(url);
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data.value && data.value.length > 0) {
+                const rate = data.value[data.value.length - 1].cotacaoVenda;
+                rates[rateKey] = rate;
+                newRatesToCache[rateKey] = { rate, source: 'PTAX' };
+                console.log(`PTAX ${key}/BRL: ${rate}`);
+              }
+            }
+          } catch (e) {
+            console.error(`Erro BCB ${key}:`, e);
+          }
+        }
+
+        const allPtaxFetched = ptaxCurrencies.every(({ key }) => rates[`${key}BRL`] !== null);
+        if (allPtaxFetched) break;
+      }
+    }
+
+    // 3. Buscar FastForex para moedas sem PTAX que faltam
     const fastForexCurrencies = Object.entries(CURRENCIES)
-      .filter(([_, config]) => !config.hasPTAX)
+      .filter(([key, config]) => !config.hasPTAX && !cachedCurrencies.includes(key))
       .map(([key]) => key);
 
     if (fastForexCurrencies.length > 0) {
-      console.log(`Moedas via FastForex: ${fastForexCurrencies.join(', ')}`);
-    }
-
-    // Tentar últimos 5 dias úteis para garantir que pegamos uma cotação
-    for (let i = 0; i < 5; i++) {
-      const checkDate = new Date(today);
-      checkDate.setDate(checkDate.getDate() - i);
-      const dateStr = formatDateBCB(checkDate);
+      const fastForexRates = await fetchFastForexRates();
       
-      console.log(`Tentando BCB para ${dateStr}`);
-
-      // Buscar cotações apenas para moedas com PTAX
-      for (const { key, config } of ptaxCurrencies) {
-        const rateKey = `${key}BRL`;
-        
-        // Pular se já temos essa cotação
-        if (rates[rateKey]) continue;
-
-        try {
-          let url: string;
-          
-          if (config.useDolarDia) {
-            // USD usa endpoint específico CotacaoDolarDia
-            url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='${dateStr}'&$format=json`;
-          } else {
-            // EUR e GBP usam CotacaoMoedaPeriodo
-            url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaPeriodo(moeda=@moeda,dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@moeda='${config.code}'&@dataInicial='${dateStr}'&@dataFinalCotacao='${dateStr}'&$format=json`;
-          }
-
-          const response = await fetch(url);
-          
-          if (response.ok) {
-            const data = await response.json();
-            if (data.value && data.value.length > 0) {
-              rates[rateKey] = data.value[data.value.length - 1].cotacaoVenda;
-              console.log(`${key}/BRL (${dateStr}): ${rates[rateKey]}`);
-            }
-          }
-        } catch (e) {
-          console.error(`Erro BCB ${key} (${dateStr}):`, e);
+      for (const currency of fastForexCurrencies) {
+        const rateKey = `${currency}BRL`;
+        if (fastForexRates[rateKey]) {
+          rates[rateKey] = fastForexRates[rateKey];
+          newRatesToCache[rateKey] = { rate: fastForexRates[rateKey], source: 'FASTFOREX' };
         }
       }
-
-      // Verificar se já temos todas as cotações PTAX
-      const allPtaxFetched = ptaxCurrencies.every(({ key }) => rates[`${key}BRL`] !== null);
-      
-      if (allPtaxFetched) {
-        console.log('Todas as cotações PTAX obtidas com sucesso');
-        break;
-      }
     }
 
-    // Buscar cotações FastForex para moedas sem PTAX
-    const fastForexRates = await fetchFastForexRates();
-    
-    // Preparar resposta final
+    // 4. Salvar novas cotações no cache
+    if (Object.keys(newRatesToCache).length > 0) {
+      await saveCachedRates(newRatesToCache);
+    }
+
+    // 5. Preparar resposta final
     const finalRates: Record<string, number | null> = {};
     const sources: Record<string, string> = {};
     
     for (const [key, config] of Object.entries(CURRENCIES)) {
       const rateKey = `${key}BRL`;
       
-      if (config.hasPTAX) {
-        // Moeda com PTAX disponível
-        if (rates[rateKey]) {
-          finalRates[rateKey] = rates[rateKey];
-          sources[key] = 'PTAX';
-        } else if (config.fallback) {
-          finalRates[rateKey] = config.fallback;
-          sources[key] = 'FALLBACK_PTAX_INDISPONIVEL';
-        } else {
-          finalRates[rateKey] = null;
-          sources[key] = 'INDISPONIVEL';
-        }
+      if (rates[rateKey]) {
+        finalRates[rateKey] = rates[rateKey];
+        const cachedData = cachedRates[rateKey];
+        sources[key] = cachedData ? cachedData.source + '_CACHE' : (config.hasPTAX ? 'PTAX' : 'FASTFOREX');
+      } else if (config.fallback) {
+        finalRates[rateKey] = config.fallback;
+        sources[key] = 'FALLBACK';
       } else {
-        // Moeda via FastForex
-        if (fastForexRates[rateKey]) {
-          finalRates[rateKey] = fastForexRates[rateKey];
-          sources[key] = 'FASTFOREX';
-        } else if (config.fallback) {
-          // Fallback para cotação de trabalho
-          finalRates[rateKey] = config.fallback;
-          sources[key] = 'FALLBACK_FASTFOREX';
-        } else {
-          finalRates[rateKey] = null;
-          sources[key] = 'SEM_COTACAO';
-        }
+        finalRates[rateKey] = null;
+        sources[key] = 'INDISPONIVEL';
       }
     }
 
-    // Identificar moedas que precisam de cotação de trabalho (quando FastForex falhou)
-    const currenciesNeedingWorkRate = Object.entries(sources)
-      .filter(([_, source]) => source === 'FALLBACK_FASTFOREX' || source === 'SEM_COTACAO')
-      .map(([key]) => key);
-
-    // Identificar moedas PTAX que falharam
-    const ptaxFailed = Object.entries(CURRENCIES)
-      .filter(([key, config]) => config.hasPTAX && !rates[`${key}BRL`])
-      .map(([key]) => key);
-
-    const ptaxCount = Object.entries(sources).filter(([_, s]) => s === 'PTAX').length;
-    const fastForexCount = Object.entries(sources).filter(([_, s]) => s === 'FASTFOREX').length;
-    
-    console.log(`Resumo: PTAX=${ptaxCount}, FastForex=${fastForexCount}`);
-    if (currenciesNeedingWorkRate.length > 0) {
-      console.log(`Moedas usando fallback: ${currenciesNeedingWorkRate.join(', ')}`);
-    }
+    const cacheCount = Object.entries(sources).filter(([_, s]) => s.includes('CACHE')).length;
+    const freshCount = Object.keys(newRatesToCache).length;
+    console.log(`Resumo: ${cacheCount} do cache, ${freshCount} novas`);
 
     return new Response(
       JSON.stringify({ 
         ...finalRates,
         timestamp: new Date().toISOString(),
         source: 'multi-source',
-        sources, // Detalhe por moeda
-        currenciesNeedingWorkRate: currenciesNeedingWorkRate.length > 0 ? currenciesNeedingWorkRate : undefined,
-        ptaxFailed: ptaxFailed.length > 0 ? ptaxFailed : undefined
+        sources,
+        fromCache: cacheCount > 0,
+        freshFetched: freshCount
       }),
       { 
         status: 200,
@@ -268,7 +320,6 @@ serve(async (req) => {
     console.error('Error in get-exchange-rates function:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     
-    // Em caso de erro total, retornar fallbacks
     const fallbackRates: Record<string, number | null> = {};
     const sources: Record<string, string> = {};
     

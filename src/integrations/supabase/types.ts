@@ -2452,6 +2452,39 @@ export type Database = {
           },
         ]
       }
+      exchange_rate_cache: {
+        Row: {
+          created_at: string
+          currency_pair: string
+          expires_at: string
+          fetched_at: string
+          id: string
+          rate: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency_pair: string
+          expires_at: string
+          fetched_at?: string
+          id?: string
+          rate: number
+          source: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency_pair?: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          rate?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       fluxo_cards: {
         Row: {
           coluna_id: string
