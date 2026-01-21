@@ -76,6 +76,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
+import { SaldoCompostoSimples } from "@/components/ui/saldo-composto";
 
 interface ProjetoVinculosTabProps {
   projetoId: string;
@@ -1136,16 +1137,23 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         </Tooltip>
                       </TooltipProvider>
                     )}
+                    {/* Saldo Composto (Real + Freebet) */}
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Wallet className="h-3 w-3" />
-                        Saldo Real
+                        Saldo
                       </span>
                       <div className="text-right">
-                        <span className="text-sm font-semibold">{formatCurrency(vinculo.saldo_real, vinculo.moeda)}</span>
+                        <SaldoCompostoSimples
+                          saldoReal={vinculo.saldo_real}
+                          saldoFreebet={vinculo.saldo_freebet}
+                          formatCurrency={(val) => formatCurrency(val, vinculo.moeda)}
+                          moeda={vinculo.moeda}
+                          className="text-sm"
+                        />
                         {vinculo.moeda !== "BRL" && (
                           <p className="text-[10px] text-muted-foreground">
-                            ≈ {formatCurrency(convertToBRL(vinculo.saldo_real, vinculo.moeda), "BRL")}
+                            ≈ {formatCurrency(convertToBRL(vinculo.saldo_real + vinculo.saldo_freebet, vinculo.moeda), "BRL")}
                           </p>
                         )}
                       </div>
@@ -1164,15 +1172,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       </span>
                       <span className="text-sm font-medium text-accent-foreground">{formatCurrency(vinculo.saldo_disponivel, vinculo.moeda)}</span>
                     </div>
-                    {vinculo.saldo_freebet > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Gift className="h-3 w-3 text-amber-400" />
-                          Freebet
-                        </span>
-                        <span className="text-sm font-medium text-amber-400">{formatCurrency(vinculo.saldo_freebet, vinculo.moeda)}</span>
-                      </div>
-                    )}
                     {vinculo.saldo_bonus > 0 && (
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -1374,39 +1373,17 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     </p>
                   </div>
 
-                  {/* Saldo Operável (inclui bônus) */}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="text-right flex-shrink-0 min-w-[80px] cursor-help">
-                          <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
-                            Saldo Operável
-                            {vinculo.saldo_bonus > 0 && (
-                              <Coins className="h-3 w-3 text-purple-400" />
-                            )}
-                          </p>
-                          <p className="font-semibold">{formatCurrency(vinculo.saldo_operavel, vinculo.moeda)}</p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs">
-                        <div className="space-y-1">
-                          <p className="text-xs">Real: {formatCurrency(vinculo.saldo_real, vinculo.moeda)}</p>
-                          {vinculo.saldo_freebet > 0 && (
-                            <p className="text-xs">Freebet: {formatCurrency(vinculo.saldo_freebet, vinculo.moeda)}</p>
-                          )}
-                          {vinculo.saldo_bonus > 0 && (
-                            <p className="text-xs font-medium flex items-center gap-1">
-                              <Coins className="h-3 w-3 text-purple-400" />
-                              Bônus: {formatCurrency(vinculo.saldo_bonus, vinculo.moeda)}
-                            </p>
-                          )}
-                          {vinculo.saldo_em_aposta > 0 && (
-                            <p className="text-xs text-muted-foreground">Em Aposta: -{formatCurrency(vinculo.saldo_em_aposta, vinculo.moeda)}</p>
-                          )}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  {/* Saldo Composto (Real + Freebet) */}
+                  <div className="text-right flex-shrink-0 min-w-[120px]">
+                    <p className="text-xs text-muted-foreground">Saldo</p>
+                    <SaldoCompostoSimples
+                      saldoReal={vinculo.saldo_real}
+                      saldoFreebet={vinculo.saldo_freebet}
+                      formatCurrency={(val) => formatCurrency(val, vinculo.moeda)}
+                      moeda={vinculo.moeda}
+                      className="justify-end text-sm"
+                    />
+                  </div>
 
                   {/* Em Aposta */}
                   <div className="text-right flex-shrink-0 min-w-[80px]">
@@ -1419,17 +1396,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     <p className="text-xs text-muted-foreground">Disponível</p>
                     <p className="font-medium text-accent-foreground">{formatCurrency(vinculo.saldo_disponivel, vinculo.moeda)}</p>
                   </div>
-
-                  {/* Freebet (condicional) */}
-                  {vinculo.saldo_freebet > 0 && (
-                    <div className="text-right flex-shrink-0 min-w-[80px]">
-                      <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
-                        <Gift className="h-3 w-3 text-amber-400" />
-                        Freebet
-                      </p>
-                      <p className="font-medium text-amber-400">{formatCurrency(vinculo.saldo_freebet, vinculo.moeda)}</p>
-                    </div>
-                  )}
 
                   {/* Bônus (condicional) */}
                   {vinculo.saldo_bonus > 0 && (

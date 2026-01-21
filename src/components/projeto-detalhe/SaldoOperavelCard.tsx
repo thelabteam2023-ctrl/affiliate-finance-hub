@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { SaldoCompostoSimples } from "@/components/ui/saldo-composto";
 
 interface SaldoOperavelCardProps {
   projetoId: string;
@@ -142,9 +143,9 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                 key={casa.id} 
                 className="p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors space-y-1.5"
               >
-                {/* Nome e Saldo */}
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
+                {/* Nome e Saldo Composto */}
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
                     {casa.nome}
                     {casa.parceiroPrimeiroNome && (
                       <span className="text-primary/80 ml-1 font-normal">
@@ -152,9 +153,12 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                       </span>
                     )}
                   </span>
-                  <span className="text-sm font-bold text-primary ml-2 whitespace-nowrap">
-                    {formatCurrency(casa.saldoOperavel)}
-                  </span>
+                  <SaldoCompostoSimples
+                    saldoReal={casa.saldoReal}
+                    saldoFreebet={casa.saldoFreebet}
+                    formatCurrency={(val) => formatCurrency(val)}
+                    className="text-sm text-primary"
+                  />
                 </div>
                 
                 {/* Rollover individual com 🎁 */}
@@ -193,19 +197,12 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                   </div>
                 )}
                 
-                {/* Info extra: Freebet / Em aposta */}
-                {(casa.saldoFreebet > 0 || casa.saldoEmAposta > 0) && (
+                {/* Info extra: Em aposta (freebet já está no saldo composto acima) */}
+                {casa.saldoEmAposta > 0 && (
                   <div className="flex gap-3 text-[10px]">
-                    {casa.saldoFreebet > 0 && (
-                      <span className="text-muted-foreground">
-                        FB: <span className="font-medium">{formatCurrency(casa.saldoFreebet)}</span>
-                      </span>
-                    )}
-                    {casa.saldoEmAposta > 0 && (
-                      <span className="text-muted-foreground">
-                        Pendente: <span className="font-medium">{formatCurrency(casa.saldoEmAposta)}</span>
-                      </span>
-                    )}
+                    <span className="text-muted-foreground">
+                      Pendente: <span className="font-medium">{formatCurrency(casa.saldoEmAposta)}</span>
+                    </span>
                   </div>
                 )}
               </div>
