@@ -150,6 +150,10 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [cotacaoTrabalho, setCotacaoTrabalho] = useState<number | null>(null);
   const [cotacaoTrabalhoEur, setCotacaoTrabalhoEur] = useState<number | null>(null);
   const [cotacaoTrabalhoGbp, setCotacaoTrabalhoGbp] = useState<number | null>(null);
+  const [cotacaoTrabalhoMyr, setCotacaoTrabalhoMyr] = useState<number | null>(null);
+  const [cotacaoTrabalhoMxn, setCotacaoTrabalhoMxn] = useState<number | null>(null);
+  const [cotacaoTrabalhoArs, setCotacaoTrabalhoArs] = useState<number | null>(null);
+  const [cotacaoTrabalhoCop, setCotacaoTrabalhoCop] = useState<number | null>(null);
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
   const [vinculoParaConciliar, setVinculoParaConciliar] = useState<Vinculo | null>(null);
   const [selectedCasas, setSelectedCasas] = useState<string[]>([]);
@@ -186,14 +190,20 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     try {
       const { data, error } = await supabase
         .from("projetos")
-        .select("cotacao_trabalho, cotacao_trabalho_eur, cotacao_trabalho_gbp")
+        .select(
+          "cotacao_trabalho, cotacao_trabalho_eur, cotacao_trabalho_gbp, cotacao_trabalho_myr, cotacao_trabalho_mxn, cotacao_trabalho_ars, cotacao_trabalho_cop"
+        )
         .eq("id", projetoId)
         .single();
 
       if (error) throw error;
-      setCotacaoTrabalho(data?.cotacao_trabalho ?? null);
-      setCotacaoTrabalhoEur(data?.cotacao_trabalho_eur ?? null);
-      setCotacaoTrabalhoGbp(data?.cotacao_trabalho_gbp ?? null);
+      setCotacaoTrabalho(data?.cotacao_trabalho != null ? Number(data.cotacao_trabalho) : null);
+      setCotacaoTrabalhoEur(data?.cotacao_trabalho_eur != null ? Number(data.cotacao_trabalho_eur) : null);
+      setCotacaoTrabalhoGbp(data?.cotacao_trabalho_gbp != null ? Number(data.cotacao_trabalho_gbp) : null);
+      setCotacaoTrabalhoMyr((data as any)?.cotacao_trabalho_myr != null ? Number((data as any).cotacao_trabalho_myr) : null);
+      setCotacaoTrabalhoMxn((data as any)?.cotacao_trabalho_mxn != null ? Number((data as any).cotacao_trabalho_mxn) : null);
+      setCotacaoTrabalhoArs((data as any)?.cotacao_trabalho_ars != null ? Number((data as any).cotacao_trabalho_ars) : null);
+      setCotacaoTrabalhoCop((data as any)?.cotacao_trabalho_cop != null ? Number((data as any).cotacao_trabalho_cop) : null);
     } catch (error: any) {
       console.error("Erro ao buscar cotações de trabalho:", error.message);
     }
@@ -637,6 +647,10 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
               cotacaoTrabalho={cotacaoTrabalho}
               cotacaoTrabalhoEur={cotacaoTrabalhoEur}
               cotacaoTrabalhoGbp={cotacaoTrabalhoGbp}
+               cotacaoTrabalhoMyr={cotacaoTrabalhoMyr}
+               cotacaoTrabalhoMxn={cotacaoTrabalhoMxn}
+               cotacaoTrabalhoArs={cotacaoTrabalhoArs}
+               cotacaoTrabalhoCop={cotacaoTrabalhoCop}
               onCotacaoUpdated={fetchCotacaoTrabalho}
             />
           )}

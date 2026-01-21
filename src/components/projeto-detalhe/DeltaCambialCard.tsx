@@ -125,7 +125,7 @@ export function DeltaCambialCard({
       return { color: "text-muted-foreground", bgColor: "bg-muted/50" };
     }
     if (deltaAbs < 3) {
-      return { color: "text-yellow-400", bgColor: "bg-yellow-500/10" };
+      return { color: "text-primary", bgColor: "bg-primary/10" };
     }
     return { color: "text-destructive", bgColor: "bg-destructive/10" };
   };
@@ -161,7 +161,7 @@ export function DeltaCambialCard({
 
       toast.success(`Cotação de trabalho ${editingCurrency} atualizada`);
       setEditingCurrency(null);
-      onCotacaoUpdated?.();
+      await Promise.resolve(onCotacaoUpdated?.());
     } catch (error: any) {
       toast.error("Erro ao atualizar cotação: " + error.message);
     } finally {
@@ -183,7 +183,7 @@ export function DeltaCambialCard({
       if (error) throw error;
 
       toast.success(`Cotação ${currency} sincronizada com PTAX`);
-      onCotacaoUpdated?.();
+      await Promise.resolve(onCotacaoUpdated?.());
     } catch (error: any) {
       toast.error("Erro ao atualizar cotação: " + error.message);
     } finally {
@@ -243,7 +243,7 @@ export function DeltaCambialCard({
             <TooltipContent side="top" className="text-xs max-w-[200px]">
               {isWorkRateOnly ? (
                 <>
-                  <p className="font-medium text-yellow-400">⚠️ Sem PTAX no BCB</p>
+                  <p className="font-medium text-primary">Sem PTAX no BCB</p>
                   <p className="text-muted-foreground mt-1">
                     O Banco Central não publica PTAX para {key}. 
                     Usando cotação de trabalho preenchida manualmente.
@@ -265,7 +265,7 @@ export function DeltaCambialCard({
           {isWorkRateOnly ? (
             <Badge 
               variant="outline" 
-              className="bg-amber-500/10 text-amber-400 border-amber-500/30 font-mono text-[9px] px-1.5 py-0"
+              className="bg-primary/10 text-primary border-primary/30 font-mono text-[9px] px-1.5 py-0"
             >
               Trabalho
             </Badge>
@@ -298,7 +298,7 @@ export function DeltaCambialCard({
               />
               <div className="flex flex-col gap-0.5">
                 <Button variant="ghost" size="icon" className="h-3 w-3 p-0" onClick={handleSaveEdit} disabled={saving}>
-                  <Check className="h-2 w-2 text-emerald-400" />
+                  <Check className="h-2 w-2 text-primary" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-3 w-3 p-0" onClick={handleCancelEdit} disabled={saving}>
                   <X className="h-2 w-2 text-destructive" />
@@ -361,7 +361,7 @@ export function DeltaCambialCard({
                 <div className="text-xs space-y-1 border-t pt-2">
                   <p><strong>Delta (Δ):</strong> Diferença entre PTAX e cotação de trabalho</p>
                   <p className="text-muted-foreground">• &lt;1%: Alinhado</p>
-                  <p className="text-yellow-400">• 1-3%: Atenção</p>
+                  <p className="text-primary">• 1-3%: Atenção</p>
                   <p className="text-destructive">• ≥3%: Defasagem</p>
                 </div>
               </div>
