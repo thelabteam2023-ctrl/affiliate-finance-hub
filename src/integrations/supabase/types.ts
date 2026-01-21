@@ -9162,6 +9162,7 @@ export type Database = {
         }[]
       }
       sync_bonus_rollover: { Args: { p_bonus_id: string }; Returns: number }
+      try_cast_uuid: { Args: { p_text: string }; Returns: string }
       update_bookmaker_balance_with_audit: {
         Args: {
           p_bookmaker_id: string
