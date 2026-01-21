@@ -226,17 +226,6 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
               <Badge variant="secondary">{bookmakersEstoque.length} casas</Badge>
             </div>
             <div className="flex items-center gap-2">
-              {onAddFreebet && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onAddFreebet()}
-                  className="h-8"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Freebet
-                </Button>
-              )}
               <ToggleGroup
                 type="single"
                 value={viewMode}
