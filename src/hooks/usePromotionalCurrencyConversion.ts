@@ -98,18 +98,24 @@ export function usePromotionalCurrencyConversion(projetoId: string) {
       });
     }
 
-    // Determinar cotação atual baseada na fonte
+    // Determinar cotação atual para KPIs
+    // REGRA: PTAX é SEMPRE primária para exibição
+    // Cotação de trabalho é FALLBACK (se PTAX indisponível)
+    // Nota: Cotação de trabalho será usada em formulários para conversão entre operações
     let cotacaoAtual = 0;
     let fonte: "TRABALHO" | "PTAX" | "INDISPONIVEL" = "INDISPONIVEL";
     let disponivel = false;
 
-    if (fonteCotacao === "TRABALHO" && cotacaoTrabalho && cotacaoTrabalho > 0) {
-      cotacaoAtual = cotacaoTrabalho;
-      fonte = "TRABALHO";
-      disponivel = true;
-    } else if (cotacaoUSD && cotacaoUSD > 0) {
+    // Prioridade 1: PTAX (cotação oficial BCB) - SEMPRE primária para KPIs
+    if (cotacaoUSD && cotacaoUSD > 0) {
       cotacaoAtual = cotacaoUSD;
       fonte = "PTAX";
+      disponivel = true;
+    } 
+    // Prioridade 2: Cotação de trabalho como FALLBACK
+    else if (cotacaoTrabalho && cotacaoTrabalho > 0) {
+      cotacaoAtual = cotacaoTrabalho;
+      fonte = "TRABALHO";
       disponivel = true;
     }
 
