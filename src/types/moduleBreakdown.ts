@@ -30,6 +30,17 @@ export interface ModuleContribution {
   details?: string;
 }
 
+/**
+ * Breakdown por moeda original (antes da conversão)
+ */
+export interface CurrencyBreakdownItem {
+  /** Código da moeda (ex: "USD", "BRL") */
+  moeda: string;
+  
+  /** Valor na moeda original */
+  valor: number;
+}
+
 export interface KpiBreakdown {
   /** Valor total consolidado */
   total: number;
@@ -39,6 +50,9 @@ export interface KpiBreakdown {
   
   /** Moeda de consolidação */
   currency: string;
+  
+  /** Breakdown por moeda original (opcional) */
+  currencyBreakdown?: CurrencyBreakdownItem[];
   
   /** Timestamp da última atualização */
   lastUpdated?: Date;
