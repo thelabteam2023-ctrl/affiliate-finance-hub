@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { registrarBonusCreditadoViaLedger, getBookmakerMoeda } from "@/lib/ledgerService";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
 
@@ -188,6 +189,7 @@ async function fetchBonusesFromDb(projectId: string, bookmakerId?: string): Prom
 export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesProps) {
   const queryClient = useQueryClient();
   const invalidateBonusQueries = useInvalidateBonusQueries();
+  const { workspaceId } = useWorkspace();
 
   const queryKey = bookmakerId 
     ? bonusQueryKeys.bookmaker(projectId, bookmakerId)
@@ -291,11 +293,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
-      const { data: projectData } = await supabase
-        .from("projetos")
-        .select("workspace_id")
-        .eq("id", projectId)
-        .single();
+      if (!workspaceId) throw new Error("Workspace não definido nesta aba");
 
       // CORREÇÃO: saldo_atual do bônus deve refletir o valor creditado
       // A RPC get_bookmaker_saldos calcula saldo_bonus via SUM(saldo_atual) dos bônus creditados
@@ -315,7 +313,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         notes: data.notes || null,
         created_by: userData.user.id,
         user_id: userData.user.id,
-        workspace_id: projectData?.workspace_id || null,
+        workspace_id: workspaceId,
         source: data.source || "manual",
         template_snapshot: data.template_snapshot || null,
         rollover_multiplier: data.rollover_multiplier || null,
@@ -334,19 +332,13 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
 
       // MODELO UNIFICADO: Se status = credited, creditar via ledger
       if (data.status === "credited") {
-        const { data: projectData2 } = await supabase
-          .from("projetos")
-          .select("workspace_id")
-          .eq("id", projectId)
-          .single();
-        
         const moeda = await getBookmakerMoeda(data.bookmaker_id);
         
         const result = await registrarBonusCreditadoViaLedger({
           bookmakerId: data.bookmaker_id,
           valor: data.bonus_amount,
           moeda,
-          workspaceId: projectData2?.workspace_id || '',
+          workspaceId,
           userId: userData.user.id,
           descricao: `Crédito de bônus: ${data.title || 'Sem título'}`,
         });
@@ -385,12 +377,8 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
           // Creditar via ledger (para impactar saldo_real)
           const bonusAmount = data.bonus_amount ?? existingBonus.bonus_amount;
           const { data: userData } = await supabase.auth.getUser();
-          
-          const { data: projectData } = await supabase
-            .from("projetos")
-            .select("workspace_id")
-            .eq("id", projectId)
-            .single();
+
+          if (!workspaceId) throw new Error("Workspace não definido nesta aba");
           
           const moeda = await getBookmakerMoeda(existingBonus.bookmaker_id);
           
@@ -398,7 +386,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
             bookmakerId: existingBonus.bookmaker_id,
             valor: bonusAmount,
             moeda,
-            workspaceId: projectData?.workspace_id || '',
+            workspaceId,
             userId: userData?.user?.id || '',
             descricao: `Crédito de bônus: ${existingBonus.title || 'Sem título'}`,
             bonusId: id,

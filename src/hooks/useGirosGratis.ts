@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { PROJETO_RESULTADO_QUERY_KEY } from "./useProjetoResultado";
 import { estornarGiroGratisViaLedger } from "@/lib/ledgerService";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { 
   GiroGratis, 
   GiroGratisComBookmaker, 
@@ -39,6 +40,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
   const [error, setError] = useState<string | null>(null);
   const [moedaConsolidacao, setMoedaConsolidacao] = useState<string>("BRL");
   const [cotacaoTrabalho, setCotacaoTrabalho] = useState<number | null>(null);
+  const { workspaceId } = useWorkspace();
 
   // Função para invalidar KPIs globais após mutação
   const invalidateProjectKPIs = useCallback(() => {
@@ -311,18 +313,12 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const { data: projeto } = await supabase
-        .from("projetos")
-        .select("workspace_id")
-        .eq("id", projetoId)
-        .single();
-
-      if (!projeto) throw new Error("Projeto não encontrado");
+      if (!workspaceId) throw new Error("Workspace não definido nesta aba");
 
       const insertData: any = {
         projeto_id: projetoId,
         bookmaker_id: formData.bookmaker_id,
-        workspace_id: projeto.workspace_id,
+        workspace_id: workspaceId,
         user_id: user.id,
         modo: formData.modo,
         data_registro: formData.data_registro.toISOString(),

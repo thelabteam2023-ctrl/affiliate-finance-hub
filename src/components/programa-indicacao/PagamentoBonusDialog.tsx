@@ -110,17 +110,26 @@ export function PagamentoBonusDialog({
           .from("parcerias")
           .select("id")
           .eq("user_id", user.id)
+          .eq("workspace_id", workspaceId)
           .limit(1)
           .maybeSingle();
         
         if (!parceria) {
           // Create a placeholder parceria for bonus tracking
+          const { data: parceiroRow } = await supabase
+            .from("parceiros")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("workspace_id", workspaceId)
+            .limit(1)
+            .maybeSingle();
+
           const { data: newParceria, error: parceriaError } = await supabase
             .from("parcerias")
             .insert({
               user_id: user.id,
               workspace_id: workspaceId,
-              parceiro_id: (await supabase.from("parceiros").select("id").eq("user_id", user.id).limit(1).single()).data?.id,
+              parceiro_id: parceiroRow?.id || null,
               status: "ATIVA",
               duracao_dias: 60,
             })
