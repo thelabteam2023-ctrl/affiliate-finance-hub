@@ -3,8 +3,8 @@
  * 
  * REGRA OBRIGATÓRIA DE CÂMBIO:
  * 
- * Prioridade 1: PTAX (cotação oficial do Banco Central) - SEMPRE PRIMÁRIA
- * Prioridade 2: Cotação de Trabalho do projeto (FALLBACK se PTAX falhar)
+ * Prioridade 1: Cotação Oficial (FastForex API / PTAX BCB) - SEMPRE PRIMÁRIA
+ * Prioridade 2: Cotação de Trabalho do projeto (FALLBACK se oficial falhar)
  * 
  * ⚠️ NUNCA usar valores hardcoded no código.
  * Se nenhuma fonte estiver disponível, informar claramente.
@@ -16,8 +16,8 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 export interface CotacaoInfo {
   /** Taxa de conversão MOEDA -> BRL */
   taxa: number;
-  /** Fonte da cotação: 'TRABALHO', 'PTAX', ou 'INDISPONIVEL' */
-  fonte: "TRABALHO" | "PTAX" | "INDISPONIVEL";
+  /** Fonte da cotação: 'TRABALHO', 'OFICIAL', ou 'INDISPONIVEL' */
+  fonte: "TRABALHO" | "OFICIAL" | "PTAX" | "INDISPONIVEL";
   /** Se a cotação está carregando */
   loading: boolean;
   /** Descrição amigável da fonte */
@@ -39,23 +39,25 @@ export interface CotacoesMultiMoeda {
 /**
  * Hook para obter cotação centralizada respeitando prioridades
  * 
- * @param cotacaoTrabalho - Cotação de trabalho USD/BRL do projeto (fallback se PTAX falhar)
- * @param fonteCotacao - Ignorado - PTAX é sempre primária, trabalho é fallback
+ * @param cotacaoTrabalho - Cotação de trabalho USD/BRL do projeto (fallback se oficial falhar)
+ * @param fonteCotacao - Ignorado - Cotação Oficial é sempre primária, trabalho é fallback
  */
 export function useCotacaoConsolidacao(
   cotacaoTrabalho?: number | null,
   fonteCotacao?: "TRABALHO" | "PTAX" | null
 ): CotacaoInfo {
-  const { cotacaoUSD, loading } = useCotacoes();
+  const { cotacaoUSD, loading, sources } = useCotacoes();
 
   return useMemo(() => {
-    // Prioridade 1: PTAX (cotação oficial do BCB) - SEMPRE primária
+    // Prioridade 1: Cotação Oficial (FastForex/PTAX) - SEMPRE primária
     if (cotacaoUSD && cotacaoUSD > 0) {
+      // Determinar label da fonte baseado no source real
+      const sourceLabel = sources?.usd?.label || "Oficial";
       return {
         taxa: cotacaoUSD,
-        fonte: "PTAX",
+        fonte: "OFICIAL",
         loading,
-        descricao: `PTAX BCB: R$ ${cotacaoUSD.toFixed(4)}`,
+        descricao: `Cotação ${sourceLabel}: R$ ${cotacaoUSD.toFixed(4)}`,
         disponivel: true,
       };
     }
@@ -79,11 +81,11 @@ export function useCotacaoConsolidacao(
       descricao: "Cotação indisponível - verifique configurações",
       disponivel: false,
     };
-  }, [cotacaoTrabalho, cotacaoUSD, loading]);
+  }, [cotacaoTrabalho, cotacaoUSD, loading, sources]);
 }
 
 /**
- * Hook para obter cotações de todas as moedas com prioridade PTAX > Trabalho
+ * Hook para obter cotações de todas as moedas com prioridade Oficial > Trabalho
  * 
  * @param cotacaoTrabalhoUSD - Cotação de trabalho USD/BRL
  * @param cotacaoTrabalhoEUR - Cotação de trabalho EUR/BRL
@@ -105,22 +107,25 @@ export function useCotacoesMultiMoeda(
   const { 
     cotacaoUSD, cotacaoEUR, cotacaoGBP, 
     cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP,
-    loading 
+    loading,
+    sources
   } = useCotacoes();
 
   return useMemo(() => {
     const buildCotacaoInfo = (
-      ptax: number,
+      oficial: number,
       trabalho: number | null | undefined,
-      symbol: string
+      symbol: string,
+      sourceLabel?: string
     ): CotacaoInfo => {
-      // Prioridade 1: PTAX (BCB)
-      if (ptax && ptax > 0) {
+      // Prioridade 1: Cotação Oficial (FastForex/PTAX)
+      if (oficial && oficial > 0) {
+        const label = sourceLabel || "Oficial";
         return {
-          taxa: ptax,
-          fonte: "PTAX",
+          taxa: oficial,
+          fonte: "OFICIAL",
           loading,
-          descricao: `PTAX BCB: R$ ${ptax.toFixed(4)}`,
+          descricao: `Cotação ${label}: R$ ${oficial.toFixed(4)}`,
           disponivel: true,
         };
       }
@@ -147,20 +152,20 @@ export function useCotacoesMultiMoeda(
     };
 
     return {
-      USD: buildCotacaoInfo(cotacaoUSD, cotacaoTrabalhoUSD, "USD"),
-      EUR: buildCotacaoInfo(cotacaoEUR, cotacaoTrabalhoEUR, "EUR"),
-      GBP: buildCotacaoInfo(cotacaoGBP, cotacaoTrabalhoGBP, "GBP"),
-      MYR: buildCotacaoInfo(cotacaoMYR, cotacaoTrabalhoMYR, "MYR"),
-      MXN: buildCotacaoInfo(cotacaoMXN, cotacaoTrabalhoMXN, "MXN"),
-      ARS: buildCotacaoInfo(cotacaoARS, cotacaoTrabalhoARS, "ARS"),
-      COP: buildCotacaoInfo(cotacaoCOP, cotacaoTrabalhoCOP, "COP"),
+      USD: buildCotacaoInfo(cotacaoUSD, cotacaoTrabalhoUSD, "USD", sources?.usd?.label),
+      EUR: buildCotacaoInfo(cotacaoEUR, cotacaoTrabalhoEUR, "EUR", sources?.eur?.label),
+      GBP: buildCotacaoInfo(cotacaoGBP, cotacaoTrabalhoGBP, "GBP", sources?.gbp?.label),
+      MYR: buildCotacaoInfo(cotacaoMYR, cotacaoTrabalhoMYR, "MYR", sources?.myr?.label),
+      MXN: buildCotacaoInfo(cotacaoMXN, cotacaoTrabalhoMXN, "MXN", sources?.mxn?.label),
+      ARS: buildCotacaoInfo(cotacaoARS, cotacaoTrabalhoARS, "ARS", sources?.ars?.label),
+      COP: buildCotacaoInfo(cotacaoCOP, cotacaoTrabalhoCOP, "COP", sources?.cop?.label),
       loading,
     };
   }, [
     cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP,
     cotacaoTrabalhoUSD, cotacaoTrabalhoEUR, cotacaoTrabalhoGBP, 
     cotacaoTrabalhoMYR, cotacaoTrabalhoMXN, cotacaoTrabalhoARS, cotacaoTrabalhoCOP,
-    loading
+    loading, sources
   ]);
 }
 

@@ -19,10 +19,10 @@ interface ProjectFinancialDisplayProps {
 /**
  * Componente de exibição financeira com hierarquia visual clara:
  * 1. Badges de moeda (valores reais) - posição dominante
- * 2. Valor consolidado aproximado (via PTAX) - referência secundária
+ * 2. Valor consolidado aproximado (via cotação oficial) - referência secundária
  * 
  * REGRAS:
- * - Conversão EXCLUSIVAMENTE via PTAX
+ * - Conversão via cotação oficial (FastForex > PTAX > Trabalho)
  * - Conversão sempre marcada como ≈ aproximação
  * - Valores reais por moeda sempre visíveis
  */
@@ -178,12 +178,12 @@ export function ProjectFinancialDisplay({
           <div className="space-y-2 text-xs">
             <div className="font-medium">Valor Aproximado (Conversão Analítica)</div>
             <div className="text-muted-foreground">
-              Este valor é uma <strong>referência aproximada</strong> calculada exclusivamente 
-              via cotação PTAX do Banco Central.
+              Este valor é uma <strong>referência aproximada</strong> calculada 
+              via cotação oficial (FastForex/PTAX).
             </div>
             <div className="pt-1 border-t border-border/50 space-y-1">
               <div className="flex justify-between">
-                <span>Cotação PTAX:</span>
+                <span>Cotação Oficial:</span>
                 <span className="font-mono">R$ {cotacaoPTAX.toFixed(4)}</span>
               </div>
               {hasUSD && (

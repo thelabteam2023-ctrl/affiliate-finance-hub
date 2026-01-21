@@ -415,7 +415,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
                 <>
                   <hr className="my-1 border-border" />
                   <p className="text-muted-foreground">
-                    Consolidado via PTAX: ≈ R$ {consolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    Consolidado via cotação oficial: ≈ R$ {consolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </>
               )}
