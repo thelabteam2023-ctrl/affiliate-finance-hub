@@ -20,7 +20,8 @@ import {
 import { 
   Gift, Search, Building2, Target, CheckCircle2, Clock, 
   TrendingUp, Percent, LayoutGrid, List, Minimize2, BarChart3,
-  LayoutDashboard, History, PanelLeft, LayoutList, Zap, Package
+  LayoutDashboard, History, PanelLeft, LayoutList, Zap, Package,
+  Plus, RefreshCw
 } from "lucide-react";
 import { startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { useFreebetViewPreferences, FreebetSubTab } from "@/hooks/useFreebetViewPreferences";
@@ -988,6 +989,31 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   if (navMode === "tabs") {
     return (
       <div className="space-y-6">
+        {/* Header - Same pattern as Giros Grátis */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">Freebets</h2>
+            <p className="text-sm text-muted-foreground">
+              Gerencie freebets recebidas e acompanhe o estoque
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={fetchData}
+              disabled={loading}
+              className="text-muted-foreground"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+            <Button onClick={() => setFreebetDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Freebet
+            </Button>
+          </div>
+        </div>
+
         <Tabs value={activeNavTab} onValueChange={handleNavTabChange} className="space-y-6">
           <div className="flex items-center justify-between border-b border-border/50">
             <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6">
@@ -1043,12 +1069,32 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
 
   // Mode: Sidebar
   return (
-    <div className="space-y-4">
-      {/* Period Filter at top right */}
-      <div className="flex justify-end">
-        {periodFilterComponent}
+    <div className="space-y-6">
+      {/* Header - Same pattern as Giros Grátis */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">Freebets</h2>
+          <p className="text-sm text-muted-foreground">
+            Gerencie freebets recebidas e acompanhe o estoque
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={fetchData}
+            disabled={loading}
+            className="text-muted-foreground"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+          <Button onClick={() => setFreebetDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Freebet
+          </Button>
+        </div>
       </div>
-      
+
       <div className="flex gap-6">
         {/* Sidebar Navigation */}
         <div className="w-52 shrink-0 space-y-6">
@@ -1083,6 +1129,9 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
               })}
             </nav>
           </div>
+          
+          {/* Period Filter in Sidebar */}
+          {periodFilterComponent}
         </div>
 
         {/* Content Area */}
