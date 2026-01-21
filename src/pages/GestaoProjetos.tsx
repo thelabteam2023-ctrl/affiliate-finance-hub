@@ -601,7 +601,7 @@ export default function GestaoProjetos() {
                             <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="z-[100]">Ver detalhes</TooltipContent>
+                       <TooltipContent side="bottom" className="z-[100]">Ver detalhes</TooltipContent>
                       </Tooltip>
                       <Badge className={`${getStatusColor(projeto.status)} text-xs`}>
                         {getStatusLabel(projeto.status)}
@@ -806,7 +806,7 @@ export default function GestaoProjetos() {
                             <Eye className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="z-[100]">Ver detalhes</TooltipContent>
+                       <TooltipContent side="bottom" className="z-[100]">Ver detalhes</TooltipContent>
                       </Tooltip>
                       {canDelete('projetos', 'projetos.delete') && (
                         <Button 
