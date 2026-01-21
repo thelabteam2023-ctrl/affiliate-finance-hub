@@ -3,8 +3,8 @@
  * 
  * REGRA OBRIGATÓRIA DE CÂMBIO:
  * 
- * Prioridade 1: Cotação de Trabalho do projeto (se definida)
- * Prioridade 2: PTAX (cotação oficial do Banco Central)
+ * Prioridade 1: PTAX (cotação oficial do Banco Central) - SEMPRE PRIMÁRIA
+ * Prioridade 2: Cotação de Trabalho do projeto (FALLBACK se PTAX falhar)
  * 
  * ⚠️ NUNCA usar valores hardcoded no código.
  * Se nenhuma fonte estiver disponível, informar claramente.
@@ -29,8 +29,8 @@ export interface CotacaoInfo {
 /**
  * Hook para obter cotação centralizada respeitando prioridades
  * 
- * @param cotacaoTrabalho - Cotação de trabalho do projeto (opcional)
- * @param fonteCotacao - Fonte preferida: 'TRABALHO' ou 'PTAX'
+ * @param cotacaoTrabalho - Cotação de trabalho do projeto (fallback se PTAX falhar)
+ * @param fonteCotacao - Ignorado - PTAX é sempre primária, trabalho é fallback
  */
 export function useCotacaoConsolidacao(
   cotacaoTrabalho?: number | null,
@@ -39,18 +39,7 @@ export function useCotacaoConsolidacao(
   const { cotacaoUSD, loading } = useCotacoes();
 
   return useMemo(() => {
-    // Prioridade 1: Cotação de trabalho (se fonte = TRABALHO e valor definido)
-    if (fonteCotacao === "TRABALHO" && cotacaoTrabalho && cotacaoTrabalho > 0) {
-      return {
-        taxa: cotacaoTrabalho,
-        fonte: "TRABALHO",
-        loading: false,
-        descricao: `Cotação de Trabalho: R$ ${cotacaoTrabalho.toFixed(4)}`,
-        disponivel: true,
-      };
-    }
-
-    // Prioridade 2: PTAX (cotação oficial do BCB)
+    // Prioridade 1: PTAX (cotação oficial do BCB) - SEMPRE primária
     if (cotacaoUSD && cotacaoUSD > 0) {
       return {
         taxa: cotacaoUSD,
@@ -61,7 +50,18 @@ export function useCotacaoConsolidacao(
       };
     }
 
-    // Fallback: Nenhuma cotação disponível
+    // Prioridade 2: Cotação de trabalho como FALLBACK (se PTAX falhar)
+    if (cotacaoTrabalho && cotacaoTrabalho > 0) {
+      return {
+        taxa: cotacaoTrabalho,
+        fonte: "TRABALHO",
+        loading: false,
+        descricao: `Cotação de Trabalho (fallback): R$ ${cotacaoTrabalho.toFixed(4)}`,
+        disponivel: true,
+      };
+    }
+
+    // Fallback final: Nenhuma cotação disponível
     return {
       taxa: 0,
       fonte: "INDISPONIVEL",
@@ -69,7 +69,7 @@ export function useCotacaoConsolidacao(
       descricao: "Cotação indisponível - verifique configurações",
       disponivel: false,
     };
-  }, [cotacaoTrabalho, fonteCotacao, cotacaoUSD, loading]);
+  }, [cotacaoTrabalho, cotacaoUSD, loading]);
 }
 
 /**
