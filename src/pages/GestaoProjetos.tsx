@@ -551,13 +551,52 @@ export default function GestaoProjetos() {
                 onClick={() => navigate(`/projeto/${projeto.id}`)}
               >
                 <CardHeader className="pb-2 flex-shrink-0 space-y-2">
-                  {/* Linha 1: Nome do projeto com ícone */}
+                  {/* Linha 1: Ícone do projeto + Nome + Ações (estrela e olho) */}
                   <div className="flex items-start gap-2 md:gap-3">
                     <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <FolderKanban className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-sm md:text-base">{projeto.nome}</CardTitle>
+                      <div className="flex items-center gap-1.5">
+                        <CardTitle className="text-sm md:text-base flex-1">{projeto.nome}</CardTitle>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFavorite(projeto.id);
+                              }}
+                              className="p-1 rounded hover:bg-muted transition-colors flex-shrink-0"
+                            >
+                              <Star
+                                className={`h-4 w-4 ${
+                                  isFavorite(projeto.id)
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-muted-foreground hover:text-yellow-400"
+                                }`}
+                              />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="z-[100]">
+                            {isFavorite(projeto.id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProjetoParaVisualizar(projeto);
+                                setVisualizarOperadoresOpen(true);
+                              }}
+                              className="p-1 rounded hover:bg-muted transition-colors flex-shrink-0"
+                            >
+                              <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="z-[100]">Ver detalhes</TooltipContent>
+                        </Tooltip>
+                      </div>
                       {projeto.descricao && (
                         <p className="text-xs md:text-sm text-muted-foreground line-clamp-1">
                           {projeto.descricao}
@@ -565,47 +604,7 @@ export default function GestaoProjetos() {
                       )}
                     </div>
                   </div>
-                  {/* Linha 2: Ícones de ação (estrela e olho) */}
-                  <div className="flex items-center gap-1.5">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(projeto.id);
-                          }}
-                          className="p-1 rounded hover:bg-muted transition-colors"
-                        >
-                          <Star
-                            className={`h-4 w-4 ${
-                              isFavorite(projeto.id)
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-muted-foreground hover:text-yellow-400"
-                            }`}
-                          />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="z-[100]">
-                        {isFavorite(projeto.id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setProjetoParaVisualizar(projeto);
-                            setVisualizarOperadoresOpen(true);
-                          }}
-                          className="p-1 rounded hover:bg-muted transition-colors"
-                        >
-                          <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="z-[100]">Ver detalhes</TooltipContent>
-                    </Tooltip>
-                  </div>
-                  {/* Linha 3: Badge de status alinhado à esquerda */}
+                  {/* Linha 2: Badge de status alinhado à esquerda */}
                   <div>
                     <Badge className={`${getStatusColor(projeto.status)} text-xs`}>
                       {getStatusLabel(projeto.status)}
