@@ -60,13 +60,6 @@ function getStatusBadge(status: string, utilizada: boolean) {
           Liberada
         </Badge>
       );
-    case "PENDENTE":
-      return (
-        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]">
-          <Clock className="h-2.5 w-2.5 mr-0.5" />
-          Pendente
-        </Badge>
-      );
     case "NAO_LIBERADA":
       return (
         <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">
@@ -153,7 +146,6 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
   const freebetsDisponiveis = freebets.filter(
     (fb) => fb.status === "LIBERADA" && !fb.utilizada
   );
-  const freebetsPendentes = freebets.filter((fb) => fb.status === "PENDENTE");
   const freebetsUtilizadas = freebets.filter((fb) => fb.utilizada);
 
   return (
@@ -204,16 +196,6 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-            <Clock className="h-4 w-4 text-amber-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.totalPendentes}</div>
-            <p className="text-xs text-muted-foreground">Aguardando liberação</p>
-          </CardContent>
-        </Card>
 
         <Card className={metrics.proximasExpirar > 0 ? "border-red-500/20 bg-red-500/5" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

@@ -12,7 +12,7 @@ export interface FreebetRecebida {
   utilizada: boolean;
   data_utilizacao: string | null;
   aposta_id: string | null;
-  status: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA";
+  status: "LIBERADA" | "NAO_LIBERADA";
   tem_rollover: boolean;
 }
 
