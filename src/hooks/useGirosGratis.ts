@@ -135,7 +135,8 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
             parceiro_id,
             bookmaker_catalogo_id,
             bookmakers_catalogo (
-              logo_url
+              logo_url,
+              nome
             ),
             parceiros (
               nome
@@ -160,6 +161,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
       const girosFormatados: GiroGratisComMoeda[] = (data || []).map((g: any) => ({
         ...g,
         bookmaker_nome: g.bookmakers?.nome || "Desconhecido",
+        bookmaker_catalogo_nome: g.bookmakers?.bookmakers_catalogo?.nome || g.bookmakers?.nome || "Desconhecido",
         bookmaker_logo_url: g.bookmakers?.bookmakers_catalogo?.logo_url || null,
         parceiro_nome: g.bookmakers?.parceiros?.nome || null,
         bookmaker_moeda: g.bookmakers?.moeda || "BRL",
@@ -223,19 +225,21 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
   const porBookmaker = useMemo((): GirosGratisPorBookmaker[] => {
     const confirmados = giros.filter(g => g.status === "confirmado");
+    
+    // Agrupar por nome do catálogo (consolidado por casa, não por usuário)
     const grouped = confirmados.reduce((acc, g) => {
-      if (!acc[g.bookmaker_id]) {
-        const moeda = g.bookmaker_moeda || "BRL";
-        acc[g.bookmaker_id] = {
-          bookmaker_id: g.bookmaker_id,
-          bookmaker_nome: g.bookmaker_nome,
+      const catalogoNome = (g as any).bookmaker_catalogo_nome || g.bookmaker_nome;
+      
+      if (!acc[catalogoNome]) {
+        acc[catalogoNome] = {
+          bookmaker_id: catalogoNome, // Usar nome como chave
+          bookmaker_nome: catalogoNome,
           logo_url: g.bookmaker_logo_url,
-          parceiro_nome: g.parceiro_nome,
+          parceiro_nome: null, // Não mostrar parceiro na visão consolidada
           total_retorno: 0,
           total_giros: 0,
           total_registros: 0,
           media_retorno: 0,
-          moeda_original: moeda,
         };
       }
       
@@ -247,9 +251,9 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
         cotacaoTrabalho
       );
       
-      acc[g.bookmaker_id].total_retorno += valorConvertido;
-      acc[g.bookmaker_id].total_giros += g.quantidade_giros || 0;
-      acc[g.bookmaker_id].total_registros += 1;
+      acc[catalogoNome].total_retorno += valorConvertido;
+      acc[catalogoNome].total_giros += g.quantidade_giros || 0;
+      acc[catalogoNome].total_registros += 1;
       return acc;
     }, {} as Record<string, GirosGratisPorBookmaker>);
 

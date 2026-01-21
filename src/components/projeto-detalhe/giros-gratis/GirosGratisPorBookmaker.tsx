@@ -106,7 +106,7 @@ export function GirosGratisPorBookmaker({ data, formatCurrency, moedaConsolidaca
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Hash className="h-3 w-3" />
-                  <span>{bookmaker.total_giros} giros</span>
+                  <span>{bookmaker.total_registros} registros</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
