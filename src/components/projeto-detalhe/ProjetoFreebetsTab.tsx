@@ -994,13 +994,16 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
     return (
       <div className="space-y-6">
         {/* Header - Same pattern as Giros Grátis */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">Freebets</h2>
-            <p className="text-sm text-muted-foreground">
-              Gerencie freebets recebidas e acompanhe o estoque
-            </p>
-          </div>
+      {/* Header - Tudo em uma linha */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">Freebets</h2>
+          <p className="text-sm text-muted-foreground">
+            Gerencie freebets recebidas e acompanhe o estoque
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {periodFilterComponent}
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -1017,26 +1020,24 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
             </Button>
           </div>
         </div>
+      </div>
 
-        <Tabs value={activeNavTab} onValueChange={handleNavTabChange} className="space-y-6">
-          <div className="flex items-center justify-between border-b border-border/50">
-            <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6">
-              {NAV_ITEMS.map((item) => (
-                <TabsTrigger
-                  key={item.value}
-                  value={item.value}
-                  className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
-                >
-                  <item.icon className="h-4 w-4 mr-2 opacity-60" />
-                  {item.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            <div className="flex items-center gap-4">
-              {periodFilterComponent}
-              {modeToggle}
-            </div>
-          </div>
+      <Tabs value={activeNavTab} onValueChange={handleNavTabChange} className="space-y-6">
+        <div className="flex items-center justify-between border-b border-border/50">
+          <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6">
+            {NAV_ITEMS.map((item) => (
+              <TabsTrigger
+                key={item.value}
+                value={item.value}
+                className="bg-transparent border-0 rounded-none px-1 pb-3 pt-1 h-auto shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none text-muted-foreground/70 data-[state=active]:text-foreground transition-colors"
+              >
+                <item.icon className="h-4 w-4 mr-2 opacity-60" />
+                {item.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {modeToggle}
+        </div>
 
           <TabsContent value={activeNavTab} className="mt-0">
             {renderMainContent()}
@@ -1074,15 +1075,16 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   // Mode: Sidebar
   return (
     <div className="space-y-6">
-      {/* Header - Same pattern as Giros Grátis */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header - Tudo em uma linha */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">Freebets</h2>
           <p className="text-sm text-muted-foreground">
             Gerencie freebets recebidas e acompanhe o estoque
           </p>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {periodFilterComponent}
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -1098,7 +1100,6 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
               Nova Freebet
             </Button>
           </div>
-          {periodFilterComponent}
         </div>
       </div>
 
