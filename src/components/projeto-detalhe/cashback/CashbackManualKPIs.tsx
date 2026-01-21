@@ -1,13 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { DollarSign, TrendingUp, BarChart3 } from "lucide-react";
 import { CashbackManualMetrics } from "@/types/cashback-manual";
+import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
 
 interface CashbackManualKPIsProps {
   metrics: CashbackManualMetrics;
   formatCurrency: (value: number) => string;
+  moedaConsolidacao?: string;
 }
 
-export function CashbackManualKPIs({ metrics, formatCurrency }: CashbackManualKPIsProps) {
+export function CashbackManualKPIs({ metrics, formatCurrency, moedaConsolidacao = "BRL" }: CashbackManualKPIsProps) {
   const kpis = [
     {
       label: "Total Recebido",
@@ -15,6 +17,7 @@ export function CashbackManualKPIs({ metrics, formatCurrency }: CashbackManualKP
       icon: DollarSign,
       color: "text-emerald-500",
       bgColor: "bg-emerald-500/10",
+      showBreakdown: true,
     },
     {
       label: "Lançamentos",
@@ -22,6 +25,7 @@ export function CashbackManualKPIs({ metrics, formatCurrency }: CashbackManualKP
       icon: BarChart3,
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
+      showBreakdown: false,
     },
     {
       label: "Média/Lançamento",
@@ -29,6 +33,7 @@ export function CashbackManualKPIs({ metrics, formatCurrency }: CashbackManualKP
       icon: TrendingUp,
       color: "text-amber-500",
       bgColor: "bg-amber-500/10",
+      showBreakdown: false,
     },
   ];
 
@@ -41,8 +46,16 @@ export function CashbackManualKPIs({ metrics, formatCurrency }: CashbackManualKP
               <div className={`p-2 rounded-lg ${kpi.bgColor}`}>
                 <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
               </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground truncate">{kpi.label}</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs text-muted-foreground truncate">{kpi.label}</p>
+                  {kpi.showBreakdown && metrics.recebidoPorMoeda && metrics.recebidoPorMoeda.length > 0 && (
+                    <CurrencyBreakdownTooltip
+                      breakdown={metrics.recebidoPorMoeda}
+                      moedaConsolidacao={moedaConsolidacao}
+                    />
+                  )}
+                </div>
                 <p className={`text-lg font-bold ${kpi.color}`}>{kpi.value}</p>
               </div>
             </div>

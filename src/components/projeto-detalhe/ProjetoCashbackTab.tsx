@@ -162,7 +162,11 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
       />
 
       {/* KPIs */}
-      <CashbackManualKPIs metrics={metrics} formatCurrency={formatCurrency} />
+      <CashbackManualKPIs 
+        metrics={metrics} 
+        formatCurrency={formatCurrency} 
+        moedaConsolidacao={moedaConsolidacao}
+      />
 
       {/* Navegação por Sub-abas */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
