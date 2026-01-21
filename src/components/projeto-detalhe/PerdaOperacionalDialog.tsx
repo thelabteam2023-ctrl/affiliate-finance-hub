@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import {
   Dialog,
   DialogContent,
@@ -30,15 +31,7 @@ interface PerdaOperacionalDialogProps {
   onSuccess: () => void;
 }
 
-interface Bookmaker {
-  id: string;
-  nome: string;
-  saldo_atual: number;
-  moeda: string;
-  parceiro: {
-    nome: string;
-  } | null;
-}
+// Interface removida - usando BookmakerSaldo da RPC canônica
 
 const CATEGORIAS = [
   { value: "CONTA_LIMITADA", label: "Conta Limitada" },
@@ -62,8 +55,6 @@ export function PerdaOperacionalDialog({
   onSuccess,
 }: PerdaOperacionalDialogProps) {
   const { workspaceId } = useWorkspace();
-  const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [bookmakerId, setBookmakerId] = useState<string>("");
@@ -72,9 +63,15 @@ export function PerdaOperacionalDialog({
   const [status, setStatus] = useState<string>("PENDENTE");
   const [descricao, setDescricao] = useState<string>("");
 
+  // Usar RPC canônica para obter saldos
+  const { data: bookmakers = [], isLoading: loading } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open && !!projetoId,
+    includeZeroBalance: true, // Mostrar todas as casas do projeto
+  });
+
   useEffect(() => {
     if (open) {
-      fetchBookmakers();
       resetForm();
     }
   }, [open, projetoId]);
@@ -85,24 +82,6 @@ export function PerdaOperacionalDialog({
     setCategoria("");
     setStatus("PENDENTE");
     setDescricao("");
-  };
-
-  const fetchBookmakers = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("bookmakers")
-        .select("id, nome, saldo_atual, moeda, parceiro:parceiros(nome)")
-        .eq("projeto_id", projetoId)
-        .order("nome");
-
-      if (error) throw error;
-      setBookmakers(data || []);
-    } catch (error: any) {
-      toast.error("Erro ao carregar bookmakers: " + error.message);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleSubmit = async () => {
@@ -144,17 +123,27 @@ export function PerdaOperacionalDialog({
 
       if (error) throw error;
 
-      // If confirming immediately, deduct from bookmaker balance
+      // Se confirmando imediatamente, registrar no ledger (trigger atualiza saldo)
       if (status === 'CONFIRMADA') {
         const selectedBk = bookmakers.find(b => b.id === bookmakerId);
-        if (selectedBk) {
-          await supabase
-            .from("bookmakers")
-            .update({ 
-              saldo_atual: Math.max(0, selectedBk.saldo_atual - valorNumerico),
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", bookmakerId);
+        if (selectedBk && workspaceId) {
+          const { data: { user } } = await supabase.auth.getUser();
+          // Registrar no cash_ledger - trigger atualiza saldo automaticamente
+          await supabase.from("cash_ledger").insert({
+            user_id: user?.id,
+            workspace_id: workspaceId,
+            tipo_transacao: "AJUSTE_SALDO",
+            tipo_moeda: "FIAT",
+            moeda: selectedBk.moeda || "BRL",
+            valor: valorNumerico,
+            origem_tipo: "BOOKMAKER",
+            origem_bookmaker_id: bookmakerId,
+            destino_tipo: "CAIXA_OPERACIONAL",
+            ajuste_direcao: "SAIDA",
+            ajuste_motivo: `Perda operacional: ${categoria} - ${descricao || 'Sem descrição'}`,
+            status: "CONFIRMADO",
+            data_transacao: new Date().toISOString(),
+          });
         }
       }
 
@@ -190,25 +179,25 @@ export function PerdaOperacionalDialog({
                 {bookmakers.map((bk) => (
                   <SelectItem key={bk.id} value={bk.id}>
                     <div className="flex items-center justify-between w-full gap-4">
-                      <span>{bk.nome} {bk.parceiro?.nome ? `- ${bk.parceiro.nome}` : ""}</span>
+                      <span>{bk.nome} {bk.parceiro_nome ? `- ${bk.parceiro_nome}` : ""}</span>
                       <span className="text-xs text-muted-foreground">
-                        Saldo: {bk.moeda} {bk.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        Saldo: {bk.moeda} {bk.saldo_operavel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {/* Exibir saldo atual da bookmaker selecionada */}
+            {/* Exibir saldo operável da bookmaker selecionada (fonte: RPC canônica) */}
             {bookmakerId && (() => {
               const selectedBk = bookmakers.find(b => b.id === bookmakerId);
               if (selectedBk) {
                 return (
                   <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Saldo atual da casa:</span>
+                      <span className="text-sm text-muted-foreground">Saldo operável da casa:</span>
                       <span className="text-lg font-semibold text-primary">
-                        {selectedBk.moeda} {selectedBk.saldo_atual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {selectedBk.moeda} {selectedBk.saldo_operavel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
