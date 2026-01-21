@@ -27,8 +27,7 @@ import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHisto
 interface BookmakerVinculado {
   id: string;
   nome: string;
-  saldo_atual: number;
-  saldo_usd: number;
+  saldo_atual: number;  // Fonte única normalizada
   status: string;
   moeda: string;
   login_username: string;
@@ -82,9 +81,10 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
     setError(null);
 
     try {
+      // Usando apenas saldo_atual como fonte única (já normalizado no banco)
       const { data: vinculadosData, error: vinculadosError } = await supabase
         .from("bookmakers")
-        .select("id, nome, saldo_atual, saldo_usd, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id")
+        .select("id, nome, saldo_atual, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id")
         .eq("parceiro_id", parceiroId);
 
       if (vinculadosError) throw vinculadosError;
@@ -138,8 +138,9 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
 
   const handleCreateVinculo = (bookmakerId: string) => { onCreateVinculo?.(parceiroId, bookmakerId); };
 
+  // Usar saldo_atual para todas as moedas (normalizado no banco)
   const isUSDMoeda = (moeda: string) => moeda === "USD" || moeda === "USDT";
-  const getSaldoCorreto = (bm: BookmakerVinculado) => isUSDMoeda(bm.moeda) ? bm.saldo_usd || 0 : bm.saldo_atual || 0;
+  const getSaldoCorreto = (bm: BookmakerVinculado) => bm.saldo_atual || 0;
 
   const formatCurrency = (value: number, moeda: string = "BRL") => {
     const symbol = isUSDMoeda(moeda) ? "$" : "R$";

@@ -34,8 +34,7 @@ interface AjusteManualDialogProps {
 interface Bookmaker {
   id: string;
   nome: string;
-  saldo_atual: number;
-  saldo_usd: number;
+  saldo_operavel: number;
   moeda: string;
 }
 
@@ -99,13 +98,23 @@ export function AjusteManualDialog({
 
   const fetchData = async () => {
     try {
+      // Para bookmakers, usamos RPC canônica via query direta
+      // (não temos projetoId aqui, então buscamos todos os bookmakers via tabela)
       const [bookmarkersRes, contasRes, walletsRes] = await Promise.all([
-        supabase.from("bookmakers").select("id, nome, saldo_atual, saldo_usd, moeda").order("nome"),
+        supabase.from("bookmakers").select("id, nome, saldo_atual, moeda").order("nome"),
         supabase.from("contas_bancarias").select("id, banco, titular, parceiro_id").order("banco"),
         supabase.from("wallets_crypto").select("id, exchange, endereco, parceiro_id").order("exchange"),
       ]);
 
-      setBookmakers(bookmarkersRes.data || []);
+      // Mapear para formato compatível com UI (usar saldo_atual como operável neste contexto)
+      const mappedBookmakers: Bookmaker[] = (bookmarkersRes.data || []).map(bk => ({
+        id: bk.id,
+        nome: bk.nome,
+        saldo_operavel: bk.saldo_atual || 0,
+        moeda: bk.moeda || "BRL",
+      }));
+
+      setBookmakers(mappedBookmakers);
       setContas(contasRes.data || []);
       setWallets(walletsRes.data || []);
     } catch (error) {
@@ -244,27 +253,8 @@ export function AjusteManualDialog({
       const { error } = await supabase.from("cash_ledger").insert([transactionData]);
       if (error) throw error;
 
-      // Atualizar saldo do bookmaker se necessário
-      if (tipoDestino === "BOOKMAKER" && bookmakerId) {
-        const bookmaker = bookmakers.find(b => b.id === bookmakerId);
-        if (bookmaker) {
-          const campoSaldo = bookmaker.moeda === "USD" ? "saldo_usd" : "saldo_atual";
-          const saldoAtual = bookmaker.moeda === "USD" ? bookmaker.saldo_usd : bookmaker.saldo_atual;
-          const novoSaldo = saldoAtual + valorFinal;
-
-          const { error: updateError } = await supabase
-            .from("bookmakers")
-            .update({ 
-              [campoSaldo]: novoSaldo,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", bookmakerId);
-
-          if (updateError) {
-            console.error("Erro ao atualizar saldo do bookmaker:", updateError);
-          }
-        }
-      }
+      // Não atualizar saldo diretamente - o trigger do cash_ledger cuida disso
+      // A inserção acima no ledger já dispara atualizar_saldo_bookmaker_v2
 
       toast({
         title: "Ajuste registrado",
@@ -389,11 +379,14 @@ export function AjusteManualDialog({
                   <SelectValue placeholder="Selecione o bookmaker" />
                 </SelectTrigger>
                 <SelectContent>
-                  {bookmakers.map((bk) => (
-                    <SelectItem key={bk.id} value={bk.id}>
-                      {bk.nome} (Saldo: {bk.moeda === "USD" ? `$${bk.saldo_usd.toFixed(2)}` : `R$ ${bk.saldo_atual.toFixed(2)}`})
-                    </SelectItem>
-                  ))}
+                  {bookmakers.map((bk) => {
+                    const symbol = bk.moeda === "USD" || bk.moeda === "USDT" ? "$" : "R$";
+                    return (
+                      <SelectItem key={bk.id} value={bk.id}>
+                        {bk.nome} (Saldo: {symbol}{bk.saldo_operavel.toFixed(2)})
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

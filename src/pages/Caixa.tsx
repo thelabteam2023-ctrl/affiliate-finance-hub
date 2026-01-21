@@ -230,13 +230,17 @@ export default function Caixa() {
       if (cryptoError) throw cryptoError;
       setSaldosCrypto((saldosCryptoData || []) as unknown as SaldoCrypto[]);
 
-      // Fetch total bookmaker balance (BRL + USD separados)
+      // Fetch total bookmaker balance via RPC canônica (usando saldo_operavel consolidado)
+      // Para visão global do caixa, usamos apenas saldo_atual que já é normalizado
       const { data: bookmakersBalanceData } = await supabase
         .from("bookmakers")
-        .select("saldo_atual, saldo_usd");
+        .select("saldo_atual, moeda");
       
-      const totalBookmakersBRL = bookmakersBalanceData?.reduce((sum, b) => sum + (b.saldo_atual || 0), 0) || 0;
-      const totalBookmakersUSD = bookmakersBalanceData?.reduce((sum, b) => sum + (b.saldo_usd || 0), 0) || 0;
+      // Separar por moeda corretamente
+      const totalBookmakersBRL = bookmakersBalanceData?.filter(b => b.moeda !== 'USD' && b.moeda !== 'USDT' && b.moeda !== 'USDC')
+        .reduce((sum, b) => sum + (b.saldo_atual || 0), 0) || 0;
+      const totalBookmakersUSD = bookmakersBalanceData?.filter(b => b.moeda === 'USD' || b.moeda === 'USDT' || b.moeda === 'USDC')
+        .reduce((sum, b) => sum + (b.saldo_atual || 0), 0) || 0;
       setSaldoBookmakersBRL(totalBookmakersBRL);
       setSaldoBookmakersUSD(totalBookmakersUSD);
       // Legacy: manter compatibilidade com saldoBookmakers (usado em alguns lugares)
