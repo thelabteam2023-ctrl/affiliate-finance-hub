@@ -291,18 +291,28 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
   const vinculosDevolvidos = historico.filter((h) => h.data_desvinculacao !== null).length;
   const vinculosAtivos = historico.filter((h) => h.data_desvinculacao === null).length;
 
+  // Obter todas as moedas únicas do histórico
+  const moedasNoHistorico = [...new Set(historico.map((h) => h.moeda || "BRL"))].sort(
+    (a, b) => (a === "BRL" ? -1 : b === "BRL" ? 1 : a.localeCompare(b))
+  );
+
   // Agregar valores por moeda para exibição multi-moeda
+  // MANTÉM todas as moedas do histórico mesmo com valor zero
   const aggregateByMoeda = (
     items: HistoricoVinculo[],
     getter: (item: HistoricoVinculo) => number
   ): CurrencyAggregate[] => {
+    // Inicializar todas as moedas com zero
     const map: Record<string, number> = {};
+    moedasNoHistorico.forEach((moeda) => {
+      map[moeda] = 0;
+    });
+    // Somar valores
     items.forEach((item) => {
       const moeda = item.moeda || "BRL";
       map[moeda] = (map[moeda] || 0) + getter(item);
     });
     return Object.entries(map)
-      .filter(([_, valor]) => valor !== 0)
       .map(([moeda, valor]) => ({ moeda, valor }))
       .sort((a, b) => (a.moeda === "BRL" ? -1 : b.moeda === "BRL" ? 1 : 0));
   };
