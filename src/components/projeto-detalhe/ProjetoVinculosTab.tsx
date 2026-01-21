@@ -69,7 +69,6 @@ import {
   History,
   Coins,
   TrendingUp,
-  Info,
   IdCard,
   Copy,
   Check,
@@ -620,80 +619,28 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       </TabsList>
 
       <TabsContent value="ativos" className="space-y-4">
-        {/* KPIs - Grid unificada incluindo Delta Cambial */}
-        <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-5">
-        {/* Card Contas no Projeto - Refatorado */}
-        <ContasNoProjetoCard 
-          projetoId={projetoId} 
-          hasForeignCurrency={consolidatedTotals.hasForeignCurrency} 
-        />
-
-        {/* Card Saldo Operável - Refatorado */}
-        <SaldoOperavelCard projetoId={projetoId} />
-
-        {/* Bônus Creditados - Total histórico de bônus já lançados no projeto */}
-        {bonusSummary.total_credited > 0 && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card className="cursor-help">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center gap-1">
-                      Bônus Creditados
-                      <Info className="h-3 w-3 text-muted-foreground" />
-                    </CardTitle>
-                    <Gift className="h-4 w-4 text-purple-400" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-purple-400">
-                      {formatCurrency(bonusSummary.total_credited, "USD")}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {bonusSummary.bookmakers_with_active_bonus} casa{bonusSummary.bookmakers_with_active_bonus !== 1 ? 's' : ''} com bônus
-                    </p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium">Total de bônus já creditados neste projeto</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Valor histórico de bônus registrados.
-                    Não representa saldo ativo ou valor em conversão.
-                    O bônus já está incluído no saldo de cada casa.
-                  </p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Parceiros Únicos</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Set(vinculos.map((v) => v.parceiro_id).filter(Boolean)).size}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Parceiros com vínculos no projeto
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Delta Cambial - compacto na mesma linha dos KPIs */}
-        {consolidatedTotals.hasForeignCurrency && (
-          <DeltaCambialCard
-            projetoId={projetoId}
-            cotacaoTrabalho={cotacaoTrabalho}
-            cotacaoTrabalhoEur={cotacaoTrabalhoEur}
-            cotacaoTrabalhoGbp={cotacaoTrabalhoGbp}
-            onCotacaoUpdated={fetchCotacaoTrabalho}
+        {/* KPIs - Grid reorganizada: Painel de Relacionamentos (2 cols) + Saldo Operável + Delta Cambial */}
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+          {/* Painel de Relacionamentos - ocupa 2 colunas */}
+          <ContasNoProjetoCard 
+            projetoId={projetoId} 
+            hasForeignCurrency={consolidatedTotals.hasForeignCurrency} 
           />
-        )}
-      </div>
+
+          {/* Card Saldo Operável */}
+          <SaldoOperavelCard projetoId={projetoId} />
+
+          {/* Delta Cambial - aparece apenas se houver moeda estrangeira */}
+          {consolidatedTotals.hasForeignCurrency && (
+            <DeltaCambialCard
+              projetoId={projetoId}
+              cotacaoTrabalho={cotacaoTrabalho}
+              cotacaoTrabalhoEur={cotacaoTrabalhoEur}
+              cotacaoTrabalhoGbp={cotacaoTrabalhoGbp}
+              onCotacaoUpdated={fetchCotacaoTrabalho}
+            />
+          )}
+        </div>
       
       {/* Alerta de discrepância de saldo */}
       <BalanceDiscrepancyAlert
