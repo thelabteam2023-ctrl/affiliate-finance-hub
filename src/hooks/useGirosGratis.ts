@@ -340,8 +340,55 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
   const updateGiro = async (id: string, formData: Partial<GiroGratisFormData>): Promise<boolean> => {
     try {
-      const updateData: any = {};
+      // 1. Buscar o giro atual para calcular delta
+      const giroAtual = giros.find(g => g.id === id);
+      if (!giroAtual) {
+        throw new Error("Giro não encontrado");
+      }
 
+      const valorAntigo = Number(giroAtual.valor_retorno);
+      const valorNovo = formData.valor_retorno !== undefined ? Number(formData.valor_retorno) : valorAntigo;
+      const delta = valorNovo - valorAntigo;
+
+      // 2. Se o valor mudou, criar ajuste no ledger
+      if (delta !== 0) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Usuário não autenticado");
+
+        const moeda = giroAtual.bookmaker_moeda || "BRL";
+        const isAumento = delta > 0;
+
+        // Inserir ajuste no ledger
+        const ledgerData = {
+          tipo_transacao: isAumento ? "GIRO_GRATIS" : "GIRO_GRATIS_ESTORNO",
+          valor: Math.abs(delta),
+          moeda,
+          workspace_id: giroAtual.workspace_id,
+          user_id: user.id,
+          descricao: `Ajuste de giro grátis: ${giroAtual.bookmaker_nome} (${isAumento ? "+" : "-"}${Math.abs(delta).toFixed(2)})`,
+          status: "CONFIRMADO",
+          impacta_caixa_operacional: true,
+          tipo_moeda: "FIAT",
+          ...(isAumento 
+            ? { destino_bookmaker_id: giroAtual.bookmaker_id }
+            : { origem_bookmaker_id: giroAtual.bookmaker_id }
+          ),
+        };
+
+        const { error: ledgerError } = await supabase
+          .from("cash_ledger")
+          .insert(ledgerData);
+
+        if (ledgerError) {
+          console.error("[updateGiro] Erro ao inserir ajuste no ledger:", ledgerError);
+          throw new Error("Erro ao ajustar saldo no ledger");
+        }
+
+        console.log(`[updateGiro] Ajuste de ${delta} aplicado para ${giroAtual.bookmaker_nome}`);
+      }
+
+      // 3. Atualizar o registro
+      const updateData: any = {};
       if (formData.bookmaker_id !== undefined) updateData.bookmaker_id = formData.bookmaker_id;
       if (formData.modo !== undefined) updateData.modo = formData.modo;
       if (formData.data_registro !== undefined) updateData.data_registro = formData.data_registro.toISOString();
@@ -363,7 +410,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
       if (error) throw error;
 
-      toast.success("Giro grátis atualizado!");
+      toast.success(delta !== 0 ? "Giro grátis atualizado e saldo ajustado!" : "Giro grátis atualizado!");
       await fetchGiros();
       invalidateProjectKPIs();
       return true;
