@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,7 +45,7 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [showHistorico, setShowHistorico] = useState(false);
 
-  const { formatCurrency } = useProjectCurrencyFormat();
+  const { formatCurrency: formatCurrencyBase } = useProjectCurrencyFormat();
 
   // Calcular datas baseado no período
   const dateRange = useMemo(() => {
@@ -70,6 +70,11 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
     dataInicio: dateRange?.start || null,
     dataFim: dateRange?.end || null,
   });
+
+  // Formatador que usa a moeda de consolidação do projeto
+  const formatCurrency = useCallback((valor: number) => {
+    return formatCurrencyBase(valor, moedaConsolidacao || "BRL");
+  }, [formatCurrencyBase, moedaConsolidacao]);
 
   // Hook para giros disponíveis (promoções pendentes)
   const {
