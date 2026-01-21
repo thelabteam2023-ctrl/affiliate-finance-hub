@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, List, Building2, RefreshCw, DollarSign } from "lucide-react";
-import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
+import { Badge } from "@/components/ui/badge";
+import { Plus, List, Building2, RefreshCw, DollarSign, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCashbackManual } from "@/hooks/useCashbackManual";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
 import { DateRange } from "react-day-picker";
@@ -20,6 +21,11 @@ interface ProjetoCashbackTabProps {
   projetoId: string;
 }
 
+// Helper para símbolo de moeda
+const getCurrencySymbol = (moeda: string) => {
+  return moeda === "USD" ? "$" : "R$";
+};
+
 export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
   // Estados para dialog
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -29,14 +35,12 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
   const [period, setPeriod] = useState<StandardPeriodFilter>("30dias");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
 
-  const { formatCurrency } = useProjectCurrencyFormat();
-
   // Calcular datas baseado no período
   const dateRange = useMemo(() => {
     return getDateRangeFromPeriod(period, customDateRange);
   }, [period, customDateRange]);
 
-  // Hook para cashback manual
+  // Hook para cashback manual (agora com moeda de consolidação)
   const {
     registros,
     metrics,
@@ -45,11 +49,22 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
     refresh,
     criarCashback,
     deletarCashback,
+    moedaConsolidacao,
+    cotacaoInfo,
   } = useCashbackManual({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
   });
+
+  // Formatter usando a moeda de consolidação
+  const formatCurrency = (value: number) => {
+    const symbol = getCurrencySymbol(moedaConsolidacao);
+    return `${symbol} ${value.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
 
   // Handler para salvar
   const handleSaveCashback = async (data: CashbackManualFormData): Promise<boolean> => {
@@ -107,8 +122,29 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
             <div className="p-3 rounded-xl bg-emerald-500/20">
               <DollarSign className="h-6 w-6 text-emerald-500" />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Recebido no Período</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">Total Recebido no Período</p>
+                {cotacaoInfo.disponivel && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Badge variant="outline" className="text-xs font-normal gap-1">
+                          <Info className="h-3 w-3" />
+                          {moedaConsolidacao}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">
+                          Valores convertidos para {moedaConsolidacao === "USD" ? "Dólar" : "Real"}
+                          <br />
+                          Fonte: {cotacaoInfo.fonte} ({cotacaoInfo.taxa.toFixed(4)})
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
               <p className="text-3xl font-bold text-emerald-500">
                 {formatCurrency(metrics.totalRecebido)}
               </p>

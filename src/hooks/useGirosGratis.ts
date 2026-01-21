@@ -330,5 +330,12 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     updateGiro,
     deleteGiro,
     confirmarGiro,
+    // Expor configuração de moeda para transparência na UI
+    moedaConsolidacao: currencyConfig.moedaConsolidacao,
+    cotacaoInfo: {
+      fonte: currencyConfig.fonte,
+      taxa: currencyConfig.cotacaoAtual,
+      disponivel: currencyConfig.disponivel,
+    },
   };
 }
