@@ -97,13 +97,30 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         .not("bookmaker_id", "is", null)
         .in("bookmaker_id", bookmakerIds);
 
+      // Cashback por bookmaker - valor original
+      const { data: cashbackData } = await supabase
+        .from("cashback_manual")
+        .select("bookmaker_id, valor")
+        .eq("projeto_id", projetoId)
+        .in("bookmaker_id", bookmakerIds);
+
+      // Giros Grátis por bookmaker - valor do retorno (ganho líquido)
+      const { data: girosData } = await supabase
+        .from("giros_gratis")
+        .select("bookmaker_id, valor_retorno")
+        .eq("projeto_id", projetoId)
+        .eq("status", "CONFIRMADO")
+        .in("bookmaker_id", bookmakerIds);
+
       // Agregar por bookmaker - valores originais SEM conversão
       // Separar CONFIRMADO de PENDENTE para clareza
       const depositosConfirmadosMap: Record<string, number> = {};
       const depositosPendentesMap: Record<string, number> = {};
       const saquesConfirmadosMap: Record<string, number> = {};
       const saquesPendentesMap: Record<string, number> = {};
-      const lucroMap: Record<string, number> = {};
+      const lucroApostasMap: Record<string, number> = {};
+      const cashbackMap: Record<string, number> = {};
+      const girosGratisMap: Record<string, number> = {};
 
       depositos?.forEach((d: any) => {
         if (d.status === "CONFIRMADO") {
@@ -123,27 +140,47 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
 
       apostasData?.forEach((a) => {
         if (a.bookmaker_id) {
-          lucroMap[a.bookmaker_id] = (lucroMap[a.bookmaker_id] || 0) + Number(a.lucro_prejuizo || 0);
+          lucroApostasMap[a.bookmaker_id] = (lucroApostasMap[a.bookmaker_id] || 0) + Number(a.lucro_prejuizo || 0);
+        }
+      });
+
+      cashbackData?.forEach((c) => {
+        if (c.bookmaker_id) {
+          cashbackMap[c.bookmaker_id] = (cashbackMap[c.bookmaker_id] || 0) + Number(c.valor || 0);
+        }
+      });
+
+      girosData?.forEach((g) => {
+        if (g.bookmaker_id) {
+          girosGratisMap[g.bookmaker_id] = (girosGratisMap[g.bookmaker_id] || 0) + Number(g.valor_retorno || 0);
         }
       });
 
       // Montar histórico com moeda original - SEM CONVERSÃO
-      const mappedHistorico: HistoricoVinculo[] = historicoData.map((h: any) => ({
-        id: h.id,
-        bookmaker_id: h.bookmaker_id,
-        bookmaker_nome: h.bookmaker_nome,
-        parceiro_id: h.parceiro_id,
-        parceiro_nome: h.parceiro_nome,
-        data_vinculacao: h.data_vinculacao,
-        data_desvinculacao: h.data_desvinculacao,
-        status_final: h.status_final,
-        moeda: h.bookmaker?.moeda || 'BRL',
-        total_depositado: depositosConfirmadosMap[h.bookmaker_id] || 0,
-        total_depositado_pendente: depositosPendentesMap[h.bookmaker_id] || 0,
-        total_sacado: saquesConfirmadosMap[h.bookmaker_id] || 0,
-        total_sacado_pendente: saquesPendentesMap[h.bookmaker_id] || 0,
-        lucro_operacional: lucroMap[h.bookmaker_id] || 0,
-      }));
+      // Lucro Operacional = Apostas + Cashback + Giros Grátis (todas as fontes de ganho)
+      const mappedHistorico: HistoricoVinculo[] = historicoData.map((h: any) => {
+        const lucroApostas = lucroApostasMap[h.bookmaker_id] || 0;
+        const lucroCashback = cashbackMap[h.bookmaker_id] || 0;
+        const lucroGiros = girosGratisMap[h.bookmaker_id] || 0;
+        const lucroOperacionalTotal = lucroApostas + lucroCashback + lucroGiros;
+
+        return {
+          id: h.id,
+          bookmaker_id: h.bookmaker_id,
+          bookmaker_nome: h.bookmaker_nome,
+          parceiro_id: h.parceiro_id,
+          parceiro_nome: h.parceiro_nome,
+          data_vinculacao: h.data_vinculacao,
+          data_desvinculacao: h.data_desvinculacao,
+          status_final: h.status_final,
+          moeda: h.bookmaker?.moeda || 'BRL',
+          total_depositado: depositosConfirmadosMap[h.bookmaker_id] || 0,
+          total_depositado_pendente: depositosPendentesMap[h.bookmaker_id] || 0,
+          total_sacado: saquesConfirmadosMap[h.bookmaker_id] || 0,
+          total_sacado_pendente: saquesPendentesMap[h.bookmaker_id] || 0,
+          lucro_operacional: lucroOperacionalTotal,
+        };
+      });
 
       setHistorico(mappedHistorico);
     } catch (error: any) {
