@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { PROJETO_RESULTADO_QUERY_KEY } from "./useProjetoResultado";
+import { estornarGiroGratisViaLedger } from "@/lib/ledgerService";
 import { 
   GiroGratis, 
   GiroGratisComBookmaker, 
@@ -375,20 +376,50 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
   const deleteGiro = async (id: string): Promise<boolean> => {
     try {
+      // 1. Buscar dados do giro para estorno
+      const giroToDelete = giros.find(g => g.id === id);
+      if (!giroToDelete) {
+        throw new Error("Giro não encontrado");
+      }
+
+      // 2. Buscar dados necessários para o estorno
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // 3. Criar estorno no ledger (débito para reverter o crédito original)
+      const moeda = giroToDelete.bookmaker_moeda || "BRL";
+      const estornoResult = await estornarGiroGratisViaLedger({
+        bookmakerId: giroToDelete.bookmaker_id,
+        valor: Number(giroToDelete.valor_retorno),
+        moeda,
+        workspaceId: giroToDelete.workspace_id,
+        userId: user.id,
+        descricao: `Estorno de giro grátis: ${giroToDelete.bookmaker_nome}`,
+        giroGratisId: id,
+      });
+
+      if (!estornoResult.success) {
+        throw new Error(estornoResult.error || "Erro ao estornar no ledger");
+      }
+
+      // 4. Marcar como cancelado
       const { error } = await supabase
         .from("giros_gratis" as any)
-        .update({ status: "cancelado" })
+        .update({ 
+          status: "cancelado",
+          cash_ledger_id: estornoResult.entryId, // Referência ao estorno
+        })
         .eq("id", id);
 
       if (error) throw error;
 
-      toast.success("Registro removido");
+      toast.success("Giro grátis removido e saldo revertido!");
       await fetchGiros();
       invalidateProjectKPIs();
       return true;
     } catch (err) {
       console.error("Erro ao remover giro grátis:", err);
-      toast.error("Erro ao remover");
+      toast.error("Erro ao remover giro grátis");
       return false;
     }
   };

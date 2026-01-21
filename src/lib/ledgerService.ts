@@ -49,7 +49,9 @@ export type LedgerTransactionType =
   | 'BONUS_CREDITADO'
   | 'BONUS_ESTORNO'
   | 'GANHO_CAMBIAL'
-  | 'PERDA_CAMBIAL';
+  | 'PERDA_CAMBIAL'
+  | 'GIRO_GRATIS'
+  | 'GIRO_GRATIS_ESTORNO';
 
 export interface LedgerEntryInput {
   /** Tipo da transação - determina como o trigger processa */
@@ -405,6 +407,32 @@ export async function registrarPerdaCambialViaLedger(params: {
     impactaCaixaOperacional: true,
     referenciaTransacaoId: params.transacaoOrigemId,
     auditoriaMetadata: { tipo: 'perda_cambial' },
+  });
+}
+
+/**
+ * Estorna giro grátis via ledger.
+ * Débito na bookmaker especificada (remove o ganho do saldo).
+ */
+export async function estornarGiroGratisViaLedger(params: {
+  bookmakerId: string;
+  valor: number;
+  moeda: string;
+  workspaceId: string;
+  userId: string;
+  descricao?: string;
+  giroGratisId?: string;
+}): Promise<LedgerEntryResult> {
+  return insertLedgerEntry({
+    tipoTransacao: 'GIRO_GRATIS_ESTORNO',
+    valor: params.valor,
+    moeda: params.moeda,
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+    origemBookmakerId: params.bookmakerId,
+    descricao: params.descricao || 'Estorno de giro grátis',
+    impactaCaixaOperacional: true,
+    auditoriaMetadata: params.giroGratisId ? { giro_gratis_id: params.giroGratisId } : undefined,
   });
 }
 
