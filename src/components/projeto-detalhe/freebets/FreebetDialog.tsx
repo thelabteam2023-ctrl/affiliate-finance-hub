@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,8 +31,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Gift, Loader2, Building2 } from "lucide-react";
+import { CalendarIcon, Gift, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
+import { BookmakerSelectOption } from "@/components/bookmakers/BookmakerSelectOption";
 
 const formSchema = z.object({
   bookmaker_id: z.string().min(1, "Selecione uma casa"),
@@ -42,14 +44,6 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
-
-interface Bookmaker {
-  id: string;
-  nome: string;
-  logo_url: string | null;
-  parceiro_nome: string | null;
-  moeda: string;
-}
 
 interface FreebetDialogProps {
   open: boolean;
@@ -74,11 +68,39 @@ export function FreebetDialog({
   preselectedBookmakerId,
   freebet,
 }: FreebetDialogProps) {
-  const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [bookmakerId, setBookmakerId] = useState(preselectedBookmakerId || "");
   const [saving, setSaving] = useState(false);
 
   const isEditing = !!freebet;
+
+  // Use the same hook as Giros Grátis
+  const { 
+    data: bookmakersData,
+    isLoading: loadingBookmakers 
+  } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: open,
+    includeZeroBalance: true,
+    currentBookmakerId: freebet?.bookmaker_id || preselectedBookmakerId || null
+  });
+
+  // Map to format used by BookmakerSelectOption
+  const bookmakers = useMemo(() => {
+    return (bookmakersData || []).map((bk) => ({
+      id: bk.id,
+      nome: bk.nome,
+      moeda: bk.moeda || "BRL",
+      logo_url: bk.logo_url || null,
+      parceiro_nome: bk.parceiro_nome || null,
+      saldo_operavel: bk.saldo_operavel || 0,
+      saldo_freebet: bk.saldo_freebet || 0,
+    }));
+  }, [bookmakersData]);
+
+  const selectedBookmaker = useMemo(() => 
+    bookmakers.find(b => b.id === bookmakerId),
+    [bookmakers, bookmakerId]
+  );
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -90,50 +112,11 @@ export function FreebetDialog({
     },
   });
 
-  // Load bookmakers
-  useEffect(() => {
-    if (!open || !projetoId) return;
-
-    const fetchBookmakers = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("bookmakers")
-          .select(`
-            id,
-            nome,
-            moeda,
-            parceiros (nome),
-            bookmakers_catalogo (logo_url)
-          `)
-          .eq("projeto_id", projetoId)
-          .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
-
-        if (error) throw error;
-
-        const formatted: Bookmaker[] = (data || []).map((bk: any) => ({
-          id: bk.id,
-          nome: bk.nome,
-          moeda: bk.moeda || "BRL",
-          logo_url: bk.bookmakers_catalogo?.logo_url || null,
-          parceiro_nome: bk.parceiros?.nome || null,
-        }));
-
-        setBookmakers(formatted);
-      } catch (err) {
-        console.error("Erro ao carregar bookmakers:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBookmakers();
-  }, [open, projetoId]);
-
-  // Reset form when dialog opens
+  // Reset form and state when dialog opens
   useEffect(() => {
     if (open) {
       if (freebet) {
+        setBookmakerId(freebet.bookmaker_id);
         form.reset({
           bookmaker_id: freebet.bookmaker_id,
           valor: freebet.valor,
@@ -141,6 +124,7 @@ export function FreebetDialog({
           data_validade: freebet.data_validade ? new Date(freebet.data_validade) : null,
         });
       } else {
+        setBookmakerId(preselectedBookmakerId || "");
         form.reset({
           bookmaker_id: preselectedBookmakerId || "",
           valor: 0,
@@ -150,6 +134,11 @@ export function FreebetDialog({
       }
     }
   }, [open, freebet, preselectedBookmakerId, form]);
+
+  // Sync bookmaker selection with form
+  useEffect(() => {
+    form.setValue("bookmaker_id", bookmakerId);
+  }, [bookmakerId, form]);
 
   const onSubmit = async (data: FormData) => {
     setSaving(true);
@@ -209,8 +198,6 @@ export function FreebetDialog({
     }
   };
 
-  const selectedBookmaker = bookmakers.find(b => b.id === form.watch("bookmaker_id"));
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -223,58 +210,31 @@ export function FreebetDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Bookmaker */}
+            {/* Bookmaker - Same pattern as Giros Grátis */}
             <FormField
               control={form.control}
               name="bookmaker_id"
-              render={({ field }) => (
+              render={() => (
                 <FormItem>
                   <FormLabel>Casa</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={loading || !!preselectedBookmakerId}
+                  <Select 
+                    value={bookmakerId} 
+                    onValueChange={setBookmakerId}
+                    disabled={!!preselectedBookmakerId}
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma casa">
-                          {selectedBookmaker && (
-                            <div className="flex items-center gap-2">
-                              {selectedBookmaker.logo_url ? (
-                                <img
-                                  src={selectedBookmaker.logo_url}
-                                  alt={selectedBookmaker.nome}
-                                  className="h-5 w-5 rounded object-contain bg-white p-0.5"
-                                />
-                              ) : (
-                                <Building2 className="h-4 w-4" />
-                              )}
-                              <span>{selectedBookmaker.nome}</span>
-                            </div>
-                          )}
-                        </SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
+                    <SelectTrigger disabled={loadingBookmakers} className="h-auto min-h-10">
+                      {loadingBookmakers ? (
+                        <span className="text-muted-foreground">Carregando...</span>
+                      ) : selectedBookmaker ? (
+                        <BookmakerSelectOption bookmaker={selectedBookmaker} />
+                      ) : (
+                        <span className="text-muted-foreground">Selecione uma casa</span>
+                      )}
+                    </SelectTrigger>
                     <SelectContent>
-                      {bookmakers.map((bk) => (
-                        <SelectItem key={bk.id} value={bk.id}>
-                          <div className="flex items-center gap-2">
-                            {bk.logo_url ? (
-                              <img
-                                src={bk.logo_url}
-                                alt={bk.nome}
-                                className="h-5 w-5 rounded object-contain bg-white p-0.5"
-                              />
-                            ) : (
-                              <Building2 className="h-4 w-4" />
-                            )}
-                            <span>{bk.nome}</span>
-                            {bk.parceiro_nome && (
-                              <span className="text-xs text-muted-foreground">
-                                ({bk.parceiro_nome})
-                              </span>
-                            )}
-                          </div>
+                      {bookmakers.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          <BookmakerSelectOption bookmaker={b} />
                         </SelectItem>
                       ))}
                     </SelectContent>
