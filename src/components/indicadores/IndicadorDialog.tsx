@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { validateCPF, formatCPF } from "@/lib/validators";
 import { Handshake, Target } from "lucide-react";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface IndicadorDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ interface AcordoData {
 
 export function IndicadorDialog({ open, onOpenChange, indicador, isViewMode }: IndicadorDialogProps) {
   const { toast } = useToast();
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
@@ -165,15 +167,7 @@ export function IndicadorDialog({ open, onOpenChange, indicador, isViewMode }: I
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      if (!workspaceId) throw new Error("Workspace não disponível nesta aba");
 
       const payload = {
         user_id: user.id,

@@ -22,6 +22,7 @@ import {
 import { pernasToInserts } from "@/types/apostasPernas";
 import { SupportedCurrency } from "@/types/currency";
 import { useCurrencySnapshot } from "./useCurrencySnapshot";
+import { useWorkspace } from "./useWorkspace";
 
 export interface UseApostasUnificadaReturn {
   loading: boolean;
@@ -39,6 +40,7 @@ export interface UseApostasUnificadaReturn {
 
 export function useApostasUnificada(): UseApostasUnificadaReturn {
   const [loading, setLoading] = useState(false);
+  const { workspaceId } = useWorkspace();
   const { getSnapshotFields, isForeignCurrency } = useCurrencySnapshot();
 
   // Buscar operações de arbitragem de um projeto
@@ -106,17 +108,8 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         return null;
       }
 
-      // Buscar workspace_id do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-      if (!workspaceMember?.workspace_id) {
-        toast.error("Workspace não encontrado");
+      if (!workspaceId) {
+        toast.error("Workspace não disponível nesta aba");
         return null;
       }
 
@@ -134,7 +127,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
 
       const insertData: ApostaUnificadaInsert = {
         user_id: user.id,
-        workspace_id: workspaceMember.workspace_id,
+        workspace_id: workspaceId,
         projeto_id: params.projeto_id,
         forma_registro: "ARBITRAGEM",
         estrategia: params.estrategia,
@@ -252,7 +245,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [workspaceId]);
 
   // Deletar operação
   const deletarArbitragem = useCallback(async (id: string): Promise<boolean> => {

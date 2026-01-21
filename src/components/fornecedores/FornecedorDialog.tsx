@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCPF, validateCPF } from "@/lib/validators";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface FornecedorDialogProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface FornecedorDialogProps {
 
 export function FornecedorDialog({ open, onOpenChange, fornecedor, isViewMode }: FornecedorDialogProps) {
   const { toast } = useToast();
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
@@ -76,15 +78,7 @@ export function FornecedorDialog({ open, onOpenChange, fornecedor, isViewMode }:
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      if (!workspaceId) throw new Error("Workspace não disponível nesta aba");
 
       const payload = {
         user_id: user.id,

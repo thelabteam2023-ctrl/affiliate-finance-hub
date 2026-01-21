@@ -16,6 +16,7 @@ import { Loader2, DollarSign, User, FolderKanban, Calendar } from "lucide-react"
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface ParticipacaoPendente {
   id: string;
@@ -47,6 +48,7 @@ export function PagamentoParticipacaoDialog({
   participacao,
   onSuccess,
 }: PagamentoParticipacaoDialogProps) {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [observacoes, setObservacoes] = useState("");
   
@@ -94,17 +96,8 @@ export function PagamentoParticipacaoDialog({
         return;
       }
 
-      // Buscar workspace_id do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", session.session.user.id)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-      if (!workspaceMember?.workspace_id) {
-        toast.error("Workspace não encontrado");
+      if (!workspaceId) {
+        toast.error("Workspace não disponível nesta aba");
         return;
       }
 
@@ -113,7 +106,7 @@ export function PagamentoParticipacaoDialog({
         .from("cash_ledger")
         .insert({
           user_id: session.session.user.id,
-          workspace_id: workspaceMember.workspace_id,
+          workspace_id: workspaceId,
           tipo_transacao: "DISTRIBUICAO_LUCRO",
           valor: participacao.valor_participacao,
           moeda: "BRL",
