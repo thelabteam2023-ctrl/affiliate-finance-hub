@@ -7,6 +7,7 @@ import {
   registrarCashbackViaLedger, 
   estornarCashbackViaLedger 
 } from "@/lib/ledgerService";
+import { usePromotionalCurrencyConversion } from "@/hooks/usePromotionalCurrencyConversion";
 import {
   CashbackManualComBookmaker,
   CashbackManualFormData,
@@ -27,6 +28,13 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
   const [registros, setRegistros] = useState<CashbackManualComBookmaker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Hook centralizado para conversão de moeda
+  const { 
+    config: currencyConfig, 
+    converterParaConsolidacao,
+    loading: currencyLoading 
+  } = usePromotionalCurrencyConversion(projetoId);
 
   // Fetch registros de cashback manual
   const fetchRegistros = useCallback(async () => {
@@ -80,13 +88,23 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
     fetchAll();
   }, [fetchAll]);
 
-  // Métricas calculadas (usando valor_brl_referencia para consistência entre moedas)
+  /**
+   * MÉTRICAS COM CONVERSÃO PARA MOEDA DE CONSOLIDAÇÃO
+   * 
+   * REGRA: Valores são convertidos para a moeda de consolidação do projeto
+   * usando a cotação configurada (Trabalho ou PTAX).
+   * Isso garante que totais sejam matematicamente corretos, mesmo com
+   * casas em diferentes moedas.
+   */
   const metrics: CashbackManualMetrics = useMemo(() => {
-    // Usar valor_brl_referencia quando disponível, senão usar valor original
+    // Converter cada valor para moeda de consolidação antes de somar
     const totalRecebido = registros.reduce((acc, r) => {
-      const valorBRL = r.valor_brl_referencia ?? Number(r.valor);
-      return acc + valorBRL;
+      const moedaOrigem = r.moeda_operacao || r.bookmaker?.moeda || "BRL";
+      const valorOriginal = Number(r.valor);
+      const valorConvertido = converterParaConsolidacao(valorOriginal, moedaOrigem);
+      return acc + valorConvertido;
     }, 0);
+    
     const totalLancamentos = registros.length;
     const mediaPorLancamento = totalLancamentos > 0 ? totalRecebido / totalLancamentos : 0;
 
@@ -95,11 +113,15 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
       totalLancamentos,
       mediaPorLancamento,
     };
-  }, [registros]);
+  }, [registros, converterParaConsolidacao]);
 
-  // Dados por bookmaker (agrupado por catálogo, com breakdown por parceiro)
+  /**
+   * DADOS POR BOOKMAKER COM CONVERSÃO
+   * 
+   * Agrupa por catálogo da casa e converte valores para moeda de consolidação.
+   * A moeda exibida será sempre a moeda de consolidação do projeto.
+   */
   const porBookmaker: CashbackManualPorBookmaker[] = useMemo(() => {
-    // Primeiro, agrupar por catálogo da casa
     const catalogoMap = new Map<string, {
       bookmaker_catalogo_id: string | null;
       bookmaker_nome: string;
@@ -111,30 +133,32 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
     }>();
 
     registros.forEach((registro) => {
-      // Key é o catálogo ou o nome da casa se não tiver catálogo
       const catalogoId = registro.bookmaker?.bookmaker_catalogo_id || registro.bookmaker_id;
       const key = catalogoId || registro.bookmaker?.nome || "Casa";
       
       const parceiroId = registro.bookmaker?.parceiro_id || null;
       const parceiroNome = registro.bookmaker?.parceiro?.nome || null;
       const parceiroKey = parceiroId || "sem_parceiro";
+
+      // CRÍTICO: Converter valor para moeda de consolidação
+      const moedaOrigem = registro.moeda_operacao || registro.bookmaker?.moeda || "BRL";
+      const valorConvertido = converterParaConsolidacao(Number(registro.valor), moedaOrigem);
       
       const existing = catalogoMap.get(key);
 
       if (existing) {
-        existing.totalRecebido += Number(registro.valor);
+        existing.totalRecebido += valorConvertido;
         existing.totalLancamentos += 1;
         
-        // Atualizar breakdown do parceiro
         const parceiroExisting = existing.parceirosMap.get(parceiroKey);
         if (parceiroExisting) {
-          parceiroExisting.totalRecebido += Number(registro.valor);
+          parceiroExisting.totalRecebido += valorConvertido;
           parceiroExisting.totalLancamentos += 1;
         } else {
           existing.parceirosMap.set(parceiroKey, {
             parceiro_id: parceiroId,
             parceiro_nome: parceiroNome,
-            totalRecebido: Number(registro.valor),
+            totalRecebido: valorConvertido,
             totalLancamentos: 1,
           });
         }
@@ -143,23 +167,23 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         parceirosMap.set(parceiroKey, {
           parceiro_id: parceiroId,
           parceiro_nome: parceiroNome,
-          totalRecebido: Number(registro.valor),
+          totalRecebido: valorConvertido,
           totalLancamentos: 1,
         });
         
         catalogoMap.set(key, {
           bookmaker_catalogo_id: registro.bookmaker?.bookmaker_catalogo_id || null,
           bookmaker_nome: registro.bookmaker?.nome || "Casa",
-          bookmaker_moeda: registro.bookmaker?.moeda || "BRL",
+          // IMPORTANTE: A moeda agora é a de consolidação, não da casa
+          bookmaker_moeda: currencyConfig.moedaConsolidacao,
           logo_url: registro.bookmaker?.bookmakers_catalogo?.logo_url || null,
-          totalRecebido: Number(registro.valor),
+          totalRecebido: valorConvertido,
           totalLancamentos: 1,
           parceirosMap,
         });
       }
     });
 
-    // Converter para array final
     return Array.from(catalogoMap.values())
       .map((item) => ({
         bookmaker_catalogo_id: item.bookmaker_catalogo_id,
@@ -171,7 +195,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         parceiros: Array.from(item.parceirosMap.values()).sort((a, b) => b.totalRecebido - a.totalRecebido),
       }))
       .sort((a, b) => b.totalRecebido - a.totalRecebido);
-  }, [registros]);
+  }, [registros, converterParaConsolidacao, currencyConfig.moedaConsolidacao]);
 
   // Criar lançamento de cashback manual
   const criarCashback = useCallback(
@@ -390,10 +414,17 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
     registros,
     metrics,
     porBookmaker,
-    loading,
+    loading: loading || currencyLoading,
     error,
     refresh: fetchAll,
     criarCashback,
     deletarCashback,
+    // Expor configuração de moeda para componentes que precisam
+    moedaConsolidacao: currencyConfig.moedaConsolidacao,
+    cotacaoInfo: {
+      fonte: currencyConfig.fonte,
+      taxa: currencyConfig.cotacaoAtual,
+      disponivel: currencyConfig.disponivel,
+    },
   };
 }

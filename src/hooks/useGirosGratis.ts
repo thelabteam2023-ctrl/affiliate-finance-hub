@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { usePromotionalCurrencyConversion } from "@/hooks/usePromotionalCurrencyConversion";
 import { 
   GiroGratis, 
   GiroGratisComBookmaker, 
@@ -16,8 +17,13 @@ interface UseGirosGratisOptions {
   dataFim?: Date | null;
 }
 
+// Extended type to include moeda from bookmaker
+interface GiroGratisComMoeda extends GiroGratisComBookmaker {
+  bookmaker_moeda?: string;
+}
+
 export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGratisOptions) {
-  const [giros, setGiros] = useState<GiroGratisComBookmaker[]>([]);
+  const [giros, setGiros] = useState<GiroGratisComMoeda[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<GirosGratisMetrics>({
@@ -30,6 +36,9 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
   });
   const [porBookmaker, setPorBookmaker] = useState<GirosGratisPorBookmaker[]>([]);
   const [chartData, setChartData] = useState<GirosGratisChartData[]>([]);
+
+  // Hook centralizado para conversão de moeda
+  const { converterParaConsolidacao, config: currencyConfig } = usePromotionalCurrencyConversion(projetoId);
 
   const fetchGiros = useCallback(async () => {
     if (!projetoId) return;
@@ -45,6 +54,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
           bookmakers!inner (
             id,
             nome,
+            moeda,
             parceiro_id,
             bookmaker_catalogo_id,
             bookmakers_catalogo (
@@ -70,24 +80,25 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
       if (fetchError) throw fetchError;
 
-      const girosFormatados: GiroGratisComBookmaker[] = (data || []).map((g: any) => ({
+      const girosFormatados: GiroGratisComMoeda[] = (data || []).map((g: any) => ({
         ...g,
         bookmaker_nome: g.bookmakers?.nome || "Desconhecido",
         bookmaker_logo_url: g.bookmakers?.bookmakers_catalogo?.logo_url || null,
         parceiro_nome: g.bookmakers?.parceiros?.nome || null,
+        bookmaker_moeda: g.bookmakers?.moeda || "BRL",
       }));
 
       setGiros(girosFormatados);
 
-      // Calcular métricas
+      // Calcular métricas COM CONVERSÃO
       const metricsData = calcularMetricas(girosFormatados);
       setMetrics(metricsData);
 
-      // Calcular por bookmaker
+      // Calcular por bookmaker COM CONVERSÃO
       const bookmakerData = calcularPorBookmaker(girosFormatados);
       setPorBookmaker(bookmakerData);
 
-      // Calcular dados do gráfico
+      // Calcular dados do gráfico COM CONVERSÃO
       const chart = calcularChartData(girosFormatados);
       setChartData(chart);
 
@@ -100,9 +111,18 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     }
   }, [projetoId, dataInicio, dataFim]);
 
-  const calcularMetricas = (data: GiroGratisComBookmaker[]): GirosGratisMetrics => {
+  /**
+   * MÉTRICAS COM CONVERSÃO PARA MOEDA DE CONSOLIDAÇÃO
+   */
+  const calcularMetricas = (data: GiroGratisComMoeda[]): GirosGratisMetrics => {
     const confirmados = data.filter(g => g.status === "confirmado");
-    const totalRetorno = confirmados.reduce((sum, g) => sum + Number(g.valor_retorno), 0);
+    
+    // CRÍTICO: Converter cada valor para moeda de consolidação
+    const totalRetorno = confirmados.reduce((sum, g) => {
+      const moeda = g.bookmaker_moeda || "BRL";
+      return sum + converterParaConsolidacao(Number(g.valor_retorno), moeda);
+    }, 0);
+    
     const totalGiros = confirmados
       .filter(g => g.modo === "detalhado")
       .reduce((sum, g) => sum + (g.quantidade_giros || 0), 0);
@@ -117,7 +137,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     };
   };
 
-  const calcularPorBookmaker = (data: GiroGratisComBookmaker[]): GirosGratisPorBookmaker[] => {
+  const calcularPorBookmaker = (data: GiroGratisComMoeda[]): GirosGratisPorBookmaker[] => {
     const confirmados = data.filter(g => g.status === "confirmado");
     const grouped = confirmados.reduce((acc, g) => {
       if (!acc[g.bookmaker_id]) {
@@ -132,7 +152,9 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
           media_retorno: 0,
         };
       }
-      acc[g.bookmaker_id].total_retorno += Number(g.valor_retorno);
+      // CRÍTICO: Converter valor para moeda de consolidação
+      const moeda = g.bookmaker_moeda || "BRL";
+      acc[g.bookmaker_id].total_retorno += converterParaConsolidacao(Number(g.valor_retorno), moeda);
       acc[g.bookmaker_id].total_giros += g.quantidade_giros || 0;
       acc[g.bookmaker_id].total_registros += 1;
       return acc;
@@ -146,7 +168,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
       .sort((a, b) => b.total_retorno - a.total_retorno);
   };
 
-  const calcularChartData = (data: GiroGratisComBookmaker[]): GirosGratisChartData[] => {
+  const calcularChartData = (data: GiroGratisComMoeda[]): GirosGratisChartData[] => {
     const confirmados = data
       .filter(g => g.status === "confirmado")
       .sort((a, b) => new Date(a.data_registro).getTime() - new Date(b.data_registro).getTime());
@@ -155,7 +177,10 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     
     confirmados.forEach(g => {
       const date = new Date(g.data_registro).toISOString().split('T')[0];
-      dailyData[date] = (dailyData[date] || 0) + Number(g.valor_retorno);
+      // CRÍTICO: Converter valor para moeda de consolidação
+      const moeda = g.bookmaker_moeda || "BRL";
+      const valorConvertido = converterParaConsolidacao(Number(g.valor_retorno), moeda);
+      dailyData[date] = (dailyData[date] || 0) + valorConvertido;
     });
 
     let acumulado = 0;
