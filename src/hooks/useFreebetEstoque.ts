@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { usePromotionalCurrencyConversion } from "@/hooks/usePromotionalCurrencyConversion";
 
 export interface FreebetRecebidaCompleta {
   id: string;
@@ -28,6 +29,7 @@ export interface BookmakerEstoque {
   parceiro_nome: string | null;
   logo_url: string | null;
   saldo_freebet: number;
+  moeda: string;
   freebets_count: number;
   freebets_pendentes: number;
   freebets_liberadas: number;
@@ -41,6 +43,7 @@ export interface EstoqueMetrics {
   totalPendentes: number;
   proximasExpirar: number;
   casasComFreebet: number;
+  moedaConsolidacao: string;
 }
 
 interface UseFreebetEstoqueProps {
@@ -54,6 +57,9 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
   const [bookmakersEstoque, setBookmakersEstoque] = useState<BookmakerEstoque[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Hook centralizado para conversão de moeda
+  const { converterParaConsolidacao, config: currencyConfig } = usePromotionalCurrencyConversion(projetoId);
 
   const fetchEstoque = useCallback(async () => {
     if (!projetoId) {
@@ -129,7 +135,7 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
       const { data: bookmakers, error: bookmakersError } = await supabase
         .from("bookmakers")
         .select(`
-          id, nome, saldo_freebet,
+          id, nome, moeda, saldo_freebet,
           parceiros!bookmakers_parceiro_id_fkey (nome),
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
         `)
@@ -148,6 +154,7 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
           parceiro_nome: bk.parceiros?.nome || null,
           logo_url: bk.bookmakers_catalogo?.logo_url || null,
           saldo_freebet: bk.saldo_freebet || 0,
+          moeda: bk.moeda || "BRL",
           freebets_count: 0,
           freebets_pendentes: 0,
           freebets_liberadas: 0,
@@ -188,12 +195,25 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
     fetchEstoque();
   }, [fetchEstoque]);
 
-  // Calculate metrics
+  /**
+   * MÉTRICAS COM CONVERSÃO PARA MOEDA DE CONSOLIDAÇÃO
+   */
   const metrics = useMemo((): EstoqueMetrics => {
-    const saldoDisponivel = bookmakersEstoque.reduce((acc, bk) => acc + bk.saldo_freebet, 0);
+    // CRÍTICO: Converter saldos para moeda de consolidação
+    const saldoDisponivel = bookmakersEstoque.reduce((acc, bk) => {
+      return acc + converterParaConsolidacao(bk.saldo_freebet, bk.moeda);
+    }, 0);
+    
     const freebetsLiberadas = freebets.filter(fb => fb.status === "LIBERADA");
-    const totalRecebido = freebetsLiberadas.reduce((acc, fb) => acc + fb.valor, 0);
-    const totalUtilizado = freebetsLiberadas.filter(fb => fb.utilizada).reduce((acc, fb) => acc + fb.valor, 0);
+    
+    const totalRecebido = freebetsLiberadas.reduce((acc, fb) => {
+      return acc + converterParaConsolidacao(fb.valor, fb.moeda);
+    }, 0);
+    
+    const totalUtilizado = freebetsLiberadas
+      .filter(fb => fb.utilizada)
+      .reduce((acc, fb) => acc + converterParaConsolidacao(fb.valor, fb.moeda), 0);
+    
     const totalPendentes = freebets.filter(fb => fb.status === "PENDENTE").length;
     const proximasExpirar = freebets.filter(fb => 
       fb.diasParaExpirar !== null && fb.diasParaExpirar <= 7 && fb.diasParaExpirar > 0 && !fb.utilizada
@@ -207,8 +227,9 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
       totalPendentes,
       proximasExpirar,
       casasComFreebet,
+      moedaConsolidacao: currencyConfig.moedaConsolidacao,
     };
-  }, [freebets, bookmakersEstoque]);
+  }, [freebets, bookmakersEstoque, converterParaConsolidacao, currencyConfig.moedaConsolidacao]);
 
   // Create freebet
   const createFreebet = async (data: {
