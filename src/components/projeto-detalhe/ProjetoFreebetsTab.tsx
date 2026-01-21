@@ -33,7 +33,7 @@ import {
   FreebetResumoPorCasa,
   FreebetGraficos,
   FreebetEstoqueView,
-  FreebetExtracaoView,
+  FreebetDialog,
   ApostaOperacionalFreebet,
   FreebetRecebida,
   BookmakerComFreebet,
@@ -60,13 +60,12 @@ const defaultFormatCurrency = (value: number): string => {
 };
 
 type NavigationMode = "tabs" | "sidebar";
-type NavTabValue = "estoque" | "extracao" | "por-casa";
+type NavTabValue = "estoque" | "por-casa";
 
 const NAV_STORAGE_KEY = "freebets-nav-mode";
 
 const NAV_ITEMS = [
   { value: "estoque" as NavTabValue, label: "Estoque", icon: Package },
-  { value: "extracao" as NavTabValue, label: "Extração", icon: TrendingUp },
   { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
 ];
 
@@ -97,6 +96,10 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   const [selectedAposta, setSelectedAposta] = useState<any>(null);
   const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<any>(null);
   const [bookmakers, setBookmakers] = useState<any[]>([]);
+  
+  // Freebet dialog state
+  const [freebetDialogOpen, setFreebetDialogOpen] = useState(false);
+  const [preselectedBookmakerId, setPreselectedBookmakerId] = useState<string | undefined>();
   
   // View mode for "Por Casa" tab
   const [porCasaViewMode, setPorCasaViewMode] = useState<'card' | 'list'>('list');
@@ -407,6 +410,17 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
     }
   };
 
+  // Handler para abrir o dialog de freebet
+  const handleAddFreebet = (bookmakerId?: string) => {
+    setPreselectedBookmakerId(bookmakerId);
+    setFreebetDialogOpen(true);
+  };
+
+  const handleFreebetSuccess = () => {
+    fetchData();
+    onDataChange?.();
+  };
+
   // Filtrar por período
   const freebetsNoPeriodo = useMemo(() => {
     if (!dateRange) return freebets;
@@ -675,17 +689,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
             projetoId={projetoId}
             formatCurrency={formatCurrency}
             dateRange={dateRange}
-          />
-        )}
-        {activeNavTab === "extracao" && (
-          <FreebetExtracaoView
-            projetoId={projetoId}
-            apostas={apostasNoPeriodo}
-            freebets={freebetsNoPeriodo}
-            formatCurrency={formatCurrency}
-            dateRange={dateRange}
-            onResultadoUpdated={handleApostaUpdated}
-            onEditClick={handleEditClick}
+            onAddFreebet={handleAddFreebet}
           />
         )}
         {activeNavTab === "por-casa" && (
@@ -1025,6 +1029,14 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           aposta={selectedApostaMultipla}
           onSuccess={handleApostaUpdated}
         />
+
+        <FreebetDialog
+          open={freebetDialogOpen}
+          onOpenChange={setFreebetDialogOpen}
+          projetoId={projetoId}
+          onSuccess={handleFreebetSuccess}
+          preselectedBookmakerId={preselectedBookmakerId}
+        />
       </div>
     );
   }
@@ -1094,6 +1106,14 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
         projetoId={projetoId}
         aposta={selectedApostaMultipla}
         onSuccess={handleApostaUpdated}
+      />
+
+      <FreebetDialog
+        open={freebetDialogOpen}
+        onOpenChange={setFreebetDialogOpen}
+        projetoId={projetoId}
+        onSuccess={handleFreebetSuccess}
+        preselectedBookmakerId={preselectedBookmakerId}
       />
     </div>
   );

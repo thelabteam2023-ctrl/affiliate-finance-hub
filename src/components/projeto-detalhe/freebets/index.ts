@@ -7,3 +7,4 @@ export { CurvaExtracaoChart } from './CurvaExtracaoChart';
 export { FreebetContaminationAlert } from './FreebetContaminationAlert';
 export { FreebetEstoqueView } from './FreebetEstoqueView';
 export { FreebetExtracaoView } from './FreebetExtracaoView';
+export { FreebetDialog } from './FreebetDialog';

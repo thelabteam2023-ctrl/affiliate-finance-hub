@@ -26,6 +26,7 @@ interface FreebetEstoqueViewProps {
   projetoId: string;
   formatCurrency: (value: number) => string;
   dateRange: { start: Date; end: Date } | null;
+  onAddFreebet?: (bookmakerId?: string) => void;
 }
 
 // Status badge helper
@@ -100,7 +101,7 @@ function getExpirationBadge(diasParaExpirar: number | null) {
   return null;
 }
 
-export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange }: FreebetEstoqueViewProps) {
+export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAddFreebet }: FreebetEstoqueViewProps) {
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   
   const { freebets, bookmakersEstoque, metrics, loading } = useFreebetEstoque({
@@ -224,18 +225,31 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange }: Fre
               <CardTitle className="text-base">Estoque por Casa</CardTitle>
               <Badge variant="secondary">{bookmakersEstoque.length} casas</Badge>
             </div>
-            <ToggleGroup
-              type="single"
-              value={viewMode}
-              onValueChange={(v) => v && setViewMode(v as "card" | "list")}
-            >
-              <ToggleGroupItem value="card" aria-label="Cards" size="sm">
-                <LayoutGrid className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="list" aria-label="Lista" size="sm">
-                <List className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
+            <div className="flex items-center gap-2">
+              {onAddFreebet && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAddFreebet()}
+                  className="h-8"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Freebet
+                </Button>
+              )}
+              <ToggleGroup
+                type="single"
+                value={viewMode}
+                onValueChange={(v) => v && setViewMode(v as "card" | "list")}
+              >
+                <ToggleGroupItem value="card" aria-label="Cards" size="sm">
+                  <LayoutGrid className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="list" aria-label="Lista" size="sm">
+                  <List className="h-4 w-4" />
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
