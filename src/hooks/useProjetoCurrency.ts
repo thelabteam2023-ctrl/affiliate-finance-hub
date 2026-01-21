@@ -58,7 +58,7 @@ export interface ProjectCurrencyReturn {
  * Hook principal para formatação baseada no projeto
  */
 export function useProjetoCurrency(projetoId: string | undefined): ProjectCurrencyReturn {
-  const { cotacaoUSD, loading: loadingCotacao } = useCotacoes();
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, loading: loadingCotacao } = useCotacoes();
 
   // Buscar configuração do projeto - SINCRONIZADO COM useProjetoConsolidacao
   const { data: projetoConfig, isLoading: loadingConfig } = useQuery({
@@ -121,20 +121,20 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
 
     // EUR -> moeda de consolidação
     if (moedaOrigem === "EUR") {
-      const eurToBrl = cotacaoAtual * 1.08; // EUR geralmente ~8% maior que USD
       if (moedaConsolidacao === "BRL") {
-        return valor * eurToBrl;
+        return valor * cotacaoEUR;
       }
-      return valor * 1.08; // EUR para USD
+      // EUR -> USD: usar proporção das cotações
+      return valor * (cotacaoEUR / cotacaoUSD);
     }
 
     // GBP -> moeda de consolidação  
     if (moedaOrigem === "GBP") {
-      const gbpToBrl = cotacaoAtual * 1.27;
       if (moedaConsolidacao === "BRL") {
-        return valor * gbpToBrl;
+        return valor * cotacaoGBP;
       }
-      return valor * 1.27; // GBP para USD
+      // GBP -> USD: usar proporção das cotações
+      return valor * (cotacaoGBP / cotacaoUSD);
     }
 
     // Crypto (USDT, USDC, etc - assumindo paridade 1:1 com USD)
@@ -146,7 +146,7 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
     }
 
     return valor;
-  }, [moedaConsolidacao, cotacaoAtual]);
+  }, [moedaConsolidacao, cotacaoAtual, cotacaoUSD, cotacaoEUR, cotacaoGBP]);
 
   // Formatar valor NA MOEDA DO PROJETO
   const formatCurrency = useCallback((valor: number, options?: FormatOptions): string => {
