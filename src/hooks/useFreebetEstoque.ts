@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePromotionalCurrencyConversion } from "@/hooks/usePromotionalCurrencyConversion";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 export interface FreebetRecebidaCompleta {
   id: string;
@@ -60,6 +61,7 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
   const [bookmakersEstoque, setBookmakersEstoque] = useState<BookmakerEstoque[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { workspaceId } = useWorkspace();
 
   // Hook centralizado para conversão de moeda
   const { converterParaConsolidacao, config: currencyConfig } = usePromotionalCurrencyConversion(projetoId);
@@ -266,14 +268,7 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Get workspace_id from bookmaker
-      const { data: bookmaker, error: bkError } = await supabase
-        .from("bookmakers")
-        .select("workspace_id")
-        .eq("id", data.bookmaker_id)
-        .single();
-
-      if (bkError) throw bkError;
+      if (!workspaceId) throw new Error("Workspace não definido nesta aba");
 
       const { error } = await supabase
         .from("freebets_recebidas")
@@ -287,7 +282,7 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
           status: data.status,
           origem: data.origem || "MANUAL",
           user_id: user.id,
-          workspace_id: bookmaker.workspace_id,
+          workspace_id: workspaceId,
           utilizada: false,
         });
 

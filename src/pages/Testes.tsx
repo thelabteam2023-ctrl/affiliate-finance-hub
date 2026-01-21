@@ -8,11 +8,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Shuffle, Users, Building2, Wallet, FolderKanban, TrendingUp, UserPlus, Loader2, AlertTriangle, RotateCcw, Banknote, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 export default function Testes() {
   const [loading, setLoading] = useState<string | null>(null);
   const [valorAporte, setValorAporte] = useState<string>("5000");
   const [confirmResetCompleto, setConfirmResetCompleto] = useState(false);
+  const { workspaceId: activeWorkspaceId } = useWorkspace();
 
   const handleDeleteAll = async (table: string, label: string) => {
     setLoading(table);
@@ -262,15 +264,11 @@ export default function Testes() {
         return;
       }
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      const workspaceId = activeWorkspaceId;
+      if (!workspaceId) {
+        toast.error("Workspace não definido nesta aba");
+        return;
+      }
 
       // Buscar nomes de parceiros já existentes para este usuário
       const { data: parceirosExistentes } = await supabase
@@ -409,15 +407,11 @@ export default function Testes() {
         return;
       }
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      const workspaceId = activeWorkspaceId;
+      if (!workspaceId) {
+        toast.error("Workspace não definido nesta aba");
+        return;
+      }
 
       // Buscar nomes de indicadores já existentes para este usuário
       const { data: indicadoresExistentes } = await supabase
@@ -515,15 +509,11 @@ export default function Testes() {
         return;
       }
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      const workspaceId = activeWorkspaceId;
+      if (!workspaceId) {
+        toast.error("Workspace não definido nesta aba");
+        return;
+      }
 
       // Buscar nomes de investidores já existentes para este usuário
       const { data: investidoresExistentes } = await supabase
@@ -576,15 +566,11 @@ export default function Testes() {
         return;
       }
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      const workspaceId = activeWorkspaceId;
+      if (!workspaceId) {
+        toast.error("Workspace não definido nesta aba");
+        return;
+      }
 
       // Buscar nomes de operadores já existentes para este usuário
       const { data: operadoresExistentes } = await supabase
@@ -653,15 +639,11 @@ export default function Testes() {
         return;
       }
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      const workspaceId = activeWorkspaceId;
+      if (!workspaceId) {
+        toast.error("Workspace não definido nesta aba");
+        return;
+      }
 
       // Buscar parceiros
       const { data: parceiros, error: parceirosError } = await supabase
@@ -1105,15 +1087,11 @@ export default function Testes() {
         return;
       }
 
-      // Buscar workspace do usuário
-      const { data: workspaceMember } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      const workspaceId = workspaceMember?.workspace_id || null;
+      const workspaceId = activeWorkspaceId;
+      if (!workspaceId) {
+        toast.error("Workspace não definido nesta aba");
+        return;
+      }
 
       const valorTotal = parseFloat(valorAporte);
       if (isNaN(valorTotal) || valorTotal <= 0) {

@@ -37,6 +37,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BookmakerSelectOption } from "@/components/bookmakers/BookmakerSelectOption";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 const formSchema = z.object({
   bookmaker_id: z.string().min(1, "Selecione uma casa"),
@@ -73,6 +74,7 @@ export function FreebetDialog({
 }: FreebetDialogProps) {
   const [bookmakerId, setBookmakerId] = useState(preselectedBookmakerId || "");
   const [saving, setSaving] = useState(false);
+  const { workspaceId } = useWorkspace();
 
   const isEditing = !!freebet;
 
@@ -149,14 +151,7 @@ export function FreebetDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Get workspace_id from bookmaker
-      const { data: bookmaker, error: bkError } = await supabase
-        .from("bookmakers")
-        .select("workspace_id")
-        .eq("id", data.bookmaker_id)
-        .single();
-
-      if (bkError) throw bkError;
+      if (!workspaceId) throw new Error("Workspace não definido nesta aba");
 
       if (isEditing && freebet) {
         // Calculate delta for saldo_freebet update
@@ -247,7 +242,7 @@ export function FreebetDialog({
             data_validade: data.data_validade?.toISOString() || null,
             origem: "MANUAL",
             user_id: user.id,
-            workspace_id: bookmaker.workspace_id,
+            workspace_id: workspaceId,
             utilizada: false,
             tem_rollover: data.tem_rollover || false,
           });

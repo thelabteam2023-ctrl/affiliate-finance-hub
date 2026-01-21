@@ -8,6 +8,7 @@ import {
   GiroDisponivelFormData 
 } from "@/types/girosGratisDisponiveis";
 import { differenceInDays, parseISO } from "date-fns";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface UseGirosDisponiveisOptions {
   projetoId: string;
@@ -17,6 +18,7 @@ export function useGirosDisponiveis({ projetoId }: UseGirosDisponiveisOptions) {
   const [giros, setGiros] = useState<GiroDisponivelComBookmaker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { workspaceId } = useWorkspace();
 
   const fetchGiros = useCallback(async () => {
     if (!projetoId) return;
@@ -95,18 +97,12 @@ export function useGirosDisponiveis({ projetoId }: UseGirosDisponiveisOptions) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const { data: projeto } = await supabase
-        .from("projetos")
-        .select("workspace_id")
-        .eq("id", projetoId)
-        .single();
-
-      if (!projeto) throw new Error("Projeto não encontrado");
+      if (!workspaceId) throw new Error("Workspace não definido nesta aba");
 
       const insertData: any = {
         projeto_id: projetoId,
         bookmaker_id: formData.bookmaker_id,
-        workspace_id: projeto.workspace_id,
+        workspace_id: workspaceId,
         user_id: user.id,
         quantidade_giros: formData.quantidade_giros,
         valor_por_giro: formData.valor_por_giro,
