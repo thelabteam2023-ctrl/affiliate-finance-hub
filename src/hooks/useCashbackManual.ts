@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { PROJETO_RESULTADO_QUERY_KEY } from "@/hooks/useProjetoResultado";
+import { useInvalidateProjectQueries } from "@/hooks/useInvalidateProjectQueries";
 import { 
   registrarCashbackViaLedger, 
   estornarCashbackViaLedger 
@@ -23,13 +23,48 @@ interface UseCashbackManualOptions {
   dataFim?: Date | null;
 }
 
+// Query key for cashback data
+export const CASHBACK_MANUAL_QUERY_KEY = "cashback-manual";
+
+async function fetchCashbackRegistros(
+  projetoId: string,
+  dataInicio?: Date | null,
+  dataFim?: Date | null
+): Promise<CashbackManualComBookmaker[]> {
+  let query = supabase
+    .from("cashback_manual")
+    .select(`
+      *,
+      bookmaker:bookmakers(
+        id, 
+        nome, 
+        moeda, 
+        parceiro_id,
+        bookmaker_catalogo_id,
+        parceiro:parceiros!bookmakers_parceiro_id_fkey(id, nome),
+        bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url)
+      )
+    `)
+    .eq("projeto_id", projetoId)
+    .order("data_credito", { ascending: false });
+
+  if (dataInicio) {
+    query = query.gte("data_credito", dataInicio.toISOString().split("T")[0]);
+  }
+  if (dataFim) {
+    query = query.lte("data_credito", dataFim.toISOString().split("T")[0]);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []) as CashbackManualComBookmaker[];
+}
+
 export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbackManualOptions) {
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
-  
-  const [registros, setRegistros] = useState<CashbackManualComBookmaker[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const invalidateProject = useInvalidateProjectQueries();
 
   // Hook centralizado para conversão de moeda
   const { 
@@ -38,68 +73,23 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
     loading: currencyLoading 
   } = usePromotionalCurrencyConversion(projetoId);
 
-  // Fetch registros de cashback manual
-  const fetchRegistros = useCallback(async () => {
-    if (!projetoId) return;
-
-    try {
-      let query = supabase
-        .from("cashback_manual")
-        .select(`
-          *,
-          bookmaker:bookmakers(
-            id, 
-            nome, 
-            moeda, 
-            parceiro_id,
-            bookmaker_catalogo_id,
-            parceiro:parceiros!bookmakers_parceiro_id_fkey(id, nome),
-            bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey(logo_url)
-          )
-        `)
-        .eq("projeto_id", projetoId)
-        .order("data_credito", { ascending: false });
-
-      if (dataInicio) {
-        query = query.gte("data_credito", dataInicio.toISOString().split("T")[0]);
-      }
-      if (dataFim) {
-        query = query.lte("data_credito", dataFim.toISOString().split("T")[0]);
-      }
-
-      const { data, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-
-      setRegistros((data || []) as CashbackManualComBookmaker[]);
-    } catch (err) {
-      console.error("Erro ao buscar cashback manual:", err);
-      setError("Erro ao carregar cashback");
-    }
-  }, [projetoId, dataInicio, dataFim]);
-
-  // Fetch all data
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    await fetchRegistros();
-    setLoading(false);
-  }, [fetchRegistros]);
-
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  // Use React Query for data fetching
+  const { 
+    data: registros = [], 
+    isLoading: loading, 
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: [CASHBACK_MANUAL_QUERY_KEY, projetoId, dataInicio?.toISOString(), dataFim?.toISOString()],
+    queryFn: () => fetchCashbackRegistros(projetoId, dataInicio, dataFim),
+    enabled: !!projetoId,
+    staleTime: 1000 * 30, // 30 seconds
+  });
 
   /**
    * MÉTRICAS COM CONVERSÃO PARA MOEDA DE CONSOLIDAÇÃO
-   * 
-   * REGRA: Valores são convertidos para a moeda de consolidação do projeto
-   * usando a cotação configurada (Trabalho ou PTAX).
-   * Isso garante que totais sejam matematicamente corretos, mesmo com
-   * casas em diferentes moedas.
    */
   const metrics: CashbackManualMetrics = useMemo(() => {
-    // Converter cada valor para moeda de consolidação antes de somar
     const totalRecebido = registros.reduce((acc, r) => {
       const moedaOrigem = r.moeda_operacao || r.bookmaker?.moeda || "BRL";
       const valorOriginal = Number(r.valor);
@@ -119,9 +109,6 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
 
   /**
    * DADOS POR BOOKMAKER COM CONVERSÃO
-   * 
-   * Agrupa por catálogo da casa e converte valores para moeda de consolidação.
-   * A moeda exibida será sempre a moeda de consolidação do projeto.
    */
   const porBookmaker: CashbackManualPorBookmaker[] = useMemo(() => {
     const catalogoMap = new Map<string, {
@@ -142,7 +129,6 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
       const parceiroNome = registro.bookmaker?.parceiro?.nome || null;
       const parceiroKey = parceiroId || "sem_parceiro";
 
-      // CRÍTICO: Converter valor para moeda de consolidação
       const moedaOrigem = registro.moeda_operacao || registro.bookmaker?.moeda || "BRL";
       const valorConvertido = converterParaConsolidacao(Number(registro.valor), moedaOrigem);
       
@@ -176,7 +162,6 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         catalogoMap.set(key, {
           bookmaker_catalogo_id: registro.bookmaker?.bookmaker_catalogo_id || null,
           bookmaker_nome: registro.bookmaker?.nome || "Casa",
-          // IMPORTANTE: A moeda agora é a de consolidação, não da casa
           bookmaker_moeda: currencyConfig.moedaConsolidacao,
           logo_url: registro.bookmaker?.bookmakers_catalogo?.logo_url || null,
           totalRecebido: valorConvertido,
@@ -217,36 +202,26 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
 
         if (bookmakerError) throw bookmakerError;
 
-        // Bloquear se a casa não pertence ao projeto
         if (!bookmaker || bookmaker.projeto_id !== projetoId) {
           toast.error("Esta casa não está vinculada a este projeto");
-          console.error("Tentativa de lançar cashback em casa não vinculada:", {
-            bookmaker_id: data.bookmaker_id,
-            projeto_id: projetoId,
-            bookmaker_projeto_id: bookmaker?.projeto_id
-          });
           return false;
         }
 
         const moedaOperacao = bookmaker.moeda || "BRL";
         const dataCredito = data.data_credito || new Date().toISOString().split("T")[0];
 
-        // Calcular valor_brl_referencia usando PTAX oficial do BCB
-        // CRÍTICO: Sempre buscar cotação via edge function para consistência
+        // Calcular valor_brl_referencia
         let valorBRLReferencia: number | null = null;
         let cotacaoSnapshot: number | null = null;
         
         if (moedaOperacao !== "BRL") {
-          // Buscar PTAX oficial via edge function
           try {
             const { data: ratesData, error: ratesError } = await supabase.functions.invoke("get-exchange-rates");
             
             if (!ratesError && ratesData?.USDBRL) {
               cotacaoSnapshot = Number(ratesData.USDBRL);
               valorBRLReferencia = data.valor * cotacaoSnapshot;
-              console.log(`Cashback: usando PTAX ${cotacaoSnapshot} para conversão de ${moedaOperacao}`);
             } else {
-              // Fallback: buscar cotação de trabalho do projeto
               const { data: projetoData } = await supabase
                 .from("projetos")
                 .select("cotacao_trabalho")
@@ -256,18 +231,10 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
               if (projetoData?.cotacao_trabalho && projetoData.cotacao_trabalho > 0) {
                 cotacaoSnapshot = Number(projetoData.cotacao_trabalho);
                 valorBRLReferencia = data.valor * cotacaoSnapshot;
-                console.log(`Cashback: usando cotação de trabalho ${cotacaoSnapshot} (fallback)`);
-              } else {
-                // Último recurso: cotação indisponível, registrar sem conversão
-                cotacaoSnapshot = null;
-                valorBRLReferencia = null;
-                console.warn("Cashback: cotação indisponível, valor_brl_referencia não calculado");
               }
             }
           } catch (err) {
             console.error("Erro ao buscar cotação para cashback:", err);
-            cotacaoSnapshot = null;
-            valorBRLReferencia = null;
           }
         } else {
           valorBRLReferencia = data.valor;
@@ -295,8 +262,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
 
         if (insertError) throw insertError;
 
-        // 3. Registrar via ledger (trigger atualiza saldo automaticamente)
-        // CRÍTICO: Se falhar aqui, precisamos reverter o cashback_manual
+        // 3. Registrar via ledger
         const ledgerResult = await registrarCashbackViaLedger({
           bookmakerId: data.bookmaker_id,
           valor: data.valor,
@@ -310,18 +276,12 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         });
 
         if (!ledgerResult.success) {
-          // ROLLBACK: Deletar o registro de cashback_manual já criado
-          console.error("[Cashback] Falha ao registrar no ledger:", ledgerResult.error);
-          await supabase
-            .from("cashback_manual")
-            .delete()
-            .eq("id", novoCashback.id);
-          
+          await supabase.from("cashback_manual").delete().eq("id", novoCashback.id);
           toast.error(`Erro ao registrar cashback: ${ledgerResult.error || "Falha no ledger financeiro"}`);
           return false;
         }
 
-        // 4. Atualizar o registro de cashback_manual com o ID do ledger
+        // 4. Atualizar o registro com o ID do ledger
         if (ledgerResult.entryId) {
           await supabase
             .from("cashback_manual")
@@ -330,7 +290,10 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         }
 
         toast.success("Cashback lançado com sucesso! Saldo atualizado.");
-        await fetchRegistros();
+        
+        // INVALIDAR CACHE GLOBAL - Atualiza KPIs automaticamente
+        await invalidateProject(projetoId);
+        
         return true;
       } catch (err) {
         console.error("Erro ao criar cashback:", err);
@@ -338,15 +301,13 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         return false;
       }
     },
-    [projetoId, user, workspaceId, fetchRegistros]
+    [projetoId, user, workspaceId, invalidateProject]
   );
 
   // Deletar lançamento de cashback (reverte saldo)
-  // PROTEÇÃO: Valida vínculo projeto-bookmaker antes de estornar
   const deletarCashback = useCallback(
     async (id: string): Promise<boolean> => {
       try {
-        // 1. Buscar registro completo para validações
         const { data: registro, error: fetchError } = await supabase
           .from("cashback_manual")
           .select("bookmaker_id, valor, projeto_id")
@@ -359,7 +320,6 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
           return false;
         }
 
-        // 2. Buscar bookmaker e verificar vínculo com projeto
         const { data: bookmaker } = await supabase
           .from("bookmakers")
           .select("moeda, workspace_id, projeto_id, nome")
@@ -367,27 +327,20 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
           .single();
 
         if (!bookmaker) {
-          toast.error("Bookmaker não encontrada. Registro será removido sem estorno.");
-          // Apenas remove o registro, sem estorno (bookmaker deletada)
           await supabase.from("cashback_manual").delete().eq("id", id);
-          await fetchRegistros();
+          await invalidateProject(projetoId);
           return true;
         }
 
-        // 3. PROTEÇÃO: Verificar se bookmaker ainda está vinculada ao projeto do cashback
         const bookmakerVinculada = bookmaker.projeto_id === registro.projeto_id;
         
         if (!bookmakerVinculada) {
-          // Bookmaker foi desvinculada - NÃO estornar (evita alteração misteriosa de saldo)
-          console.warn(`[deletarCashback] Bookmaker ${bookmaker.nome} desvinculada do projeto. Removendo registro SEM estorno.`);
           toast.warning(`Bookmaker "${bookmaker.nome}" foi desvinculada. Registro removido sem alterar saldo.`);
-          
           await supabase.from("cashback_manual").delete().eq("id", id);
-          await fetchRegistros();
+          await invalidateProject(projetoId);
           return true;
         }
 
-        // 4. Bookmaker vinculada - Estornar via ledger (trigger atualiza saldo automaticamente)
         const estornoResult = await estornarCashbackViaLedger({
           bookmakerId: registro.bookmaker_id,
           valor: Number(registro.valor),
@@ -399,12 +352,10 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         });
 
         if (!estornoResult.success) {
-          console.error("[deletarCashback] Falha no estorno:", estornoResult.error);
           toast.error(`Erro ao estornar: ${estornoResult.error}`);
           return false;
         }
 
-        // 5. Deletar registro após estorno bem-sucedido
         const { error: deleteError } = await supabase
           .from("cashback_manual")
           .delete()
@@ -413,7 +364,10 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         if (deleteError) throw deleteError;
 
         toast.success("Cashback removido e saldo ajustado");
-        await fetchRegistros();
+        
+        // INVALIDAR CACHE GLOBAL - Atualiza KPIs automaticamente
+        await invalidateProject(projetoId);
+        
         return true;
       } catch (err) {
         console.error("Erro ao deletar cashback:", err);
@@ -421,19 +375,23 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         return false;
       }
     },
-    [projetoId, workspaceId, user, fetchRegistros]
+    [projetoId, workspaceId, user, invalidateProject]
   );
+
+  // Wrapper para refresh que pode ser usado como onClick
+  const handleRefresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   return {
     registros,
     metrics,
     porBookmaker,
     loading: loading || currencyLoading,
-    error,
-    refresh: fetchAll,
+    error: error ? String(error) : null,
+    refresh: handleRefresh,
     criarCashback,
     deletarCashback,
-    // Expor configuração de moeda para componentes que precisam
     moedaConsolidacao: currencyConfig.moedaConsolidacao,
     cotacaoInfo: {
       fonte: currencyConfig.fonte,

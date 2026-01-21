@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   ProjetoKpiBreakdowns, 
   KpiBreakdown, 
@@ -21,6 +22,126 @@ interface UseKpiBreakdownsReturn {
   refresh: () => Promise<void>;
 }
 
+// Query key for KPI breakdowns
+export const PROJETO_BREAKDOWNS_QUERY_KEY = "projeto-breakdowns";
+
+/**
+ * Fetches and calculates all KPI breakdowns from modules
+ */
+async function fetchBreakdownsData(
+  projetoId: string,
+  dataInicio: Date | null,
+  dataFim: Date | null,
+  moedaConsolidacao: string
+): Promise<ProjetoKpiBreakdowns> {
+  // Fetch dados de todos os módulos em paralelo
+  const [
+    apostasData,
+    girosGratisData,
+    perdasData,
+    ajustesData,
+    cashbackData,
+  ] = await Promise.all([
+    fetchApostasModuleData(projetoId, dataInicio, dataFim),
+    fetchGirosGratisModuleData(projetoId, dataInicio, dataFim),
+    fetchPerdasModuleData(projetoId, dataInicio, dataFim),
+    fetchAjustesModuleData(projetoId),
+    fetchCashbackModuleData(projetoId, dataInicio, dataFim),
+  ]);
+
+  // === BREAKDOWN APOSTAS (quantidade) ===
+  const apostasBreakdown = createKpiBreakdown([
+    createModuleContribution(
+      'apostas',
+      'Apostas',
+      apostasData.count,
+      true,
+      { icon: 'Target', color: 'default', details: apostasData.countDetails }
+    ),
+    createModuleContribution(
+      'giros_gratis',
+      'Giros Grátis',
+      girosGratisData.count,
+      girosGratisData.count > 0,
+      { icon: 'Dices', color: 'default' }
+    ),
+  ], moedaConsolidacao);
+
+  // === BREAKDOWN VOLUME (stake) ===
+  const volumeBreakdown = createKpiBreakdown([
+    createModuleContribution(
+      'apostas',
+      'Apostas',
+      apostasData.volume,
+      true,
+      { icon: 'Target', color: 'default' }
+    ),
+    createModuleContribution(
+      'giros_gratis',
+      'Giros Grátis',
+      girosGratisData.valorTotal,
+      girosGratisData.count > 0,
+      { icon: 'Dices', color: 'default' }
+    ),
+  ], moedaConsolidacao);
+
+  // === BREAKDOWN LUCRO ===
+  const lucroBreakdown = createKpiBreakdown([
+    createModuleContribution(
+      'apostas',
+      'Apostas',
+      apostasData.lucro,
+      true,
+      { icon: 'Target' }
+    ),
+    createModuleContribution(
+      'giros_gratis',
+      'Giros Grátis',
+      girosGratisData.lucro,
+      girosGratisData.count > 0,
+      { icon: 'Dices', color: 'positive' }
+    ),
+    createModuleContribution(
+      'cashback',
+      'Cashback',
+      cashbackData.total,
+      cashbackData.count > 0,
+      { icon: 'Percent', color: 'positive' }
+    ),
+    createModuleContribution(
+      'perdas',
+      'Perdas Operacionais',
+      -perdasData.confirmadas,
+      perdasData.confirmadas > 0,
+      { icon: 'TrendingDown', color: 'negative' }
+    ),
+    createModuleContribution(
+      'ajustes',
+      'Ajustes Conciliação',
+      ajustesData.total,
+      ajustesData.total !== 0,
+      { icon: 'Minus', color: ajustesData.total >= 0 ? 'positive' : 'negative' }
+    ),
+  ], moedaConsolidacao);
+
+  // === ROI (calculado a partir do lucro e volume) ===
+  const lucroTotal = lucroBreakdown.total;
+  const volumeTotal = volumeBreakdown.total;
+  const roiTotal = volumeTotal > 0 ? (lucroTotal / volumeTotal) * 100 : null;
+
+  return {
+    apostas: apostasBreakdown,
+    volume: volumeBreakdown,
+    lucro: lucroBreakdown,
+    roi: {
+      total: roiTotal,
+      volumeTotal,
+      lucroTotal,
+      currency: moedaConsolidacao,
+    },
+  };
+}
+
 /**
  * Hook para calcular breakdowns dinâmicos dos KPIs por módulo.
  * 
@@ -28,6 +149,7 @@ interface UseKpiBreakdownsReturn {
  * - Cada módulo contribui independentemente
  * - Novos módulos podem ser adicionados sem alterar a lógica do tooltip
  * - Mesma estrutura alimenta KPIs, relatórios e exportações
+ * - Usa React Query para cache e invalidação automática
  */
 export function useKpiBreakdowns({
   projetoId,
@@ -35,145 +157,35 @@ export function useKpiBreakdowns({
   dataFim = null,
   moedaConsolidacao = 'BRL',
 }: UseKpiBreakdownsProps): UseKpiBreakdownsReturn {
-  const [breakdowns, setBreakdowns] = useState<ProjetoKpiBreakdowns | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const calculateBreakdowns = useCallback(async () => {
-    if (!projetoId) {
-      setBreakdowns(null);
-      setLoading(false);
-      return;
-    }
+  const { 
+    data: breakdowns = null, 
+    isLoading: loading, 
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: [
+      PROJETO_BREAKDOWNS_QUERY_KEY, 
+      projetoId, 
+      dataInicio?.toISOString(), 
+      dataFim?.toISOString(),
+      moedaConsolidacao
+    ],
+    queryFn: () => fetchBreakdownsData(projetoId, dataInicio, dataFim, moedaConsolidacao),
+    enabled: !!projetoId,
+    staleTime: 1000 * 30, // 30 seconds
+  });
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Fetch dados de todos os módulos em paralelo
-      const [
-        apostasData,
-        girosGratisData,
-        perdasData,
-        ajustesData,
-        cashbackData,
-      ] = await Promise.all([
-        fetchApostasModuleData(projetoId, dataInicio, dataFim),
-        fetchGirosGratisModuleData(projetoId, dataInicio, dataFim),
-        fetchPerdasModuleData(projetoId, dataInicio, dataFim),
-        fetchAjustesModuleData(projetoId),
-        fetchCashbackModuleData(projetoId, dataInicio, dataFim),
-      ]);
-
-      // === BREAKDOWN APOSTAS (quantidade) ===
-      const apostasBreakdown = createKpiBreakdown([
-        createModuleContribution(
-          'apostas',
-          'Apostas',
-          apostasData.count,
-          true,
-          { icon: 'Target', color: 'default', details: apostasData.countDetails }
-        ),
-        createModuleContribution(
-          'giros_gratis',
-          'Giros Grátis',
-          girosGratisData.count,
-          girosGratisData.count > 0,
-          { icon: 'Dices', color: 'default' }
-        ),
-      ], moedaConsolidacao);
-
-      // === BREAKDOWN VOLUME (stake) ===
-      // Giros Grátis: volume = valor_total_giros (valor promocional recebido)
-      const volumeBreakdown = createKpiBreakdown([
-        createModuleContribution(
-          'apostas',
-          'Apostas',
-          apostasData.volume,
-          true,
-          { icon: 'Target', color: 'default' }
-        ),
-        createModuleContribution(
-          'giros_gratis',
-          'Giros Grátis',
-          girosGratisData.valorTotal, // valor_total_giros (valor recebido em promoções)
-          girosGratisData.count > 0,
-          { icon: 'Dices', color: 'default' }
-        ),
-      ], moedaConsolidacao);
-
-      // === BREAKDOWN LUCRO ===
-      const lucroBreakdown = createKpiBreakdown([
-        createModuleContribution(
-          'apostas',
-          'Apostas',
-          apostasData.lucro,
-          true,
-          { icon: 'Target' }
-        ),
-        createModuleContribution(
-          'giros_gratis',
-          'Giros Grátis',
-          girosGratisData.lucro,
-          girosGratisData.count > 0,
-          { icon: 'Dices', color: 'positive' } // Sempre positivo por regra
-        ),
-        createModuleContribution(
-          'cashback',
-          'Cashback',
-          cashbackData.total,
-          cashbackData.count > 0,
-          { icon: 'Percent', color: 'positive' } // Cashback é sempre positivo
-        ),
-        createModuleContribution(
-          'perdas',
-          'Perdas Operacionais',
-          -perdasData.confirmadas, // Negativo pois são perdas
-          perdasData.confirmadas > 0,
-          { icon: 'TrendingDown', color: 'negative' }
-        ),
-        createModuleContribution(
-          'ajustes',
-          'Ajustes Conciliação',
-          ajustesData.total,
-          ajustesData.total !== 0,
-          { icon: 'Minus', color: ajustesData.total >= 0 ? 'positive' : 'negative' }
-        ),
-      ], moedaConsolidacao);
-
-      // === ROI (calculado a partir do lucro e volume) ===
-      const lucroTotal = lucroBreakdown.total;
-      const volumeTotal = volumeBreakdown.total;
-      const roiTotal = volumeTotal > 0 ? (lucroTotal / volumeTotal) * 100 : null;
-
-      setBreakdowns({
-        apostas: apostasBreakdown,
-        volume: volumeBreakdown,
-        lucro: lucroBreakdown,
-        roi: {
-          total: roiTotal,
-          volumeTotal,
-          lucroTotal,
-          currency: moedaConsolidacao,
-        },
-      });
-    } catch (err: any) {
-      console.error('Erro ao calcular breakdowns:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [projetoId, dataInicio, dataFim, moedaConsolidacao]);
-
-  useEffect(() => {
-    calculateBreakdowns();
-  }, [calculateBreakdowns]);
+  const refresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   return {
     breakdowns,
     loading,
-    error,
-    refresh: calculateBreakdowns,
+    error: error ? String(error) : null,
+    refresh,
   };
 }
 
@@ -201,18 +213,15 @@ async function fetchApostasModuleData(
 
   const apostas = data || [];
   
-  // Contagem com detalhes (greens/reds)
   const greens = apostas.filter(a => a.resultado === 'GREEN' || a.resultado === 'MEIO_GREEN').length;
   const reds = apostas.filter(a => a.resultado === 'RED' || a.resultado === 'MEIO_RED').length;
   const countDetails = `${greens}G/${reds}R`;
 
-  // Volume (stake)
   const volume = apostas.reduce((acc, a) => {
     const stake = a.forma_registro === 'ARBITRAGEM' ? Number(a.stake_total || 0) : Number(a.stake || 0);
     return acc + stake;
   }, 0);
 
-  // Lucro (apenas liquidadas)
   const lucro = apostas
     .filter(a => a.status === 'LIQUIDADA')
     .reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0);
@@ -248,13 +257,8 @@ async function fetchGirosGratisModuleData(
 
   const giros = (data || []) as any[];
   
-  // Contagem de registros
   const count = giros.length;
-  
-  // Valor total dos giros (para volume)
   const valorTotal = giros.reduce((acc, g) => acc + Number(g.valor_total_giros || 0), 0);
-  
-  // Lucro (valor_retorno é sempre >= 0)
   const lucro = giros.reduce((acc, g) => acc + Math.max(0, Number(g.valor_retorno || 0)), 0);
 
   return { count, valorTotal, lucro };
@@ -336,10 +340,7 @@ async function fetchCashbackModuleData(
 
   const cashbacks = data || [];
   
-  // Contagem de registros
   const count = cashbacks.length;
-  
-  // Valor total (usando valor_brl_referencia quando disponível para consolidação)
   const total = cashbacks.reduce((acc, cb) => {
     const valor = cb.valor_brl_referencia ?? Number(cb.valor || 0);
     return acc + valor;

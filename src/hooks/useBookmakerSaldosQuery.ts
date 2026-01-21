@@ -106,14 +106,25 @@ export function useBookmakerSaldosQuery({
 }
 
 /**
- * Hook para invalidar cache de saldos (usar após criar/editar apostas)
+ * Hook para invalidar cache de saldos e KPIs (usar após criar/editar apostas)
+ * 
+ * ATUALIZADO: Agora também invalida KPIs centrais do projeto para
+ * garantir atualização automática sem reload.
  */
 export function useInvalidateBookmakerSaldos() {
   const queryClient = useQueryClient();
   
   return (projetoId?: string) => {
     if (projetoId) {
+      // Invalidar saldos de bookmakers
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY, projetoId] });
+      
+      // CRÍTICO: Invalidar KPIs centrais para atualização automática
+      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["apostas", projetoId] });
+      
+      console.log(`[useInvalidateBookmakerSaldos] Invalidated saldos + KPIs for project ${projetoId}`);
     } else {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     }
