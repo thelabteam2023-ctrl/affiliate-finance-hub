@@ -12,6 +12,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -31,7 +32,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Gift, Loader2 } from "lucide-react";
+import { CalendarIcon, Gift, Loader2, Lock } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BookmakerSelectOption } from "@/components/bookmakers/BookmakerSelectOption";
@@ -41,6 +43,7 @@ const formSchema = z.object({
   valor: z.number().min(0.01, "Valor deve ser maior que 0"),
   status: z.enum(["LIBERADA", "PENDENTE"]),
   data_validade: z.date().optional().nullable(),
+  tem_rollover: z.boolean().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -57,6 +60,7 @@ interface FreebetDialogProps {
     valor: number;
     status: "LIBERADA" | "PENDENTE" | "NAO_LIBERADA";
     data_validade: string | null;
+    tem_rollover?: boolean;
   };
 }
 
@@ -109,6 +113,7 @@ export function FreebetDialog({
       valor: 0,
       status: "LIBERADA",
       data_validade: null,
+      tem_rollover: false,
     },
   });
 
@@ -122,6 +127,7 @@ export function FreebetDialog({
           valor: freebet.valor,
           status: freebet.status === "NAO_LIBERADA" ? "PENDENTE" : freebet.status,
           data_validade: freebet.data_validade ? new Date(freebet.data_validade) : null,
+          tem_rollover: freebet.tem_rollover || false,
         });
       } else {
         setBookmakerId(preselectedBookmakerId || "");
@@ -130,6 +136,7 @@ export function FreebetDialog({
           valor: 0,
           status: "LIBERADA",
           data_validade: null,
+          tem_rollover: false,
         });
       }
     }
@@ -172,6 +179,7 @@ export function FreebetDialog({
             valor: newValue,
             status: newStatus,
             data_validade: data.data_validade?.toISOString() || null,
+            tem_rollover: data.tem_rollover || false,
           })
           .eq("id", freebet.id);
 
@@ -244,6 +252,7 @@ export function FreebetDialog({
             user_id: user.id,
             workspace_id: bookmaker.workspace_id,
             utilizada: false,
+            tem_rollover: data.tem_rollover || false,
           });
 
         if (error) throw error;
@@ -415,6 +424,31 @@ export function FreebetDialog({
                     </PopoverContent>
                   </Popover>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Checkbox de Rollover */}
+            <FormField
+              control={form.control}
+              name="tem_rollover"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 bg-muted/30">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="flex items-center gap-1.5 text-sm font-normal cursor-pointer">
+                      <Lock className="h-3.5 w-3.5 text-amber-500" />
+                      Exige cumprimento de rollover
+                    </FormLabel>
+                    <FormDescription className="text-xs">
+                      Após uso, o lucro terá restrição de saque
+                    </FormDescription>
+                  </div>
                 </FormItem>
               )}
             />

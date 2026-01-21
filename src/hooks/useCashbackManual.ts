@@ -256,6 +256,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
             valor_brl_referencia: valorBRLReferencia,
             cotacao_snapshot: cotacaoSnapshot,
             cotacao_snapshot_at: new Date().toISOString(),
+            tem_rollover: data.tem_rollover || false,
           })
           .select()
           .single();

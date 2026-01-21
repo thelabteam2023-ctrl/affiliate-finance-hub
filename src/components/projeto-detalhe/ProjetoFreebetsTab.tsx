@@ -168,7 +168,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
         .from("freebets_recebidas")
         .select(`
           id, bookmaker_id, valor, motivo, data_recebida, utilizada, 
-          data_utilizacao, aposta_id, status,
+          data_utilizacao, aposta_id, status, tem_rollover,
           bookmakers!freebets_recebidas_bookmaker_id_fkey (
             nome, parceiro_id,
             parceiros!bookmakers_parceiro_id_fkey (nome),
@@ -193,6 +193,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
         data_utilizacao: fb.data_utilizacao,
         aposta_id: fb.aposta_id,
         status: fb.status || "LIBERADA",
+        tem_rollover: fb.tem_rollover || false,
       }));
 
       setFreebets(formatted);

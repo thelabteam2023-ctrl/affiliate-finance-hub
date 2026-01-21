@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   XCircle,
   Timer,
+  Lock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -422,7 +423,14 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                         {fb.motivo}
                       </td>
                       <td className="p-3 text-center">
-                        {getStatusBadge(fb.status, fb.utilizada)}
+                        <div className="flex items-center justify-center gap-1.5">
+                          {getStatusBadge(fb.status, fb.utilizada)}
+                          {fb.tem_rollover && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400" title="Após uso, o lucro exigirá cumprimento de rollover">
+                              <Lock className="h-2.5 w-2.5" />
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="p-3 text-center">
                         {fb.data_validade ? (

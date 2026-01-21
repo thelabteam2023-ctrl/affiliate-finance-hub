@@ -17,6 +17,9 @@ export interface CashbackManual {
   data_credito: string;
   observacoes: string | null;
   
+  // Flag de rollover
+  tem_rollover: boolean;
+  
   // Integração financeira
   cash_ledger_id: string | null;
   
@@ -53,6 +56,7 @@ export interface CashbackManualFormData {
   valor: number;
   data_credito?: string;
   observacoes?: string | null;
+  tem_rollover?: boolean;
 }
 
 export interface CashbackManualMetrics {
