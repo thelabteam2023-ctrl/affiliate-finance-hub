@@ -34,15 +34,19 @@ export function ProjectFinancialDisplay({
   isMultiCurrency = false,
 }: ProjectFinancialDisplayProps) {
   const isSaldo = type === "saldo";
-  const label = isSaldo ? "Saldo Bookmakers" : "Lucro";
+  
+  // Para lucro, usar o utilitário de display financeiro (precisa calcular antes da label)
+  const lucroDisplay = !isSaldo ? getFinancialDisplay(totalConsolidado) : null;
+  const isPositive = isSaldo ? true : (lucroDisplay?.isPositive || lucroDisplay?.isZero);
+  
+  // Label dinâmica: "Lucro" ou "Prejuízo" baseado no sinal
+  const label = isSaldo 
+    ? "Saldo Bookmakers" 
+    : (lucroDisplay?.isNegative ? "Prejuízo" : "Lucro");
   
   const hasBRL = breakdown.BRL !== 0;
   const hasUSD = breakdown.USD !== 0;
   const showMultiCurrency = isMultiCurrency || (hasBRL && hasUSD) || hasUSD;
-  
-  // Para lucro, usar o utilitário de display financeiro
-  const lucroDisplay = !isSaldo ? getFinancialDisplay(totalConsolidado) : null;
-  const isPositive = isSaldo ? true : (lucroDisplay?.isPositive || lucroDisplay?.isZero);
   
   // Formatação de moeda
   const formatBRL = (value: number) => {
