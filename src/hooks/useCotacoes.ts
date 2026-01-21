@@ -13,16 +13,16 @@ export interface ExchangeRates {
 
 /**
  * Tipos de fonte para cotações:
- * - PTAX: Cotação oficial do Banco Central do Brasil (USD, EUR, GBP)
- * - FASTFOREX: Cotação da API FastForex (MYR, MXN, ARS, COP)
+ * - FASTFOREX: Cotação da API FastForex (fonte primária para TODAS as moedas)
+ * - PTAX_FALLBACK: PTAX como segundo fallback para USD, EUR, GBP
  * - TRABALHO_FALLBACK: Usando cotação de trabalho como fallback (fonte oficial indisponível)
- * - FALLBACK: Usando valor fallback hardcoded
+ * - FALLBACK: Usando valor fallback hardcoded (terceira opção)
  */
 export type CotacaoSource = 
-  | 'PTAX' 
-  | 'PTAX_CACHE' 
   | 'FASTFOREX' 
   | 'FASTFOREX_CACHE' 
+  | 'PTAX_FALLBACK' 
+  | 'PTAX_FALLBACK_CACHE' 
   | 'TRABALHO_FALLBACK' 
   | 'FALLBACK'
   | 'INDISPONIVEL';
@@ -32,6 +32,7 @@ export interface CotacaoSourceInfo {
   label: string;
   isOfficial: boolean;
   isFallback: boolean;
+  isPtaxFallback: boolean;
 }
 
 interface CotacoesState {
@@ -72,37 +73,41 @@ const FALLBACK_RATES: ExchangeRates = {
 
 /**
  * Mapeia a fonte retornada pela edge function para o tipo CotacaoSourceInfo
+ * Nova hierarquia: FastForex (primário) → PTAX (fallback USD/EUR/GBP) → Hardcoded
  */
-function parseSource(rawSource: string, currency: 'PTAX' | 'FASTFOREX'): CotacaoSourceInfo {
+function parseSource(rawSource: string): CotacaoSourceInfo {
   const source = rawSource?.toUpperCase() || '';
   
-  // PTAX oficial (USD, EUR, GBP)
-  if (source === 'PTAX' || source === 'PTAX_CACHE') {
-    return {
-      source: source.includes('CACHE') ? 'PTAX_CACHE' : 'PTAX',
-      label: 'PTAX BCB',
-      isOfficial: true,
-      isFallback: false
-    };
-  }
-  
-  // FastForex (MYR, MXN, ARS, COP)
+  // FastForex (fonte primária para TODAS as moedas)
   if (source === 'FASTFOREX' || source === 'FASTFOREX_CACHE') {
     return {
       source: source.includes('CACHE') ? 'FASTFOREX_CACHE' : 'FASTFOREX',
       label: 'FastForex',
       isOfficial: true,
-      isFallback: false
+      isFallback: false,
+      isPtaxFallback: false
     };
   }
   
-  // Fallback quando fonte oficial indisponível
+  // PTAX como fallback (apenas USD, EUR, GBP quando FastForex indisponível)
+  if (source === 'PTAX_FALLBACK' || source === 'PTAX_FALLBACK_CACHE') {
+    return {
+      source: source.includes('CACHE') ? 'PTAX_FALLBACK_CACHE' : 'PTAX_FALLBACK',
+      label: 'PTAX (fallback)',
+      isOfficial: true,
+      isFallback: false,
+      isPtaxFallback: true
+    };
+  }
+  
+  // Fallback hardcoded quando nenhuma fonte disponível
   if (source === 'FALLBACK' || source === 'FALLBACK_ERRO') {
     return {
       source: 'FALLBACK',
-      label: currency === 'PTAX' ? 'Fallback (sem PTAX)' : 'Fallback (sem API)',
+      label: 'Fallback',
       isOfficial: false,
-      isFallback: true
+      isFallback: true,
+      isPtaxFallback: false
     };
   }
   
@@ -111,7 +116,8 @@ function parseSource(rawSource: string, currency: 'PTAX' | 'FASTFOREX'): Cotacao
     source: 'INDISPONIVEL',
     label: 'Indisponível',
     isOfficial: false,
-    isFallback: true
+    isFallback: true,
+    isPtaxFallback: false
   };
 }
 
@@ -119,7 +125,8 @@ const defaultSourceInfo: CotacaoSourceInfo = {
   source: 'FALLBACK',
   label: 'Carregando...',
   isOfficial: false,
-  isFallback: true
+  isFallback: true,
+  isPtaxFallback: false
 };
 
 export function useCotacoes(cryptoSymbols: string[] = []) {
@@ -181,15 +188,15 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
         newState.cotacaoCOP = data.COPBRL;
       }
       
-      // Parsear sources com a lógica correta
+      // Parsear sources - agora TODAS usam FastForex como primário
       const newSources = {
-        usd: parseSource(rawSources.USD, 'PTAX'),
-        eur: parseSource(rawSources.EUR, 'PTAX'),
-        gbp: parseSource(rawSources.GBP, 'PTAX'),
-        myr: parseSource(rawSources.MYR, 'FASTFOREX'),
-        mxn: parseSource(rawSources.MXN, 'FASTFOREX'),
-        ars: parseSource(rawSources.ARS, 'FASTFOREX'),
-        cop: parseSource(rawSources.COP, 'FASTFOREX'),
+        usd: parseSource(rawSources.USD),
+        eur: parseSource(rawSources.EUR),
+        gbp: parseSource(rawSources.GBP),
+        myr: parseSource(rawSources.MYR),
+        mxn: parseSource(rawSources.MXN),
+        ars: parseSource(rawSources.ARS),
+        cop: parseSource(rawSources.COP),
         crypto: state.sources.crypto
       };
       
