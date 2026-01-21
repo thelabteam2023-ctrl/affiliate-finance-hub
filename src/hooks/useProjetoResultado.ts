@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 // Fonte única de verdade para o resultado do projeto
@@ -49,33 +50,62 @@ interface UseProjetoResultadoReturn {
   refresh: () => Promise<void>;
 }
 
+// Query key factory para consistência
+export const PROJETO_RESULTADO_QUERY_KEY = "projeto-resultado";
+
+export function getProjetoResultadoQueryKey(
+  projetoId: string,
+  dataInicio?: Date | null,
+  dataFim?: Date | null
+) {
+  return [
+    PROJETO_RESULTADO_QUERY_KEY,
+    projetoId,
+    dataInicio?.toISOString() || null,
+    dataFim?.toISOString() || null,
+  ];
+}
+
+/**
+ * Hook para invalidar o cache do resultado do projeto.
+ * Use após mutações que afetam KPIs (apostas, giros, cashback, etc.)
+ */
+export function useInvalidateProjetoResultado() {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    (projetoId: string) => {
+      queryClient.invalidateQueries({
+        queryKey: [PROJETO_RESULTADO_QUERY_KEY, projetoId],
+      });
+    },
+    [queryClient]
+  );
+}
+
 /**
  * Hook centralizado para calcular o resultado do projeto.
  * FONTE ÚNICA DE VERDADE - deve ser usado por:
  * - KPI "Lucro" do dashboard interno
  * - "Retorno Financeiro" do card externo
  * - Qualquer outro lugar que exiba resultado do projeto
+ * 
+ * AGORA USANDO REACT QUERY para cache e invalidação automática
  */
 export function useProjetoResultado({ 
   projetoId, 
   dataInicio = null, 
   dataFim = null 
 }: UseProjetoResultadoProps): UseProjetoResultadoReturn {
-  const [resultado, setResultado] = useState<ProjetoResultado | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const calculateResultado = useCallback(async () => {
-    if (!projetoId) {
-      setResultado(null);
-      setLoading(false);
-      return;
-    }
+  const queryKey = getProjetoResultadoQueryKey(projetoId, dataInicio, dataFim);
 
-    setLoading(true);
-    setError(null);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey,
+    queryFn: async (): Promise<ProjetoResultado | null> => {
+      if (!projetoId) return null;
 
-    try {
       // 0. Buscar configuração de moeda do projeto
       const { data: projetoData } = await supabase
         .from('projetos')
@@ -116,7 +146,7 @@ export function useProjetoResultado({
       // 9. Calcular ROI
       const roi = totalStaked > 0 ? (netProfit / totalStaked) * 100 : null;
 
-      setResultado({
+      return {
         totalStaked,
         grossProfitFromBets,
         lucroGirosGratis,
@@ -133,20 +163,23 @@ export function useProjetoResultado({
         totalDepositos: capitalData.totalDepositos,
         totalSaques: capitalData.totalSaques,
         moedaConsolidacao,
-      });
-    } catch (err: any) {
-      console.error('Erro ao calcular resultado do projeto:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [projetoId, dataInicio, dataFim]);
+      };
+    },
+    enabled: !!projetoId,
+    staleTime: 30 * 1000, // 30 segundos - dados ficam "frescos"
+    gcTime: 5 * 60 * 1000, // 5 minutos no cache
+  });
 
-  useEffect(() => {
-    calculateResultado();
-  }, [calculateResultado]);
+  const refresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
-  return { resultado, loading, error, refresh: calculateResultado };
+  return { 
+    resultado: data || null, 
+    loading: isLoading, 
+    error: error?.message || null, 
+    refresh 
+  };
 }
 
 // Funções auxiliares de fetch

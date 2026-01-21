@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { PROJETO_RESULTADO_QUERY_KEY } from "./useProjetoResultado";
 import { 
   GiroGratis, 
   GiroGratisComBookmaker, 
@@ -30,11 +32,20 @@ interface GiroGratisComMoeda extends GiroGratisComBookmaker {
  * - Elimina race condition do hook anterior
  */
 export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGratisOptions) {
+  const queryClient = useQueryClient();
   const [giros, setGiros] = useState<GiroGratisComMoeda[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [moedaConsolidacao, setMoedaConsolidacao] = useState<string>("BRL");
   const [cotacaoTrabalho, setCotacaoTrabalho] = useState<number | null>(null);
+
+  // Função para invalidar KPIs globais após mutação
+  const invalidateProjectKPIs = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: [PROJETO_RESULTADO_QUERY_KEY, projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+  }, [queryClient, projetoId]);
 
   // Buscar configuração de moeda do projeto PRIMEIRO
   useEffect(() => {
@@ -317,6 +328,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
       toast.success("Giro grátis registrado! Saldo da casa atualizado.");
       await fetchGiros();
+      invalidateProjectKPIs(); // Atualiza KPIs globais automaticamente
       return (data as any)?.id || null;
     } catch (err) {
       console.error("Erro ao criar giro grátis:", err);
@@ -352,6 +364,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
       toast.success("Giro grátis atualizado!");
       await fetchGiros();
+      invalidateProjectKPIs();
       return true;
     } catch (err) {
       console.error("Erro ao atualizar giro grátis:", err);
@@ -371,6 +384,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
       toast.success("Registro removido");
       await fetchGiros();
+      invalidateProjectKPIs();
       return true;
     } catch (err) {
       console.error("Erro ao remover giro grátis:", err);
@@ -390,6 +404,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
       toast.success("Giro confirmado! Saldo da casa atualizado.");
       await fetchGiros();
+      invalidateProjectKPIs();
       return true;
     } catch (err) {
       console.error("Erro ao confirmar giro grátis:", err);
