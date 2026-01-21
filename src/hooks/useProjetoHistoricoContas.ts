@@ -14,6 +14,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+interface ContaHistorico {
+  id: string;
+  nome: string;
+  parceiroNome: string | null;
+  dataVinculacao: string | null;
+  foiLimitada: boolean;
+}
+
+interface ParceiroHistorico {
+  id: string;
+  nome: string;
+  totalContas: number;
+}
+
 interface HistoricoContasResult {
   // BLOCO A — Estado Atual
   contasAtuais: number;
@@ -26,10 +40,20 @@ interface HistoricoContasResult {
   historicoContasLimitadas: number;   // Total de contas que já foram limitadas
   historicoParceirosUnicos: number;   // Total de parceiros únicos que já passaram pelo projeto
   
+  // BLOCO B — Dados detalhados para tooltips
+  historicoContasLista: ContaHistorico[];
+  historicoContasLimitadasLista: ContaHistorico[];
+  historicoParceirosLista: ParceiroHistorico[];
+  
   // BLOCO C — Indicadores Operacionais
   casasComBonus: number;              // Casas (bookmaker_catalogo) com bônus ativo
   contasComBonus: number;             // Contas (bookmakers) com bônus ativo
   parceirosComContasVinculadas: number; // Parceiros que têm contas atualmente vinculadas
+  
+  // BLOCO C — Dados detalhados para tooltips
+  casasComBonusLista: { id: string; nome: string }[];
+  contasComBonusLista: { id: string; nome: string; parceiroNome: string | null }[];
+  parceirosAtivosLista: { id: string; nome: string; totalContas: number }[];
   
   isLoading: boolean;
   isError: boolean;
@@ -41,10 +65,19 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["projeto-painel-contas", projetoId],
     queryFn: async () => {
-      // 1. Buscar bookmakers atualmente vinculados
+      // 1. Buscar bookmakers atualmente vinculados com dados do catálogo
       const { data: bookmarkersAtuais, error: bookmarkersError } = await supabase
         .from("bookmakers")
-        .select("id, status, parceiro_id, bookmaker_catalogo_id")
+        .select(`
+          id, 
+          nome,
+          status, 
+          parceiro_id, 
+          bookmaker_catalogo_id,
+          created_at,
+          parceiros!bookmakers_parceiro_id_fkey (id, nome),
+          bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (id, nome)
+        `)
         .eq("projeto_id", projetoId);
       
       if (bookmarkersError) throw bookmarkersError;
@@ -52,8 +85,17 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
       // 2. Buscar histórico de vínculos
       const { data: historicoData, error: historicoError } = await supabase
         .from("projeto_bookmaker_historico")
-        .select("id, bookmaker_id, parceiro_id, status_final")
-        .eq("projeto_id", projetoId);
+        .select(`
+          id, 
+          bookmaker_id, 
+          parceiro_id, 
+          status_final,
+          bookmaker_nome,
+          parceiro_nome,
+          data_vinculacao
+        `)
+        .eq("projeto_id", projetoId)
+        .order("data_vinculacao", { ascending: true });
       
       if (historicoError) throw historicoError;
 
@@ -82,52 +124,143 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
       const parceirosAtivos = parceirosIdsAtuais.size;
 
       // ============ BLOCO B — Histórico Consolidado ============
-      // Combinar IDs únicos de histórico + atuais
-      const idsHistorico = new Set(historicoData?.map(h => h.bookmaker_id) || []);
-      const idsAtuais = new Set(bookmarkersAtuais?.map(b => b.id) || []);
+      // Mapa para construir lista de contas históricas
+      const contasHistoricoMap = new Map<string, ContaHistorico>();
       
-      // Total histórico = união de todos os bookmakers já vinculados
-      const todosBookmakerIds = new Set([...idsHistorico, ...idsAtuais]);
-      const historicoTotalContas = todosBookmakerIds.size;
+      // Adicionar do histórico primeiro
+      historicoData?.forEach(h => {
+        if (h.bookmaker_id) {
+          contasHistoricoMap.set(h.bookmaker_id, {
+            id: h.bookmaker_id,
+            nome: h.bookmaker_nome || "Conta sem nome",
+            parceiroNome: h.parceiro_nome || null,
+            dataVinculacao: h.data_vinculacao,
+            foiLimitada: h.status_final?.toLowerCase() === "limitada"
+          });
+        }
+      });
       
-      // Limitações: histórico (status_final = 'limitada') + atuais limitadas
-      const limitadasHistorico = new Set(
-        historicoData?.filter(h => 
-          h.status_final?.toLowerCase() === "limitada"
-        ).map(h => h.bookmaker_id) || []
-      );
-      const limitadasAtuais = new Set(
-        bookmarkersAtuais?.filter(b => 
-          b.status?.toLowerCase() === "limitada"
-        ).map(b => b.id) || []
-      );
-      const todasLimitadas = new Set([...limitadasHistorico, ...limitadasAtuais]);
-      const historicoContasLimitadas = todasLimitadas.size;
+      // Adicionar/atualizar com dados atuais
+      bookmarkersAtuais?.forEach(b => {
+        const existing = contasHistoricoMap.get(b.id);
+        const parceiroNome = (b as any).parceiros?.nome || null;
+        contasHistoricoMap.set(b.id, {
+          id: b.id,
+          nome: b.nome,
+          parceiroNome: parceiroNome,
+          dataVinculacao: existing?.dataVinculacao || b.created_at,
+          foiLimitada: existing?.foiLimitada || b.status?.toLowerCase() === "limitada"
+        });
+      });
       
-      // Parceiros únicos histórico = união de parceiros do histórico + atuais
-      const parceirosHistorico = new Set(
-        historicoData?.map(h => h.parceiro_id).filter(Boolean) || []
-      );
-      const todosParceirosIds = new Set([...parceirosHistorico, ...parceirosIdsAtuais]);
-      const historicoParceirosUnicos = todosParceirosIds.size;
+      const historicoContasLista = Array.from(contasHistoricoMap.values())
+        .sort((a, b) => {
+          if (!a.dataVinculacao) return 1;
+          if (!b.dataVinculacao) return -1;
+          return new Date(a.dataVinculacao).getTime() - new Date(b.dataVinculacao).getTime();
+        });
+      
+      const historicoTotalContas = historicoContasLista.length;
+      
+      const historicoContasLimitadasLista = historicoContasLista.filter(c => c.foiLimitada);
+      const historicoContasLimitadas = historicoContasLimitadasLista.length;
+      
+      // Parceiros únicos histórico
+      const parceirosMap = new Map<string, { nome: string; contas: Set<string> }>();
+      
+      historicoData?.forEach(h => {
+        if (h.parceiro_id && h.parceiro_nome) {
+          const existing = parceirosMap.get(h.parceiro_id);
+          if (existing) {
+            if (h.bookmaker_id) existing.contas.add(h.bookmaker_id);
+          } else {
+            parceirosMap.set(h.parceiro_id, {
+              nome: h.parceiro_nome,
+              contas: new Set(h.bookmaker_id ? [h.bookmaker_id] : [])
+            });
+          }
+        }
+      });
+      
+      bookmarkersAtuais?.forEach(b => {
+        if (b.parceiro_id) {
+          const parceiroNome = (b as any).parceiros?.nome || "Parceiro";
+          const existing = parceirosMap.get(b.parceiro_id);
+          if (existing) {
+            existing.contas.add(b.id);
+          } else {
+            parceirosMap.set(b.parceiro_id, {
+              nome: parceiroNome,
+              contas: new Set([b.id])
+            });
+          }
+        }
+      });
+      
+      const historicoParceirosLista: ParceiroHistorico[] = Array.from(parceirosMap.entries())
+        .map(([id, data]) => ({
+          id,
+          nome: data.nome,
+          totalContas: data.contas.size
+        }))
+        .sort((a, b) => b.totalContas - a.totalContas);
+      
+      const historicoParceirosUnicos = historicoParceirosLista.length;
 
       // ============ BLOCO C — Indicadores Operacionais ============
       // Bookmakers com bônus ativo
-      const bookmakersComBonus = new Set(
+      const bookmakersComBonusIds = new Set(
         bonusData?.map(b => b.bookmaker_id) || []
       );
-      const contasComBonus = bookmakersComBonus.size;
+      const contasComBonus = bookmakersComBonusIds.size;
+      
+      // Contas com bônus - lista detalhada
+      const contasComBonusLista = bookmarkersAtuais
+        ?.filter(b => bookmakersComBonusIds.has(b.id))
+        .map(b => ({
+          id: b.id,
+          nome: b.nome,
+          parceiroNome: (b as any).parceiros?.nome || null
+        })) || [];
       
       // Casas (bookmaker_catalogo) com bônus = extrair catalogo_ids únicos das contas com bônus
-      const catalogosComBonus = new Set(
-        bookmarkersAtuais
-          ?.filter(b => bookmakersComBonus.has(b.id) && b.bookmaker_catalogo_id)
-          .map(b => b.bookmaker_catalogo_id) || []
-      );
-      const casasComBonus = catalogosComBonus.size;
+      const catalogosComBonusMap = new Map<string, string>();
+      bookmarkersAtuais
+        ?.filter(b => bookmakersComBonusIds.has(b.id) && b.bookmaker_catalogo_id)
+        .forEach(b => {
+          const catalogoNome = (b as any).bookmakers_catalogo?.nome || b.nome;
+          if (b.bookmaker_catalogo_id) {
+            catalogosComBonusMap.set(b.bookmaker_catalogo_id, catalogoNome);
+          }
+        });
       
-      // Parceiros com contas vinculadas (atualmente)
-      const parceirosComContasVinculadas = parceirosAtivos;
+      const casasComBonusLista = Array.from(catalogosComBonusMap.entries())
+        .map(([id, nome]) => ({ id, nome }));
+      const casasComBonus = casasComBonusLista.length;
+      
+      // Parceiros com contas vinculadas (atualmente) - lista detalhada
+      const parceirosAtivosMap = new Map<string, { nome: string; contas: number }>();
+      bookmarkersAtuais?.forEach(b => {
+        if (b.parceiro_id) {
+          const parceiroNome = (b as any).parceiros?.nome || "Parceiro";
+          const existing = parceirosAtivosMap.get(b.parceiro_id);
+          if (existing) {
+            existing.contas++;
+          } else {
+            parceirosAtivosMap.set(b.parceiro_id, { nome: parceiroNome, contas: 1 });
+          }
+        }
+      });
+      
+      const parceirosAtivosLista = Array.from(parceirosAtivosMap.entries())
+        .map(([id, data]) => ({
+          id,
+          nome: data.nome,
+          totalContas: data.contas
+        }))
+        .sort((a, b) => b.totalContas - a.totalContas);
+      
+      const parceirosComContasVinculadas = parceirosAtivosLista.length;
 
       return {
         // BLOCO A
@@ -139,10 +272,16 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
         historicoTotalContas,
         historicoContasLimitadas,
         historicoParceirosUnicos,
+        historicoContasLista,
+        historicoContasLimitadasLista,
+        historicoParceirosLista,
         // BLOCO C
         casasComBonus,
         contasComBonus,
         parceirosComContasVinculadas,
+        casasComBonusLista,
+        contasComBonusLista,
+        parceirosAtivosLista,
       };
     },
     enabled: !!projetoId,
@@ -160,11 +299,17 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
     historicoTotalContas: data?.historicoTotalContas || 0,
     historicoContasLimitadas: data?.historicoContasLimitadas || 0,
     historicoParceirosUnicos: data?.historicoParceirosUnicos || 0,
+    historicoContasLista: data?.historicoContasLista || [],
+    historicoContasLimitadasLista: data?.historicoContasLimitadasLista || [],
+    historicoParceirosLista: data?.historicoParceirosLista || [],
     
     // BLOCO C — Indicadores Operacionais
     casasComBonus: data?.casasComBonus || 0,
     contasComBonus: data?.contasComBonus || 0,
     parceirosComContasVinculadas: data?.parceirosComContasVinculadas || 0,
+    casasComBonusLista: data?.casasComBonusLista || [],
+    contasComBonusLista: data?.contasComBonusLista || [],
+    parceirosAtivosLista: data?.parceirosAtivosLista || [],
     
     isLoading,
     isError,
