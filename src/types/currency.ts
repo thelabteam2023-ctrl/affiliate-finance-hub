@@ -9,7 +9,7 @@
  */
 
 // Moedas FIAT suportadas pelo sistema
-export type FiatCurrency = "BRL" | "USD" | "EUR" | "GBP";
+export type FiatCurrency = "BRL" | "USD" | "EUR" | "GBP" | "MYR" | "MXN" | "ARS" | "COP";
 
 // Moedas CRYPTO suportadas pelo sistema
 export type CryptoCurrency = 
@@ -41,6 +41,10 @@ export const FIAT_CURRENCIES: Array<{ value: FiatCurrency; label: string; symbol
   { value: "USD", label: "Dólar Americano", symbol: "$" },
   { value: "EUR", label: "Euro", symbol: "€" },
   { value: "GBP", label: "Libra Esterlina", symbol: "£" },
+  { value: "MYR", label: "Ringgit Malaio", symbol: "RM" },
+  { value: "MXN", label: "Peso Mexicano", symbol: "MX$" },
+  { value: "ARS", label: "Peso Argentino", symbol: "AR$" },
+  { value: "COP", label: "Peso Colombiano", symbol: "CO$" },
 ];
 
 // Lista de moedas CRYPTO disponíveis
@@ -69,6 +73,10 @@ export const CURRENCY_TYPES: Record<SupportedCurrency, CurrencyType> = {
   USD: "FIAT",
   EUR: "FIAT",
   GBP: "FIAT",
+  MYR: "FIAT",
+  MXN: "FIAT",
+  ARS: "FIAT",
+  COP: "FIAT",
   // CRYPTO
   USDT: "CRYPTO",
   USDC: "CRYPTO",
@@ -94,6 +102,10 @@ export const CURRENCY_SYMBOLS: Record<SupportedCurrency, string> = {
   USD: "$",
   EUR: "€",
   GBP: "£",
+  MYR: "RM",
+  MXN: "MX$",
+  ARS: "AR$",
+  COP: "CO$",
   // CRYPTO
   USDT: "₮",
   USDC: "USDC",
@@ -119,6 +131,10 @@ export const CURRENCY_NAMES: Record<SupportedCurrency, string> = {
   USD: "Dólar Americano",
   EUR: "Euro",
   GBP: "Libra Esterlina",
+  MYR: "Ringgit Malaio",
+  MXN: "Peso Mexicano",
+  ARS: "Peso Argentino",
+  COP: "Peso Colombiano",
   // CRYPTO
   USDT: "Tether (USDT)",
   USDC: "USD Coin (USDC)",

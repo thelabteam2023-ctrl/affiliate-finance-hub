@@ -5,12 +5,20 @@ export interface ExchangeRates {
   USDBRL: number;
   EURBRL: number;
   GBPBRL: number;
+  MYRBRL: number;
+  MXNBRL: number;
+  ARSBRL: number;
+  COPBRL: number;
 }
 
 interface CotacoesState {
   cotacaoUSD: number;
   cotacaoEUR: number;
   cotacaoGBP: number;
+  cotacaoMYR: number;
+  cotacaoMXN: number;
+  cotacaoARS: number;
+  cotacaoCOP: number;
   cryptoPrices: Record<string, number>;
   loading: boolean;
   lastUpdate: Date | null;
@@ -18,6 +26,10 @@ interface CotacoesState {
     usd: string;
     eur: string;
     gbp: string;
+    myr: string;
+    mxn: string;
+    ars: string;
+    cop: string;
     crypto: string;
   };
 }
@@ -28,7 +40,11 @@ const REFRESH_INTERVAL = 60000; // 60 segundos
 const FALLBACK_RATES: ExchangeRates = {
   USDBRL: 5.31,
   EURBRL: 6.10,
-  GBPBRL: 7.10
+  GBPBRL: 7.10,
+  MYRBRL: 1.20,
+  MXNBRL: 0.26,
+  ARSBRL: 0.005,
+  COPBRL: 0.0013
 };
 
 export function useCotacoes(cryptoSymbols: string[] = []) {
@@ -36,6 +52,10 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
     cotacaoUSD: FALLBACK_RATES.USDBRL,
     cotacaoEUR: FALLBACK_RATES.EURBRL,
     cotacaoGBP: FALLBACK_RATES.GBPBRL,
+    cotacaoMYR: FALLBACK_RATES.MYRBRL,
+    cotacaoMXN: FALLBACK_RATES.MXNBRL,
+    cotacaoARS: FALLBACK_RATES.ARSBRL,
+    cotacaoCOP: FALLBACK_RATES.COPBRL,
     cryptoPrices: {},
     loading: true,
     lastUpdate: null,
@@ -43,6 +63,10 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
       usd: "fallback",
       eur: "fallback",
       gbp: "fallback",
+      myr: "fallback",
+      mxn: "fallback",
+      ars: "fallback",
+      cop: "fallback",
       crypto: "fallback"
     }
   });
@@ -54,18 +78,36 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
       
       const newState: Partial<CotacoesState> = {};
       const newSource = { ...state.source };
+      const sourceInfo = data?.source || "BCB";
+      const failedCurrencies = data?.failedCurrencies || [];
       
       if (data?.USDBRL) {
         newState.cotacaoUSD = data.USDBRL;
-        newSource.usd = data.source || "BCB";
+        newSource.usd = failedCurrencies.includes('USD') ? 'fallback' : sourceInfo;
       }
       if (data?.EURBRL) {
         newState.cotacaoEUR = data.EURBRL;
-        newSource.eur = data.partial && !data.EURBRL ? "fallback" : (data.source || "BCB");
+        newSource.eur = failedCurrencies.includes('EUR') ? 'fallback' : sourceInfo;
       }
       if (data?.GBPBRL) {
         newState.cotacaoGBP = data.GBPBRL;
-        newSource.gbp = data.partial && !data.GBPBRL ? "fallback" : (data.source || "BCB");
+        newSource.gbp = failedCurrencies.includes('GBP') ? 'fallback' : sourceInfo;
+      }
+      if (data?.MYRBRL) {
+        newState.cotacaoMYR = data.MYRBRL;
+        newSource.myr = failedCurrencies.includes('MYR') ? 'fallback' : sourceInfo;
+      }
+      if (data?.MXNBRL) {
+        newState.cotacaoMXN = data.MXNBRL;
+        newSource.mxn = failedCurrencies.includes('MXN') ? 'fallback' : sourceInfo;
+      }
+      if (data?.ARSBRL) {
+        newState.cotacaoARS = data.ARSBRL;
+        newSource.ars = failedCurrencies.includes('ARS') ? 'fallback' : sourceInfo;
+      }
+      if (data?.COPBRL) {
+        newState.cotacaoCOP = data.COPBRL;
+        newSource.cop = failedCurrencies.includes('COP') ? 'fallback' : sourceInfo;
       }
       
       setState(prev => ({
@@ -78,6 +120,10 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
         USD: data?.USDBRL,
         EUR: data?.EURBRL,
         GBP: data?.GBPBRL,
+        MYR: data?.MYRBRL,
+        MXN: data?.MXNBRL,
+        ARS: data?.ARSBRL,
+        COP: data?.COPBRL,
         source: data?.source
       });
     } catch (error) {
@@ -148,9 +194,13 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
       case "USD": return valor * state.cotacaoUSD;
       case "EUR": return valor * state.cotacaoEUR;
       case "GBP": return valor * state.cotacaoGBP;
+      case "MYR": return valor * state.cotacaoMYR;
+      case "MXN": return valor * state.cotacaoMXN;
+      case "ARS": return valor * state.cotacaoARS;
+      case "COP": return valor * state.cotacaoCOP;
       default: return valor; // Moeda desconhecida, retorna sem conversão
     }
-  }, [state.cotacaoUSD, state.cotacaoEUR, state.cotacaoGBP]);
+  }, [state.cotacaoUSD, state.cotacaoEUR, state.cotacaoGBP, state.cotacaoMYR, state.cotacaoMXN, state.cotacaoARS, state.cotacaoCOP]);
 
   const getRate = useCallback((moeda: string): number => {
     const moedaUpper = moeda.toUpperCase();
@@ -158,10 +208,14 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
       case "USD": return state.cotacaoUSD;
       case "EUR": return state.cotacaoEUR;
       case "GBP": return state.cotacaoGBP;
+      case "MYR": return state.cotacaoMYR;
+      case "MXN": return state.cotacaoMXN;
+      case "ARS": return state.cotacaoARS;
+      case "COP": return state.cotacaoCOP;
       case "BRL": return 1;
       default: return 1;
     }
-  }, [state.cotacaoUSD, state.cotacaoEUR, state.cotacaoGBP]);
+  }, [state.cotacaoUSD, state.cotacaoEUR, state.cotacaoGBP, state.cotacaoMYR, state.cotacaoMXN, state.cotacaoARS, state.cotacaoCOP]);
 
   const getCryptoUSDValue = useCallback((coin: string, quantity: number, fallbackUSD?: number) => {
     const price = state.cryptoPrices[coin];
@@ -177,7 +231,11 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
   const rates: ExchangeRates = {
     USDBRL: state.cotacaoUSD,
     EURBRL: state.cotacaoEUR,
-    GBPBRL: state.cotacaoGBP
+    GBPBRL: state.cotacaoGBP,
+    MYRBRL: state.cotacaoMYR,
+    MXNBRL: state.cotacaoMXN,
+    ARSBRL: state.cotacaoARS,
+    COPBRL: state.cotacaoCOP
   };
 
   return {
