@@ -15,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoricoVinculosTab } from "./HistoricoVinculosTab";
 import { HistoricoConciliacoesTab } from "./HistoricoConciliacoesTab";
 import { ProjetoMovimentacoesTab } from "./ProjetoMovimentacoesTab";
+import { ContasNoProjetoCard } from "./ContasNoProjetoCard";
+import { SaldoOperavelCard } from "./SaldoOperavelCard";
 import { VinculoBonusDrawer } from "./VinculoBonusDrawer";
 import { BalanceDiscrepancyAlert } from "./BalanceDiscrepancyAlert";
 import { DeltaCambialCard } from "./DeltaCambialCard";
@@ -620,112 +622,14 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       <TabsContent value="ativos" className="space-y-4">
         {/* KPIs - Grid unificada incluindo Delta Cambial */}
         <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contas no Projeto</CardTitle>
-            <Link2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {vinculos.length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-emerald-400">{vinculosAtivos} ativas</span>
-              {" · "}
-              <span className="text-yellow-400">{vinculosLimitados} limitadas</span>
-            </p>
-            {/* Indicador multi-moeda */}
-            {consolidatedTotals.hasForeignCurrency && (
-              <div className="flex items-center gap-1 mt-1">
-                <Globe className="h-3 w-3 text-blue-400" />
-                <span className="text-[10px] text-blue-400">Multi-moeda</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Card Contas no Projeto - Refatorado */}
+        <ContasNoProjetoCard 
+          projetoId={projetoId} 
+          hasForeignCurrency={consolidatedTotals.hasForeignCurrency} 
+        />
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card className="border-primary/30 bg-primary/5 cursor-help">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-                    Saldo Operável
-                    <Info className="h-3 w-3 text-muted-foreground" />
-                  </CardTitle>
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {/* Valor principal consolidado */}
-                  <div className="text-2xl font-bold text-primary">
-                    {formatCurrency(consolidatedTotals.totalOperavelBRL, "BRL")}
-                  </div>
-                  
-                  {/* Breakdown por moeda - destaque visual */}
-                  {balancesByMoeda.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {balancesByMoeda.map(b => (
-                        <TooltipProvider key={b.moeda}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge 
-                                variant="outline" 
-                                className={`text-xs px-2 py-0.5 font-medium ${
-                                  b.moeda === "BRL" 
-                                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400" 
-                                    : "bg-blue-500/15 border-blue-500/40 text-blue-400"
-                                }`}
-                              >
-                                {b.moeda} {formatCurrency(b.total, b.moeda, { compact: true })}
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="font-medium">{formatCurrency(b.total, b.moeda)}</p>
-                              {b.moeda !== "BRL" && (
-                                <p className="text-xs text-muted-foreground">
-                                  ≈ {formatCurrency(b.totalBRL, "BRL")} (BCB PTAX)
-                                </p>
-                              )}
-                              <p className="text-xs text-muted-foreground">{b.count} conta{b.count !== 1 ? 's' : ''}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* Indicadores secundários - apenas Freebet (bônus já está no saldo real) */}
-                  {consolidatedTotals.totalFreebetBRL > 0 && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 border-t border-border/50">
-                      <span className="flex items-center gap-1">
-                        <Gift className="h-3 w-3 text-amber-400" />
-                        FB {formatCurrency(consolidatedTotals.totalFreebetBRL, "BRL", { compact: true })}
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <div className="space-y-2">
-                <p className="font-medium">Saldo Operável = Real + Freebet</p>
-                <p className="text-xs text-muted-foreground">
-                  Valor total disponível para operação.
-                  O bônus já está incluído no saldo real de cada casa.
-                </p>
-                {consolidatedTotals.hasForeignCurrency && (
-                  <div className="pt-2 border-t border-border/50">
-                    <p className="text-xs font-medium text-blue-400">⚡ Conversão em tempo real</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      Fonte: Banco Central do Brasil (PTAX)<br/>
-                      Atualização: a cada 60 segundos
-                    </p>
-                  </div>
-                )}
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {/* Card Saldo Operável - Refatorado */}
+        <SaldoOperavelCard projetoId={projetoId} />
 
         {/* Bônus Creditados - Total histórico de bônus já lançados no projeto */}
         {bonusSummary.total_credited > 0 && (
