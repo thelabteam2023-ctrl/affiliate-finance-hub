@@ -174,7 +174,7 @@ export function ProjectFinancialDisplay({
             <Info className="h-3.5 w-3.5 opacity-50" />
           </div>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-[300px]">
+        <TooltipContent side="top" align="center" sideOffset={8} className="max-w-[300px] z-[100]">
           <div className="space-y-2 text-xs">
             <div className="font-medium">Valor Aproximado (Conversão Analítica)</div>
             <div className="text-muted-foreground">
