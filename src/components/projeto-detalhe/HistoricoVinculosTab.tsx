@@ -4,6 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -18,7 +24,11 @@ import {
   CheckCircle2,
   ShieldAlert,
   XCircle,
+  Info,
+  CircleDollarSign,
+  DollarSign,
 } from "lucide-react";
+import { useCotacoes } from "@/hooks/useCotacoes";
 
 interface HistoricoVinculosTabProps {
   projetoId: string;
@@ -42,9 +52,16 @@ interface HistoricoVinculo {
   lucro_operacional: number;
 }
 
+// Agregação por moeda para KPIs multi-moeda
+interface CurrencyAggregate {
+  moeda: string;
+  valor: number;
+}
+
 export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
   const [historico, setHistorico] = useState<HistoricoVinculo[]>([]);
   const [loading, setLoading] = useState(true);
+  const { convertToBRL, loading: cotacaoLoading } = useCotacoes();
 
   useEffect(() => {
     fetchHistorico();
@@ -269,20 +286,142 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
     }
   };
 
-  // KPIs
+  // KPIs básicos
   const totalHistorico = historico.length;
   const vinculosDevolvidos = historico.filter((h) => h.data_desvinculacao !== null).length;
   const vinculosAtivos = historico.filter((h) => h.data_desvinculacao === null).length;
-  const lucroAcumulado = historico.reduce((acc, h) => acc + h.lucro_operacional, 0);
-  const depositoTotal = historico.reduce((acc, h) => acc + h.total_depositado, 0);
-  const saqueTotal = historico.reduce((acc, h) => acc + h.total_sacado, 0);
 
-  if (loading) {
+  // Agregar valores por moeda para exibição multi-moeda
+  const aggregateByMoeda = (
+    items: HistoricoVinculo[],
+    getter: (item: HistoricoVinculo) => number
+  ): CurrencyAggregate[] => {
+    const map: Record<string, number> = {};
+    items.forEach((item) => {
+      const moeda = item.moeda || "BRL";
+      map[moeda] = (map[moeda] || 0) + getter(item);
+    });
+    return Object.entries(map)
+      .filter(([_, valor]) => valor !== 0)
+      .map(([moeda, valor]) => ({ moeda, valor }))
+      .sort((a, b) => (a.moeda === "BRL" ? -1 : b.moeda === "BRL" ? 1 : 0));
+  };
+
+  // Agregações por moeda
+  const depositosPorMoeda = aggregateByMoeda(historico, (h) => h.total_depositado);
+  const saquesPorMoeda = aggregateByMoeda(historico, (h) => h.total_sacado);
+  const lucroPorMoeda = aggregateByMoeda(historico, (h) => h.lucro_operacional);
+
+  // Calcular totais consolidados em BRL
+  const calcularTotalConsolidado = (agregados: CurrencyAggregate[]): number => {
+    return agregados.reduce((acc, item) => {
+      return acc + convertToBRL(item.valor, item.moeda);
+    }, 0);
+  };
+
+  const depositoTotalBRL = calcularTotalConsolidado(depositosPorMoeda);
+  const saqueTotalBRL = calcularTotalConsolidado(saquesPorMoeda);
+  const lucroTotalBRL = calcularTotalConsolidado(lucroPorMoeda);
+
+  // Verificar se há múltiplas moedas
+  const hasMultipleCurrencies = (agregados: CurrencyAggregate[]): boolean => {
+    return agregados.length > 1 || (agregados.length === 1 && agregados[0].moeda !== "BRL");
+  };
+
+  // Formatar badge de moeda
+  const getMoedaIcon = (moeda: string) => {
+    return moeda === "BRL" ? CircleDollarSign : DollarSign;
+  };
+
+  // Formatar valor para exibição simples
+  const formatSimple = (valor: number, moeda: string) => {
+    if (moeda === "BRL") {
+      return `R$ ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `$ ${valor.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  // Componente para renderizar badges por moeda com tooltip
+  const renderCurrencyBadges = (
+    agregados: CurrencyAggregate[],
+    colorClass: string,
+    showConsolidated: boolean = true
+  ) => {
+    const consolidado = calcularTotalConsolidado(agregados);
+    const isMulti = hasMultipleCurrencies(agregados);
+
+    // Se não há dados, mostrar zero em BRL
+    if (agregados.length === 0) {
+      return (
+        <div className="flex flex-col items-center gap-1">
+          <Badge variant="outline" className={`text-sm px-3 py-1 ${colorClass}`}>
+            <CircleDollarSign className="h-3 w-3 mr-1" />
+            R$ 0,00
+          </Badge>
+        </div>
+      );
+    }
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex flex-col items-center gap-1 cursor-help">
+              {/* Badges por moeda */}
+              <div className="flex flex-wrap justify-center gap-1">
+                {agregados.map((item) => {
+                  const Icon = getMoedaIcon(item.moeda);
+                  return (
+                    <Badge
+                      key={item.moeda}
+                      variant="outline"
+                      className={`text-sm px-3 py-1 ${colorClass}`}
+                    >
+                      <Icon className="h-3 w-3 mr-1" />
+                      {formatSimple(item.valor, item.moeda)}
+                    </Badge>
+                  );
+                })}
+              </div>
+              {/* Valor consolidado aproximado */}
+              {showConsolidated && isMulti && (
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Info className="h-3 w-3" />
+                  ≈ R$ {consolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-xs">
+            <div className="text-sm space-y-1">
+              <p className="font-medium">Valores por moeda:</p>
+              {agregados.map((item) => (
+                <p key={item.moeda} className="flex justify-between gap-4">
+                  <span>{item.moeda}:</span>
+                  <span>{formatSimple(item.valor, item.moeda)}</span>
+                </p>
+              ))}
+              {isMulti && (
+                <>
+                  <hr className="my-1 border-border" />
+                  <p className="text-muted-foreground">
+                    Consolidado via PTAX: ≈ R$ {consolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
+  if (loading || cotacaoLoading) {
     return (
       <div className="space-y-4">
         <div className="grid gap-4 md:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-28" />
           ))}
         </div>
         <Skeleton className="h-64" />
@@ -315,10 +454,10 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
             <ArrowDownCircle className="h-4 w-4 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-400">
-              {formatCurrency(depositoTotal)}
+            <div className="flex flex-col items-center">
+              {renderCurrencyBadges(depositosPorMoeda, "border-blue-500/50 text-blue-400")}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground text-center mt-2">
               Valor total depositado nas casas
             </p>
           </CardContent>
@@ -330,10 +469,10 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
             <ArrowUpCircle className="h-4 w-4 text-emerald-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-400">
-              {formatCurrency(saqueTotal)}
+            <div className="flex flex-col items-center">
+              {renderCurrencyBadges(saquesPorMoeda, "border-emerald-500/50 text-emerald-400")}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground text-center mt-2">
               Valor total sacado das casas
             </p>
           </CardContent>
@@ -341,23 +480,25 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lucro Acumulado</CardTitle>
-            {lucroAcumulado >= 0 ? (
+            <CardTitle className="text-sm font-medium">
+              {lucroTotalBRL >= 0 ? "Lucro Acumulado" : "Prejuízo Acumulado"}
+            </CardTitle>
+            {lucroTotalBRL >= 0 ? (
               <TrendingUp className="h-4 w-4 text-emerald-400" />
             ) : (
               <TrendingDown className="h-4 w-4 text-red-400" />
             )}
           </CardHeader>
           <CardContent>
-            <div
-              className={`text-2xl font-bold ${
-                lucroAcumulado >= 0 ? "text-emerald-400" : "text-red-400"
-              }`}
-            >
-              {lucroAcumulado >= 0 ? "+" : ""}
-              {formatCurrency(lucroAcumulado)}
+            <div className="flex flex-col items-center">
+              {renderCurrencyBadges(
+                lucroPorMoeda,
+                lucroTotalBRL >= 0
+                  ? "border-emerald-500/50 text-emerald-400"
+                  : "border-red-500/50 text-red-400"
+              )}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground text-center mt-2">
               Lucro total das operações
             </p>
           </CardContent>
