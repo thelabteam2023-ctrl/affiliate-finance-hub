@@ -30,6 +30,10 @@ export interface CotacoesMultiMoeda {
   USD: CotacaoInfo;
   EUR: CotacaoInfo;
   GBP: CotacaoInfo;
+  MYR: CotacaoInfo;
+  MXN: CotacaoInfo;
+  ARS: CotacaoInfo;
+  COP: CotacaoInfo;
 }
 
 /**
@@ -84,13 +88,25 @@ export function useCotacaoConsolidacao(
  * @param cotacaoTrabalhoUSD - Cotação de trabalho USD/BRL
  * @param cotacaoTrabalhoEUR - Cotação de trabalho EUR/BRL
  * @param cotacaoTrabalhoGBP - Cotação de trabalho GBP/BRL
+ * @param cotacaoTrabalhoMYR - Cotação de trabalho MYR/BRL
+ * @param cotacaoTrabalhoMXN - Cotação de trabalho MXN/BRL
+ * @param cotacaoTrabalhoARS - Cotação de trabalho ARS/BRL
+ * @param cotacaoTrabalhoCOP - Cotação de trabalho COP/BRL
  */
 export function useCotacoesMultiMoeda(
   cotacaoTrabalhoUSD?: number | null,
   cotacaoTrabalhoEUR?: number | null,
-  cotacaoTrabalhoGBP?: number | null
+  cotacaoTrabalhoGBP?: number | null,
+  cotacaoTrabalhoMYR?: number | null,
+  cotacaoTrabalhoMXN?: number | null,
+  cotacaoTrabalhoARS?: number | null,
+  cotacaoTrabalhoCOP?: number | null
 ): CotacoesMultiMoeda & { loading: boolean } {
-  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, loading } = useCotacoes();
+  const { 
+    cotacaoUSD, cotacaoEUR, cotacaoGBP, 
+    cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP,
+    loading 
+  } = useCotacoes();
 
   return useMemo(() => {
     const buildCotacaoInfo = (
@@ -134,16 +150,25 @@ export function useCotacoesMultiMoeda(
       USD: buildCotacaoInfo(cotacaoUSD, cotacaoTrabalhoUSD, "USD"),
       EUR: buildCotacaoInfo(cotacaoEUR, cotacaoTrabalhoEUR, "EUR"),
       GBP: buildCotacaoInfo(cotacaoGBP, cotacaoTrabalhoGBP, "GBP"),
+      MYR: buildCotacaoInfo(cotacaoMYR, cotacaoTrabalhoMYR, "MYR"),
+      MXN: buildCotacaoInfo(cotacaoMXN, cotacaoTrabalhoMXN, "MXN"),
+      ARS: buildCotacaoInfo(cotacaoARS, cotacaoTrabalhoARS, "ARS"),
+      COP: buildCotacaoInfo(cotacaoCOP, cotacaoTrabalhoCOP, "COP"),
       loading,
     };
-  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoTrabalhoUSD, cotacaoTrabalhoEUR, cotacaoTrabalhoGBP, loading]);
+  }, [
+    cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP,
+    cotacaoTrabalhoUSD, cotacaoTrabalhoEUR, cotacaoTrabalhoGBP, 
+    cotacaoTrabalhoMYR, cotacaoTrabalhoMXN, cotacaoTrabalhoARS, cotacaoTrabalhoCOP,
+    loading
+  ]);
 }
 
 /**
  * Função pura para converter valor usando cotação
  * 
  * @param valor - Valor a converter
- * @param moedaOrigem - Moeda de origem (USD, BRL, EUR, GBP, etc)
+ * @param moedaOrigem - Moeda de origem (USD, BRL, EUR, GBP, MYR, MXN, ARS, COP, etc)
  * @param moedaDestino - Moeda de destino (BRL, USD, etc)
  * @param taxa - Taxa de conversão MOEDA/BRL
  * @returns Valor convertido
@@ -176,13 +201,14 @@ export function converterValor(
     return valor;
   }
   
-  // EUR/GBP -> BRL
-  if ((moedaOrigem === "EUR" || moedaOrigem === "GBP") && moedaDestino === "BRL") {
+  // Moedas FIAT -> BRL (EUR, GBP, MYR, MXN, ARS, COP)
+  const fiatCurrencies = ["EUR", "GBP", "MYR", "MXN", "ARS", "COP"];
+  if (fiatCurrencies.includes(moedaOrigem) && moedaDestino === "BRL") {
     return valor * taxa;
   }
   
-  // BRL -> EUR/GBP
-  if (moedaOrigem === "BRL" && (moedaDestino === "EUR" || moedaDestino === "GBP")) {
+  // BRL -> Moedas FIAT
+  if (moedaOrigem === "BRL" && fiatCurrencies.includes(moedaDestino)) {
     return valor / taxa;
   }
   
@@ -194,7 +220,19 @@ export function converterValor(
  */
 export function formatarMoeda(valor: number, moeda: string = "BRL"): string {
   const isUSD = ["USD", "USDT", "USDC"].includes(moeda);
-  const symbol = isUSD ? "$" : moeda === "EUR" ? "€" : moeda === "GBP" ? "£" : "R$";
+  
+  const symbolMap: Record<string, string> = {
+    USD: "$",
+    EUR: "€",
+    GBP: "£",
+    MYR: "RM",
+    MXN: "MX$",
+    ARS: "AR$",
+    COP: "CO$",
+    BRL: "R$"
+  };
+  
+  const symbol = isUSD ? "$" : (symbolMap[moeda] || "R$");
   
   return `${symbol} ${valor.toLocaleString("pt-BR", {
     minimumFractionDigits: 2,

@@ -60,6 +60,10 @@ export function useFinanceiroConsolidado(cryptoSymbols: string[] = []) {
     cotacaoUSD,
     cotacaoEUR,
     cotacaoGBP,
+    cotacaoMYR,
+    cotacaoMXN,
+    cotacaoARS,
+    cotacaoCOP,
     getCryptoUSDValue, 
     getCryptoPrice,
     loading, 
@@ -183,6 +187,50 @@ export function useFinanceiroConsolidado(cryptoSymbols: string[] = []) {
       };
     }
 
+    if (moeda === "MYR") {
+      return {
+        valorOriginal: valor,
+        moedaOriginal: "MYR",
+        valorBRL: valor * cotacaoMYR,
+        cotacaoUsada: cotacaoMYR,
+        fonteConversao: source.myr || "BCB",
+        isForeign: true,
+      };
+    }
+
+    if (moeda === "MXN") {
+      return {
+        valorOriginal: valor,
+        moedaOriginal: "MXN",
+        valorBRL: valor * cotacaoMXN,
+        cotacaoUsada: cotacaoMXN,
+        fonteConversao: source.mxn || "BCB",
+        isForeign: true,
+      };
+    }
+
+    if (moeda === "ARS") {
+      return {
+        valorOriginal: valor,
+        moedaOriginal: "ARS",
+        valorBRL: valor * cotacaoARS,
+        cotacaoUsada: cotacaoARS,
+        fonteConversao: source.ars || "BCB",
+        isForeign: true,
+      };
+    }
+
+    if (moeda === "COP") {
+      return {
+        valorOriginal: valor,
+        moedaOriginal: "COP",
+        valorBRL: valor * cotacaoCOP,
+        cotacaoUsada: cotacaoCOP,
+        fonteConversao: source.cop || "BCB",
+        isForeign: true,
+      };
+    }
+
     // Fallback: tratar como BRL
     return {
       valorOriginal: valor,
@@ -192,7 +240,7 @@ export function useFinanceiroConsolidado(cryptoSymbols: string[] = []) {
       fonteConversao: "fallback_brl",
       isForeign: false,
     };
-  }, [cotacaoUSD, getCryptoPrice, source.usd]);
+  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP, getCryptoPrice, source]);
 
   /**
    * Consolidar lista de operações para resumo
