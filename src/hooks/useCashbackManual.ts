@@ -229,31 +229,43 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         const moedaOperacao = bookmaker.moeda || "BRL";
         const dataCredito = data.data_credito || new Date().toISOString().split("T")[0];
 
-        // Calcular valor_brl_referencia para moedas não-BRL
+        // Calcular valor_brl_referencia usando PTAX oficial do BCB
+        // CRÍTICO: Sempre buscar cotação via edge function para consistência
         let valorBRLReferencia: number | null = null;
         let cotacaoSnapshot: number | null = null;
         
         if (moedaOperacao !== "BRL") {
-          // Para USD/USDT, usar cotação aproximada (em produção, buscar de API de câmbio)
-          // Por enquanto, tentar buscar cotação do workspace ou usar estimativa
+          // Buscar PTAX oficial via edge function
           try {
-            const { data: cotacaoData } = await supabase
-              .from("cash_ledger")
-              .select("cotacao")
-              .eq("workspace_id", workspaceId)
-              .not("cotacao", "is", null)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .single();
+            const { data: ratesData, error: ratesError } = await supabase.functions.invoke("get-exchange-rates");
             
-            if (cotacaoData?.cotacao) {
-              cotacaoSnapshot = Number(cotacaoData.cotacao);
+            if (!ratesError && ratesData?.USDBRL) {
+              cotacaoSnapshot = Number(ratesData.USDBRL);
               valorBRLReferencia = data.valor * cotacaoSnapshot;
+              console.log(`Cashback: usando PTAX ${cotacaoSnapshot} para conversão de ${moedaOperacao}`);
+            } else {
+              // Fallback: buscar cotação de trabalho do projeto
+              const { data: projetoData } = await supabase
+                .from("projetos")
+                .select("cotacao_trabalho")
+                .eq("id", projetoId)
+                .single();
+              
+              if (projetoData?.cotacao_trabalho && projetoData.cotacao_trabalho > 0) {
+                cotacaoSnapshot = Number(projetoData.cotacao_trabalho);
+                valorBRLReferencia = data.valor * cotacaoSnapshot;
+                console.log(`Cashback: usando cotação de trabalho ${cotacaoSnapshot} (fallback)`);
+              } else {
+                // Último recurso: cotação indisponível, registrar sem conversão
+                cotacaoSnapshot = null;
+                valorBRLReferencia = null;
+                console.warn("Cashback: cotação indisponível, valor_brl_referencia não calculado");
+              }
             }
-          } catch {
-            // Se não encontrar cotação, usar estimativa conservadora (5.5 para USD)
-            cotacaoSnapshot = 5.5;
-            valorBRLReferencia = data.valor * cotacaoSnapshot;
+          } catch (err) {
+            console.error("Erro ao buscar cotação para cashback:", err);
+            cotacaoSnapshot = null;
+            valorBRLReferencia = null;
           }
         } else {
           valorBRLReferencia = data.valor;

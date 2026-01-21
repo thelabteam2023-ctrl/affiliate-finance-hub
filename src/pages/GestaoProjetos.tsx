@@ -303,6 +303,8 @@ export default function GestaoProjetos() {
       });
       
       // Agregar lucro de cashback manual por projeto
+      // CRÍTICO: Sempre converter via PTAX em tempo real para consistência
+      // NÃO usar valor_brl_referencia pois pode ter sido gravado com cotação incorreta
       (cashbackManualResult.data || []).forEach((cb: any) => {
         if (!cb.projeto_id) return;
         if (!lucroByProjeto[cb.projeto_id]) {
@@ -313,11 +315,10 @@ export default function GestaoProjetos() {
         const moeda = cb.moeda_operacao || 'BRL';
         
         // Acumular por moeda original
-        if (moeda === 'USD' || moeda === 'USDT') {
+        if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
           lucroByProjeto[cb.projeto_id].USD += valor;
-          // Para total consolidado, usar BRL referência se existir, senão converter
-          const valorBRL = cb.valor_brl_referencia ?? (valor * USD_TO_BRL);
-          lucroByProjeto[cb.projeto_id].total += valorBRL;
+          // SEMPRE converter via PTAX atual (não usar valor_brl_referencia do banco)
+          lucroByProjeto[cb.projeto_id].total += valor * USD_TO_BRL;
         } else {
           lucroByProjeto[cb.projeto_id].BRL += valor;
           lucroByProjeto[cb.projeto_id].total += valor;
