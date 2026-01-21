@@ -422,16 +422,18 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                       <td className="p-3 max-w-[150px] truncate" title={fb.motivo}>
                         {fb.motivo}
                       </td>
-                      <td className="p-3 text-center min-w-[120px]">
+                      <td className="p-3 text-center min-w-[140px]">
                         <div className="flex items-center justify-center gap-1.5">
-                          <div className="flex-shrink-0">
+                          <div className="w-[70px] flex justify-center flex-shrink-0">
                             {getStatusBadge(fb.status, fb.utilizada)}
                           </div>
-                          {fb.tem_rollover && (
-                            <Badge variant="outline" className="text-[10px] px-1 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400 flex-shrink-0" title="Após uso, o lucro exigirá cumprimento de rollover">
-                              <Lock className="h-2.5 w-2.5" />
-                            </Badge>
-                          )}
+                          <div className="w-5 flex-shrink-0">
+                            {fb.tem_rollover && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400" title="Após uso, o lucro exigirá cumprimento de rollover">
+                                <Lock className="h-2.5 w-2.5" />
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="p-3 text-center">
