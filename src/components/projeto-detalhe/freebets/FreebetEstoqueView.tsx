@@ -6,6 +6,16 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Package,
   Gift,
   Clock,
@@ -18,6 +28,7 @@ import {
   XCircle,
   Timer,
   Lock,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -104,12 +115,26 @@ function getExpirationBadge(diasParaExpirar: number | null) {
 
 export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAddFreebet }: FreebetEstoqueViewProps) {
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
+  const [freebetToDelete, setFreebetToDelete] = useState<FreebetRecebidaCompleta | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
-  const { freebets, bookmakersEstoque, metrics, loading } = useFreebetEstoque({
+  const { freebets, bookmakersEstoque, metrics, loading, deleteFreebet } = useFreebetEstoque({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
   });
+
+  const handleDeleteFreebet = async () => {
+    if (!freebetToDelete) return;
+    
+    setIsDeleting(true);
+    const success = await deleteFreebet(freebetToDelete.id);
+    setIsDeleting(false);
+    
+    if (success) {
+      setFreebetToDelete(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -397,6 +422,7 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                     <th className="text-center p-3 font-medium">Status</th>
                     <th className="text-center p-3 font-medium">Expiração</th>
                     <th className="text-left p-3 font-medium">Data</th>
+                    <th className="text-center p-3 font-medium w-12"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -451,6 +477,19 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                       <td className="p-3 text-muted-foreground text-xs">
                         {format(new Date(fb.data_recebida), "dd/MM/yyyy", { locale: ptBR })}
                       </td>
+                      <td className="p-3 text-center">
+                        {!fb.utilizada && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => setFreebetToDelete(fb)}
+                            title="Excluir freebet"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -464,6 +503,36 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de confirmação de exclusão */}
+      <AlertDialog open={!!freebetToDelete} onOpenChange={(open) => !open && setFreebetToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Freebet</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta freebet de{" "}
+              <span className="font-medium text-foreground">
+                {formatCurrency(freebetToDelete?.valor || 0)}
+              </span>{" "}
+              da casa{" "}
+              <span className="font-medium text-foreground">
+                {freebetToDelete?.bookmaker_nome}
+              </span>
+              ? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteFreebet}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
