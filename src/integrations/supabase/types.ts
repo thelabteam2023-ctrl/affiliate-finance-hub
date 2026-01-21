@@ -5643,6 +5643,8 @@ export type Database = {
           base_calculo_investidor: string | null
           conciliado: boolean
           cotacao_trabalho: number | null
+          cotacao_trabalho_eur: number | null
+          cotacao_trabalho_gbp: number | null
           created_at: string
           data_fim_prevista: string | null
           data_fim_real: string | null
@@ -5670,6 +5672,8 @@ export type Database = {
           base_calculo_investidor?: string | null
           conciliado?: boolean
           cotacao_trabalho?: number | null
+          cotacao_trabalho_eur?: number | null
+          cotacao_trabalho_gbp?: number | null
           created_at?: string
           data_fim_prevista?: string | null
           data_fim_real?: string | null
@@ -5697,6 +5701,8 @@ export type Database = {
           base_calculo_investidor?: string | null
           conciliado?: boolean
           cotacao_trabalho?: number | null
+          cotacao_trabalho_eur?: number | null
+          cotacao_trabalho_gbp?: number | null
           created_at?: string
           data_fim_prevista?: string | null
           data_fim_real?: string | null

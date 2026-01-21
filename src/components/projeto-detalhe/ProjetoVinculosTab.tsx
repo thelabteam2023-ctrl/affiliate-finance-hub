@@ -147,6 +147,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [selectedBookmakerForBonus, setSelectedBookmakerForBonus] = useState<{ id: string; nome: string; login?: string; password?: string | null; logo?: string | null; bookmakerCatalogoId?: string | null } | null>(null);
   const [filterBonusOnly, setFilterBonusOnly] = useState(false);
   const [cotacaoTrabalho, setCotacaoTrabalho] = useState<number | null>(null);
+  const [cotacaoTrabalhoEur, setCotacaoTrabalhoEur] = useState<number | null>(null);
+  const [cotacaoTrabalhoGbp, setCotacaoTrabalhoGbp] = useState<number | null>(null);
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
   const [vinculoParaConciliar, setVinculoParaConciliar] = useState<Vinculo | null>(null);
   const [selectedCasas, setSelectedCasas] = useState<string[]>([]);
@@ -183,14 +185,16 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     try {
       const { data, error } = await supabase
         .from("projetos")
-        .select("cotacao_trabalho")
+        .select("cotacao_trabalho, cotacao_trabalho_eur, cotacao_trabalho_gbp")
         .eq("id", projetoId)
         .single();
 
       if (error) throw error;
       setCotacaoTrabalho(data?.cotacao_trabalho ?? null);
+      setCotacaoTrabalhoEur(data?.cotacao_trabalho_eur ?? null);
+      setCotacaoTrabalhoGbp(data?.cotacao_trabalho_gbp ?? null);
     } catch (error: any) {
-      console.error("Erro ao buscar cotação de trabalho:", error.message);
+      console.error("Erro ao buscar cotações de trabalho:", error.message);
     }
   }, [projetoId]);
 
@@ -780,6 +784,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           <DeltaCambialCard
             projetoId={projetoId}
             cotacaoTrabalho={cotacaoTrabalho}
+            cotacaoTrabalhoEur={cotacaoTrabalhoEur}
+            cotacaoTrabalhoGbp={cotacaoTrabalhoGbp}
             onCotacaoUpdated={fetchCotacaoTrabalho}
           />
         )}
