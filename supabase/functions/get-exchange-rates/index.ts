@@ -99,11 +99,12 @@ serve(async (req) => {
       }
     }
 
-    // Aplicar fallbacks se necessário
+    // Aplicar fallbacks se necessário (valores de referência fornecidos)
+    // USD usa cotação de trabalho do projeto como fallback
     const finalRates = {
-      USDBRL: rates.USDBRL ?? 5.31,
-      EURBRL: rates.EURBRL ?? 5.75,
-      GBPBRL: rates.GBPBRL ?? 6.70,
+      USDBRL: rates.USDBRL ?? null, // Sem fallback hardcoded - usa cotação de trabalho do projeto
+      EURBRL: rates.EURBRL ?? 6.10,
+      GBPBRL: rates.GBPBRL ?? 7.10,
     };
 
     return new Response(
@@ -125,9 +126,9 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ 
-        USDBRL: 5.31,
-        EURBRL: 5.75,
-        GBPBRL: 6.70,
+        USDBRL: null, // Frontend usará cotação de trabalho do projeto como fallback
+        EURBRL: 6.10,
+        GBPBRL: 7.10,
         timestamp: new Date().toISOString(),
         source: 'fallback',
         error: errorMessage
