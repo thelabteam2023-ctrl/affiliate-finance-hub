@@ -271,10 +271,10 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   // Trigger para desktop (Popover) ou mobile (Dialog)
   const TriggerContent = ({ isCompact = false }: { isCompact?: boolean }) => (
     <div className={cn(
-      "flex flex-col cursor-pointer group",
+      "flex flex-col items-center justify-center text-center cursor-pointer group",
       isCompact && "px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20"
     )}>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2">
         {isCompact && <Wallet className="h-4 w-4 text-primary" />}
         {/* Valor principal na moeda de consolidação */}
         <span className={cn(
@@ -356,7 +356,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     return (
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <Card className="border-primary/30 bg-primary/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+          <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-2 p-3 md:p-6">
             <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5">
               Saldo Operável
               <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
@@ -364,18 +364,18 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
             {/* Badge Moeda Oficial - neutro */}
             <Badge 
               variant="outline" 
-              className="text-[9px] px-1.5 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
+              className="ml-2 text-[9px] px-1.5 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
             >
               {moedaConsolidacao}
             </Badge>
           </CardHeader>
-          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+          <CardContent className="flex flex-col items-center justify-center p-3 pt-0 md:p-6 md:pt-0">
             <DialogTrigger asChild>
               <div className="cursor-pointer">
                 <TriggerContent />
               </div>
             </DialogTrigger>
-            <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] md:text-xs text-muted-foreground mt-1 text-center">
               {totalCasas} casa{totalCasas !== 1 ? 's' : ''}
               {casasComRollover > 0 && ` • ${casasComRollover} com rollover`}
             </p>
@@ -397,7 +397,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   return (
     <Popover>
       <Card className="border-primary/30 bg-primary/5">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+        <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-2 p-3 md:p-6">
           <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5">
             Saldo Operável
             <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
@@ -405,18 +405,18 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           {/* Badge Moeda Oficial - neutro, não parece CTA */}
           <Badge 
             variant="outline" 
-            className="text-[9px] px-1.5 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
+            className="ml-2 text-[9px] px-1.5 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
           >
             {moedaConsolidacao}
           </Badge>
         </CardHeader>
-        <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+        <CardContent className="flex flex-col items-center justify-center p-3 pt-0 md:p-6 md:pt-0">
           <PopoverTrigger asChild>
             <div className="cursor-pointer">
               <TriggerContent />
             </div>
           </PopoverTrigger>
-          <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
+          <p className="text-[10px] md:text-xs text-muted-foreground mt-1 text-center">
             {totalCasas} casa{totalCasas !== 1 ? 's' : ''}
             {casasComRollover > 0 && ` • ${casasComRollover} com rollover`}
           </p>
