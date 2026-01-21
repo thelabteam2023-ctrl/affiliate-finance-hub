@@ -342,5 +342,12 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
     createFreebet,
     updateFreebet,
     deleteFreebet,
+    // Expor configuração de moeda para transparência na UI
+    moedaConsolidacao: currencyConfig.moedaConsolidacao,
+    cotacaoInfo: {
+      fonte: currencyConfig.fonte,
+      taxa: currencyConfig.cotacaoAtual,
+      disponivel: currencyConfig.disponivel,
+    },
   };
 }
