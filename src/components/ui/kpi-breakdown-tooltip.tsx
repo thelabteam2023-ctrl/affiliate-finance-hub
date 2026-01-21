@@ -5,8 +5,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { ModuleContribution, KpiBreakdown } from "@/types/moduleBreakdown";
+import { ModuleContribution, KpiBreakdown, CurrencyBreakdownItem } from "@/types/moduleBreakdown";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -17,7 +18,8 @@ import {
   Zap, 
   Target,
   Dices,
-  Minus
+  Minus,
+  Percent
 } from "lucide-react";
 
 // Mapa de ícones disponíveis por módulo
@@ -31,6 +33,21 @@ const MODULE_ICONS: Record<string, React.ElementType> = {
   duplogreen: Zap,
   perdas: TrendingDown,
   ajustes: Minus,
+  cashback: Percent,
+};
+
+// Helper para formatar valor com símbolo da moeda
+const formatarPorMoeda = (valor: number, moeda: string): string => {
+  const simbolos: Record<string, string> = {
+    BRL: "R$",
+    USD: "$",
+    EUR: "€",
+    GBP: "£",
+    USDT: "$",
+    USDC: "$",
+  };
+  const simbolo = simbolos[moeda] || moeda + " ";
+  return `${simbolo} ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 interface KpiBreakdownTooltipProps {
@@ -44,12 +61,7 @@ interface KpiBreakdownTooltipProps {
 
 /**
  * Tooltip dinâmico que mostra a composição de um KPI por módulos.
- * 
- * Características:
- * - Agnóstico a módulos específicos
- * - Adiciona novos módulos automaticamente
- * - Valores positivos/negativos diferenciados
- * - Compacto e escaneável
+ * Também exibe breakdown por moeda quando disponível.
  */
 export function KpiBreakdownTooltip({
   children,
@@ -59,20 +71,23 @@ export function KpiBreakdownTooltip({
   showZeroValues = false,
   side = "bottom",
 }: KpiBreakdownTooltipProps) {
-  // Se não há breakdown, renderiza só o children
   if (!breakdown || breakdown.contributions.length === 0) {
     return <>{children}</>;
   }
 
-  // Filtra contribuições (oculta zeros se configurado)
   const visibleContributions = showZeroValues
     ? breakdown.contributions
     : breakdown.contributions.filter((c) => c.value !== 0);
 
-  // Se não há contribuições visíveis, renderiza só o children
   if (visibleContributions.length === 0) {
     return <>{children}</>;
   }
+
+  // Verifica se há breakdown por moeda para exibir
+  const hasCurrencyBreakdown = breakdown.currencyBreakdown && breakdown.currencyBreakdown.length > 0;
+  const hasMultipleCurrencies = hasCurrencyBreakdown && breakdown.currencyBreakdown!.length > 1;
+  const hasDifferentCurrency = hasCurrencyBreakdown && 
+    breakdown.currencyBreakdown!.some(c => c.moeda !== breakdown.currency);
 
   return (
     <TooltipProvider>
@@ -80,7 +95,7 @@ export function KpiBreakdownTooltip({
         <TooltipTrigger asChild>{children}</TooltipTrigger>
         <TooltipContent 
           side={side} 
-          className="max-w-[280px] p-3"
+          className="max-w-[300px] p-3"
           sideOffset={8}
         >
           <div className="space-y-2">
@@ -100,6 +115,23 @@ export function KpiBreakdownTooltip({
               ))}
             </div>
 
+            {/* Breakdown por moeda (se disponível) */}
+            {(hasMultipleCurrencies || hasDifferentCurrency) && (
+              <div className="border-t border-border pt-2 mt-2">
+                <p className="text-[10px] text-muted-foreground mb-1.5">Por moeda original:</p>
+                <div className="space-y-1">
+                  {breakdown.currencyBreakdown!.map((item) => (
+                    <div key={item.moeda} className="flex items-center justify-between gap-3 text-xs">
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        {item.moeda}
+                      </Badge>
+                      <span className="font-medium">{formatarPorMoeda(item.valor, item.moeda)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Total */}
             <div className="border-t border-border pt-1.5 mt-2">
               <div className="flex justify-between items-center">
@@ -113,6 +145,11 @@ export function KpiBreakdownTooltip({
                   {formatValue(breakdown.total)}
                 </span>
               </div>
+              {(hasMultipleCurrencies || hasDifferentCurrency) && (
+                <p className="text-[9px] text-muted-foreground mt-1">
+                  Consolidado em {breakdown.currency} usando cotação do projeto
+                </p>
+              )}
             </div>
           </div>
         </TooltipContent>
