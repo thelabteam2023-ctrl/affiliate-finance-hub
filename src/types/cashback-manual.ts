@@ -63,6 +63,8 @@ export interface CashbackManualMetrics {
   totalRecebido: number;
   totalLancamentos: number;
   mediaPorLancamento: number;
+  /** Breakdown por moeda original (antes da conversão) */
+  recebidoPorMoeda?: { moeda: string; valor: number }[];
 }
 
 // Breakdown individual por parceiro dentro de uma casa

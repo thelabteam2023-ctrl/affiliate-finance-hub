@@ -90,20 +90,33 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
    * MÉTRICAS COM CONVERSÃO PARA MOEDA DE CONSOLIDAÇÃO
    */
   const metrics: CashbackManualMetrics = useMemo(() => {
+    // Agregação por moeda original
+    const porMoedaMap = new Map<string, number>();
+    
     const totalRecebido = registros.reduce((acc, r) => {
       const moedaOrigem = r.moeda_operacao || r.bookmaker?.moeda || "BRL";
       const valorOriginal = Number(r.valor);
       const valorConvertido = converterParaConsolidacao(valorOriginal, moedaOrigem);
+      
+      // Acumula na moeda original
+      porMoedaMap.set(moedaOrigem, (porMoedaMap.get(moedaOrigem) || 0) + valorOriginal);
+      
       return acc + valorConvertido;
     }, 0);
     
     const totalLancamentos = registros.length;
     const mediaPorLancamento = totalLancamentos > 0 ? totalRecebido / totalLancamentos : 0;
 
+    // Converte Map para array de breakdown
+    const recebidoPorMoeda = Array.from(porMoedaMap.entries())
+      .map(([moeda, valor]) => ({ moeda, valor }))
+      .filter(item => Math.abs(item.valor) > 0.01);
+
     return {
       totalRecebido,
       totalLancamentos,
       mediaPorLancamento,
+      recebidoPorMoeda,
     };
   }, [registros, converterParaConsolidacao]);
 

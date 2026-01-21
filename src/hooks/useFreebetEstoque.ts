@@ -44,6 +44,9 @@ export interface EstoqueMetrics {
   proximasExpirar: number;
   casasComFreebet: number;
   moedaConsolidacao: string;
+  /** Breakdown por moeda original */
+  saldoPorMoeda?: { moeda: string; valor: number }[];
+  recebidoPorMoeda?: { moeda: string; valor: number }[];
 }
 
 interface UseFreebetEstoqueProps {
@@ -200,14 +203,22 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
    * MÉTRICAS COM CONVERSÃO PARA MOEDA DE CONSOLIDAÇÃO
    */
   const metrics = useMemo((): EstoqueMetrics => {
+    // Maps para agregação por moeda
+    const saldoPorMoedaMap = new Map<string, number>();
+    const recebidoPorMoedaMap = new Map<string, number>();
+    
     // CRÍTICO: Converter saldos para moeda de consolidação
     const saldoDisponivel = bookmakersEstoque.reduce((acc, bk) => {
+      // Acumula na moeda original
+      saldoPorMoedaMap.set(bk.moeda, (saldoPorMoedaMap.get(bk.moeda) || 0) + bk.saldo_freebet);
       return acc + converterParaConsolidacao(bk.saldo_freebet, bk.moeda);
     }, 0);
     
     const freebetsLiberadas = freebets.filter(fb => fb.status === "LIBERADA");
     
     const totalRecebido = freebetsLiberadas.reduce((acc, fb) => {
+      // Acumula na moeda original
+      recebidoPorMoedaMap.set(fb.moeda, (recebidoPorMoedaMap.get(fb.moeda) || 0) + fb.valor);
       return acc + converterParaConsolidacao(fb.valor, fb.moeda);
     }, 0);
     
@@ -220,6 +231,15 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
     ).length;
     const casasComFreebet = bookmakersEstoque.length;
 
+    // Converte Maps para arrays
+    const saldoPorMoeda = Array.from(saldoPorMoedaMap.entries())
+      .map(([moeda, valor]) => ({ moeda, valor }))
+      .filter(item => Math.abs(item.valor) > 0.01);
+      
+    const recebidoPorMoeda = Array.from(recebidoPorMoedaMap.entries())
+      .map(([moeda, valor]) => ({ moeda, valor }))
+      .filter(item => Math.abs(item.valor) > 0.01);
+
     return {
       saldoDisponivel,
       totalRecebido,
@@ -227,6 +247,8 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
       proximasExpirar,
       casasComFreebet,
       moedaConsolidacao: currencyConfig.moedaConsolidacao,
+      saldoPorMoeda,
+      recebidoPorMoeda,
     };
   }, [freebets, bookmakersEstoque, converterParaConsolidacao, currencyConfig.moedaConsolidacao]);
 

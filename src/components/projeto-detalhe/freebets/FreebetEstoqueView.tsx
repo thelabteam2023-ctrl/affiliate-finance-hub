@@ -33,6 +33,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useFreebetEstoque, FreebetRecebidaCompleta, BookmakerEstoque, EstoqueMetrics } from "@/hooks/useFreebetEstoque";
+import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
 
 interface FreebetEstoqueViewProps {
   projetoId: string;
@@ -154,7 +155,15 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card className="border-amber-500/20 bg-amber-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Disponível</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-sm font-medium">Saldo Disponível</CardTitle>
+              {metrics.saldoPorMoeda && metrics.saldoPorMoeda.length > 0 && (
+                <CurrencyBreakdownTooltip
+                  breakdown={metrics.saldoPorMoeda}
+                  moedaConsolidacao={metrics.moedaConsolidacao}
+                />
+              )}
+            </div>
             <Gift className="h-4 w-4 text-amber-400" />
           </CardHeader>
           <CardContent>
@@ -169,7 +178,15 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recebido</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-sm font-medium">Recebido</CardTitle>
+              {metrics.recebidoPorMoeda && metrics.recebidoPorMoeda.length > 0 && (
+                <CurrencyBreakdownTooltip
+                  breakdown={metrics.recebidoPorMoeda}
+                  moedaConsolidacao={metrics.moedaConsolidacao}
+                />
+              )}
+            </div>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
