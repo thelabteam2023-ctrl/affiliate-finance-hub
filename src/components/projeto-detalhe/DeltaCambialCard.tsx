@@ -208,17 +208,26 @@ export function DeltaCambialCard({
     const classification = getDeltaClassification(delta);
     const DeltaIcon = delta > 0 ? TrendingUp : delta < 0 ? TrendingDown : Minus;
     const isEditing = editingCurrency === key;
-    const showSyncButton = Math.abs(delta) >= 1 && !isEditing;
+    
+    // Verificar se moeda usa cotação de trabalho (sem PTAX no BCB)
+    const isWorkRateOnly = sourceInfo === 'SEM_PTAX_BCB' || sourceInfo === 'fallback';
+    const hasPtaxAvailable = sourceInfo === 'PTAX BCB';
+    
+    // Só mostrar botão de sincronizar se houver PTAX disponível e delta significativo
+    const showSyncButton = hasPtaxAvailable && Math.abs(delta) >= 1 && !isEditing;
 
     // Para moedas com valores muito pequenos (ARS, COP), mostrar mais decimais
     const decimals = ptax < 0.1 ? 4 : 2;
+    
+    // Valor exibido: se não tem PTAX, mostrar cotação de trabalho
+    const displayValue = isWorkRateOnly ? work : ptax;
 
     return (
       <div 
         key={key} 
         className={`flex flex-col gap-1.5 p-2 rounded-lg bg-background/50 border border-border/50 ${compact ? 'p-1.5' : ''}`}
       >
-        {/* Header: Moeda + PTAX */}
+        {/* Header: Moeda + Cotação */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -227,26 +236,48 @@ export function DeltaCambialCard({
                   {config.symbol} {key}
                 </div>
                 <div className={`font-mono font-bold text-foreground ${compact ? 'text-sm' : 'text-base'}`}>
-                  {cotacaoLoading ? "..." : ptax.toFixed(decimals)}
+                  {cotacaoLoading ? "..." : displayValue.toFixed(decimals)}
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              <p>PTAX: R$ {ptax.toFixed(6)}</p>
-              <p className="text-muted-foreground">Fonte: {sourceInfo}</p>
+            <TooltipContent side="top" className="text-xs max-w-[200px]">
+              {isWorkRateOnly ? (
+                <>
+                  <p className="font-medium text-yellow-400">⚠️ Sem PTAX no BCB</p>
+                  <p className="text-muted-foreground mt-1">
+                    O Banco Central não publica PTAX para {key}. 
+                    Usando cotação de trabalho preenchida manualmente.
+                  </p>
+                  <p className="mt-1">Valor: R$ {work.toFixed(6)}</p>
+                </>
+              ) : (
+                <>
+                  <p>PTAX: R$ {ptax.toFixed(6)}</p>
+                  <p className="text-muted-foreground">Fonte: {sourceInfo}</p>
+                </>
+              )}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
-        {/* Delta Badge */}
+        {/* Badge: Delta (se PTAX) ou "Trabalho" (se sem PTAX) */}
         <div className="flex justify-center">
-          <Badge 
-            variant="outline" 
-            className={`${classification.bgColor} ${classification.color} font-mono text-[9px] px-1 py-0`}
-          >
-            <DeltaIcon className="h-2 w-2 mr-0.5" />
-            {delta > 0 ? "+" : ""}{delta.toFixed(1)}%
-          </Badge>
+          {isWorkRateOnly ? (
+            <Badge 
+              variant="outline" 
+              className="bg-amber-500/10 text-amber-400 border-amber-500/30 font-mono text-[9px] px-1.5 py-0"
+            >
+              Trabalho
+            </Badge>
+          ) : (
+            <Badge 
+              variant="outline" 
+              className={`${classification.bgColor} ${classification.color} font-mono text-[9px] px-1 py-0`}
+            >
+              <DeltaIcon className="h-2 w-2 mr-0.5" />
+              {delta > 0 ? "+" : ""}{delta.toFixed(1)}%
+            </Badge>
+          )}
         </div>
 
         {/* Cotação de Trabalho - Editável */}
