@@ -113,7 +113,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       {/* Composição do Saldo - Simplificado */}
       <div className="space-y-1.5">
         <p className="text-xs font-medium text-foreground">Composição do Saldo</p>
-        <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="grid grid-cols-3 gap-2 text-xs">
           <div className="p-2 rounded bg-muted/30">
             <span className="text-muted-foreground">Saldo Real</span>
             <p className="font-semibold">{formatCurrency(saldoReal)}</p>
