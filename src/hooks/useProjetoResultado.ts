@@ -114,7 +114,7 @@ export function useProjetoResultado({
         .single();
       
       const moedaConsolidacao = projetoData?.moeda_consolidacao || 'BRL';
-      // IMPORTANTE: Se não há cotação de trabalho, significa que deve usar PTAX
+      // IMPORTANTE: Se não há cotação de trabalho, significa que deve usar cotação oficial (FastForex/PTAX)
       // O valor 0 indica "usar fonte externa" - a camada de frontend resolve isso
       const cotacaoTrabalho = projetoData?.cotacao_trabalho || 0;
 

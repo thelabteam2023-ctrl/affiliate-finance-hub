@@ -211,9 +211,9 @@ export function CurrencyConsolidationSettings({ projetoId }: CurrencyConsolidati
             >
               <RadioGroupItem value="PTAX" id="ptax" />
               <div className="flex-1">
-                <div className="font-medium">PTAX (Banco Central)</div>
+                <div className="font-medium">Cotação Oficial (Automática)</div>
                 <div className="text-xs text-muted-foreground">
-                  Cotação oficial automática. Atualizada diariamente.
+                  FastForex/PTAX BCB. Atualizada automaticamente.
                 </div>
               </div>
             </Label>

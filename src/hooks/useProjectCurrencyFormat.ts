@@ -8,34 +8,26 @@ import { SupportedCurrency, CURRENCY_SYMBOLS, isForeignCurrency } from "@/types/
  * =============================================================================
  * 
  * FONTE DE COTAÇÃO (HIERARQUIA PARA KPIs):
- * 1. PTAX (primária) - Banco Central do Brasil (BCB) - API PTAX oficial
- * 2. Cotação de Trabalho (fallback) - Definida no projeto, usada se PTAX falhar
+ * 1. FastForex (primária) - API comercial para todas as moedas
+ * 2. PTAX BCB (fallback) - Banco Central para USD/EUR/GBP se FastForex falhar
+ * 3. Cotação de Trabalho (fallback manual) - Definida no projeto
  * 
- * Nota: Cotação de Trabalho será usada em formulários para conversão entre 
+ * Nota: Cotação de Trabalho é usada em formulários para conversão entre 
  * operações com moedas diferentes (não para exibição de KPIs).
  * 
- * ENDPOINT BCB:
- * - olinda.bcb.gov.br/olinda/servico/PTAX
- * - Cotação de venda (cotacaoVenda) do último dia útil
- * 
  * FREQUÊNCIA DE ATUALIZAÇÃO:
- * - Automática a cada 60 segundos (REFRESH_INTERVAL)
- * - Manual via refreshAll()
- * 
- * CACHE:
- * - Em memória (React state)
- * - Persiste durante a sessão
- * - Fallback: USD=5.31, EUR=5.75, GBP=6.70 se API falhar
+ * - Automática via cron job (10x ao dia)
+ * - Cache no banco: tabela exchange_rate_cache (TTL ~2h24m)
+ * - Fallback local se API indisponível
  * 
  * MOEDAS SUPORTADAS:
  * - BRL (Real Brasileiro) - moeda base
- * - USD (Dólar Americano) - cotação BCB PTAX
- * - EUR (Euro) - cotação BCB PTAX
- * - GBP (Libra Esterlina) - cotação BCB PTAX
- * - Criptomoedas - API Binance (preço em USD × cotação BCB)
+ * - USD, EUR, GBP (FastForex primário, PTAX fallback)
+ * - MYR, MXN, ARS, COP (FastForex apenas)
+ * - Criptomoedas - API Binance (preço em USD × cotação oficial)
  * 
  * USO NO SISTEMA:
- * - KPIs: Usam PTAX em tempo real (primária), cotação de trabalho (fallback)
+ * - KPIs: Usam cotação oficial em tempo real, cotação de trabalho (fallback)
  * - Formulários: Usarão cotação de trabalho para conversões operacionais
  * - Snapshots: Valores de depósitos/saques mantêm snapshot da cotação no momento
  * - Relatórios: devem usar snapshots para auditoria

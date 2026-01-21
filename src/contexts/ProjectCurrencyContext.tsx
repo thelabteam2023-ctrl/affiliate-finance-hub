@@ -85,12 +85,12 @@ export function ProjectCurrencyProvider({ projetoId, children }: ProjectCurrency
     const cotacaoTrabalho = projetoConfig?.cotacao_trabalho || null;
     
     // REGRA DE COTAÇÃO PARA KPIs:
-    // Prioridade 1: PTAX (cotação oficial BCB) - SEMPRE primária
-    // Prioridade 2: Cotação de trabalho - FALLBACK se PTAX indisponível
+    // Prioridade 1: Cotação oficial (FastForex/PTAX) - SEMPRE primária
+    // Prioridade 2: Cotação de trabalho - FALLBACK se API indisponível
     // Nota: Cotação de trabalho será usada em formulários para conversão entre operações
     let cotacaoAtual = cotacaoUSD;
     if (!cotacaoUSD || cotacaoUSD <= 0) {
-      // Fallback para cotação de trabalho se PTAX indisponível
+      // Fallback para cotação de trabalho se API indisponível
       cotacaoAtual = cotacaoTrabalho ?? 0;
     }
 

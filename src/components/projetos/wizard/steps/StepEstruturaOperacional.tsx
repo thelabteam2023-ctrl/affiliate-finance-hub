@@ -196,7 +196,7 @@ export function StepEstruturaOperacional({
               <span className="text-muted-foreground">Cotação:</span>{" "}
               <span className="font-medium">
                 {formData.fonte_cotacao === "PTAX" 
-                  ? "PTAX automática" 
+                  ? "Cotação oficial automática" 
                   : formData.cotacao_trabalho 
                     ? `R$ ${formData.cotacao_trabalho}` 
                     : "Pendente"}

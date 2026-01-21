@@ -179,11 +179,11 @@ export function ProjectFinancialDisplay({
             <div className="font-medium">Valor Aproximado (Conversão Analítica)</div>
             <div className="text-muted-foreground">
               Este valor é uma <strong>referência aproximada</strong> calculada 
-              via cotação oficial (FastForex/PTAX).
+              via cotação oficial em tempo real.
             </div>
             <div className="pt-1 border-t border-border/50 space-y-1">
               <div className="flex justify-between">
-                <span>Cotação Oficial:</span>
+                <span>Cotação USD/BRL:</span>
                 <span className="font-mono">R$ {cotacaoPTAX.toFixed(4)}</span>
               </div>
               {hasUSD && (

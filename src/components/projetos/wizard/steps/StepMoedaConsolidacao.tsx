@@ -254,9 +254,9 @@ export function StepMoedaConsolidacao({ formData, onChange }: StepMoedaConsolida
                   )}
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium">PTAX (Banco Central)</div>
+                  <div className="font-medium">Cotação Oficial (Automática)</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    Cotação oficial automática
+                    FastForex/PTAX BCB atualizada automaticamente
                   </div>
                   {formData.fonte_cotacao === "PTAX" && (
                     <div className="text-xs text-primary mt-2 font-mono">
