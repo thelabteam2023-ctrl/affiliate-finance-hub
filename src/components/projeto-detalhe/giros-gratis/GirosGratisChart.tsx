@@ -46,11 +46,11 @@ export function GirosGratisChart({ data, formatCurrency }: GirosGratisChartProps
           </p>
           <div className="space-y-1">
             <div className="flex items-center justify-between gap-4">
-              <span className="text-xs">Dia:</span>
-              <span className="text-xs font-medium">{formatCurrency(payload[0]?.value || 0)}</span>
+              <span className="text-xs text-amber-500">Dia:</span>
+              <span className="text-xs font-medium text-amber-500">{formatCurrency(payload[0]?.value || 0)}</span>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <span className="text-xs">Acumulado:</span>
+              <span className="text-xs text-green-500">Acumulado:</span>
               <span className={`text-xs font-medium ${payload[1]?.value >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {formatCurrency(payload[1]?.value || 0)}
               </span>
