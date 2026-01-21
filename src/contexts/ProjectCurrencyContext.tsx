@@ -84,12 +84,22 @@ export function ProjectCurrencyProvider({ projetoId, children }: ProjectCurrency
     const fonteCotacao = (projetoConfig?.fonte_cotacao as FonteCotacao) ?? "TRABALHO";
     const cotacaoTrabalho = projetoConfig?.cotacao_trabalho || null;
     
-    // Cotação atual baseada na fonte configurada
-    const cotacaoAtual = fonteCotacao === "TRABALHO" && cotacaoTrabalho 
-      ? cotacaoTrabalho 
-      : cotacaoUSD;
+    // REGRA DE COTAÇÃO PARA KPIs:
+    // Prioridade 1: PTAX (cotação oficial BCB) - SEMPRE primária
+    // Prioridade 2: Cotação de trabalho - FALLBACK se PTAX indisponível
+    // Nota: Cotação de trabalho será usada em formulários para conversão entre operações
+    let cotacaoAtual = cotacaoUSD;
+    if (!cotacaoUSD || cotacaoUSD <= 0) {
+      // Fallback para cotação de trabalho se PTAX indisponível
+      cotacaoAtual = cotacaoTrabalho ?? 0;
+    }
 
-    console.log("[ProjectCurrencyContext] Config processada:", { moedaConsolidacao, fonteCotacao });
+    console.log("[ProjectCurrencyContext] Config processada:", { 
+      moedaConsolidacao, 
+      fonteCotacao,
+      cotacaoAtual,
+      fonte: cotacaoUSD > 0 ? "PTAX" : "TRABALHO"
+    });
 
     return {
       moedaConsolidacao,
