@@ -102,7 +102,7 @@ function getExpirationBadge(diasParaExpirar: number | null) {
 }
 
 export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAddFreebet }: FreebetEstoqueViewProps) {
-  const [viewMode, setViewMode] = useState<"card" | "list">("card");
+  const [viewMode, setViewMode] = useState<"card" | "list">("list");
   
   const { freebets, bookmakersEstoque, metrics, loading } = useFreebetEstoque({
     projetoId,
@@ -225,20 +225,18 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
               <CardTitle className="text-base">Estoque por Casa</CardTitle>
               <Badge variant="secondary">{bookmakersEstoque.length} casas</Badge>
             </div>
-            <div className="flex items-center gap-2">
-              <ToggleGroup
-                type="single"
-                value={viewMode}
-                onValueChange={(v) => v && setViewMode(v as "card" | "list")}
-              >
-                <ToggleGroupItem value="card" aria-label="Cards" size="sm">
-                  <LayoutGrid className="h-4 w-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="list" aria-label="Lista" size="sm">
-                  <List className="h-4 w-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode(viewMode === "list" ? "card" : "list")}
+              className="h-8 w-8 p-0"
+            >
+              {viewMode === "list" ? (
+                <LayoutGrid className="h-4 w-4" />
+              ) : (
+                <List className="h-4 w-4" />
+              )}
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
