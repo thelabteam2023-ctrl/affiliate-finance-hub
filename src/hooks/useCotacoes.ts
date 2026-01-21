@@ -78,36 +78,54 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
       
       const newState: Partial<CotacoesState> = {};
       const newSource = { ...state.source };
-      const sourceInfo = data?.source || "BCB";
-      const failedCurrencies = data?.failedCurrencies || [];
       
+      // sources contém informação detalhada por moeda
+      const sources = data?.sources || {};
+      // Moedas que precisam de cotação de trabalho (não têm PTAX)
+      const currenciesNeedingWorkRate = data?.currenciesNeedingWorkRate || [];
+      
+      // Processar USD, EUR, GBP (têm PTAX)
       if (data?.USDBRL) {
         newState.cotacaoUSD = data.USDBRL;
-        newSource.usd = failedCurrencies.includes('USD') ? 'fallback' : sourceInfo;
+        newSource.usd = sources.USD === 'PTAX' ? 'PTAX BCB' : 'fallback';
       }
       if (data?.EURBRL) {
         newState.cotacaoEUR = data.EURBRL;
-        newSource.eur = failedCurrencies.includes('EUR') ? 'fallback' : sourceInfo;
+        newSource.eur = sources.EUR === 'PTAX' ? 'PTAX BCB' : 'fallback';
       }
       if (data?.GBPBRL) {
         newState.cotacaoGBP = data.GBPBRL;
-        newSource.gbp = failedCurrencies.includes('GBP') ? 'fallback' : sourceInfo;
+        newSource.gbp = sources.GBP === 'PTAX' ? 'PTAX BCB' : 'fallback';
       }
-      if (data?.MYRBRL) {
+      
+      // Processar moedas SEM PTAX no BCB
+      // Para essas, retornamos null/fallback e sinalizamos que precisam cotação de trabalho
+      if (data?.MYRBRL !== null && data?.MYRBRL !== undefined) {
         newState.cotacaoMYR = data.MYRBRL;
-        newSource.myr = failedCurrencies.includes('MYR') ? 'fallback' : sourceInfo;
+        newSource.myr = sources.MYR === 'PTAX' ? 'PTAX BCB' : 'SEM_PTAX_BCB';
+      } else {
+        newSource.myr = 'SEM_PTAX_BCB';
       }
-      if (data?.MXNBRL) {
+      
+      if (data?.MXNBRL !== null && data?.MXNBRL !== undefined) {
         newState.cotacaoMXN = data.MXNBRL;
-        newSource.mxn = failedCurrencies.includes('MXN') ? 'fallback' : sourceInfo;
+        newSource.mxn = sources.MXN === 'PTAX' ? 'PTAX BCB' : 'SEM_PTAX_BCB';
+      } else {
+        newSource.mxn = 'SEM_PTAX_BCB';
       }
-      if (data?.ARSBRL) {
+      
+      if (data?.ARSBRL !== null && data?.ARSBRL !== undefined) {
         newState.cotacaoARS = data.ARSBRL;
-        newSource.ars = failedCurrencies.includes('ARS') ? 'fallback' : sourceInfo;
+        newSource.ars = sources.ARS === 'PTAX' ? 'PTAX BCB' : 'SEM_PTAX_BCB';
+      } else {
+        newSource.ars = 'SEM_PTAX_BCB';
       }
-      if (data?.COPBRL) {
+      
+      if (data?.COPBRL !== null && data?.COPBRL !== undefined) {
         newState.cotacaoCOP = data.COPBRL;
-        newSource.cop = failedCurrencies.includes('COP') ? 'fallback' : sourceInfo;
+        newSource.cop = sources.COP === 'PTAX' ? 'PTAX BCB' : 'SEM_PTAX_BCB';
+      } else {
+        newSource.cop = 'SEM_PTAX_BCB';
       }
       
       setState(prev => ({
@@ -124,7 +142,8 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
         MXN: data?.MXNBRL,
         ARS: data?.ARSBRL,
         COP: data?.COPBRL,
-        source: data?.source
+        sources: data?.sources,
+        currenciesNeedingWorkRate
       });
     } catch (error) {
       console.error("Erro ao buscar cotações:", error);
