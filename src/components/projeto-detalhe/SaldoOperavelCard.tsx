@@ -172,10 +172,21 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <Progress 
-                      value={casa.rolloverPercentual} 
-                      className="h-1.5 flex-1"
-                    />
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Progress 
+                            value={casa.rolloverPercentual} 
+                            className="h-1.5 flex-1 cursor-help"
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">
+                            {formatCurrency(casa.rolloverProgress)} de {formatCurrency(casa.rolloverTarget)}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                       {casa.rolloverPercentual.toFixed(0)}%
                     </span>
