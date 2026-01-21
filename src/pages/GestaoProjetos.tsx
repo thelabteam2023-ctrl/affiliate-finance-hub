@@ -44,6 +44,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { ProjectFinancialDisplay } from "@/components/projetos/ProjectFinancialDisplay";
 
 interface SaldoByMoeda {
   BRL: number;
@@ -93,6 +94,7 @@ export default function GestaoProjetos() {
   
   // COTAÇÃO CENTRALIZADA - Usa PTAX do BCB, nunca hardcoded
   const { cotacaoUSD, loading: loadingCotacao } = useCotacoes();
+  const USD_TO_BRL = cotacaoUSD || 5.37; // Fallback apenas para renderização inicial
 
   // Check if user is operator (should only see linked projects)
   const isOperator = role === 'operator';
@@ -607,104 +609,35 @@ export default function GestaoProjetos() {
                       <span className="truncate">{projeto.operadores_ativos || 0} operador(es) • {projeto.total_bookmakers || 0} bookmaker(s)</span>
                     </div>
                   
-                  <div className="pt-2 border-t space-y-2">
-                    {/* Saldo Bookmakers com breakdown por moeda */}
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Wallet className="h-4 w-4" />
-                        <span>Saldo Bookmakers</span>
-                      </div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="font-medium cursor-help">
-                            {formatCurrency(projeto.saldo_bookmakers || 0)}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="left" className="text-xs">
-                          <div className="space-y-1">
-                            {(projeto.saldo_bookmakers_by_moeda?.BRL || 0) > 0 && (
-                              <div>BRL: {formatCurrency(projeto.saldo_bookmakers_by_moeda?.BRL || 0)}</div>
-                            )}
-                            {(projeto.saldo_bookmakers_by_moeda?.USD || 0) > 0 && (
-                              <div>USD: ${(projeto.saldo_bookmakers_by_moeda?.USD || 0).toFixed(2)}</div>
-                            )}
-                            {(projeto.saldo_bookmakers_by_moeda?.USD || 0) > 0 && (
-                              <div className="text-muted-foreground pt-1 border-t">
-                                Total consolidado em BRL (PTAX)
-                              </div>
-                            )}
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
+                  <div className="pt-2 border-t space-y-3">
+                    {/* Saldo Bookmakers - Novo design com hierarquia clara */}
+                    <ProjectFinancialDisplay
+                      type="saldo"
+                      breakdown={{
+                        BRL: projeto.saldo_bookmakers_by_moeda?.BRL || 0,
+                        USD: projeto.saldo_bookmakers_by_moeda?.USD || 0,
+                      }}
+                      totalConsolidado={projeto.saldo_bookmakers || 0}
+                      cotacaoPTAX={USD_TO_BRL}
+                      isMultiCurrency={(projeto.saldo_bookmakers_by_moeda?.USD || 0) > 0}
+                    />
                     
-                    {/* Mostrar breakdown visual se houver USD */}
-                    {(projeto.saldo_bookmakers_by_moeda?.USD || 0) > 0 && (
-                      <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground -mt-1">
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          R$ {(projeto.saldo_bookmakers_by_moeda?.BRL || 0).toFixed(0)}
-                        </Badge>
-                        <span>+</span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500/30 text-emerald-400">
-                          $ {(projeto.saldo_bookmakers_by_moeda?.USD || 0).toFixed(2)}
-                        </Badge>
-                      </div>
-                    )}
-                    
+                    {/* Lucro - Mesmo padrão do Saldo */}
                     {(() => {
-                      // Lucro operacional = soma de lucro_prejuizo das apostas LIQUIDADAS - perdas confirmadas
                       const lucroOperacional = (projeto.lucro_operacional || 0) - (projeto.perdas_confirmadas || 0);
-                      const isPositive = lucroOperacional >= 0;
                       const hasUSD = (projeto.lucro_by_moeda?.USD || 0) !== 0;
                       
                       return (
-                        <>
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              {isPositive ? (
-                                <TrendingUp className="h-4 w-4 text-emerald-500" />
-                              ) : (
-                                <TrendingDown className="h-4 w-4 text-red-500" />
-                              )}
-                              <span>Lucro</span>
-                            </div>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className={`font-medium cursor-help ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-                                  {isPositive ? '+' : ''}{formatCurrency(lucroOperacional)}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="left" className="text-xs">
-                                <div className="space-y-1">
-                                  {(projeto.lucro_by_moeda?.BRL || 0) !== 0 && (
-                                    <div>BRL: {formatCurrency(projeto.lucro_by_moeda?.BRL || 0)}</div>
-                                  )}
-                                  {hasUSD && (
-                                    <div>USD: ${(projeto.lucro_by_moeda?.USD || 0).toFixed(2)}</div>
-                                  )}
-                                  {hasUSD && (
-                                    <div className="text-muted-foreground pt-1 border-t">
-                                      Total consolidado em BRL (PTAX)
-                                    </div>
-                                  )}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                          
-                          {/* Breakdown visual de lucro se houver USD */}
-                          {hasUSD && (
-                            <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground -mt-1">
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                R$ {(projeto.lucro_by_moeda?.BRL || 0).toFixed(0)}
-                              </Badge>
-                              <span>+</span>
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500/30 text-emerald-400">
-                                $ {(projeto.lucro_by_moeda?.USD || 0).toFixed(2)}
-                              </Badge>
-                            </div>
-                          )}
-                        </>
+                        <ProjectFinancialDisplay
+                          type="lucro"
+                          breakdown={{
+                            BRL: projeto.lucro_by_moeda?.BRL || 0,
+                            USD: projeto.lucro_by_moeda?.USD || 0,
+                          }}
+                          totalConsolidado={lucroOperacional}
+                          cotacaoPTAX={USD_TO_BRL}
+                          isMultiCurrency={hasUSD}
+                        />
                       );
                     })()}
                   </div>
