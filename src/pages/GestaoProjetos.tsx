@@ -601,7 +601,7 @@ export default function GestaoProjetos() {
                             <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent>Ver Operadores</TooltipContent>
+                        <TooltipContent side="top" className="z-[100]">Ver detalhes</TooltipContent>
                       </Tooltip>
                       <Badge className={`${getStatusColor(projeto.status)} text-xs`}>
                         {getStatusLabel(projeto.status)}
@@ -792,18 +792,22 @@ export default function GestaoProjetos() {
                           <Edit className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        title="Ver Operadores"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setProjetoParaVisualizar(projeto);
-                          setVisualizarOperadoresOpen(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjetoParaVisualizar(projeto);
+                              setVisualizarOperadoresOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="z-[100]">Ver detalhes</TooltipContent>
+                      </Tooltip>
                       {canDelete('projetos', 'projetos.delete') && (
                         <Button 
                           variant="ghost" 
