@@ -78,9 +78,25 @@ export function usePromotionalCurrencyConversion(projetoId: string) {
 
   // Configuração processada
   const config: ProjectCurrencyConfig = useMemo(() => {
-    const moedaConsolidacao = (projectConfig?.moeda_consolidacao as MoedaConsolidacao) || "BRL";
+    // CRÍTICO: Garantir que moedaConsolidacao seja lido corretamente do projeto
+    // O banco pode retornar null se o campo não foi definido
+    const rawMoeda = projectConfig?.moeda_consolidacao;
+    const moedaConsolidacao: MoedaConsolidacao = 
+      rawMoeda === "USD" || rawMoeda === "BRL" 
+        ? rawMoeda 
+        : "BRL"; // Fallback apenas se realmente null/undefined
+    
     const fonteCotacao = (projectConfig?.fonte_cotacao as FonteCotacao) || "TRABALHO";
     const cotacaoTrabalho = projectConfig?.cotacao_trabalho || null;
+
+    // DEBUG: Log para diagnóstico (remover em produção)
+    if (projectConfig) {
+      console.log("[usePromotionalCurrencyConversion] Config carregada:", {
+        rawMoeda,
+        moedaConsolidacao,
+        cotacaoTrabalho,
+      });
+    }
 
     // Determinar cotação atual baseada na fonte
     let cotacaoAtual = 0;
@@ -123,15 +139,15 @@ export function usePromotionalCurrencyConversion(projetoId: string) {
 
     const { moedaConsolidacao, cotacaoAtual, disponivel } = config;
 
-    // Moeda igual = sem conversão
-    if (moedaOrigem === moedaConsolidacao) return valor;
-
-    // Moedas tratadas como USD (stablecoins)
+    // Normalizar moeda de origem (stablecoins = USD)
     const isUSDLike = (m: string) => ["USD", "USDT", "USDC"].includes(m);
     const moedaOrigemNormalizada = isUSDLike(moedaOrigem) ? "USD" : moedaOrigem;
+    const moedaDestinoNormalizada = isUSDLike(moedaConsolidacao) ? "USD" : moedaConsolidacao;
 
-    // Se origem e destino são USD-like, sem conversão
-    if (isUSDLike(moedaOrigem) && moedaConsolidacao === "USD") return valor;
+    // CRÍTICO: Moeda igual (após normalização) = SEM conversão
+    if (moedaOrigemNormalizada === moedaDestinoNormalizada) {
+      return valor;
+    }
 
     // Se cotação não disponível, retornar valor original
     // IMPORTANTE: Não "inventar" conversão - manter transparência
@@ -141,17 +157,18 @@ export function usePromotionalCurrencyConversion(projetoId: string) {
     }
 
     // Conversões suportadas
-    if (moedaOrigemNormalizada === "USD" && moedaConsolidacao === "BRL") {
+    if (moedaOrigemNormalizada === "USD" && moedaDestinoNormalizada === "BRL") {
       // USD -> BRL: multiplicar pela taxa
       return valor * cotacaoAtual;
     }
 
-    if (moedaOrigem === "BRL" && moedaConsolidacao === "USD") {
+    if (moedaOrigemNormalizada === "BRL" && moedaDestinoNormalizada === "USD") {
       // BRL -> USD: dividir pela taxa
       return valor / cotacaoAtual;
     }
 
     // Conversão não suportada - retornar original
+    console.warn(`[converterParaConsolidacao] Conversão não suportada: ${moedaOrigem} -> ${moedaConsolidacao}`);
     return valor;
   }, [config]);
 
