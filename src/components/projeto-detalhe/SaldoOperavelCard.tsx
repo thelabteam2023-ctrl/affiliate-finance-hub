@@ -33,6 +33,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   const { 
     saldoOperavel, 
     saldoReal, 
+    saldoBonus,
     saldoFreebet, 
     saldoEmAposta,
     casasComSaldo,
@@ -103,6 +104,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
 
   const hasCasas = casasComSaldo.length > 0;
   const hasFreebet = saldoFreebet > 0;
+  const hasBonus = saldoBonus > 0;
   const casasComRollover = casasComSaldo.filter(c => c.hasRollover).length;
 
   // Conteúdo do detalhamento por casa
@@ -119,7 +121,13 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           {hasFreebet && (
             <div className="p-2 rounded bg-muted/30">
               <span className="text-muted-foreground">Freebet</span>
-              <p className="font-semibold">{formatCurrency(saldoFreebet)}</p>
+              <p className="font-semibold text-amber-500">{formatCurrency(saldoFreebet)}</p>
+            </div>
+          )}
+          {hasBonus && (
+            <div className="p-2 rounded bg-muted/30">
+              <span className="text-muted-foreground">Bônus</span>
+              <p className="font-semibold text-purple-500">{formatCurrency(saldoBonus)}</p>
             </div>
           )}
           {saldoEmAposta > 0 && (
