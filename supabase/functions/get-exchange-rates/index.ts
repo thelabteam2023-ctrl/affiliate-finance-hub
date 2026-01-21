@@ -31,8 +31,8 @@ const CURRENCIES = {
 
 type CurrencyKey = keyof typeof CURRENCIES;
 
-// TTL do cache: 4 horas
-const CACHE_TTL_HOURS = 4;
+// TTL do cache: 2h24min (144 minutos) - sincronizado com cron job
+const CACHE_TTL_MINUTES = 144;
 
 /**
  * Cria cliente Supabase com service role para acessar o cache
@@ -82,7 +82,7 @@ async function getCachedRates(): Promise<Record<string, { rate: number; source: 
 async function saveCachedRates(rates: Record<string, { rate: number; source: string }>) {
   const supabase = getSupabaseClient();
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + CACHE_TTL_HOURS * 60 * 60 * 1000);
+  const expiresAt = new Date(now.getTime() + CACHE_TTL_MINUTES * 60 * 1000);
   
   const upserts = Object.entries(rates).map(([currencyPair, data]) => ({
     currency_pair: currencyPair,
@@ -100,7 +100,7 @@ async function saveCachedRates(rates: Record<string, { rate: number; source: str
   if (error) {
     console.error('Erro ao salvar cache:', error);
   } else {
-    console.log(`Cache salvo: ${Object.keys(rates).length} cotações (expira em ${CACHE_TTL_HOURS}h)`);
+    console.log(`Cache salvo: ${Object.keys(rates).length} cotações (expira em ${CACHE_TTL_MINUTES}min)`);
   }
 }
 
