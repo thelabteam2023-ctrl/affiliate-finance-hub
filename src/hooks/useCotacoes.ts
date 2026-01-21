@@ -89,11 +89,14 @@ function parseSource(rawSource: string): CotacaoSourceInfo {
     };
   }
   
-  // PTAX como fallback (apenas USD, EUR, GBP quando FastForex indisponível)
-  if (source === 'PTAX_FALLBACK' || source === 'PTAX_FALLBACK_CACHE') {
+  // PTAX - pode ser fallback (nova lógica) ou legado do cache antigo
+  // Ambos são considerados oficiais - PTAX é segunda opção após FastForex
+  if (source === 'PTAX' || source === 'PTAX_CACHE' || source === 'PTAX_FALLBACK' || source === 'PTAX_FALLBACK_CACHE') {
+    const isFromCache = source.includes('CACHE');
+    const isFallbackSource = source.includes('FALLBACK');
     return {
-      source: source.includes('CACHE') ? 'PTAX_FALLBACK_CACHE' : 'PTAX_FALLBACK',
-      label: 'PTAX (fallback)',
+      source: isFromCache ? 'PTAX_FALLBACK_CACHE' : 'PTAX_FALLBACK',
+      label: isFallbackSource ? 'PTAX (fallback)' : 'PTAX BCB',
       isOfficial: true,
       isFallback: false,
       isPtaxFallback: true
