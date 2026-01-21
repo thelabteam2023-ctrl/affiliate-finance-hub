@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { PROJETO_RESULTADO_QUERY_KEY } from "@/hooks/useProjetoResultado";
 import { 
   registrarCashbackViaLedger, 
   estornarCashbackViaLedger 

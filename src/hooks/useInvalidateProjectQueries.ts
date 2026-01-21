@@ -1,0 +1,154 @@
+import { useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
+/**
+ * Hook centralizado para invalidação de cache do projeto.
+ * 
+ * FONTE ÚNICA DE VERDADE para garantir sincronização automática de KPIs
+ * após qualquer mutação (INSERT, UPDATE, DELETE) em módulos do projeto.
+ * 
+ * Uso:
+ * const invalidateProject = useInvalidateProjectQueries();
+ * await invalidateProject(projetoId); // Dispara após mutação
+ * 
+ * Chaves invalidadas:
+ * - projeto-resultado: KPIs de lucro, ROI, volume
+ * - projeto-breakdowns: Breakdown por módulo (apostas, giros, cashback)
+ * - bookmaker-saldos: Saldos das casas vinculadas
+ * - bookmakers: Lista de bookmakers (após vincular/desvincular)
+ * - apostas: Lista de apostas do projeto
+ * - bonus: Bônus do projeto
+ * - giros-gratis: Giros grátis (resultados)
+ * - giros-disponiveis: Promoções disponíveis
+ * - cashback-manual: Registros de cashback
+ */
+export function useInvalidateProjectQueries() {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    async (projetoId: string, options?: { 
+      /** Invalidar apenas chaves específicas (performance) */
+      only?: (
+        | "resultado" 
+        | "breakdowns" 
+        | "saldos" 
+        | "bookmakers" 
+        | "apostas" 
+        | "bonus" 
+        | "giros" 
+        | "cashback"
+      )[];
+    }) => {
+      const { only } = options || {};
+      
+      const shouldInvalidate = (key: string) => {
+        if (!only || only.length === 0) return true;
+        return only.includes(key as any);
+      };
+
+      const invalidations: Promise<void>[] = [];
+
+      // KPIs Centrais
+      if (shouldInvalidate("resultado")) {
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: ["projeto-resultado", projetoId] 
+          })
+        );
+      }
+
+      if (shouldInvalidate("breakdowns")) {
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: ["projeto-breakdowns", projetoId] 
+          })
+        );
+      }
+
+      // Saldos de Bookmakers (afeta KPIs de Saldo Operável)
+      if (shouldInvalidate("saldos")) {
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: ["bookmaker-saldos", projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["bookmaker-saldos"] 
+          })
+        );
+      }
+
+      // Lista de Bookmakers
+      if (shouldInvalidate("bookmakers")) {
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: ["bookmakers", projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["bookmakers"] 
+          })
+        );
+      }
+
+      // Apostas
+      if (shouldInvalidate("apostas")) {
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: ["apostas", projetoId] 
+          })
+        );
+      }
+
+      // Bônus
+      if (shouldInvalidate("bonus")) {
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: ["bonus", "project", projetoId] 
+          })
+        );
+      }
+
+      // Giros Grátis
+      if (shouldInvalidate("giros")) {
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: ["giros-gratis", projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["giros-disponiveis", projetoId] 
+          })
+        );
+      }
+
+      // Cashback
+      if (shouldInvalidate("cashback")) {
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: ["cashback-manual", projetoId] 
+          })
+        );
+      }
+
+      await Promise.all(invalidations);
+      
+      console.log(`[useInvalidateProjectQueries] Invalidated queries for project ${projetoId}`, {
+        keys: only || "ALL",
+      });
+    },
+    [queryClient]
+  );
+}
+
+/**
+ * Hook para criar uma função de callback que invalida o projeto.
+ * Útil para passar para sub-componentes sem precisar passar o projetoId.
+ */
+export function useProjectInvalidationCallback(projetoId: string) {
+  const invalidateProject = useInvalidateProjectQueries();
+
+  return useCallback(
+    async (options?: Parameters<ReturnType<typeof useInvalidateProjectQueries>>[1]) => {
+      await invalidateProject(projetoId, options);
+    },
+    [invalidateProject, projetoId]
+  );
+}
