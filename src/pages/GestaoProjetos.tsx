@@ -588,6 +588,21 @@ export default function GestaoProjetos() {
                           {isFavorite(projeto.id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}
                         </TooltipContent>
                       </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjetoParaVisualizar(projeto);
+                              setVisualizarOperadoresOpen(true);
+                            }}
+                            className="p-1 rounded hover:bg-muted transition-colors"
+                          >
+                            <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Ver Operadores</TooltipContent>
+                      </Tooltip>
                       <Badge className={`${getStatusColor(projeto.status)} text-xs`}>
                         {getStatusLabel(projeto.status)}
                       </Badge>
@@ -642,59 +657,43 @@ export default function GestaoProjetos() {
                     })()}
                   </div>
                 </div>
-                  <div className="flex flex-wrap gap-1.5 md:gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 min-w-0 text-xs md:text-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/projeto/${projeto.id}`);
-                      }}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
-                      <span className="truncate">Abrir</span>
-                    </Button>
+                  <div className="flex items-center justify-end gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t">
                     {canEdit('projetos', 'projetos.edit') && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1 min-w-0 text-xs md:text-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenDialog(projeto, "edit");
-                        }}
-                      >
-                        <Edit className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
-                        <span className="truncate">Editar</span>
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            className="h-8 w-8 md:h-9 md:w-9"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenDialog(projeto, "edit");
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar Projeto</TooltipContent>
+                      </Tooltip>
                     )}
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      className="h-8 w-8 md:h-9 md:w-9 flex-shrink-0"
-                      title="Ver Operadores"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setProjetoParaVisualizar(projeto);
-                        setVisualizarOperadoresOpen(true);
-                      }}
-                    >
-                      <Eye className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                    </Button>
                     {canDelete('projetos', 'projetos.delete') && (
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        className="h-8 w-8 md:h-9 md:w-9 flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setProjetoToDelete(projeto);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            className="h-8 w-8 md:h-9 md:w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjetoToDelete(projeto);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Excluir Projeto</TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                 </CardContent>
