@@ -80,9 +80,9 @@ export function GirosGratisChart({ data, formatCurrency }: GirosGratisChartProps
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
               <defs>
-                <linearGradient id="colorValor" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                <linearGradient id="colorValorDiario" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorAcumulado" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={isPositive ? "#22c55e" : "#ef4444"} stopOpacity={0.3} />
@@ -105,9 +105,9 @@ export function GirosGratisChart({ data, formatCurrency }: GirosGratisChartProps
               <Area
                 type="monotone"
                 dataKey="valor"
-                stroke="hsl(var(--primary))"
+                stroke="#f59e0b"
                 fillOpacity={1}
-                fill="url(#colorValor)"
+                fill="url(#colorValorDiario)"
                 strokeWidth={2}
               />
               <Area
@@ -123,7 +123,7 @@ export function GirosGratisChart({ data, formatCurrency }: GirosGratisChartProps
         </div>
         <div className="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-primary" />
+            <div className="w-3 h-3 rounded-full bg-amber-500" />
             <span>Retorno diário</span>
           </div>
           <div className="flex items-center gap-2">
