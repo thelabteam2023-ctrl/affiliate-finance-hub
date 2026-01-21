@@ -28,7 +28,7 @@ import {
   CircleDollarSign,
   DollarSign,
 } from "lucide-react";
-import { useCotacoes } from "@/hooks/useCotacoes";
+import { useCotacoes, CotacaoSourceInfo } from "@/hooks/useCotacoes";
 
 interface HistoricoVinculosTabProps {
   projetoId: string;
@@ -61,7 +61,7 @@ interface CurrencyAggregate {
 export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
   const [historico, setHistorico] = useState<HistoricoVinculo[]>([]);
   const [loading, setLoading] = useState(true);
-  const { convertToBRL, loading: cotacaoLoading } = useCotacoes();
+  const { convertToBRL, loading: cotacaoLoading, cotacaoUSD, sources } = useCotacoes();
 
   useEffect(() => {
     fetchHistorico();
@@ -415,7 +415,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
                 <>
                   <hr className="my-1 border-border" />
                   <p className="text-muted-foreground">
-                    Consolidado via cotação oficial: ≈ R$ {consolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    Consolidado via {sources.usd?.label || "cotação oficial"} (USD: R$ {cotacaoUSD.toFixed(4)}): ≈ R$ {consolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </>
               )}
