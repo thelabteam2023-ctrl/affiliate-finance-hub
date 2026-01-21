@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Wallet, TrendingUp, TrendingDown, Info } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, Info, DollarSign, CircleDollarSign } from "lucide-react";
 import { getFinancialDisplay } from "@/lib/financial-display";
 
 interface CurrencyBreakdown {
@@ -94,7 +94,8 @@ export function ProjectFinancialDisplay({
                   : 'border-border'
             }`}
           >
-            <span className="font-medium">💰 BRL:</span>
+            <CircleDollarSign className="h-3.5 w-3.5 mr-1" />
+            <span className="font-medium">BRL:</span>
             <span className="ml-1.5 font-semibold">
               {!isSaldo && breakdown.BRL > 0 ? '+' : ''}{formatBRL(breakdown.BRL)}
             </span>
@@ -126,7 +127,8 @@ export function ProjectFinancialDisplay({
                   : 'border-border'
             }`}
           >
-            <span className="font-medium">💰 BRL:</span>
+            <CircleDollarSign className="h-3.5 w-3.5 mr-1" />
+            <span className="font-medium">BRL:</span>
             <span className="ml-1.5 font-semibold">
               {!isSaldo && breakdown.BRL > 0 ? '+' : ''}{formatBRL(breakdown.BRL)}
             </span>
@@ -144,7 +146,8 @@ export function ProjectFinancialDisplay({
                   : 'border-emerald-500/30 text-emerald-400'
             }`}
           >
-            <span className="font-medium">💵 USD:</span>
+            <DollarSign className="h-3.5 w-3.5 mr-1" />
+            <span className="font-medium">USD:</span>
             <span className="ml-1.5 font-semibold">
               {!isSaldo && breakdown.USD > 0 ? '+' : ''}{formatUSD(breakdown.USD)}
             </span>
