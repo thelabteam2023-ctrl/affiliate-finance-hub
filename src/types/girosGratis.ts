@@ -58,6 +58,7 @@ export interface GirosGratisPorBookmaker {
   total_giros: number;
   total_registros: number;
   media_retorno: number;
+  moeda_original?: string; // Moeda original da casa para transparência
 }
 
 export interface GirosGratisChartData {

@@ -2,15 +2,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Building2, TrendingUp, Hash } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Building2, TrendingUp, Hash, Info } from "lucide-react";
 import { GirosGratisPorBookmaker as BookmakerStats } from "@/types/girosGratis";
 
 interface GirosGratisPorBookmakerProps {
   data: BookmakerStats[];
   formatCurrency: (value: number) => string;
+  moedaConsolidacao?: string;
 }
 
-export function GirosGratisPorBookmaker({ data, formatCurrency }: GirosGratisPorBookmakerProps) {
+export function GirosGratisPorBookmaker({ data, formatCurrency, moedaConsolidacao = "BRL" }: GirosGratisPorBookmakerProps) {
   if (data.length === 0) {
     return (
       <Card>
@@ -37,15 +39,23 @@ export function GirosGratisPorBookmaker({ data, formatCurrency }: GirosGratisPor
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Building2 className="h-4 w-4" />
-          Análise por Casa
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Análise por Casa
+          </CardTitle>
+          <Badge variant="outline" className="text-xs">
+            {moedaConsolidacao}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {data.map((bookmaker, index) => {
           const progressValue = maxRetorno > 0 ? (bookmaker.total_retorno / maxRetorno) * 100 : 0;
           const isPositive = bookmaker.total_retorno >= 0;
+          // Moeda original da casa (se disponível no tipo)
+          const moedaOriginal = (bookmaker as any).moeda_original;
+          const temConversao = moedaOriginal && moedaOriginal !== moedaConsolidacao;
 
           return (
             <div key={bookmaker.bookmaker_id} className="space-y-2">
@@ -62,7 +72,21 @@ export function GirosGratisPorBookmaker({ data, formatCurrency }: GirosGratisPor
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <div className="truncate">
-                      <p className="text-sm font-medium truncate">{bookmaker.bookmaker_nome}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm font-medium truncate">{bookmaker.bookmaker_nome}</p>
+                        {temConversao && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">Casa em {moedaOriginal}, convertido para {moedaConsolidacao}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                       {bookmaker.parceiro_nome && (
                         <p className="text-xs text-muted-foreground truncate">{bookmaker.parceiro_nome}</p>
                       )}

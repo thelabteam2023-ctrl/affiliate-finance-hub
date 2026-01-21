@@ -86,6 +86,10 @@ export function GiroGratisDialog({
     return bookmakers.find(b => b.id === bookmakerId);
   }, [bookmakers, bookmakerId]);
 
+  // Moeda do bookmaker selecionado (para exibição dinâmica)
+  const moedaSelecionada = selectedBookmaker?.moeda || "BRL";
+  const currencySymbol = moedaSelecionada === "USD" ? "US$" : moedaSelecionada === "EUR" ? "€" : "R$";
+
   // Valor total calculado automaticamente no modo detalhado
   const valorTotalGiros = quantidadeGiros * valorPorGiro;
 
@@ -177,14 +181,14 @@ export function GiroGratisDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {usandoPromo && (
+        {usandoPromo && giroDisponivel && (
           <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-sm">
             <div className="flex items-center gap-2 font-medium">
               <Gift className="h-4 w-4 text-primary" />
               Usando promoção: {giroDisponivel?.motivo}
             </div>
             <p className="text-muted-foreground mt-1">
-              {giroDisponivel?.quantidade_giros} giros × R$ {giroDisponivel?.valor_por_giro?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              {giroDisponivel?.quantidade_giros} giros × {currencySymbol} {giroDisponivel?.valor_por_giro?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </p>
           </div>
         )}
@@ -252,11 +256,11 @@ export function GiroGratisDialog({
           {/* Campos baseados no modo */}
           {modo === "simples" ? (
             <div className="space-y-2">
-              <Label>Valor Retornado *</Label>
+              <Label>Valor Retornado * <span className="text-xs text-muted-foreground">({moedaSelecionada})</span></Label>
               <MoneyInput
                 value={valorRetorno.toString()}
                 onChange={(v) => setValorRetorno(Number(v) || 0)}
-                currency="R$"
+                currency={currencySymbol}
               />
             </div>
           ) : (
@@ -273,11 +277,11 @@ export function GiroGratisDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Valor por Giro *</Label>
+                  <Label>Valor por Giro * <span className="text-xs text-muted-foreground">({moedaSelecionada})</span></Label>
                   <MoneyInput
                     value={valorPorGiro.toString()}
                     onChange={(v) => setValorPorGiro(Number(v) || 0)}
-                    currency="R$"
+                    currency={currencySymbol}
                   />
                 </div>
               </div>
@@ -290,17 +294,17 @@ export function GiroGratisDialog({
                     <span>Valor Total dos Giros</span>
                   </div>
                   <Badge variant="secondary" className="text-base font-mono">
-                    R$ {valorTotalGiros.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    {currencySymbol} {valorTotalGiros.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </Badge>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Valor Retornado *</Label>
+                <Label>Valor Retornado * <span className="text-xs text-muted-foreground">({moedaSelecionada})</span></Label>
                 <MoneyInput
                   value={valorRetorno.toString()}
                   onChange={(v) => setValorRetorno(Number(v) || 0)}
-                  currency="R$"
+                  currency={currencySymbol}
                 />
                 {valorTotalGiros > 0 && valorRetorno > 0 && (
                   <p className="text-xs text-muted-foreground">

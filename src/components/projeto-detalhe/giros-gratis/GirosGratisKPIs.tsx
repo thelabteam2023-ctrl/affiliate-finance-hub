@@ -1,14 +1,26 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Hash, Calculator, FileText, Zap, ListChecks } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TrendingUp, Hash, Calculator, FileText, Zap, ListChecks, Info } from "lucide-react";
 import { GirosGratisMetrics } from "@/types/girosGratis";
 
 interface GirosGratisKPIsProps {
   metrics: GirosGratisMetrics;
   formatCurrency: (value: number) => string;
+  moedaConsolidacao?: string;
+  cotacaoInfo?: {
+    fonte: string;
+    taxa: number;
+    disponivel: boolean;
+  };
 }
 
-export function GirosGratisKPIs({ metrics, formatCurrency }: GirosGratisKPIsProps) {
+export function GirosGratisKPIs({ 
+  metrics, 
+  formatCurrency, 
+  moedaConsolidacao = "BRL",
+  cotacaoInfo 
+}: GirosGratisKPIsProps) {
   const kpis = [
     {
       label: "Total Retornado",
@@ -44,6 +56,32 @@ export function GirosGratisKPIs({ metrics, formatCurrency }: GirosGratisKPIsProp
 
   return (
     <div className="space-y-4">
+      {/* Badge de moeda de consolidação */}
+      {moedaConsolidacao && (
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            Valores em {moedaConsolidacao}
+          </Badge>
+          {cotacaoInfo && cotacaoInfo.disponivel && moedaConsolidacao !== "BRL" && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="secondary" className="text-xs gap-1 cursor-help">
+                    <Info className="h-3 w-3" />
+                    {cotacaoInfo.fonte === "trabalho" ? "Cotação de Trabalho" : "PTAX"}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    Taxa: {cotacaoInfo.taxa.toFixed(4)} ({cotacaoInfo.fonte})
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi, index) => (
           <Card key={index}>

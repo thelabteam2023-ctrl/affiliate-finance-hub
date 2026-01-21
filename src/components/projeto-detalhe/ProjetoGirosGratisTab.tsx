@@ -63,6 +63,8 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
     createGiro,
     updateGiro,
     deleteGiro,
+    moedaConsolidacao,
+    cotacaoInfo,
   } = useGirosGratis({
     projetoId,
     dataInicio: dateRange?.start || null,
@@ -255,7 +257,7 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
       />
 
       {/* KPIs de Performance - Compactos */}
-      <GirosGratisKPIsCompact metrics={metrics} formatCurrency={formatCurrency} />
+      <GirosGratisKPIsCompact metrics={metrics} formatCurrency={formatCurrency} moedaConsolidacao={moedaConsolidacao} />
 
       {/* Navegação por Sub-abas */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -282,7 +284,11 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
         <TabsContent value="resumo" className="space-y-5 mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <GirosGratisChart data={chartData} formatCurrency={formatCurrency} />
-            <GirosGratisPorBookmaker data={porBookmaker} formatCurrency={formatCurrency} />
+            <GirosGratisPorBookmaker 
+              data={porBookmaker} 
+              formatCurrency={formatCurrency} 
+              moedaConsolidacao={moedaConsolidacao}
+            />
           </div>
         </TabsContent>
 

@@ -141,6 +141,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     const confirmados = data.filter(g => g.status === "confirmado");
     const grouped = confirmados.reduce((acc, g) => {
       if (!acc[g.bookmaker_id]) {
+        const moeda = g.bookmaker_moeda || "BRL";
         acc[g.bookmaker_id] = {
           bookmaker_id: g.bookmaker_id,
           bookmaker_nome: g.bookmaker_nome,
@@ -150,6 +151,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
           total_giros: 0,
           total_registros: 0,
           media_retorno: 0,
+          moeda_original: moeda, // Guardar moeda original para transparência
         };
       }
       // CRÍTICO: Converter valor para moeda de consolidação
