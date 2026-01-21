@@ -41,7 +41,6 @@ import { BookmakerSelectOption } from "@/components/bookmakers/BookmakerSelectOp
 const formSchema = z.object({
   bookmaker_id: z.string().min(1, "Selecione uma casa"),
   valor: z.number().min(0.01, "Valor deve ser maior que 0"),
-  status: z.enum(["LIBERADA", "PENDENTE"]),
   data_validade: z.date().optional().nullable(),
   tem_rollover: z.boolean().optional(),
 });
@@ -111,7 +110,6 @@ export function FreebetDialog({
     defaultValues: {
       bookmaker_id: preselectedBookmakerId || "",
       valor: 0,
-      status: "LIBERADA",
       data_validade: null,
       tem_rollover: false,
     },
@@ -125,7 +123,6 @@ export function FreebetDialog({
         form.reset({
           bookmaker_id: freebet.bookmaker_id,
           valor: freebet.valor,
-          status: freebet.status === "NAO_LIBERADA" ? "PENDENTE" : freebet.status,
           data_validade: freebet.data_validade ? new Date(freebet.data_validade) : null,
           tem_rollover: freebet.tem_rollover || false,
         });
@@ -134,7 +131,6 @@ export function FreebetDialog({
         form.reset({
           bookmaker_id: preselectedBookmakerId || "",
           valor: 0,
-          status: "LIBERADA",
           data_validade: null,
           tem_rollover: false,
         });
@@ -167,7 +163,8 @@ export function FreebetDialog({
         const oldValue = freebet.valor;
         const oldStatus = freebet.status;
         const newValue = data.valor;
-        const newStatus = data.status;
+        // Status is always LIBERADA for manual freebets now
+        const newStatus = "LIBERADA";
         const oldBookmakerId = freebet.bookmaker_id;
         const newBookmakerId = data.bookmaker_id;
 
@@ -188,7 +185,7 @@ export function FreebetDialog({
         // Update saldo_freebet based on status changes
         // Only LIBERADA status affects saldo_freebet
         const oldContribution = oldStatus === "LIBERADA" ? oldValue : 0;
-        const newContribution = newStatus === "LIBERADA" ? newValue : 0;
+        const newContribution = newValue; // Always LIBERADA now
 
         if (oldBookmakerId === newBookmakerId) {
           // Same bookmaker - just update the delta
@@ -237,14 +234,14 @@ export function FreebetDialog({
           }
         }
       } else {
-        // Create new freebet
+        // Create new freebet - always with status LIBERADA
         const { error } = await supabase
           .from("freebets_recebidas")
           .insert({
             projeto_id: projetoId,
             bookmaker_id: data.bookmaker_id,
             valor: data.valor,
-            status: data.status,
+            status: "LIBERADA",
             motivo: "Adicionada manualmente",
             data_recebida: new Date().toISOString(),
             data_validade: data.data_validade?.toISOString() || null,
@@ -257,20 +254,18 @@ export function FreebetDialog({
 
         if (error) throw error;
 
-        // Update saldo_freebet only if status is LIBERADA
-        if (data.status === "LIBERADA") {
-          const { data: currentBk } = await supabase
-            .from("bookmakers")
-            .select("saldo_freebet")
-            .eq("id", data.bookmaker_id)
-            .single();
-          
-          const novoSaldo = (currentBk?.saldo_freebet || 0) + data.valor;
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_freebet: novoSaldo })
-            .eq("id", data.bookmaker_id);
-        }
+        // Always update saldo_freebet since status is always LIBERADA
+        const { data: currentBk } = await supabase
+          .from("bookmakers")
+          .select("saldo_freebet")
+          .eq("id", data.bookmaker_id)
+          .single();
+        
+        const novoSaldo = (currentBk?.saldo_freebet || 0) + data.valor;
+        await supabase
+          .from("bookmakers")
+          .update({ saldo_freebet: novoSaldo })
+          .eq("id", data.bookmaker_id);
       }
 
       onSuccess();
@@ -350,28 +345,6 @@ export function FreebetDialog({
               )}
             />
 
-            {/* Status */}
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="LIBERADA">Liberada</SelectItem>
-                      <SelectItem value="PENDENTE">Pendente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {/* Data Validade (opcional) */}
             <FormField

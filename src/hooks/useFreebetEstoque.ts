@@ -41,7 +41,6 @@ export interface EstoqueMetrics {
   saldoDisponivel: number;
   totalRecebido: number;
   totalUtilizado: number;
-  totalPendentes: number;
   proximasExpirar: number;
   casasComFreebet: number;
   moedaConsolidacao: string;
@@ -216,7 +215,6 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
       .filter(fb => fb.utilizada)
       .reduce((acc, fb) => acc + converterParaConsolidacao(fb.valor, fb.moeda), 0);
     
-    const totalPendentes = freebets.filter(fb => fb.status === "PENDENTE").length;
     const proximasExpirar = freebets.filter(fb => 
       fb.diasParaExpirar !== null && fb.diasParaExpirar <= 7 && fb.diasParaExpirar > 0 && !fb.utilizada
     ).length;
@@ -226,7 +224,6 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
       saldoDisponivel,
       totalRecebido,
       totalUtilizado,
-      totalPendentes,
       proximasExpirar,
       casasComFreebet,
       moedaConsolidacao: currencyConfig.moedaConsolidacao,
