@@ -62,6 +62,25 @@ export const CACHE_MAX_AGE_HOURS = 24;
 export const FRONTEND_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
 
 /**
+ * Configuração de retry para chamadas à Edge Function
+ */
+export const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 5000,
+};
+
+/**
+ * Chave do localStorage para backup de cotações
+ */
+export const LOCALSTORAGE_RATES_KEY = 'exchange_rates_backup';
+
+/**
+ * TTL máximo do backup local em horas
+ */
+export const LOCALSTORAGE_BACKUP_TTL_HOURS = 24;
+
+/**
  * Tipos de fonte de cotação
  */
 export type CotacaoSource = 

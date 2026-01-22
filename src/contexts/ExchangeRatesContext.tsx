@@ -17,6 +17,9 @@ import {
   FALLBACK_RATES, 
   FRONTEND_REFRESH_INTERVAL_MS,
   DEFAULT_SOURCE_INFO,
+  RETRY_CONFIG,
+  LOCALSTORAGE_RATES_KEY,
+  LOCALSTORAGE_BACKUP_TTL_HOURS,
   parseSource,
   isRateFresh,
   getRateAgeMinutes,
@@ -31,6 +34,11 @@ export type { CotacaoSource, CotacaoSourceInfo, ExchangeRates };
 export interface CryptoPrices {
   [symbol: string]: number;
 }
+
+/**
+ * Status de conexão com a API de cotações
+ */
+export type ConnectionStatus = 'connected' | 'partial' | 'offline';
 
 export interface ExchangeRatesContextValue {
   // Cotações FIAT
@@ -53,6 +61,8 @@ export interface ExchangeRatesContextValue {
   isUsingFallback: boolean;  // true se qualquer moeda está usando fallback hardcoded
   isStale: boolean;          // true se cotações têm mais de 30 min
   rateAgeMinutes: number | null;
+  connectionStatus: ConnectionStatus; // status de conexão com a API
+  isFromLocalBackup: boolean; // true se usando backup do localStorage
   
   // Sources detalhadas
   sources: {
@@ -105,6 +115,8 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isFromLocalBackup, setIsFromLocalBackup] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('offline');
   const [sources, setSources] = useState({
     usd: DEFAULT_SOURCE_INFO,
     eur: DEFAULT_SOURCE_INFO,
@@ -116,24 +128,71 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
     crypto: "fallback",
   });
 
-  // Fetch FIAT rates (única chamada)
+  // Carregar backup do localStorage
+  const loadLocalBackup = useCallback(() => {
+    try {
+      const backup = localStorage.getItem(LOCALSTORAGE_RATES_KEY);
+      if (!backup) return false;
+      
+      const { rates: savedRates, sources: savedSources, timestamp } = JSON.parse(backup);
+      const ageHours = (Date.now() - timestamp) / (60 * 60 * 1000);
+      
+      if (ageHours < LOCALSTORAGE_BACKUP_TTL_HOURS) {
+        console.log("[ExchangeRatesContext] 📦 Usando backup local (idade:", Math.round(ageHours * 60), "min)");
+        setRates(savedRates);
+        setSources(savedSources);
+        setLastUpdate(new Date(timestamp));
+        setIsFromLocalBackup(true);
+        return true;
+      }
+    } catch (e) {
+      console.warn("[ExchangeRatesContext] Erro ao carregar backup local:", e);
+    }
+    return false;
+  }, []);
+
+  // Salvar backup no localStorage
+  const saveLocalBackup = useCallback((newRates: ExchangeRates, newSources: typeof sources) => {
+    try {
+      localStorage.setItem(LOCALSTORAGE_RATES_KEY, JSON.stringify({
+        rates: newRates,
+        sources: newSources,
+        timestamp: Date.now(),
+      }));
+    } catch (e) {
+      console.warn("[ExchangeRatesContext] Erro ao salvar backup local:", e);
+    }
+  }, []);
+
+  // Fetch com retry e exponential backoff
+  const fetchRatesWithRetry = useCallback(async (): Promise<any> => {
+    const { maxRetries, baseDelayMs, maxDelayMs } = RETRY_CONFIG;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[ExchangeRatesContext] Tentativa ${attempt}/${maxRetries}...`);
+        const { data, error } = await supabase.functions.invoke("get-exchange-rates");
+        
+        if (error) throw error;
+        if (!data || typeof data !== 'object') throw new Error("Dados inválidos da API");
+        
+        return data;
+      } catch (err) {
+        console.warn(`[ExchangeRatesContext] Tentativa ${attempt}/${maxRetries} falhou:`, err);
+        
+        if (attempt === maxRetries) throw err;
+        
+        const delay = Math.min(baseDelayMs * Math.pow(2, attempt - 1), maxDelayMs);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }, []);
+
+  // Fetch FIAT rates
   const fetchRates = useCallback(async () => {
     try {
       console.log("[ExchangeRatesContext] Buscando cotações...");
-      const { data, error } = await supabase.functions.invoke("get-exchange-rates");
-      
-      if (error) {
-        console.error("[ExchangeRatesContext] Erro na Edge Function:", error);
-        setFetchError(error.message);
-        throw error;
-      }
-
-      // Validar que recebemos dados válidos
-      if (!data || typeof data !== 'object') {
-        console.error("[ExchangeRatesContext] Dados inválidos recebidos:", data);
-        setFetchError("Dados inválidos da API");
-        return;
-      }
+      const data = await fetchRatesWithRetry();
 
       // Log detalhado para debugging
       console.log("[ExchangeRatesContext] Dados recebidos:", {
@@ -142,7 +201,7 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
         fromCache: data.fromCache,
       });
 
-      const newRates: Partial<ExchangeRates> = {};
+      const newRates: ExchangeRates = { ...FALLBACK_RATES };
       
       // Só atualizar se o valor for válido (número > 0)
       if (typeof data.USDBRL === 'number' && data.USDBRL > 0) newRates.USDBRL = data.USDBRL;
@@ -153,23 +212,9 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
       if (typeof data.ARSBRL === 'number' && data.ARSBRL > 0) newRates.ARSBRL = data.ARSBRL;
       if (typeof data.COPBRL === 'number' && data.COPBRL > 0) newRates.COPBRL = data.COPBRL;
 
-      // Log das taxas que vamos aplicar
-      console.log("[ExchangeRatesContext] Taxas validadas:", newRates);
-
-      // Atualizar rates - merge com existentes para não perder dados
-      setRates(prev => {
-        const merged = { ...prev, ...newRates };
-        console.log("[ExchangeRatesContext] Rates após merge:", {
-          MXNBRL_antes: prev.MXNBRL,
-          MXNBRL_novo: newRates.MXNBRL,
-          MXNBRL_final: merged.MXNBRL,
-        });
-        return merged;
-      });
-
       // Parse sources
       const rawSources = data.sources || {};
-      setSources({
+      const newSources = {
         usd: parseSource(rawSources.USD || ''),
         eur: parseSource(rawSources.EUR || ''),
         gbp: parseSource(rawSources.GBP || ''),
@@ -178,10 +223,30 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
         ars: parseSource(rawSources.ARS || ''),
         cop: parseSource(rawSources.COP || ''),
         crypto: "fallback",
-      });
+      };
 
+      // Atualizar state
+      setRates(newRates);
+      setSources(newSources);
       setLastUpdate(new Date());
       setFetchError(null);
+      setIsFromLocalBackup(false);
+
+      // Determinar status de conexão
+      const fallbackCount = Object.values(newSources).filter(s => 
+        typeof s === 'object' && s.isFallback
+      ).length;
+      
+      if (fallbackCount === 0) {
+        setConnectionStatus('connected');
+      } else if (fallbackCount < 7) {
+        setConnectionStatus('partial');
+      } else {
+        setConnectionStatus('offline');
+      }
+
+      // Salvar backup local
+      saveLocalBackup(newRates, newSources);
       
       console.log("[ExchangeRatesContext] ✅ Cotações atualizadas:", {
         fromCache: data.fromCache,
@@ -190,9 +255,15 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
       });
     } catch (error) {
       console.error("[ExchangeRatesContext] ❌ Erro ao buscar cotações:", error);
-      // NÃO resetar rates para FALLBACK_RATES aqui - manter o último valor válido
+      setFetchError(error instanceof Error ? error.message : "Erro desconhecido");
+      setConnectionStatus('offline');
+      
+      // Tentar carregar backup local se não temos dados atualizados
+      if (!lastUpdate) {
+        loadLocalBackup();
+      }
     }
-  }, []);
+  }, [fetchRatesWithRetry, loadLocalBackup, saveLocalBackup, lastUpdate]);
 
   // Fetch crypto prices
   const fetchCrypto = useCallback(async (symbols: string[]) => {
@@ -314,6 +385,8 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
     isUsingFallback,
     isStale,
     rateAgeMinutes,
+    connectionStatus,
+    isFromLocalBackup,
     sources,
     source,
     getRate,
@@ -326,6 +399,7 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
     refreshCrypto: fetchCrypto,
   }), [
     rates, cryptoPrices, loading, lastUpdate, isUsingFallback, isStale, rateAgeMinutes,
+    connectionStatus, isFromLocalBackup,
     sources, source, getRate, convertToBRL, convertUSDtoBRL, convertBRLtoUSD, 
     getCryptoPrice, getCryptoUSDValue, fetchRates, fetchCrypto
   ]);
