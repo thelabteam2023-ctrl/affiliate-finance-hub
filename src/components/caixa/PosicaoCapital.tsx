@@ -328,7 +328,8 @@ export function PosicaoCapital({
                                 <p className="text-xs font-medium text-muted-foreground mb-2">Composição por moeda:</p>
                                 {item.detailItems.map((d, i) => {
                                   const sourceInfo = d.moeda !== 'BRL' && d.moeda !== 'CRYPTO' ? getSourceInfo(d.moeda) : null;
-                                  const isOfficial = sourceInfo?.source?.label?.includes('FastForex') || sourceInfo?.source?.label?.includes('PTAX');
+                                  // Usar isOfficial do CotacaoSourceInfo - não depender de string matching
+                                  const isOfficial = sourceInfo?.source?.isOfficial === true || !sourceInfo?.source?.isFallback;
                                   
                                   return (
                                     <div key={i} className="flex items-center justify-between gap-3 text-xs">
