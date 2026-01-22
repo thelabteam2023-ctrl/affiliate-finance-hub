@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { FIAT_CURRENCIES } from "@/types/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -433,10 +434,11 @@ export default function BookmakerCatalogoDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="BRL">🇧🇷 BRL (Real)</SelectItem>
-                    <SelectItem value="USD">🇺🇸 USD (Dólar)</SelectItem>
-                    <SelectItem value="EUR">🇪🇺 EUR (Euro)</SelectItem>
-                    <SelectItem value="GBP">🇬🇧 GBP (Libra)</SelectItem>
+                    {FIAT_CURRENCIES.map((currency) => (
+                      <SelectItem key={currency.value} value={currency.value}>
+                        {currency.symbol} {currency.value} ({currency.label})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
