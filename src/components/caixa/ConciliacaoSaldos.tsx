@@ -58,11 +58,15 @@ interface ConciliacaoSaldosProps {
   onRefresh: () => void;
 }
 
+interface CurrencyAdjustmentSummary {
+  ganhos: number;
+  perdas: number;
+  liquido: number;
+}
+
 interface ExchangeAdjustmentSummary {
-  totalGanhos: number;
-  totalPerdas: number;
-  saldoLiquido: number;
   totalConciliacoes: number;
+  byMoeda: Record<string, CurrencyAdjustmentSummary>;
 }
 
 interface ExchangeAdjustmentRecord {
@@ -102,12 +106,10 @@ export function ConciliacaoSaldos({
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   
-  // Resumo de ajustes cambiais
+  // Resumo de ajustes cambiais agrupados por moeda
   const [adjustmentSummary, setAdjustmentSummary] = useState<ExchangeAdjustmentSummary>({
-    totalGanhos: 0,
-    totalPerdas: 0,
-    saldoLiquido: 0,
     totalConciliacoes: 0,
+    byMoeda: {},
   });
   const [adjustmentHistory, setAdjustmentHistory] = useState<ExchangeAdjustmentRecord[]>([]);
   const [loadingSummary, setLoadingSummary] = useState(true);
@@ -127,22 +129,31 @@ export function ConciliacaoSaldos({
         
         if (error) throw error;
         
-        let totalGanhos = 0;
-        let totalPerdas = 0;
+        // Agrupar totais por moeda nativa (moeda_destino)
+        const byMoeda: Record<string, CurrencyAdjustmentSummary> = {};
         
         data?.forEach((adj) => {
+          const moeda = adj.moeda_destino || "USD";
+          
+          if (!byMoeda[moeda]) {
+            byMoeda[moeda] = { ganhos: 0, perdas: 0, liquido: 0 };
+          }
+          
           if (adj.tipo_ajuste === "GANHO_CAMBIAL") {
-            totalGanhos += adj.diferenca || 0;
+            byMoeda[moeda].ganhos += adj.diferenca || 0;
           } else if (adj.tipo_ajuste === "PERDA_CAMBIAL") {
-            totalPerdas += Math.abs(adj.diferenca || 0);
+            byMoeda[moeda].perdas += Math.abs(adj.diferenca || 0);
           }
         });
         
+        // Calcular líquido por moeda
+        Object.keys(byMoeda).forEach((moeda) => {
+          byMoeda[moeda].liquido = byMoeda[moeda].ganhos - byMoeda[moeda].perdas;
+        });
+        
         setAdjustmentSummary({
-          totalGanhos,
-          totalPerdas,
-          saldoLiquido: totalGanhos - totalPerdas,
           totalConciliacoes: data?.length || 0,
+          byMoeda,
         });
         
         setAdjustmentHistory(data || []);
@@ -512,30 +523,32 @@ export function ConciliacaoSaldos({
       ) : (
         /* === HISTÓRICO DE CONCILIAÇÕES === */
         <div className="space-y-4">
-          {/* Resumo cambial */}
+          {/* Resumo cambial agrupado por moeda */}
           {adjustmentSummary.totalConciliacoes > 0 && (
-            <div className="flex items-center gap-4 p-3 rounded-lg border border-border/50 bg-muted/20">
+            <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg border border-border/50 bg-muted/20">
               <div className="flex items-center gap-2">
                 <History className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Total:</span>
                 <span className="font-medium">{adjustmentSummary.totalConciliacoes}</span>
               </div>
-              <div className="h-4 w-px bg-border" />
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-400" />
-                <span className="text-sm text-emerald-400">+{formatCurrency(adjustmentSummary.totalGanhos)}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-red-400" />
-                <span className="text-sm text-red-400">-{formatCurrency(adjustmentSummary.totalPerdas)}</span>
-              </div>
-              <div className="h-4 w-px bg-border" />
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Líquido:</span>
-                <span className={`font-medium ${adjustmentSummary.saldoLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {adjustmentSummary.saldoLiquido >= 0 ? '+' : ''}{formatCurrency(adjustmentSummary.saldoLiquido)}
-                </span>
-              </div>
+              
+              {/* Mostrar totais por moeda */}
+              {Object.entries(adjustmentSummary.byMoeda).map(([moeda, summary]) => (
+                <div key={moeda} className="flex items-center gap-3 border-l border-border/50 pl-4">
+                  <Badge variant="outline" className="text-xs">{moeda}</Badge>
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3 text-emerald-400" />
+                    <span className="text-xs text-emerald-400">+{formatCurrency(summary.ganhos, moeda)}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <TrendingDown className="h-3 w-3 text-red-400" />
+                    <span className="text-xs text-red-400">-{formatCurrency(summary.perdas, moeda)}</span>
+                  </div>
+                  <span className={`text-xs font-medium ${summary.liquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    = {summary.liquido >= 0 ? '+' : ''}{formatCurrency(summary.liquido, moeda)}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
 
