@@ -4,14 +4,31 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
 import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle } from "lucide-react";
+import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
+import { formatCurrencyValue, getCurrencySymbol } from "@/types/currency";
+
+interface SaldoFiat {
+  moeda: string;
+  saldo: number;
+}
+
+interface SaldoBookmakerPorMoeda {
+  moeda: string;
+  saldo: number;
+}
 
 interface PosicaoCapitalProps {
-  saldoCaixaFiat: number;
+  /** Saldos FIAT do caixa operacional (por moeda) */
+  saldosFiat: SaldoFiat[];
+  /** Saldo crypto do caixa em USD */
   saldoCaixaCrypto: number;
-  saldoBookmakersBRL: number;
-  saldoBookmakersUSD: number;
+  /** Saldos de bookmakers por moeda */
+  saldosBookmakers: SaldoBookmakerPorMoeda[];
+  /** Saldo em contas bancárias de parceiros (BRL) */
   saldoContasParceiros: number;
+  /** Saldo em wallets de parceiros (USD) */
   saldoWalletsParceiros: number;
+  /** Cotação USD/BRL atual */
   cotacaoUSD: number;
 }
 
@@ -24,36 +41,86 @@ const GRADIENT_COLORS = [
 ];
 
 export function PosicaoCapital({
-  saldoCaixaFiat,
+  saldosFiat,
   saldoCaixaCrypto,
-  saldoBookmakersBRL,
-  saldoBookmakersUSD,
+  saldosBookmakers,
   saldoContasParceiros,
   saldoWalletsParceiros,
   cotacaoUSD,
 }: PosicaoCapitalProps) {
+  // Hook de conversão multi-moeda
+  const { convert } = useMultiCurrencyConversion();
+
   const dadosPosicao = useMemo(() => {
-    // Converter tudo para BRL para visualização unificada
-    const caixaTotal = saldoCaixaFiat + (saldoCaixaCrypto * cotacaoUSD);
-    const walletsTotal = saldoWalletsParceiros * cotacaoUSD;
-    // Bookmakers: BRL + USD convertido para BRL
-    const bookmakersTotal = saldoBookmakersBRL + (saldoBookmakersUSD * cotacaoUSD);
+    // Consolidar saldos FIAT do caixa para BRL
+    let caixaFiatBRL = 0;
+    const caixaFiatDetails: string[] = [];
     
+    saldosFiat.forEach(sf => {
+      if (sf.saldo === 0) return;
+      
+      if (sf.moeda === 'BRL') {
+        caixaFiatBRL += sf.saldo;
+        caixaFiatDetails.push(`R$ ${sf.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`);
+      } else {
+        // Converter para BRL usando hook
+        const valorBRL = convert(sf.saldo, sf.moeda, 'BRL');
+        caixaFiatBRL += valorBRL;
+        const symbol = getCurrencySymbol(sf.moeda);
+        caixaFiatDetails.push(`${symbol} ${sf.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`);
+      }
+    });
+    
+    // Adicionar crypto ao caixa
+    const cryptoBRL = saldoCaixaCrypto * cotacaoUSD;
+    const caixaTotal = caixaFiatBRL + cryptoBRL;
+    
+    // Montar detail string para caixa
+    let caixaDetailStr = caixaFiatDetails.join(' + ');
+    if (saldoCaixaCrypto > 0) {
+      caixaDetailStr += (caixaDetailStr ? ' + ' : '') + `$${saldoCaixaCrypto.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} crypto`;
+    }
+    if (!caixaDetailStr) caixaDetailStr = 'Sem saldo';
+
+    // Consolidar saldos de Bookmakers para BRL
+    let bookmakersBRL = 0;
+    const bookmakersDetails: string[] = [];
+    
+    saldosBookmakers.forEach(sb => {
+      if (sb.saldo === 0) return;
+      
+      if (sb.moeda === 'BRL') {
+        bookmakersBRL += sb.saldo;
+        bookmakersDetails.push(`R$ ${sb.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`);
+      } else {
+        // Converter para BRL
+        const valorBRL = convert(sb.saldo, sb.moeda, 'BRL');
+        bookmakersBRL += valorBRL;
+        const symbol = getCurrencySymbol(sb.moeda);
+        bookmakersDetails.push(`${symbol} ${sb.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`);
+      }
+    });
+    
+    const bookmakersDetailStr = bookmakersDetails.length > 0 
+      ? bookmakersDetails.join(' + ') 
+      : 'Em operação';
+
+    // Wallets parceiros (já em USD → converter para BRL)
+    const walletsTotal = saldoWalletsParceiros * cotacaoUSD;
+
     const dados = [
       { 
         name: "Caixa Operacional", 
         value: caixaTotal, 
         icon: Wallet,
-        detail: `R$ ${saldoCaixaFiat.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} + $${saldoCaixaCrypto.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} crypto`,
+        detail: caixaDetailStr,
         help: "Saldo disponível no caixa central para uso imediato (FIAT + Crypto)"
       },
       { 
         name: "Bookmakers", 
-        value: bookmakersTotal, 
+        value: bookmakersBRL, 
         icon: Building2,
-        detail: saldoBookmakersUSD > 0 
-          ? `R$ ${saldoBookmakersBRL.toLocaleString('pt-BR', { minimumFractionDigits: 0 })} + $${saldoBookmakersUSD.toLocaleString('pt-BR', { minimumFractionDigits: 0 })} USD`
-          : "Em operação",
+        detail: bookmakersDetailStr,
         help: "Capital alocado em casas de apostas para operações"
       },
       { 
@@ -67,7 +134,7 @@ export function PosicaoCapital({
         name: "Wallets Parceiros", 
         value: walletsTotal, 
         icon: Coins,
-        detail: `$${saldoWalletsParceiros.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD`,
+        detail: `$${saldoWalletsParceiros.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} USD`,
         help: "Capital em carteiras crypto de parceiros"
       },
     ].filter(item => item.value > 0);
@@ -75,7 +142,7 @@ export function PosicaoCapital({
     const total = dados.reduce((sum, item) => sum + item.value, 0);
     
     return { dados, total };
-  }, [saldoCaixaFiat, saldoCaixaCrypto, saldoBookmakersBRL, saldoBookmakersUSD, saldoContasParceiros, saldoWalletsParceiros, cotacaoUSD]);
+  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldoContasParceiros, saldoWalletsParceiros, cotacaoUSD, convert]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
