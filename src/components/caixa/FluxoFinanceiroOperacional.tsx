@@ -316,8 +316,7 @@ export function FluxoFinanceiroOperacional({
         });
         
         return result;
-      })
-      .slice(-12);
+      });
 
     // Calcular totais por moeda
     type CurrencyTotalsExterno = Record<SupportedCurrency, { aportes: number; liquidacoes: number }>;
@@ -462,8 +461,7 @@ export function FluxoFinanceiroOperacional({
         });
         
         return result;
-      })
-      .slice(-12);
+      });
 
     // Calcular totais por moeda
     const totais: CurrencyTotals = SUPPORTED_CURRENCIES.reduce((acc, currency) => {
