@@ -697,7 +697,8 @@ export function FluxoFinanceiroOperacional({
           </TabsList>
 
           {/* Aba 1: Capital Externo (Investidores) */}
-          <TabsContent value="externo" className="mt-4 space-y-4">
+          {/* forceMount + hidden para evitar remontagem do gráfico ao trocar de aba */}
+          <TabsContent value="externo" className="mt-4 space-y-4" forceMount>
             {/* KPIs Multi-moeda */}
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-500/20">
@@ -896,7 +897,8 @@ export function FluxoFinanceiroOperacional({
           </TabsContent>
 
           {/* Aba 2: Fluxo de Caixa (Capital em Operação - Bookmakers) */}
-          <TabsContent value="fluxo" className="mt-4 space-y-4">
+          {/* forceMount + hidden para evitar remontagem do gráfico ao trocar de aba */}
+          <TabsContent value="fluxo" className="mt-4 space-y-4" forceMount>
             {/* KPIs - Depósitos e Saques com todas as moedas ativas */}
             <div className="grid grid-cols-2 gap-4">
               {/* Card Depósitos */}
