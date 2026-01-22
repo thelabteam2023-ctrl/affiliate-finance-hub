@@ -152,13 +152,13 @@ export function ConciliacaoSaldos({
     loadAdjustments();
   }, [workspace?.id, transacoes]);
 
-  // Filtrar transações crypto pendentes de confirmação
+  // Filtrar transações pendentes de conciliação
+  // Inclui: CRYPTO e FIAT com conversão de moeda (moeda_origem ≠ moeda_destino)
   // Suporta tanto "pendente" (minúsculo) quanto "PENDENTE" (maiúsculo)
   const pendingTransactions = useMemo(() => {
     return transacoes.filter(
       (t) =>
         (t.status === "pendente" || t.status === "PENDENTE") &&
-        t.tipo_moeda === "CRYPTO" &&
         (t.tipo_transacao === "DEPOSITO" || t.tipo_transacao === "SAQUE")
     );
   }, [transacoes]);
@@ -190,9 +190,18 @@ export function ConciliacaoSaldos({
 
     setSaving(true);
     try {
-      const valorNominal = selectedTransaction.valor_usd || selectedTransaction.valor || 0;
+      // Usar valor_destino como nominal (na moeda da casa)
+      // Fallback para valor_usd ou valor para transações legacy
+      const valorNominal = selectedTransaction.valor_destino 
+        || selectedTransaction.valor_usd 
+        || selectedTransaction.valor 
+        || 0;
       const diferenca = valorReal - valorNominal;
       const hasDiferenca = Math.abs(diferenca) > 0.01;
+      
+      // Atualizar também valor_destino com o valor confirmado
+      // Isso garante que o trigger de saldo use o valor correto
+      const isCrypto = selectedTransaction.tipo_moeda === "CRYPTO";
 
       // 1. Atualizar transação - MANTER valor/valor_usd (contábil), adicionar valor_confirmado (operacional)
       const { error: updateError } = await supabase
@@ -201,7 +210,11 @@ export function ConciliacaoSaldos({
           status: "CONFIRMADO",
           status_valor: hasDiferenca ? "AJUSTADO" : "CONFIRMADO",
           valor_confirmado: valorReal, // Novo campo: valor REAL para fins operacionais
-          cotacao_implicita: hasDiferenca ? (selectedTransaction.qtd_coin / valorReal) : null,
+          valor_destino: valorReal, // Atualizar valor_destino para trigger de saldo
+          valor: valorReal, // Atualizar valor canônico
+          cotacao_implicita: isCrypto && hasDiferenca && selectedTransaction.qtd_coin 
+            ? (selectedTransaction.qtd_coin / valorReal) 
+            : null,
           descricao: observacoes 
             ? `${selectedTransaction.descricao || ""} | Obs: ${observacoes}` 
             : selectedTransaction.descricao,
@@ -317,7 +330,7 @@ export function ConciliacaoSaldos({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <RefreshCcw className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">Conciliação de Saldos Crypto</h3>
+          <h3 className="font-semibold">Conciliação de Saldos</h3>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -330,8 +343,9 @@ export function ConciliacaoSaldos({
                   <strong>Conciliação</strong> valida se o valor real creditado/recebido corresponde ao esperado.
                 </p>
                 <ul className="text-xs mt-2 space-y-1 text-muted-foreground">
-                  <li>• <strong>Valor nominal:</strong> usado para fins contábeis (caixa/financeiro)</li>
-                  <li>• <strong>Valor confirmado:</strong> usado para saldo operacional (bookmaker)</li>
+                  <li>• <strong>Valor nominal:</strong> valor enviado na moeda de origem</li>
+                  <li>• <strong>Valor confirmado:</strong> valor real creditado na casa</li>
+                  <li>• <strong>Conversão:</strong> quando a moeda de origem difere da moeda da casa</li>
                 </ul>
                 <p className="text-xs mt-2 text-muted-foreground">
                   Diferenças são registradas como ajustes cambiais para análise.
@@ -526,7 +540,7 @@ export function ConciliacaoSaldos({
           <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">Tudo Conciliado!</h3>
           <p className="text-muted-foreground">
-            Não há transações crypto pendentes de confirmação.
+            Não há transações pendentes de confirmação.
           </p>
         </div>
       ) : (
@@ -539,7 +553,21 @@ export function ConciliacaoSaldos({
           <div className="space-y-3">
             {pendingTransactions.map((t) => {
               const isDeposito = t.tipo_transacao === "DEPOSITO";
+              const isCrypto = t.tipo_moeda === "CRYPTO";
               const valorNominal = t.valor_usd || t.valor || 0;
+              const moedaOrigem = t.moeda_origem || (isCrypto ? t.coin : t.moeda) || "BRL";
+              const moedaDestino = t.moeda_destino || t.moeda || "BRL";
+              const valorOrigem = t.valor_origem || t.valor || 0;
+              
+              // Determinar origem: wallet (crypto) ou conta bancária (fiat)
+              const origemLabel = isCrypto 
+                ? (t.origem_wallet_id ? getWalletInfo(t.origem_wallet_id) : "Wallet")
+                : (t.moeda_origem || "FIAT");
+              
+              // Determinar destino
+              const destinoLabel = isDeposito
+                ? (t.destino_bookmaker_id ? getBookmakerName(t.destino_bookmaker_id) : "Bookmaker")
+                : (t.origem_bookmaker_id ? getBookmakerName(t.origem_bookmaker_id) : "Bookmaker");
               
               return (
                 <div
@@ -557,28 +585,50 @@ export function ConciliacaoSaldos({
                     >
                       {isDeposito ? "Depósito" : "Saque"}
                     </Badge>
+                    
+                    {/* Badge de tipo de moeda */}
+                    <Badge variant="outline" className="text-xs">
+                      {isCrypto ? "CRYPTO" : "FIAT"}
+                    </Badge>
 
                     {/* Fluxo */}
                     <div className="flex items-center gap-2 text-sm">
                       <div className="flex items-center gap-1">
-                        <Wallet className="h-4 w-4 text-muted-foreground" />
-                        <span>{t.origem_wallet_id ? getWalletInfo(t.origem_wallet_id) : "Wallet"}</span>
+                        {isCrypto ? (
+                          <Wallet className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span className="text-muted-foreground">{origemLabel}</span>
                       </div>
                       <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       <div className="flex items-center gap-1">
                         <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span>{t.destino_bookmaker_id ? getBookmakerName(t.destino_bookmaker_id) : "Bookmaker"}</span>
+                        <span>{destinoLabel}</span>
                       </div>
                     </div>
 
                     {/* Valores */}
                     <div className="text-sm">
-                      <div className="font-mono">
-                        {t.qtd_coin?.toFixed(4)} {t.coin}
-                      </div>
-                      <div className="text-muted-foreground">
-                        ≈ {formatCurrency(valorNominal)}
-                      </div>
+                      {isCrypto ? (
+                        <>
+                          <div className="font-mono">
+                            {t.qtd_coin?.toFixed(4)} {t.coin}
+                          </div>
+                          <div className="text-muted-foreground">
+                            ≈ {formatCurrency(valorNominal)}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="font-mono font-medium">
+                            {moedaOrigem} {valorOrigem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                          <div className="text-muted-foreground text-xs">
+                            → {moedaDestino} (aguardando confirmação)
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Data */}
@@ -613,102 +663,118 @@ export function ConciliacaoSaldos({
             </DialogTitle>
             <DialogDescription>
               Informe o valor real que foi{" "}
-              {selectedTransaction?.tipo_transacao === "DEPOSITO" ? "creditado na casa" : "recebido na wallet"}
+              {selectedTransaction?.tipo_transacao === "DEPOSITO" ? "creditado na casa" : "recebido"}
             </DialogDescription>
           </DialogHeader>
 
-          {selectedTransaction && (
-            <div className="space-y-4 py-4">
-              {/* Resumo da transação */}
-              <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Quantidade enviada:</span>
-                  <span className="font-mono font-medium">
-                    {selectedTransaction.qtd_coin?.toFixed(6)} {selectedTransaction.coin}
-                  </span>
+          {selectedTransaction && (() => {
+            const isCrypto = selectedTransaction.tipo_moeda === "CRYPTO";
+            const moedaOrigem = selectedTransaction.moeda_origem || (isCrypto ? selectedTransaction.coin : selectedTransaction.moeda) || "BRL";
+            const moedaDestino = selectedTransaction.moeda_destino || selectedTransaction.moeda || "BRL";
+            const valorOrigem = selectedTransaction.valor_origem || selectedTransaction.valor || 0;
+            const valorNominalDestino = selectedTransaction.valor_destino || selectedTransaction.valor || 0;
+            
+            // Para exibição do símbolo da moeda destino
+            const currencySymbols: Record<string, string> = {
+              USD: "$", BRL: "R$", EUR: "€", GBP: "£", MXN: "$", MYR: "RM", ARS: "$", COP: "$"
+            };
+            const symbolDestino = currencySymbols[moedaDestino] || moedaDestino;
+            
+            return (
+              <div className="space-y-4 py-4">
+                {/* Resumo da transação */}
+                <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Valor enviado:</span>
+                    <span className="font-mono font-medium">
+                      {isCrypto 
+                        ? `${selectedTransaction.qtd_coin?.toFixed(6)} ${selectedTransaction.coin}`
+                        : `${moedaOrigem} ${valorOrigem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Valor estimado ({moedaDestino}):</span>
+                    <span className="font-medium">
+                      {symbolDestino} {valorNominalDestino.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Destino:</span>
+                    <span>
+                      {selectedTransaction.destino_bookmaker_id 
+                        ? getBookmakerName(selectedTransaction.destino_bookmaker_id)
+                        : selectedTransaction.origem_bookmaker_id
+                          ? getBookmakerName(selectedTransaction.origem_bookmaker_id)
+                          : "N/A"}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Valor nominal (contábil):</span>
-                  <span className="font-medium">
-                    {formatCurrency(selectedTransaction.valor_usd || selectedTransaction.valor || 0)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Destino:</span>
-                  <span>
-                    {selectedTransaction.destino_bookmaker_id 
-                      ? getBookmakerName(selectedTransaction.destino_bookmaker_id)
-                      : selectedTransaction.origem_bookmaker_id
-                        ? getBookmakerName(selectedTransaction.origem_bookmaker_id)
-                        : "N/A"}
-                  </span>
-                </div>
-              </div>
 
-              {/* Input valor real */}
-              <div className="space-y-2">
-                <Label htmlFor="valorReal">
-                  Valor real {selectedTransaction.tipo_transacao === "DEPOSITO" ? "creditado" : "recebido"} (USD)
-                </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    id="valorReal"
-                    type="number"
-                    step="0.01"
-                    value={valorConfirmado}
-                    onChange={(e) => setValorConfirmado(e.target.value)}
-                    className="pl-7"
-                    placeholder="0.00"
-                  />
-                </div>
-                
-                {/* Indicador de diferença */}
-                {valorConfirmado && (
-                  <div className="flex items-center gap-2 text-sm">
-                    {(() => {
-                      const valorNominal = selectedTransaction.valor_usd || selectedTransaction.valor || 0;
-                      const valorReal = parseFloat(valorConfirmado) || 0;
-                      const diferenca = valorReal - valorNominal;
-                      
-                      if (Math.abs(diferenca) < 0.01) {
-                        return (
+                {/* Input valor real */}
+                <div className="space-y-2">
+                  <Label htmlFor="valorReal">
+                    Valor real {selectedTransaction.tipo_transacao === "DEPOSITO" ? "creditado" : "recebido"} ({moedaDestino})
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbolDestino}</span>
+                    <Input
+                      id="valorReal"
+                      type="number"
+                      step="0.01"
+                      value={valorConfirmado}
+                      onChange={(e) => setValorConfirmado(e.target.value)}
+                      className="pl-10"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  
+                  {/* Indicador de diferença */}
+                  {valorConfirmado && (
+                    <div className="flex items-center gap-2 text-sm">
+                      {(() => {
+                        const valorReal = parseFloat(valorConfirmado) || 0;
+                        const diferenca = valorReal - valorNominalDestino;
+                        
+                        if (Math.abs(diferenca) < 0.01) {
+                          return (
+                            <span className="text-emerald-400 flex items-center gap-1">
+                              <CheckCircle2 className="h-4 w-4" />
+                              Valores conferem
+                            </span>
+                          );
+                        }
+                        
+                        return diferenca > 0 ? (
                           <span className="text-emerald-400 flex items-center gap-1">
-                            <CheckCircle2 className="h-4 w-4" />
-                            Valores conferem
+                            <TrendingUp className="h-4 w-4" />
+                            Ganho cambial: +{symbolDestino} {diferenca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        ) : (
+                          <span className="text-amber-400 flex items-center gap-1">
+                            <TrendingDown className="h-4 w-4" />
+                            Perda cambial: {symbolDestino} {diferenca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                         );
-                      }
-                      
-                      return diferenca > 0 ? (
-                        <span className="text-emerald-400 flex items-center gap-1">
-                          <TrendingUp className="h-4 w-4" />
-                          Ganho cambial: +{formatCurrency(diferenca)}
-                        </span>
-                      ) : (
-                        <span className="text-amber-400 flex items-center gap-1">
-                          <TrendingDown className="h-4 w-4" />
-                          Perda cambial: {formatCurrency(diferenca)}
-                        </span>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
+                      })()}
+                    </div>
+                  )}
+                </div>
 
-              {/* Observações */}
-              <div className="space-y-2">
-                <Label htmlFor="observacoes">Observações (opcional)</Label>
-                <Textarea
-                  id="observacoes"
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Ex: Cotação da casa estava defasada"
-                  rows={2}
-                />
+                {/* Observações */}
+                <div className="space-y-2">
+                  <Label htmlFor="observacoes">Observações (opcional)</Label>
+                  <Textarea
+                    id="observacoes"
+                    value={observacoes}
+                    onChange={(e) => setObservacoes(e.target.value)}
+                    placeholder="Ex: Cotação da casa estava defasada"
+                    rows={2}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmDialog(false)} disabled={saving}>

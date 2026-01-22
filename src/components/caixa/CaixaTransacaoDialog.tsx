@@ -1635,11 +1635,27 @@ export function CaixaTransacaoDialog({
       // Find investor name if APORTE_FINANCEIRO
       const investidor = investidores.find(inv => inv.id === investidorId);
       
-      // SAQUE e DEPOSITO crypto iniciam como PENDENTE para conciliação
-      // Outros tipos iniciam como CONFIRMADO
+      // =========================================================================
+      // REGRA DE STATUS INICIAL:
+      // - SAQUE: Sempre PENDENTE (precisa confirmar recebimento na conta/wallet)
+      // - DEPOSITO com conversão de moeda: PENDENTE (precisa confirmar valor creditado)
+      //   → CRYPTO: origem em crypto, destino em moeda da casa
+      //   → FIAT: origem em BRL/EUR, destino em casa com moeda diferente (MXN, USD, etc)
+      // - Outros: CONFIRMADO imediatamente
+      // =========================================================================
+      
+      // Calcular se há conversão de moeda ANTES de definir status
+      const moedaOrigemTemp = tipoMoeda === "CRYPTO" ? coin : moeda;
+      let moedaDestinoTemp = tipoMoeda === "FIAT" ? moeda : "USD";
+      if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
+        const destBm = bookmakers.find(b => b.id === destinoBookmakerId);
+        moedaDestinoTemp = destBm?.moeda || "BRL";
+      }
+      const temConversaoMoeda = moedaOrigemTemp !== moedaDestinoTemp;
+      
       const statusInicial = 
         tipoTransacao === "SAQUE" ? "PENDENTE" :
-        (tipoTransacao === "DEPOSITO" && tipoMoeda === "CRYPTO") ? "PENDENTE" :
+        (tipoTransacao === "DEPOSITO" && temConversaoMoeda) ? "PENDENTE" :
         "CONFIRMADO";
 
       // Determinar moeda de destino baseado no bookmaker de destino (para DEPOSITO)
@@ -1870,11 +1886,15 @@ export function CaixaTransacaoDialog({
         }
       }
 
+      const mensagemSucesso = tipoTransacao === "SAQUE" 
+        ? "Saque solicitado! Aguardando confirmação de recebimento."
+        : (tipoTransacao === "DEPOSITO" && temConversaoMoeda)
+          ? "Depósito registrado! Aguardando confirmação do valor creditado na aba Conciliação."
+          : "Transação registrada com sucesso";
+
       toast({
         title: "Sucesso",
-        description: tipoTransacao === "SAQUE" 
-          ? "Saque solicitado! Aguardando confirmação de recebimento."
-          : "Transação registrada com sucesso",
+        description: mensagemSucesso,
       });
 
       resetForm();

@@ -74,11 +74,11 @@ export function CaixaTabsContainer({
   initialTab = "analise",
 }: CaixaTabsContainerProps) {
   // Conta transações pendentes de conciliação
+  // Inclui: CRYPTO (depósitos e saques) e FIAT com conversão de moeda
   // Suporta tanto "pendente" (minúsculo) quanto "PENDENTE" (maiúsculo)
   const pendingCount = transacoes.filter(
     (t) => 
       (t.status === "pendente" || t.status === "PENDENTE") && 
-      t.tipo_moeda === "CRYPTO" &&
       (t.tipo_transacao === "DEPOSITO" || t.tipo_transacao === "SAQUE")
   ).length;
 
