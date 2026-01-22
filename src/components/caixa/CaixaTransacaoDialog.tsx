@@ -1868,7 +1868,9 @@ export function CaixaTransacaoDialog({
       if (tipoTransacao === "SAQUE" && origemBookmakerId && tipoMoeda === "FIAT") {
         const bm = bookmakers.find(b => b.id === origemBookmakerId);
         const moedaCasa = bm?.moeda || "BRL";
-        const moedaContaDestino = moeda; // Moeda da conta bancária de destino
+        // Buscar moeda REAL da conta bancária de destino (não usar state 'moeda')
+        const contaDestino = contasBancarias.find(c => c.id === destinoContaId);
+        const moedaContaDestino = contaDestino?.moeda || "BRL";
         
         // Valor de ORIGEM = valor na moeda da CASA
         transactionData.moeda_origem = moedaCasa;
