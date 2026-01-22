@@ -16,13 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -45,7 +38,6 @@ import {
   AlertTriangle,
   Network,
   Coins,
-  TrendingDown,
   Info,
 } from "lucide-react";
 import {
@@ -54,21 +46,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-// Moedas cripto suportadas
-const CRYPTO_COINS = ["USDT", "USDC", "ETH", "BTC", "BNB", "TRX", "SOL", "MATIC"];
-
-// Redes blockchain suportadas
-const BLOCKCHAIN_NETWORKS = [
-  { value: "TRC20", label: "TRON (TRC20)" },
-  { value: "ERC20", label: "Ethereum (ERC20)" },
-  { value: "BEP20", label: "BNB Chain (BEP20)" },
-  { value: "SOL", label: "Solana" },
-  { value: "MATIC", label: "Polygon" },
-  { value: "ARB", label: "Arbitrum" },
-  { value: "OP", label: "Optimism" },
-  { value: "AVAX", label: "Avalanche C-Chain" },
-];
 
 export interface SaquePendente {
   id: string;
@@ -87,9 +64,10 @@ export interface SaquePendente {
   moeda_destino?: string;
   // Campos cripto
   coin?: string;
-  qtd_coin?: number;
+  qtd_coin?: number; // Estimativa de coins a receber
   cotacao_original?: number;
   moeda_origem?: string;
+  valor_origem?: number; // Valor na moeda da casa
   // Dados da wallet de destino
   wallet_network?: string;
   wallet_exchange?: string;
@@ -102,6 +80,11 @@ interface ConfirmarSaqueDialogProps {
   onSuccess: () => void;
   saque: SaquePendente | null;
 }
+
+// Símbolos de moeda
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  BRL: "R$", USD: "$", EUR: "€", GBP: "£", MXN: "$", MYR: "RM", ARS: "$", COP: "$"
+};
 
 export function ConfirmarSaqueDialog({
   open,
@@ -116,11 +99,8 @@ export function ConfirmarSaqueDialog({
   // Estados para saque FIAT
   const [valorRecebido, setValorRecebido] = useState<string>("");
   
-  // Estados para saque CRIPTO
+  // Estados para saque CRIPTO - SIMPLIFICADO (apenas quantidade de coins)
   const [qtdCoinRecebida, setQtdCoinRecebida] = useState<string>("");
-  const [moedaRecebida, setMoedaRecebida] = useState<string>("");
-  const [redeUtilizada, setRedeUtilizada] = useState<string>("");
-  const [cotacaoReal, setCotacaoReal] = useState<string>("");
 
   // Determinar se é saque cripto
   const isCryptoWithdrawal = !!saque?.destino_wallet_id;
@@ -131,40 +111,21 @@ export function ConfirmarSaqueDialog({
       setObservacoes("");
       
       if (isCryptoWithdrawal) {
-        // Pré-preencher com dados esperados
+        // Pré-preencher com estimativa
         setQtdCoinRecebida(saque.qtd_coin?.toString() || "");
-        setMoedaRecebida(saque.coin || saque.moeda_origem || "USDT");
-        setRedeUtilizada(normalizeNetwork(saque.wallet_network || ""));
-        setCotacaoReal(saque.cotacao_original?.toString() || "1");
         setValorRecebido("");
       } else {
         // Saque FIAT
         setValorRecebido(saque.valor.toString());
         setQtdCoinRecebida("");
-        setMoedaRecebida("");
-        setRedeUtilizada("");
-        setCotacaoReal("");
       }
     }
   }, [open, saque, isCryptoWithdrawal]);
 
-  // Normalizar nome da rede para o formato do select
-  const normalizeNetwork = (network: string): string => {
-    const networkUpper = network.toUpperCase();
-    if (networkUpper.includes("TRC20") || networkUpper.includes("TRON")) return "TRC20";
-    if (networkUpper.includes("ERC20") || networkUpper.includes("ETHEREUM")) return "ERC20";
-    if (networkUpper.includes("BEP20") || networkUpper.includes("BNB") || networkUpper.includes("BSC")) return "BEP20";
-    if (networkUpper.includes("SOL")) return "SOL";
-    if (networkUpper.includes("MATIC") || networkUpper.includes("POLYGON")) return "MATIC";
-    if (networkUpper.includes("ARB")) return "ARB";
-    if (networkUpper.includes("OP")) return "OP";
-    if (networkUpper.includes("AVAX")) return "AVAX";
-    return network;
-  };
-
   const formatCurrency = (value: number, currency: string = "BRL") => {
     // Tratar moedas cripto
-    if (CRYPTO_COINS.includes(currency.toUpperCase())) {
+    const cryptoCoins = ["USDT", "USDC", "ETH", "BTC", "BNB", "TRX", "SOL", "MATIC"];
+    if (cryptoCoins.includes(currency.toUpperCase())) {
       return `${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ${currency}`;
     }
     try {
@@ -177,35 +138,26 @@ export function ConfirmarSaqueDialog({
     }
   };
 
-  // Cálculos para saque CRIPTO
+  // Dados do saque cripto
   const qtdCoinRecebidaNum = parseFloat(qtdCoinRecebida) || 0;
-  const cotacaoRealNum = parseFloat(cotacaoReal) || 1;
   const qtdCoinEsperada = saque?.qtd_coin || 0;
-  const cotacaoOriginal = saque?.cotacao_original || 1;
+  const coinMoeda = saque?.coin || "USDT";
+  const moedaCasa = saque?.moeda_origem || saque?.moeda || "USD";
+  const valorCasa = saque?.valor_origem || saque?.valor || 0;
+  const simboloMoedaCasa = CURRENCY_SYMBOLS[moedaCasa] || moedaCasa;
   
-  // Taxa de rede = diferença entre esperado e recebido (em coins)
-  const taxaRede = qtdCoinEsperada - qtdCoinRecebidaNum;
-  const temTaxaRede = Math.abs(taxaRede) > 0.001;
-  
-  // Spread = diferença de cotação
-  const spreadPercentual = cotacaoOriginal > 0 
-    ? ((cotacaoRealNum - cotacaoOriginal) / cotacaoOriginal) * 100 
-    : 0;
-  const temSpread = Math.abs(spreadPercentual) > 0.01;
-  
-  // Valor USD real calculado
-  const valorUsdReal = qtdCoinRecebidaNum * cotacaoRealNum;
-  const valorUsdEsperado = saque?.valor || 0;
-  const diferencaUsd = valorUsdReal - valorUsdEsperado;
+  // Diferença simples em coins (esperado - recebido)
+  const diferencaCoin = qtdCoinEsperada - qtdCoinRecebidaNum;
+  const temDiferencaCrypto = Math.abs(diferencaCoin) > 0.001;
 
-  // Cálculos para saque FIAT
+  // Dados do saque FIAT
   const valorRecebidoNum = parseFloat(valorRecebido) || 0;
   const diferencaFiat = valorRecebidoNum - (saque?.valor || 0);
   const temDiferencaFiat = Math.abs(diferencaFiat) > 0.01;
   const moedaDestinoFiat = saque?.moeda_destino || saque?.moeda || "BRL";
 
-  // Validação
-  const isValidCrypto = isCryptoWithdrawal && qtdCoinRecebidaNum > 0 && moedaRecebida && redeUtilizada;
+  // Validação - SIMPLIFICADA para crypto (apenas quantidade)
+  const isValidCrypto = isCryptoWithdrawal && qtdCoinRecebidaNum > 0;
   const isValidFiat = !isCryptoWithdrawal && valorRecebidoNum > 0;
   const isValid = isValidCrypto || isValidFiat;
 
@@ -239,21 +191,12 @@ export function ConfirmarSaqueDialog({
       }
 
       if (isCryptoWithdrawal) {
-        // Adicionar detalhes da liquidação cripto
-        const detalhes: string[] = [];
-        if (moedaRecebida !== saque.coin) {
-          detalhes.push(`Moeda diferente: esperado ${saque.coin}, recebido ${moedaRecebida}`);
-        }
-        if (temTaxaRede) {
-          detalhes.push(`Taxa de rede: ${taxaRede.toFixed(6)} ${moedaRecebida}`);
-        }
-        if (temSpread) {
-          detalhes.push(`Spread: ${spreadPercentual > 0 ? "+" : ""}${spreadPercentual.toFixed(2)}%`);
-        }
-        if (detalhes.length > 0) {
+        // Adicionar detalhes da liquidação cripto (SIMPLIFICADO)
+        if (temDiferencaCrypto) {
+          const tipoDif = diferencaCoin > 0 ? "PERDA" : "GANHO";
           descricaoFinal = descricaoFinal
-            ? `${descricaoFinal}\n[Liquidação Cripto]: ${detalhes.join(" | ")}`
-            : `[Liquidação Cripto]: ${detalhes.join(" | ")}`;
+            ? `${descricaoFinal}\n[Diferença ${tipoDif}]: ${Math.abs(diferencaCoin).toFixed(6)} ${coinMoeda}`
+            : `[Diferença ${tipoDif}]: ${Math.abs(diferencaCoin).toFixed(6)} ${coinMoeda}`;
         }
 
         // Atualizar com dados reais de cripto
@@ -261,11 +204,7 @@ export function ConfirmarSaqueDialog({
           .from("cash_ledger")
           .update({
             status: "CONFIRMADO",
-            valor_confirmado: valorUsdReal,
             qtd_coin: qtdCoinRecebidaNum,
-            coin: moedaRecebida,
-            cotacao: cotacaoRealNum,
-            metodo_destino: redeUtilizada,
             descricao: descricaoFinal || null,
           })
           .eq("id", saque.id)
@@ -273,8 +212,8 @@ export function ConfirmarSaqueDialog({
 
         if (error) throw error;
 
-        // Registrar perda se houver diferença significativa
-        if (Math.abs(diferencaUsd) > 0.01 && saque.origem_bookmaker_id) {
+        // Registrar diferença se houver (SIMPLIFICADO - apenas em coins)
+        if (temDiferencaCrypto && saque.origem_bookmaker_id) {
           const { data: userData } = await supabase.auth.getUser();
           const { data: bookmaker } = await supabase
             .from("bookmakers")
@@ -283,22 +222,23 @@ export function ConfirmarSaqueDialog({
             .single();
 
           if (bookmaker && userData?.user) {
-            const tipoAjuste = diferencaUsd > 0 ? "GANHO_CAMBIAL" : "PERDA_CAMBIAL";
+            // diferencaCoin > 0 significa que recebemos MENOS do que esperado = PERDA
+            const tipoAjuste = diferencaCoin > 0 ? "PERDA_CAMBIAL" : "GANHO_CAMBIAL";
             await supabase.from("cash_ledger").insert({
               tipo_transacao: tipoAjuste,
-              valor: Math.abs(diferencaUsd),
-              moeda: "USD",
+              valor: Math.abs(diferencaCoin),
+              moeda: coinMoeda,
               status: "CONFIRMADO",
               data_transacao: new Date().toISOString().split("T")[0],
-              descricao: `${tipoAjuste === "GANHO_CAMBIAL" ? "Ganho" : "Perda"} na liquidação cripto - ${saque.bookmaker_nome || "Saque"} (taxa rede: ${taxaRede.toFixed(4)} ${moedaRecebida})`,
+              descricao: `${tipoAjuste === "GANHO_CAMBIAL" ? "Ganho" : "Perda"} na liquidação cripto - ${saque.bookmaker_nome || "Saque"} (diferença: ${Math.abs(diferencaCoin).toFixed(6)} ${coinMoeda})`,
               workspace_id: bookmaker.workspace_id,
               user_id: userData.user.id,
               tipo_moeda: "CRYPTO",
               impacta_caixa_operacional: false,
               referencia_transacao_id: saque.id,
               destino_wallet_id: saque.destino_wallet_id,
-              coin: moedaRecebida,
-              qtd_coin: Math.abs(taxaRede),
+              coin: coinMoeda,
+              qtd_coin: Math.abs(diferencaCoin),
             });
           }
         }
@@ -374,7 +314,7 @@ export function ConfirmarSaqueDialog({
         }
       }
 
-      toast.success("Saque confirmado com sucesso! Dados de liquidação registrados.");
+      toast.success("Saque confirmado com sucesso!");
       resetForm();
       onSuccess();
       onClose();
@@ -455,9 +395,6 @@ export function ConfirmarSaqueDialog({
     setObservacoes("");
     setValorRecebido("");
     setQtdCoinRecebida("");
-    setMoedaRecebida("");
-    setRedeUtilizada("");
-    setCotacaoReal("");
   };
 
   if (!saque) return null;
@@ -468,12 +405,12 @@ export function ConfirmarSaqueDialog({
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-yellow-500" />
+              <Clock className="h-5 w-5 text-warning" />
               Confirmação de Saque {isCryptoWithdrawal ? "Cripto" : ""}
             </DialogTitle>
             <DialogDescription>
               {isCryptoWithdrawal 
-                ? "Informe os dados reais da liquidação na blockchain"
+                ? "Informe a quantidade real de coins recebida na wallet"
                 : "Informe o valor real recebido no banco para confirmar"
               }
             </DialogDescription>
@@ -488,7 +425,14 @@ export function ConfirmarSaqueDialog({
                     <Building2 className="h-4 w-4" />
                     <span>Origem</span>
                   </div>
-                  <span className="font-medium">{saque.bookmaker_nome || "Bookmaker"}</span>
+                  <div className="text-right">
+                    <span className="font-medium">{saque.bookmaker_nome || "Bookmaker"}</span>
+                    {isCryptoWithdrawal && (
+                      <div className="text-xs text-muted-foreground">
+                        Sacou: {simboloMoedaCasa} {valorCasa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex justify-center">
@@ -527,14 +471,14 @@ export function ConfirmarSaqueDialog({
                   {isCryptoWithdrawal ? (
                     <>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Quantidade Esperada</span>
+                        <span className="text-sm text-muted-foreground">Estimativa</span>
                         <div className="text-right">
                           <span className="text-lg font-semibold text-muted-foreground">
-                            {saque.qtd_coin?.toFixed(4) || "0"} {saque.coin || "USDT"}
+                            ~{qtdCoinEsperada.toFixed(4)} {coinMoeda}
                           </span>
-                          <div className="text-xs text-muted-foreground">
-                            ≈ {formatCurrency(saque.valor, "USD")} @ {saque.cotacao_original?.toFixed(4) || "1.0000"}
-                          </div>
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            estimado
+                          </Badge>
                         </div>
                       </div>
                     </>
@@ -556,164 +500,54 @@ export function ConfirmarSaqueDialog({
               </CardContent>
             </Card>
 
-            {/* SEÇÃO CRIPTO */}
+            {/* SEÇÃO CRIPTO - SIMPLIFICADA */}
             {isCryptoWithdrawal ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Coins className="h-4 w-4 text-primary" />
-                  <span className="font-medium">Dados Reais da Liquidação</span>
+                  <span className="font-medium">Quantidade Real Recebida</span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-3.5 w-3.5 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p>Informe os dados exatos recebidos na blockchain. Isso permite auditar taxas de rede, spreads e moedas diferentes das solicitadas.</p>
+                        <p>Informe a quantidade exata de {coinMoeda} recebida na wallet. A diferença será registrada automaticamente.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
 
-                {/* Quantidade Real Recebida */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="qtd-coin" className="flex items-center gap-1">
-                      Qtd Recebida <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="qtd-coin"
-                      type="number"
-                      step="0.000001"
-                      min="0"
-                      value={qtdCoinRecebida}
-                      onChange={(e) => setQtdCoinRecebida(e.target.value)}
-                      placeholder="0.000000"
-                      className="font-mono"
-                      autoFocus
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="moeda-recebida" className="flex items-center gap-1">
-                      Moeda <span className="text-destructive">*</span>
-                    </Label>
-                    <Select value={moedaRecebida} onValueChange={setMoedaRecebida}>
-                      <SelectTrigger id="moeda-recebida">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CRYPTO_COINS.map((coin) => (
-                          <SelectItem key={coin} value={coin}>
-                            {coin}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                {/* Campo único: Quantidade de coins recebida */}
+                <div className="space-y-2">
+                  <Label htmlFor="qtd-coin" className="flex items-center gap-1">
+                    Quantidade de {coinMoeda} Recebida <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="qtd-coin"
+                    type="number"
+                    step="0.000001"
+                    min="0"
+                    value={qtdCoinRecebida}
+                    onChange={(e) => setQtdCoinRecebida(e.target.value)}
+                    placeholder="0.000000"
+                    className="font-mono text-lg"
+                    autoFocus
+                  />
                 </div>
 
-                {/* Rede e Cotação */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="rede" className="flex items-center gap-1">
-                      Rede Blockchain <span className="text-destructive">*</span>
-                    </Label>
-                    <Select value={redeUtilizada} onValueChange={setRedeUtilizada}>
-                      <SelectTrigger id="rede">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {BLOCKCHAIN_NETWORKS.map((net) => (
-                          <SelectItem key={net.value} value={net.value}>
-                            {net.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="cotacao" className="flex items-center gap-1">
-                      Cotação USD
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Cotação no momento do recebimento</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </Label>
-                    <Input
-                      id="cotacao"
-                      type="number"
-                      step="0.0001"
-                      min="0"
-                      value={cotacaoReal}
-                      onChange={(e) => setCotacaoReal(e.target.value)}
-                      placeholder="1.0000"
-                      className="font-mono"
-                    />
-                  </div>
-                </div>
-
-                {/* Indicadores de Diferença */}
-                {qtdCoinRecebidaNum > 0 && (
-                  <div className="space-y-2 pt-2">
-                    {/* Taxa de Rede */}
-                    {temTaxaRede && (
-                      <div className="flex items-center gap-2 text-sm p-2 rounded-md bg-amber-500/10 text-amber-400">
-                        <TrendingDown className="h-4 w-4" />
-                        <span>
-                          Taxa de rede: {taxaRede.toFixed(6)} {moedaRecebida}
-                          {" "}(≈ {formatCurrency(taxaRede * cotacaoRealNum, "USD")})
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Spread */}
-                    {temSpread && (
-                      <div className={`flex items-center gap-2 text-sm p-2 rounded-md ${
-                        spreadPercentual > 0 
-                          ? "bg-emerald-500/10 text-emerald-400" 
-                          : "bg-amber-500/10 text-amber-400"
-                      }`}>
-                        <AlertTriangle className="h-4 w-4" />
-                        <span>
-                          Spread: {spreadPercentual > 0 ? "+" : ""}{spreadPercentual.toFixed(2)}%
-                          {" "}(cotação original: {cotacaoOriginal.toFixed(4)})
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Moeda diferente */}
-                    {moedaRecebida && saque.coin && moedaRecebida !== saque.coin && (
-                      <div className="flex items-center gap-2 text-sm p-2 rounded-md bg-destructive/10 text-destructive">
-                        <AlertTriangle className="h-4 w-4" />
-                        <span>
-                          Moeda diferente! Esperado: {saque.coin}, Recebido: {moedaRecebida}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Resultado Final */}
-                    <div className="flex items-center justify-between p-3 rounded-md bg-muted/50 border border-border/50">
-                      <span className="text-sm font-medium">Valor USD Real</span>
-                      <div className="text-right">
-                        <span className={`text-lg font-bold ${
-                          diferencaUsd >= 0 ? "text-emerald-400" : "text-amber-400"
-                        }`}>
-                          {formatCurrency(valorUsdReal, "USD")}
-                        </span>
-                        {Math.abs(diferencaUsd) > 0.01 && (
-                          <div className="text-xs text-muted-foreground">
-                            {diferencaUsd > 0 ? "+" : ""}{formatCurrency(diferencaUsd, "USD")} vs esperado
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                {/* Indicador de diferença - SIMPLIFICADO */}
+                {qtdCoinRecebidaNum > 0 && temDiferencaCrypto && (
+                  <div className={`flex items-center gap-2 text-sm p-3 rounded-md ${
+                    diferencaCoin > 0 
+                      ? "bg-warning/10 text-warning border border-warning/30" 
+                      : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                  }`}>
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>
+                      {diferencaCoin > 0 ? "Diferença (perda): " : "Diferença (ganho): "}
+                      <strong>{Math.abs(diferencaCoin).toFixed(6)} {coinMoeda}</strong>
+                    </span>
                   </div>
                 )}
               </div>
@@ -740,7 +574,7 @@ export function ConfirmarSaqueDialog({
                   <div className={`flex items-center gap-2 text-sm p-2 rounded-md ${
                     diferencaFiat > 0 
                       ? "bg-emerald-500/10 text-emerald-400" 
-                      : "bg-amber-500/10 text-amber-400"
+                      : "bg-warning/10 text-warning"
                   }`}>
                     <AlertTriangle className="h-4 w-4" />
                     <span>
