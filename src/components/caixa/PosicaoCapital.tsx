@@ -327,8 +327,8 @@ export function PosicaoCapital({
                               <div className="space-y-3">
                                 <p className="text-xs font-medium text-muted-foreground">Composição por moeda:</p>
                                 
-                                {/* Grid de chips verticais */}
-                                <div className="flex flex-wrap gap-2 justify-center">
+                                {/* Grid de chips verticais - 2 por linha */}
+                                <div className="grid grid-cols-2 gap-2">
                                   {item.detailItems.map((d, i) => {
                                     const sourceInfo = d.moeda !== 'BRL' && d.moeda !== 'CRYPTO' ? getSourceInfo(d.moeda) : null;
                                     const isOfficial = sourceInfo?.source?.isOfficial === true || !sourceInfo?.source?.isFallback;
