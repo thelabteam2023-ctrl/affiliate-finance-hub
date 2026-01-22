@@ -143,7 +143,11 @@ export function CaixaTransacaoDialog({
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
-  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, getRate, convertToBRL, source } = useCotacoes();
+  const { 
+    cotacaoUSD, cotacaoEUR, cotacaoGBP, 
+    cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP,
+    getRate, convertToBRL, source, dataSource, isUsingFallback 
+  } = useCotacoes();
   const [loading, setLoading] = useState(false);
 
   // Form state
@@ -1682,14 +1686,30 @@ export function CaixaTransacaoDialog({
         } else if (moedaOrigem === "GBP") {
           cotacaoOrigemUsd = cotacaoGBP / cotacaoUSD;
           valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
-        } else {
-          // Outras moedas FIAT (MXN, MYR, etc) - usar aproximação
-          cotacaoOrigemUsd = 0.058; // Fallback MXN
+        } else if (moedaOrigem === "MXN") {
+          // MXN→USD usando cotação centralizada: MXN→BRL / USD→BRL
+          cotacaoOrigemUsd = cotacaoMXN / cotacaoUSD;
           valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
+        } else if (moedaOrigem === "MYR") {
+          cotacaoOrigemUsd = cotacaoMYR / cotacaoUSD;
+          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
+        } else if (moedaOrigem === "ARS") {
+          cotacaoOrigemUsd = cotacaoARS / cotacaoUSD;
+          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
+        } else if (moedaOrigem === "COP") {
+          cotacaoOrigemUsd = cotacaoCOP / cotacaoUSD;
+          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
+        } else {
+          // Moeda não mapeada - usar cotação via getRate como fallback
+          const taxaBRL = getRate(moedaOrigem);
+          cotacaoOrigemUsd = taxaBRL / cotacaoUSD;
+          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
+          console.warn(`[CaixaTransacao] Moeda origem não mapeada: ${moedaOrigem}, usando getRate fallback`);
         }
       }
       
       // Calcular cotação da moeda de destino (casa) para USD
+      // IMPORTANTE: Usar fonte única de verdade (useCotacoes) para TODAS as moedas
       if (destinoBookmakerMoeda === "BRL") {
         cotacaoDestinoUsd = 1 / cotacaoUSD;
       } else if (destinoBookmakerMoeda === "USD") {
@@ -1699,13 +1719,19 @@ export function CaixaTransacaoDialog({
       } else if (destinoBookmakerMoeda === "GBP") {
         cotacaoDestinoUsd = cotacaoGBP / cotacaoUSD;
       } else if (destinoBookmakerMoeda === "MXN") {
-        cotacaoDestinoUsd = 0.058;
+        // MXN→USD: cotacaoMXN (MXN→BRL) / cotacaoUSD (USD→BRL)
+        cotacaoDestinoUsd = cotacaoMXN / cotacaoUSD;
       } else if (destinoBookmakerMoeda === "MYR") {
-        cotacaoDestinoUsd = 0.21;
+        cotacaoDestinoUsd = cotacaoMYR / cotacaoUSD;
       } else if (destinoBookmakerMoeda === "ARS") {
-        cotacaoDestinoUsd = 0.001;
+        cotacaoDestinoUsd = cotacaoARS / cotacaoUSD;
       } else if (destinoBookmakerMoeda === "COP") {
-        cotacaoDestinoUsd = 0.00024;
+        cotacaoDestinoUsd = cotacaoCOP / cotacaoUSD;
+      } else {
+        // Moeda destino não mapeada - usar getRate como fallback
+        const taxaBRL = getRate(destinoBookmakerMoeda);
+        cotacaoDestinoUsd = taxaBRL / cotacaoUSD;
+        console.warn(`[CaixaTransacao] Moeda destino não mapeada: ${destinoBookmakerMoeda}, usando getRate fallback`);
       }
       
       // Calcular valor de destino (na moeda da casa)
