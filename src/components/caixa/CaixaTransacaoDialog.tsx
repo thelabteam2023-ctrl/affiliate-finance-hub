@@ -1365,6 +1365,59 @@ export function CaixaTransacaoDialog({
     );
   };
 
+  // Calcula a estimativa de valor na moeda da casa (para preview no card de destino/origem)
+  const calcularEstimativaMoedaCasa = (valorOrigem: number, moedaOrigem: string, bookmakerId: string): { 
+    estimativa: number; 
+    moedaCasa: string; 
+    precisaConversao: boolean;
+    symbol: string;
+  } | null => {
+    const bm = bookmakers.find(b => b.id === bookmakerId);
+    if (!bm) return null;
+    
+    const moedaCasa = bm.moeda || "BRL";
+    const precisaConversao = moedaOrigem !== moedaCasa;
+    
+    const currencySymbols: Record<string, string> = {
+      BRL: "R$", USD: "$", EUR: "€", GBP: "£", 
+      MXN: "$", MYR: "RM", ARS: "$", COP: "$"
+    };
+    const symbol = currencySymbols[moedaCasa] || moedaCasa;
+    
+    if (!precisaConversao) {
+      return { estimativa: valorOrigem, moedaCasa, precisaConversao: false, symbol };
+    }
+    
+    // Converter: ORIGEM → USD → DESTINO
+    const taxaOrigem = getRate(moedaOrigem); // Moeda origem → BRL
+    const taxaDestino = getRate(moedaCasa);  // Moeda destino → BRL
+    
+    // Usar USD como pivot
+    const valorBRL = valorOrigem * taxaOrigem;
+    const valorUSD = valorBRL / cotacaoUSD;
+    const estimativa = valorUSD * (cotacaoUSD / taxaDestino);
+    
+    return { estimativa, moedaCasa, precisaConversao: true, symbol };
+  };
+
+  // Renderiza preview de estimativa na moeda da casa
+  const renderEstimativaMoedaCasa = (valorOrigem: number, moedaOrigem: string, bookmakerId: string): React.ReactNode | null => {
+    if (valorOrigem <= 0) return null;
+    
+    const result = calcularEstimativaMoedaCasa(valorOrigem, moedaOrigem, bookmakerId);
+    if (!result || !result.precisaConversao) return null;
+    
+    return (
+      <div className="mt-1 text-xs text-muted-foreground">
+        <span className="opacity-70">≈</span>{" "}
+        <span className="font-mono">
+          {result.symbol} {result.estimativa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
+        <span className="opacity-60 ml-1">({result.moedaCasa})</span>
+      </div>
+    );
+  };
+
   const getOrigemLabel = (): string => {
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       if (fluxoAporte === "APORTE") {
@@ -3738,15 +3791,55 @@ export function CaixaTransacaoDialog({
                                 )}
                                 {parseFloat(String(valor)) > 0 ? (
                                   <>
-                                    <div className="mt-2 flex items-center justify-center gap-2">
-                                      <TrendingDown className="h-4 w-4 text-destructive" />
-                                      <span className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
-                                        {tipoMoeda === "CRYPTO"
-                                          ? formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)), "USD")
-                                          : formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - parseFloat(String(valor)), "BRL")}
-                                      </span>
-                                    </div>
-                                    {tipoMoeda === "FIAT" && renderCotacaoInfo(parseFloat(String(valor)), moeda)}
+                                    {/* Mostrar estimativa na moeda da casa para saque */}
+                                    {(() => {
+                                      const valorNum = parseFloat(String(valor));
+                                      const bm = bookmakers.find(b => b.id === origemBookmakerId);
+                                      const moedaCasa = bm?.moeda || "BRL";
+                                      const moedaDestino = tipoMoeda === "CRYPTO" ? "USD" : moeda;
+                                      const precisaConversao = moedaCasa !== moedaDestino;
+                                      
+                                      const currencySymbols: Record<string, string> = {
+                                        BRL: "R$", USD: "$", EUR: "€", GBP: "£", 
+                                        MXN: "$", MYR: "RM", ARS: "$", COP: "$"
+                                      };
+                                      const symbol = currencySymbols[moedaCasa] || moedaCasa;
+                                      
+                                      if (precisaConversao) {
+                                        // Calcular quanto sai da casa
+                                        const taxaDestino = getRate(moedaDestino);
+                                        const taxaCasa = getRate(moedaCasa);
+                                        const valorBRL = valorNum * taxaDestino;
+                                        const valorUSD = valorBRL / cotacaoUSD;
+                                        const estimativaCasa = valorUSD * (cotacaoUSD / taxaCasa);
+                                        
+                                        return (
+                                          <div className="flex flex-col items-center gap-1">
+                                            <div className="flex items-center gap-2">
+                                              <TrendingDown className="h-4 w-4 text-destructive" />
+                                              <span className="text-sm font-semibold text-destructive">
+                                                {symbol} {estimativaCasa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              </span>
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground">
+                                              ≈ saída estimada em {moedaCasa}
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+                                      
+                                      // Sem conversão
+                                      return (
+                                        <div className="mt-2 flex items-center justify-center gap-2">
+                                          <TrendingDown className="h-4 w-4 text-destructive" />
+                                          <span className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
+                                            {tipoMoeda === "CRYPTO"
+                                              ? formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - valorNum, "USD")
+                                              : formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - valorNum, "BRL")}
+                                          </span>
+                                        </div>
+                                      );
+                                    })()}
                                   </>
                                 ) : (
                                   <div className="text-xs text-muted-foreground">
@@ -3949,16 +4042,41 @@ export function CaixaTransacaoDialog({
                               <div className="mt-3 space-y-1">
                                 {parseFloat(String(valor)) > 0 ? (
                                   <>
-                                    <div className="mt-2 flex items-center justify-center gap-2">
-                                      <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                      <span className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
-                                        {tipoMoeda === "CRYPTO" 
-                                          ? formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)), "USD")
-                                          : formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + parseFloat(String(valor)), "BRL")
-                                        }
-                                      </span>
-                                    </div>
-                                    {tipoMoeda === "FIAT" && renderCotacaoInfo(parseFloat(String(valor)), moeda)}
+                                    {/* Estimativa na moeda da casa (quando há conversão) */}
+                                    {(() => {
+                                      const valorNum = parseFloat(String(valor));
+                                      const moedaOrigem = tipoMoeda === "CRYPTO" ? "USD" : moeda;
+                                      const result = calcularEstimativaMoedaCasa(valorNum, moedaOrigem, destinoBookmakerId);
+                                      
+                                      if (result && result.precisaConversao) {
+                                        return (
+                                          <div className="flex flex-col items-center gap-1">
+                                            <div className="flex items-center gap-2">
+                                              <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                              <span className="text-sm font-semibold text-emerald-400">
+                                                {result.symbol} {result.estimativa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              </span>
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground">
+                                              ≈ estimativa em {result.moedaCasa}
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+                                      
+                                      // Sem conversão - mostra o valor direto
+                                      return (
+                                        <div className="mt-2 flex items-center justify-center gap-2">
+                                          <TrendingUp className="h-4 w-4 text-emerald-500" />
+                                          <span className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
+                                            {tipoMoeda === "CRYPTO" 
+                                              ? formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + valorNum, "USD")
+                                              : formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + valorNum, "BRL")
+                                            }
+                                          </span>
+                                        </div>
+                                      );
+                                    })()}
                                   </>
                                 ) : (
                                   <div className="text-xs text-muted-foreground mt-2">
