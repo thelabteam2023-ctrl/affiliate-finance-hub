@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import {
   BarChart,
   Bar,
@@ -47,19 +47,29 @@ interface ModernBarChartProps {
   dynamicColors?: boolean;
 }
 
-// Custom animated label component
-const AnimatedLabel = (props: any) => {
+// Custom animated label component - MEMOIZED to prevent flicker
+// KEY FIX: Use refs to track if already animated, preventing re-animation on parent re-renders
+const AnimatedLabel = memo(function AnimatedLabel(props: any) {
   const { x, y, width, height, value, fill, index, formattedValue, isNegative } = props;
-  const [opacity, setOpacity] = useState(0);
-  const [translateY, setTranslateY] = useState(10);
+  
+  // Use ref to track if we've already animated - survives re-renders without triggering new animations
+  const hasAnimatedRef = useRef(false);
+  const [isVisible, setIsVisible] = useState(hasAnimatedRef.current);
 
   useEffect(() => {
+    // Only animate once per mount cycle
+    if (hasAnimatedRef.current) {
+      setIsVisible(true);
+      return;
+    }
+    
     const timer = setTimeout(() => {
-      setOpacity(1);
-      setTranslateY(0);
-    }, 100 + index * 50);
+      hasAnimatedRef.current = true;
+      setIsVisible(true);
+    }, 100 + (index % 12) * 30); // Cap animation delay to prevent excessive delays
+    
     return () => clearTimeout(timer);
-  }, [index]);
+  }, []); // Empty deps - only run on mount
 
   const displayValue = formattedValue !== undefined ? formattedValue : value;
   if (
@@ -88,8 +98,8 @@ const AnimatedLabel = (props: any) => {
       dominantBaseline={isNegative ? "hanging" : "baseline"}
       className="text-xs font-semibold"
       style={{
-        opacity,
-        transform: `translateY(${translateY}px)`,
+        opacity: isVisible ? 1 : 0,
+        transform: `translateY(${isVisible ? 0 : 10}px)`,
         transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         fontSize: "11px",
         pointerEvents: "none",
@@ -98,7 +108,18 @@ const AnimatedLabel = (props: any) => {
       {displayValue}
     </text>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if visual values actually changed
+  return (
+    prevProps.formattedValue === nextProps.formattedValue &&
+    prevProps.x === nextProps.x &&
+    prevProps.y === nextProps.y &&
+    prevProps.width === nextProps.width &&
+    prevProps.height === nextProps.height &&
+    prevProps.fill === nextProps.fill &&
+    prevProps.isNegative === nextProps.isNegative
+  );
+});
 
 // Custom tooltip component
 const CustomTooltip = ({ 
