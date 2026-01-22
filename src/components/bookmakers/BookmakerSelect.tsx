@@ -45,6 +45,8 @@ interface BookmakerSelectProps {
   somenteComSaldoFiat?: boolean; // Apenas bookmakers com saldo_atual > 0 (FIAT)
   excludeVinculosDoParceiro?: string;
   moedaOperacional?: string; // Filtra bookmakers pela moeda operacional (BRL, USD, etc)
+  modoSaque?: boolean; // Para saques: busca TODAS as bookmakers do workspace com saldo (ignora parceiroId)
+  workspaceId?: string; // Obrigatório quando modoSaque=true
 }
 
 export interface BookmakerSelectRef {
@@ -61,6 +63,7 @@ interface BookmakerItem {
   saldo_freebet?: number;
   moeda?: string;
   status?: string;
+  parceiro_nome?: string; // Para modo saque: exibir o nome do parceiro
 }
 
 const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({ 
@@ -73,7 +76,9 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   somenteComSaldoUsd,
   somenteComSaldoFiat,
   excludeVinculosDoParceiro,
-  moedaOperacional
+  moedaOperacional,
+  modoSaque,
+  workspaceId
 }, ref) => {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<BookmakerItem[]>([]);
@@ -87,7 +92,8 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   
   const lastFetchedValue = useRef<string>("");
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const isVinculoMode = !!parceiroId;
+  const isVinculoMode = !!parceiroId && !modoSaque;
+  const isModoSaque = modoSaque && workspaceId;
 
   // Expose focus and open methods via ref
   useImperativeHandle(ref, () => ({
@@ -173,8 +179,70 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     const abortController = new AbortController();
     
     const fetchBookmakers = async () => {
+      // MODO SAQUE: Buscar TODAS as bookmakers do workspace com saldo (ignora parceiroId)
+      if (isModoSaque) {
+        setPrerequisitesReady(true);
+        setLoading(true);
+        
+        try {
+          let query = supabase
+            .from("bookmakers")
+            .select(`
+              id,
+              nome,
+              saldo_atual,
+              saldo_usd,
+              saldo_freebet,
+              moeda,
+              status,
+              parceiro_id,
+              parceiros:parceiro_id (
+                nome
+              ),
+              bookmakers_catalogo:bookmaker_catalogo_id (
+                logo_url
+              )
+            `)
+            .eq("workspace_id", workspaceId!)
+            .eq("status", "ativo")
+            .gt("saldo_atual", 0); // Saque sempre requer saldo_atual > 0
+
+          // Filtrar por moeda operacional se especificado
+          if (moedaOperacional) {
+            query = query.eq('moeda', moedaOperacional);
+          }
+
+          const { data, error } = await query.order("nome");
+          
+          if (abortController.signal.aborted) return;
+          if (error) throw error;
+
+          const mapped: BookmakerItem[] = (data || []).map((b: any) => ({
+            id: b.id,
+            nome: b.nome,
+            logo_url: b.bookmakers_catalogo?.logo_url || null,
+            saldo_atual: b.saldo_atual,
+            saldo_usd: b.saldo_usd,
+            saldo_freebet: b.saldo_freebet,
+            moeda: b.moeda,
+            status: b.status,
+            parceiro_nome: b.parceiros?.nome || null,
+          }));
+
+          setItems(mapped);
+        } catch (error) {
+          if (!abortController.signal.aborted) {
+            console.error("Erro ao carregar bookmakers (modo saque):", error);
+            setItems([]);
+          }
+        } finally {
+          if (!abortController.signal.aborted) {
+            setLoading(false);
+          }
+        }
+      }
       // MODO VÍNCULO: Requer parceiroId
-      if (parceiroId) {
+      else if (parceiroId) {
         setPrerequisitesReady(true);
         setLoading(true);
         
@@ -298,7 +366,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     return () => {
       abortController.abort();
     };
-  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro, moedaOperacional]);
+  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro, moedaOperacional, isModoSaque, workspaceId]);
 
   // Buscar dados de exibição quando value muda - execução imediata e determinística
   useEffect(() => {
@@ -457,13 +525,15 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                   ? "Carregando..."
                   : !prerequisitesReady
                     ? "Selecione os campos anteriores"
-                    : parceiroId 
-                      ? (moedaOperacional
-                          ? `Nenhuma bookmaker compatível com ${moedaOperacional} neste parceiro`
-                          : somenteComSaldo || somenteComSaldoFiat || somenteComSaldoUsd
-                            ? "Este parceiro não possui bookmakers com saldo disponível" 
-                            : "Este parceiro não possui bookmakers vinculadas")
-                      : "Nenhuma bookmaker encontrada"}
+                    : isModoSaque
+                      ? "Nenhuma bookmaker com saldo disponível para saque"
+                      : parceiroId 
+                        ? (moedaOperacional
+                            ? `Nenhuma bookmaker compatível com ${moedaOperacional} neste parceiro`
+                            : somenteComSaldo || somenteComSaldoFiat || somenteComSaldoUsd
+                              ? "Este parceiro não possui bookmakers com saldo disponível" 
+                              : "Este parceiro não possui bookmakers vinculadas")
+                        : "Nenhuma bookmaker encontrada"}
               </CommandEmpty>
               <CommandGroup>
                 {filteredItems.map((item) => {
@@ -496,12 +566,20 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                             onError={(e) => { e.currentTarget.style.display = "none"; }}
                           />
                         )}
-                        <span className={cn(
-                          "uppercase text-sm font-medium text-center",
-                          isLimitada && "text-yellow-400"
-                        )}>
-                          {item.nome}
-                        </span>
+                        <div className="flex flex-col items-start">
+                          <span className={cn(
+                            "uppercase text-sm font-medium",
+                            isLimitada && "text-yellow-400"
+                          )}>
+                            {item.nome}
+                          </span>
+                          {/* Modo saque: exibir o nome do parceiro */}
+                          {isModoSaque && item.parceiro_nome && (
+                            <span className="text-[10px] text-muted-foreground leading-tight">
+                              {item.parceiro_nome}
+                            </span>
+                          )}
+                        </div>
                         {(item.saldo_atual !== undefined || item.saldo_usd !== undefined) && (
                           <span className="text-xs text-muted-foreground flex-shrink-0 flex items-center gap-1">
                             {/* Exibir saldo baseado na moeda nativa da bookmaker */}

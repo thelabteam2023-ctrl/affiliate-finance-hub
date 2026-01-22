@@ -2197,15 +2197,15 @@ export function CaixaTransacaoDialog({
             <div className="space-y-2">
               <Label>Bookmaker (com saldo disponível)</Label>
               <BookmakerSelect
-                key={`saque-fiat-${destinoParceiroId}`}
+                key={`saque-fiat-${workspaceId}`}
                 ref={bookmakerSelectRef}
                 value={origemBookmakerId}
                 onValueChange={setOrigemBookmakerId}
                 disabled={!isDestinoCompleta}
-                parceiroId={destinoParceiroId}
-                somenteComSaldoFiat={true}
-                // REMOVIDO: moedaOperacional={moeda}
-                // Casas de qualquer moeda podem sacar via FIAT (conversão interna)
+                modoSaque={true}
+                workspaceId={workspaceId || undefined}
+                // Modo saque busca TODAS as bookmakers do workspace com saldo
+                // Não filtra por parceiroId nem moeda - conversão interna é permitida
               />
             </div>
           </>
@@ -2215,9 +2215,6 @@ export function CaixaTransacaoDialog({
       // SAQUE CRYPTO: destino = wallet crypto, origem = bookmaker com saldo
       // Casas de qualquer moeda podem sacar via crypto (conversão interna)
       const isDestinoCompletaCrypto = destinoParceiroId && destinoWalletId;
-      
-      // Verificar se há bookmakers com saldo disponível
-      const bookmakersComSaldo = bookmakers.filter(b => b.saldo_atual > 0);
       
       return (
         <>
@@ -2229,26 +2226,18 @@ export function CaixaTransacaoDialog({
               </AlertDescription>
             </Alert>
           )}
-          {bookmakersComSaldo.length === 0 && (
-            <Alert variant="destructive" className="border-warning/50 bg-warning/10">
-              <AlertTriangle className="h-4 w-4 text-warning" />
-              <AlertDescription className="text-warning">
-                Nenhuma bookmaker com saldo disponível para saque.
-              </AlertDescription>
-            </Alert>
-          )}
           <div className="space-y-2">
             <Label>Bookmaker (com saldo disponível)</Label>
             <BookmakerSelect
-              key={`saque-crypto-${destinoParceiroId}`}
+              key={`saque-crypto-${workspaceId}`}
               ref={bookmakerSelectRef}
               value={origemBookmakerId}
               onValueChange={setOrigemBookmakerId}
               disabled={!isDestinoCompletaCrypto}
-              parceiroId={destinoParceiroId}
-              somenteComSaldoFiat={true}
-              // REMOVIDO: somenteComSaldoUsd={true}
-              // Casas de qualquer moeda podem sacar via crypto
+              modoSaque={true}
+              workspaceId={workspaceId || undefined}
+              // Modo saque busca TODAS as bookmakers do workspace com saldo
+              // Não filtra por parceiroId nem moeda - conversão interna é permitida
             />
           </div>
         </>
