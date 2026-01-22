@@ -1,0 +1,115 @@
+/**
+ * Classificação de Tipos de Transação para o Sistema Financeiro
+ * 
+ * ARQUITETURA DE 2 CAMADAS:
+ * 
+ * 1. CASH_REAL_TYPES - Movimentam dinheiro real (entram/saem do sistema)
+ *    → Aparecem no Caixa Operacional
+ *    → Impactam KPIs financeiros
+ *    → Afetam fluxo de caixa real
+ * 
+ * 2. OPERATIONAL_MONEY_TYPES - Dinheiro operacional (dentro de bookmakers)
+ *    → NÃO aparecem no Caixa Operacional
+ *    → Aparecem apenas em Projetos/Bônus
+ *    → São eventos contábeis internos
+ * 
+ * REGRA DE OURO:
+ * "O Caixa Operacional só mostra dinheiro que entra ou sai do sistema real."
+ * "Eventos promocionais são movimentos internos de bookmakers."
+ */
+
+/**
+ * Tipos de transação que movimentam CASH REAL
+ * (Dinheiro que entra ou sai do sistema financeiro)
+ */
+export const CASH_REAL_TYPES = [
+  // Aportes e Liquidações (Investidores)
+  'APORTE',
+  'LIQUIDACAO',
+  'APORTE_FINANCEIRO',
+  
+  // Movimentações de Caixa
+  'DEPOSITO',
+  'SAQUE',
+  'TRANSFERENCIA',
+  
+  // Pagamentos para Externos
+  'PAGTO_PARCEIRO',
+  'PAGTO_FORNECEDOR',
+  'PAGTO_OPERADOR',
+  'COMISSAO_INDICADOR',
+  'BONUS_INDICADOR',
+  'DESPESA_ADMINISTRATIVA',
+  
+  // Ajustes de Caixa (quando afetam caixa real)
+  'AJUSTE_MANUAL',
+  'AJUSTE_SALDO',
+  'CONCILIACAO',
+] as const;
+
+/**
+ * Tipos de transação de DINHEIRO OPERACIONAL
+ * (Movimentos internos dentro de bookmakers - NÃO impactam caixa real)
+ */
+export const OPERATIONAL_MONEY_TYPES = [
+  // Bônus e Promoções
+  'BONUS_CREDITADO',
+  'BONUS_ESTORNO',
+  'GIRO_GRATIS',
+  'GIRO_GRATIS_GANHO',
+  'GIRO_GRATIS_ESTORNO',
+  'CREDITO_PROMOCIONAL',
+  'FREEBET_CONVERTIDA',
+  'EVENTO_PROMOCIONAL',
+  
+  // Cashback (é lucro operacional, não entrada de caixa)
+  'CASHBACK_MANUAL',
+  'CASHBACK_ESTORNO',
+  
+  // Resultados de Apostas
+  'APOSTA_GREEN',
+  'APOSTA_RED',
+  'APOSTA_VOID',
+  'APOSTA_MEIO_GREEN',
+  'APOSTA_MEIO_RED',
+  'APOSTA_REVERSAO',
+  
+  // Perdas e Ajustes Operacionais
+  'PERDA_OPERACIONAL',
+  'PERDA_REVERSAO',
+  
+  // Variações Cambiais (contábil)
+  'GANHO_CAMBIAL',
+  'PERDA_CAMBIAL',
+] as const;
+
+/**
+ * Verifica se um tipo de transação é Cash Real (impacta caixa)
+ */
+export function isCashRealType(tipo: string): boolean {
+  return CASH_REAL_TYPES.includes(tipo as any);
+}
+
+/**
+ * Verifica se um tipo de transação é Dinheiro Operacional (não impacta caixa)
+ */
+export function isOperationalMoneyType(tipo: string): boolean {
+  return OPERATIONAL_MONEY_TYPES.includes(tipo as any);
+}
+
+/**
+ * Retorna o filtro SQL para tipos de Cash Real
+ * Usado em queries do Caixa Operacional
+ */
+export function getCashRealTypesFilter(): string[] {
+  return [...CASH_REAL_TYPES];
+}
+
+/**
+ * Descrição legível da classificação de um tipo
+ */
+export function getTransactionClassification(tipo: string): 'cash_real' | 'operational' | 'unknown' {
+  if (isCashRealType(tipo)) return 'cash_real';
+  if (isOperationalMoneyType(tipo)) return 'operational';
+  return 'unknown';
+}

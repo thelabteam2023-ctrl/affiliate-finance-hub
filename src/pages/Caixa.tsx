@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { CASH_REAL_TYPES } from "@/lib/cashOperationalTypes";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
 import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal } from "lucide-react";
@@ -156,9 +157,13 @@ export default function Caixa() {
         ? format(dataFim, "yyyy-MM-dd")
         : format(new Date(), "yyyy-MM-dd");
       
+      // ARQUITETURA: Caixa Operacional só exibe transações de CASH REAL
+      // Eventos promocionais (GIRO_GRATIS, BONUS_CREDITADO, etc.) são filtrados
+      // para manter a visão pura de "dinheiro que entra e sai do sistema"
       const { data: transacoesData, error: transacoesError } = await supabase
         .from("cash_ledger")
         .select("*")
+        .in("tipo_transacao", [...CASH_REAL_TYPES])
         .gte("data_transacao", queryStartDate)
         .lte("data_transacao", `${queryEndDate}T23:59:59`)
         .order("data_transacao", { ascending: false });
