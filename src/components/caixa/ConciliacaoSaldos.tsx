@@ -78,6 +78,7 @@ interface ExchangeAdjustmentRecord {
   observacoes: string | null;
   bookmaker_id: string | null;
   wallet_id: string | null;
+  moeda_destino: string | null;
 }
 
 export function ConciliacaoSaldos({
@@ -171,6 +172,11 @@ export function ConciliacaoSaldos({
       USD: "$",
       BRL: "R$",
       EUR: "€",
+      GBP: "£",
+      MXN: "MX$",
+      MYR: "RM",
+      ARS: "AR$",
+      COP: "COP$",
     };
     return `${symbols[currency] || currency} ${value.toFixed(2)}`;
   };
@@ -236,6 +242,9 @@ export function ConciliacaoSaldos({
           ? selectedTransaction.destino_bookmaker_id 
           : selectedTransaction.origem_bookmaker_id;
         
+        // Obter moeda destino da transação
+        const moedaDestino = selectedTransaction.moeda_destino || selectedTransaction.moeda || "USD";
+        
         // Registrar ajuste cambial para histórico
         const { error: adjError } = await supabase
           .from("exchange_adjustments")
@@ -253,6 +262,7 @@ export function ConciliacaoSaldos({
             coin: selectedTransaction.coin,
             qtd_coin: selectedTransaction.qtd_coin,
             observacoes: observacoes || null,
+            moeda_destino: moedaDestino,
           });
         
         if (adjError) {
@@ -629,10 +639,10 @@ export function ConciliacaoSaldos({
 
                       <div className="text-right shrink-0 ml-2">
                         <p className={`font-semibold ${isGanho ? "text-emerald-400" : "text-red-400"}`}>
-                          {isGanho ? "+" : "-"}{formatCurrency(Math.abs(adj.diferenca))}
+                          {isGanho ? "+" : "-"}{formatCurrency(Math.abs(adj.diferenca), adj.moeda_destino || "USD")}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatCurrency(adj.valor_nominal)} → {formatCurrency(adj.valor_confirmado)}
+                          {formatCurrency(adj.valor_nominal, adj.moeda_destino || "USD")} → {formatCurrency(adj.valor_confirmado, adj.moeda_destino || "USD")}
                         </p>
                       </div>
                     </div>

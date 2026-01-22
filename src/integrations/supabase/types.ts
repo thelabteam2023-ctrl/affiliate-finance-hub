@@ -2353,6 +2353,7 @@ export type Database = {
           created_at: string | null
           diferenca: number
           id: string
+          moeda_destino: string | null
           observacoes: string | null
           qtd_coin: number | null
           tipo: string
@@ -2370,6 +2371,7 @@ export type Database = {
           created_at?: string | null
           diferenca: number
           id?: string
+          moeda_destino?: string | null
           observacoes?: string | null
           qtd_coin?: number | null
           tipo: string
@@ -2387,6 +2389,7 @@ export type Database = {
           created_at?: string | null
           diferenca?: number
           id?: string
+          moeda_destino?: string | null
           observacoes?: string | null
           qtd_coin?: number | null
           tipo?: string
