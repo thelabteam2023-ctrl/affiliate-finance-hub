@@ -23,7 +23,7 @@ import { SaldosParceirosSheet } from "@/components/caixa/SaldosParceirosSheet";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
-import { subDays, startOfDay, endOfDay } from "date-fns";
+import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -150,12 +150,21 @@ export default function Caixa() {
     try {
       setLoading(true);
       
-      // Fetch transactions
+      // Fetch transactions with date filter applied server-side
+      // Use current filter dates or default to last 90 days for better coverage
+      const queryStartDate = dataInicio 
+        ? format(dataInicio, "yyyy-MM-dd")
+        : format(subDays(new Date(), 90), "yyyy-MM-dd");
+      const queryEndDate = dataFim 
+        ? format(dataFim, "yyyy-MM-dd")
+        : format(new Date(), "yyyy-MM-dd");
+      
       const { data: transacoesData, error: transacoesError } = await supabase
         .from("cash_ledger")
         .select("*")
-        .order("data_transacao", { ascending: false })
-        .limit(50);
+        .gte("data_transacao", queryStartDate)
+        .lte("data_transacao", `${queryEndDate}T23:59:59`)
+        .order("data_transacao", { ascending: false });
 
       if (transacoesError) throw transacoesError;
       setTransacoes(transacoesData || []);
@@ -282,7 +291,7 @@ export default function Caixa() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [dataInicio, dataFim]);
 
   // Handle navigation state to open dialog
   useEffect(() => {
