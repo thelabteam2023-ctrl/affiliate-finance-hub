@@ -16,21 +16,34 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useActionAccess } from "@/hooks/useModuleAccess";
+import { NativeCurrencyKpi, CurrencyEntry } from "@/components/ui/native-currency-kpi";
 
-interface InvestidorROI {
+// Interface multi-moeda para ROI
+export interface InvestidorROIMultiMoeda {
   investidor_id: string;
-  aportes_fiat_brl: number;
-  aportes_fiat_usd: number;
-  liquidacoes_fiat_brl: number;
-  liquidacoes_fiat_usd: number;
+  // FIAT por moeda nativa
+  aportes_brl: number;
+  liquidacoes_brl: number;
+  aportes_usd: number;
+  liquidacoes_usd: number;
+  aportes_eur: number;
+  liquidacoes_eur: number;
+  aportes_gbp: number;
+  liquidacoes_gbp: number;
+  aportes_mxn: number;
+  liquidacoes_mxn: number;
+  aportes_myr: number;
+  liquidacoes_myr: number;
+  aportes_ars: number;
+  liquidacoes_ars: number;
+  aportes_cop: number;
+  liquidacoes_cop: number;
+  // Crypto
   aportes_crypto_usd: number;
   liquidacoes_crypto_usd: number;
-  saldo_fiat_brl: number;
-  saldo_fiat_usd: number;
-  saldo_crypto_usd: number;
-  total_aportes_usd: number;
-  total_liquidacoes_usd: number;
-  roi_percentual: number;
+  // Totais USD
+  total_aportes_usd_ref: number;
+  total_liquidacoes_usd_ref: number;
 }
 
 interface InvestidorDeal {
@@ -53,7 +66,7 @@ interface Investidor {
 
 interface InvestidorPainelCardProps {
   investidor: Investidor;
-  roi?: InvestidorROI;
+  roi?: InvestidorROIMultiMoeda;
   deal?: InvestidorDeal;
   projetosCount?: number;
   onEdit: () => void;
@@ -63,18 +76,47 @@ interface InvestidorPainelCardProps {
   onVerDetalhes?: () => void;
 }
 
-const formatCurrency = (value: number, currency: "BRL" | "USD" = "BRL") => {
-  return new Intl.NumberFormat(currency === "BRL" ? "pt-BR" : "en-US", {
-    style: "currency",
-    currency: currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-};
+const FIAT_CURRENCIES = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP"] as const;
 
 const formatCPF = (cpf: string) => {
   return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 };
+
+/**
+ * Extrai entries de capital em operação FIAT (aportes - liquidações) por moeda nativa
+ */
+function getFiatExposureEntries(roi: InvestidorROIMultiMoeda | undefined): CurrencyEntry[] {
+  if (!roi) return [];
+
+  const entries: CurrencyEntry[] = [];
+
+  for (const currency of FIAT_CURRENCIES) {
+    const key = currency.toLowerCase();
+    const aportes = Number(roi[`aportes_${key}` as keyof InvestidorROIMultiMoeda]) || 0;
+    const liquidacoes = Number(roi[`liquidacoes_${key}` as keyof InvestidorROIMultiMoeda]) || 0;
+    const saldo = aportes - liquidacoes;
+
+    if (saldo !== 0) {
+      entries.push({ currency, value: saldo });
+    }
+  }
+
+  return entries;
+}
+
+/**
+ * Extrai entries de capital crypto (consolidado em USD)
+ */
+function getCryptoExposureEntries(roi: InvestidorROIMultiMoeda | undefined): CurrencyEntry[] {
+  if (!roi) return [];
+
+  const aportes = Number(roi.aportes_crypto_usd) || 0;
+  const liquidacoes = Number(roi.liquidacoes_crypto_usd) || 0;
+  const saldo = aportes - liquidacoes;
+
+  if (saldo === 0) return [];
+  return [{ currency: "USDT", value: saldo }];
+}
 
 export function InvestidorPainelCard({
   investidor,
@@ -87,19 +129,21 @@ export function InvestidorPainelCard({
   onVerDetalhes,
 }: InvestidorPainelCardProps) {
   const { canEdit, canDelete } = useActionAccess();
-  
-  // Capital em operação FIAT
-  const capitalFiat = Math.max(0, (roi?.aportes_fiat_brl || 0) - (roi?.liquidacoes_fiat_brl || 0));
-  
-  // Capital em operação CRYPTO
-  const capitalCrypto = Math.max(0, (roi?.aportes_crypto_usd || 0) - (roi?.liquidacoes_crypto_usd || 0));
 
-  // ROI consolidado
-  const roiConsolidado = roi?.roi_percentual || 0;
+  // Entries multi-moeda
+  const fiatEntries = getFiatExposureEntries(roi);
+  const cryptoEntries = getCryptoExposureEntries(roi);
 
-  const hasFiat = roi && (roi.aportes_fiat_brl > 0 || roi.liquidacoes_fiat_brl > 0);
-  const hasCrypto = roi && (roi.aportes_crypto_usd > 0 || roi.liquidacoes_crypto_usd > 0);
+  const hasFiat = fiatEntries.length > 0;
+  const hasCrypto = cryptoEntries.length > 0;
   const hasData = hasFiat || hasCrypto;
+
+  // ROI consolidado via USD reference
+  const totalAportes = Number(roi?.total_aportes_usd_ref) || 0;
+  const totalLiquidacoes = Number(roi?.total_liquidacoes_usd_ref) || 0;
+  const roiConsolidado = totalAportes > 0
+    ? ((totalLiquidacoes - totalAportes) / totalAportes) * 100
+    : 0;
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 bg-card/80">
@@ -150,7 +194,7 @@ export function InvestidorPainelCard({
       <CardContent className="p-4">
         {hasData ? (
           <div className="space-y-3">
-            {/* Capital em Operação - Compacto */}
+            {/* Capital em Operação - Multi-moeda */}
             <div className="grid grid-cols-2 gap-3">
               {hasFiat && (
                 <div className="bg-muted/20 rounded-lg p-3">
@@ -160,9 +204,12 @@ export function InvestidorPainelCard({
                       FIAT
                     </span>
                   </div>
-                  <p className="text-lg font-bold font-mono text-foreground">
-                    {formatCurrency(capitalFiat, "BRL")}
-                  </p>
+                  <NativeCurrencyKpi
+                    entries={fiatEntries}
+                    size="md"
+                    variant="default"
+                    className="font-mono"
+                  />
                 </div>
               )}
               {hasCrypto && (
@@ -173,12 +220,15 @@ export function InvestidorPainelCard({
                       CRYPTO
                     </span>
                   </div>
-                  <p className="text-lg font-bold font-mono text-foreground">
-                    {formatCurrency(capitalCrypto, "USD")}
-                  </p>
+                  <NativeCurrencyKpi
+                    entries={cryptoEntries}
+                    size="md"
+                    variant="default"
+                    className="font-mono"
+                  />
                 </div>
               )}
-              {/* Se só tem um tipo, centraliza */}
+              {/* Se só tem um tipo, mostra projetos no outro espaço */}
               {((hasFiat && !hasCrypto) || (!hasFiat && hasCrypto)) && (
                 <div className="bg-muted/10 rounded-lg p-3 flex items-center justify-center">
                   <div className="text-center">
