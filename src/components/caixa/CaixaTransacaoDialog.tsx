@@ -38,12 +38,16 @@ import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/Boo
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { Loader2, ArrowLeftRight, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
 
-// Constantes de moedas disponíveis
+// Constantes de moedas disponíveis (todas as 8 moedas FIAT suportadas)
 const MOEDAS_FIAT = [
   { value: "BRL", label: "Real Brasileiro" },
   { value: "USD", label: "Dólar Americano" },
   { value: "EUR", label: "Euro" },
   { value: "GBP", label: "Libra Esterlina" },
+  { value: "MXN", label: "Peso Mexicano" },
+  { value: "MYR", label: "Ringgit Malaio" },
+  { value: "ARS", label: "Peso Argentino" },
+  { value: "COP", label: "Peso Colombiano" },
 ];
 
 const MOEDAS_CRYPTO = [
