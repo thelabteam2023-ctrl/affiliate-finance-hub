@@ -1041,12 +1041,21 @@ export default function CentralOperacoes() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-yellow-400">{formatCurrency(saque.valor_origem || saque.valor, saque.moeda_origem || saque.moeda)}</span>
-                      <Button size="sm" onClick={() => handleConfirmarSaque(saque)} className="bg-yellow-600 hover:bg-yellow-700 h-6 text-xs px-2">
-                        Confirmar
-                      </Button>
+                    <div className="flex flex-col items-end gap-0.5 shrink-0">
+                      {/* Valor ORIGEM (débito da casa) */}
+                      <span className="text-xs font-bold text-yellow-400">
+                        {formatCurrency(saque.valor_origem || saque.valor, saque.moeda_origem || saque.moeda)}
+                      </span>
+                      {/* Valor ESPERADO (crédito destino) - se houver conversão */}
+                      {saque.valor_destino && saque.moeda_destino && saque.moeda_destino !== saque.moeda_origem && (
+                        <span className="text-[10px] text-muted-foreground">
+                          ≈ {formatCurrency(saque.valor_destino, saque.moeda_destino)}
+                        </span>
+                      )}
                     </div>
+                    <Button size="sm" onClick={() => handleConfirmarSaque(saque)} className="bg-yellow-600 hover:bg-yellow-700 h-6 text-xs px-2">
+                      Confirmar
+                    </Button>
                   </div>
                 ))}
               </div>
