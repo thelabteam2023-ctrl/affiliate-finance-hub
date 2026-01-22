@@ -126,7 +126,7 @@ function parseSource(rawSource: string): CotacaoSourceInfo {
 
 const defaultSourceInfo: CotacaoSourceInfo = {
   source: 'FALLBACK',
-  label: 'Carregando...',
+  label: 'Fallback',
   isOfficial: false,
   isFallback: true,
   isPtaxFallback: false
