@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -34,6 +34,7 @@ import {
   User,
   Clock,
   Wallet,
+  AlertTriangle,
 } from "lucide-react";
 
 interface SaquePendente {
@@ -50,6 +51,7 @@ interface SaquePendente {
   parceiro_nome?: string;
   banco_nome?: string;
   wallet_nome?: string;
+  moeda_destino?: string;
 }
 
 interface ConfirmarSaqueDialogProps {
@@ -67,7 +69,16 @@ export function ConfirmarSaqueDialog({
 }: ConfirmarSaqueDialogProps) {
   const [loading, setLoading] = useState(false);
   const [observacoes, setObservacoes] = useState("");
+  const [valorRecebido, setValorRecebido] = useState<string>("");
   const [showRecusaConfirm, setShowRecusaConfirm] = useState(false);
+
+  // Resetar valor recebido quando abre o dialog
+  useEffect(() => {
+    if (open && saque) {
+      setValorRecebido(saque.valor.toString());
+      setObservacoes("");
+    }
+  }, [open, saque]);
 
   const formatCurrency = (value: number, currency: string = "BRL") => {
     return new Intl.NumberFormat("pt-BR", {
@@ -76,14 +87,25 @@ export function ConfirmarSaqueDialog({
     }).format(value);
   };
 
+  // Calcula diferença entre valor solicitado e recebido
+  const valorRecebidoNum = parseFloat(valorRecebido) || 0;
+  const diferenca = valorRecebidoNum - (saque?.valor || 0);
+  const temDiferenca = Math.abs(diferenca) > 0.01;
+  const moedaDestino = saque?.moeda_destino || saque?.moeda || "BRL";
+
   const handleConfirmar = async () => {
     if (!saque) return;
+
+    // Validar valor recebido
+    if (valorRecebidoNum <= 0) {
+      toast.error("Informe o valor recebido para confirmar o saque.");
+      return;
+    }
 
     try {
       setLoading(true);
 
       // PROTEÇÃO: Verificar se o saque ainda está PENDENTE antes de confirmar
-      // Isso evita decrementos duplos em caso de cliques duplos ou race conditions
       const { data: currentSaque, error: fetchError } = await supabase
         .from("cash_ledger")
         .select("status")
@@ -98,28 +120,61 @@ export function ConfirmarSaqueDialog({
         return;
       }
 
-      // Atualizar status para CONFIRMADO
-      const updateData: any = {
-        status: "CONFIRMADO",
-      };
-
+      // Montar descrição com diferença se houver
+      let descricaoFinal = saque.descricao || "";
       if (observacoes.trim()) {
-        updateData.descricao = saque.descricao 
-          ? `${saque.descricao}\n\n[Confirmação]: ${observacoes}`
+        descricaoFinal = descricaoFinal 
+          ? `${descricaoFinal}\n\n[Confirmação]: ${observacoes}`
           : `[Confirmação]: ${observacoes}`;
       }
+      if (temDiferenca) {
+        const tipoDif = diferenca > 0 ? "GANHO" : "PERDA";
+        descricaoFinal = descricaoFinal
+          ? `${descricaoFinal}\n[Ajuste ${tipoDif}]: ${formatCurrency(Math.abs(diferenca), moedaDestino)}`
+          : `[Ajuste ${tipoDif}]: ${formatCurrency(Math.abs(diferenca), moedaDestino)}`;
+      }
 
+      // Atualizar status para CONFIRMADO com valor_confirmado
       const { error } = await supabase
         .from("cash_ledger")
-        .update(updateData)
+        .update({
+          status: "CONFIRMADO",
+          valor_confirmado: valorRecebidoNum,
+          descricao: descricaoFinal || null,
+        })
         .eq("id", saque.id)
-        .eq("status", "PENDENTE"); // Condição extra para evitar race condition
+        .eq("status", "PENDENTE");
 
       if (error) throw error;
 
-      // ⚠️ ATENÇÃO: O trigger 'atualizar_saldo_bookmaker' no banco de dados
-      // JÁ DECREMENTA o saldo automaticamente quando status muda de PENDENTE → CONFIRMADO.
-      // NÃO chamar updateBookmakerBalance aqui para evitar débito duplo!
+      // Se houve diferença, registrar ajuste cambial
+      if (temDiferenca && saque.origem_bookmaker_id) {
+        const { data: userData } = await supabase.auth.getUser();
+        const { data: bookmaker } = await supabase
+          .from("bookmakers")
+          .select("workspace_id")
+          .eq("id", saque.origem_bookmaker_id)
+          .single();
+
+        if (bookmaker && userData?.user) {
+          // Registrar ganho ou perda cambial
+          await supabase.from("cash_ledger").insert({
+            tipo_transacao: diferenca > 0 ? "GANHO_CAMBIAL" : "PERDA_CAMBIAL",
+            valor: Math.abs(diferenca),
+            moeda: moedaDestino,
+            status: "CONFIRMADO",
+            data_transacao: new Date().toISOString().split("T")[0],
+            descricao: `Ajuste cambial - Saque ${saque.bookmaker_nome || "Bookmaker"}`,
+            workspace_id: bookmaker.workspace_id,
+            user_id: userData.user.id,
+            tipo_moeda: "FIAT",
+            impacta_caixa_operacional: false,
+            referencia_transacao_id: saque.id,
+            destino_wallet_id: saque.destino_wallet_id,
+            destino_conta_bancaria_id: saque.destino_conta_bancaria_id,
+          });
+        }
+      }
       
       // Verificar se precisa limpar workflow de saque baseado no saldo restante
       if (saque.origem_bookmaker_id) {
@@ -146,6 +201,7 @@ export function ConfirmarSaqueDialog({
 
       toast.success("Saque confirmado com sucesso! O saldo foi atualizado.");
       setObservacoes("");
+      setValorRecebido("");
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -181,7 +237,6 @@ export function ConfirmarSaqueDialog({
 
       // 2. Se tinha bookmaker origem, revincular ao projeto original
       if (saque.origem_bookmaker_id) {
-        // Buscar o projeto original e status anterior do histórico
         const { data: historico } = await supabase
           .from("projeto_bookmaker_historico")
           .select("projeto_id, status_final")
@@ -191,10 +246,8 @@ export function ConfirmarSaqueDialog({
           .single();
 
         if (historico?.projeto_id) {
-          // Usar o status anterior do histórico (preservar LIMITADA se estava limitada)
           const statusAnterior = historico.status_final === "LIMITADA" ? "LIMITADA" : "ativo";
           
-          // Revincular bookmaker ao projeto com status anterior
           const { error: bookmakerError } = await supabase
             .from("bookmakers")
             .update({ 
@@ -205,7 +258,6 @@ export function ConfirmarSaqueDialog({
 
           if (bookmakerError) throw bookmakerError;
 
-          // Atualizar histórico removendo data_desvinculacao
           await supabase
             .from("projeto_bookmaker_historico")
             .update({ 
@@ -219,6 +271,7 @@ export function ConfirmarSaqueDialog({
 
       toast.success("Saque marcado como recusado. A conta foi revinculada ao projeto.");
       setObservacoes("");
+      setValorRecebido("");
       setShowRecusaConfirm(false);
       onSuccess();
       onClose();
@@ -241,7 +294,7 @@ export function ConfirmarSaqueDialog({
               Confirmação de Saque
             </DialogTitle>
             <DialogDescription>
-              Verifique se o valor foi recebido no banco/wallet antes de confirmar
+              Informe o valor real recebido no banco/wallet para confirmar
             </DialogDescription>
           </DialogHeader>
 
@@ -285,8 +338,8 @@ export function ConfirmarSaqueDialog({
 
                 <div className="pt-2 border-t border-border/50">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Valor</span>
-                    <span className="text-xl font-bold text-emerald-400">
+                    <span className="text-sm text-muted-foreground">Valor Solicitado</span>
+                    <span className="text-lg font-semibold text-muted-foreground">
                       {formatCurrency(saque.valor, saque.moeda)}
                     </span>
                   </div>
@@ -299,6 +352,40 @@ export function ConfirmarSaqueDialog({
                 </div>
               </CardContent>
             </Card>
+
+            {/* Campo: Valor Real Recebido */}
+            <div className="space-y-2">
+              <Label htmlFor="valor-recebido" className="flex items-center gap-2">
+                Valor Real Recebido ({moedaDestino})
+                <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="valor-recebido"
+                type="number"
+                step="0.01"
+                min="0"
+                value={valorRecebido}
+                onChange={(e) => setValorRecebido(e.target.value)}
+                placeholder="0.00"
+                className="text-lg font-mono"
+                autoFocus
+              />
+              
+              {/* Indicador de diferença */}
+              {temDiferenca && valorRecebidoNum > 0 && (
+                <div className={`flex items-center gap-2 text-sm p-2 rounded-md ${
+                  diferenca > 0 
+                    ? "bg-emerald-500/10 text-emerald-400" 
+                    : "bg-amber-500/10 text-amber-400"
+                }`}>
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>
+                    {diferenca > 0 ? "Ganho cambial: +" : "Perda cambial: "}
+                    {formatCurrency(Math.abs(diferenca), moedaDestino)}
+                  </span>
+                </div>
+              )}
+            </div>
 
             {/* Observações */}
             <div className="space-y-2">
@@ -334,7 +421,7 @@ export function ConfirmarSaqueDialog({
               </Button>
               <Button
                 onClick={handleConfirmar}
-                disabled={loading}
+                disabled={loading || valorRecebidoNum <= 0}
                 className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700"
               >
                 {loading ? (
