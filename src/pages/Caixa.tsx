@@ -544,12 +544,18 @@ export default function Caixa() {
     // Pagamentos para parceiros, indicadores, operadores
     if (transacao.destino_tipo === "PARCEIRO") {
       if (transacao.destino_parceiro_id && parceiros[transacao.destino_parceiro_id]) {
-        return { primary: parceiros[transacao.destino_parceiro_id] };
+        return { 
+          primary: "Parceiro", 
+          secondary: parceiros[transacao.destino_parceiro_id] 
+        };
       }
       // Fallback: extrair nome do parceiro da descrição
       const match = transacao.descricao?.match(/parceiro\s+(.+)/i);
       if (match) {
-        return { primary: match[1].trim() };
+        return { 
+          primary: "Parceiro", 
+          secondary: match[1].trim() 
+        };
       }
       return { primary: "Parceiro" };
     }
