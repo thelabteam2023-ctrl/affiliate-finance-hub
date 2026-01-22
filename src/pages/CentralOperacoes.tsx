@@ -1727,13 +1727,78 @@ export default function CentralOperacoes() {
       });
     }
 
+    // 15. Casas Pendentes de Conciliação - financial_event
+    if (casasPendentesConciliacao.length > 0 && allowedDomains.includes('financial_event')) {
+      cards.push({
+        id: "casas-pendentes-conciliacao",
+        priority: PRIORITY.HIGH,
+        domain: 'financial_event',
+        component: (
+          <Card key="casas-pendentes-conciliacao" className="border-amber-500/50 bg-amber-500/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <RefreshCw className="h-4 w-4 text-amber-400 animate-spin" style={{ animationDuration: '3s' }} />
+                Conciliação Pendente
+                <CardInfoTooltip 
+                  title="Conciliação Obrigatória"
+                  description="Casas com transações pendentes não podem ser usadas para apostas ou bônus até a conciliação ser realizada."
+                  flow="Após depósitos multi-moeda, confirme o valor real creditado para liberar a casa."
+                />
+                <Badge className="ml-auto bg-amber-500/20 text-amber-400">{casasPendentesConciliacao.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {casasPendentesConciliacao.slice(0, 4).map((casa) => (
+                  <div key={casa.bookmaker_id} className="flex items-center justify-between p-2 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0 animate-pulse" />
+                      <span className="text-xs font-medium truncate">{casa.bookmaker_nome}</span>
+                      {casa.projeto_nome && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-muted-foreground/30">
+                          {casa.projeto_nome}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge className="text-[10px] h-5 bg-amber-500/20 text-amber-400">
+                        {casa.qtd_transacoes_pendentes} tx
+                      </Badge>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => navigate(`/caixa?tab=conciliacao&bookmaker=${casa.bookmaker_id}`)} 
+                        className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 h-6 text-xs px-2"
+                      >
+                        Conciliar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {casasPendentesConciliacao.length > 4 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full text-xs text-muted-foreground"
+                    onClick={() => navigate('/caixa?tab=conciliacao')}
+                  >
+                    Ver todas ({casasPendentesConciliacao.length})
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
     // Sort by priority
     return cards.sort((a, b) => a.priority - b.priority);
   }, [
     alertasCriticos, saquesPendentes, alertasSaques, alertasLimitadas, casasDesvinculadas,
     participacoesPendentes, pagamentosOperadorPendentes, alertasCiclosFiltrados, alertasLucro, 
     entregasPendentes, parceirosSemParceria, pagamentosParceiros, bonusPendentes, comissoesPendentes, 
-    parceriasEncerramento, allowedDomains, propostasPagamentoCount
+    parceriasEncerramento, allowedDomains, propostasPagamentoCount, casasPendentesConciliacao, navigate
   ]);
 
   const hasAnyAlerts = alertCards.length > 0;

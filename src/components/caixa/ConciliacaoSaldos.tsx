@@ -365,62 +365,79 @@ export function ConciliacaoSaldos({
         )}
       </div>
 
-      {/* Resumo de Ajustes Cambiais - mostra sempre que há histórico OU pendências */}
+      {/* Resumo compacto: apenas Pendentes visível, KPIs cambiais em tooltip */}
       {!loadingSummary && (adjustmentSummary.totalConciliacoes > 0 || pendingTransactions.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <Card className="bg-emerald-500/5 border-emerald-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-400" />
-                <span className="text-xs text-muted-foreground">Ganhos Cambiais</span>
-              </div>
-              <p className="text-lg font-semibold text-emerald-400 mt-1">
-                +{formatCurrency(adjustmentSummary.totalGanhos)}
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-red-500/5 border-red-500/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-red-400" />
-                <span className="text-xs text-muted-foreground">Perdas Cambiais</span>
-              </div>
-              <p className="text-lg font-semibold text-red-400 mt-1">
-                -{formatCurrency(adjustmentSummary.totalPerdas)}
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className={`${adjustmentSummary.saldoLiquido >= 0 ? 'bg-primary/5 border-primary/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <RefreshCcw className="h-4 w-4 text-primary" />
-                <span className="text-xs text-muted-foreground">Saldo Líquido</span>
-              </div>
-              <p className={`text-lg font-semibold mt-1 ${adjustmentSummary.saldoLiquido >= 0 ? 'text-primary' : 'text-amber-400'}`}>
-                {adjustmentSummary.saldoLiquido >= 0 ? '+' : ''}{formatCurrency(adjustmentSummary.saldoLiquido)}
-              </p>
-            </CardContent>
-          </Card>
-          
+        <div className="flex items-center gap-4">
+          {/* Card principal: Pendentes */}
           <Card className={pendingTransactions.length > 0 ? "bg-amber-500/10 border-amber-500/30" : "bg-muted/30 border-muted/50"}>
-            <CardContent className="p-4">
+            <CardContent className="p-4 flex items-center gap-4">
               <div className="flex items-center gap-2">
                 {pendingTransactions.length > 0 ? (
                   <Clock className="h-4 w-4 text-amber-400" />
                 ) : (
                   <History className="h-4 w-4 text-muted-foreground" />
                 )}
-                <span className="text-xs text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   {pendingTransactions.length > 0 ? "Pendentes" : "Total Conciliações"}
                 </span>
               </div>
-              <p className={`text-lg font-semibold mt-1 ${pendingTransactions.length > 0 ? 'text-amber-400' : ''}`}>
+              <p className={`text-xl font-bold ${pendingTransactions.length > 0 ? 'text-amber-400' : ''}`}>
                 {pendingTransactions.length > 0 ? pendingTransactions.length : adjustmentSummary.totalConciliacoes}
               </p>
             </CardContent>
           </Card>
+
+          {/* Resumo cambial em linha (apenas se houver histórico) */}
+          {adjustmentSummary.totalConciliacoes > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border/50 bg-muted/20 cursor-help text-xs">
+                    <span className="text-muted-foreground">Balanço cambial:</span>
+                    <span className={`font-medium ${adjustmentSummary.saldoLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {adjustmentSummary.saldoLiquido >= 0 ? '+' : ''}{formatCurrency(adjustmentSummary.saldoLiquido)}
+                    </span>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="p-3 space-y-2 max-w-xs">
+                  <p className="font-medium text-sm mb-2">Resumo de Ajustes Cambiais</p>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="flex items-center gap-1.5 text-xs">
+                        <TrendingUp className="h-3 w-3 text-emerald-400" />
+                        Ganhos
+                      </span>
+                      <span className="text-xs font-medium text-emerald-400">
+                        +{formatCurrency(adjustmentSummary.totalGanhos)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="flex items-center gap-1.5 text-xs">
+                        <TrendingDown className="h-3 w-3 text-red-400" />
+                        Perdas
+                      </span>
+                      <span className="text-xs font-medium text-red-400">
+                        -{formatCurrency(adjustmentSummary.totalPerdas)}
+                      </span>
+                    </div>
+                    <div className="border-t border-border/50 pt-1.5 flex items-center justify-between gap-4">
+                      <span className="flex items-center gap-1.5 text-xs font-medium">
+                        <RefreshCcw className="h-3 w-3 text-primary" />
+                        Líquido
+                      </span>
+                      <span className={`text-xs font-bold ${adjustmentSummary.saldoLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {adjustmentSummary.saldoLiquido >= 0 ? '+' : ''}{formatCurrency(adjustmentSummary.saldoLiquido)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/30">
+                    Diferenças entre valor estimado e valor real creditado nas conciliações.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       )}
 
