@@ -207,6 +207,16 @@ interface SaquePendenteConfirmacao {
   banco_nome?: string;
   wallet_nome?: string;
   projeto_nome?: string;
+  // Campos cripto para liquidação real
+  coin?: string;
+  qtd_coin?: number;
+  cotacao_original?: number;
+  moeda_origem?: string;
+  moeda_destino?: string;
+  // Dados da wallet de destino
+  wallet_network?: string;
+  wallet_exchange?: string;
+  wallet_moedas?: string[];
 }
 
 interface AlertaLucroParceiro {
@@ -388,11 +398,11 @@ export default function CentralOperacoes() {
         canSeePartnerData
           ? supabase.from("parcerias").select("parceiro_id").in("status", ["ATIVA", "EM_ENCERRAMENTO"])
           : Promise.resolve({ data: [], error: null }),
-        // Saques pendentes - apenas se puder ver dados financeiros
+        // Saques pendentes - apenas se puder ver dados financeiros (incluindo dados cripto)
         canSeeFinancialData
           ? supabase
               .from("cash_ledger")
-              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id, destino_wallet_id`)
+              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id, destino_wallet_id, coin, qtd_coin, cotacao, moeda_origem, moeda_destino`)
               .eq("tipo_transacao", "SAQUE")
               .eq("status", "PENDENTE")
               .order("data_transacao", { ascending: false })
@@ -621,24 +631,42 @@ export default function CentralOperacoes() {
         const projetosMap = Object.fromEntries((projetosNomes.data || []).map((p: any) => [p.id, p.nome]));
         const parceirosMap = Object.fromEntries((parceirosNomes.data || []).map((p: any) => [p.id, p.nome]));
         const contasMap = Object.fromEntries((contasNomes.data || []).map((c: any) => [c.id, `${c.banco} - ${c.titular}`]));
-        const walletsMap = Object.fromEntries(
+        // Criar mapa estruturado das wallets (com dados completos, não apenas label)
+        const walletsDataMap = Object.fromEntries(
           (walletsNomes.data || []).map((w: any) => {
-            const moedas = Array.isArray(w.moeda) && w.moeda.length > 0 ? w.moeda.join(", ") : undefined;
+            const moedas = Array.isArray(w.moeda) ? w.moeda : [];
             const exchange = w.exchange ? String(w.exchange).replace(/-/g, " ").toUpperCase() : "WALLET";
-            const label = moedas ? `${exchange} (${moedas})` : exchange;
-            return [w.id, label];
+            const label = moedas.length > 0 ? `${exchange} (${moedas.join(", ")})` : exchange;
+            return [w.id, { 
+              label, 
+              network: w.network,
+              exchange,
+              moedas 
+            }];
           })
         );
 
         const saquesEnriquecidos: SaquePendenteConfirmacao[] = saquesPendentesResult.data.map((s: any) => {
           const bkData = bookmakersMap[s.origem_bookmaker_id] || { nome: "Bookmaker", projeto_id: null };
+          const walletData = s.destino_wallet_id ? walletsDataMap[s.destino_wallet_id] : null;
+          
           return {
             ...s,
             bookmaker_nome: bkData.nome,
             parceiro_nome: parceirosMap[s.destino_parceiro_id] || "",
             banco_nome: s.destino_conta_bancaria_id ? contasMap[s.destino_conta_bancaria_id] : undefined,
-            wallet_nome: s.destino_wallet_id ? walletsMap[s.destino_wallet_id] : undefined,
+            wallet_nome: walletData?.label || undefined,
             projeto_nome: bkData.projeto_id ? projetosMap[bkData.projeto_id] : undefined,
+            // Dados cripto do cash_ledger
+            coin: s.coin || undefined,
+            qtd_coin: s.qtd_coin || undefined,
+            cotacao_original: s.cotacao || undefined,
+            moeda_origem: s.moeda_origem || undefined,
+            moeda_destino: s.moeda_destino || undefined,
+            // Dados da wallet
+            wallet_network: walletData?.network || undefined,
+            wallet_exchange: walletData?.exchange || undefined,
+            wallet_moedas: walletData?.moedas || undefined,
           };
         });
 
