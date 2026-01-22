@@ -72,6 +72,7 @@ export function useMultiCurrencyConversion(cryptoSymbols: string[] = []) {
     cotacaoCOP,
     cryptoPrices,
     loading,
+    lastUpdate,
     source,
     sources,
     refreshAll 
@@ -245,6 +246,7 @@ export function useMultiCurrencyConversion(cryptoSymbols: string[] = []) {
   return {
     // Estado
     loading,
+    lastUpdate,
     cotacaoUSD,
     source,
     sources, // Exposição das fontes de cada moeda para UI
