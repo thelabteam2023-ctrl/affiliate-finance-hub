@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -137,6 +138,7 @@ export function CaixaTransacaoDialog({
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP } = useCotacoes();
   const [loading, setLoading] = useState(false);
 
   // Form state
@@ -1556,23 +1558,105 @@ export function CaixaTransacaoDialog({
       // Determinar se há conversão de moeda
       const moedaOrigem = tipoMoeda === "CRYPTO" ? coin : moeda;
       const precisaConversao = moedaOrigem !== moedaDestino;
+      
+      // =========================================================================
+      // ARQUITETURA MULTI-MOEDA (3 CAMADAS)
+      // 1. ORIGEM: O que foi enviado (ex: 1000 USDT)
+      // 2. EXECUÇÃO: O que entrou na casa (ex: 17,320 MXN) - CANÔNICO para saldo
+      // 3. REFERÊNCIA: Valor em USD para KPIs globais (imutável/snapshot)
+      // =========================================================================
+      
+      const valorOrigem = parseFloat(valor);
+      const now = new Date().toISOString();
+      
+      // Calcular cotações para USD (snapshot no momento da transação)
+      // cotacaoUSD = 1 USD = X BRL, então para converter MOEDA→USD precisamos da taxa inversa
+      let cotacaoOrigemUsd = 1.0; // Default para USD/USDT/USDC
+      let cotacaoDestinoUsd = 1.0;
+      let valorDestinoCalculado = valorOrigem;
+      let valorUsdReferencia = valorOrigem; // Para crypto, valor já está em USD
+      
+      // Calcular cotação da moeda de origem para USD
+      if (tipoMoeda === "CRYPTO") {
+        // Crypto: preço já está em USD
+        const cryptoPrice = cryptoPrices[coin] || 1;
+        cotacaoOrigemUsd = cryptoPrice; // 1 BTC = 89000 USD
+        valorUsdReferencia = valorOrigem; // valor já está em USD (qtd × price)
+      } else {
+        // FIAT: converter para USD
+        if (moedaOrigem === "BRL") {
+          cotacaoOrigemUsd = 1 / cotacaoUSD; // 1 BRL = 0.189 USD (quando 1 USD = 5.31 BRL)
+          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
+        } else if (moedaOrigem === "USD") {
+          cotacaoOrigemUsd = 1.0;
+          valorUsdReferencia = valorOrigem;
+        } else if (moedaOrigem === "EUR") {
+          cotacaoOrigemUsd = cotacaoEUR / cotacaoUSD; // EUR→BRL / USD→BRL = EUR→USD
+          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
+        } else if (moedaOrigem === "GBP") {
+          cotacaoOrigemUsd = cotacaoGBP / cotacaoUSD;
+          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
+        } else {
+          // Outras moedas FIAT (MXN, MYR, etc) - usar aproximação
+          cotacaoOrigemUsd = 0.058; // Fallback MXN
+          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
+        }
+      }
+      
+      // Calcular cotação da moeda de destino (casa) para USD
+      if (destinoBookmakerMoeda === "BRL") {
+        cotacaoDestinoUsd = 1 / cotacaoUSD;
+      } else if (destinoBookmakerMoeda === "USD") {
+        cotacaoDestinoUsd = 1.0;
+      } else if (destinoBookmakerMoeda === "EUR") {
+        cotacaoDestinoUsd = cotacaoEUR / cotacaoUSD;
+      } else if (destinoBookmakerMoeda === "GBP") {
+        cotacaoDestinoUsd = cotacaoGBP / cotacaoUSD;
+      } else if (destinoBookmakerMoeda === "MXN") {
+        cotacaoDestinoUsd = 0.058;
+      } else if (destinoBookmakerMoeda === "MYR") {
+        cotacaoDestinoUsd = 0.21;
+      } else if (destinoBookmakerMoeda === "ARS") {
+        cotacaoDestinoUsd = 0.001;
+      } else if (destinoBookmakerMoeda === "COP") {
+        cotacaoDestinoUsd = 0.00024;
+      }
+      
+      // Calcular valor de destino (na moeda da casa)
+      if (precisaConversao) {
+        // Converter: ORIGEM → USD → DESTINO
+        valorDestinoCalculado = valorUsdReferencia / cotacaoDestinoUsd;
+      } else {
+        valorDestinoCalculado = valorOrigem;
+      }
 
       const transactionData: any = {
         user_id: userData.user.id,
         workspace_id: workspaceId,
         tipo_transacao: tipoTransacao,
         tipo_moeda: tipoMoeda,
-        moeda: moedaDestino,
-        valor: parseFloat(valor),
+        moeda: moedaDestino, // Moeda canônica = moeda da casa
+        valor: valorDestinoCalculado, // Valor canônico = valor na moeda da casa
         descricao,
         status: statusInicial,
         investidor_id: tipoTransacao === "APORTE_FINANCEIRO" ? investidorId : null,
         nome_investidor: tipoTransacao === "APORTE_FINANCEIRO" && investidor ? investidor.nome : null,
-        // Campos de conversão
+        
+        // CAMADA ORIGEM (Transporte)
         moeda_origem: moedaOrigem,
-        valor_origem: parseFloat(valor),
+        valor_origem: valorOrigem,
+        cotacao_origem_usd: cotacaoOrigemUsd,
+        
+        // CAMADA EXECUÇÃO (Casa) - CANÔNICO
         moeda_destino: moedaDestino,
-        valor_destino: parseFloat(valor), // Inicialmente igual, pode ser ajustado depois
+        valor_destino: valorDestinoCalculado,
+        cotacao_destino_usd: cotacaoDestinoUsd,
+        
+        // CAMADA REFERÊNCIA (KPI) - IMUTÁVEL
+        valor_usd_referencia: valorUsdReferencia,
+        cotacao_snapshot_at: now,
+        
+        // Status de conversão
         status_valor: precisaConversao ? "ESTIMADO" : "CONFIRMADO",
       };
 
@@ -1580,10 +1664,9 @@ export function CaixaTransacaoDialog({
       if (tipoMoeda === "CRYPTO") {
         transactionData.coin = coin;
         transactionData.qtd_coin = parseFloat(qtdCoin);
-        transactionData.valor_usd = parseFloat(valor);
+        transactionData.valor_usd = valorUsdReferencia; // Agora usa o valor de referência calculado
         if (cotacao) {
           transactionData.cotacao = parseFloat(cotacao);
-          // Para crypto, calcular cotação implícita
           transactionData.cotacao_implicita = parseFloat(cotacao);
         }
       }
@@ -1633,75 +1716,16 @@ export function CaixaTransacaoDialog({
 
       if (error) throw error;
 
-      // ATUALIZAR SALDO DO BOOKMAKER quando a transação envolve bookmaker
-      const valorNumerico = parseFloat(valor);
+      // =========================================================================
+      // NOTA: Atualização de saldo do bookmaker é feita via TRIGGER no banco
+      // O trigger tr_cash_ledger_update_bookmaker_balance_v2 usa valor_destino
+      // (na moeda da casa) para atualizar saldo_atual automaticamente.
+      // 
+      // NÃO fazer atualização manual aqui para evitar duplicidade!
+      // =========================================================================
       
-      // DEPÓSITO: aumentar saldo do bookmaker de destino
-      if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
-        const destBk = bookmakers.find(b => b.id === destinoBookmakerId);
-        if (destBk) {
-          // Determinar qual campo atualizar baseado na moeda
-          const moedaBk = destBk.moeda || "BRL";
-          const campoSaldo = moedaBk === "USD" ? "saldo_usd" : "saldo_atual";
-          const novoSaldo = (moedaBk === "USD" ? destBk.saldo_usd : destBk.saldo_atual) + valorNumerico;
-          
-          const { error: updateBkError } = await supabase
-            .from("bookmakers")
-            .update({ 
-              [campoSaldo]: novoSaldo,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", destinoBookmakerId);
-          
-          if (updateBkError) {
-            console.error("Erro ao atualizar saldo do bookmaker de destino:", updateBkError);
-          }
-        }
-      }
-      
-      // TRANSFERÊNCIA BOOKMAKER → outro destino: decrementar saldo do bookmaker de origem
-      if (tipoTransacao === "TRANSFERENCIA" && origemBookmakerId) {
-        const origBk = bookmakers.find(b => b.id === origemBookmakerId);
-        if (origBk) {
-          const moedaBk = origBk.moeda || "BRL";
-          const campoSaldo = moedaBk === "USD" ? "saldo_usd" : "saldo_atual";
-          const novoSaldo = Math.max(0, (moedaBk === "USD" ? origBk.saldo_usd : origBk.saldo_atual) - valorNumerico);
-          
-          const { error: updateBkError } = await supabase
-            .from("bookmakers")
-            .update({ 
-              [campoSaldo]: novoSaldo,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", origemBookmakerId);
-          
-          if (updateBkError) {
-            console.error("Erro ao atualizar saldo do bookmaker de origem:", updateBkError);
-          }
-        }
-      }
-      
-      // TRANSFERÊNCIA → BOOKMAKER destino: incrementar saldo
-      if (tipoTransacao === "TRANSFERENCIA" && destinoBookmakerId) {
-        const destBk = bookmakers.find(b => b.id === destinoBookmakerId);
-        if (destBk) {
-          const moedaBk = destBk.moeda || "BRL";
-          const campoSaldo = moedaBk === "USD" ? "saldo_usd" : "saldo_atual";
-          const novoSaldo = (moedaBk === "USD" ? destBk.saldo_usd : destBk.saldo_atual) + valorNumerico;
-          
-          const { error: updateBkError } = await supabase
-            .from("bookmakers")
-            .update({ 
-              [campoSaldo]: novoSaldo,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", destinoBookmakerId);
-          
-          if (updateBkError) {
-            console.error("Erro ao atualizar saldo do bookmaker de destino:", updateBkError);
-          }
-        }
-      }
+      // NOTA: Transferências também são tratadas pelo trigger automaticamente.
+      // O trigger usa valor_origem para débito e valor_destino para crédito.
 
       // Se for SAQUE, atualizar status do bookmaker para indicar saque em processamento
       // O saldo será atualizado apenas quando o saque for CONFIRMADO

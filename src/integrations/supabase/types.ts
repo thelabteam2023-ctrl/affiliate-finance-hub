@@ -1170,7 +1170,10 @@ export type Database = {
           conversao_aplicada: boolean | null
           conversao_referencia_id: string | null
           cotacao: number | null
+          cotacao_destino_usd: number | null
           cotacao_implicita: number | null
+          cotacao_origem_usd: number | null
+          cotacao_snapshot_at: string | null
           created_at: string
           data_transacao: string
           descricao: string | null
@@ -1208,6 +1211,7 @@ export type Database = {
           valor_destino: number | null
           valor_origem: number | null
           valor_usd: number | null
+          valor_usd_referencia: number | null
           workspace_id: string
         }
         Insert: {
@@ -1218,7 +1222,10 @@ export type Database = {
           conversao_aplicada?: boolean | null
           conversao_referencia_id?: string | null
           cotacao?: number | null
+          cotacao_destino_usd?: number | null
           cotacao_implicita?: number | null
+          cotacao_origem_usd?: number | null
+          cotacao_snapshot_at?: string | null
           created_at?: string
           data_transacao?: string
           descricao?: string | null
@@ -1256,6 +1263,7 @@ export type Database = {
           valor_destino?: number | null
           valor_origem?: number | null
           valor_usd?: number | null
+          valor_usd_referencia?: number | null
           workspace_id: string
         }
         Update: {
@@ -1266,7 +1274,10 @@ export type Database = {
           conversao_aplicada?: boolean | null
           conversao_referencia_id?: string | null
           cotacao?: number | null
+          cotacao_destino_usd?: number | null
           cotacao_implicita?: number | null
+          cotacao_origem_usd?: number | null
+          cotacao_snapshot_at?: string | null
           created_at?: string
           data_transacao?: string
           descricao?: string | null
@@ -1304,6 +1315,7 @@ export type Database = {
           valor_destino?: number | null
           valor_origem?: number | null
           valor_usd?: number | null
+          valor_usd_referencia?: number | null
           workspace_id?: string
         }
         Relationships: [
