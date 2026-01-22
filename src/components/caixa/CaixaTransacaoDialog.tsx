@@ -1709,17 +1709,30 @@ export function CaixaTransacaoDialog({
         (tipoTransacao === "DEPOSITO" && temConversaoMoeda) ? "PENDENTE" :
         "CONFIRMADO";
 
-      // Determinar moeda de destino baseado no bookmaker de destino (para DEPOSITO)
+      // =========================================================================
+      // DETERMINAÇÃO DE MOEDAS ORIGEM/DESTINO
+      // - DEPÓSITO: Origem = moeda de transporte (BRL/USDT), Destino = moeda da CASA
+      // - SAQUE: Origem = moeda da CASA, Destino = moeda de recebimento (BRL/USDT)
+      // =========================================================================
+      let moedaOrigem = tipoMoeda === "CRYPTO" ? coin : moeda;
       let moedaDestino = tipoMoeda === "FIAT" ? moeda : "USD";
       let destinoBookmakerMoeda = "BRL";
+      
       if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
+        // DEPÓSITO: origem = moeda de transporte, destino = moeda da casa
         const destBm = bookmakers.find(b => b.id === destinoBookmakerId);
         destinoBookmakerMoeda = destBm?.moeda || "BRL";
         moedaDestino = destinoBookmakerMoeda;
+      } else if (tipoTransacao === "SAQUE" && origemBookmakerId) {
+        // SAQUE: origem = moeda da CASA, destino = moeda de recebimento (BRL ou crypto)
+        const origBm = bookmakers.find(b => b.id === origemBookmakerId);
+        const moedaCasa = origBm?.moeda || "BRL";
+        moedaOrigem = moedaCasa; // A origem é a moeda NATIVA da casa!
+        moedaDestino = tipoMoeda === "CRYPTO" ? coin : moeda; // Destino é onde vai receber
+        destinoBookmakerMoeda = moedaCasa;
       }
 
       // Determinar se há conversão de moeda
-      const moedaOrigem = tipoMoeda === "CRYPTO" ? coin : moeda;
       const precisaConversao = moedaOrigem !== moedaDestino;
       
       // =========================================================================
