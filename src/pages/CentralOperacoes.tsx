@@ -214,6 +214,8 @@ interface SaquePendenteConfirmacao {
   moeda_origem?: string;
   moeda_destino?: string;
   valor_origem?: number; // Valor na moeda da casa
+  valor_destino?: number; // Valor esperado na moeda de destino (estimativa)
+  cotacao_snapshot?: number; // Cotação usada na estimativa
   // Dados da wallet de destino
   wallet_network?: string;
   wallet_exchange?: string;
@@ -403,7 +405,7 @@ export default function CentralOperacoes() {
         canSeeFinancialData
           ? supabase
               .from("cash_ledger")
-              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id, destino_wallet_id, coin, qtd_coin, cotacao, moeda_origem, moeda_destino, valor_origem`)
+              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id, destino_wallet_id, coin, qtd_coin, cotacao, moeda_origem, moeda_destino, valor_origem, valor_destino, cotacao_snapshot`)
               .eq("tipo_transacao", "SAQUE")
               .eq("status", "PENDENTE")
               .order("data_transacao", { ascending: false })
@@ -665,6 +667,9 @@ export default function CentralOperacoes() {
             moeda_origem: s.moeda_origem || undefined,
             valor_origem: s.valor_origem || undefined,
             moeda_destino: s.moeda_destino || undefined,
+            // Dados de conversão para conciliação
+            valor_destino: s.valor_destino || undefined,
+            cotacao_snapshot: s.cotacao_snapshot || s.cotacao || undefined,
             // Dados da wallet
             wallet_network: walletData?.network || undefined,
             wallet_exchange: walletData?.exchange || undefined,
