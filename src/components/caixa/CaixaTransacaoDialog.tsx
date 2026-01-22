@@ -2773,7 +2773,7 @@ export function CaixaTransacaoDialog({
               onValueChange={setDestinoBookmakerId}
               disabled={!isOrigemCompleta}
               parceiroId={origemParceiroId}
-              moedaOperacional={tipoMoeda === "CRYPTO" ? "USD" : moeda}
+              moedaOperacional={tipoMoeda === "CRYPTO" ? undefined : moeda}
             />
           </div>
         </>
