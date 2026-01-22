@@ -34,8 +34,8 @@ const CURRENCIES = {
 
 type CurrencyKey = keyof typeof CURRENCIES;
 
-// TTL do cache: 2h24min (144 minutos) - sincronizado com cron job
-const CACHE_TTL_MINUTES = 144;
+// TTL do cache: 30 minutos - refresh frequente dentro do limite do plano
+const CACHE_TTL_MINUTES = 30;
 
 /**
  * Cria cliente Supabase com service role para acessar o cache
