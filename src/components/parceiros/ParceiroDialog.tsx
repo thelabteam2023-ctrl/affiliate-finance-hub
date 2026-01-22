@@ -639,6 +639,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               parceiro_id: currentParceiroId,
               banco_id: account.banco_id,
               banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
+              moeda: account.moeda || "BRL", // CRÍTICO: Incluir moeda selecionada pelo usuário
               agencia: account.agencia || null,
               conta: account.conta || null,
               tipo_conta: account.tipo_conta,
