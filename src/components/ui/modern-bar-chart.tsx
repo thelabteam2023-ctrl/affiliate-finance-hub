@@ -36,6 +36,8 @@ interface ModernBarChartProps {
   barSize?: number;
   showLabels?: boolean;
   showLegend?: boolean;
+  /** Disable all chart + label animations (helps avoid flicker in tabbed/rapid re-render scenarios) */
+  disableAnimations?: boolean;
   formatValue?: (value: number) => string;
   formatTooltip?: (dataKey: string, value: number) => string;
   customTooltipContent?: (payload: any, label: string) => React.ReactNode;
@@ -120,6 +122,46 @@ const AnimatedLabel = memo(function AnimatedLabel(props: any) {
     prevProps.isNegative === nextProps.isNegative
   );
 });
+
+// Non-animated label (stable DOM, no transitions)
+function StaticLabel(props: any) {
+  const { x, y, width, height, value, fill, formattedValue, isNegative } = props;
+
+  const displayValue = formattedValue !== undefined ? formattedValue : value;
+  if (
+    displayValue === undefined ||
+    displayValue === null ||
+    displayValue === 0 ||
+    displayValue === "" ||
+    displayValue === "R$ 0"
+  )
+    return null;
+
+  const labelOffset = 8;
+  const barTop = Math.min(y, y + height);
+  const barBottom = Math.max(y, y + height);
+  const labelY = isNegative ? barBottom + labelOffset : barTop - labelOffset;
+
+  return (
+    <text
+      x={x + width / 2}
+      y={labelY}
+      fill={fill}
+      textAnchor="middle"
+      dominantBaseline={isNegative ? "hanging" : "baseline"}
+      className="text-xs font-semibold"
+      style={{
+        opacity: 1,
+        transform: "none",
+        transition: "none",
+        fontSize: "11px",
+        pointerEvents: "none",
+      }}
+    >
+      {displayValue}
+    </text>
+  );
+}
 
 // Custom tooltip component
 const CustomTooltip = ({ 
@@ -206,6 +248,7 @@ export function ModernBarChart({
   barSize = 20,
   showLabels = true,
   showLegend = true,
+  disableAnimations = false,
   formatValue,
   formatTooltip,
   customTooltipContent,
@@ -214,14 +257,7 @@ export function ModernBarChart({
   hideYAxisTicks = false,
   dynamicColors = true,
 }: ModernBarChartProps) {
-  const [isAnimated, setIsAnimated] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // Trigger animation after mount
-    const timer = setTimeout(() => setIsAnimated(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
 
   if (!data || data.length === 0) {
     return (
@@ -316,9 +352,10 @@ export function ModernBarChart({
               fill={`url(#barGradient-${bar.dataKey})`}
               radius={[3, 3, 3, 3]}
               barSize={barSize}
-              animationBegin={barIndex * 100}
-              animationDuration={800}
-              animationEasing="ease-out"
+              isAnimationActive={!disableAnimations}
+              animationBegin={disableAnimations ? 0 : barIndex * 100}
+              animationDuration={disableAnimations ? 0 : 800}
+              animationEasing={disableAnimations ? "linear" : "ease-out"}
             >
               {data.map((entry, index) => {
                 const value = entry[bar.dataKey];
@@ -365,20 +402,37 @@ export function ModernBarChart({
                     const signValue = rawValue;
 
                     return (
-                      <AnimatedLabel
-                        {...props}
-                        isNegative={isNegative}
-                        fill={
-                          typeof signValue === "number"
-                            ? signValue > 0
-                              ? "#22C55E"
-                              : signValue < 0
-                                ? "#EF4444"
-                                : "#6B7280"
-                            : bar.gradientStart
-                        }
-                        formattedValue={formattedValue}
-                      />
+                      disableAnimations ? (
+                        <StaticLabel
+                          {...props}
+                          isNegative={isNegative}
+                          fill={
+                            typeof signValue === "number"
+                              ? signValue > 0
+                                ? "#22C55E"
+                                : signValue < 0
+                                  ? "#EF4444"
+                                  : "#6B7280"
+                              : bar.gradientStart
+                          }
+                          formattedValue={formattedValue}
+                        />
+                      ) : (
+                        <AnimatedLabel
+                          {...props}
+                          isNegative={isNegative}
+                          fill={
+                            typeof signValue === "number"
+                              ? signValue > 0
+                                ? "#22C55E"
+                                : signValue < 0
+                                  ? "#EF4444"
+                                  : "#6B7280"
+                              : bar.gradientStart
+                          }
+                          formattedValue={formattedValue}
+                        />
+                      )
                     );
                   }}
                 />
