@@ -261,7 +261,10 @@ export function FluxoFinanceiroOperacional({
       }
     });
 
-    // Calcular dados para o gráfico
+    // Calcular dados para o gráfico (SEM cotações - apenas valores nativos)
+    // IMPORTANTE: Cotações NÃO devem ser dependência deste useMemo
+    // para evitar re-render do gráfico quando taxas atualizam.
+    // A normalização visual é feita separadamente.
     const dados = Array.from(agrupamentos.entries())
       .map(([chave, grupo]) => {
         const result: Record<string, any> = {
@@ -269,18 +272,13 @@ export function FluxoFinanceiroOperacional({
           transacoes: grupo.transacoes,
         };
         
-        // Para cada moeda, adicionar valores reais e normalizados
+        // Para cada moeda, adicionar valores reais (sem normalização aqui)
         SUPPORTED_CURRENCIES.forEach(currency => {
-          const cotacao = cotacoes[currency];
           const key = currency.toLowerCase();
           
-          // Valores reais
+          // Valores reais na moeda nativa
           result[`aportes_${key}`] = grupo.aportes[currency];
           result[`liquidacoes_${key}`] = grupo.liquidacoes[currency];
-          
-          // Valores normalizados em BRL para escala visual
-          result[`aportes_${key}_norm`] = grupo.aportes[currency] * cotacao;
-          result[`liquidacoes_${key}_norm`] = grupo.liquidacoes[currency] * cotacao;
           
           // Líquido por moeda
           result[`liquido_${key}`] = grupo.aportes[currency] - grupo.liquidacoes[currency];
@@ -320,7 +318,7 @@ export function FluxoFinanceiroOperacional({
       hasUSD: totais.USD.aportes > 0 || totais.USD.liquidacoes > 0,
       hasMultipleCurrencies: moedasAtivas.length > 1,
     };
-  }, [transacoesFiltradas, periodo, cotacoes]);
+  }, [transacoesFiltradas, periodo]); // ← REMOVIDO cotacoes da dependência
 
   // 2. Capital Alocado em Operação (Bookmakers)
   // REGRA: Suporta todas as 8 moedas, CRYPTO = USD
@@ -389,7 +387,9 @@ export function FluxoFinanceiroOperacional({
       }
     });
 
-    // Calcular dados para o gráfico
+    // Calcular dados para o gráfico (SEM cotações - apenas valores nativos)
+    // IMPORTANTE: Cotações NÃO devem ser dependência deste useMemo
+    // para evitar re-render do gráfico quando taxas atualizam.
     const dados = Array.from(agrupamentos.entries())
       .map(([chave, grupo]) => {
         const result: Record<string, any> = {
@@ -397,17 +397,11 @@ export function FluxoFinanceiroOperacional({
           transacoes: grupo.transacoes,
         };
         
-        // Para cada moeda, adicionar valores reais e normalizados
+        // Para cada moeda, adicionar valores reais (sem normalização aqui)
         SUPPORTED_CURRENCIES.forEach(currency => {
-          const cotacao = cotacoes[currency];
-          
-          // Valores reais
+          // Valores reais na moeda nativa
           result[`depositos_${currency.toLowerCase()}`] = grupo.depositos[currency];
           result[`saques_${currency.toLowerCase()}`] = grupo.saques[currency];
-          
-          // Valores normalizados em BRL para escala visual
-          result[`depositos_${currency.toLowerCase()}_norm`] = grupo.depositos[currency] * cotacao;
-          result[`saques_${currency.toLowerCase()}_norm`] = grupo.saques[currency] * cotacao;
           
           // Alocação líquida por moeda
           result[`alocacao_${currency.toLowerCase()}`] = grupo.depositos[currency] - grupo.saques[currency];
@@ -446,7 +440,7 @@ export function FluxoFinanceiroOperacional({
       hasUSD: totais.USD.depositos > 0 || totais.USD.saques > 0,
       hasMultipleCurrencies: moedasAtivas.length > 1,
     };
-  }, [transacoesFiltradas, periodo, cotacoes]);
+  }, [transacoesFiltradas, periodo]); // ← REMOVIDO cotacoes da dependência
 
   // Formatador de moeda dinâmico
   const formatCurrencyValue = (value: number, currency: string = "BRL") => {
