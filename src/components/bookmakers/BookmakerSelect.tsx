@@ -189,8 +189,17 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
         return;
       }
       
-      // MODO SAQUE: Buscar TODAS as bookmakers do workspace com saldo (ignora parceiroId)
+      // MODO SAQUE: Buscar bookmakers do PARCEIRO SELECIONADO com saldo disponível
+      // CRÍTICO: Isolamento entre parceiros - só exibir casas do parceiro que vai receber o saque
       if (isModoSaque) {
+        // Se não tem parceiroId, aguardar seleção (não pode mostrar casas sem saber de quem)
+        if (!parceiroId) {
+          setPrerequisitesReady(false);
+          setItems([]);
+          setLoading(false);
+          return;
+        }
+        
         setPrerequisitesReady(true);
         setLoading(true);
         
@@ -214,6 +223,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
               )
             `)
             .eq("workspace_id", workspaceId!)
+            .eq("parceiro_id", parceiroId) // CRÍTICO: Filtrar por parceiro!
             .eq("status", "ativo")
             .gt("saldo_atual", 0); // Saque sempre requer saldo_atual > 0
 
@@ -538,9 +548,11 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                   : modoSaqueAguardandoWorkspace
                     ? "Carregando workspace..."
                     : !prerequisitesReady
-                      ? "Selecione os campos anteriores"
+                      ? (isModoSaque && !parceiroId 
+                          ? "Selecione primeiro o parceiro de destino"
+                          : "Selecione os campos anteriores")
                       : isModoSaque
-                        ? "Nenhuma bookmaker com saldo disponível para saque"
+                        ? "Este parceiro não possui bookmakers com saldo disponível para saque"
                         : parceiroId 
                           ? (moedaOperacional
                               ? `Nenhuma bookmaker compatível com ${moedaOperacional} neste parceiro`
