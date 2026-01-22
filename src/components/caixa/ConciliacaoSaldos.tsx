@@ -59,6 +59,7 @@ interface ConciliacaoSaldosProps {
   wallets: { [key: string]: string };
   walletsDetalhes: Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>;
   parceiros: { [key: string]: string };
+  contasBancarias: Array<{ id: string; banco: string; titular: string }>;
   onRefresh: () => void;
 }
 
@@ -95,6 +96,7 @@ export function ConciliacaoSaldos({
   wallets,
   walletsDetalhes,
   parceiros,
+  contasBancarias,
   onRefresh,
 }: ConciliacaoSaldosProps) {
   const { user } = useAuth();
@@ -462,6 +464,17 @@ export function ConciliacaoSaldos({
                   const walletParceiroNome = walletParceiroId ? parceiros[walletParceiroId] : null;
                   const walletParceiroShort = walletParceiroNome ? getFirstLastName(walletParceiroNome) : null;
                   
+                  // Conta bancária info for FIAT withdrawals
+                  const contaBancariaId = t.destino_conta_bancaria_id;
+                  const contaBancaria = contaBancariaId ? contasBancarias.find(c => c.id === contaBancariaId) : null;
+                  const contaBancoNome = contaBancaria?.banco || "Banco";
+                  const contaTitularShort = contaBancaria?.titular ? getFirstLastName(contaBancaria.titular) : null;
+                  
+                  // Parceiro destino (pode ser via conta bancária ou diretamente)
+                  const destinoParceiroId = t.destino_parceiro_id;
+                  const destinoParceiroNome = destinoParceiroId ? parceiros[destinoParceiroId] : null;
+                  const destinoParceiroShort = destinoParceiroNome ? getFirstLastName(destinoParceiroNome) : null;
+                  
                   return (
                     <div
                       key={t.id}
@@ -482,43 +495,107 @@ export function ConciliacaoSaldos({
                           {isCrypto ? "CRYPTO" : "FIAT"}
                         </Badge>
 
-                        {/* Fluxo visual: Origem → Destino */}
+                        {/* Fluxo visual corrigido */}
                         <div className="flex items-center gap-3 text-sm">
-                          {/* Origem */}
-                          {isCrypto && walletDetails ? (
-                            <div className="flex flex-col items-center min-w-[80px]">
-                              <div className="flex items-center gap-1.5">
-                                <Wallet className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-xs font-medium uppercase">{walletExchange}</span>
-                              </div>
-                              {walletParceiroShort && (
-                                <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">
-                                  {walletParceiroShort}
-                                </span>
+                          {isDeposito ? (
+                            <>
+                              {/* DEPÓSITO: Wallet/Banco → Bookmaker */}
+                              {isCrypto && walletDetails ? (
+                                <div className="flex flex-col items-center min-w-[80px]">
+                                  <div className="flex items-center gap-1.5">
+                                    <Wallet className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-xs font-medium uppercase">{walletExchange}</span>
+                                  </div>
+                                  {walletParceiroShort && (
+                                    <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">
+                                      {walletParceiroShort}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground">{moedaOrigem}</span>
+                                </div>
                               )}
-                            </div>
+
+                              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+
+                              {/* Destino: Bookmaker */}
+                              <div className="flex items-center gap-2">
+                                {bookmakerLogo ? (
+                                  <img
+                                    src={bookmakerLogo}
+                                    alt=""
+                                    className="h-5 w-5 rounded object-contain"
+                                  />
+                                ) : (
+                                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                                )}
+                                <span className="text-xs font-medium uppercase">{bookmakerNome}</span>
+                              </div>
+                            </>
                           ) : (
-                            <div className="flex items-center gap-1">
-                              <Building2 className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground">{moedaOrigem}</span>
-                            </div>
+                            <>
+                              {/* SAQUE: Bookmaker → Wallet/Banco */}
+                              <div className="flex items-center gap-2">
+                                {bookmakerLogo ? (
+                                  <img
+                                    src={bookmakerLogo}
+                                    alt=""
+                                    className="h-5 w-5 rounded object-contain"
+                                  />
+                                ) : (
+                                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                                )}
+                                <span className="text-xs font-medium uppercase">{bookmakerNome}</span>
+                              </div>
+
+                              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+
+                              {/* Destino do saque: Wallet ou Banco */}
+                              {isCrypto && walletDetails ? (
+                                <div className="flex flex-col items-center min-w-[80px]">
+                                  <div className="flex items-center gap-1.5">
+                                    <Wallet className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-xs font-medium uppercase">{walletExchange}</span>
+                                  </div>
+                                  {walletParceiroShort && (
+                                    <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">
+                                      {walletParceiroShort}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : contaBancaria ? (
+                                <div className="flex flex-col items-center min-w-[80px]">
+                                  <div className="flex items-center gap-1.5">
+                                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-xs font-medium uppercase">{contaBancoNome}</span>
+                                  </div>
+                                  {(contaTitularShort || destinoParceiroShort) && (
+                                    <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">
+                                      {contaTitularShort || destinoParceiroShort}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : destinoParceiroNome ? (
+                                <div className="flex flex-col items-center min-w-[80px]">
+                                  <div className="flex items-center gap-1.5">
+                                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-xs font-medium uppercase">Parceiro</span>
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">
+                                    {destinoParceiroShort}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground">{moedaDestino}</span>
+                                </div>
+                              )}
+                            </>
                           )}
-
-                          <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-
-                          {/* Destino: Bookmaker com logo */}
-                          <div className="flex items-center gap-2">
-                            {bookmakerLogo ? (
-                              <img
-                                src={bookmakerLogo}
-                                alt=""
-                                className="h-5 w-5 rounded object-contain"
-                              />
-                            ) : (
-                              <Building2 className="h-5 w-5 text-muted-foreground" />
-                            )}
-                            <span className="text-xs font-medium uppercase">{bookmakerNome}</span>
-                          </div>
                         </div>
 
                         {/* Valores */}

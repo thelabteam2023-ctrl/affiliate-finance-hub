@@ -156,6 +156,7 @@ export function CaixaTabsContainer({
             wallets={wallets}
             walletsDetalhes={walletsDetalhes}
             parceiros={parceiros}
+            contasBancarias={contasBancarias}
             onRefresh={onRefresh}
           />
         </TabsContent>
