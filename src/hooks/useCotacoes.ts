@@ -1,5 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+/**
+ * Hook de compatibilidade para cotações
+ * 
+ * IMPORTANTE: Este hook agora consome dados do ExchangeRatesContext global.
+ * Não faz requisições próprias - apenas repassa os dados do Context.
+ * 
+ * Para novos componentes, considere usar useExchangeRates() diretamente.
+ */
+
+import { useEffect, useCallback, useMemo } from "react";
+import { useExchangeRates, useExchangeRatesSafe } from "@/contexts/ExchangeRatesContext";
+import type { CotacaoSource, CotacaoSourceInfo } from "@/contexts/ExchangeRatesContext";
+
+// Re-export types for backwards compatibility
+export type { CotacaoSource, CotacaoSourceInfo };
 
 export interface ExchangeRates {
   USDBRL: number;
@@ -12,128 +25,119 @@ export interface ExchangeRates {
 }
 
 /**
- * Tipos de fonte para cotações:
- * - FASTFOREX: Cotação da API FastForex (fonte primária para TODAS as moedas)
- * - PTAX_FALLBACK: PTAX como segundo fallback para USD, EUR, GBP
- * - TRABALHO_FALLBACK: Usando cotação de trabalho como fallback (fonte oficial indisponível)
- * - FALLBACK: Usando valor fallback hardcoded (terceira opção)
+ * Hook de cotações que consome do Context global
+ * 
+ * @param cryptoSymbols - Símbolos de crypto para buscar preços
+ * @returns Objeto com cotações e funções utilitárias
  */
-export type CotacaoSource = 
-  | 'FASTFOREX' 
-  | 'FASTFOREX_CACHE' 
-  | 'PTAX_FALLBACK' 
-  | 'PTAX_FALLBACK_CACHE' 
-  | 'TRABALHO_FALLBACK' 
-  | 'FALLBACK'
-  | 'INDISPONIVEL';
+export function useCotacoes(cryptoSymbols: string[] = []) {
+  const context = useExchangeRatesSafe();
+  
+  // Se não há context (fora do provider), retornar valores fallback
+  if (!context) {
+    console.warn("[useCotacoes] Usado fora do ExchangeRatesProvider - retornando fallbacks");
+    return getFallbackValues();
+  }
 
-export interface CotacaoSourceInfo {
-  source: CotacaoSource;
-  label: string;
-  isOfficial: boolean;
-  isFallback: boolean;
-  isPtaxFallback: boolean;
-}
+  const {
+    cotacaoUSD,
+    cotacaoEUR,
+    cotacaoGBP,
+    cotacaoMYR,
+    cotacaoMXN,
+    cotacaoARS,
+    cotacaoCOP,
+    cryptoPrices,
+    loading,
+    lastUpdate,
+    sources,
+    source,
+    getRate,
+    convertToBRL,
+    convertUSDtoBRL,
+    convertBRLtoUSD,
+    getCryptoPrice,
+    getCryptoUSDValue,
+    refreshRates,
+    refreshCrypto,
+  } = context;
 
-interface CotacoesState {
-  cotacaoUSD: number;
-  cotacaoEUR: number;
-  cotacaoGBP: number;
-  cotacaoMYR: number;
-  cotacaoMXN: number;
-  cotacaoARS: number;
-  cotacaoCOP: number;
-  cryptoPrices: Record<string, number>;
-  loading: boolean;
-  lastUpdate: Date | null;
-  sources: {
-    usd: CotacaoSourceInfo;
-    eur: CotacaoSourceInfo;
-    gbp: CotacaoSourceInfo;
-    myr: CotacaoSourceInfo;
-    mxn: CotacaoSourceInfo;
-    ars: CotacaoSourceInfo;
-    cop: CotacaoSourceInfo;
-    crypto: string;
+  // Buscar crypto quando symbols mudam
+  useEffect(() => {
+    if (cryptoSymbols.length > 0) {
+      // Verificar quais symbols ainda não temos
+      const missing = cryptoSymbols.filter(s => !cryptoPrices[s.toUpperCase()]);
+      if (missing.length > 0) {
+        refreshCrypto(missing);
+      }
+    }
+  }, [cryptoSymbols.join(","), refreshCrypto]);
+
+  // Objeto com todas as cotações para acesso direto
+  const rates: ExchangeRates = useMemo(() => ({
+    USDBRL: cotacaoUSD,
+    EURBRL: cotacaoEUR,
+    GBPBRL: cotacaoGBP,
+    MYRBRL: cotacaoMYR,
+    MXNBRL: cotacaoMXN,
+    ARSBRL: cotacaoARS,
+    COPBRL: cotacaoCOP,
+  }), [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+
+  return {
+    // Valores individuais
+    cotacaoUSD,
+    cotacaoEUR,
+    cotacaoGBP,
+    cotacaoMYR,
+    cotacaoMXN,
+    cotacaoARS,
+    cotacaoCOP,
+    cryptoPrices,
+    loading,
+    lastUpdate,
+    
+    // Objeto agregado
+    rates,
+    
+    // Sources
+    sources,
+    source,
+    
+    // Funções
+    refreshAll: refreshRates,
+    convertUSDtoBRL,
+    convertBRLtoUSD,
+    convertToBRL,
+    getRate,
+    getCryptoUSDValue,
+    getCryptoPrice,
   };
 }
-
-const REFRESH_INTERVAL = 60000; // 60 segundos
-
-// Fallbacks de referência
-const FALLBACK_RATES: ExchangeRates = {
-  USDBRL: 5.31,
-  EURBRL: 6.10,
-  GBPBRL: 7.10,
-  MYRBRL: 1.20,
-  MXNBRL: 0.26,
-  ARSBRL: 0.005,
-  COPBRL: 0.0013
-};
 
 /**
- * Mapeia a fonte retornada pela edge function para o tipo CotacaoSourceInfo
- * Nova hierarquia: FastForex (primário) → PTAX (fallback USD/EUR/GBP) → Hardcoded
+ * Valores fallback para uso fora do provider
  */
-function parseSource(rawSource: string): CotacaoSourceInfo {
-  const source = rawSource?.toUpperCase() || '';
-  
-  // FastForex (fonte primária para TODAS as moedas)
-  if (source === 'FASTFOREX' || source === 'FASTFOREX_CACHE') {
-    return {
-      source: source.includes('CACHE') ? 'FASTFOREX_CACHE' : 'FASTFOREX',
-      label: 'FastForex',
-      isOfficial: true,
-      isFallback: false,
-      isPtaxFallback: false
-    };
-  }
-  
-  // PTAX - pode ser fallback (nova lógica) ou legado do cache antigo
-  // Ambos são considerados oficiais - PTAX é segunda opção após FastForex
-  if (source === 'PTAX' || source === 'PTAX_CACHE' || source === 'PTAX_FALLBACK' || source === 'PTAX_FALLBACK_CACHE') {
-    const isFromCache = source.includes('CACHE');
-    const isFallbackSource = source.includes('FALLBACK');
-    return {
-      source: isFromCache ? 'PTAX_FALLBACK_CACHE' : 'PTAX_FALLBACK',
-      label: isFallbackSource ? 'PTAX (fallback)' : 'PTAX BCB',
-      isOfficial: true,
-      isFallback: false,
-      isPtaxFallback: true
-    };
-  }
-  
-  // Fallback hardcoded quando nenhuma fonte disponível
-  if (source === 'FALLBACK' || source === 'FALLBACK_ERRO') {
-    return {
-      source: 'FALLBACK',
-      label: 'Fallback',
-      isOfficial: false,
-      isFallback: true,
-      isPtaxFallback: false
-    };
-  }
-  
-  // Indisponível
-  return {
-    source: 'INDISPONIVEL',
-    label: 'Indisponível',
+function getFallbackValues() {
+  const FALLBACK_RATES: ExchangeRates = {
+    USDBRL: 5.31,
+    EURBRL: 6.10,
+    GBPBRL: 7.10,
+    MYRBRL: 1.20,
+    MXNBRL: 0.26,
+    ARSBRL: 0.005,
+    COPBRL: 0.0013,
+  };
+
+  const defaultSourceInfo: CotacaoSourceInfo = {
+    source: 'FALLBACK',
+    label: 'Fallback',
     isOfficial: false,
     isFallback: true,
-    isPtaxFallback: false
+    isPtaxFallback: false,
   };
-}
 
-const defaultSourceInfo: CotacaoSourceInfo = {
-  source: 'FALLBACK',
-  label: 'Fallback',
-  isOfficial: false,
-  isFallback: true,
-  isPtaxFallback: false
-};
-
-export function useCotacoes(cryptoSymbols: string[] = []) {
-  const [state, setState] = useState<CotacoesState>({
+  return {
     cotacaoUSD: FALLBACK_RATES.USDBRL,
     cotacaoEUR: FALLBACK_RATES.EURBRL,
     cotacaoGBP: FALLBACK_RATES.GBPBRL,
@@ -142,8 +146,9 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
     cotacaoARS: FALLBACK_RATES.ARSBRL,
     cotacaoCOP: FALLBACK_RATES.COPBRL,
     cryptoPrices: {},
-    loading: true,
+    loading: false,
     lastUpdate: null,
+    rates: FALLBACK_RATES,
     sources: {
       usd: defaultSourceInfo,
       eur: defaultSourceInfo,
@@ -152,208 +157,45 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
       mxn: defaultSourceInfo,
       ars: defaultSourceInfo,
       cop: defaultSourceInfo,
-      crypto: "fallback"
-    }
-  });
-
-  const fetchExchangeRate = useCallback(async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke("get-exchange-rates");
-      if (error) throw error;
-      
-      const newState: Partial<CotacoesState> = {};
-      
-      // sources contém informação detalhada por moeda vinda da edge function
-      const rawSources = data?.sources || {};
-      
-      // Processar USD, EUR, GBP (fonte primária: PTAX)
-      if (data?.USDBRL) {
-        newState.cotacaoUSD = data.USDBRL;
-      }
-      if (data?.EURBRL) {
-        newState.cotacaoEUR = data.EURBRL;
-      }
-      if (data?.GBPBRL) {
-        newState.cotacaoGBP = data.GBPBRL;
-      }
-      
-      // Processar MYR, MXN, ARS, COP (fonte primária: FastForex)
-      if (data?.MYRBRL !== null && data?.MYRBRL !== undefined) {
-        newState.cotacaoMYR = data.MYRBRL;
-      }
-      if (data?.MXNBRL !== null && data?.MXNBRL !== undefined) {
-        newState.cotacaoMXN = data.MXNBRL;
-      }
-      if (data?.ARSBRL !== null && data?.ARSBRL !== undefined) {
-        newState.cotacaoARS = data.ARSBRL;
-      }
-      if (data?.COPBRL !== null && data?.COPBRL !== undefined) {
-        newState.cotacaoCOP = data.COPBRL;
-      }
-      
-      // Parsear sources - agora TODAS usam FastForex como primário
-      const newSources = {
-        usd: parseSource(rawSources.USD),
-        eur: parseSource(rawSources.EUR),
-        gbp: parseSource(rawSources.GBP),
-        myr: parseSource(rawSources.MYR),
-        mxn: parseSource(rawSources.MXN),
-        ars: parseSource(rawSources.ARS),
-        cop: parseSource(rawSources.COP),
-        crypto: state.sources.crypto
-      };
-      
-      setState(prev => ({
-        ...prev,
-        ...newState,
-        sources: newSources
-      }));
-      
-      console.log("Cotações atualizadas:", {
-        USD: { value: data?.USDBRL, source: rawSources.USD },
-        EUR: { value: data?.EURBRL, source: rawSources.EUR },
-        GBP: { value: data?.GBPBRL, source: rawSources.GBP },
-        MYR: { value: data?.MYRBRL, source: rawSources.MYR },
-        MXN: { value: data?.MXNBRL, source: rawSources.MXN },
-        ARS: { value: data?.ARSBRL, source: rawSources.ARS },
-        COP: { value: data?.COPBRL, source: rawSources.COP },
-      });
-    } catch (error) {
-      console.error("Erro ao buscar cotações:", error);
-    }
-  }, []);
-
-  const fetchCryptoPrices = useCallback(async (symbols: string[]) => {
-    if (symbols.length === 0) return;
-    try {
-      const { data, error } = await supabase.functions.invoke("get-crypto-prices", {
-        body: { symbols }
-      });
-      if (error) throw error;
-      if (data?.prices) {
-        setState(prev => ({
-          ...prev,
-          cryptoPrices: data.prices,
-          sources: { ...prev.sources, crypto: "Binance" }
-        }));
-        console.log("Cotações crypto atualizadas:", data.prices);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar cotações crypto:", error);
-    }
-  }, []);
-
-  const refreshAll = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true }));
-    await Promise.all([
-      fetchExchangeRate(),
-      cryptoSymbols.length > 0 ? fetchCryptoPrices(cryptoSymbols) : Promise.resolve()
-    ]);
-    setState(prev => ({ ...prev, loading: false, lastUpdate: new Date() }));
-  }, [fetchExchangeRate, fetchCryptoPrices, cryptoSymbols]);
-
-  // Buscar cotações na montagem
-  useEffect(() => {
-    refreshAll();
-  }, []);
-
-  // Atualizar crypto prices quando symbols mudam
-  useEffect(() => {
-    if (cryptoSymbols.length > 0) {
-      fetchCryptoPrices(cryptoSymbols);
-    }
-  }, [cryptoSymbols.join(",")]);
-
-  // Auto-refresh a cada intervalo
-  useEffect(() => {
-    const interval = setInterval(refreshAll, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [refreshAll]);
-
-  // Funções utilitárias
-  const convertUSDtoBRL = useCallback((usd: number) => {
-    return usd * state.cotacaoUSD;
-  }, [state.cotacaoUSD]);
-
-  const convertBRLtoUSD = useCallback((brl: number) => {
-    return brl / state.cotacaoUSD;
-  }, [state.cotacaoUSD]);
-
-  const convertToBRL = useCallback((valor: number, moeda: string): number => {
-    const moedaUpper = moeda.toUpperCase();
-    switch (moedaUpper) {
-      case "BRL": return valor;
-      case "USD": return valor * state.cotacaoUSD;
-      case "EUR": return valor * state.cotacaoEUR;
-      case "GBP": return valor * state.cotacaoGBP;
-      case "MYR": return valor * state.cotacaoMYR;
-      case "MXN": return valor * state.cotacaoMXN;
-      case "ARS": return valor * state.cotacaoARS;
-      case "COP": return valor * state.cotacaoCOP;
-      default: return valor;
-    }
-  }, [state.cotacaoUSD, state.cotacaoEUR, state.cotacaoGBP, state.cotacaoMYR, state.cotacaoMXN, state.cotacaoARS, state.cotacaoCOP]);
-
-  const getRate = useCallback((moeda: string): number => {
-    const moedaUpper = moeda.toUpperCase();
-    switch (moedaUpper) {
-      case "USD": return state.cotacaoUSD;
-      case "EUR": return state.cotacaoEUR;
-      case "GBP": return state.cotacaoGBP;
-      case "MYR": return state.cotacaoMYR;
-      case "MXN": return state.cotacaoMXN;
-      case "ARS": return state.cotacaoARS;
-      case "COP": return state.cotacaoCOP;
-      case "BRL": return 1;
-      default: return 1;
-    }
-  }, [state.cotacaoUSD, state.cotacaoEUR, state.cotacaoGBP, state.cotacaoMYR, state.cotacaoMXN, state.cotacaoARS, state.cotacaoCOP]);
-
-  const getCryptoUSDValue = useCallback((coin: string, quantity: number, fallbackUSD?: number) => {
-    const price = state.cryptoPrices[coin];
-    if (price) return quantity * price;
-    return fallbackUSD ?? 0;
-  }, [state.cryptoPrices]);
-
-  const getCryptoPrice = useCallback((coin: string) => {
-    return state.cryptoPrices[coin] ?? null;
-  }, [state.cryptoPrices]);
-
-  // Objeto com todas as cotações para acesso direto
-  const rates: ExchangeRates = {
-    USDBRL: state.cotacaoUSD,
-    EURBRL: state.cotacaoEUR,
-    GBPBRL: state.cotacaoGBP,
-    MYRBRL: state.cotacaoMYR,
-    MXNBRL: state.cotacaoMXN,
-    ARSBRL: state.cotacaoARS,
-    COPBRL: state.cotacaoCOP
-  };
-
-  // Compatibilidade com código legado - mapear sources para source
-  const sources = state.sources;
-  const source = {
-    usd: sources?.usd?.label ?? 'fallback',
-    eur: sources?.eur?.label ?? 'fallback',
-    gbp: sources?.gbp?.label ?? 'fallback',
-    myr: sources?.myr?.label ?? 'fallback',
-    mxn: sources?.mxn?.label ?? 'fallback',
-    ars: sources?.ars?.label ?? 'fallback',
-    cop: sources?.cop?.label ?? 'fallback',
-    crypto: sources?.crypto ?? 'fallback'
-  };
-
-  return {
-    ...state,
-    rates,
-    source, // Compatibilidade legado
-    sources: state.sources, // Novo formato com mais detalhes
-    refreshAll,
-    convertUSDtoBRL,
-    convertBRLtoUSD,
-    convertToBRL,
-    getRate,
-    getCryptoUSDValue,
-    getCryptoPrice
+      crypto: "fallback",
+    },
+    source: {
+      usd: "Fallback",
+      eur: "Fallback",
+      gbp: "Fallback",
+      myr: "Fallback",
+      mxn: "Fallback",
+      ars: "Fallback",
+      cop: "Fallback",
+      crypto: "fallback",
+    },
+    refreshAll: async () => {},
+    convertUSDtoBRL: (usd: number) => usd * FALLBACK_RATES.USDBRL,
+    convertBRLtoUSD: (brl: number) => brl / FALLBACK_RATES.USDBRL,
+    convertToBRL: (valor: number, moeda: string) => {
+      const m = moeda.toUpperCase();
+      if (m === "BRL") return valor;
+      if (m === "USD") return valor * FALLBACK_RATES.USDBRL;
+      if (m === "EUR") return valor * FALLBACK_RATES.EURBRL;
+      if (m === "GBP") return valor * FALLBACK_RATES.GBPBRL;
+      if (m === "MYR") return valor * FALLBACK_RATES.MYRBRL;
+      if (m === "MXN") return valor * FALLBACK_RATES.MXNBRL;
+      if (m === "ARS") return valor * FALLBACK_RATES.ARSBRL;
+      if (m === "COP") return valor * FALLBACK_RATES.COPBRL;
+      return valor;
+    },
+    getRate: (moeda: string) => {
+      const m = moeda.toUpperCase();
+      if (m === "USD") return FALLBACK_RATES.USDBRL;
+      if (m === "EUR") return FALLBACK_RATES.EURBRL;
+      if (m === "GBP") return FALLBACK_RATES.GBPBRL;
+      if (m === "MYR") return FALLBACK_RATES.MYRBRL;
+      if (m === "MXN") return FALLBACK_RATES.MXNBRL;
+      if (m === "ARS") return FALLBACK_RATES.ARSBRL;
+      if (m === "COP") return FALLBACK_RATES.COPBRL;
+      return 1;
+    },
+    getCryptoUSDValue: (coin: string, quantity: number, fallbackUSD?: number) => fallbackUSD ? quantity * fallbackUSD : 0,
+    getCryptoPrice: (coin: string) => null,
   };
 }
