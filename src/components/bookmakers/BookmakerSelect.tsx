@@ -93,7 +93,9 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   const lastFetchedValue = useRef<string>("");
   const triggerRef = useRef<HTMLButtonElement>(null);
   const isVinculoMode = !!parceiroId && !modoSaque;
-  const isModoSaque = modoSaque && workspaceId;
+  // CRÍTICO: modoSaque ativo requer workspaceId - se ainda não carregou, aguardar
+  const isModoSaque = modoSaque === true && !!workspaceId;
+  const modoSaqueAguardandoWorkspace = modoSaque === true && !workspaceId;
 
   // Expose focus and open methods via ref
   useImperativeHandle(ref, () => ({
@@ -179,6 +181,14 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     const abortController = new AbortController();
     
     const fetchBookmakers = async () => {
+      // MODO SAQUE AGUARDANDO WORKSPACE: Não fazer nada ainda
+      if (modoSaqueAguardandoWorkspace) {
+        setPrerequisitesReady(false);
+        setItems([]);
+        setLoading(false);
+        return;
+      }
+      
       // MODO SAQUE: Buscar TODAS as bookmakers do workspace com saldo (ignora parceiroId)
       if (isModoSaque) {
         setPrerequisitesReady(true);
@@ -366,7 +376,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     return () => {
       abortController.abort();
     };
-  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro, moedaOperacional, isModoSaque, workspaceId]);
+  }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro, moedaOperacional, isModoSaque, workspaceId, modoSaqueAguardandoWorkspace]);
 
   // Buscar dados de exibição quando value muda - execução imediata e determinística
   useEffect(() => {
@@ -458,7 +468,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                 variant="outline"
                 role="combobox"
                 aria-expanded={open}
-                disabled={disabled || loading || !prerequisitesReady}
+                disabled={disabled || loading || !prerequisitesReady || modoSaqueAguardandoWorkspace}
                 className="w-full h-12 justify-center"
               >
                 <div className="flex items-center justify-center gap-2 w-full">
@@ -477,9 +487,11 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                         ? "Carregando..." 
                         : loadingDisplay
                           ? "Carregando..."
-                          : !prerequisitesReady
-                            ? "Aguardando..."
-                            : "Selecione..."}
+                          : modoSaqueAguardandoWorkspace
+                            ? "Carregando workspace..."
+                            : !prerequisitesReady
+                              ? "Aguardando..."
+                              : "Selecione..."}
                   </span>
                   <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                 </div>
@@ -523,17 +535,19 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
               <CommandEmpty>
                 {loading
                   ? "Carregando..."
-                  : !prerequisitesReady
-                    ? "Selecione os campos anteriores"
-                    : isModoSaque
-                      ? "Nenhuma bookmaker com saldo disponível para saque"
-                      : parceiroId 
-                        ? (moedaOperacional
-                            ? `Nenhuma bookmaker compatível com ${moedaOperacional} neste parceiro`
-                            : somenteComSaldo || somenteComSaldoFiat || somenteComSaldoUsd
-                              ? "Este parceiro não possui bookmakers com saldo disponível" 
-                              : "Este parceiro não possui bookmakers vinculadas")
-                        : "Nenhuma bookmaker encontrada"}
+                  : modoSaqueAguardandoWorkspace
+                    ? "Carregando workspace..."
+                    : !prerequisitesReady
+                      ? "Selecione os campos anteriores"
+                      : isModoSaque
+                        ? "Nenhuma bookmaker com saldo disponível para saque"
+                        : parceiroId 
+                          ? (moedaOperacional
+                              ? `Nenhuma bookmaker compatível com ${moedaOperacional} neste parceiro`
+                              : somenteComSaldo || somenteComSaldoFiat || somenteComSaldoUsd
+                                ? "Este parceiro não possui bookmakers com saldo disponível" 
+                                : "Este parceiro não possui bookmakers vinculadas")
+                          : "Nenhuma bookmaker encontrada"}
               </CommandEmpty>
               <CommandGroup>
                 {filteredItems.map((item) => {
