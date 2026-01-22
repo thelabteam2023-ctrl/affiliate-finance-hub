@@ -68,6 +68,8 @@ export interface SaquePendente {
   cotacao_original?: number;
   moeda_origem?: string;
   valor_origem?: number; // Valor na moeda da casa
+  valor_destino?: number; // Valor esperado na moeda de destino (estimativa)
+  cotacao_snapshot?: number; // Cotação usada na estimativa
   // Dados da wallet de destino
   wallet_network?: string;
   wallet_exchange?: string;
@@ -115,8 +117,9 @@ export function ConfirmarSaqueDialog({
         setQtdCoinRecebida(saque.qtd_coin?.toString() || "");
         setValorRecebido("");
       } else {
-        // Saque FIAT
-        setValorRecebido(saque.valor.toString());
+        // Saque FIAT - pré-preencher com valor ESPERADO na moeda de destino
+        const valorDestinoEstimado = saque.valor_destino || saque.valor;
+        setValorRecebido(valorDestinoEstimado.toString());
         setQtdCoinRecebida("");
       }
     }
@@ -150,11 +153,15 @@ export function ConfirmarSaqueDialog({
   const diferencaCoin = qtdCoinEsperada - qtdCoinRecebidaNum;
   const temDiferencaCrypto = Math.abs(diferencaCoin) > 0.001;
 
-  // Dados do saque FIAT
+  // Dados do saque FIAT - CORRIGIDO para moeda de destino
   const valorRecebidoNum = parseFloat(valorRecebido) || 0;
-  const diferencaFiat = valorRecebidoNum - (saque?.valor || 0);
+  const moedaDestinoFiat = saque?.moeda_destino || "BRL";
+  const valorEsperadoDestino = saque?.valor_destino || saque?.valor || 0;
+  const cotacaoUsada = saque?.cotacao_snapshot || 0;
+  
+  // Diferença calculada na moeda de DESTINO (BRL), não na moeda da casa
+  const diferencaFiat = valorRecebidoNum - valorEsperadoDestino;
   const temDiferencaFiat = Math.abs(diferencaFiat) > 0.01;
-  const moedaDestinoFiat = saque?.moeda_destino || saque?.moeda || "BRL";
 
   // Validação - SIMPLIFICADA para crypto (apenas quantidade)
   const isValidCrypto = isCryptoWithdrawal && qtdCoinRecebidaNum > 0;
@@ -483,12 +490,34 @@ export function ConfirmarSaqueDialog({
                       </div>
                     </>
                   ) : (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Valor Solicitado</span>
-                      <span className="text-lg font-semibold text-muted-foreground">
-                        {formatCurrency(valorCasa, moedaCasa)}
-                      </span>
-                    </div>
+                    <>
+                      {/* Valor Sacado (moeda da casa) */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Valor Sacado</span>
+                        <span className="text-lg font-semibold">
+                          {formatCurrency(valorCasa, moedaCasa)}
+                        </span>
+                      </div>
+                      {/* Valor Esperado (moeda de destino) */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Valor Esperado</span>
+                        <div className="text-right">
+                          <span className="text-lg font-semibold text-muted-foreground">
+                            ~{formatCurrency(valorEsperadoDestino, moedaDestinoFiat)}
+                          </span>
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            estimado
+                          </Badge>
+                        </div>
+                      </div>
+                      {/* Cotação usada na estimativa */}
+                      {cotacaoUsada > 0 && moedaCasa !== moedaDestinoFiat && (
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Cotação ({moedaCasa}/{moedaDestinoFiat})</span>
+                          <span>{cotacaoUsada.toFixed(4)}</span>
+                        </div>
+                      )}
+                    </>
                   )}
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Solicitado em</span>
@@ -552,34 +581,51 @@ export function ConfirmarSaqueDialog({
                 )}
               </div>
             ) : (
-              /* SEÇÃO FIAT */
-              <div className="space-y-2">
-                <Label htmlFor="valor-recebido" className="flex items-center gap-2">
-                  Valor Real Recebido ({moedaCasa})
-                  <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="valor-recebido"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={valorRecebido}
-                  onChange={(e) => setValorRecebido(e.target.value)}
-                  placeholder="0.00"
-                  className="text-lg font-mono"
-                  autoFocus
-                />
+              /* SEÇÃO FIAT - CORRIGIDA para moeda de destino */
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Landmark className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Valor Real Recebido</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Informe o valor exato que você recebeu na conta bancária em {moedaDestinoFiat}. A diferença entre esperado e recebido será registrada como resultado da liquidação cambial.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="valor-recebido" className="flex items-center gap-2">
+                    Valor Recebido ({moedaDestinoFiat})
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="valor-recebido"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={valorRecebido}
+                    onChange={(e) => setValorRecebido(e.target.value)}
+                    placeholder="0.00"
+                    className="text-lg font-mono"
+                    autoFocus
+                  />
+                </div>
                 
                 {temDiferencaFiat && valorRecebidoNum > 0 && (
-                  <div className={`flex items-center gap-2 text-sm p-2 rounded-md ${
+                  <div className={`flex items-center gap-2 text-sm p-3 rounded-md ${
                     diferencaFiat > 0 
-                      ? "bg-emerald-500/10 text-emerald-400" 
-                      : "bg-warning/10 text-warning"
+                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" 
+                      : "bg-warning/10 text-warning border border-warning/30"
                   }`}>
                     <AlertTriangle className="h-4 w-4" />
                     <span>
-                      {diferencaFiat > 0 ? "Ganho cambial: +" : "Perda cambial: "}
-                      {formatCurrency(Math.abs(diferencaFiat), moedaDestinoFiat)}
+                      {diferencaFiat > 0 ? "Ganho na liquidação: +" : "Perda na liquidação: "}
+                      <strong>{formatCurrency(Math.abs(diferencaFiat), moedaDestinoFiat)}</strong>
                     </span>
                   </div>
                 )}

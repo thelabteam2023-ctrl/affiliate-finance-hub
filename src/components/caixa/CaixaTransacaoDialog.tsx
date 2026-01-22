@@ -1861,6 +1861,56 @@ export function CaixaTransacaoDialog({
         status_valor: precisaConversao ? "ESTIMADO" : "CONFIRMADO",
       };
 
+      // =========================================================================
+      // SAQUE FIAT: Corrigir valor_destino para moeda de DESTINO (BRL)
+      // Modelo: Sacamos €102 → Esperamos R$ 6.320 → Recebemos R$ X.XXX
+      // =========================================================================
+      if (tipoTransacao === "SAQUE" && origemBookmakerId && tipoMoeda === "FIAT") {
+        const bm = bookmakers.find(b => b.id === origemBookmakerId);
+        const moedaCasa = bm?.moeda || "BRL";
+        const moedaContaDestino = moeda; // Moeda da conta bancária de destino
+        
+        // Valor de ORIGEM = valor na moeda da CASA
+        transactionData.moeda_origem = moedaCasa;
+        transactionData.valor_origem = valorOrigem;
+        
+        // Valor de DESTINO = estimativa na moeda da CONTA de destino
+        transactionData.moeda_destino = moedaContaDestino;
+        
+        if (moedaCasa !== moedaContaDestino) {
+          // Calcular estimativa: Casa → Destino
+          const taxaCasa = getRate(moedaCasa);
+          const taxaDestino = getRate(moedaContaDestino);
+          
+          // Conversão: Casa → BRL → Destino
+          let valorBRLFromCasa = valorOrigem;
+          if (moedaCasa !== "BRL") {
+            valorBRLFromCasa = valorOrigem * taxaCasa;
+          }
+          
+          let valorDestinoEstimado = valorBRLFromCasa;
+          if (moedaContaDestino !== "BRL") {
+            valorDestinoEstimado = valorBRLFromCasa / taxaDestino;
+          }
+          
+          // Cotação direta entre as moedas para auditoria
+          const cotacaoSnapshot = moedaCasa === moedaContaDestino 
+            ? 1.0 
+            : taxaCasa / taxaDestino;
+          
+          transactionData.valor_destino = valorDestinoEstimado;
+          transactionData.cotacao_snapshot = cotacaoSnapshot;
+        } else {
+          // Mesma moeda - sem conversão
+          transactionData.valor_destino = valorOrigem;
+          transactionData.cotacao_snapshot = 1.0;
+        }
+        
+        // Moeda canônica para ledger = moeda da CASA (para trigger de débito)
+        transactionData.moeda = moedaCasa;
+        transactionData.valor = valorOrigem;
+      }
+
       // Add crypto-specific fields
       if (tipoMoeda === "CRYPTO") {
         transactionData.coin = coin;
@@ -1887,6 +1937,7 @@ export function CaixaTransacaoDialog({
           transactionData.valor_usd = valorEmUSD;
           transactionData.cotacao = cotacaoCoin;
           transactionData.cotacao_implicita = cotacaoCoin;
+          transactionData.cotacao_snapshot = cotacaoCoin; // Para auditoria
           
           // Registrar moeda de origem (moeda da casa)
           transactionData.moeda_origem = moedaCasaSaque;
