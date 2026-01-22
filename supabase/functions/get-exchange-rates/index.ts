@@ -50,25 +50,24 @@ function getSupabaseClient() {
 /**
  * Busca cotações do cache no banco de dados
  */
-async function getCachedRates(): Promise<Record<string, { rate: number; source: string }>> {
+async function getCachedRates(): Promise<Record<string, { rate: number; source: string; expires_at: string }>> {
   const supabase = getSupabaseClient();
-  const now = new Date().toISOString();
   
   const { data, error } = await supabase
     .from('exchange_rate_cache')
-    .select('currency_pair, rate, source')
-    .gt('expires_at', now);
+    .select('currency_pair, rate, source, expires_at');
   
   if (error) {
     console.error('Erro ao buscar cache:', error);
     return {};
   }
   
-  const cached: Record<string, { rate: number; source: string }> = {};
+  const cached: Record<string, { rate: number; source: string; expires_at: string }> = {};
   for (const row of data || []) {
     cached[row.currency_pair] = { 
       rate: Number(row.rate), 
-      source: row.source 
+      source: row.source,
+      expires_at: row.expires_at,
     };
   }
   
@@ -168,13 +167,19 @@ serve(async (req) => {
     console.log('Fetching exchange rates');
 
     // 1. Verificar cache no banco de dados
+    // IMPORTANTE: mesmo se o cache estiver expirado, ainda retornamos o último valor
+    // para evitar cair em fallback hardcoded quando houver instabilidade momentânea.
     const cachedRates = await getCachedRates();
     const allCurrencies = Object.keys(CURRENCIES);
-    const cachedCurrencies = Object.keys(cachedRates).map(k => k.replace('BRL', ''));
-    const missingCurrencies = allCurrencies.filter(c => !cachedCurrencies.includes(c));
+    const nowIso = new Date().toISOString();
+
+    const currenciesToRefresh = allCurrencies.filter((c) => {
+      const entry = cachedRates[`${c}BRL`];
+      return !entry || entry.expires_at <= nowIso;
+    });
     
-    // Se temos todas as moedas em cache, retornar direto
-    if (missingCurrencies.length === 0) {
+    // Se temos todas as moedas em cache válido, retornar direto
+    if (currenciesToRefresh.length === 0) {
       console.log('Todas as cotações em cache válido');
       const finalRates: Record<string, number | null> = {};
       const sources: Record<string, string> = {};
@@ -201,23 +206,23 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Moedas faltando no cache: ${missingCurrencies.join(', ')}`);
+    console.log(`Moedas para refresh (expiradas/ausentes): ${currenciesToRefresh.join(', ')}`);
 
     const today = new Date();
     const rates: Record<string, number | null> = {};
     const newRatesToCache: Record<string, { rate: number; source: string }> = {};
     
-    // Usar cache existente
+    // Usar cache existente (mesmo expirado) como base
     for (const [key, data] of Object.entries(cachedRates)) {
       rates[key] = data.rate;
     }
 
-    // 2. FONTE PRIMÁRIA: FastForex para TODAS as moedas faltando
-    if (missingCurrencies.length > 0) {
-      console.log('Buscando FastForex (fonte primária) para:', missingCurrencies.join(', '));
+    // 2. FONTE PRIMÁRIA: FastForex para TODAS as moedas que precisam de refresh
+    if (currenciesToRefresh.length > 0) {
+      console.log('Buscando FastForex (fonte primária) para:', currenciesToRefresh.join(', '));
       const fastForexRates = await fetchFastForexRates();
       
-      for (const currency of missingCurrencies) {
+      for (const currency of currenciesToRefresh) {
         const rateKey = `${currency}BRL`;
         if (fastForexRates[rateKey]) {
           rates[rateKey] = fastForexRates[rateKey];
@@ -226,9 +231,9 @@ serve(async (req) => {
       }
     }
 
-    // 3. FALLBACK SECUNDÁRIO: PTAX para USD, EUR, GBP que ainda faltam
+    // 3. FALLBACK SECUNDÁRIO: PTAX para USD, EUR, GBP que ainda precisavam de refresh
     const ptaxCurrencies = Object.entries(CURRENCIES)
-      .filter(([key, config]) => config.hasPTAX && !rates[`${key}BRL`])
+      .filter(([key, config]) => config.hasPTAX && currenciesToRefresh.includes(key) && !newRatesToCache[`${key}BRL`])
       .map(([key, config]) => ({ key, config }));
 
     if (ptaxCurrencies.length > 0) {
@@ -240,8 +245,9 @@ serve(async (req) => {
         const dateStr = formatDateBCB(checkDate);
         
         for (const { key, config } of ptaxCurrencies) {
-          const rateKey = `${key}BRL`;
-          if (rates[rateKey]) continue;
+           const rateKey = `${key}BRL`;
+           // Se FastForex já atualizou, não precisa tentar PTAX
+           if (newRatesToCache[rateKey]) continue;
 
           try {
             let url: string;
@@ -258,8 +264,8 @@ serve(async (req) => {
               const data = await response.json();
               if (data.value && data.value.length > 0) {
                 const rate = data.value[data.value.length - 1].cotacaoVenda;
-                rates[rateKey] = rate;
-                newRatesToCache[rateKey] = { rate, source: 'PTAX_FALLBACK' };
+                 rates[rateKey] = rate;
+                 newRatesToCache[rateKey] = { rate, source: 'PTAX_FALLBACK' };
                 console.log(`PTAX (fallback) ${key}/BRL: ${rate}`);
               }
             }
@@ -282,13 +288,18 @@ serve(async (req) => {
     const finalRates: Record<string, number | null> = {};
     const sources: Record<string, string> = {};
     
-    for (const [key, config] of Object.entries(CURRENCIES)) {
+     for (const [key, config] of Object.entries(CURRENCIES)) {
       const rateKey = `${key}BRL`;
-      
+
       if (rates[rateKey]) {
         finalRates[rateKey] = rates[rateKey];
-        const cachedData = cachedRates[rateKey];
-        sources[key] = cachedData ? cachedData.source + '_CACHE' : (config.hasPTAX ? 'PTAX' : 'FASTFOREX');
+        if (newRatesToCache[rateKey]) {
+          sources[key] = newRatesToCache[rateKey].source;
+        } else if (cachedRates[rateKey]) {
+          sources[key] = cachedRates[rateKey].source + '_CACHE';
+        } else {
+          sources[key] = 'INDISPONIVEL';
+        }
       } else if (config.fallback) {
         finalRates[rateKey] = config.fallback;
         sources[key] = 'FALLBACK';
