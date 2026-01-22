@@ -3599,23 +3599,96 @@ export function CaixaTransacaoDialog({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-center block">Valor em {moeda}</Label>
-                <Input
-                  ref={valorFiatInputRef}
-                  type="text"
-                  value={valorDisplay}
-                  onChange={handleValorChange}
-                  placeholder="0,00"
-                />
+                {/* SAQUE FIAT: Valor na moeda da casa (fonte de verdade do débito) */}
+                {tipoTransacao === "SAQUE" && origemBookmakerId ? (
+                  <>
+                    <Label className="text-center block">
+                      Valor a debitar ({(() => {
+                        const bm = bookmakers.find(b => b.id === origemBookmakerId);
+                        return bm?.moeda || moeda;
+                      })()})
+                    </Label>
+                    <Input
+                      ref={valorFiatInputRef}
+                      type="text"
+                      value={valorDisplay}
+                      onChange={handleValorChange}
+                      placeholder="0,00"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Label className="text-center block">Valor em {moeda}</Label>
+                    <Input
+                      ref={valorFiatInputRef}
+                      type="text"
+                      value={valorDisplay}
+                      onChange={handleValorChange}
+                      placeholder="0,00"
+                    />
+                  </>
+                )}
               </div>
             </div>
             
-            {/* REMOVIDO: Painel de "Valor Creditado Real"
-                Conforme modelo de conciliação em duas fases:
-                - Fase 1 (Depósito): registra apenas o que SAIU da origem
-                - Fase 2 (Conciliação): informa o que realmente ENTROU na casa
-                O campo "Valor Creditado Real" agora existe apenas na tela de Conciliação
-            */}
+            {/* Painel de Estimativa de Conversão para Saque Multi-Moeda */}
+            {tipoTransacao === "SAQUE" && origemBookmakerId && (() => {
+              const valorNum = parseFloat(valor) || 0;
+              const bm = bookmakers.find(b => b.id === origemBookmakerId);
+              const moedaCasa = bm?.moeda || "BRL";
+              const moedaDestino = moeda; // Moeda da conta de destino
+              const precisaConversao = moedaCasa !== moedaDestino;
+              
+              if (!precisaConversao || valorNum <= 0) return null;
+              
+              // Calcular estimativa: Casa → Destino
+              const taxaCasa = getRate(moedaCasa);
+              const taxaDestino = getRate(moedaDestino);
+              
+              // Casa → BRL → USD → Destino
+              let valorBRLFromCasa = valorNum;
+              if (moedaCasa !== "BRL") {
+                valorBRLFromCasa = valorNum * taxaCasa;
+              }
+              const valorUSD = valorBRLFromCasa / cotacaoUSD;
+              
+              let valorDestinoEstimado = valorBRLFromCasa;
+              if (moedaDestino !== "BRL") {
+                valorDestinoEstimado = valorUSD * cotacaoUSD / taxaDestino;
+              }
+              
+              const currencySymbols: Record<string, string> = {
+                BRL: "R$", USD: "$", EUR: "€", GBP: "£", 
+                MXN: "$", MYR: "RM", ARS: "$", COP: "$"
+              };
+              const symbolCasa = currencySymbols[moedaCasa] || moedaCasa;
+              const symbolDestino = currencySymbols[moedaDestino] || moedaDestino;
+              
+              return (
+                <Alert className="border-primary/30 bg-primary/5">
+                  <Info className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-primary">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">Débito na casa:</span>
+                        <span className="font-semibold">{symbolCasa} {valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm opacity-80">
+                        <span>Cotação {moedaCasa}/{moedaDestino}:</span>
+                        <span className="font-mono">{(taxaCasa / taxaDestino).toFixed(4)} <span className="text-[10px] opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span></span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-primary/20 pt-1 mt-1">
+                        <span className="font-medium">Valor estimado a receber:</span>
+                        <span className="font-semibold text-green-400">{symbolDestino} {valorDestinoEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground text-center mt-1">
+                        O valor final será confirmado na Conciliação
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              );
+            })()}
             </>
           )}
 
@@ -3662,10 +3735,10 @@ export function CaixaTransacaoDialog({
                 {tipoTransacao === "SAQUE" && origemBookmakerId ? (
                   <div className="space-y-2">
                     <Label className="text-center block">
-                      Valor em {(() => {
+                      Valor a debitar ({(() => {
                         const bm = bookmakers.find(b => b.id === origemBookmakerId);
                         return bm?.moeda || "USD";
-                      })()}
+                      })()})
                     </Label>
                     <Input
                       ref={valorFiatInputRef}
