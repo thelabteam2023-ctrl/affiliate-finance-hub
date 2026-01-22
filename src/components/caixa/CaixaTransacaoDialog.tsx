@@ -36,7 +36,7 @@ import ParceiroSelect, { ParceiroSelectRef } from "@/components/parceiros/Parcei
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerSelect, { BookmakerSelectRef } from "@/components/bookmakers/BookmakerSelect";
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
-import { Loader2, ArrowLeftRight, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
+import { Loader2, ArrowLeftRight, ArrowRightLeft, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
 
 // Constantes de moedas disponíveis (todas as 8 moedas FIAT suportadas)
 const MOEDAS_FIAT = [
@@ -162,6 +162,10 @@ export function CaixaTransacaoDialog({
   const [qtdCoin, setQtdCoin] = useState<string>("");
   const [cotacao, setCotacao] = useState<string>("");
   const [descricao, setDescricao] = useState<string>("");
+  
+  // Estado para valor creditado manual (quando há conversão de moeda no depósito)
+  const [valorCreditado, setValorCreditado] = useState<string>("");
+  const [valorCreditadoDisplay, setValorCreditadoDisplay] = useState<string>("");
 
   // Estados para cotação em tempo real da Binance
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
@@ -1238,6 +1242,8 @@ export function CaixaTransacaoDialog({
     setQtdCoin("");
     setCotacao("");
     setDescricao("");
+    setValorCreditado("");
+    setValorCreditadoDisplay("");
     setOrigemTipo("");
     setOrigemParceiroId("");
     setOrigemContaId("");
@@ -1735,12 +1741,24 @@ export function CaixaTransacaoDialog({
       }
       
       // Calcular valor de destino (na moeda da casa)
+      // PRIORIDADE: Se o usuário informou valorCreditado manualmente, usar esse valor
+      const valorCreditadoManual = parseFloat(valorCreditado);
       if (precisaConversao) {
-        // Converter: ORIGEM → USD → DESTINO
-        valorDestinoCalculado = valorUsdReferencia / cotacaoDestinoUsd;
+        if (!isNaN(valorCreditadoManual) && valorCreditadoManual > 0) {
+          // Usuário informou o valor real creditado pela casa
+          valorDestinoCalculado = valorCreditadoManual;
+        } else {
+          // Calcular estimativa: ORIGEM → USD → DESTINO
+          valorDestinoCalculado = valorUsdReferencia / cotacaoDestinoUsd;
+        }
       } else {
         valorDestinoCalculado = valorOrigem;
       }
+      
+      // Determinar status: CONFIRMADO se usuário informou manualmente, senão ESTIMADO
+      const statusValorFinal = precisaConversao 
+        ? (!isNaN(valorCreditadoManual) && valorCreditadoManual > 0 ? "CONFIRMADO" : "ESTIMADO")
+        : "CONFIRMADO";
 
       const transactionData: any = {
         user_id: userData.user.id,
@@ -1769,7 +1787,7 @@ export function CaixaTransacaoDialog({
         cotacao_snapshot_at: now,
         
         // Status de conversão
-        status_valor: precisaConversao ? "ESTIMADO" : "CONFIRMADO",
+        status_valor: statusValorFinal,
       };
 
       // Add crypto-specific fields
@@ -2767,13 +2785,17 @@ export function CaixaTransacaoDialog({
           )}
           <div className="space-y-2">
             <Label>Bookmaker</Label>
+            {/* 
+              IMPORTANTE: Não filtrar por moeda no DEPÓSITO!
+              O operador pode enviar BRL (via Pix) para uma casa EUR/MXN.
+              A conversão é feita pela casa - o sistema registra moeda_origem e moeda_destino.
+            */}
             <BookmakerSelect
               ref={bookmakerSelectRef}
               value={destinoBookmakerId}
               onValueChange={setDestinoBookmakerId}
               disabled={!isOrigemCompleta}
               parceiroId={origemParceiroId}
-              moedaOperacional={tipoMoeda === "CRYPTO" ? undefined : moeda}
             />
           </div>
         </>
@@ -3465,6 +3487,7 @@ export function CaixaTransacaoDialog({
 
           {/* Tipo de Moeda, Moeda e Valor - Compactados */}
           {tipoTransacao && tipoMoeda === "FIAT" && (
+            <>
             <div className="grid grid-cols-[200px_1fr_1fr] gap-3">
               <div className="space-y-2">
                 <Label className="text-center block">Tipo de Moeda</Label>
@@ -3509,6 +3532,76 @@ export function CaixaTransacaoDialog({
                 />
               </div>
             </div>
+            
+            {/* Campo de Valor Creditado - aparece quando há conversão de moeda no depósito */}
+            {tipoTransacao === "DEPOSITO" && destinoBookmakerId && (() => {
+              const destBm = bookmakers.find(b => b.id === destinoBookmakerId);
+              const moedaCasa = destBm?.moeda || "BRL";
+              const precisaConversaoUI = moeda !== moedaCasa;
+              
+              if (!precisaConversaoUI) return null;
+              
+              // Calcular estimativa para exibir como placeholder
+              const valorNum = parseFloat(valor) || 0;
+              let estimativa = 0;
+              if (valorNum > 0) {
+                const taxaOrigem = getRate(moeda);
+                const taxaDestino = getRate(moedaCasa);
+                // BRL → USD → Destino
+                const valorUSD = (valorNum * taxaOrigem) / cotacaoUSD;
+                estimativa = valorUSD / (taxaDestino / cotacaoUSD);
+              }
+              
+              const currencySymbols: Record<string, string> = {
+                BRL: "R$", USD: "$", EUR: "€", GBP: "£", 
+                MXN: "$", MYR: "RM", ARS: "$", COP: "$"
+              };
+              const symbol = currencySymbols[moedaCasa] || moedaCasa;
+              
+              return (
+                <div className="mt-3 p-3 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Conversão: {moeda} → {moedaCasa}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Valor Estimado ({moedaCasa})</Label>
+                      <div className="text-sm font-mono bg-muted/50 px-2 py-1.5 rounded">
+                        {symbol} {estimativa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Valor Creditado Real ({moedaCasa})</Label>
+                      <Input
+                        type="text"
+                        value={valorCreditadoDisplay}
+                        onChange={(e) => {
+                          const inputValue = e.target.value;
+                          const digits = inputValue.replace(/\D/g, '');
+                          if (!digits) {
+                            setValorCreditado('');
+                            setValorCreditadoDisplay('');
+                            return;
+                          }
+                          const numericValue = (parseInt(digits) / 100).toString();
+                          setValorCreditado(numericValue);
+                          setValorCreditadoDisplay(formatCurrencyInput(inputValue));
+                        }}
+                        placeholder="Informe o valor real"
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    💡 Deixe em branco para usar a estimativa, ou informe o valor exato creditado pela casa.
+                  </p>
+                </div>
+              );
+            })()}
+            </>
           )}
 
           {/* Crypto fields - Compactados */}
