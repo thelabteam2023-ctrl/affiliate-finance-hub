@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { ParceiroFinanceiroConsolidado } from "@/hooks/useParceiroFinanceiroConsolidado";
+import { useState, useCallback, useMemo } from "react";
+import { ParceiroFinanceiroConsolidado, saldosToEntries } from "@/hooks/useParceiroFinanceiroConsolidado";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TabKey } from "@/hooks/useParceiroFinanceiroCache";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { MoneyDisplay, formatMoneyValue } from "@/components/ui/money-display";
-import { NativeCurrencyKpiLegacy } from "@/components/ui/native-currency-kpi";
+import { NativeCurrencyKpi } from "@/components/ui/native-currency-kpi";
 
 interface ParceiroCache {
   resumoData: ParceiroFinanceiroConsolidado | null;
@@ -63,6 +63,36 @@ export function ParceiroDetalhesPanel({
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null });
   const { canEdit, canDelete } = useActionAccess();
+
+  // Mover hooks useMemo ANTES de qualquer early return
+  const depositadoEntries = useMemo(() => 
+    data ? saldosToEntries(data.depositado_por_moeda) : [], 
+    [data?.depositado_por_moeda]
+  );
+  const sacadoEntries = useMemo(() => 
+    data ? saldosToEntries(data.sacado_por_moeda) : [], 
+    [data?.sacado_por_moeda]
+  );
+  const saldoEntries = useMemo(() => 
+    data ? saldosToEntries(data.saldo_por_moeda) : [], 
+    [data?.saldo_por_moeda]
+  );
+  const resultadoEntries = useMemo(() => 
+    data ? saldosToEntries(data.resultado_por_moeda) : [], 
+    [data?.resultado_por_moeda]
+  );
+  
+  const hasLucro = useMemo(() => resultadoEntries.some(e => e.value > 0), [resultadoEntries]);
+  const hasPrejuizo = useMemo(() => resultadoEntries.some(e => e.value < 0), [resultadoEntries]);
+  
+  const bookmarkersAtivos = useMemo(() => 
+    data?.bookmakers.filter(b => b.status === "ativo").length ?? 0, 
+    [data?.bookmakers]
+  );
+  const bookmakersLimitados = useMemo(() => 
+    data?.bookmakers.filter(b => b.status === "limitada").length ?? 0, 
+    [data?.bookmakers]
+  );
 
   const handleBookmakersDataChange = useCallback(() => {
     if (parceiroId) {
@@ -145,12 +175,6 @@ export function ParceiroDetalhesPanel({
       </div>
     );
   }
-
-  // Cálculos
-  const totalSaldoBRL = data.bookmakers.reduce((sum, b) => sum + b.saldo_brl, 0);
-  const totalSaldoUSD = data.bookmakers.reduce((sum, b) => sum + b.saldo_usd, 0);
-  const bookmarkersAtivos = data.bookmakers.filter(b => b.status === "ativo").length;
-  const bookmakersLimitados = data.bookmakers.filter(b => b.status === "limitada").length;
 
   return (
     <>
@@ -315,9 +339,8 @@ export function ParceiroDetalhesPanel({
                     <ArrowDownToLine className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Depositado</p>
-                      <NativeCurrencyKpiLegacy
-                        valueBRL={data.total_depositado_brl}
-                        valueUSD={data.total_depositado_usd}
+                      <NativeCurrencyKpi
+                        entries={depositadoEntries}
                         size="sm"
                         masked={!showSensitiveData}
                         showDashOnZero
@@ -330,9 +353,8 @@ export function ParceiroDetalhesPanel({
                     <ArrowUpFromLine className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Sacado</p>
-                      <NativeCurrencyKpiLegacy
-                        valueBRL={data.total_sacado_brl}
-                        valueUSD={data.total_sacado_usd}
+                      <NativeCurrencyKpi
+                        entries={sacadoEntries}
                         size="sm"
                         masked={!showSensitiveData}
                         showDashOnZero
@@ -345,9 +367,8 @@ export function ParceiroDetalhesPanel({
                     <Wallet className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-primary/80 font-medium uppercase tracking-wide">💰 Saldo Atual</p>
-                      <NativeCurrencyKpiLegacy
-                        valueBRL={totalSaldoBRL}
-                        valueUSD={totalSaldoUSD}
+                      <NativeCurrencyKpi
+                        entries={saldoEntries}
                         size="sm"
                         masked={!showSensitiveData}
                         className="font-bold"
@@ -358,7 +379,7 @@ export function ParceiroDetalhesPanel({
                   {/* Resultado */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
                     {showSensitiveData ? (
-                      data.lucro_prejuizo >= 0 ? (
+                      hasLucro && !hasPrejuizo ? (
                         <TrendingUp className="h-4 w-4 text-success shrink-0 mt-0.5" />
                       ) : (
                         <TrendingDown className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
@@ -368,9 +389,8 @@ export function ParceiroDetalhesPanel({
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Resultado</p>
-                      <NativeCurrencyKpiLegacy
-                        valueBRL={data.lucro_prejuizo_brl}
-                        valueUSD={data.lucro_prejuizo_usd}
+                      <NativeCurrencyKpi
+                        entries={resultadoEntries}
                         size="sm"
                         variant="auto"
                         masked={!showSensitiveData}
@@ -586,78 +606,50 @@ export function ParceiroDetalhesPanel({
                                 </TooltipContent>
                               </Tooltip>
                             </div>
-                            {/* Depósito */}
+                            {/* Depósito - sempre na moeda nativa da casa */}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="text-right">
                                   <MoneyDisplay
-                                    value={
-                                      bm.moeda === "USD" || bm.moeda === "USDT"
-                                        ? bm.total_depositado_usd
-                                        : bm.total_depositado
-                                    }
+                                    value={bm.total_depositado}
                                     currency={bm.moeda || "BRL"}
                                     size="sm"
                                     masked={!showSensitiveData}
                                   />
                                 </div>
                               </TooltipTrigger>
-                              {showSensitiveData &&
-                                (bm.total_depositado > 0 || bm.total_depositado_usd > 0) && (
-                                  <TooltipContent side="top" className="text-xs">
-                                    <p className="font-medium">Total depositado</p>
-                                    {bm.total_depositado > 0 && (
-                                      <p>BRL: {formatMoneyValue(bm.total_depositado, "BRL")}</p>
-                                    )}
-                                    {bm.total_depositado_usd > 0 && (
-                                      <p className="text-cyan-400">
-                                        USD: {formatMoneyValue(bm.total_depositado_usd, "USD")}
-                                      </p>
-                                    )}
-                                  </TooltipContent>
-                                )}
+                              {showSensitiveData && bm.total_depositado > 0 && (
+                                <TooltipContent side="top" className="text-xs">
+                                  <p className="font-medium">Total depositado</p>
+                                  <p>{formatMoneyValue(bm.total_depositado, bm.moeda || "BRL")}</p>
+                                </TooltipContent>
+                              )}
                             </Tooltip>
-                            {/* Saque */}
+                            {/* Saque - sempre na moeda nativa da casa */}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="text-right">
                                   <MoneyDisplay
-                                    value={
-                                      bm.moeda === "USD" || bm.moeda === "USDT"
-                                        ? bm.total_sacado_usd
-                                        : bm.total_sacado
-                                    }
+                                    value={bm.total_sacado}
                                     currency={bm.moeda || "BRL"}
                                     size="sm"
                                     masked={!showSensitiveData}
                                   />
                                 </div>
                               </TooltipTrigger>
-                              {showSensitiveData &&
-                                (bm.total_sacado > 0 || bm.total_sacado_usd > 0) && (
-                                  <TooltipContent side="top" className="text-xs">
-                                    <p className="font-medium">Total sacado</p>
-                                    {bm.total_sacado > 0 && (
-                                      <p>BRL: {formatMoneyValue(bm.total_sacado, "BRL")}</p>
-                                    )}
-                                    {bm.total_sacado_usd > 0 && (
-                                      <p className="text-cyan-400">
-                                        USD: {formatMoneyValue(bm.total_sacado_usd, "USD")}
-                                      </p>
-                                    )}
-                                  </TooltipContent>
-                                )}
+                              {showSensitiveData && bm.total_sacado > 0 && (
+                                <TooltipContent side="top" className="text-xs">
+                                  <p className="font-medium">Total sacado</p>
+                                  <p>{formatMoneyValue(bm.total_sacado, bm.moeda || "BRL")}</p>
+                                </TooltipContent>
+                              )}
                             </Tooltip>
-                            {/* Resultado */}
+                            {/* Resultado - sempre na moeda nativa da casa */}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="text-right">
                                   <MoneyDisplay
-                                    value={
-                                      bm.moeda === "USD" || bm.moeda === "USDT"
-                                        ? bm.lucro_prejuizo_usd
-                                        : bm.lucro_prejuizo
-                                    }
+                                    value={bm.lucro_prejuizo}
                                     currency={bm.moeda || "BRL"}
                                     size="sm"
                                     variant="auto"
@@ -665,20 +657,12 @@ export function ParceiroDetalhesPanel({
                                   />
                                 </div>
                               </TooltipTrigger>
-                              {showSensitiveData &&
-                                (bm.lucro_prejuizo !== 0 || bm.lucro_prejuizo_usd !== 0) && (
-                                  <TooltipContent side="top" className="text-xs">
-                                    <p className="font-medium">Resultado</p>
-                                    {bm.lucro_prejuizo !== 0 && (
-                                      <p>BRL: {formatMoneyValue(bm.lucro_prejuizo, "BRL")}</p>
-                                    )}
-                                    {bm.lucro_prejuizo_usd !== 0 && (
-                                      <p className="text-cyan-400">
-                                        USD: {formatMoneyValue(bm.lucro_prejuizo_usd, "USD")}
-                                      </p>
-                                    )}
-                                  </TooltipContent>
-                                )}
+                              {showSensitiveData && bm.lucro_prejuizo !== 0 && (
+                                <TooltipContent side="top" className="text-xs">
+                                  <p className="font-medium">Resultado</p>
+                                  <p>{formatMoneyValue(bm.lucro_prejuizo, bm.moeda || "BRL")}</p>
+                                </TooltipContent>
+                              )}
                             </Tooltip>
                             <div className="text-right text-sm font-medium text-muted-foreground">
                               {bm.qtd_apostas.toLocaleString("pt-BR")}
