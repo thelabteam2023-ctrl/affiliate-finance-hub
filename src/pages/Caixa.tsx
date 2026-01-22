@@ -123,12 +123,9 @@ export default function Caixa() {
   const cryptoSymbols = useMemo(() => saldosCrypto.map(s => s.coin), [saldosCrypto]);
   const { cotacaoUSD, cryptoPrices, getCryptoUSDValue, lastUpdate } = useCotacoes(cryptoSymbols);
 
-  // Auto-refresh dos dados quando cotações atualizam
-  useEffect(() => {
-    if (lastUpdate) {
-      fetchData();
-    }
-  }, [lastUpdate]);
+  // NOTA: Cotações NÃO devem disparar refetch de dados.
+  // As cotações são usadas apenas para exibição de valores convertidos.
+  // O fetchData só deve rodar quando: filtros mudam, nova transação criada, ou mount inicial.
   
   // Filters
   const [filtroTipo, setFiltroTipo] = useState<string>("TODOS");
