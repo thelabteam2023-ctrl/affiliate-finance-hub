@@ -7,8 +7,8 @@
  * Para novos componentes, considere usar useExchangeRates() diretamente.
  */
 
-import { useEffect, useCallback, useMemo } from "react";
-import { useExchangeRates, useExchangeRatesSafe } from "@/contexts/ExchangeRatesContext";
+import { useEffect, useMemo, useCallback } from "react";
+import { useExchangeRatesSafe } from "@/contexts/ExchangeRatesContext";
 import type { CotacaoSource, CotacaoSourceInfo } from "@/contexts/ExchangeRatesContext";
 
 // Re-export types for backwards compatibility
@@ -24,6 +24,47 @@ export interface ExchangeRates {
   COPBRL: number;
 }
 
+// Fallback rates quando fora do provider
+const FALLBACK_RATES: ExchangeRates = {
+  USDBRL: 5.31,
+  EURBRL: 6.10,
+  GBPBRL: 7.10,
+  MYRBRL: 1.20,
+  MXNBRL: 0.26,
+  ARSBRL: 0.005,
+  COPBRL: 0.0013,
+};
+
+const defaultSourceInfo: CotacaoSourceInfo = {
+  source: 'FALLBACK',
+  label: 'Fallback',
+  isOfficial: false,
+  isFallback: true,
+  isPtaxFallback: false,
+};
+
+const defaultSources = {
+  usd: defaultSourceInfo,
+  eur: defaultSourceInfo,
+  gbp: defaultSourceInfo,
+  myr: defaultSourceInfo,
+  mxn: defaultSourceInfo,
+  ars: defaultSourceInfo,
+  cop: defaultSourceInfo,
+  crypto: "fallback",
+};
+
+const defaultSourceLabels = {
+  usd: "Fallback",
+  eur: "Fallback",
+  gbp: "Fallback",
+  myr: "Fallback",
+  mxn: "Fallback",
+  ars: "Fallback",
+  cop: "Fallback",
+  crypto: "fallback",
+};
+
 /**
  * Hook de cotações que consome do Context global
  * 
@@ -33,45 +74,30 @@ export interface ExchangeRates {
 export function useCotacoes(cryptoSymbols: string[] = []) {
   const context = useExchangeRatesSafe();
   
-  // Se não há context (fora do provider), retornar valores fallback
-  if (!context) {
-    console.warn("[useCotacoes] Usado fora do ExchangeRatesProvider - retornando fallbacks");
-    return getFallbackValues();
-  }
-
-  const {
-    cotacaoUSD,
-    cotacaoEUR,
-    cotacaoGBP,
-    cotacaoMYR,
-    cotacaoMXN,
-    cotacaoARS,
-    cotacaoCOP,
-    cryptoPrices,
-    loading,
-    lastUpdate,
-    sources,
-    source,
-    getRate,
-    convertToBRL,
-    convertUSDtoBRL,
-    convertBRLtoUSD,
-    getCryptoPrice,
-    getCryptoUSDValue,
-    refreshRates,
-    refreshCrypto,
-  } = context;
-
+  // Valores do context ou fallback (sempre definidos para evitar problemas de hooks)
+  const cotacaoUSD = context?.cotacaoUSD ?? FALLBACK_RATES.USDBRL;
+  const cotacaoEUR = context?.cotacaoEUR ?? FALLBACK_RATES.EURBRL;
+  const cotacaoGBP = context?.cotacaoGBP ?? FALLBACK_RATES.GBPBRL;
+  const cotacaoMYR = context?.cotacaoMYR ?? FALLBACK_RATES.MYRBRL;
+  const cotacaoMXN = context?.cotacaoMXN ?? FALLBACK_RATES.MXNBRL;
+  const cotacaoARS = context?.cotacaoARS ?? FALLBACK_RATES.ARSBRL;
+  const cotacaoCOP = context?.cotacaoCOP ?? FALLBACK_RATES.COPBRL;
+  const cryptoPrices = context?.cryptoPrices ?? {};
+  const loading = context?.loading ?? false;
+  const lastUpdate = context?.lastUpdate ?? null;
+  const sources = context?.sources ?? defaultSources;
+  const source = context?.source ?? defaultSourceLabels;
+  
   // Buscar crypto quando symbols mudam
   useEffect(() => {
-    if (cryptoSymbols.length > 0) {
-      // Verificar quais symbols ainda não temos
-      const missing = cryptoSymbols.filter(s => !cryptoPrices[s.toUpperCase()]);
-      if (missing.length > 0) {
-        refreshCrypto(missing);
-      }
+    if (!context || cryptoSymbols.length === 0) return;
+    
+    // Verificar quais symbols ainda não temos
+    const missing = cryptoSymbols.filter(s => !cryptoPrices[s.toUpperCase()]);
+    if (missing.length > 0) {
+      context.refreshCrypto(missing);
     }
-  }, [cryptoSymbols.join(","), refreshCrypto]);
+  }, [cryptoSymbols.join(","), context, cryptoPrices]);
 
   // Objeto com todas as cotações para acesso direto
   const rates: ExchangeRates = useMemo(() => ({
@@ -83,6 +109,56 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
     ARSBRL: cotacaoARS,
     COPBRL: cotacaoCOP,
   }), [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+
+  // Funções utilitárias (sempre disponíveis, usam context se disponível ou fallback)
+  const getRate = useCallback((moeda: string): number => {
+    if (context?.getRate) return context.getRate(moeda);
+    
+    const m = moeda.toUpperCase();
+    if (m === "BRL") return 1;
+    if (m === "USD") return cotacaoUSD;
+    if (m === "EUR") return cotacaoEUR;
+    if (m === "GBP") return cotacaoGBP;
+    if (m === "MYR") return cotacaoMYR;
+    if (m === "MXN") return cotacaoMXN;
+    if (m === "ARS") return cotacaoARS;
+    if (m === "COP") return cotacaoCOP;
+    return 1;
+  }, [context, cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+
+  const convertToBRL = useCallback((valor: number, moeda: string): number => {
+    if (context?.convertToBRL) return context.convertToBRL(valor, moeda);
+    if (!valor) return 0;
+    return valor * getRate(moeda);
+  }, [context, getRate]);
+
+  const convertUSDtoBRL = useCallback((usd: number): number => {
+    if (context?.convertUSDtoBRL) return context.convertUSDtoBRL(usd);
+    return usd * cotacaoUSD;
+  }, [context, cotacaoUSD]);
+
+  const convertBRLtoUSD = useCallback((brl: number): number => {
+    if (context?.convertBRLtoUSD) return context.convertBRLtoUSD(brl);
+    return cotacaoUSD > 0 ? brl / cotacaoUSD : 0;
+  }, [context, cotacaoUSD]);
+
+  const getCryptoPrice = useCallback((symbol: string): number | null => {
+    if (context?.getCryptoPrice) return context.getCryptoPrice(symbol);
+    return cryptoPrices[symbol.toUpperCase()] ?? null;
+  }, [context, cryptoPrices]);
+
+  const getCryptoUSDValue = useCallback((coin: string, quantity: number, fallbackUSD?: number): number => {
+    if (context?.getCryptoUSDValue) return context.getCryptoUSDValue(coin, quantity, fallbackUSD);
+    const price = cryptoPrices[coin.toUpperCase()];
+    if (price) return quantity * price;
+    if (fallbackUSD) return quantity * fallbackUSD;
+    if (["USDT", "USDC"].includes(coin.toUpperCase())) return quantity;
+    return 0;
+  }, [context, cryptoPrices]);
+
+  const refreshAll = useCallback(async (): Promise<void> => {
+    if (context?.refreshRates) await context.refreshRates();
+  }, [context]);
 
   return {
     // Valores individuais
@@ -105,97 +181,12 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
     source,
     
     // Funções
-    refreshAll: refreshRates,
+    refreshAll,
     convertUSDtoBRL,
     convertBRLtoUSD,
     convertToBRL,
     getRate,
     getCryptoUSDValue,
     getCryptoPrice,
-  };
-}
-
-/**
- * Valores fallback para uso fora do provider
- */
-function getFallbackValues() {
-  const FALLBACK_RATES: ExchangeRates = {
-    USDBRL: 5.31,
-    EURBRL: 6.10,
-    GBPBRL: 7.10,
-    MYRBRL: 1.20,
-    MXNBRL: 0.26,
-    ARSBRL: 0.005,
-    COPBRL: 0.0013,
-  };
-
-  const defaultSourceInfo: CotacaoSourceInfo = {
-    source: 'FALLBACK',
-    label: 'Fallback',
-    isOfficial: false,
-    isFallback: true,
-    isPtaxFallback: false,
-  };
-
-  return {
-    cotacaoUSD: FALLBACK_RATES.USDBRL,
-    cotacaoEUR: FALLBACK_RATES.EURBRL,
-    cotacaoGBP: FALLBACK_RATES.GBPBRL,
-    cotacaoMYR: FALLBACK_RATES.MYRBRL,
-    cotacaoMXN: FALLBACK_RATES.MXNBRL,
-    cotacaoARS: FALLBACK_RATES.ARSBRL,
-    cotacaoCOP: FALLBACK_RATES.COPBRL,
-    cryptoPrices: {},
-    loading: false,
-    lastUpdate: null,
-    rates: FALLBACK_RATES,
-    sources: {
-      usd: defaultSourceInfo,
-      eur: defaultSourceInfo,
-      gbp: defaultSourceInfo,
-      myr: defaultSourceInfo,
-      mxn: defaultSourceInfo,
-      ars: defaultSourceInfo,
-      cop: defaultSourceInfo,
-      crypto: "fallback",
-    },
-    source: {
-      usd: "Fallback",
-      eur: "Fallback",
-      gbp: "Fallback",
-      myr: "Fallback",
-      mxn: "Fallback",
-      ars: "Fallback",
-      cop: "Fallback",
-      crypto: "fallback",
-    },
-    refreshAll: async () => {},
-    convertUSDtoBRL: (usd: number) => usd * FALLBACK_RATES.USDBRL,
-    convertBRLtoUSD: (brl: number) => brl / FALLBACK_RATES.USDBRL,
-    convertToBRL: (valor: number, moeda: string) => {
-      const m = moeda.toUpperCase();
-      if (m === "BRL") return valor;
-      if (m === "USD") return valor * FALLBACK_RATES.USDBRL;
-      if (m === "EUR") return valor * FALLBACK_RATES.EURBRL;
-      if (m === "GBP") return valor * FALLBACK_RATES.GBPBRL;
-      if (m === "MYR") return valor * FALLBACK_RATES.MYRBRL;
-      if (m === "MXN") return valor * FALLBACK_RATES.MXNBRL;
-      if (m === "ARS") return valor * FALLBACK_RATES.ARSBRL;
-      if (m === "COP") return valor * FALLBACK_RATES.COPBRL;
-      return valor;
-    },
-    getRate: (moeda: string) => {
-      const m = moeda.toUpperCase();
-      if (m === "USD") return FALLBACK_RATES.USDBRL;
-      if (m === "EUR") return FALLBACK_RATES.EURBRL;
-      if (m === "GBP") return FALLBACK_RATES.GBPBRL;
-      if (m === "MYR") return FALLBACK_RATES.MYRBRL;
-      if (m === "MXN") return FALLBACK_RATES.MXNBRL;
-      if (m === "ARS") return FALLBACK_RATES.ARSBRL;
-      if (m === "COP") return FALLBACK_RATES.COPBRL;
-      return 1;
-    },
-    getCryptoUSDValue: (coin: string, quantity: number, fallbackUSD?: number) => fallbackUSD ? quantity * fallbackUSD : 0,
-    getCryptoPrice: (coin: string) => null,
   };
 }
