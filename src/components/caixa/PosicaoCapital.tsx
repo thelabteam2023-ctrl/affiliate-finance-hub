@@ -323,47 +323,76 @@ export function PosicaoCapital({
                                 {item.detail}
                               </span>
                             </TooltipTrigger>
-                            <TooltipContent side="bottom" className="max-w-[320px]">
-                              <div className="space-y-1.5 py-1">
-                                <p className="text-xs font-medium text-muted-foreground mb-2">Composição por moeda:</p>
-                                {item.detailItems.map((d, i) => {
-                                  const sourceInfo = d.moeda !== 'BRL' && d.moeda !== 'CRYPTO' ? getSourceInfo(d.moeda) : null;
-                                  // Usar isOfficial do CotacaoSourceInfo - não depender de string matching
-                                  const isOfficial = sourceInfo?.source?.isOfficial === true || !sourceInfo?.source?.isFallback;
-                                  
-                                  return (
-                                    <div key={i} className="flex items-center justify-between gap-3 text-xs">
-                                      <div className="flex items-center gap-1.5">
-                                        {sourceInfo && (
-                                          isOfficial ? (
-                                            <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                            <TooltipContent side="bottom" className="max-w-[400px] p-3">
+                              <div className="space-y-3">
+                                <p className="text-xs font-medium text-muted-foreground">Composição por moeda:</p>
+                                
+                                {/* Grid de chips verticais */}
+                                <div className="flex flex-wrap gap-2 justify-center">
+                                  {item.detailItems.map((d, i) => {
+                                    const sourceInfo = d.moeda !== 'BRL' && d.moeda !== 'CRYPTO' ? getSourceInfo(d.moeda) : null;
+                                    const isOfficial = sourceInfo?.source?.isOfficial === true || !sourceInfo?.source?.isFallback;
+                                    const isBRL = d.moeda === 'BRL';
+                                    const isCrypto = d.moeda === 'CRYPTO';
+                                    
+                                    return (
+                                      <div 
+                                        key={i} 
+                                        className="flex flex-col items-center justify-between min-w-[90px] max-w-[110px] p-2.5 rounded-lg bg-muted/50 border border-border/50"
+                                      >
+                                        {/* Linha 1: Código da moeda + ícone de status */}
+                                        <div className="flex items-center gap-1 mb-1">
+                                          {sourceInfo && (
+                                            isOfficial ? (
+                                              <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                                            ) : (
+                                              <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                                            )
+                                          )}
+                                          <span className="text-xs font-semibold text-foreground">
+                                            {isCrypto ? 'CRYPTO' : d.moeda}
+                                          </span>
+                                        </div>
+                                        
+                                        {/* Linha 2: Cotação */}
+                                        <div className="text-[10px] text-muted-foreground mb-1.5">
+                                          {isBRL ? (
+                                            <span>base</span>
+                                          ) : isCrypto ? (
+                                            <span>@USD</span>
+                                          ) : sourceInfo?.cotacao ? (
+                                            <span>@{sourceInfo.cotacao.toFixed(4)}</span>
                                           ) : (
-                                            <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
-                                          )
-                                        )}
-                                        <span className="font-medium">{d.moeda === 'CRYPTO' ? 'Crypto (USD)' : d.moeda}</span>
-                                        {sourceInfo?.cotacao && d.moeda !== 'BRL' && (
-                                          <span className="text-[10px] text-muted-foreground">
-                                            @{sourceInfo.cotacao.toFixed(4)}
-                                          </span>
-                                        )}
-                                      </div>
-                                      <div className="text-right">
-                                        <span className="font-mono">{d.symbol} {d.valorOriginal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</span>
-                                        {d.moeda !== 'BRL' && (
-                                          <span className="text-muted-foreground ml-1">
-                                            (≈ R$ {d.valorBRL.toLocaleString('pt-BR', { maximumFractionDigits: 0 })})
-                                          </span>
+                                            <span>—</span>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Linha 3: Saldo nativo */}
+                                        <div className="text-sm font-mono font-medium text-foreground text-center break-all leading-tight">
+                                          {d.symbol} {d.valorOriginal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                                        </div>
+                                        
+                                        {/* Linha 4: Aproximação em BRL */}
+                                        {!isBRL && (
+                                          <div className="text-[10px] text-muted-foreground mt-1 text-center">
+                                            ≈ R$ {d.valorBRL.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                                          </div>
                                         )}
                                       </div>
-                                    </div>
-                                  );
-                                })}
-                                <div className="border-t border-border/50 pt-2 mt-2">
-                                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                    <CheckCircle2 className="h-3 w-3 text-emerald-500" /> FastForex/PTAX
-                                    <span className="mx-1">•</span>
-                                    <AlertTriangle className="h-3 w-3 text-amber-500" /> Fallback
+                                    );
+                                  })}
+                                </div>
+                                
+                                {/* Legenda */}
+                                <div className="border-t border-border/50 pt-2">
+                                  <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-2">
+                                    <span className="flex items-center gap-1">
+                                      <CheckCircle2 className="h-3 w-3 text-emerald-500" /> Oficial
+                                    </span>
+                                    <span className="text-border">•</span>
+                                    <span className="flex items-center gap-1">
+                                      <AlertTriangle className="h-3 w-3 text-amber-500" /> Fallback
+                                    </span>
                                   </p>
                                 </div>
                               </div>
