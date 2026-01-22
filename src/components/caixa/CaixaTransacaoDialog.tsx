@@ -163,9 +163,8 @@ export function CaixaTransacaoDialog({
   const [cotacao, setCotacao] = useState<string>("");
   const [descricao, setDescricao] = useState<string>("");
   
-  // Estado para valor creditado manual (quando há conversão de moeda no depósito)
-  const [valorCreditado, setValorCreditado] = useState<string>("");
-  const [valorCreditadoDisplay, setValorCreditadoDisplay] = useState<string>("");
+  // REMOVIDO: valorCreditado e valorCreditadoDisplay
+  // O valor creditado real agora é informado na tela de Conciliação, não aqui
 
   // Estados para cotação em tempo real da Binance
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
@@ -1242,8 +1241,7 @@ export function CaixaTransacaoDialog({
     setQtdCoin("");
     setCotacao("");
     setDescricao("");
-    setValorCreditado("");
-    setValorCreditadoDisplay("");
+    // REMOVIDO: valorCreditado reset - agora é tratado na Conciliação
     setOrigemTipo("");
     setOrigemParceiroId("");
     setOrigemContaId("");
@@ -1757,24 +1755,15 @@ export function CaixaTransacaoDialog({
       }
       
       // Calcular valor de destino (na moeda da casa)
-      // PRIORIDADE: Se o usuário informou valorCreditado manualmente, usar esse valor
-      const valorCreditadoManual = parseFloat(valorCreditado);
+      // Agora SEMPRE usa estimativa - o valor real será informado na Conciliação
       if (precisaConversao) {
-        if (!isNaN(valorCreditadoManual) && valorCreditadoManual > 0) {
-          // Usuário informou o valor real creditado pela casa
-          valorDestinoCalculado = valorCreditadoManual;
-        } else {
-          // Calcular estimativa: ORIGEM → USD → DESTINO
-          valorDestinoCalculado = valorUsdReferencia / cotacaoDestinoUsd;
-        }
+        // Calcular estimativa: ORIGEM → USD → DESTINO
+        valorDestinoCalculado = valorUsdReferencia / cotacaoDestinoUsd;
       } else {
         valorDestinoCalculado = valorOrigem;
       }
       
-      // Determinar status: CONFIRMADO se usuário informou manualmente, senão ESTIMADO
-      const statusValorFinal = precisaConversao 
-        ? (!isNaN(valorCreditadoManual) && valorCreditadoManual > 0 ? "CONFIRMADO" : "ESTIMADO")
-        : "CONFIRMADO";
+      // Status: transações com conversão começam como PENDENTE (serão conciliadas depois)
 
       const transactionData: any = {
         user_id: userData.user.id,
@@ -1802,8 +1791,8 @@ export function CaixaTransacaoDialog({
         valor_usd_referencia: valorUsdReferencia,
         cotacao_snapshot_at: now,
         
-        // Status de conversão
-        status_valor: statusValorFinal,
+        // Status de conversão (ESTIMADO para transações com conversão pendente)
+        status_valor: precisaConversao ? "ESTIMADO" : "CONFIRMADO",
       };
 
       // Add crypto-specific fields
@@ -3553,74 +3542,12 @@ export function CaixaTransacaoDialog({
               </div>
             </div>
             
-            {/* Campo de Valor Creditado - aparece quando há conversão de moeda no depósito */}
-            {tipoTransacao === "DEPOSITO" && destinoBookmakerId && (() => {
-              const destBm = bookmakers.find(b => b.id === destinoBookmakerId);
-              const moedaCasa = destBm?.moeda || "BRL";
-              const precisaConversaoUI = moeda !== moedaCasa;
-              
-              if (!precisaConversaoUI) return null;
-              
-              // Calcular estimativa para exibir como placeholder
-              const valorNum = parseFloat(valor) || 0;
-              let estimativa = 0;
-              if (valorNum > 0) {
-                const taxaOrigem = getRate(moeda);
-                const taxaDestino = getRate(moedaCasa);
-                // BRL → USD → Destino
-                const valorUSD = (valorNum * taxaOrigem) / cotacaoUSD;
-                estimativa = valorUSD / (taxaDestino / cotacaoUSD);
-              }
-              
-              const currencySymbols: Record<string, string> = {
-                BRL: "R$", USD: "$", EUR: "€", GBP: "£", 
-                MXN: "$", MYR: "RM", ARS: "$", COP: "$"
-              };
-              const symbol = currencySymbols[moedaCasa] || moedaCasa;
-              
-              return (
-                <div className="mt-3 p-3 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium text-muted-foreground">
-                      Conversão: {moeda} → {moedaCasa}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Valor Estimado ({moedaCasa})</Label>
-                      <div className="text-sm font-mono bg-muted/50 px-2 py-1.5 rounded">
-                        {symbol} {estimativa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Valor Creditado Real ({moedaCasa})</Label>
-                      <Input
-                        type="text"
-                        value={valorCreditadoDisplay}
-                        onChange={(e) => {
-                          const inputValue = e.target.value;
-                          const digits = inputValue.replace(/\D/g, '');
-                          if (!digits) {
-                            setValorCreditado('');
-                            setValorCreditadoDisplay('');
-                            return;
-                          }
-                          const numericValue = (parseInt(digits) / 100).toString();
-                          setValorCreditado(numericValue);
-                          setValorCreditadoDisplay(formatCurrencyInput(inputValue));
-                        }}
-                        placeholder="Informe o valor real"
-                        className="h-8"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    💡 Deixe em branco para usar a estimativa, ou informe o valor exato creditado pela casa.
-                  </p>
-                </div>
-              );
-            })()}
+            {/* REMOVIDO: Painel de "Valor Creditado Real"
+                Conforme modelo de conciliação em duas fases:
+                - Fase 1 (Depósito): registra apenas o que SAIU da origem
+                - Fase 2 (Conciliação): informa o que realmente ENTROU na casa
+                O campo "Valor Creditado Real" agora existe apenas na tela de Conciliação
+            */}
             </>
           )}
 
