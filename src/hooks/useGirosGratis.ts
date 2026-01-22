@@ -374,6 +374,9 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
         const isAumento = delta > 0;
 
         // Inserir ajuste no ledger
+        // ARQUITETURA: Giros Grátis são eventos operacionais internos
+        // NÃO impactam o Caixa Operacional (dinheiro real)
+        // São movimentos dentro da bookmaker (promocionais)
         const ledgerData = {
           tipo_transacao: isAumento ? "GIRO_GRATIS" : "GIRO_GRATIS_ESTORNO",
           valor: Math.abs(delta),
@@ -382,7 +385,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
           user_id: user.id,
           descricao: `Ajuste de giro grátis: ${giroAtual.bookmaker_nome} (${isAumento ? "+" : "-"}${Math.abs(delta).toFixed(2)})`,
           status: "CONFIRMADO",
-          impacta_caixa_operacional: true,
+          impacta_caixa_operacional: false, // Evento promocional - não impacta caixa real
           tipo_moeda: "FIAT",
           ...(isAumento 
             ? { destino_bookmaker_id: giroAtual.bookmaker_id }

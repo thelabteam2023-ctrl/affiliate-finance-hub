@@ -162,7 +162,8 @@ export async function insertLedgerEntry(
 
 /**
  * Registra cashback manual via ledger.
- * Crédito na bookmaker especificada.
+ * ARQUITETURA: Cashback é lucro operacional interno da bookmaker.
+ * NÃO é entrada de dinheiro real no caixa - é ganho promocional.
  */
 export async function registrarCashbackViaLedger(params: {
   bookmakerId: string;
@@ -185,14 +186,14 @@ export async function registrarCashbackViaLedger(params: {
     descricao: params.descricao || 'Cashback manual',
     dataTransacao: params.dataCredito,
     cotacao: params.cotacao,
-    impactaCaixaOperacional: true,
+    impactaCaixaOperacional: false, // Lucro operacional - NÃO é entrada de caixa real
     auditoriaMetadata: params.referenciaId ? { cashback_id: params.referenciaId } : undefined,
   });
 }
 
 /**
  * Estorna cashback via ledger.
- * Débito na bookmaker especificada.
+ * ARQUITETURA: Estorno de cashback é evento operacional interno.
  */
 export async function estornarCashbackViaLedger(params: {
   bookmakerId: string;
@@ -211,7 +212,7 @@ export async function estornarCashbackViaLedger(params: {
     userId: params.userId,
     origemBookmakerId: params.bookmakerId,
     descricao: params.descricao || 'Estorno de cashback',
-    impactaCaixaOperacional: true,
+    impactaCaixaOperacional: false, // Evento operacional - NÃO impacta caixa real
     auditoriaMetadata: params.referenciaId ? { cashback_id: params.referenciaId } : undefined,
   });
 }
@@ -310,6 +311,8 @@ export async function registrarAjusteViaLedger(params: {
 
 /**
  * Registra crédito de bônus via ledger.
+ * ARQUITETURA: Bônus é evento promocional interno, NÃO impacta caixa operacional.
+ * Origem = Bookmaker, Destino = Bookmaker (movimento interno)
  */
 export async function registrarBonusCreditadoViaLedger(params: {
   bookmakerId: string;
@@ -327,14 +330,16 @@ export async function registrarBonusCreditadoViaLedger(params: {
     workspaceId: params.workspaceId,
     userId: params.userId,
     destinoBookmakerId: params.bookmakerId,
+    origemBookmakerId: params.bookmakerId, // Movimento interno: Bookmaker → Bookmaker
     descricao: params.descricao || 'Crédito de bônus',
-    impactaCaixaOperacional: true,
+    impactaCaixaOperacional: false, // Evento promocional - NÃO impacta caixa real
     auditoriaMetadata: params.bonusId ? { bonus_id: params.bonusId } : undefined,
   });
 }
 
 /**
  * Registra estorno de bônus via ledger.
+ * ARQUITETURA: Estorno de bônus é evento promocional interno, NÃO impacta caixa.
  */
 export async function estornarBonusViaLedger(params: {
   bookmakerId: string;
@@ -353,7 +358,7 @@ export async function estornarBonusViaLedger(params: {
     userId: params.userId,
     origemBookmakerId: params.bookmakerId,
     descricao: params.descricao || 'Estorno de bônus',
-    impactaCaixaOperacional: true,
+    impactaCaixaOperacional: false, // Evento promocional - NÃO impacta caixa real
     auditoriaMetadata: params.bonusId ? { bonus_id: params.bonusId } : undefined,
   });
 }
@@ -414,6 +419,10 @@ export async function registrarPerdaCambialViaLedger(params: {
  * Estorna giro grátis via ledger.
  * Débito na bookmaker especificada (remove o ganho do saldo).
  */
+/**
+ * Estorna giro grátis via ledger.
+ * ARQUITETURA: Evento promocional - NÃO impacta caixa operacional.
+ */
 export async function estornarGiroGratisViaLedger(params: {
   bookmakerId: string;
   valor: number;
@@ -431,7 +440,7 @@ export async function estornarGiroGratisViaLedger(params: {
     userId: params.userId,
     origemBookmakerId: params.bookmakerId,
     descricao: params.descricao || 'Estorno de giro grátis',
-    impactaCaixaOperacional: true,
+    impactaCaixaOperacional: false, // Evento promocional - NÃO impacta caixa real
     auditoriaMetadata: params.giroGratisId ? { giro_gratis_id: params.giroGratisId } : undefined,
   });
 }
