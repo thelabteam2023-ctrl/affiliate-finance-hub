@@ -523,32 +523,49 @@ export function ConciliacaoSaldos({
       ) : (
         /* === HISTÓRICO DE CONCILIAÇÕES === */
         <div className="space-y-4">
-          {/* Resumo cambial agrupado por moeda */}
+          {/* Resumo cambial com tooltip para detalhes por moeda */}
           {adjustmentSummary.totalConciliacoes > 0 && (
-            <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg border border-border/50 bg-muted/20">
+            <div className="flex items-center gap-4 p-3 rounded-lg border border-border/50 bg-muted/20">
               <div className="flex items-center gap-2">
                 <History className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Total:</span>
                 <span className="font-medium">{adjustmentSummary.totalConciliacoes}</span>
               </div>
               
-              {/* Mostrar totais por moeda */}
-              {Object.entries(adjustmentSummary.byMoeda).map(([moeda, summary]) => (
-                <div key={moeda} className="flex items-center gap-3 border-l border-border/50 pl-4">
-                  <Badge variant="outline" className="text-xs">{moeda}</Badge>
-                  <div className="flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 text-emerald-400" />
-                    <span className="text-xs text-emerald-400">+{formatCurrency(summary.ganhos, moeda)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <TrendingDown className="h-3 w-3 text-red-400" />
-                    <span className="text-xs text-red-400">-{formatCurrency(summary.perdas, moeda)}</span>
-                  </div>
-                  <span className={`text-xs font-medium ${summary.liquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    = {summary.liquido >= 0 ? '+' : ''}{formatCurrency(summary.liquido, moeda)}
-                  </span>
-                </div>
-              ))}
+              <div className="h-4 w-px bg-border" />
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-3 cursor-help">
+                      {/* Mostrar quantidade de moedas */}
+                      <span className="text-sm text-muted-foreground">
+                        {Object.keys(adjustmentSummary.byMoeda).length} moeda{Object.keys(adjustmentSummary.byMoeda).length !== 1 ? 's' : ''}
+                      </span>
+                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs p-3">
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Resumo por moeda:</p>
+                      {Object.entries(adjustmentSummary.byMoeda).map(([moeda, summary]) => (
+                        <div key={moeda} className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">{moeda}</Badge>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs pl-1">
+                            <span className="text-emerald-400">+{formatCurrency(summary.ganhos, moeda)}</span>
+                            <span className="text-red-400">-{formatCurrency(summary.perdas, moeda)}</span>
+                            <span className={`font-medium ${summary.liquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              = {summary.liquido >= 0 ? '+' : ''}{formatCurrency(summary.liquido, moeda)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
 
