@@ -2002,6 +2002,7 @@ export type Database = {
           conta: string | null
           created_at: string
           id: string
+          moeda: string
           observacoes: string | null
           parceiro_id: string
           pix_key: string | null
@@ -2016,6 +2017,7 @@ export type Database = {
           conta?: string | null
           created_at?: string
           id?: string
+          moeda?: string
           observacoes?: string | null
           parceiro_id: string
           pix_key?: string | null
@@ -2030,6 +2032,7 @@ export type Database = {
           conta?: string | null
           created_at?: string
           id?: string
+          moeda?: string
           observacoes?: string | null
           parceiro_id?: string
           pix_key?: string | null
@@ -8192,6 +8195,7 @@ export type Database = {
           parceiro_id: string | null
           parceiro_nome: string | null
           saldo: number | null
+          titular: string | null
           user_id: string | null
         }
         Relationships: [

@@ -85,6 +85,7 @@ interface ContaBancaria {
   banco: string;
   titular: string;
   parceiro_id: string;
+  moeda: string;
 }
 
 interface WalletCrypto {
@@ -1028,7 +1029,7 @@ export function CaixaTransacaoDialog({
     try {
       const { data: contas } = await supabase
         .from("contas_bancarias")
-        .select("id, banco, titular, parceiro_id")
+        .select("id, banco, titular, parceiro_id, moeda")
         .order("banco");
 
       const { data: wallets } = await supabase
@@ -1131,9 +1132,12 @@ export function CaixaTransacaoDialog({
   };
 
   // Funções auxiliares para filtrar parceiros e contas/wallets disponíveis no destino
-  const getContasDisponiveisDestino = (parceiroId: string) => {
+  // IMPORTANTE: Filtrar contas por moeda compatível (1 conta = 1 moeda)
+  const getContasDisponiveisDestino = (parceiroId: string, moedaFiltro?: string) => {
     return contasBancarias.filter(
-      (c) => c.parceiro_id === parceiroId && c.id !== origemContaId
+      (c) => c.parceiro_id === parceiroId && 
+             c.id !== origemContaId &&
+             (!moedaFiltro || c.moeda === moedaFiltro)
     );
   };
 
@@ -1845,6 +1849,8 @@ export function CaixaTransacaoDialog({
                     .filter((c) => {
                       // Filtrar apenas contas do parceiro selecionado
                       if (c.parceiro_id !== origemParceiroId) return false;
+                      // Filtrar apenas contas com moeda compatível
+                      if (c.moeda !== moeda) return false;
                       
                       // Filtrar apenas contas com saldo disponível
                       const saldo = saldosParceirosContas.find(
@@ -1858,7 +1864,7 @@ export function CaixaTransacaoDialog({
                       );
                       return (
                         <SelectItem key={conta.id} value={conta.id}>
-                          {conta.banco} - Saldo: {formatCurrency(saldo?.saldo || 0)}
+                          {conta.banco} ({conta.moeda}) - Saldo: {formatCurrency(saldo?.saldo || 0)}
                         </SelectItem>
                       );
                     })}
@@ -2110,6 +2116,7 @@ export function CaixaTransacaoDialog({
                       {contasBancarias
                         .filter((c) => {
                           if (c.parceiro_id !== origemParceiroId) return false;
+                          if (c.moeda !== moeda) return false;
                           const saldo = saldosParceirosContas.find(
                             s => s.conta_id === c.id && s.moeda === moeda
                           );
@@ -2121,7 +2128,7 @@ export function CaixaTransacaoDialog({
                           );
                           return (
                             <SelectItem key={conta.id} value={conta.id}>
-                              {conta.banco} - Saldo: {formatCurrency(saldo?.saldo || 0)}
+                              {conta.banco} ({conta.moeda}) - Saldo: {formatCurrency(saldo?.saldo || 0)}
                             </SelectItem>
                           );
                         })}
@@ -2307,6 +2314,8 @@ export function CaixaTransacaoDialog({
                     {contasBancarias
                       .filter((c) => {
                         if (c.parceiro_id !== origemParceiroId) return false;
+                        // Filtrar apenas contas com moeda compatível
+                        if (c.moeda !== moeda) return false;
                         // Filtrar apenas contas com saldo
                         const saldo = saldosParceirosContas.find(
                           s => s.conta_id === c.id && s.moeda === moeda
@@ -2319,7 +2328,7 @@ export function CaixaTransacaoDialog({
                         );
                         return (
                           <SelectItem key={conta.id} value={conta.id}>
-                            {conta.banco} - Saldo: {formatCurrency(saldo?.saldo || 0)}
+                            {conta.banco} ({conta.moeda}) - Saldo: {formatCurrency(saldo?.saldo || 0)}
                           </SelectItem>
                         );
                       })}
@@ -2520,21 +2529,21 @@ export function CaixaTransacaoDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {contasBancarias
-                      .filter((c) => c.parceiro_id === destinoParceiroId)
+                      .filter((c) => c.parceiro_id === destinoParceiroId && c.moeda === moeda)
                       .map((conta) => (
                         <SelectItem key={conta.id} value={conta.id}>
-                          {conta.banco}
+                          {conta.banco} ({conta.moeda})
                         </SelectItem>
                       ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
-            {destinoParceiroId && contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId).length === 0 && (
+            {destinoParceiroId && contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId && c.moeda === moeda).length === 0 && (
               <Alert variant="destructive" className="border-warning/50 bg-warning/10">
                 <AlertTriangle className="h-4 w-4 text-warning" />
                 <AlertDescription className="text-warning">
-                  Este parceiro não possui contas bancárias cadastradas.{' '}
+                  Este parceiro não possui contas bancárias em {moeda}.{' '}
                   <button
                     onClick={() => {
                       setAlertParceiroId(destinoParceiroId);
@@ -2730,10 +2739,10 @@ export function CaixaTransacaoDialog({
                     </SelectTrigger>
                     <SelectContent>
                       {contasBancarias
-                        .filter((c) => c.parceiro_id === destinoParceiroId)
+                        .filter((c) => c.parceiro_id === destinoParceiroId && c.moeda === moeda)
                         .map((conta) => (
                           <SelectItem key={conta.id} value={conta.id}>
-                            {conta.banco}
+                            {conta.banco} ({conta.moeda})
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -2875,9 +2884,9 @@ export function CaixaTransacaoDialog({
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {getContasDisponiveisDestino(destinoParceiroId).map((conta) => (
+                    {getContasDisponiveisDestino(destinoParceiroId, moeda).map((conta) => (
                       <SelectItem key={conta.id} value={conta.id}>
-                        {conta.banco}
+                        {conta.banco} ({conta.moeda})
                       </SelectItem>
                     ))}
                   </SelectContent>
