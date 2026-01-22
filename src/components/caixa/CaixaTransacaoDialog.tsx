@@ -3216,8 +3216,11 @@ export function CaixaTransacaoDialog({
     if (valorNumerico === 0 && qtdCoinNumerico === 0) return false;
 
     // ============================================================================
-    // REGRA CRÍTICA: Para CRYPTO, comparar QUANTIDADE DE MOEDAS (saldo_coin vs qtdCoin)
-    // NUNCA comparar valores convertidos em USD/BRL que variam com a cotação
+    // REGRA CRÍTICA MULTI-MOEDA:
+    // 1. Para SAQUE: o valor digitado é SEMPRE na moeda da casa (bookmaker.moeda)
+    //    A comparação deve usar saldo_atual (moeda nativa), NUNCA saldo_usd convertido
+    // 2. Para CRYPTO: comparar quantidade de moedas (saldo_coin vs qtdCoin)
+    // 3. Conversões são apenas estimativas de destino, não afetam validação de saldo
     // ============================================================================
 
     // Check APORTE_FINANCEIRO flow (LIQUIDAÇÃO = saída do caixa)
@@ -3231,10 +3234,22 @@ export function CaixaTransacaoDialog({
     }
 
     // Check SAQUE (bookmaker → parceiro)
+    // CORREÇÃO CRÍTICA: O valor digitado está na MOEDA DA CASA (EUR, USD, BRL, etc.)
+    // Deve-se comparar contra saldo_atual que também está na moeda da casa
     if (tipoTransacao === "SAQUE" && origemBookmakerId) {
-      // Para SAQUE, usamos saldo_usd vs valor_usd pois bookmakers operam em USD
-      const saldoAtual = getSaldoAtual("BOOKMAKER", origemBookmakerId);
-      return saldoAtual < valorNumerico;
+      const bm = bookmakers.find(b => b.id === origemBookmakerId);
+      if (!bm) return false;
+      
+      // saldo_atual é o saldo canônico NA MOEDA OPERACIONAL DA CASA
+      // valorNumerico é o valor digitado NA MOEDA DA CASA (label mostra a moeda)
+      const saldoNativo = bm.saldo_atual || 0;
+      
+      // Subtrair saques pendentes (também registrados na moeda da casa)
+      const pendenteBookmaker = saquesPendentes[origemBookmakerId] || 0;
+      const saldoDisponivel = saldoNativo - pendenteBookmaker;
+      
+      // Comparação direta: moeda da casa vs moeda da casa
+      return saldoDisponivel < valorNumerico;
     }
 
     // Check DEPOSITO - FIAT usa conta bancária, CRYPTO usa wallet
@@ -3935,19 +3950,30 @@ export function CaixaTransacaoDialog({
                                   <div className="text-xs text-yellow-500 flex items-center justify-center gap-1">
                                     <AlertTriangle className="h-3 w-3" />
                                     <span>
-                                      Pendente: {formatCurrency(getSaquesPendentesBookmaker(origemBookmakerId), tipoMoeda === "CRYPTO" ? "USD" : "BRL")}
+                                      {/* Pendente na moeda da casa */}
+                                      Pendente: {(() => {
+                                        const bm = bookmakers.find(b => b.id === origemBookmakerId);
+                                        const moedaCasa = bm?.moeda || "BRL";
+                                        return formatCurrency(getSaquesPendentesBookmaker(origemBookmakerId), moedaCasa);
+                                      })()}
                                     </span>
                                   </div>
                                 )}
                                 {parseFloat(String(valor)) > 0 ? (
                                   <>
-                                    {/* Mostrar estimativa na moeda da casa para saque */}
+                                    {/* 
+                                      CORREÇÃO MULTI-MOEDA:
+                                      O valor digitado agora está na MOEDA DA CASA (EUR, USD, BRL, etc.)
+                                      Não precisa de conversão para mostrar débito - é direto!
+                                      O saldo restante = saldo_atual - valorDigitado (ambos na moeda da casa)
+                                    */}
                                     {(() => {
                                       const valorNum = parseFloat(String(valor));
                                       const bm = bookmakers.find(b => b.id === origemBookmakerId);
                                       const moedaCasa = bm?.moeda || "BRL";
-                                      const moedaDestino = tipoMoeda === "CRYPTO" ? "USD" : moeda;
-                                      const precisaConversao = moedaCasa !== moedaDestino;
+                                      const saldoAtual = bm?.saldo_atual || 0;
+                                      const pendentes = saquesPendentes[origemBookmakerId] || 0;
+                                      const saldoRestante = saldoAtual - pendentes - valorNum;
                                       
                                       const currencySymbols: Record<string, string> = {
                                         BRL: "R$", USD: "$", EUR: "€", GBP: "£", 
@@ -3955,39 +3981,18 @@ export function CaixaTransacaoDialog({
                                       };
                                       const symbol = currencySymbols[moedaCasa] || moedaCasa;
                                       
-                                      if (precisaConversao) {
-                                        // Calcular quanto sai da casa
-                                        const taxaDestino = getRate(moedaDestino);
-                                        const taxaCasa = getRate(moedaCasa);
-                                        const valorBRL = valorNum * taxaDestino;
-                                        const valorUSD = valorBRL / cotacaoUSD;
-                                        const estimativaCasa = valorUSD * (cotacaoUSD / taxaCasa);
-                                        
-                                        return (
-                                          <div className="flex flex-col items-center gap-1">
-                                            <div className="flex items-center gap-2">
-                                              <TrendingDown className="h-4 w-4 text-destructive" />
-                                              <span className="text-sm font-semibold text-destructive">
-                                                {symbol} {estimativaCasa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                              </span>
-                                            </div>
-                                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                              <span>≈ saída estimada em {moedaCasa}</span>
-                                              <span className="text-[8px] opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span>
-                                            </div>
-                                          </div>
-                                        );
-                                      }
-                                      
-                                      // Sem conversão
+                                      // Exibir débito direto e saldo restante (ambos na moeda da casa)
                                       return (
-                                        <div className="mt-2 flex items-center justify-center gap-2">
-                                          <TrendingDown className="h-4 w-4 text-destructive" />
-                                          <span className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
-                                            {tipoMoeda === "CRYPTO"
-                                              ? formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - valorNum, "USD")
-                                              : formatCurrency(getSaldoAtual("BOOKMAKER", origemBookmakerId) - valorNum, "BRL")}
-                                          </span>
+                                        <div className="flex flex-col items-center gap-1">
+                                          <div className="flex items-center gap-2">
+                                            <TrendingDown className="h-4 w-4 text-destructive" />
+                                            <span className="text-sm font-semibold text-destructive">
+                                              -{symbol} {valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
+                                          </div>
+                                          <div className="text-[10px] text-muted-foreground">
+                                            Saldo restante: {symbol} {saldoRestante.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
                                         </div>
                                       );
                                     })()}
