@@ -174,7 +174,10 @@ export function ConciliacaoSaldos({
 
   const handleOpenConfirm = (transaction: any) => {
     setSelectedTransaction(transaction);
-    setValorConfirmado(transaction.valor_usd?.toFixed(2) || transaction.valor?.toFixed(2) || "");
+    // Prioridade: valor_destino (estimado na moeda da casa) > valor_usd > valor
+    // Se houver conversão de moeda, valor_destino contém a estimativa correta
+    const valorInicial = transaction.valor_destino ?? transaction.valor_usd ?? transaction.valor ?? 0;
+    setValorConfirmado(valorInicial > 0 ? valorInicial.toFixed(2) : "");
     setObservacoes("");
     setConfirmDialog(true);
   };
