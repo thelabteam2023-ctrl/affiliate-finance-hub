@@ -510,34 +510,31 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                               // Usar saldo_atual como fonte única de verdade (arquitetura v3)
                               const saldo = item.saldo_atual ?? 0;
                               
-                              // Mapear símbolos por moeda
-                              const currencyConfig: Record<string, { symbol: string; suffix: string; highlight: boolean }> = {
-                                BRL: { symbol: "R$", suffix: "", highlight: false },
-                                USD: { symbol: "$", suffix: " USD", highlight: true },
-                                EUR: { symbol: "€", suffix: " EUR", highlight: true },
-                                GBP: { symbol: "£", suffix: " GBP", highlight: true },
-                                MXN: { symbol: "$", suffix: " MXN", highlight: true },
-                                MYR: { symbol: "RM", suffix: " MYR", highlight: true },
-                                ARS: { symbol: "$", suffix: " ARS", highlight: true },
-                                COP: { symbol: "$", suffix: " COP", highlight: true },
+                              // Mapear símbolos e cores por moeda (badges distintas)
+                              const currencyConfig: Record<string, { symbol: string; suffix: string; bg: string; text: string }> = {
+                                BRL: { symbol: "R$", suffix: "", bg: "bg-emerald-500/15", text: "text-emerald-400" },
+                                USD: { symbol: "$", suffix: " USD", bg: "bg-cyan-500/15", text: "text-cyan-400" },
+                                EUR: { symbol: "€", suffix: " EUR", bg: "bg-blue-500/15", text: "text-blue-400" },
+                                GBP: { symbol: "£", suffix: " GBP", bg: "bg-purple-500/15", text: "text-purple-400" },
+                                MXN: { symbol: "$", suffix: " MXN", bg: "bg-orange-500/15", text: "text-orange-400" },
+                                MYR: { symbol: "RM", suffix: " MYR", bg: "bg-pink-500/15", text: "text-pink-400" },
+                                ARS: { symbol: "$", suffix: " ARS", bg: "bg-sky-500/15", text: "text-sky-400" },
+                                COP: { symbol: "$", suffix: " COP", bg: "bg-yellow-500/15", text: "text-yellow-400" },
                               };
                               
-                              const config = currencyConfig[moeda] || { symbol: moeda, suffix: "", highlight: true };
+                              const config = currencyConfig[moeda] || { symbol: moeda, suffix: "", bg: "bg-muted/50", text: "text-muted-foreground" };
                               
                               if (saldo > 0) {
                                 return (
-                                  <span className={config.highlight 
-                                    ? "bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded" 
-                                    : "bg-muted/50 px-1.5 py-0.5 rounded"
-                                  }>
+                                  <span className={`${config.bg} ${config.text} px-1.5 py-0.5 rounded font-medium`}>
                                     {config.symbol} {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}{config.suffix}
                                   </span>
                                 );
                               }
                               
-                              // Saldo zero - exibir na moeda correta
+                              // Saldo zero - exibir na moeda correta com opacidade reduzida
                               return (
-                                <span className="opacity-50">
+                                <span className={`${config.bg} ${config.text} px-1.5 py-0.5 rounded opacity-60`}>
                                   {config.symbol} 0,00{config.suffix}
                                 </span>
                               );
