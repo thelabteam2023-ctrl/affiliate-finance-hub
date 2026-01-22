@@ -1851,11 +1851,41 @@ export function CaixaTransacaoDialog({
       // Add crypto-specific fields
       if (tipoMoeda === "CRYPTO") {
         transactionData.coin = coin;
-        transactionData.qtd_coin = parseFloat(qtdCoin);
-        transactionData.valor_usd = valorUsdReferencia; // Agora usa o valor de referência calculado
-        if (cotacao) {
-          transactionData.cotacao = parseFloat(cotacao);
-          transactionData.cotacao_implicita = parseFloat(cotacao);
+        
+        // SAQUE CRYPTO: calcular estimativa de coins baseado no valor da casa
+        if (tipoTransacao === "SAQUE" && origemBookmakerId) {
+          // Valor está na moeda da casa, calcular estimativa de coins
+          const bm = bookmakers.find(b => b.id === origemBookmakerId);
+          const moedaCasaSaque = bm?.moeda || "USD";
+          let valorEmUSD = valorOrigem;
+          
+          // Converter valor da casa para USD
+          if (moedaCasaSaque !== "USD") {
+            const taxaCasa = getRate(moedaCasaSaque);
+            const valorBRL = valorOrigem * taxaCasa;
+            valorEmUSD = valorBRL / cotacaoUSD;
+          }
+          
+          // Calcular estimativa de coins
+          const cotacaoCoin = cryptoPrices[coin] || 1;
+          const qtdEstimada = valorEmUSD / cotacaoCoin;
+          
+          transactionData.qtd_coin = qtdEstimada;
+          transactionData.valor_usd = valorEmUSD;
+          transactionData.cotacao = cotacaoCoin;
+          transactionData.cotacao_implicita = cotacaoCoin;
+          
+          // Registrar moeda de origem (moeda da casa)
+          transactionData.moeda_origem = moedaCasaSaque;
+          transactionData.valor_origem = valorOrigem;
+        } else {
+          // Outros fluxos CRYPTO (DEPOSITO, TRANSFERENCIA)
+          transactionData.qtd_coin = parseFloat(qtdCoin);
+          transactionData.valor_usd = valorUsdReferencia;
+          if (cotacao) {
+            transactionData.cotacao = parseFloat(cotacao);
+            transactionData.cotacao_implicita = parseFloat(cotacao);
+          }
         }
       }
 
@@ -3621,7 +3651,7 @@ export function CaixaTransacaoDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-center block">Moeda</Label>
+                  <Label className="text-center block">Moeda Crypto</Label>
                   <Select value={coin} onValueChange={setCoin}>
                     <SelectTrigger ref={coinSelectRef}>
                       <SelectValue placeholder="Selecione" />
@@ -3643,44 +3673,106 @@ export function CaixaTransacaoDialog({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-center block">Valor em USD (calculado)</Label>
-                  <Input
-                    type="text"
-                    value={valorDisplay}
-                    onChange={handleValorChange}
-                    placeholder="0,00"
-                    readOnly
-                    disabled
-                    className="bg-muted/50"
-                  />
-                </div>
+                {/* SAQUE CRYPTO: Valor na moeda da casa (inverted flow) */}
+                {tipoTransacao === "SAQUE" && origemBookmakerId ? (
+                  <div className="space-y-2">
+                    <Label className="text-center block">
+                      Valor em {(() => {
+                        const bm = bookmakers.find(b => b.id === origemBookmakerId);
+                        return bm?.moeda || "USD";
+                      })()}
+                    </Label>
+                    <Input
+                      ref={valorFiatInputRef}
+                      type="text"
+                      value={valorDisplay}
+                      onChange={handleValorChange}
+                      placeholder="0,00"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className="text-center block">Valor em USD (calculado)</Label>
+                    <Input
+                      type="text"
+                      value={valorDisplay}
+                      onChange={handleValorChange}
+                      placeholder="0,00"
+                      readOnly={tipoTransacao !== "SAQUE"}
+                      disabled={tipoTransacao !== "SAQUE"}
+                      className={tipoTransacao !== "SAQUE" ? "bg-muted/50" : ""}
+                    />
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-center block">Quantidade de Coins</Label>
-                  <Input
-                    ref={qtdCoinInputRef}
-                    type="number"
-                    step="0.00000001"
-                    value={qtdCoin}
-                    onChange={(e) => setQtdCoin(e.target.value)}
-                    placeholder="0.00000000"
-                  />
+              
+              {/* SAQUE CRYPTO: Mostrar estimativa de coins a receber */}
+              {tipoTransacao === "SAQUE" && origemBookmakerId && parseFloat(String(valor)) > 0 && (
+                <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Estimativa de {coin} a receber:</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-semibold text-cyan-400">
+                        {(() => {
+                          const valorNum = parseFloat(String(valor)) || 0;
+                          const bm = bookmakers.find(b => b.id === origemBookmakerId);
+                          const moedaCasa = bm?.moeda || "USD";
+                          
+                          // Converter valor da casa para USD
+                          let valorEmUSD = valorNum;
+                          if (moedaCasa !== "USD") {
+                            const taxaCasa = getRate(moedaCasa);
+                            const valorBRL = valorNum * taxaCasa;
+                            valorEmUSD = valorBRL / cotacaoUSD;
+                          }
+                          
+                          // Converter USD para coins usando cotação do coin
+                          const cotacaoCoin = cryptoPrices[coin] || 1;
+                          const qtdEstimada = valorEmUSD / cotacaoCoin;
+                          
+                          return `~${qtdEstimada.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ${coin}`;
+                        })()}
+                      </span>
+                      <div className="text-[10px] text-muted-foreground">
+                        Cotação: {(cryptoPrices[coin] || 1).toFixed(4)} USD/{coin}
+                        <span className="ml-1 opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-center block">Cotação USD (calculada)</Label>
-                  <Input
-                    type="number"
-                    step="0.00000001"
-                    value={cotacao}
-                    readOnly
-                    disabled
-                    placeholder="0.00"
-                    className="bg-muted/50"
-                  />
+              )}
+              
+              {/* Outros fluxos CRYPTO: Quantidade de coins */}
+              {tipoTransacao !== "SAQUE" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-center block">Quantidade de Coins</Label>
+                    <Input
+                      ref={qtdCoinInputRef}
+                      type="number"
+                      step="0.00000001"
+                      value={qtdCoin}
+                      onChange={(e) => setQtdCoin(e.target.value)}
+                      placeholder="0.00000000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-center block">Cotação USD (calculada)</Label>
+                    <Input
+                      type="number"
+                      step="0.00000001"
+                      value={cotacao}
+                      readOnly
+                      disabled
+                      placeholder="0.00"
+                      className="bg-muted/50"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
 
