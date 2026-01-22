@@ -67,9 +67,9 @@ export interface SaquePendente {
   qtd_coin?: number; // Estimativa de coins a receber
   cotacao_original?: number;
   moeda_origem?: string;
-  valor_origem?: number; // Valor na moeda da casa
+  valor_origem?: number; // Valor na moeda da casa (débito)
   valor_destino?: number; // Valor esperado na moeda de destino (estimativa)
-  cotacao_snapshot?: number; // Cotação usada na estimativa
+  cotacao?: number; // Cotação Casa→Destino (ex: EUR/BRL = 6.21)
   // Dados da wallet de destino
   wallet_network?: string;
   wallet_exchange?: string;
@@ -157,7 +157,7 @@ export function ConfirmarSaqueDialog({
   const valorRecebidoNum = parseFloat(valorRecebido) || 0;
   const moedaDestinoFiat = saque?.moeda_destino || "BRL";
   const valorEsperadoDestino = saque?.valor_destino || saque?.valor || 0;
-  const cotacaoUsada = saque?.cotacao_snapshot || 0;
+  const cotacaoUsada = saque?.cotacao || 0; // Cotação Casa→Destino (ex: EUR/BRL = 6.21)
   
   // Diferença calculada na moeda de DESTINO (BRL), não na moeda da casa
   const diferencaFiat = valorRecebidoNum - valorEsperadoDestino;
