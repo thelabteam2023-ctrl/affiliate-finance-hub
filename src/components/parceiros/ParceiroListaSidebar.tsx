@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { maskCPFPartial } from "@/lib/validators";
 import { useActionAccess } from "@/hooks/useModuleAccess";
-import { MultiCurrencyDisplay } from "@/components/ui/money-display";
+import { NativeCurrencyKpiLegacy } from "@/components/ui/native-currency-kpi";
 
 interface Parceiro {
   id: string;
@@ -118,7 +118,7 @@ export function ParceiroListaSidebar({
                   <span className="text-xs text-muted-foreground font-mono">
                     {maskCPFPartial(parceiro.cpf)}
                   </span>
-                  <MultiCurrencyDisplay
+                  <NativeCurrencyKpiLegacy
                     valueBRL={parceiro.lucro_prejuizo_brl ?? parceiro.lucro_prejuizo}
                     valueUSD={parceiro.lucro_prejuizo_usd ?? 0}
                     size="xs"

@@ -15,7 +15,8 @@ import { ParceiroBookmakersTab } from "./ParceiroBookmakersTab";
 import { useToast } from "@/hooks/use-toast";
 import { TabKey } from "@/hooks/useParceiroFinanceiroCache";
 import { useActionAccess } from "@/hooks/useModuleAccess";
-import { MoneyDisplay, MultiCurrencyDisplay, formatMoneyValue } from "@/components/ui/money-display";
+import { MoneyDisplay, formatMoneyValue } from "@/components/ui/money-display";
+import { NativeCurrencyKpiLegacy } from "@/components/ui/native-currency-kpi";
 
 interface ParceiroCache {
   resumoData: ParceiroFinanceiroConsolidado | null;
@@ -314,7 +315,7 @@ export function ParceiroDetalhesPanel({
                     <ArrowDownToLine className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Depositado</p>
-                      <MultiCurrencyDisplay
+                      <NativeCurrencyKpiLegacy
                         valueBRL={data.total_depositado_brl}
                         valueUSD={data.total_depositado_usd}
                         size="sm"
@@ -329,7 +330,7 @@ export function ParceiroDetalhesPanel({
                     <ArrowUpFromLine className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Sacado</p>
-                      <MultiCurrencyDisplay
+                      <NativeCurrencyKpiLegacy
                         valueBRL={data.total_sacado_brl}
                         valueUSD={data.total_sacado_usd}
                         size="sm"
@@ -344,7 +345,7 @@ export function ParceiroDetalhesPanel({
                     <Wallet className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-primary/80 font-medium uppercase tracking-wide">💰 Saldo Atual</p>
-                      <MultiCurrencyDisplay
+                      <NativeCurrencyKpiLegacy
                         valueBRL={totalSaldoBRL}
                         valueUSD={totalSaldoUSD}
                         size="sm"
@@ -367,7 +368,7 @@ export function ParceiroDetalhesPanel({
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Resultado</p>
-                      <MultiCurrencyDisplay
+                      <NativeCurrencyKpiLegacy
                         valueBRL={data.lucro_prejuizo_brl}
                         valueUSD={data.lucro_prejuizo_usd}
                         size="sm"
