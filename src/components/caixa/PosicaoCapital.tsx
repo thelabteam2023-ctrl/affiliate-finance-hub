@@ -304,7 +304,7 @@ export function PosicaoCapital({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-xs text-muted-foreground cursor-help hover:text-foreground transition-colors underline decoration-dotted underline-offset-2">
+                              <span className="text-xs text-muted-foreground cursor-help hover:text-foreground transition-colors">
                                 {item.detail}
                               </span>
                             </TooltipTrigger>
