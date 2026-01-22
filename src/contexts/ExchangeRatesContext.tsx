@@ -4,40 +4,29 @@
  * REGRA: Uma única requisição à Edge Function por sessão.
  * Todas as cotações são cacheadas aqui e compartilhadas via Context.
  * 
- * A Edge Function já usa cache do banco (TTL 144min), então não há
+ * A Edge Function já usa cache do banco (TTL 30min), então não há
  * necessidade de múltiplas chamadas do frontend.
+ * 
+ * IMPORTANTE: Este é o ÚNICO lugar que deve definir cotações para a aplicação.
+ * Hooks e componentes devem consumir deste Context, NUNCA definir fallbacks próprios.
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { 
+  FALLBACK_RATES, 
+  FRONTEND_REFRESH_INTERVAL_MS,
+  DEFAULT_SOURCE_INFO,
+  parseSource,
+  isRateFresh,
+  getRateAgeMinutes,
+  type ExchangeRates,
+  type CotacaoSource,
+  type CotacaoSourceInfo,
+} from "@/constants/exchangeRates";
 
-// ============= Types =============
-
-export type CotacaoSource = 
-  | 'FASTFOREX' 
-  | 'FASTFOREX_CACHE' 
-  | 'PTAX_FALLBACK' 
-  | 'PTAX_FALLBACK_CACHE' 
-  | 'FALLBACK' 
-  | 'INDISPONIVEL';
-
-export interface CotacaoSourceInfo {
-  source: CotacaoSource;
-  label: string;
-  isOfficial: boolean;
-  isFallback: boolean;
-  isPtaxFallback: boolean;
-}
-
-export interface ExchangeRates {
-  USDBRL: number;
-  EURBRL: number;
-  GBPBRL: number;
-  MYRBRL: number;
-  MXNBRL: number;
-  ARSBRL: number;
-  COPBRL: number;
-}
+// Re-export types for backwards compatibility
+export type { CotacaoSource, CotacaoSourceInfo, ExchangeRates };
 
 export interface CryptoPrices {
   [symbol: string]: number;
@@ -59,6 +48,11 @@ export interface ExchangeRatesContextValue {
   // Estado
   loading: boolean;
   lastUpdate: Date | null;
+  
+  // Status de saúde das cotações
+  isUsingFallback: boolean;  // true se qualquer moeda está usando fallback hardcoded
+  isStale: boolean;          // true se cotações têm mais de 30 min
+  rateAgeMinutes: number | null;
   
   // Sources detalhadas
   sources: {
@@ -97,74 +91,6 @@ export interface ExchangeRatesContextValue {
   refreshCrypto: (symbols: string[]) => Promise<void>;
 }
 
-// ============= Constants =============
-
-const FALLBACK_RATES: ExchangeRates = {
-  USDBRL: 5.31,
-  EURBRL: 6.10,
-  GBPBRL: 7.10,
-  MYRBRL: 1.20,
-  MXNBRL: 0.26,
-  ARSBRL: 0.005,
-  COPBRL: 0.0013,
-};
-
-const defaultSourceInfo: CotacaoSourceInfo = {
-  source: 'FALLBACK',
-  label: 'Fallback',
-  isOfficial: false,
-  isFallback: true,
-  isPtaxFallback: false,
-};
-
-// Intervalo de refresh: 5 minutos (a edge function usa cache de 144min)
-const REFRESH_INTERVAL = 5 * 60 * 1000;
-
-// ============= Helpers =============
-
-function parseSource(rawSource: string): CotacaoSourceInfo {
-  const source = rawSource?.toUpperCase() || '';
-  
-  if (source === 'FASTFOREX' || source === 'FASTFOREX_CACHE') {
-    return {
-      source: source.includes('CACHE') ? 'FASTFOREX_CACHE' : 'FASTFOREX',
-      label: 'FastForex',
-      isOfficial: true,
-      isFallback: false,
-      isPtaxFallback: false,
-    };
-  }
-  
-  if (source === 'PTAX' || source === 'PTAX_CACHE' || source === 'PTAX_FALLBACK' || source === 'PTAX_FALLBACK_CACHE') {
-    const isFallbackSource = source.includes('FALLBACK');
-    return {
-      source: source.includes('CACHE') ? 'PTAX_FALLBACK_CACHE' : 'PTAX_FALLBACK',
-      label: isFallbackSource ? 'PTAX (fallback)' : 'PTAX BCB',
-      isOfficial: true,
-      isFallback: false,
-      isPtaxFallback: true,
-    };
-  }
-  
-  if (source === 'FALLBACK' || source === 'FALLBACK_ERRO') {
-    return {
-      source: 'FALLBACK',
-      label: 'Fallback',
-      isOfficial: false,
-      isFallback: true,
-      isPtaxFallback: false,
-    };
-  }
-  
-  return {
-    source: 'INDISPONIVEL',
-    label: 'Indisponível',
-    isOfficial: false,
-    isFallback: true,
-    isPtaxFallback: false,
-  };
-}
-
 // ============= Context =============
 
 const ExchangeRatesContext = createContext<ExchangeRatesContextValue | null>(null);
@@ -178,14 +104,15 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
   const [cryptoPrices, setCryptoPrices] = useState<CryptoPrices>({});
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [sources, setSources] = useState({
-    usd: defaultSourceInfo,
-    eur: defaultSourceInfo,
-    gbp: defaultSourceInfo,
-    myr: defaultSourceInfo,
-    mxn: defaultSourceInfo,
-    ars: defaultSourceInfo,
-    cop: defaultSourceInfo,
+    usd: DEFAULT_SOURCE_INFO,
+    eur: DEFAULT_SOURCE_INFO,
+    gbp: DEFAULT_SOURCE_INFO,
+    myr: DEFAULT_SOURCE_INFO,
+    mxn: DEFAULT_SOURCE_INFO,
+    ars: DEFAULT_SOURCE_INFO,
+    cop: DEFAULT_SOURCE_INFO,
     crypto: "fallback",
   });
 
@@ -195,38 +122,75 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
       console.log("[ExchangeRatesContext] Buscando cotações...");
       const { data, error } = await supabase.functions.invoke("get-exchange-rates");
       
-      if (error) throw error;
+      if (error) {
+        console.error("[ExchangeRatesContext] Erro na Edge Function:", error);
+        setFetchError(error.message);
+        throw error;
+      }
+
+      // Validar que recebemos dados válidos
+      if (!data || typeof data !== 'object') {
+        console.error("[ExchangeRatesContext] Dados inválidos recebidos:", data);
+        setFetchError("Dados inválidos da API");
+        return;
+      }
+
+      // Log detalhado para debugging
+      console.log("[ExchangeRatesContext] Dados recebidos:", {
+        MXNBRL: data.MXNBRL,
+        sources: data.sources,
+        fromCache: data.fromCache,
+      });
 
       const newRates: Partial<ExchangeRates> = {};
-      if (data?.USDBRL) newRates.USDBRL = data.USDBRL;
-      if (data?.EURBRL) newRates.EURBRL = data.EURBRL;
-      if (data?.GBPBRL) newRates.GBPBRL = data.GBPBRL;
-      if (data?.MYRBRL) newRates.MYRBRL = data.MYRBRL;
-      if (data?.MXNBRL) newRates.MXNBRL = data.MXNBRL;
-      if (data?.ARSBRL) newRates.ARSBRL = data.ARSBRL;
-      if (data?.COPBRL) newRates.COPBRL = data.COPBRL;
+      
+      // Só atualizar se o valor for válido (número > 0)
+      if (typeof data.USDBRL === 'number' && data.USDBRL > 0) newRates.USDBRL = data.USDBRL;
+      if (typeof data.EURBRL === 'number' && data.EURBRL > 0) newRates.EURBRL = data.EURBRL;
+      if (typeof data.GBPBRL === 'number' && data.GBPBRL > 0) newRates.GBPBRL = data.GBPBRL;
+      if (typeof data.MYRBRL === 'number' && data.MYRBRL > 0) newRates.MYRBRL = data.MYRBRL;
+      if (typeof data.MXNBRL === 'number' && data.MXNBRL > 0) newRates.MXNBRL = data.MXNBRL;
+      if (typeof data.ARSBRL === 'number' && data.ARSBRL > 0) newRates.ARSBRL = data.ARSBRL;
+      if (typeof data.COPBRL === 'number' && data.COPBRL > 0) newRates.COPBRL = data.COPBRL;
 
-      setRates(prev => ({ ...prev, ...newRates }));
+      // Log das taxas que vamos aplicar
+      console.log("[ExchangeRatesContext] Taxas validadas:", newRates);
 
-      const rawSources = data?.sources || {};
+      // Atualizar rates - merge com existentes para não perder dados
+      setRates(prev => {
+        const merged = { ...prev, ...newRates };
+        console.log("[ExchangeRatesContext] Rates após merge:", {
+          MXNBRL_antes: prev.MXNBRL,
+          MXNBRL_novo: newRates.MXNBRL,
+          MXNBRL_final: merged.MXNBRL,
+        });
+        return merged;
+      });
+
+      // Parse sources
+      const rawSources = data.sources || {};
       setSources({
-        usd: parseSource(rawSources.USD),
-        eur: parseSource(rawSources.EUR),
-        gbp: parseSource(rawSources.GBP),
-        myr: parseSource(rawSources.MYR),
-        mxn: parseSource(rawSources.MXN),
-        ars: parseSource(rawSources.ARS),
-        cop: parseSource(rawSources.COP),
+        usd: parseSource(rawSources.USD || ''),
+        eur: parseSource(rawSources.EUR || ''),
+        gbp: parseSource(rawSources.GBP || ''),
+        myr: parseSource(rawSources.MYR || ''),
+        mxn: parseSource(rawSources.MXN || ''),
+        ars: parseSource(rawSources.ARS || ''),
+        cop: parseSource(rawSources.COP || ''),
         crypto: "fallback",
       });
 
       setLastUpdate(new Date());
-      console.log("[ExchangeRatesContext] Cotações atualizadas:", {
-        fromCache: data?.fromCache,
-        source: data?.source,
+      setFetchError(null);
+      
+      console.log("[ExchangeRatesContext] ✅ Cotações atualizadas:", {
+        fromCache: data.fromCache,
+        source: data.source,
+        timestamp: data.timestamp,
       });
     } catch (error) {
-      console.error("[ExchangeRatesContext] Erro ao buscar cotações:", error);
+      console.error("[ExchangeRatesContext] ❌ Erro ao buscar cotações:", error);
+      // NÃO resetar rates para FALLBACK_RATES aqui - manter o último valor válido
     }
   }, []);
 
@@ -259,8 +223,8 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
     };
     init();
 
-    // Refresh automático a cada 5 minutos
-    const interval = setInterval(fetchRates, REFRESH_INTERVAL);
+    // Refresh automático
+    const interval = setInterval(fetchRates, FRONTEND_REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [fetchRates]);
 
@@ -309,6 +273,21 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
     return 0;
   }, [cryptoPrices]);
 
+  // Calcular status de saúde das cotações
+  const isUsingFallback = useMemo(() => {
+    return Object.values(sources).some(s => 
+      typeof s === 'object' && s.isFallback
+    );
+  }, [sources]);
+
+  const isStale = useMemo(() => {
+    return !isRateFresh(lastUpdate);
+  }, [lastUpdate]);
+
+  const rateAgeMinutes = useMemo(() => {
+    return getRateAgeMinutes(lastUpdate);
+  }, [lastUpdate]);
+
   // Labels de compatibilidade
   const source = useMemo(() => ({
     usd: sources.usd.label,
@@ -332,6 +311,9 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
     cryptoPrices,
     loading,
     lastUpdate,
+    isUsingFallback,
+    isStale,
+    rateAgeMinutes,
     sources,
     source,
     getRate,
@@ -342,7 +324,11 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
     getCryptoUSDValue,
     refreshRates: fetchRates,
     refreshCrypto: fetchCrypto,
-  }), [rates, cryptoPrices, loading, lastUpdate, sources, source, getRate, convertToBRL, convertUSDtoBRL, convertBRLtoUSD, getCryptoPrice, getCryptoUSDValue, fetchRates, fetchCrypto]);
+  }), [
+    rates, cryptoPrices, loading, lastUpdate, isUsingFallback, isStale, rateAgeMinutes,
+    sources, source, getRate, convertToBRL, convertUSDtoBRL, convertBRLtoUSD, 
+    getCryptoPrice, getCryptoUSDValue, fetchRates, fetchCrypto
+  ]);
 
   return (
     <ExchangeRatesContext.Provider value={value}>

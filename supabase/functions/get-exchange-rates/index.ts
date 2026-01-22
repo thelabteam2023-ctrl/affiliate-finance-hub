@@ -22,14 +22,18 @@ function formatDateBCB(date: Date): string {
  * USD, EUR, GBP têm PTAX como segunda opção de fallback
  * Fallback hardcoded é a terceira opção
  */
+/**
+ * Moedas suportadas com fallbacks atualizados (última atualização: 2026-01-22)
+ * IMPORTANTE: Estes valores devem estar sincronizados com src/constants/exchangeRates.ts
+ */
 const CURRENCIES = {
-  USD: { code: 'USD', fallback: 5.31, useDolarDia: true, hasPTAX: true },
-  EUR: { code: 'EUR', fallback: 6.10, useDolarDia: false, hasPTAX: true },
-  GBP: { code: 'GBP', fallback: 7.10, useDolarDia: false, hasPTAX: true },
-  MYR: { code: 'MYR', fallback: 1.20, useDolarDia: false, hasPTAX: false },
-  MXN: { code: 'MXN', fallback: 0.26, useDolarDia: false, hasPTAX: false },
-  ARS: { code: 'ARS', fallback: 0.005, useDolarDia: false, hasPTAX: false },
-  COP: { code: 'COP', fallback: 0.0013, useDolarDia: false, hasPTAX: false },
+  USD: { code: 'USD', fallback: 5.32, useDolarDia: true, hasPTAX: true },
+  EUR: { code: 'EUR', fallback: 6.21, useDolarDia: false, hasPTAX: true },
+  GBP: { code: 'GBP', fallback: 7.14, useDolarDia: false, hasPTAX: true },
+  MYR: { code: 'MYR', fallback: 1.32, useDolarDia: false, hasPTAX: false },
+  MXN: { code: 'MXN', fallback: 0.304, useDolarDia: false, hasPTAX: false },  // Atualizado de 0.26
+  ARS: { code: 'ARS', fallback: 0.0037, useDolarDia: false, hasPTAX: false },
+  COP: { code: 'COP', fallback: 0.00145, useDolarDia: false, hasPTAX: false },
 } as const;
 
 type CurrencyKey = keyof typeof CURRENCIES;

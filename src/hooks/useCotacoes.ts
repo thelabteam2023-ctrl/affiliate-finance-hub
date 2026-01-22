@@ -9,48 +9,25 @@
 
 import { useEffect, useMemo, useCallback } from "react";
 import { useExchangeRatesSafe } from "@/contexts/ExchangeRatesContext";
-import type { CotacaoSource, CotacaoSourceInfo } from "@/contexts/ExchangeRatesContext";
+import { 
+  FALLBACK_RATES,
+  DEFAULT_SOURCE_INFO,
+  type CotacaoSource, 
+  type CotacaoSourceInfo,
+  type ExchangeRates,
+} from "@/constants/exchangeRates";
 
 // Re-export types for backwards compatibility
-export type { CotacaoSource, CotacaoSourceInfo };
-
-export interface ExchangeRates {
-  USDBRL: number;
-  EURBRL: number;
-  GBPBRL: number;
-  MYRBRL: number;
-  MXNBRL: number;
-  ARSBRL: number;
-  COPBRL: number;
-}
-
-// Fallback rates quando fora do provider
-const FALLBACK_RATES: ExchangeRates = {
-  USDBRL: 5.31,
-  EURBRL: 6.10,
-  GBPBRL: 7.10,
-  MYRBRL: 1.20,
-  MXNBRL: 0.26,
-  ARSBRL: 0.005,
-  COPBRL: 0.0013,
-};
-
-const defaultSourceInfo: CotacaoSourceInfo = {
-  source: 'FALLBACK',
-  label: 'Fallback',
-  isOfficial: false,
-  isFallback: true,
-  isPtaxFallback: false,
-};
+export type { CotacaoSource, CotacaoSourceInfo, ExchangeRates };
 
 const defaultSources = {
-  usd: defaultSourceInfo,
-  eur: defaultSourceInfo,
-  gbp: defaultSourceInfo,
-  myr: defaultSourceInfo,
-  mxn: defaultSourceInfo,
-  ars: defaultSourceInfo,
-  cop: defaultSourceInfo,
+  usd: DEFAULT_SOURCE_INFO,
+  eur: DEFAULT_SOURCE_INFO,
+  gbp: DEFAULT_SOURCE_INFO,
+  myr: DEFAULT_SOURCE_INFO,
+  mxn: DEFAULT_SOURCE_INFO,
+  ars: DEFAULT_SOURCE_INFO,
+  cop: DEFAULT_SOURCE_INFO,
   crypto: "fallback",
 };
 
@@ -58,8 +35,8 @@ const defaultSourceLabels = {
   usd: "Fallback",
   eur: "Fallback",
   gbp: "Fallback",
-  myr: "Fallback",
   mxn: "Fallback",
+  myr: "Fallback",
   ars: "Fallback",
   cop: "Fallback",
   crypto: "fallback",
@@ -75,6 +52,7 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
   const context = useExchangeRatesSafe();
   
   // Valores do context ou fallback (sempre definidos para evitar problemas de hooks)
+  // IMPORTANTE: Usar FALLBACK_RATES centralizado, não valores locais
   const cotacaoUSD = context?.cotacaoUSD ?? FALLBACK_RATES.USDBRL;
   const cotacaoEUR = context?.cotacaoEUR ?? FALLBACK_RATES.EURBRL;
   const cotacaoGBP = context?.cotacaoGBP ?? FALLBACK_RATES.GBPBRL;
@@ -87,6 +65,13 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
   const lastUpdate = context?.lastUpdate ?? null;
   const sources = context?.sources ?? defaultSources;
   const source = context?.source ?? defaultSourceLabels;
+  
+  // Log de debug se estiver usando fallback
+  useEffect(() => {
+    if (!context) {
+      console.warn("[useCotacoes] ⚠️ Context não disponível - usando FALLBACK_RATES centralizados");
+    }
+  }, [context]);
   
   // Buscar crypto quando symbols mudam
   useEffect(() => {
