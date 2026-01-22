@@ -3821,8 +3821,9 @@ export function CaixaTransacaoDialog({
                                                 {symbol} {estimativaCasa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                               </span>
                                             </div>
-                                            <div className="text-[10px] text-muted-foreground">
-                                              ≈ saída estimada em {moedaCasa}
+                                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                              <span>≈ saída estimada em {moedaCasa}</span>
+                                              <span className="text-[8px] opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span>
                                             </div>
                                           </div>
                                         );
@@ -4057,8 +4058,9 @@ export function CaixaTransacaoDialog({
                                                 {result.symbol} {result.estimativa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                               </span>
                                             </div>
-                                            <div className="text-[10px] text-muted-foreground">
-                                              ≈ estimativa em {result.moedaCasa}
+                                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                              <span>≈ estimativa em {result.moedaCasa}</span>
+                                              <span className="text-[8px] opacity-60">({isUsingFallback ? "fallback" : "oficial"})</span>
                                             </div>
                                           </div>
                                         );
