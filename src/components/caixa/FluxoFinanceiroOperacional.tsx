@@ -790,6 +790,7 @@ export function FluxoFinanceiroOperacional({
               <ModernBarChart
                 data={dadosCapitalExterno.dados}
                 categoryKey="periodo"
+                disableAnimations
                 hideYAxisTicks={dadosCapitalExterno.hasMultipleCurrencies}
                 bars={dadosCapitalExterno.moedasAtivas.flatMap((currency) => {
                   const config = CURRENCY_CONFIG[currency];
@@ -955,6 +956,7 @@ export function FluxoFinanceiroOperacional({
               <ModernBarChart
                 data={dadosCapitalOperacao.dados}
                 categoryKey="periodo"
+                disableAnimations
                 hideYAxisTicks={dadosCapitalOperacao.hasMultipleCurrencies}
                 bars={
                   // Gerar barras dinamicamente baseado nas moedas ativas
