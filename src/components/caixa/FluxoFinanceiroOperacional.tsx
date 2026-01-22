@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +13,13 @@ import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users
 import { cn } from "@/lib/utils";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { getCurrencySymbol } from "@/types/currency";
+
+// Helper para comparar objetos de cotações por valor (evita re-renders desnecessários)
+function areCotacoesEqual(prev: Record<string, number>, next: Record<string, number>): boolean {
+  const keys = Object.keys(prev);
+  if (keys.length !== Object.keys(next).length) return false;
+  return keys.every(key => Math.abs(prev[key] - next[key]) < 0.0001);
+}
 
 // Moedas suportadas e suas configurações de cor
 const CURRENCY_CONFIG: Record<string, { 
@@ -147,8 +154,9 @@ export function FluxoFinanceiroOperacional({
   // Buscar todas as cotações para normalizar as barras do gráfico
   const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP } = useCotacoes();
   
-  // Mapa de cotações para acesso dinâmico
-  const cotacoes: Record<SupportedCurrency, number> = useMemo(() => ({
+  // ESTABILIZAÇÃO: Usar ref para armazenar cotações e só atualizar se valores mudarem significativamente
+  // Isso evita re-renders do gráfico quando cotações flutuam minimamente
+  const cotacoesRef = useRef<Record<SupportedCurrency, number>>({
     BRL: 1,
     USD: cotacaoUSD,
     EUR: cotacaoEUR,
@@ -157,7 +165,30 @@ export function FluxoFinanceiroOperacional({
     MYR: cotacaoMYR,
     ARS: cotacaoARS,
     COP: cotacaoCOP,
-  }), [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP]);
+  });
+  
+  // Mapa de cotações estável - só atualiza se houver mudança real nos valores
+  const cotacoes: Record<SupportedCurrency, number> = useMemo(() => {
+    const newCotacoes: Record<SupportedCurrency, number> = {
+      BRL: 1,
+      USD: cotacaoUSD,
+      EUR: cotacaoEUR,
+      GBP: cotacaoGBP,
+      MXN: cotacaoMXN,
+      MYR: cotacaoMYR,
+      ARS: cotacaoARS,
+      COP: cotacaoCOP,
+    };
+    
+    // Comparar por valor, não por referência
+    if (areCotacoesEqual(cotacoesRef.current, newCotacoes)) {
+      return cotacoesRef.current; // Retornar mesma referência se valores iguais
+    }
+    
+    // Atualizar ref e retornar novo objeto
+    cotacoesRef.current = newCotacoes;
+    return newCotacoes;
+  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP]);
 
   // Handler para mudar período
   const handlePeriodoChange = (newPeriodo: Periodo) => {
