@@ -2178,7 +2178,9 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoTransacao === "SAQUE") {
-      // SAQUE FIAT: destino = conta bancária, origem = bookmaker com saldo_atual
+      // SAQUE FIAT: destino = conta bancária, origem = bookmaker COM SALDO (qualquer moeda)
+      // Importante: O método de saque (BRL/Pix) é independente da moeda operacional da casa!
+      // Uma casa USD pode sacar via Pix (converte USD→BRL internamente)
       if (tipoMoeda === "FIAT") {
         const isDestinoCompleta = destinoParceiroId && destinoContaId;
         
@@ -2193,27 +2195,29 @@ export function CaixaTransacaoDialog({
               </Alert>
             )}
             <div className="space-y-2">
-              <Label>Bookmaker (com saldo {moeda})</Label>
+              <Label>Bookmaker (com saldo disponível)</Label>
               <BookmakerSelect
-                key={`saque-fiat-${destinoParceiroId}-${moeda}`}
+                key={`saque-fiat-${destinoParceiroId}`}
                 ref={bookmakerSelectRef}
                 value={origemBookmakerId}
                 onValueChange={setOrigemBookmakerId}
                 disabled={!isDestinoCompleta}
                 parceiroId={destinoParceiroId}
                 somenteComSaldoFiat={true}
-                moedaOperacional={moeda}
+                // REMOVIDO: moedaOperacional={moeda}
+                // Casas de qualquer moeda podem sacar via FIAT (conversão interna)
               />
             </div>
           </>
         );
       }
       
-      // SAQUE CRYPTO: destino = wallet crypto, origem = bookmaker com saldo_usd
+      // SAQUE CRYPTO: destino = wallet crypto, origem = bookmaker com saldo
+      // Casas de qualquer moeda podem sacar via crypto (conversão interna)
       const isDestinoCompletaCrypto = destinoParceiroId && destinoWalletId;
       
-      // Verificar se há bookmakers com saldo USD disponível
-      const bookmakersComSaldoUsd = bookmakers.filter(b => b.saldo_usd > 0);
+      // Verificar se há bookmakers com saldo disponível
+      const bookmakersComSaldo = bookmakers.filter(b => b.saldo_atual > 0);
       
       return (
         <>
@@ -2225,16 +2229,16 @@ export function CaixaTransacaoDialog({
               </AlertDescription>
             </Alert>
           )}
-          {bookmakersComSaldoUsd.length === 0 && (
+          {bookmakersComSaldo.length === 0 && (
             <Alert variant="destructive" className="border-warning/50 bg-warning/10">
               <AlertTriangle className="h-4 w-4 text-warning" />
               <AlertDescription className="text-warning">
-                Nenhuma bookmaker com saldo USD disponível para saque crypto.
+                Nenhuma bookmaker com saldo disponível para saque.
               </AlertDescription>
             </Alert>
           )}
           <div className="space-y-2">
-            <Label>Bookmaker (com saldo USD)</Label>
+            <Label>Bookmaker (com saldo disponível)</Label>
             <BookmakerSelect
               key={`saque-crypto-${destinoParceiroId}`}
               ref={bookmakerSelectRef}
@@ -2242,8 +2246,9 @@ export function CaixaTransacaoDialog({
               onValueChange={setOrigemBookmakerId}
               disabled={!isDestinoCompletaCrypto}
               parceiroId={destinoParceiroId}
-              somenteComSaldo={true}
-              somenteComSaldoUsd={true}
+              somenteComSaldoFiat={true}
+              // REMOVIDO: somenteComSaldoUsd={true}
+              // Casas de qualquer moeda podem sacar via crypto
             />
           </div>
         </>
@@ -3290,58 +3295,49 @@ export function CaixaTransacaoDialog({
 
   const saldoInsuficiente = checkSaldoInsuficiente();
 
-  const formatCurrency = (value: number, forceCurrency?: "BRL" | "USD") => {
-    const currencyCode = forceCurrency || (tipoMoeda === "CRYPTO" ? "USD" : (moeda || "BRL"));
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: currencyCode,
-    }).format(value);
-  };
-
-  // Formatar saldo de bookmaker com ambas moedas se existirem
-  const formatBookmakerBalance = (bookmarkerId: string): React.ReactNode => {
-    const saldos = getSaldoBrutoBookmaker(bookmarkerId);
-    const pendente = getSaquesPendentesBookmaker(bookmarkerId);
-    const hasBrl = saldos.brl > 0;
-    const hasUsd = saldos.usd > 0;
+  // Suporta todas as 8 moedas FIAT + USD para crypto
+  const formatCurrency = (value: number, forceCurrency?: string) => {
+    let currencyCode = forceCurrency || (tipoMoeda === "CRYPTO" ? "USD" : (moeda || "BRL"));
     
-    // Se CRYPTO, mostrar apenas USD
-    if (tipoMoeda === "CRYPTO") {
-      const disponivel = saldos.usd - pendente;
-      return formatCurrency(disponivel, "USD");
+    // Tratar USDT como USD para formatação
+    if (currencyCode === "USDT") currencyCode = "USD";
+    
+    try {
+      return new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: currencyCode,
+      }).format(value);
+    } catch {
+      // Fallback para moedas não suportadas
+      const symbols: Record<string, string> = { 
+        BRL: "R$", USD: "$", EUR: "€", GBP: "£", 
+        MXN: "$", MYR: "RM", ARS: "$", COP: "$" 
+      };
+      return `${symbols[currencyCode] || currencyCode} ${value.toFixed(2)}`;
     }
-    
-    // Se FIAT, mostrar apenas BRL
-    const disponivel = saldos.brl - pendente;
-    return formatCurrency(disponivel, "BRL");
   };
 
-  // Formatar exibição completa dos saldos da bookmaker (BRL + USD)
+  // FUNÇÃO REMOVIDA: formatBookmakerBalance duplicava lógica
+  // Usar apenas formatBookmakerFullBalance que respeita moeda operacional única
+
+  // Formatar exibição do saldo da bookmaker - ÚNICA MOEDA OPERACIONAL
+  // Uma bookmaker opera em UMA moeda (definida em bookmakers.moeda)
+  // saldo_atual é o saldo canônico na moeda operacional da casa
   const formatBookmakerFullBalance = (bookmarkerId: string): React.ReactNode => {
-    const saldos = getSaldoBrutoBookmaker(bookmarkerId);
-    const hasBrl = saldos.brl > 0;
-    const hasUsd = saldos.usd > 0;
-    const isUsdMoeda = saldos.moeda === "USD" || saldos.moeda === "USDT";
+    const bm = bookmakers.find(b => b.id === bookmarkerId);
+    if (!bm) return formatCurrency(0, "BRL");
     
-    if (hasBrl && hasUsd) {
-      return (
-        <div className="flex flex-col items-center gap-0.5">
-          <span>{formatCurrency(saldos.brl, "BRL")}</span>
-          <span className="text-cyan-400">{formatCurrency(saldos.usd, "USD")}</span>
-        </div>
-      );
-    }
-    if (hasUsd) {
-      return <span className="text-cyan-400">{formatCurrency(saldos.usd, "USD")}</span>;
-    }
-    if (hasBrl) {
-      return formatCurrency(saldos.brl, "BRL");
-    }
-    // Quando ambos são zero, usar a moeda da bookmaker
+    const moedaCasa = bm.moeda || "BRL";
+    const saldoOperacional = bm.saldo_atual || 0;
+    const isUsdMoeda = moedaCasa === "USD" || moedaCasa === "USDT";
+    
+    // Mostrar APENAS o saldo na moeda operacional da casa
     if (isUsdMoeda) {
-      return <span className="text-cyan-400">{formatCurrency(0, "USD")}</span>;
+      return <span className="text-cyan-400">{formatCurrency(saldoOperacional, "USD")}</span>;
     }
-    return formatCurrency(0, "BRL");
+    
+    // Para outras moedas (BRL, EUR, GBP, MXN, etc.), usar formatação apropriada
+    return formatCurrency(saldoOperacional, moedaCasa as string);
   };
 
   // Função para determinar moedas disponíveis baseado no tipo de transação
@@ -4158,15 +4154,16 @@ export function CaixaTransacaoDialog({
                                         );
                                       }
                                       
-                                      // Sem conversão - mostra o valor direto
+                                      // Sem conversão - mostra o valor direto na moeda da casa
+                                      const bmDest = bookmakers.find(b => b.id === destinoBookmakerId);
+                                      const moedaCasaDest = bmDest?.moeda || "BRL";
+                                      const isUsdCasa = moedaCasaDest === "USD" || moedaCasaDest === "USDT";
+                                      
                                       return (
                                         <div className="mt-2 flex items-center justify-center gap-2">
                                           <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                          <span className={`text-sm font-semibold ${tipoMoeda === "CRYPTO" ? "text-cyan-400" : "text-foreground"}`}>
-                                            {tipoMoeda === "CRYPTO" 
-                                              ? formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + valorNum, "USD")
-                                              : formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + valorNum, "BRL")
-                                            }
+                                          <span className={`text-sm font-semibold ${isUsdCasa ? "text-cyan-400" : "text-foreground"}`}>
+                                            {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + valorNum, moedaCasaDest)}
                                           </span>
                                         </div>
                                       );
