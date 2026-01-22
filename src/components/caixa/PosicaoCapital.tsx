@@ -48,10 +48,11 @@ export function PosicaoCapital({
   saldoWalletsParceiros,
   cotacaoUSD,
 }: PosicaoCapitalProps) {
-  // Hook de conversão multi-moeda com fontes
-  const { convert, sources, cotacoes } = useMultiCurrencyConversion();
+  // Hook de conversão multi-moeda com fontes e status de dados
+  const { convert, sources, cotacoes, dataSource, isUsingFallback } = useMultiCurrencyConversion();
 
   // Helper para obter info da fonte de uma moeda
+  // IMPORTANTE: isOfficial agora considera se os dados vieram do banco (não é fallback real)
   const getSourceInfo = (moeda: string) => {
     const upper = moeda.toUpperCase();
     const sourceMap: Record<string, { source: any; cotacao: number }> = {
@@ -63,7 +64,16 @@ export function PosicaoCapital({
       ARS: { source: sources?.ars, cotacao: cotacoes?.ARS || 0 },
       COP: { source: sources?.cop, cotacao: cotacoes?.COP || 0 },
     };
-    return sourceMap[upper] || null;
+    const info = sourceMap[upper];
+    if (!info) return null;
+    
+    // Se dados vieram do banco/edge/localStorage, não é fallback real
+    // Só é fallback se dataSource === 'fallback' (hardcoded)
+    return {
+      ...info,
+      // Override: se não estamos usando fallback hardcoded, a fonte é confiável
+      isRealFallback: isUsingFallback,
+    };
   };
 
   const dadosPosicao = useMemo(() => {
@@ -331,7 +341,9 @@ export function PosicaoCapital({
                                 <div className="grid grid-cols-2 gap-2">
                                   {item.detailItems.map((d, i) => {
                                     const sourceInfo = d.moeda !== 'BRL' && d.moeda !== 'CRYPTO' ? getSourceInfo(d.moeda) : null;
-                                    const isOfficial = sourceInfo?.source?.isOfficial === true || !sourceInfo?.source?.isFallback;
+                                    // NOVA LÓGICA: só mostra ⚠️ se REALMENTE usando fallback hardcoded
+                                    // Se veio do banco/edge/localStorage, é confiável mesmo que source diga "FALLBACK"
+                                    const isRealFallback = sourceInfo?.isRealFallback === true;
                                     const isBRL = d.moeda === 'BRL';
                                     const isCrypto = d.moeda === 'CRYPTO';
                                     
@@ -343,10 +355,10 @@ export function PosicaoCapital({
                                         {/* Linha 1: Código da moeda + ícone de status */}
                                         <div className="flex items-center gap-1 mb-1">
                                           {sourceInfo && (
-                                            isOfficial ? (
-                                              <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                                            isRealFallback ? (
+                                              <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
                                             ) : (
-                                              <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                                              <CheckCircle2 className="h-3 w-3 text-success shrink-0" />
                                             )
                                           )}
                                           <span className="text-xs font-semibold text-foreground">
@@ -387,11 +399,11 @@ export function PosicaoCapital({
                                 <div className="border-t border-border/50 pt-2">
                                   <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-2">
                                     <span className="flex items-center gap-1">
-                                      <CheckCircle2 className="h-3 w-3 text-emerald-500" /> Oficial
+                                      <CheckCircle2 className="h-3 w-3 text-success" /> Oficial
                                     </span>
                                     <span className="text-border">•</span>
                                     <span className="flex items-center gap-1">
-                                      <AlertTriangle className="h-3 w-3 text-amber-500" /> Fallback
+                                      <AlertTriangle className="h-3 w-3 text-warning" /> Fallback
                                     </span>
                                   </p>
                                 </div>

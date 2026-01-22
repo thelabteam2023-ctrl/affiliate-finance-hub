@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useMemo, useCallback } from "react";
-import { useExchangeRatesSafe } from "@/contexts/ExchangeRatesContext";
+import { useExchangeRatesSafe, type DataSource } from "@/contexts/ExchangeRatesContext";
 import { 
   FALLBACK_RATES,
   DEFAULT_SOURCE_INFO,
@@ -18,7 +18,7 @@ import {
 } from "@/constants/exchangeRates";
 
 // Re-export types for backwards compatibility
-export type { CotacaoSource, CotacaoSourceInfo, ExchangeRates };
+export type { CotacaoSource, CotacaoSourceInfo, ExchangeRates, DataSource };
 
 const defaultSources = {
   usd: DEFAULT_SOURCE_INFO,
@@ -65,6 +65,8 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
   const lastUpdate = context?.lastUpdate ?? null;
   const sources = context?.sources ?? defaultSources;
   const source = context?.source ?? defaultSourceLabels;
+  const dataSource: DataSource = context?.dataSource ?? 'fallback';
+  const isUsingFallback = context?.isUsingFallback ?? true;
   
   // Log de debug se estiver usando fallback
   useEffect(() => {
@@ -164,6 +166,10 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
     // Sources
     sources,
     source,
+    
+    // Status de dados
+    dataSource,        // 'database' | 'edge_function' | 'localstorage' | 'fallback'
+    isUsingFallback,   // TRUE apenas se usando fallback hardcoded
     
     // Funções
     refreshAll,
