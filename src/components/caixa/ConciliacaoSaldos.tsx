@@ -46,6 +46,8 @@ import {
   getBookmakerMoeda 
 } from "@/lib/ledgerService";
 import { OperationsSubTabHeader } from "@/components/projeto-detalhe/operations/OperationsSubTabHeader";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+import { getFirstLastName } from "@/lib/utils";
 
 interface ConciliacaoSaldosProps {
   transacoes: any[];
@@ -88,6 +90,7 @@ export function ConciliacaoSaldos({
 }: ConciliacaoSaldosProps) {
   const { user } = useAuth();
   const { workspace } = useWorkspace();
+  const { getLogoUrl } = useBookmakerLogoMap();
   
   // Sub-tab state
   const [subTab, setSubTab] = useState<"abertas" | "historico">("abertas");
@@ -381,13 +384,18 @@ export function ConciliacaoSaldos({
                   const moedaDestino = t.moeda_destino || t.moeda || "BRL";
                   const valorOrigem = t.valor_origem || t.valor || 0;
                   
-                  const origemLabel = isCrypto 
-                    ? (t.origem_wallet_id ? getWalletInfo(t.origem_wallet_id) : "Wallet")
-                    : (t.moeda_origem || "FIAT");
+                  // Bookmaker info
+                  const bookmakerId = isDeposito ? t.destino_bookmaker_id : t.origem_bookmaker_id;
+                  const bookmakerNome = bookmakerId ? getBookmakerName(bookmakerId) : "Bookmaker";
+                  const bookmakerLogo = getLogoUrl(bookmakerNome);
                   
-                  const destinoLabel = isDeposito
-                    ? (t.destino_bookmaker_id ? getBookmakerName(t.destino_bookmaker_id) : "Bookmaker")
-                    : (t.origem_bookmaker_id ? getBookmakerName(t.origem_bookmaker_id) : "Bookmaker");
+                  // Wallet info with abbreviated partner name
+                  const walletId = t.origem_wallet_id || t.destino_wallet_id;
+                  const walletDetails = walletId ? walletsDetalhes.find(w => w.id === walletId) : null;
+                  const walletExchange = walletDetails?.exchange?.replace(/-/g, ' ').toUpperCase() || "WALLET";
+                  const walletParceiroId = walletDetails?.parceiro_id;
+                  const walletParceiroNome = walletParceiroId ? parceiros[walletParceiroId] : null;
+                  const walletParceiroShort = walletParceiroNome ? getFirstLastName(walletParceiroNome) : null;
                   
                   return (
                     <div
@@ -409,29 +417,53 @@ export function ConciliacaoSaldos({
                           {isCrypto ? "CRYPTO" : "FIAT"}
                         </Badge>
 
-                        <div className="flex items-center gap-2 text-sm">
-                          <div className="flex items-center gap-1">
-                            {isCrypto ? (
-                              <Wallet className="h-4 w-4 text-muted-foreground" />
-                            ) : (
+                        {/* Fluxo visual: Origem → Destino */}
+                        <div className="flex items-center gap-3 text-sm">
+                          {/* Origem */}
+                          {isCrypto && walletDetails ? (
+                            <div className="flex flex-col items-center min-w-[80px]">
+                              <div className="flex items-center gap-1.5">
+                                <Wallet className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-xs font-medium uppercase">{walletExchange}</span>
+                              </div>
+                              {walletParceiroShort && (
+                                <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">
+                                  {walletParceiroShort}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
                               <Building2 className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">{moedaOrigem}</span>
+                            </div>
+                          )}
+
+                          <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+
+                          {/* Destino: Bookmaker com logo */}
+                          <div className="flex items-center gap-2">
+                            {bookmakerLogo ? (
+                              <img
+                                src={bookmakerLogo}
+                                alt=""
+                                className="h-5 w-5 rounded object-contain"
+                              />
+                            ) : (
+                              <Building2 className="h-5 w-5 text-muted-foreground" />
                             )}
-                            <span className="text-muted-foreground">{origemLabel}</span>
-                          </div>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                          <div className="flex items-center gap-1">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                            <span>{destinoLabel}</span>
+                            <span className="text-xs font-medium uppercase">{bookmakerNome}</span>
                           </div>
                         </div>
 
+                        {/* Valores */}
                         <div className="text-sm">
                           {isCrypto ? (
                             <>
                               <div className="font-mono">
                                 {t.qtd_coin?.toFixed(4)} {t.coin}
                               </div>
-                              <div className="text-muted-foreground">
+                              <div className="text-muted-foreground text-xs">
                                 ≈ {formatCurrency(valorNominal)}
                               </div>
                             </>
@@ -515,7 +547,14 @@ export function ConciliacaoSaldos({
                 {adjustmentHistory.map((adj) => {
                   const isGanho = adj.tipo_ajuste === "GANHO_CAMBIAL";
                   const bookmakerNome = adj.bookmaker_id ? getBookmakerName(adj.bookmaker_id) : null;
-                  const walletInfo = adj.wallet_id ? getWalletInfo(adj.wallet_id) : null;
+                  const bookmakerLogo = bookmakerNome ? getLogoUrl(bookmakerNome) : null;
+                  
+                  // Wallet info with abbreviated partner name
+                  const walletDetails = adj.wallet_id ? walletsDetalhes.find(w => w.id === adj.wallet_id) : null;
+                  const walletExchange = walletDetails?.exchange?.replace(/-/g, ' ').toUpperCase() || null;
+                  const walletParceiroId = walletDetails?.parceiro_id;
+                  const walletParceiroNome = walletParceiroId ? parceiros[walletParceiroId] : null;
+                  const walletParceiroShort = walletParceiroNome ? getFirstLastName(walletParceiroNome) : null;
                   
                   return (
                     <div
@@ -546,20 +585,36 @@ export function ConciliacaoSaldos({
                           {adj.tipo === "DEPOSITO" ? "Depósito" : "Saque"}
                         </Badge>
 
-                        <div className="flex items-center gap-1 text-sm min-w-0">
-                          {bookmakerNome && (
-                            <div className="flex items-center gap-1 text-muted-foreground truncate">
-                              <Building2 className="h-3.5 w-3.5 shrink-0" />
-                              <span className="truncate">{bookmakerNome}</span>
+                        {/* Wallet info */}
+                        {walletExchange && (
+                          <div className="flex flex-col items-center min-w-0">
+                            <div className="flex items-center gap-1">
+                              <Wallet className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-xs font-medium uppercase truncate">{walletExchange}</span>
                             </div>
-                          )}
-                          {walletInfo && (
-                            <div className="flex items-center gap-1 text-muted-foreground truncate">
-                              <Wallet className="h-3.5 w-3.5 shrink-0" />
-                              <span className="truncate">{walletInfo}</span>
-                            </div>
-                          )}
-                        </div>
+                            {walletParceiroShort && (
+                              <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">
+                                {walletParceiroShort}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Bookmaker with logo */}
+                        {bookmakerNome && (
+                          <div className="flex items-center gap-1.5">
+                            {bookmakerLogo ? (
+                              <img
+                                src={bookmakerLogo}
+                                alt=""
+                                className="h-4 w-4 rounded object-contain shrink-0"
+                              />
+                            ) : (
+                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                            )}
+                            <span className="text-xs font-medium uppercase truncate">{bookmakerNome}</span>
+                          </div>
+                        )}
 
                         {adj.qtd_coin && adj.coin && (
                           <div className="text-xs text-muted-foreground shrink-0 font-mono">
