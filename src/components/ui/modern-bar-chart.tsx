@@ -15,7 +15,7 @@ interface BarDataItem {
   [key: string]: any;
 }
 
-export type CurrencyType = "BRL" | "USD" | "none";
+export type CurrencyType = "BRL" | "USD" | "EUR" | "GBP" | "MXN" | "MYR" | "ARS" | "COP" | "none";
 
 interface BarConfig {
   dataKey: string;

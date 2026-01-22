@@ -6,12 +6,73 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
-import { format, isWithinInterval, subDays, startOfDay, endOfDay } from "date-fns";
+import { format, isWithinInterval, subDays } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, HelpCircle, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { getCurrencySymbol } from "@/types/currency";
+
+// Moedas suportadas e suas configurações de cor
+const CURRENCY_CONFIG: Record<string, { 
+  depositGradient: [string, string]; 
+  saqueGradient: [string, string];
+  depositColor: string;
+  saqueColor: string;
+}> = {
+  BRL: { 
+    depositGradient: ["#3B82F6", "#2563EB"], 
+    saqueGradient: ["#8B5CF6", "#7C3AED"],
+    depositColor: "text-blue-500",
+    saqueColor: "text-purple-500",
+  },
+  USD: { 
+    depositGradient: ["#06B6D4", "#0891B2"], 
+    saqueGradient: ["#EC4899", "#DB2777"],
+    depositColor: "text-cyan-500",
+    saqueColor: "text-pink-500",
+  },
+  EUR: { 
+    depositGradient: ["#10B981", "#059669"], 
+    saqueGradient: ["#F59E0B", "#D97706"],
+    depositColor: "text-emerald-500",
+    saqueColor: "text-amber-500",
+  },
+  GBP: { 
+    depositGradient: ["#6366F1", "#4F46E5"], 
+    saqueGradient: ["#EF4444", "#DC2626"],
+    depositColor: "text-indigo-500",
+    saqueColor: "text-red-500",
+  },
+  MXN: { 
+    depositGradient: ["#14B8A6", "#0D9488"], 
+    saqueGradient: ["#F97316", "#EA580C"],
+    depositColor: "text-teal-500",
+    saqueColor: "text-orange-500",
+  },
+  MYR: { 
+    depositGradient: ["#8B5CF6", "#7C3AED"], 
+    saqueGradient: ["#A855F7", "#9333EA"],
+    depositColor: "text-violet-500",
+    saqueColor: "text-purple-500",
+  },
+  ARS: { 
+    depositGradient: ["#22C55E", "#16A34A"], 
+    saqueGradient: ["#84CC16", "#65A30D"],
+    depositColor: "text-green-500",
+    saqueColor: "text-lime-500",
+  },
+  COP: { 
+    depositGradient: ["#0EA5E9", "#0284C7"], 
+    saqueGradient: ["#38BDF8", "#0EA5E9"],
+    depositColor: "text-sky-500",
+    saqueColor: "text-sky-400",
+  },
+};
+
+const SUPPORTED_CURRENCIES = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP"] as const;
+type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
 
 interface Transacao {
   id: string;
@@ -83,8 +144,20 @@ export function FluxoFinanceiroOperacional({
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
   
-  // Buscar cotação USD/BRL para normalizar as barras do gráfico
-  const { cotacaoUSD } = useCotacoes();
+  // Buscar todas as cotações para normalizar as barras do gráfico
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP } = useCotacoes();
+  
+  // Mapa de cotações para acesso dinâmico
+  const cotacoes: Record<SupportedCurrency, number> = useMemo(() => ({
+    BRL: 1,
+    USD: cotacaoUSD,
+    EUR: cotacaoEUR,
+    GBP: cotacaoGBP,
+    MXN: cotacaoMXN,
+    MYR: cotacaoMYR,
+    ARS: cotacaoARS,
+    COP: cotacaoCOP,
+  }), [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP]);
 
   // Handler para mudar período
   const handlePeriodoChange = (newPeriodo: Periodo) => {
@@ -215,15 +288,22 @@ export function FluxoFinanceiroOperacional({
   }, [transacoesFiltradas, periodo, cotacaoUSD]);
 
   // 2. Capital Alocado em Operação (Bookmakers)
-  // REGRA: CRYPTO = USD, FIAT = BRL, nunca misturar
+  // REGRA: Suporta todas as 8 moedas, CRYPTO = USD
+  type CurrencyTotals = Record<SupportedCurrency, { depositos: number; saques: number }>;
+  
   const dadosCapitalOperacao = useMemo(() => {
-    const agrupamentos: Map<string, { 
-      depositos_brl: number; 
-      depositos_usd: number;
-      saques_brl: number; 
-      saques_usd: number;
-      transacoes: Transacao[] 
-    }> = new Map();
+    // Tipo para agrupamento por período
+    type GrupoData = {
+      depositos: Record<SupportedCurrency, number>;
+      saques: Record<SupportedCurrency, number>;
+      transacoes: Transacao[];
+    };
+    
+    const agrupamentos: Map<string, GrupoData> = new Map();
+    
+    // Inicializar objeto vazio para cada moeda
+    const emptyTotals = (): Record<SupportedCurrency, number> => 
+      SUPPORTED_CURRENCIES.reduce((acc, c) => ({ ...acc, [c]: 0 }), {} as Record<SupportedCurrency, number>);
 
     transacoesFiltradas.forEach((t) => {
       if (t.tipo_transacao !== "DEPOSITO" && t.tipo_transacao !== "SAQUE") return;
@@ -246,74 +326,117 @@ export function FluxoFinanceiroOperacional({
       }
 
       if (!agrupamentos.has(chave)) {
-        agrupamentos.set(chave, { depositos_brl: 0, depositos_usd: 0, saques_brl: 0, saques_usd: 0, transacoes: [] });
+        agrupamentos.set(chave, { 
+          depositos: emptyTotals(), 
+          saques: emptyTotals(), 
+          transacoes: [] 
+        });
       }
 
       const grupo = agrupamentos.get(chave)!;
       grupo.transacoes.push(t);
       
+      // Determinar moeda: CRYPTO = USD, FIAT = moeda nativa
       const isCrypto = t.tipo_moeda === "CRYPTO";
-      const isUSD = t.moeda === "USD" || isCrypto;
+      let moeda: SupportedCurrency = isCrypto ? "USD" : (t.moeda as SupportedCurrency);
+      
+      // Fallback para BRL se moeda não reconhecida
+      if (!SUPPORTED_CURRENCIES.includes(moeda)) {
+        moeda = "BRL";
+      }
+      
       const valor = isCrypto ? (t.valor_usd || 0) : t.valor;
 
       if (t.tipo_transacao === "DEPOSITO") {
-        if (isUSD) {
-          grupo.depositos_usd += valor;
-        } else {
-          grupo.depositos_brl += valor;
-        }
+        grupo.depositos[moeda] += valor;
       } else if (t.tipo_transacao === "SAQUE") {
-        if (isUSD) {
-          grupo.saques_usd += valor;
-        } else {
-          grupo.saques_brl += valor;
-        }
+        grupo.saques[moeda] += valor;
       }
     });
 
+    // Calcular dados para o gráfico
     const dados = Array.from(agrupamentos.entries())
-      .map(([chave, dados]) => ({
-        periodo: chave,
-        depositos: dados.depositos_brl,
-        depositos_usd: dados.depositos_usd,
-        // Valores normalizados em BRL para altura das barras (USD * cotação)
-        depositos_usd_normalizado: dados.depositos_usd * cotacaoUSD,
-        saques: dados.saques_brl,
-        saques_usd: dados.saques_usd,
-        saques_usd_normalizado: dados.saques_usd * cotacaoUSD,
-        alocacaoLiquida: dados.depositos_brl - dados.saques_brl,
-        alocacaoLiquidaUSD: dados.depositos_usd - dados.saques_usd,
-        transacoes: dados.transacoes,
-      }))
+      .map(([chave, grupo]) => {
+        const result: Record<string, any> = {
+          periodo: chave,
+          transacoes: grupo.transacoes,
+        };
+        
+        // Para cada moeda, adicionar valores reais e normalizados
+        SUPPORTED_CURRENCIES.forEach(currency => {
+          const cotacao = cotacoes[currency];
+          
+          // Valores reais
+          result[`depositos_${currency.toLowerCase()}`] = grupo.depositos[currency];
+          result[`saques_${currency.toLowerCase()}`] = grupo.saques[currency];
+          
+          // Valores normalizados em BRL para escala visual
+          result[`depositos_${currency.toLowerCase()}_norm`] = grupo.depositos[currency] * cotacao;
+          result[`saques_${currency.toLowerCase()}_norm`] = grupo.saques[currency] * cotacao;
+          
+          // Alocação líquida por moeda
+          result[`alocacao_${currency.toLowerCase()}`] = grupo.depositos[currency] - grupo.saques[currency];
+        });
+        
+        return result;
+      })
       .slice(-12);
 
-    const totalDepositosBRL = dados.reduce((sum, d) => sum + d.depositos, 0);
-    const totalDepositosUSD = dados.reduce((sum, d) => sum + d.depositos_usd, 0);
-    const totalSaquesBRL = dados.reduce((sum, d) => sum + d.saques, 0);
-    const totalSaquesUSD = dados.reduce((sum, d) => sum + d.saques_usd, 0);
+    // Calcular totais por moeda
+    const totais: CurrencyTotals = SUPPORTED_CURRENCIES.reduce((acc, currency) => {
+      const key = currency.toLowerCase();
+      acc[currency] = {
+        depositos: dados.reduce((sum, d) => sum + (d[`depositos_${key}`] || 0), 0),
+        saques: dados.reduce((sum, d) => sum + (d[`saques_${key}`] || 0), 0),
+      };
+      return acc;
+    }, {} as CurrencyTotals);
+
+    // Detectar quais moedas têm movimentação
+    const moedasAtivas = SUPPORTED_CURRENCIES.filter(currency => 
+      totais[currency].depositos > 0 || totais[currency].saques > 0
+    );
 
     return { 
       dados, 
-      totalDepositos: totalDepositosBRL, 
-      totalDepositosUSD,
-      totalSaques: totalSaquesBRL,
-      totalSaquesUSD,
-      alocacaoLiquida: totalDepositosBRL - totalSaquesBRL,
-      alocacaoLiquidaUSD: totalDepositosUSD - totalSaquesUSD,
-      hasUSD: totalDepositosUSD > 0 || totalSaquesUSD > 0
+      totais,
+      moedasAtivas,
+      // Compatibilidade com código legado
+      totalDepositos: totais.BRL.depositos,
+      totalDepositosUSD: totais.USD.depositos,
+      totalSaques: totais.BRL.saques,
+      totalSaquesUSD: totais.USD.saques,
+      alocacaoLiquida: totais.BRL.depositos - totais.BRL.saques,
+      alocacaoLiquidaUSD: totais.USD.depositos - totais.USD.saques,
+      hasUSD: totais.USD.depositos > 0 || totais.USD.saques > 0,
+      hasMultipleCurrencies: moedasAtivas.length > 1,
     };
-  }, [transacoesFiltradas, periodo, cotacaoUSD]);
+  }, [transacoesFiltradas, periodo, cotacoes]);
 
-  const formatCurrency = (value: number, currency: "BRL" | "USD" = "BRL") => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
+  // Formatador de moeda dinâmico
+  const formatCurrencyValue = (value: number, currency: string = "BRL") => {
+    const upper = currency.toUpperCase();
+    const symbol = getCurrencySymbol(upper);
+    
+    // Usar Intl para moedas padrão, símbolo manual para outras
+    const standardCurrencies = ["BRL", "USD", "EUR", "GBP"];
+    
+    if (standardCurrencies.includes(upper)) {
+      return new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: upper,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(value);
+    }
+    
+    // Para moedas não padrão, usar símbolo manual
+    return `${symbol} ${value.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
   };
 
-  const formatUSD = (value: number) => formatCurrency(value, "USD");
+  // Alias para compatibilidade
+  const formatCurrency = (value: number, currency: "BRL" | "USD" = "BRL") => formatCurrencyValue(value, currency);
+  const formatUSD = (value: number) => formatCurrencyValue(value, "USD");
 
   if (transacoesFiltradas.length === 0) {
     return (
@@ -690,8 +813,9 @@ export function FluxoFinanceiroOperacional({
 
           {/* Aba 2: Fluxo de Caixa (Capital em Operação - Bookmakers) */}
           <TabsContent value="fluxo" className="mt-4 space-y-4">
-            {/* KPIs - Depósitos e Saques separados por moeda */}
+            {/* KPIs - Depósitos e Saques com todas as moedas ativas */}
             <div className="grid grid-cols-2 gap-4">
+              {/* Card Depósitos */}
               <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
                 <div className="flex items-center gap-2 text-blue-500 mb-1">
                   <TrendingUp className="h-4 w-4" />
@@ -699,16 +823,23 @@ export function FluxoFinanceiroOperacional({
                   <KpiHelp text="Capital enviado às bookmakers no período selecionado" />
                 </div>
                 <div className="space-y-1">
+                  {/* Moeda primária (BRL) */}
                   <span className="text-xl font-bold text-blue-400 font-mono">
-                    {formatCurrency(dadosCapitalOperacao.totalDepositos)}
+                    {formatCurrencyValue(dadosCapitalOperacao.totais.BRL.depositos, "BRL")}
                   </span>
-                  {dadosCapitalOperacao.hasUSD && dadosCapitalOperacao.totalDepositosUSD > 0 && (
-                    <div className="text-sm font-mono text-cyan-400">
-                      + {formatUSD(dadosCapitalOperacao.totalDepositosUSD)}
-                    </div>
-                  )}
+                  {/* Outras moedas com movimentação */}
+                  {dadosCapitalOperacao.moedasAtivas
+                    .filter(m => m !== "BRL" && dadosCapitalOperacao.totais[m].depositos > 0)
+                    .map(moeda => (
+                      <div key={moeda} className="text-sm font-mono text-muted-foreground">
+                        + {formatCurrencyValue(dadosCapitalOperacao.totais[moeda].depositos, moeda)}
+                      </div>
+                    ))
+                  }
                 </div>
               </div>
+              
+              {/* Card Saques */}
               <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
                 <div className="flex items-center gap-2 text-purple-500 mb-1">
                   <TrendingDown className="h-4 w-4" />
@@ -716,149 +847,159 @@ export function FluxoFinanceiroOperacional({
                   <KpiHelp text="Capital retornado das bookmakers para o caixa no período" />
                 </div>
                 <div className="space-y-1">
+                  {/* Moeda primária (BRL) */}
                   <span className="text-xl font-bold text-purple-400 font-mono">
-                    {formatCurrency(dadosCapitalOperacao.totalSaques)}
+                    {formatCurrencyValue(dadosCapitalOperacao.totais.BRL.saques, "BRL")}
                   </span>
-                  {dadosCapitalOperacao.hasUSD && dadosCapitalOperacao.totalSaquesUSD > 0 && (
-                    <div className="text-sm font-mono text-cyan-400">
-                      + {formatUSD(dadosCapitalOperacao.totalSaquesUSD)}
-                    </div>
-                  )}
+                  {/* Outras moedas com movimentação */}
+                  {dadosCapitalOperacao.moedasAtivas
+                    .filter(m => m !== "BRL" && dadosCapitalOperacao.totais[m].saques > 0)
+                    .map(moeda => (
+                      <div key={moeda} className="text-sm font-mono text-muted-foreground">
+                        + {formatCurrencyValue(dadosCapitalOperacao.totais[moeda].saques, moeda)}
+                      </div>
+                    ))
+                  }
                 </div>
               </div>
             </div>
 
-            {/* Gráfico com 4 séries: BRL e USD separados */}
+            {/* Gráfico com barras dinâmicas para cada moeda ativa */}
             {dadosCapitalOperacao.dados.length > 0 ? (
               <ModernBarChart
                 data={dadosCapitalOperacao.dados}
                 categoryKey="periodo"
-                hideYAxisTicks={dadosCapitalOperacao.hasUSD}
-                bars={[
-                  { 
-                    dataKey: "depositos", 
-                    label: "Depósitos BRL", 
-                    gradientStart: "#3B82F6", 
-                    gradientEnd: "#2563EB",
-                    currency: "BRL",
-                  },
-                  { 
-                    dataKey: "depositos_usd_normalizado", 
-                    label: "Depósitos USD",
-                    labelValueKey: "depositos_usd",
-                    gradientStart: "#06B6D4", 
-                    gradientEnd: "#0891B2",
-                    currency: "USD",
-                  },
-                  { 
-                    dataKey: "saques", 
-                    label: "Saques BRL", 
-                    gradientStart: "#8B5CF6", 
-                    gradientEnd: "#7C3AED",
-                    currency: "BRL",
-                  },
-                  { 
-                    dataKey: "saques_usd_normalizado", 
-                    label: "Saques USD",
-                    labelValueKey: "saques_usd",
-                    gradientStart: "#EC4899", 
-                    gradientEnd: "#DB2777",
-                    currency: "USD",
-                  },
-                ]}
+                hideYAxisTicks={dadosCapitalOperacao.hasMultipleCurrencies}
+                bars={
+                  // Gerar barras dinamicamente baseado nas moedas ativas
+                  dadosCapitalOperacao.moedasAtivas.flatMap(moeda => {
+                    const config = CURRENCY_CONFIG[moeda];
+                    const key = moeda.toLowerCase();
+                    const hasDeposits = dadosCapitalOperacao.totais[moeda].depositos > 0;
+                    const hasSaques = dadosCapitalOperacao.totais[moeda].saques > 0;
+                    
+                    const bars: Array<{
+                      dataKey: string;
+                      label: string;
+                      labelValueKey?: string;
+                      gradientStart: string;
+                      gradientEnd: string;
+                      currency: "BRL" | "USD" | "EUR" | "GBP" | "MXN" | "MYR" | "ARS" | "COP" | "none";
+                    }> = [];
+                    
+                    if (hasDeposits) {
+                      bars.push({
+                        dataKey: moeda === "BRL" ? `depositos_${key}` : `depositos_${key}_norm`,
+                        label: `Depósitos ${moeda}`,
+                        labelValueKey: moeda !== "BRL" ? `depositos_${key}` : undefined,
+                        gradientStart: config.depositGradient[0],
+                        gradientEnd: config.depositGradient[1],
+                        currency: moeda,
+                      });
+                    }
+                    
+                    if (hasSaques) {
+                      bars.push({
+                        dataKey: moeda === "BRL" ? `saques_${key}` : `saques_${key}_norm`,
+                        label: `Saques ${moeda}`,
+                        labelValueKey: moeda !== "BRL" ? `saques_${key}` : undefined,
+                        gradientStart: config.saqueGradient[0],
+                        gradientEnd: config.saqueGradient[1],
+                        currency: moeda,
+                      });
+                    }
+                    
+                    return bars;
+                  })
+                }
                 height={300}
-                barSize={24}
-                showLabels={true}
+                barSize={dadosCapitalOperacao.moedasAtivas.length > 2 ? 16 : 24}
+                showLabels={dadosCapitalOperacao.moedasAtivas.length <= 3}
                 formatLabel={(value, ctx) => {
                   if (value === 0) return "";
-                  const currency = ctx?.currency;
-                  const prefix = currency === "USD" ? "US$ " : "R$ ";
-                  return prefix + Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+                  const currency = ctx?.currency || "BRL";
+                  const symbol = getCurrencySymbol(currency);
+                  return symbol + " " + Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
                 }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
-                  const hasAnyUSD = (data?.depositos_usd || 0) > 0 || (data?.saques_usd || 0) > 0;
                   
                   return (
                     <>
                       <p className="font-medium text-sm mb-2">{label}</p>
                       <div className="space-y-2 text-sm">
-                        {/* Depósitos BRL */}
-                        {(data?.depositos || 0) > 0 && (
-                          <div className="space-y-0.5">
-                            <div className="flex justify-between gap-4">
-                              <span className="text-blue-500 font-medium">Depósitos BRL</span>
+                        {/* Renderizar cada moeda ativa */}
+                        {dadosCapitalOperacao.moedasAtivas.map(moeda => {
+                          const key = moeda.toLowerCase();
+                          const depositos = data?.[`depositos_${key}`] || 0;
+                          const saques = data?.[`saques_${key}`] || 0;
+                          const depositosNorm = data?.[`depositos_${key}_norm`] || 0;
+                          const saquesNorm = data?.[`saques_${key}_norm`] || 0;
+                          const config = CURRENCY_CONFIG[moeda];
+                          const isBRL = moeda === "BRL";
+                          
+                          if (depositos === 0 && saques === 0) return null;
+                          
+                          return (
+                            <div key={moeda} className="space-y-1">
+                              {/* Depósitos */}
+                              {depositos > 0 && (
+                                <div className="space-y-0.5">
+                                  <div className="flex justify-between gap-4">
+                                    <span className={`${config.depositColor} font-medium`}>Depósitos {moeda}</span>
+                                  </div>
+                                  <div className="flex justify-between gap-4 pl-2">
+                                    <span className="text-muted-foreground text-xs">Valor real:</span>
+                                    <span className="font-mono">{formatCurrencyValue(depositos, moeda)}</span>
+                                  </div>
+                                  {!isBRL && (
+                                    <div className="flex justify-between gap-4 pl-2">
+                                      <span className="text-muted-foreground text-xs">Escala visual:</span>
+                                      <span className="font-mono text-muted-foreground">≈ {formatCurrencyValue(depositosNorm, "BRL")}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              
+                              {/* Saques */}
+                              {saques > 0 && (
+                                <div className="space-y-0.5">
+                                  <div className="flex justify-between gap-4">
+                                    <span className={`${config.saqueColor} font-medium`}>Saques {moeda}</span>
+                                  </div>
+                                  <div className="flex justify-between gap-4 pl-2">
+                                    <span className="text-muted-foreground text-xs">Valor real:</span>
+                                    <span className="font-mono">{formatCurrencyValue(saques, moeda)}</span>
+                                  </div>
+                                  {!isBRL && (
+                                    <div className="flex justify-between gap-4 pl-2">
+                                      <span className="text-muted-foreground text-xs">Escala visual:</span>
+                                      <span className="font-mono text-muted-foreground">≈ {formatCurrencyValue(saquesNorm, "BRL")}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Valor real:</span>
-                              <span className="font-mono">{formatCurrency(data?.depositos || 0)}</span>
-                            </div>
-                          </div>
-                        )}
+                          );
+                        })}
                         
-                        {/* Depósitos USD - com transparência de escala */}
-                        {(data?.depositos_usd || 0) > 0 && (
-                          <div className="space-y-0.5">
-                            <div className="flex justify-between gap-4">
-                              <span className="text-cyan-500 font-medium">Depósitos USD</span>
-                            </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Valor real:</span>
-                              <span className="font-mono">{formatUSD(data?.depositos_usd || 0)}</span>
-                            </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Escala visual:</span>
-                              <span className="font-mono text-muted-foreground">≈ {formatCurrency(data?.depositos_usd_normalizado || 0)}</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Saques BRL */}
-                        {(data?.saques || 0) > 0 && (
-                          <div className="space-y-0.5">
-                            <div className="flex justify-between gap-4">
-                              <span className="text-purple-500 font-medium">Saques BRL</span>
-                            </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Valor real:</span>
-                              <span className="font-mono">{formatCurrency(data?.saques || 0)}</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Saques USD - com transparência de escala */}
-                        {(data?.saques_usd || 0) > 0 && (
-                          <div className="space-y-0.5">
-                            <div className="flex justify-between gap-4">
-                              <span className="text-pink-500 font-medium">Saques USD</span>
-                            </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Valor real:</span>
-                              <span className="font-mono">{formatUSD(data?.saques_usd || 0)}</span>
-                            </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Escala visual:</span>
-                              <span className="font-mono text-muted-foreground">≈ {formatCurrency(data?.saques_usd_normalizado || 0)}</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Saldos */}
-                        <div className="border-t border-white/10 pt-2 mt-2 space-y-1">
-                          <div className="flex justify-between gap-4 font-medium">
-                            <span className={data?.alocacaoLiquida >= 0 ? "text-blue-500" : "text-purple-500"}>
-                              Alocação Líquida BRL:
-                            </span>
-                            <span className="font-mono">{formatCurrency(data?.alocacaoLiquida || 0)}</span>
-                          </div>
-                          {hasAnyUSD && (
-                            <div className="flex justify-between gap-4 font-medium">
-                              <span className={data?.alocacaoLiquidaUSD >= 0 ? "text-cyan-500" : "text-pink-500"}>
-                                Alocação Líquida USD:
-                              </span>
-                              <span className="font-mono">{formatUSD(data?.alocacaoLiquidaUSD || 0)}</span>
-                            </div>
-                          )}
+                        {/* Saldos por moeda */}
+                        <div className="border-t border-border/50 pt-2 mt-2 space-y-1">
+                          {dadosCapitalOperacao.moedasAtivas.map(moeda => {
+                            const key = moeda.toLowerCase();
+                            const alocacao = data?.[`alocacao_${key}`] || 0;
+                            if (alocacao === 0) return null;
+                            
+                            const config = CURRENCY_CONFIG[moeda];
+                            return (
+                              <div key={moeda} className="flex justify-between gap-4 font-medium">
+                                <span className={alocacao >= 0 ? config.depositColor : config.saqueColor}>
+                                  Alocação {moeda}:
+                                </span>
+                                <span className="font-mono">{formatCurrencyValue(alocacao, moeda)}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </>
@@ -871,9 +1012,9 @@ export function FluxoFinanceiroOperacional({
               </div>
             )}
 
-            {dadosCapitalOperacao.hasUSD ? (
+            {dadosCapitalOperacao.hasMultipleCurrencies ? (
               <p className="text-xs text-muted-foreground text-center italic">
-                Escala proporcional normalizada para comparação visual entre moedas. Os valores exibidos são reais; a altura das barras reflete equivalência.
+                Escala proporcional normalizada para comparação visual entre moedas. Os valores exibidos são reais; a altura das barras reflete equivalência em BRL.
               </p>
             ) : (
               <p className="text-xs text-muted-foreground text-center">
