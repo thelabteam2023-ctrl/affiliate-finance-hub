@@ -195,15 +195,19 @@ export function FluxoFinanceiroOperacional({
   }, [transacoes, dataInicio, dataFim]);
 
   // 1. Fluxo de Capital Externo (Investidores)
-  // REGRA: CRYPTO = USD, FIAT = BRL, nunca misturar
+  // REGRA: Suporta todas as 8 moedas, CRYPTO = USD
+  type GrupoDataExterno = {
+    aportes: Record<SupportedCurrency, number>;
+    liquidacoes: Record<SupportedCurrency, number>;
+    transacoes: Transacao[];
+  };
+  
   const dadosCapitalExterno = useMemo(() => {
-    const agrupamentos: Map<string, { 
-      aportes_brl: number; 
-      aportes_usd: number;
-      liquidacoes_brl: number; 
-      liquidacoes_usd: number;
-      transacoes: Transacao[] 
-    }> = new Map();
+    const agrupamentos: Map<string, GrupoDataExterno> = new Map();
+    
+    // Inicializar objeto vazio para cada moeda
+    const emptyTotals = (): Record<SupportedCurrency, number> => 
+      SUPPORTED_CURRENCIES.reduce((acc, c) => ({ ...acc, [c]: 0 }), {} as Record<SupportedCurrency, number>);
 
     transacoesFiltradas.forEach((t) => {
       if (t.tipo_transacao !== "APORTE_FINANCEIRO") return;
@@ -226,66 +230,97 @@ export function FluxoFinanceiroOperacional({
       }
 
       if (!agrupamentos.has(chave)) {
-        agrupamentos.set(chave, { aportes_brl: 0, aportes_usd: 0, liquidacoes_brl: 0, liquidacoes_usd: 0, transacoes: [] });
+        agrupamentos.set(chave, { 
+          aportes: emptyTotals(), 
+          liquidacoes: emptyTotals(), 
+          transacoes: [] 
+        });
       }
 
       const grupo = agrupamentos.get(chave)!;
       grupo.transacoes.push(t);
       
+      // Determinar moeda: CRYPTO = USD, FIAT = moeda nativa
       const isCrypto = t.tipo_moeda === "CRYPTO";
-      const isUSD = t.moeda === "USD" || isCrypto;
+      let moeda: SupportedCurrency = isCrypto ? "USD" : (t.moeda as SupportedCurrency);
+      
+      // Fallback para BRL se moeda não reconhecida
+      if (!SUPPORTED_CURRENCIES.includes(moeda)) {
+        moeda = "BRL";
+      }
+      
       const valor = isCrypto ? (t.valor_usd || 0) : t.valor;
 
       // Aporte: Investidor → Caixa
       if (t.destino_tipo === "CAIXA_OPERACIONAL") {
-        if (isUSD) {
-          grupo.aportes_usd += valor;
-        } else {
-          grupo.aportes_brl += valor;
-        }
+        grupo.aportes[moeda] += valor;
       }
       // Liquidação: Caixa → Investidor
       if (t.origem_tipo === "CAIXA_OPERACIONAL") {
-        if (isUSD) {
-          grupo.liquidacoes_usd += valor;
-        } else {
-          grupo.liquidacoes_brl += valor;
-        }
+        grupo.liquidacoes[moeda] += valor;
       }
     });
 
+    // Calcular dados para o gráfico
     const dados = Array.from(agrupamentos.entries())
-      .map(([chave, dados]) => ({
-        periodo: chave,
-        aportes: dados.aportes_brl,
-        aportes_usd: dados.aportes_usd,
-        // Valores normalizados em BRL para altura das barras (USD * cotação)
-        aportes_usd_normalizado: dados.aportes_usd * cotacaoUSD,
-        liquidacoes: -dados.liquidacoes_brl,
-        liquidacoes_usd: -dados.liquidacoes_usd,
-        liquidacoes_usd_normalizado: -dados.liquidacoes_usd * cotacaoUSD,
-        liquido: dados.aportes_brl - dados.liquidacoes_brl,
-        liquido_usd: dados.aportes_usd - dados.liquidacoes_usd,
-        transacoes: dados.transacoes,
-      }))
+      .map(([chave, grupo]) => {
+        const result: Record<string, any> = {
+          periodo: chave,
+          transacoes: grupo.transacoes,
+        };
+        
+        // Para cada moeda, adicionar valores reais e normalizados
+        SUPPORTED_CURRENCIES.forEach(currency => {
+          const cotacao = cotacoes[currency];
+          const key = currency.toLowerCase();
+          
+          // Valores reais
+          result[`aportes_${key}`] = grupo.aportes[currency];
+          result[`liquidacoes_${key}`] = grupo.liquidacoes[currency];
+          
+          // Valores normalizados em BRL para escala visual
+          result[`aportes_${key}_norm`] = grupo.aportes[currency] * cotacao;
+          result[`liquidacoes_${key}_norm`] = grupo.liquidacoes[currency] * cotacao;
+          
+          // Líquido por moeda
+          result[`liquido_${key}`] = grupo.aportes[currency] - grupo.liquidacoes[currency];
+        });
+        
+        return result;
+      })
       .slice(-12);
 
-    const totalAportesBRL = dados.reduce((sum, d) => sum + d.aportes, 0);
-    const totalAportesUSD = dados.reduce((sum, d) => sum + d.aportes_usd, 0);
-    const totalLiquidacoesBRL = dados.reduce((sum, d) => sum + Math.abs(d.liquidacoes), 0);
-    const totalLiquidacoesUSD = dados.reduce((sum, d) => sum + Math.abs(d.liquidacoes_usd), 0);
+    // Calcular totais por moeda
+    type CurrencyTotalsExterno = Record<SupportedCurrency, { aportes: number; liquidacoes: number }>;
+    const totais: CurrencyTotalsExterno = SUPPORTED_CURRENCIES.reduce((acc, currency) => {
+      const key = currency.toLowerCase();
+      acc[currency] = {
+        aportes: dados.reduce((sum, d) => sum + (d[`aportes_${key}`] || 0), 0),
+        liquidacoes: dados.reduce((sum, d) => sum + (d[`liquidacoes_${key}`] || 0), 0),
+      };
+      return acc;
+    }, {} as CurrencyTotalsExterno);
+
+    // Detectar quais moedas têm movimentação
+    const moedasAtivas = SUPPORTED_CURRENCIES.filter(currency => 
+      totais[currency].aportes > 0 || totais[currency].liquidacoes > 0
+    );
 
     return { 
       dados, 
-      totalAportes: totalAportesBRL, 
-      totalAportesUSD,
-      totalLiquidacoes: totalLiquidacoesBRL,
-      totalLiquidacoesUSD,
-      liquido: totalAportesBRL - totalLiquidacoesBRL,
-      liquidoUSD: totalAportesUSD - totalLiquidacoesUSD,
-      hasUSD: totalAportesUSD > 0 || totalLiquidacoesUSD > 0
+      totais,
+      moedasAtivas,
+      // Compatibilidade com código legado
+      totalAportes: totais.BRL.aportes, 
+      totalAportesUSD: totais.USD.aportes,
+      totalLiquidacoes: totais.BRL.liquidacoes,
+      totalLiquidacoesUSD: totais.USD.liquidacoes,
+      liquido: totais.BRL.aportes - totais.BRL.liquidacoes,
+      liquidoUSD: totais.USD.aportes - totais.USD.liquidacoes,
+      hasUSD: totais.USD.aportes > 0 || totais.USD.liquidacoes > 0,
+      hasMultipleCurrencies: moedasAtivas.length > 1,
     };
-  }, [transacoesFiltradas, periodo, cotacaoUSD]);
+  }, [transacoesFiltradas, periodo, cotacoes]);
 
   // 2. Capital Alocado em Operação (Bookmakers)
   // REGRA: Suporta todas as 8 moedas, CRYPTO = USD
@@ -594,7 +629,7 @@ export function FluxoFinanceiroOperacional({
 
           {/* Aba 1: Capital Externo (Investidores) */}
           <TabsContent value="externo" className="mt-4 space-y-4">
-            {/* KPIs */}
+            {/* KPIs Multi-moeda */}
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-500/20">
                 <div className="flex items-center gap-2 text-emerald-500 mb-1">
@@ -603,13 +638,18 @@ export function FluxoFinanceiroOperacional({
                   <KpiHelp text="Total de capital recebido de investidores no período selecionado" />
                 </div>
                 <div className="space-y-1">
-                  <span className="text-lg font-bold text-emerald-400 font-mono">
-                    {formatCurrency(dadosCapitalExterno.totalAportes)}
-                  </span>
-                  {dadosCapitalExterno.hasUSD && dadosCapitalExterno.totalAportesUSD > 0 && (
-                    <div className="text-sm font-mono text-blue-400">
-                      + {formatUSD(dadosCapitalExterno.totalAportesUSD)}
-                    </div>
+                  {dadosCapitalExterno.moedasAtivas.length === 0 ? (
+                    <span className="text-lg font-bold text-muted-foreground font-mono">R$ 0</span>
+                  ) : (
+                    dadosCapitalExterno.moedasAtivas.map((currency, idx) => {
+                      const total = dadosCapitalExterno.totais[currency]?.aportes || 0;
+                      if (total <= 0) return null;
+                      return (
+                        <div key={currency} className={cn("font-mono", idx === 0 ? "text-lg font-bold text-emerald-400" : "text-sm text-emerald-300/80")}>
+                          {formatCurrencyValue(total, currency)}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -620,175 +660,150 @@ export function FluxoFinanceiroOperacional({
                   <KpiHelp text="Total de capital devolvido aos investidores (lucros ou resgates)" />
                 </div>
                 <div className="space-y-1">
-                  <span className="text-lg font-bold text-amber-400 font-mono">
-                    {formatCurrency(dadosCapitalExterno.totalLiquidacoes)}
-                  </span>
-                  {dadosCapitalExterno.hasUSD && dadosCapitalExterno.totalLiquidacoesUSD > 0 && (
-                    <div className="text-sm font-mono text-blue-400">
-                      + {formatUSD(dadosCapitalExterno.totalLiquidacoesUSD)}
-                    </div>
+                  {dadosCapitalExterno.moedasAtivas.length === 0 ? (
+                    <span className="text-lg font-bold text-muted-foreground font-mono">R$ 0</span>
+                  ) : (
+                    dadosCapitalExterno.moedasAtivas.map((currency, idx) => {
+                      const total = dadosCapitalExterno.totais[currency]?.liquidacoes || 0;
+                      if (total <= 0) return null;
+                      return (
+                        <div key={currency} className={cn("font-mono", idx === 0 ? "text-lg font-bold text-amber-400" : "text-sm text-amber-300/80")}>
+                          {formatCurrencyValue(total, currency)}
+                        </div>
+                      );
+                    })
+                  )}
+                  {/* Mostrar zero se não houver liquidações */}
+                  {dadosCapitalExterno.moedasAtivas.every(c => (dadosCapitalExterno.totais[c]?.liquidacoes || 0) <= 0) && (
+                    <span className="text-lg font-bold text-muted-foreground font-mono">R$ 0</span>
                   )}
                 </div>
               </div>
               <div className={`rounded-lg p-3 border ${
-                dadosCapitalExterno.liquido >= 0 
+                (dadosCapitalExterno.totais.BRL?.aportes || 0) - (dadosCapitalExterno.totais.BRL?.liquidacoes || 0) >= 0 
                   ? "bg-emerald-500/10 border-emerald-500/20" 
                   : "bg-destructive/10 border-destructive/20"
               }`}>
                 <div className={`flex items-center gap-2 mb-1 ${
-                  dadosCapitalExterno.liquido >= 0 ? "text-emerald-500" : "text-destructive"
+                  (dadosCapitalExterno.totais.BRL?.aportes || 0) - (dadosCapitalExterno.totais.BRL?.liquidacoes || 0) >= 0 ? "text-emerald-500" : "text-destructive"
                 }`}>
                   <ArrowRightLeft className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase">Saldo Líquido</span>
                   <KpiHelp text="Diferença entre aportes e liquidações. Positivo = mais capital entrando" />
                 </div>
                 <div className="space-y-1">
-                  <span className={`text-lg font-bold font-mono ${
-                    dadosCapitalExterno.liquido >= 0 ? "text-emerald-400" : "text-destructive"
-                  }`}>
-                    {dadosCapitalExterno.liquido >= 0 ? "+" : ""}{formatCurrency(dadosCapitalExterno.liquido)}
-                  </span>
-                  {dadosCapitalExterno.hasUSD && (
-                    <div className={`text-sm font-mono ${dadosCapitalExterno.liquidoUSD >= 0 ? "text-blue-400" : "text-red-400"}`}>
-                      {dadosCapitalExterno.liquidoUSD >= 0 ? "+" : ""}{formatUSD(dadosCapitalExterno.liquidoUSD)}
-                    </div>
+                  {dadosCapitalExterno.moedasAtivas.length === 0 ? (
+                    <span className="text-lg font-bold text-muted-foreground font-mono">R$ 0</span>
+                  ) : (
+                    dadosCapitalExterno.moedasAtivas.map((currency, idx) => {
+                      const aportes = dadosCapitalExterno.totais[currency]?.aportes || 0;
+                      const liquidacoes = dadosCapitalExterno.totais[currency]?.liquidacoes || 0;
+                      const liquido = aportes - liquidacoes;
+                      if (aportes === 0 && liquidacoes === 0) return null;
+                      return (
+                        <div key={currency} className={cn(
+                          "font-mono",
+                          idx === 0 ? "text-lg font-bold" : "text-sm",
+                          liquido >= 0 ? "text-emerald-400" : "text-destructive"
+                        )}>
+                          {liquido >= 0 ? "+" : ""}{formatCurrencyValue(liquido, currency)}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Gráfico com 4 séries: BRL e USD separados */}
+            {/* Gráfico dinâmico com barras para cada moeda ativa */}
             {dadosCapitalExterno.dados.length > 0 ? (
               <ModernBarChart
                 data={dadosCapitalExterno.dados}
                 categoryKey="periodo"
-                hideYAxisTicks={dadosCapitalExterno.hasUSD}
-                bars={[
-                  { 
-                    dataKey: "aportes", 
-                    label: "Aportes BRL", 
-                    gradientStart: "#22C55E", 
-                    gradientEnd: "#16A34A",
-                    currency: "BRL",
-                  },
-                  { 
-                    dataKey: "aportes_usd_normalizado", 
-                    label: "Aportes USD",
-                    labelValueKey: "aportes_usd",
-                    gradientStart: "#06B6D4", 
-                    gradientEnd: "#0891B2",
-                    currency: "USD",
-                  },
-                  { 
-                    dataKey: "liquidacoes", 
-                    label: "Liquidações BRL", 
-                    gradientStart: "#F97316", 
-                    gradientEnd: "#EA580C",
-                    currency: "BRL",
-                  },
-                  { 
-                    dataKey: "liquidacoes_usd_normalizado", 
-                    label: "Liquidações USD",
-                    labelValueKey: "liquidacoes_usd",
-                    gradientStart: "#EC4899", 
-                    gradientEnd: "#DB2777",
-                    currency: "USD",
-                  },
-                ]}
+                hideYAxisTicks={dadosCapitalExterno.hasMultipleCurrencies}
+                bars={dadosCapitalExterno.moedasAtivas.flatMap((currency) => {
+                  const config = CURRENCY_CONFIG[currency];
+                  const key = currency.toLowerCase();
+                  return [
+                    { 
+                      dataKey: currency === "BRL" ? `aportes_brl` : `aportes_${key}_norm`, 
+                      label: `Aportes ${currency}`,
+                      labelValueKey: currency === "BRL" ? undefined : `aportes_${key}`,
+                      gradientStart: config?.depositGradient[0] || "#22C55E", 
+                      gradientEnd: config?.depositGradient[1] || "#16A34A",
+                      currency: currency as any,
+                    },
+                    { 
+                      dataKey: currency === "BRL" ? `liquidacoes_brl` : `liquidacoes_${key}_norm`, 
+                      label: `Liquidações ${currency}`,
+                      labelValueKey: currency === "BRL" ? undefined : `liquidacoes_${key}`,
+                      gradientStart: config?.saqueGradient[0] || "#F97316", 
+                      gradientEnd: config?.saqueGradient[1] || "#EA580C",
+                      currency: currency as any,
+                    },
+                  ];
+                })}
                 height={300}
                 barSize={24}
                 showLabels={true}
                 formatLabel={(value, ctx) => {
                   if (value === 0) return "";
-                  const currency = ctx?.currency;
-                  const prefix = currency === "USD" ? "US$ " : "R$ ";
-                  return prefix + Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+                  const currency = ctx?.currency || "BRL";
+                  const symbol = getCurrencySymbol(String(currency));
+                  return symbol + " " + Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
                 }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
-                  const hasAnyUSD = (data?.aportes_usd || 0) > 0 || Math.abs(data?.liquidacoes_usd || 0) > 0;
                   
                   return (
                     <>
                       <p className="font-medium text-sm mb-2">{label}</p>
                       <div className="space-y-2 text-sm">
-                        {/* Aportes BRL */}
-                        {(data?.aportes || 0) > 0 && (
-                          <div className="space-y-0.5">
-                            <div className="flex justify-between gap-4">
-                              <span className="text-emerald-500 font-medium">Aportes BRL</span>
+                        {/* Renderizar para cada moeda ativa */}
+                        {dadosCapitalExterno.moedasAtivas.map((currency) => {
+                          const key = currency.toLowerCase();
+                          const aportes = data?.[`aportes_${key}`] || 0;
+                          const liquidacoes = data?.[`liquidacoes_${key}`] || 0;
+                          const aportesNorm = data?.[`aportes_${key}_norm`] || 0;
+                          const liquidacoesNorm = data?.[`liquidacoes_${key}_norm`] || 0;
+                          const liquido = data?.[`liquido_${key}`] || 0;
+                          
+                          if (aportes === 0 && liquidacoes === 0) return null;
+                          
+                          const config = CURRENCY_CONFIG[currency];
+                          
+                          return (
+                            <div key={currency} className="space-y-1 pb-2 border-b border-white/10 last:border-0">
+                              <div className={cn("font-medium text-xs uppercase", config?.depositColor || "text-emerald-500")}>
+                                {currency}
+                              </div>
+                              {aportes > 0 && (
+                                <div className="flex justify-between gap-4 pl-2">
+                                  <span className="text-muted-foreground text-xs">Aportes:</span>
+                                  <span className="font-mono">{formatCurrencyValue(aportes, currency)}</span>
+                                </div>
+                              )}
+                              {currency !== "BRL" && aportes > 0 && (
+                                <div className="flex justify-between gap-4 pl-2">
+                                  <span className="text-muted-foreground text-xs">Escala visual:</span>
+                                  <span className="font-mono text-muted-foreground">≈ {formatCurrencyValue(aportesNorm, "BRL")}</span>
+                                </div>
+                              )}
+                              {liquidacoes > 0 && (
+                                <div className="flex justify-between gap-4 pl-2">
+                                  <span className="text-muted-foreground text-xs">Liquidações:</span>
+                                  <span className="font-mono">{formatCurrencyValue(liquidacoes, currency)}</span>
+                                </div>
+                              )}
+                              <div className="flex justify-between gap-4 pl-2 pt-1">
+                                <span className="text-muted-foreground text-xs font-medium">Saldo:</span>
+                                <span className={cn("font-mono font-medium", liquido >= 0 ? "text-emerald-400" : "text-destructive")}>
+                                  {liquido >= 0 ? "+" : ""}{formatCurrencyValue(liquido, currency)}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Valor real:</span>
-                              <span className="font-mono">{formatCurrency(data?.aportes || 0)}</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Aportes USD - com transparência de escala */}
-                        {(data?.aportes_usd || 0) > 0 && (
-                          <div className="space-y-0.5">
-                            <div className="flex justify-between gap-4">
-                              <span className="text-cyan-500 font-medium">Aportes USD</span>
-                            </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Valor real:</span>
-                              <span className="font-mono">{formatUSD(data?.aportes_usd || 0)}</span>
-                            </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Escala visual:</span>
-                              <span className="font-mono text-muted-foreground">≈ {formatCurrency(data?.aportes_usd_normalizado || 0)}</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Liquidações BRL */}
-                        {Math.abs(data?.liquidacoes || 0) > 0 && (
-                          <div className="space-y-0.5">
-                            <div className="flex justify-between gap-4">
-                              <span className="text-amber-500 font-medium">Liquidações BRL</span>
-                            </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Valor real:</span>
-                              <span className="font-mono">{formatCurrency(Math.abs(data?.liquidacoes || 0))}</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Liquidações USD - com transparência de escala */}
-                        {Math.abs(data?.liquidacoes_usd || 0) > 0 && (
-                          <div className="space-y-0.5">
-                            <div className="flex justify-between gap-4">
-                              <span className="text-pink-500 font-medium">Liquidações USD</span>
-                            </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Valor real:</span>
-                              <span className="font-mono">{formatUSD(Math.abs(data?.liquidacoes_usd || 0))}</span>
-                            </div>
-                            <div className="flex justify-between gap-4 pl-2">
-                              <span className="text-muted-foreground text-xs">Escala visual:</span>
-                              <span className="font-mono text-muted-foreground">≈ {formatCurrency(Math.abs(data?.liquidacoes_usd_normalizado || 0))}</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Saldos */}
-                        <div className="border-t border-white/10 pt-2 mt-2 space-y-1">
-                          <div className="flex justify-between gap-4 font-medium">
-                            <span className={data?.liquido >= 0 ? "text-emerald-500" : "text-destructive"}>
-                              Saldo BRL:
-                            </span>
-                            <span className="font-mono">{formatCurrency(data?.liquido || 0)}</span>
-                          </div>
-                          {hasAnyUSD && (
-                            <div className="flex justify-between gap-4 font-medium">
-                              <span className={data?.liquido_usd >= 0 ? "text-cyan-500" : "text-pink-500"}>
-                                Saldo USD:
-                              </span>
-                              <span className="font-mono">{formatUSD(data?.liquido_usd || 0)}</span>
-                            </div>
-                          )}
-                        </div>
+                          );
+                        })}
                       </div>
                     </>
                   );
@@ -800,9 +815,9 @@ export function FluxoFinanceiroOperacional({
               </div>
             )}
 
-            {dadosCapitalExterno.hasUSD ? (
+            {dadosCapitalExterno.hasMultipleCurrencies ? (
               <p className="text-xs text-muted-foreground text-center italic">
-                Escala proporcional normalizada para comparação visual entre moedas. Os valores exibidos são reais; a altura das barras reflete equivalência.
+                Escala proporcional normalizada para comparação visual entre moedas. Os valores exibidos são reais; a altura das barras reflete equivalência em BRL.
               </p>
             ) : (
               <p className="text-xs text-muted-foreground text-center">
