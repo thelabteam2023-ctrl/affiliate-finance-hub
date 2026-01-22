@@ -1036,7 +1036,7 @@ export default function CentralOperacoes() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-yellow-400">{formatCurrency(saque.valor, saque.moeda)}</span>
+                      <span className="text-xs font-bold text-yellow-400">{formatCurrency(saque.valor_origem || saque.valor, saque.moeda_origem || saque.moeda)}</span>
                       <Button size="sm" onClick={() => handleConfirmarSaque(saque)} className="bg-yellow-600 hover:bg-yellow-700 h-6 text-xs px-2">
                         Confirmar
                       </Button>

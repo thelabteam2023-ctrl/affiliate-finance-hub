@@ -486,7 +486,7 @@ export function ConfirmarSaqueDialog({
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Valor Solicitado</span>
                       <span className="text-lg font-semibold text-muted-foreground">
-                        {formatCurrency(saque.valor, saque.moeda)}
+                        {formatCurrency(valorCasa, moedaCasa)}
                       </span>
                     </div>
                   )}
@@ -555,7 +555,7 @@ export function ConfirmarSaqueDialog({
               /* SEÇÃO FIAT */
               <div className="space-y-2">
                 <Label htmlFor="valor-recebido" className="flex items-center gap-2">
-                  Valor Real Recebido ({moedaDestinoFiat})
+                  Valor Real Recebido ({moedaCasa})
                   <span className="text-destructive">*</span>
                 </Label>
                 <Input
