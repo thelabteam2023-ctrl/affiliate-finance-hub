@@ -1,48 +1,65 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SupportedCurrency, FIAT_CURRENCIES } from "@/types/currency";
+
+// Tipo para saldos dinâmicos por moeda
+export type SaldosPorMoeda = Record<string, number>;
+
+// Lista de moedas FIAT suportadas
+const SUPPORTED_FIAT: string[] = FIAT_CURRENCIES.map(c => c.value);
+
+// Helper para criar objeto de saldos vazio
+function createEmptySaldos(): SaldosPorMoeda {
+  const saldos: SaldosPorMoeda = {};
+  SUPPORTED_FIAT.forEach(moeda => {
+    saldos[moeda] = 0;
+  });
+  return saldos;
+}
+
+// Helper para identificar moeda de execução a partir de transação
+function getMoedaExecucao(tx: { tipo_moeda?: string; moeda?: string; coin?: string }): string {
+  // CRYPTO sempre conta como USD (stablecoins ou valor_usd)
+  if (tx.tipo_moeda === "CRYPTO") {
+    return "USD";
+  }
+  // FIAT usa o campo moeda
+  return tx.moeda || "BRL";
+}
 
 export interface BookmakerFinanceiro {
   bookmaker_id: string;
   bookmaker_nome: string;
   logo_url: string | null;
-  moeda: string;
+  moeda: string; // Moeda nativa da casa
+  // Valores na moeda NATIVA da casa
   total_depositado: number;
-  total_depositado_usd: number;
   total_sacado: number;
-  total_sacado_usd: number;
   lucro_prejuizo: number;
-  lucro_prejuizo_usd: number;
+  saldo_atual: number;
+  // Breakdown multi-moeda (para casos onde há transações em moedas diferentes)
+  depositado_por_moeda: SaldosPorMoeda;
+  sacado_por_moeda: SaldosPorMoeda;
+  saldo_por_moeda: SaldosPorMoeda;
+  resultado_por_moeda: SaldosPorMoeda;
   qtd_apostas: number;
-  saldo_brl: number;
-  saldo_usd: number;
-  saldo_atual: number; // Legacy - soma total para compatibilidade
   status: string;
-  projetos: string[]; // IDs dos projetos onde foi usado
-  has_credentials: boolean; // Indica se tem login_username preenchido
+  projetos: string[];
+  has_credentials: boolean;
   login_username: string | null;
   login_password_encrypted: string | null;
-}
-
-// Saldos separados por tipo de moeda
-export interface SaldosPorMoeda {
-  brl: number;
-  usd: number;
 }
 
 export interface ParceiroFinanceiroConsolidado {
   parceiro_id: string;
   parceiro_nome: string;
-  // Totais separados por moeda
-  total_depositado_brl: number;
-  total_depositado_usd: number;
-  total_sacado_brl: number;
-  total_sacado_usd: number;
-  lucro_prejuizo_brl: number;
-  lucro_prejuizo_usd: number;
-  // Legacy (soma BRL + USD estimado) para compatibilidade
-  total_depositado: number;
-  total_sacado: number;
-  lucro_prejuizo: number;
+  // Totais por moeda nativa (chave = código da moeda)
+  depositado_por_moeda: SaldosPorMoeda;
+  sacado_por_moeda: SaldosPorMoeda;
+  saldo_por_moeda: SaldosPorMoeda;
+  resultado_por_moeda: SaldosPorMoeda;
+  // Moedas que o parceiro utiliza (para UI)
+  moedas_utilizadas: string[];
   qtd_apostas_total: number;
   bookmakers: BookmakerFinanceiro[];
 }
@@ -80,7 +97,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
 
       if (parceiroError) throw parceiroError;
 
-      // Buscar todos os bookmakers do parceiro (incluindo moeda e saldo_usd)
+      // Buscar todos os bookmakers do parceiro
       const { data: bookmakers, error: bookmakersError } = await supabase
         .from("bookmakers")
         .select(`
@@ -88,7 +105,6 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           nome,
           moeda,
           saldo_atual,
-          saldo_usd,
           status,
           projeto_id,
           bookmaker_catalogo_id,
@@ -118,31 +134,35 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
 
       const bookmakerIds = (bookmakers || []).map(b => b.id);
 
-      // Buscar transações financeiras (depósitos e saques) por bookmaker
-      // Inclui tipo_moeda e valor_usd para separação correta
-      let depositosMap = new Map<string, { brl: number; usd: number }>();
-      let saquesMap = new Map<string, { brl: number; usd: number }>();
+      // Maps para acumular valores por bookmaker e moeda
+      let depositosMap = new Map<string, SaldosPorMoeda>();
+      let saquesMap = new Map<string, SaldosPorMoeda>();
 
       if (bookmakerIds.length > 0) {
         // Depósitos (destino é o bookmaker)
         const { data: depositos } = await supabase
           .from("cash_ledger")
-          .select("destino_bookmaker_id, valor, valor_usd, tipo_moeda, moeda")
+          .select("destino_bookmaker_id, valor, valor_destino, valor_usd, tipo_moeda, moeda, moeda_destino")
           .in("destino_bookmaker_id", bookmakerIds)
           .eq("tipo_transacao", "DEPOSITO")
           .eq("status", "CONFIRMADO");
 
         depositos?.forEach((d) => {
           if (d.destino_bookmaker_id) {
-            const current = depositosMap.get(d.destino_bookmaker_id) || { brl: 0, usd: 0 };
-            // CRYPTO usa valor_usd, FIAT usa valor
-            if (d.tipo_moeda === "CRYPTO") {
-              current.usd += Number(d.valor_usd) || 0;
-            } else if (d.moeda === "USD") {
-              current.usd += Number(d.valor) || 0;
+            const current = depositosMap.get(d.destino_bookmaker_id) || createEmptySaldos();
+            
+            // Usar moeda_destino se disponível (3-layer model), senão derivar
+            let moedaExec: string;
+            if (d.moeda_destino) {
+              moedaExec = d.moeda_destino;
             } else {
-              current.brl += Number(d.valor) || 0;
+              moedaExec = getMoedaExecucao(d);
             }
+            
+            // Usar valor_destino se disponível (3-layer), senão valor
+            const valorExec = Number(d.valor_destino) || Number(d.valor) || 0;
+            
+            current[moedaExec] = (current[moedaExec] || 0) + valorExec;
             depositosMap.set(d.destino_bookmaker_id, current);
           }
         });
@@ -150,28 +170,33 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
         // Saques (origem é o bookmaker)
         const { data: saques } = await supabase
           .from("cash_ledger")
-          .select("origem_bookmaker_id, valor, valor_usd, tipo_moeda, moeda")
+          .select("origem_bookmaker_id, valor, valor_origem, valor_usd, tipo_moeda, moeda, moeda_origem")
           .in("origem_bookmaker_id", bookmakerIds)
           .eq("tipo_transacao", "SAQUE")
           .eq("status", "CONFIRMADO");
 
         saques?.forEach((s) => {
           if (s.origem_bookmaker_id) {
-            const current = saquesMap.get(s.origem_bookmaker_id) || { brl: 0, usd: 0 };
-            // CRYPTO usa valor_usd, FIAT usa valor
-            if (s.tipo_moeda === "CRYPTO") {
-              current.usd += Number(s.valor_usd) || 0;
-            } else if (s.moeda === "USD") {
-              current.usd += Number(s.valor) || 0;
+            const current = saquesMap.get(s.origem_bookmaker_id) || createEmptySaldos();
+            
+            // Usar moeda_origem se disponível (3-layer model), senão derivar
+            let moedaExec: string;
+            if (s.moeda_origem) {
+              moedaExec = s.moeda_origem;
             } else {
-              current.brl += Number(s.valor) || 0;
+              moedaExec = getMoedaExecucao(s);
             }
+            
+            // Usar valor_origem se disponível (3-layer), senão valor
+            const valorExec = Number(s.valor_origem) || Number(s.valor) || 0;
+            
+            current[moedaExec] = (current[moedaExec] || 0) + valorExec;
             saquesMap.set(s.origem_bookmaker_id, current);
           }
         });
       }
 
-      // Buscar quantidade de apostas por bookmaker from apostas_unificada
+      // Buscar quantidade de apostas por bookmaker
       let apostasMap = new Map<string, number>();
 
       if (bookmakerIds.length > 0) {
@@ -190,32 +215,41 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
 
       // Montar dados por bookmaker
       const bookmakersFinanceiro: BookmakerFinanceiro[] = (bookmakers || []).map(bm => {
-        const depositadoData = depositosMap.get(bm.id) || { brl: 0, usd: 0 };
-        const sacadoData = saquesMap.get(bm.id) || { brl: 0, usd: 0 };
-        const saldoBRL = Number(bm.saldo_atual) || 0;
-        const saldoUSD = Number(bm.saldo_usd) || 0;
-        const moeda = bm.moeda || "BRL";
+        const depositadoPorMoeda = depositosMap.get(bm.id) || createEmptySaldos();
+        const sacadoPorMoeda = saquesMap.get(bm.id) || createEmptySaldos();
+        const moedaNativa = bm.moeda || "BRL";
+        const saldoAtual = Number(bm.saldo_atual) || 0;
         
-        // Lucro BRL = Sacado BRL + Saldo BRL - Depositado BRL
-        const lucroBRL = sacadoData.brl + saldoBRL - depositadoData.brl;
-        // Lucro USD = Sacado USD + Saldo USD - Depositado USD
-        const lucroUSD = sacadoData.usd + saldoUSD - depositadoData.usd;
+        // Saldo por moeda (saldo_atual é sempre na moeda nativa)
+        const saldoPorMoeda = createEmptySaldos();
+        saldoPorMoeda[moedaNativa] = saldoAtual;
+        
+        // Calcular resultado por moeda: Sacado + Saldo - Depositado
+        const resultadoPorMoeda = createEmptySaldos();
+        SUPPORTED_FIAT.forEach(moeda => {
+          const saldo = moeda === moedaNativa ? saldoAtual : 0;
+          resultadoPorMoeda[moeda] = (sacadoPorMoeda[moeda] || 0) + saldo - (depositadoPorMoeda[moeda] || 0);
+        });
+        
+        // Valores consolidados na moeda nativa para exibição principal
+        const totalDepositado = depositadoPorMoeda[moedaNativa] || 0;
+        const totalSacado = sacadoPorMoeda[moedaNativa] || 0;
+        const lucroPrejuizo = resultadoPorMoeda[moedaNativa] || 0;
 
         return {
           bookmaker_id: bm.id,
           bookmaker_nome: bm.nome,
-          moeda,
+          moeda: moedaNativa,
           logo_url: bm.bookmaker_catalogo_id ? logosMap.get(bm.bookmaker_catalogo_id) || null : null,
-          total_depositado: depositadoData.brl,
-          total_depositado_usd: depositadoData.usd,
-          total_sacado: sacadoData.brl,
-          total_sacado_usd: sacadoData.usd,
-          lucro_prejuizo: lucroBRL,
-          lucro_prejuizo_usd: lucroUSD,
+          total_depositado: totalDepositado,
+          total_sacado: totalSacado,
+          lucro_prejuizo: lucroPrejuizo,
+          saldo_atual: saldoAtual,
+          depositado_por_moeda: depositadoPorMoeda,
+          sacado_por_moeda: sacadoPorMoeda,
+          saldo_por_moeda: saldoPorMoeda,
+          resultado_por_moeda: resultadoPorMoeda,
           qtd_apostas: apostasMap.get(bm.id) || 0,
-          saldo_brl: saldoBRL,
-          saldo_usd: saldoUSD,
-          saldo_atual: saldoBRL + saldoUSD, // Legacy soma
           status: bm.status,
           projetos: bm.projeto_id ? [bm.projeto_id] : [],
           has_credentials: !!(bm.login_username && bm.login_username.trim()),
@@ -224,40 +258,39 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
         };
       });
 
-      // Calcular totais consolidados SEPARADOS por moeda
-      let totalDepositadoBRL = 0;
-      let totalDepositadoUSD = 0;
-      let totalSacadoBRL = 0;
-      let totalSacadoUSD = 0;
-      let lucroBRL = 0;
-      let lucroUSD = 0;
+      // Calcular totais consolidados por moeda
+      const totalDepositadoPorMoeda = createEmptySaldos();
+      const totalSacadoPorMoeda = createEmptySaldos();
+      const totalSaldoPorMoeda = createEmptySaldos();
+      const totalResultadoPorMoeda = createEmptySaldos();
       
       bookmakersFinanceiro.forEach(b => {
-        // Agora cada bookmaker tem valores separados por moeda
-        totalDepositadoBRL += b.total_depositado;
-        totalDepositadoUSD += b.total_depositado_usd;
-        totalSacadoBRL += b.total_sacado;
-        totalSacadoUSD += b.total_sacado_usd;
-        lucroBRL += b.lucro_prejuizo;
-        lucroUSD += b.lucro_prejuizo_usd;
+        SUPPORTED_FIAT.forEach(moeda => {
+          totalDepositadoPorMoeda[moeda] += b.depositado_por_moeda[moeda] || 0;
+          totalSacadoPorMoeda[moeda] += b.sacado_por_moeda[moeda] || 0;
+          totalSaldoPorMoeda[moeda] += b.saldo_por_moeda[moeda] || 0;
+          totalResultadoPorMoeda[moeda] += b.resultado_por_moeda[moeda] || 0;
+        });
       });
+      
+      // Identificar moedas utilizadas (com valor não-zero)
+      const moedasUtilizadas = SUPPORTED_FIAT.filter(moeda => 
+        totalDepositadoPorMoeda[moeda] !== 0 ||
+        totalSacadoPorMoeda[moeda] !== 0 ||
+        totalSaldoPorMoeda[moeda] !== 0 ||
+        totalResultadoPorMoeda[moeda] !== 0
+      );
       
       const qtdApostasTotal = bookmakersFinanceiro.reduce((sum, b) => sum + b.qtd_apostas, 0);
 
       setData({
         parceiro_id: parceiroId,
         parceiro_nome: parceiroData.nome,
-        // Novos campos separados
-        total_depositado_brl: totalDepositadoBRL,
-        total_depositado_usd: totalDepositadoUSD,
-        total_sacado_brl: totalSacadoBRL,
-        total_sacado_usd: totalSacadoUSD,
-        lucro_prejuizo_brl: lucroBRL,
-        lucro_prejuizo_usd: lucroUSD,
-        // Legacy (soma estimada - USD * 5 para BRL aproximado)
-        total_depositado: totalDepositadoBRL + (totalDepositadoUSD * 5),
-        total_sacado: totalSacadoBRL + (totalSacadoUSD * 5),
-        lucro_prejuizo: lucroBRL + (lucroUSD * 5),
+        depositado_por_moeda: totalDepositadoPorMoeda,
+        sacado_por_moeda: totalSacadoPorMoeda,
+        saldo_por_moeda: totalSaldoPorMoeda,
+        resultado_por_moeda: totalResultadoPorMoeda,
+        moedas_utilizadas: moedasUtilizadas,
         qtd_apostas_total: qtdApostasTotal,
         bookmakers: bookmakersFinanceiro.sort((a, b) => b.lucro_prejuizo - a.lucro_prejuizo),
       });
@@ -270,4 +303,11 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
   };
 
   return { data, loading, error, refresh: fetchData };
+}
+
+// Helper para converter SaldosPorMoeda em CurrencyEntry[] para NativeCurrencyKpi
+export function saldosToEntries(saldos: SaldosPorMoeda): Array<{ currency: string; value: number }> {
+  return Object.entries(saldos)
+    .filter(([_, value]) => value !== 0)
+    .map(([currency, value]) => ({ currency, value }));
 }
