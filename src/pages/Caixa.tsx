@@ -640,15 +640,17 @@ export default function Caixa() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {saldosFiat.map((saldoFiat) => (
-                    <div key={saldoFiat.moeda} className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{saldoFiat.moeda}</span>
-                      <span className="text-lg font-bold text-emerald-400">
-                        {formatCurrency(saldoFiat.saldo, saldoFiat.moeda)}
-                      </span>
-                    </div>
-                  ))}
-                  {saldosFiat.length === 0 && (
+                  {saldosFiat
+                    .filter(s => s.saldo !== 0)
+                    .map((saldoFiat) => (
+                      <div key={saldoFiat.moeda} className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">{saldoFiat.moeda}</span>
+                        <span className="text-lg font-bold text-emerald-400">
+                          {formatCurrency(saldoFiat.saldo, saldoFiat.moeda)}
+                        </span>
+                      </div>
+                    ))}
+                  {saldosFiat.filter(s => s.saldo !== 0).length === 0 && (
                     <div className="text-sm text-muted-foreground italic">Nenhum saldo FIAT</div>
                   )}
                 </div>
