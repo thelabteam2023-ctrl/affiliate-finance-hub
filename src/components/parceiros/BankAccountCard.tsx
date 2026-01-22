@@ -17,19 +17,19 @@ interface BankAccountCardProps {
 }
 
 export function BankAccountCard({ account }: BankAccountCardProps) {
-  const pixKey = account.pix_keys?.[0];
-  const [copied, setCopied] = useState(false);
+  const pixKeys = account.pix_keys?.filter(k => k.tipo && k.chave) || [];
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const { toast } = useToast();
   
-  const copyToClipboard = async (text: string, label: string) => {
+  const copyToClipboard = async (text: string, label: string, index: number) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
+      setCopiedIndex(index);
       toast({
         title: "Copiado!",
         description: `${label} copiado para a área de transferência.`,
       });
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopiedIndex(null), 2000);
     } catch (err) {
       toast({
         title: "Erro ao copiar",
@@ -82,25 +82,31 @@ export function BankAccountCard({ account }: BankAccountCardProps) {
             </div>
           )}
 
-          {pixKey && (
+          {pixKeys.length > 0 && (
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Chave PIX</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary" className="text-xs uppercase">
-                  {pixKey.tipo}
-                </Badge>
-                <p 
-                  className="text-sm text-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-2"
-                  onClick={() => copyToClipboard(pixKey.chave, "Chave PIX")}
-                  title="Clique para copiar"
-                >
-                  {pixKey.chave}
-                  {copied ? (
-                    <Check className="w-3 h-3 text-primary" />
-                  ) : (
-                    <Copy className="w-3 h-3 opacity-50" />
-                  )}
-                </p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                {pixKeys.length === 1 ? "Chave PIX" : "Chaves PIX"}
+              </p>
+              <div className="space-y-2 mt-1">
+                {pixKeys.map((pixKey, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs uppercase">
+                      {pixKey.tipo}
+                    </Badge>
+                    <p 
+                      className="text-sm text-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-2"
+                      onClick={() => copyToClipboard(pixKey.chave, "Chave PIX", index)}
+                      title="Clique para copiar"
+                    >
+                      {pixKey.chave}
+                      {copiedIndex === index ? (
+                        <Check className="w-3 h-3 text-primary" />
+                      ) : (
+                        <Copy className="w-3 h-3 opacity-50" />
+                      )}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           )}

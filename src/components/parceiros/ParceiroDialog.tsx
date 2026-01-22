@@ -236,36 +236,37 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       setStatus(parceiro.status || "ativo");
       setObservacoes(parceiro.observacoes || "");
       
-      // Map bank accounts data, converting pix_key string to pix_keys array
+      // Map bank accounts data using pix_keys JSONB column
       const mappedAccounts = (parceiro.contas_bancarias || []).map((acc: any) => {
-        const detectPixKeyType = (key: string) => {
-          if (!key) return "";
-          // Remove all non-digit characters for CPF/CNPJ detection
-          const cleanKey = key.replace(/\D/g, "");
-          if (cleanKey.length === 11) return "cpf";
-          if (cleanKey.length === 14) return "cnpj";
-          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key)) return "email";
-          if (/^\+/.test(key) && /\d/.test(key)) return "telefone";
-          return "aleatoria";
+        const formatCPFDisplay = (cpf: string) => {
+          const clean = cpf.replace(/\D/g, "");
+          return clean.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+        };
+        const formatCNPJDisplay = (cnpj: string) => {
+          const clean = cnpj.replace(/\D/g, "");
+          return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
         };
         
-        const pixKeyType = acc.pix_key ? detectPixKeyType(acc.pix_key) : "";
-        let formattedKey = acc.pix_key || "";
+        // Parse pix_keys from JSONB (array format)
+        let parsedPixKeys: Array<{ tipo: string; chave: string }> = [];
+        if (acc.pix_keys && Array.isArray(acc.pix_keys)) {
+          parsedPixKeys = acc.pix_keys.map((pk: any) => ({
+            tipo: pk.tipo || "",
+            chave: pk.tipo === "cpf" ? formatCPFDisplay(pk.chave) 
+                 : pk.tipo === "cnpj" ? formatCNPJDisplay(pk.chave)
+                 : pk.chave || ""
+          }));
+        }
         
-        // Format CPF/CNPJ for display
-        if (pixKeyType === "cpf") {
-          formattedKey = formatCPF(acc.pix_key);
-        } else if (pixKeyType === "cnpj") {
-          const cleanCnpj = acc.pix_key.replace(/\D/g, "");
-          formattedKey = cleanCnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+        // Fallback to empty if no keys
+        if (parsedPixKeys.length === 0) {
+          parsedPixKeys = [{ tipo: "", chave: "" }];
         }
         
         return {
           ...acc,
           moeda: acc.moeda || "BRL",
-          pix_keys: acc.pix_key 
-            ? [{ tipo: pixKeyType, chave: formattedKey }] 
-            : [{ tipo: "", chave: "" }]
+          pix_keys: parsedPixKeys
         };
       });
       setBankAccounts(mappedAccounts);
@@ -624,14 +625,15 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         for (let i = 0; i < bankAccounts.length; i++) {
           const account = bankAccounts[i];
           if (account.banco_id && account.pix_keys.some(k => k.chave)) {
-            // Clean PIX key before saving (remove formatting)
-            let cleanPixKey = account.pix_keys[0]?.chave || null;
-            if (cleanPixKey) {
-              const pixType = account.pix_keys[0]?.tipo;
-              if (pixType === "cpf" || pixType === "cnpj") {
-                cleanPixKey = cleanPixKey.replace(/\D/g, "");
-              }
-            }
+            // Format PIX keys for JSONB storage - clean CPF/CNPJ formatting
+            const cleanedPixKeys = account.pix_keys
+              .filter(k => k.chave && k.tipo)
+              .map(k => ({
+                tipo: k.tipo,
+                chave: (k.tipo === "cpf" || k.tipo === "cnpj") 
+                  ? k.chave.replace(/\D/g, "") 
+                  : k.chave
+              }));
             
             const accountData = {
               parceiro_id: currentParceiroId,
@@ -641,7 +643,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               conta: account.conta || null,
               tipo_conta: account.tipo_conta,
               titular: account.titular || nome,
-              pix_key: cleanPixKey,
+              pix_keys: cleanedPixKeys,
               observacoes: account.observacoes || null,
             };
             
@@ -1065,14 +1067,15 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       // UPDATE or INSERT accounts
       for (const account of bankAccounts) {
         if (account.banco_id && account.pix_keys.some(k => k.chave)) {
-          // Clean PIX key before saving (remove formatting)
-          let cleanPixKey = account.pix_keys[0]?.chave || null;
-          if (cleanPixKey) {
-            const pixType = account.pix_keys[0]?.tipo;
-            if (pixType === "cpf" || pixType === "cnpj") {
-              cleanPixKey = cleanPixKey.replace(/\D/g, "");
-            }
-          }
+          // Format PIX keys for JSONB storage - clean CPF/CNPJ formatting
+          const cleanedPixKeys = account.pix_keys
+            .filter(k => k.chave && k.tipo)
+            .map(k => ({
+              tipo: k.tipo,
+              chave: (k.tipo === "cpf" || k.tipo === "cnpj") 
+                ? k.chave.replace(/\D/g, "") 
+                : k.chave
+            }));
           
           const accountData = {
             parceiro_id: currentParceiroId,
@@ -1083,7 +1086,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             conta: account.conta || null,
             tipo_conta: account.tipo_conta,
             titular: account.titular || nome,
-            pix_key: cleanPixKey,
+            pix_keys: cleanedPixKeys,
             observacoes: account.observacoes || null,
           };
           
@@ -1119,27 +1122,42 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         .eq("parceiro_id", currentParceiroId);
 
       if (savedAccounts) {
-        const detectType = (key: string) => {
-          if (!key) return "";
-          const cleanKey = key.replace(/\D/g, "");
-          if (cleanKey.length === 11) return "cpf";
-          if (cleanKey.length === 14) return "cnpj";
-          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key)) return "email";
-          if (/^\+/.test(key) && /\d/.test(key)) return "telefone";
-          return "aleatoria";
+        const formatCPFDisplay = (cpf: string) => {
+          const clean = cpf.replace(/\D/g, "");
+          return clean.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+        };
+        const formatCNPJDisplay = (cnpj: string) => {
+          const clean = cnpj.replace(/\D/g, "");
+          return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
         };
         
-        setBankAccounts(savedAccounts.map(acc => ({
-          id: acc.id,
-          banco_id: acc.banco_id || "",
-          moeda: acc.moeda || "BRL",
-          agencia: acc.agencia || "",
-          conta: acc.conta || "",
-          tipo_conta: acc.tipo_conta,
-          titular: acc.titular,
-          pix_keys: acc.pix_key ? [{ tipo: detectType(acc.pix_key), chave: acc.pix_key }] : [{ tipo: "", chave: "" }],
-          observacoes: acc.observacoes || ""
-        })));
+        setBankAccounts(savedAccounts.map(acc => {
+          // Parse pix_keys from JSONB
+          let parsedPixKeys: Array<{ tipo: string; chave: string }> = [];
+          if (acc.pix_keys && Array.isArray(acc.pix_keys)) {
+            parsedPixKeys = (acc.pix_keys as Array<{ tipo: string; chave: string }>).map((pk) => ({
+              tipo: pk.tipo || "",
+              chave: pk.tipo === "cpf" ? formatCPFDisplay(pk.chave) 
+                   : pk.tipo === "cnpj" ? formatCNPJDisplay(pk.chave)
+                   : pk.chave || ""
+            }));
+          }
+          if (parsedPixKeys.length === 0) {
+            parsedPixKeys = [{ tipo: "", chave: "" }];
+          }
+          
+          return {
+            id: acc.id,
+            banco_id: acc.banco_id || "",
+            moeda: acc.moeda || "BRL",
+            agencia: acc.agencia || "",
+            conta: acc.conta || "",
+            tipo_conta: acc.tipo_conta,
+            titular: acc.titular,
+            pix_keys: parsedPixKeys,
+            observacoes: acc.observacoes || ""
+          };
+        }));
       }
 
       toast({

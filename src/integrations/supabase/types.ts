@@ -2006,6 +2006,7 @@ export type Database = {
           observacoes: string | null
           parceiro_id: string
           pix_key: string | null
+          pix_keys: Json | null
           tipo_conta: string
           titular: string
           updated_at: string
@@ -2021,6 +2022,7 @@ export type Database = {
           observacoes?: string | null
           parceiro_id: string
           pix_key?: string | null
+          pix_keys?: Json | null
           tipo_conta: string
           titular: string
           updated_at?: string
@@ -2036,6 +2038,7 @@ export type Database = {
           observacoes?: string | null
           parceiro_id?: string
           pix_key?: string | null
+          pix_keys?: Json | null
           tipo_conta?: string
           titular?: string
           updated_at?: string
