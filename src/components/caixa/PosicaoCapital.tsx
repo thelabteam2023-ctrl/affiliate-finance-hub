@@ -54,20 +54,33 @@ export function PosicaoCapital({
   const dadosPosicao = useMemo(() => {
     // Consolidar saldos FIAT do caixa para BRL
     let caixaFiatBRL = 0;
-    const caixaFiatDetails: string[] = [];
+    let caixaBRLValue = 0;
+    const caixaFiatDetails: Array<{ moeda: string; valorOriginal: number; valorBRL: number; symbol: string }> = [];
+    let caixaOtherCurrenciesCount = 0;
     
     saldosFiat.forEach(sf => {
       if (sf.saldo === 0) return;
       
       if (sf.moeda === 'BRL') {
         caixaFiatBRL += sf.saldo;
-        caixaFiatDetails.push(`R$ ${sf.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`);
+        caixaBRLValue = sf.saldo;
+        caixaFiatDetails.push({ 
+          moeda: 'BRL', 
+          valorOriginal: sf.saldo, 
+          valorBRL: sf.saldo, 
+          symbol: 'R$' 
+        });
       } else {
-        // Converter para BRL usando hook
         const valorBRL = convert(sf.saldo, sf.moeda, 'BRL');
         caixaFiatBRL += valorBRL;
         const symbol = getCurrencySymbol(sf.moeda);
-        caixaFiatDetails.push(`${symbol} ${sf.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`);
+        caixaFiatDetails.push({ 
+          moeda: sf.moeda, 
+          valorOriginal: sf.saldo, 
+          valorBRL, 
+          symbol 
+        });
+        caixaOtherCurrenciesCount++;
       }
     });
     
@@ -75,34 +88,56 @@ export function PosicaoCapital({
     const cryptoBRL = saldoCaixaCrypto * cotacaoUSD;
     const caixaTotal = caixaFiatBRL + cryptoBRL;
     
-    // Montar detail string para caixa
-    let caixaDetailStr = caixaFiatDetails.join(' + ');
+    // Adicionar crypto aos detalhes se existir
     if (saldoCaixaCrypto > 0) {
-      caixaDetailStr += (caixaDetailStr ? ' + ' : '') + `$${saldoCaixaCrypto.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} crypto`;
+      caixaFiatDetails.push({
+        moeda: 'CRYPTO',
+        valorOriginal: saldoCaixaCrypto,
+        valorBRL: cryptoBRL,
+        symbol: '$'
+      });
+      caixaOtherCurrenciesCount++;
     }
-    if (!caixaDetailStr) caixaDetailStr = 'Sem saldo';
+    
+    // Montar string resumida: "R$ X + N moedas"
+    const caixaDetailStr = caixaBRLValue > 0 || caixaOtherCurrenciesCount > 0
+      ? `R$ ${caixaBRLValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}${caixaOtherCurrenciesCount > 0 ? ` + ${caixaOtherCurrenciesCount} ${caixaOtherCurrenciesCount === 1 ? 'moeda' : 'moedas'}` : ''}`
+      : 'Sem saldo';
 
     // Consolidar saldos de Bookmakers para BRL
     let bookmakersBRL = 0;
-    const bookmakersDetails: string[] = [];
+    let bookmakersBRLValue = 0;
+    const bookmakersDetails: Array<{ moeda: string; valorOriginal: number; valorBRL: number; symbol: string }> = [];
+    let bookmakersOtherCount = 0;
     
     saldosBookmakers.forEach(sb => {
       if (sb.saldo === 0) return;
       
       if (sb.moeda === 'BRL') {
         bookmakersBRL += sb.saldo;
-        bookmakersDetails.push(`R$ ${sb.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`);
+        bookmakersBRLValue = sb.saldo;
+        bookmakersDetails.push({ 
+          moeda: 'BRL', 
+          valorOriginal: sb.saldo, 
+          valorBRL: sb.saldo, 
+          symbol: 'R$' 
+        });
       } else {
-        // Converter para BRL
         const valorBRL = convert(sb.saldo, sb.moeda, 'BRL');
         bookmakersBRL += valorBRL;
         const symbol = getCurrencySymbol(sb.moeda);
-        bookmakersDetails.push(`${symbol} ${sb.saldo.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`);
+        bookmakersDetails.push({ 
+          moeda: sb.moeda, 
+          valorOriginal: sb.saldo, 
+          valorBRL, 
+          symbol 
+        });
+        bookmakersOtherCount++;
       }
     });
     
-    const bookmakersDetailStr = bookmakersDetails.length > 0 
-      ? bookmakersDetails.join(' + ') 
+    const bookmakersDetailStr = bookmakersDetails.length > 0
+      ? `R$ ${bookmakersBRLValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}${bookmakersOtherCount > 0 ? ` + ${bookmakersOtherCount} ${bookmakersOtherCount === 1 ? 'moeda' : 'moedas'}` : ''}`
       : 'Em operação';
 
     // Wallets parceiros (já em USD → converter para BRL)
@@ -114,6 +149,7 @@ export function PosicaoCapital({
         value: caixaTotal, 
         icon: Wallet,
         detail: caixaDetailStr,
+        detailItems: caixaFiatDetails,
         help: "Saldo disponível no caixa central para uso imediato (FIAT + Crypto)"
       },
       { 
@@ -121,6 +157,7 @@ export function PosicaoCapital({
         value: bookmakersBRL, 
         icon: Building2,
         detail: bookmakersDetailStr,
+        detailItems: bookmakersDetails,
         help: "Capital alocado em casas de apostas para operações"
       },
       { 
@@ -128,6 +165,7 @@ export function PosicaoCapital({
         value: saldoContasParceiros, 
         icon: CreditCard,
         detail: "Bancos",
+        detailItems: [] as Array<{ moeda: string; valorOriginal: number; valorBRL: number; symbol: string }>,
         help: "Saldo em contas bancárias de parceiros disponível para movimentação"
       },
       { 
@@ -135,6 +173,7 @@ export function PosicaoCapital({
         value: walletsTotal, 
         icon: Coins,
         detail: `$${saldoWalletsParceiros.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} USD`,
+        detailItems: [{ moeda: 'USD', valorOriginal: saldoWalletsParceiros, valorBRL: walletsTotal, symbol: '$' }],
         help: "Capital em carteiras crypto de parceiros"
       },
     ].filter(item => item.value > 0);
@@ -261,7 +300,37 @@ export function PosicaoCapital({
                       <span className="text-xs text-muted-foreground">{percentual}%</span>
                     </div>
                     <div className="flex items-center justify-between mt-0.5">
-                      <span className="text-xs text-muted-foreground">{item.detail}</span>
+                      {item.detailItems.length > 1 ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-xs text-muted-foreground cursor-help hover:text-foreground transition-colors underline decoration-dotted underline-offset-2">
+                                {item.detail}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="max-w-[280px]">
+                              <div className="space-y-1.5 py-1">
+                                <p className="text-xs font-medium text-muted-foreground mb-2">Composição por moeda:</p>
+                                {item.detailItems.map((d, i) => (
+                                  <div key={i} className="flex items-center justify-between gap-4 text-xs">
+                                    <span className="font-medium">{d.moeda === 'CRYPTO' ? 'Crypto (USD)' : d.moeda}</span>
+                                    <div className="text-right">
+                                      <span className="font-mono">{d.symbol} {d.valorOriginal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</span>
+                                      {d.moeda !== 'BRL' && (
+                                        <span className="text-muted-foreground ml-1">
+                                          (≈ R$ {d.valorBRL.toLocaleString('pt-BR', { maximumFractionDigits: 0 })})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{item.detail}</span>
+                      )}
                       <span className="font-mono text-sm font-medium" style={{ color: GRADIENT_COLORS[index]?.[0] }}>
                         {formatCurrency(item.value)}
                       </span>
