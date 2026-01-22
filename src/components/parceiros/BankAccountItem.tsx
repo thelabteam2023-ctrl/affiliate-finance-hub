@@ -66,9 +66,11 @@ const maskPixKey = (chave: string, tipo: string): string => {
 export function BankAccountItem({ conta, variant = "card", showSensitiveData = false }: BankAccountItemProps) {
   const { toast } = useToast();
   
-  const pixKey = conta.pix_keys?.[0] || (conta.pix_key ? { tipo: 'CPF', chave: conta.pix_key } : null);
+  // Support multiple PIX keys from JSONB column
+  const pixKeys = conta.pix_keys?.filter(k => k.tipo && k.chave) || 
+    (conta.pix_key ? [{ tipo: 'CPF', chave: conta.pix_key }] : []);
 
-  if (!pixKey) {
+  if (pixKeys.length === 0) {
     return (
       <div className={`flex items-center justify-between text-xs bg-accent/30 rounded ${variant === "card" ? "p-2" : "px-2 py-1.5"}`}>
         <div className="flex-1 min-w-0">
@@ -78,26 +80,29 @@ export function BankAccountItem({ conta, variant = "card", showSensitiveData = f
     );
   }
 
-  const maskedValue = showSensitiveData ? pixKey.chave : maskPixKey(pixKey.chave, pixKey.tipo);
-
   return (
-    <div className={`flex items-center justify-between text-xs bg-accent/30 rounded ${variant === "card" ? "p-2" : "px-2 py-1.5"}`}>
-      <div className="flex-1 min-w-0">
-        <p className={`truncate ${variant === "list" ? "max-w-[200px]" : ""}`}>
-          <span className="font-medium">{conta.banco}</span>
-          <span className="text-muted-foreground"> - PIX {pixKey.tipo}: </span>
-          <span className="font-mono">{maskedValue}</span>
-        </p>
-      </div>
-      <button
-        onClick={() => {
-          navigator.clipboard.writeText(pixKey.chave);
-          toast({ title: "PIX copiado!" });
-        }}
-        className="ml-2 p-1 hover:bg-accent rounded transition-colors"
-      >
-        <Copy className="h-3 w-3" />
-      </button>
+    <div className={`space-y-1 text-xs bg-accent/30 rounded ${variant === "card" ? "p-2" : "px-2 py-1.5"}`}>
+      <p className="font-medium truncate">{conta.banco}</p>
+      {pixKeys.map((pixKey, index) => {
+        const maskedValue = showSensitiveData ? pixKey.chave : maskPixKey(pixKey.chave, pixKey.tipo);
+        return (
+          <div key={index} className="flex items-center justify-between">
+            <p className={`truncate ${variant === "list" ? "max-w-[200px]" : ""}`}>
+              <span className="text-muted-foreground">PIX {pixKey.tipo}: </span>
+              <span className="font-mono">{maskedValue}</span>
+            </p>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(pixKey.chave);
+                toast({ title: "PIX copiado!" });
+              }}
+              className="ml-2 p-1 hover:bg-accent rounded transition-colors"
+            >
+              <Copy className="h-3 w-3" />
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
