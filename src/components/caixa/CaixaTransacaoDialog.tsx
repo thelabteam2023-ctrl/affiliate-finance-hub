@@ -1026,29 +1026,67 @@ export function CaixaTransacaoDialog({
   }, [destinoBookmakerId]);
 
   const fetchAccountsAndWallets = async () => {
+    if (!workspaceId) return;
+    
     try {
+      // Buscar contas bancárias via parceiros do workspace atual
+      // RLS já protege, mas filtro explícito adiciona camada extra de segurança
       const { data: contas } = await supabase
         .from("contas_bancarias")
-        .select("id, banco, titular, parceiro_id, moeda")
+        .select(`
+          id, 
+          banco, 
+          titular, 
+          parceiro_id, 
+          moeda,
+          parceiros!inner(workspace_id)
+        `)
+        .eq("parceiros.workspace_id", workspaceId)
         .order("banco");
 
+      // Buscar wallets via parceiros do workspace atual
       const { data: wallets } = await supabase
         .from("wallets_crypto")
-        .select("id, exchange, endereco, parceiro_id, moeda")
+        .select(`
+          id, 
+          exchange, 
+          endereco, 
+          parceiro_id, 
+          moeda,
+          parceiros!inner(workspace_id)
+        `)
+        .eq("parceiros.workspace_id", workspaceId)
         .order("exchange");
 
-      setContasBancarias(contas || []);
-      setWalletsCrypto(wallets || []);
+      // Mapear para remover o campo parceiros aninhado
+      setContasBancarias((contas || []).map(c => ({
+        id: c.id,
+        banco: c.banco,
+        titular: c.titular,
+        parceiro_id: c.parceiro_id,
+        moeda: c.moeda
+      })));
+      
+      setWalletsCrypto((wallets || []).map(w => ({
+        id: w.id,
+        exchange: w.exchange,
+        endereco: w.endereco,
+        parceiro_id: w.parceiro_id,
+        moeda: w.moeda
+      })));
     } catch (error) {
       console.error("Erro ao carregar contas e wallets:", error);
     }
   };
 
   const fetchBookmakers = async () => {
+    if (!workspaceId) return;
+    
     try {
       const { data } = await supabase
         .from("bookmakers")
         .select("id, nome, saldo_atual, saldo_usd, moeda")
+        .eq("workspace_id", workspaceId) // Filtro explícito de workspace
         .order("nome");
       
       setBookmakers(data || []);
@@ -1058,7 +1096,10 @@ export function CaixaTransacaoDialog({
   };
 
   const fetchSaldosCaixa = async () => {
+    if (!workspaceId) return;
+    
     try {
+      // Views já filtram por workspace internamente via get_current_workspace()
       const { data: fiat } = await supabase
         .from("v_saldo_caixa_fiat")
         .select("moeda, saldo");
@@ -1075,7 +1116,10 @@ export function CaixaTransacaoDialog({
   };
 
   const fetchSaldosParceiros = async () => {
+    if (!workspaceId) return;
+    
     try {
+      // Views já filtram por workspace internamente via get_current_workspace()
       const { data: contas } = await supabase
         .from("v_saldo_parceiro_contas")
         .select("conta_id, parceiro_id, saldo, moeda");
@@ -1092,11 +1136,13 @@ export function CaixaTransacaoDialog({
   };
 
   const fetchInvestidores = async () => {
+    if (!workspaceId) return;
+    
     try {
-      // RLS policies handle workspace isolation
       const { data, error } = await supabase
         .from("investidores")
         .select("id, nome")
+        .eq("workspace_id", workspaceId) // Filtro explícito de workspace
         .eq("status", "ativo");
 
       if (error) throw error;
@@ -1107,10 +1153,13 @@ export function CaixaTransacaoDialog({
   };
 
   const fetchSaquesPendentes = async () => {
+    if (!workspaceId) return;
+    
     try {
       const { data, error } = await supabase
         .from("cash_ledger")
         .select("origem_bookmaker_id, valor")
+        .eq("workspace_id", workspaceId) // Filtro explícito de workspace
         .eq("tipo_transacao", "SAQUE")
         .eq("status", "PENDENTE")
         .not("origem_bookmaker_id", "is", null);
