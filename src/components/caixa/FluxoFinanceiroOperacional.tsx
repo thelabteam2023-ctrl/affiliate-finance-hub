@@ -202,7 +202,7 @@ export function FluxoFinanceiroOperacional({
     transacoes: Transacao[];
   };
   
-  const dadosCapitalExterno = useMemo(() => {
+  const dadosCapitalExternoBase = useMemo(() => {
     const agrupamentos: Map<string, GrupoDataExterno> = new Map();
     
     // Inicializar objeto vazio para cada moeda
@@ -305,7 +305,7 @@ export function FluxoFinanceiroOperacional({
     );
 
     return { 
-      dados, 
+      dadosBase: dados, // Dados estáveis sem normalização
       totais,
       moedasAtivas,
       // Compatibilidade com código legado
@@ -318,13 +318,36 @@ export function FluxoFinanceiroOperacional({
       hasUSD: totais.USD.aportes > 0 || totais.USD.liquidacoes > 0,
       hasMultipleCurrencies: moedasAtivas.length > 1,
     };
-  }, [transacoesFiltradas, periodo]); // ← REMOVIDO cotacoes da dependência
+  }, [transacoesFiltradas, periodo]);
+
+  // Normalização separada para renderização do gráfico
+  // ARQUITETURA: Dados base são estáveis. Normalização pode mudar com cotações
+  // mas é aplicada em tempo de renderização, não afetando re-fetches.
+  const dadosCapitalExternoNormalizados = useMemo(() => {
+    return dadosCapitalExternoBase.dadosBase.map(item => {
+      const result = { ...item };
+      SUPPORTED_CURRENCIES.forEach(currency => {
+        const key = currency.toLowerCase();
+        const cotacao = cotacoes[currency];
+        // Adicionar valores normalizados para escala visual
+        result[`aportes_${key}_norm`] = (item[`aportes_${key}`] || 0) * cotacao;
+        result[`liquidacoes_${key}_norm`] = (item[`liquidacoes_${key}`] || 0) * cotacao;
+      });
+      return result;
+    });
+  }, [dadosCapitalExternoBase.dadosBase, cotacoes]);
+
+  // Objeto final para uso nos componentes
+  const dadosCapitalExterno = useMemo(() => ({
+    ...dadosCapitalExternoBase,
+    dados: dadosCapitalExternoNormalizados,
+  }), [dadosCapitalExternoBase, dadosCapitalExternoNormalizados]);
 
   // 2. Capital Alocado em Operação (Bookmakers)
   // REGRA: Suporta todas as 8 moedas, CRYPTO = USD
   type CurrencyTotals = Record<SupportedCurrency, { depositos: number; saques: number }>;
   
-  const dadosCapitalOperacao = useMemo(() => {
+  const dadosCapitalOperacaoBase = useMemo(() => {
     // Tipo para agrupamento por período
     type GrupoData = {
       depositos: Record<SupportedCurrency, number>;
@@ -427,7 +450,7 @@ export function FluxoFinanceiroOperacional({
     );
 
     return { 
-      dados, 
+      dadosBase: dados, // Dados estáveis sem normalização
       totais,
       moedasAtivas,
       // Compatibilidade com código legado
@@ -440,7 +463,28 @@ export function FluxoFinanceiroOperacional({
       hasUSD: totais.USD.depositos > 0 || totais.USD.saques > 0,
       hasMultipleCurrencies: moedasAtivas.length > 1,
     };
-  }, [transacoesFiltradas, periodo]); // ← REMOVIDO cotacoes da dependência
+  }, [transacoesFiltradas, periodo]);
+
+  // Normalização separada para renderização do gráfico de Capital Operação
+  const dadosCapitalOperacaoNormalizados = useMemo(() => {
+    return dadosCapitalOperacaoBase.dadosBase.map(item => {
+      const result = { ...item };
+      SUPPORTED_CURRENCIES.forEach(currency => {
+        const key = currency.toLowerCase();
+        const cotacao = cotacoes[currency];
+        // Adicionar valores normalizados para escala visual
+        result[`depositos_${key}_norm`] = (item[`depositos_${key}`] || 0) * cotacao;
+        result[`saques_${key}_norm`] = (item[`saques_${key}`] || 0) * cotacao;
+      });
+      return result;
+    });
+  }, [dadosCapitalOperacaoBase.dadosBase, cotacoes]);
+
+  // Objeto final para uso nos componentes
+  const dadosCapitalOperacao = useMemo(() => ({
+    ...dadosCapitalOperacaoBase,
+    dados: dadosCapitalOperacaoNormalizados,
+  }), [dadosCapitalOperacaoBase, dadosCapitalOperacaoNormalizados]);
 
   // Formatador de moeda dinâmico
   const formatCurrencyValue = (value: number, currency: string = "BRL") => {
