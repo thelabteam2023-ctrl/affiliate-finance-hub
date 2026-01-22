@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
-import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle } from "lucide-react";
+import { PieChart as PieChartIcon, Wallet, Building2, Coins, CreditCard, HelpCircle, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
 import { formatCurrencyValue, getCurrencySymbol } from "@/types/currency";
 
@@ -48,8 +48,23 @@ export function PosicaoCapital({
   saldoWalletsParceiros,
   cotacaoUSD,
 }: PosicaoCapitalProps) {
-  // Hook de conversão multi-moeda
-  const { convert } = useMultiCurrencyConversion();
+  // Hook de conversão multi-moeda com fontes
+  const { convert, sources, cotacoes } = useMultiCurrencyConversion();
+
+  // Helper para obter info da fonte de uma moeda
+  const getSourceInfo = (moeda: string) => {
+    const upper = moeda.toUpperCase();
+    const sourceMap: Record<string, { source: any; cotacao: number }> = {
+      USD: { source: sources?.usd, cotacao: cotacoes?.USD || 0 },
+      EUR: { source: sources?.eur, cotacao: cotacoes?.EUR || 0 },
+      GBP: { source: sources?.gbp, cotacao: cotacoes?.GBP || 0 },
+      MXN: { source: sources?.mxn, cotacao: cotacoes?.MXN || 0 },
+      MYR: { source: sources?.myr, cotacao: cotacoes?.MYR || 0 },
+      ARS: { source: sources?.ars, cotacao: cotacoes?.ARS || 0 },
+      COP: { source: sources?.cop, cotacao: cotacoes?.COP || 0 },
+    };
+    return sourceMap[upper] || null;
+  };
 
   const dadosPosicao = useMemo(() => {
     // Consolidar saldos FIAT do caixa para BRL
@@ -308,22 +323,48 @@ export function PosicaoCapital({
                                 {item.detail}
                               </span>
                             </TooltipTrigger>
-                            <TooltipContent side="bottom" className="max-w-[280px]">
+                            <TooltipContent side="bottom" className="max-w-[320px]">
                               <div className="space-y-1.5 py-1">
                                 <p className="text-xs font-medium text-muted-foreground mb-2">Composição por moeda:</p>
-                                {item.detailItems.map((d, i) => (
-                                  <div key={i} className="flex items-center justify-between gap-4 text-xs">
-                                    <span className="font-medium">{d.moeda === 'CRYPTO' ? 'Crypto (USD)' : d.moeda}</span>
-                                    <div className="text-right">
-                                      <span className="font-mono">{d.symbol} {d.valorOriginal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</span>
-                                      {d.moeda !== 'BRL' && (
-                                        <span className="text-muted-foreground ml-1">
-                                          (≈ R$ {d.valorBRL.toLocaleString('pt-BR', { maximumFractionDigits: 0 })})
-                                        </span>
-                                      )}
+                                {item.detailItems.map((d, i) => {
+                                  const sourceInfo = d.moeda !== 'BRL' && d.moeda !== 'CRYPTO' ? getSourceInfo(d.moeda) : null;
+                                  const isOfficial = sourceInfo?.source?.label?.includes('FastForex') || sourceInfo?.source?.label?.includes('PTAX');
+                                  
+                                  return (
+                                    <div key={i} className="flex items-center justify-between gap-3 text-xs">
+                                      <div className="flex items-center gap-1.5">
+                                        {sourceInfo && (
+                                          isOfficial ? (
+                                            <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                                          ) : (
+                                            <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                                          )
+                                        )}
+                                        <span className="font-medium">{d.moeda === 'CRYPTO' ? 'Crypto (USD)' : d.moeda}</span>
+                                        {sourceInfo?.cotacao && d.moeda !== 'BRL' && (
+                                          <span className="text-[10px] text-muted-foreground">
+                                            @{sourceInfo.cotacao.toFixed(4)}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="text-right">
+                                        <span className="font-mono">{d.symbol} {d.valorOriginal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</span>
+                                        {d.moeda !== 'BRL' && (
+                                          <span className="text-muted-foreground ml-1">
+                                            (≈ R$ {d.valorBRL.toLocaleString('pt-BR', { maximumFractionDigits: 0 })})
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
+                                <div className="border-t border-border/50 pt-2 mt-2">
+                                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                    <CheckCircle2 className="h-3 w-3 text-emerald-500" /> FastForex/PTAX
+                                    <span className="mx-1">•</span>
+                                    <AlertTriangle className="h-3 w-3 text-amber-500" /> Fallback
+                                  </p>
+                                </div>
                               </div>
                             </TooltipContent>
                           </Tooltip>
