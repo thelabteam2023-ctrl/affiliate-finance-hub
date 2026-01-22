@@ -5,16 +5,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { maskCPFPartial } from "@/lib/validators";
 import { useActionAccess } from "@/hooks/useModuleAccess";
-import { NativeCurrencyKpiLegacy } from "@/components/ui/native-currency-kpi";
+import { NativeCurrencyKpi, CurrencyEntry } from "@/components/ui/native-currency-kpi";
+
+// Multi-currency saldos type
+type SaldosPorMoeda = Record<string, number>;
 
 interface Parceiro {
   id: string;
   nome: string;
   cpf: string;
   status: string;
-  lucro_prejuizo: number;
-  lucro_prejuizo_brl?: number;
-  lucro_prejuizo_usd?: number;
+  resultado_por_moeda: SaldosPorMoeda;
+  moedas_utilizadas: string[];
   has_parceria?: boolean;
 }
 
@@ -55,6 +57,16 @@ export function ParceiroListaSidebar({
     });
   }, [parceiros, searchTerm, statusFilter]);
 
+  // Convert SaldosPorMoeda to CurrencyEntry array
+  const buildCurrencyEntries = (resultado: SaldosPorMoeda, moedasUtilizadas: string[]): CurrencyEntry[] => {
+    return moedasUtilizadas
+      .filter(moeda => resultado[moeda] !== undefined)
+      .map(moeda => ({
+        currency: moeda,
+        value: resultado[moeda] || 0,
+      }));
+  };
+
   return (
     <div className="h-full max-h-full flex flex-col border-r border-border overflow-hidden">
       {/* Header: altura fixa, nunca comprime */}
@@ -92,44 +104,47 @@ export function ParceiroListaSidebar({
       {/* Lista: flex-1 com scroll próprio - scrollbar sempre visível */}
       <div className="flex-1 min-h-0 overflow-y-scroll">
         <div className="p-2 space-y-1 pb-4">
-          {filteredParceiros.map((parceiro) => (
-            <button
-              key={parceiro.id}
-              onClick={() => onSelect(parceiro.id)}
-              className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
-                selectedId === parceiro.id
-                  ? "bg-primary/10 border border-primary/30"
-                  : "hover:bg-muted/50 border border-transparent"
-              )}
-            >
-              <div className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                parceiro.status === "ativo" ? "bg-primary/10" : "bg-warning/10"
-              )}>
-                <User className={cn(
-                  "h-4 w-4",
-                  parceiro.status === "ativo" ? "text-primary" : "text-warning"
-                )} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm leading-tight">{parceiro.nome}</p>
-                <div className="flex items-center justify-between gap-2 mt-0.5">
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {maskCPFPartial(parceiro.cpf)}
-                  </span>
-                  <NativeCurrencyKpiLegacy
-                    valueBRL={parceiro.lucro_prejuizo_brl ?? parceiro.lucro_prejuizo}
-                    valueUSD={parceiro.lucro_prejuizo_usd ?? 0}
-                    size="xs"
-                    variant="auto"
-                    masked={!showSensitiveData}
-                    showDashOnZero
-                  />
+          {filteredParceiros.map((parceiro) => {
+            const entries = buildCurrencyEntries(parceiro.resultado_por_moeda, parceiro.moedas_utilizadas);
+            
+            return (
+              <button
+                key={parceiro.id}
+                onClick={() => onSelect(parceiro.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
+                  selectedId === parceiro.id
+                    ? "bg-primary/10 border border-primary/30"
+                    : "hover:bg-muted/50 border border-transparent"
+                )}
+              >
+                <div className={cn(
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                  parceiro.status === "ativo" ? "bg-primary/10" : "bg-warning/10"
+                )}>
+                  <User className={cn(
+                    "h-4 w-4",
+                    parceiro.status === "ativo" ? "text-primary" : "text-warning"
+                  )} />
                 </div>
-              </div>
-            </button>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm leading-tight">{parceiro.nome}</p>
+                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {maskCPFPartial(parceiro.cpf)}
+                    </span>
+                    <NativeCurrencyKpi
+                      entries={entries}
+                      size="xs"
+                      variant="auto"
+                      masked={!showSensitiveData}
+                      showDashOnZero
+                    />
+                  </div>
+                </div>
+              </button>
+            );
+          })}
 
           {filteredParceiros.length === 0 && (
             <div className="text-center py-8 text-muted-foreground text-sm">
