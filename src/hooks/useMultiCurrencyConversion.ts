@@ -75,6 +75,8 @@ export function useMultiCurrencyConversion(cryptoSymbols: string[] = []) {
     lastUpdate,
     source,
     sources,
+    dataSource,
+    isUsingFallback,
     refreshAll 
   } = useCotacoes(cryptoSymbols);
 
@@ -250,6 +252,10 @@ export function useMultiCurrencyConversion(cryptoSymbols: string[] = []) {
     cotacaoUSD,
     source,
     sources, // Exposição das fontes de cada moeda para UI
+    
+    // Status de dados (NOVO - para determinar se é fallback real)
+    dataSource,        // 'database' | 'edge_function' | 'localstorage' | 'fallback'
+    isUsingFallback,   // TRUE apenas se usando fallback hardcoded
     
     // Cotações individuais (para debug/exibição)
     cotacoes: {

@@ -8846,6 +8846,18 @@ export type Database = {
           valor_total_pendente: number
         }[]
       }
+      get_cached_exchange_rates: {
+        Args: never
+        Returns: {
+          age_minutes: number
+          currency_pair: string
+          expires_at: string
+          fetched_at: string
+          is_expired: boolean
+          rate: number
+          source: string
+        }[]
+      }
       get_current_workspace: { Args: never; Returns: string }
       get_effective_access: {
         Args: { _user_id: string; _workspace_id?: string }
