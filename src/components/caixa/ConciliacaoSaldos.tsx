@@ -33,10 +33,7 @@ import {
   Loader2,
   HelpCircle,
   History,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -48,6 +45,7 @@ import {
   registrarPerdaCambialViaLedger,
   getBookmakerMoeda 
 } from "@/lib/ledgerService";
+import { OperationsSubTabHeader } from "@/components/projeto-detalhe/operations/OperationsSubTabHeader";
 
 interface ConciliacaoSaldosProps {
   transacoes: any[];
@@ -91,6 +89,9 @@ export function ConciliacaoSaldos({
   const { user } = useAuth();
   const { workspace } = useWorkspace();
   
+  // Sub-tab state
+  const [subTab, setSubTab] = useState<"abertas" | "historico">("abertas");
+  
   const [confirmDialog, setConfirmDialog] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [valorConfirmado, setValorConfirmado] = useState("");
@@ -106,7 +107,6 @@ export function ConciliacaoSaldos({
   });
   const [adjustmentHistory, setAdjustmentHistory] = useState<ExchangeAdjustmentRecord[]>([]);
   const [loadingSummary, setLoadingSummary] = useState(true);
-  const [showHistory, setShowHistory] = useState(false);
 
   // Carregar resumo e histórico de ajustes cambiais
   useEffect(() => {
@@ -328,350 +328,267 @@ export function ConciliacaoSaldos({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header com tooltip explicativo */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <RefreshCcw className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">Conciliação de Saldos</h3>
+    <div className="space-y-4">
+      {/* Sub-tab header */}
+      <OperationsSubTabHeader
+        subTab={subTab}
+        onSubTabChange={(tab) => setSubTab(tab as "abertas" | "historico")}
+        openCount={pendingTransactions.length}
+        historyCount={adjustmentHistory.length}
+        showViewToggle={false}
+        extraActions={
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button className="text-muted-foreground hover:text-foreground transition-colors">
+                <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
                   <HelpCircle className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="max-w-xs">
+              <TooltipContent side="left" className="max-w-xs">
                 <p className="text-sm">
                   <strong>Conciliação</strong> valida se o valor real creditado/recebido corresponde ao esperado.
                 </p>
                 <ul className="text-xs mt-2 space-y-1 text-muted-foreground">
                   <li>• <strong>Valor nominal:</strong> valor enviado na moeda de origem</li>
                   <li>• <strong>Valor confirmado:</strong> valor real creditado na casa</li>
-                  <li>• <strong>Conversão:</strong> quando a moeda de origem difere da moeda da casa</li>
                 </ul>
-                <p className="text-xs mt-2 text-muted-foreground">
-                  Diferenças são registradas como ajustes cambiais para análise.
-                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </div>
-        {pendingTransactions.length > 0 && (
-          <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30">
-            <Clock className="h-3 w-3 mr-1" />
-            {pendingTransactions.length} pendente{pendingTransactions.length > 1 ? "s" : ""}
-          </Badge>
-        )}
-      </div>
+        }
+      />
 
-      {/* Resumo compacto: apenas Pendentes visível, KPIs cambiais em tooltip */}
-      {!loadingSummary && (adjustmentSummary.totalConciliacoes > 0 || pendingTransactions.length > 0) && (
-        <div className="flex items-center gap-4">
-          {/* Card principal: Pendentes */}
-          <Card className={pendingTransactions.length > 0 ? "bg-amber-500/10 border-amber-500/30" : "bg-muted/30 border-muted/50"}>
-            <CardContent className="p-4 flex items-center gap-4">
+      {/* Conteúdo baseado na sub-tab */}
+      {subTab === "abertas" ? (
+        /* === AGUARDANDO CONCILIAÇÃO === */
+        <div className="space-y-4">
+          {pendingTransactions.length === 0 ? (
+            <div className="text-center py-12">
+              <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Tudo Conciliado!</h3>
+              <p className="text-muted-foreground">
+                Não há transações pendentes de confirmação.
+              </p>
+            </div>
+          ) : (
+            <ScrollArea className="h-[400px]">
+              <div className="space-y-3 pr-4">
+                {pendingTransactions.map((t) => {
+                  const isDeposito = t.tipo_transacao === "DEPOSITO";
+                  const isCrypto = t.tipo_moeda === "CRYPTO";
+                  const valorNominal = t.valor_usd || t.valor || 0;
+                  const moedaOrigem = t.moeda_origem || (isCrypto ? t.coin : t.moeda) || "BRL";
+                  const moedaDestino = t.moeda_destino || t.moeda || "BRL";
+                  const valorOrigem = t.valor_origem || t.valor || 0;
+                  
+                  const origemLabel = isCrypto 
+                    ? (t.origem_wallet_id ? getWalletInfo(t.origem_wallet_id) : "Wallet")
+                    : (t.moeda_origem || "FIAT");
+                  
+                  const destinoLabel = isDeposito
+                    ? (t.destino_bookmaker_id ? getBookmakerName(t.destino_bookmaker_id) : "Bookmaker")
+                    : (t.origem_bookmaker_id ? getBookmakerName(t.origem_bookmaker_id) : "Bookmaker");
+                  
+                  return (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between p-4 rounded-lg border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors"
+                    >
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <Badge
+                          className={
+                            isDeposito
+                              ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                              : "bg-purple-500/20 text-purple-400 border-purple-500/30"
+                          }
+                        >
+                          {isDeposito ? "Depósito" : "Saque"}
+                        </Badge>
+                        
+                        <Badge variant="outline" className="text-xs">
+                          {isCrypto ? "CRYPTO" : "FIAT"}
+                        </Badge>
+
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className="flex items-center gap-1">
+                            {isCrypto ? (
+                              <Wallet className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <span className="text-muted-foreground">{origemLabel}</span>
+                          </div>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          <div className="flex items-center gap-1">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <span>{destinoLabel}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-sm">
+                          {isCrypto ? (
+                            <>
+                              <div className="font-mono">
+                                {t.qtd_coin?.toFixed(4)} {t.coin}
+                              </div>
+                              <div className="text-muted-foreground">
+                                ≈ {formatCurrency(valorNominal)}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="font-mono font-medium">
+                                {moedaOrigem} {valorOrigem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </div>
+                              <div className="text-muted-foreground text-xs">
+                                → {moedaDestino}
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="text-xs text-muted-foreground">
+                          {format(new Date(t.data_transacao), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </div>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => handleOpenConfirm(t)}
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Conciliar
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
+      ) : (
+        /* === HISTÓRICO DE CONCILIAÇÕES === */
+        <div className="space-y-4">
+          {/* Resumo cambial */}
+          {adjustmentSummary.totalConciliacoes > 0 && (
+            <div className="flex items-center gap-4 p-3 rounded-lg border border-border/50 bg-muted/20">
               <div className="flex items-center gap-2">
-                {pendingTransactions.length > 0 ? (
-                  <Clock className="h-4 w-4 text-amber-400" />
-                ) : (
-                  <History className="h-4 w-4 text-muted-foreground" />
-                )}
-                <span className="text-sm text-muted-foreground">
-                  {pendingTransactions.length > 0 ? "Pendentes" : "Total Conciliações"}
+                <History className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Total:</span>
+                <span className="font-medium">{adjustmentSummary.totalConciliacoes}</span>
+              </div>
+              <div className="h-4 w-px bg-border" />
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-emerald-400" />
+                <span className="text-sm text-emerald-400">+{formatCurrency(adjustmentSummary.totalGanhos)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <TrendingDown className="h-4 w-4 text-red-400" />
+                <span className="text-sm text-red-400">-{formatCurrency(adjustmentSummary.totalPerdas)}</span>
+              </div>
+              <div className="h-4 w-px bg-border" />
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Líquido:</span>
+                <span className={`font-medium ${adjustmentSummary.saldoLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {adjustmentSummary.saldoLiquido >= 0 ? '+' : ''}{formatCurrency(adjustmentSummary.saldoLiquido)}
                 </span>
               </div>
-              <p className={`text-xl font-bold ${pendingTransactions.length > 0 ? 'text-amber-400' : ''}`}>
-                {pendingTransactions.length > 0 ? pendingTransactions.length : adjustmentSummary.totalConciliacoes}
-              </p>
-            </CardContent>
-          </Card>
+            </div>
+          )}
 
-          {/* Resumo cambial em linha (apenas se houver histórico) */}
-          {adjustmentSummary.totalConciliacoes > 0 && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border/50 bg-muted/20 cursor-help text-xs">
-                    <span className="text-muted-foreground">Balanço cambial:</span>
-                    <span className={`font-medium ${adjustmentSummary.saldoLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {adjustmentSummary.saldoLiquido >= 0 ? '+' : ''}{formatCurrency(adjustmentSummary.saldoLiquido)}
-                    </span>
-                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="p-3 space-y-2 max-w-xs">
-                  <p className="font-medium text-sm mb-2">Resumo de Ajustes Cambiais</p>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="flex items-center gap-1.5 text-xs">
-                        <TrendingUp className="h-3 w-3 text-emerald-400" />
-                        Ganhos
-                      </span>
-                      <span className="text-xs font-medium text-emerald-400">
-                        +{formatCurrency(adjustmentSummary.totalGanhos)}
-                      </span>
+          {loadingSummary ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : adjustmentHistory.length === 0 ? (
+            <div className="text-center py-12">
+              <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Sem histórico</h3>
+              <p className="text-muted-foreground">
+                Nenhuma conciliação realizada ainda.
+              </p>
+            </div>
+          ) : (
+            <ScrollArea className="h-[400px]">
+              <div className="space-y-2 pr-4">
+                {adjustmentHistory.map((adj) => {
+                  const isGanho = adj.tipo_ajuste === "GANHO_CAMBIAL";
+                  const bookmakerNome = adj.bookmaker_id ? getBookmakerName(adj.bookmaker_id) : null;
+                  const walletInfo = adj.wallet_id ? getWalletInfo(adj.wallet_id) : null;
+                  
+                  return (
+                    <div
+                      key={adj.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        isGanho 
+                          ? "bg-emerald-500/5 border-emerald-500/20" 
+                          : "bg-red-500/5 border-red-500/20"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 flex-wrap min-w-0">
+                        <Badge
+                          className={
+                            isGanho
+                              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shrink-0"
+                              : "bg-red-500/20 text-red-400 border-red-500/30 shrink-0"
+                          }
+                        >
+                          {isGanho ? (
+                            <TrendingUp className="h-3 w-3 mr-1" />
+                          ) : (
+                            <TrendingDown className="h-3 w-3 mr-1" />
+                          )}
+                          {isGanho ? "Ganho" : "Perda"}
+                        </Badge>
+
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {adj.tipo === "DEPOSITO" ? "Depósito" : "Saque"}
+                        </Badge>
+
+                        <div className="flex items-center gap-1 text-sm min-w-0">
+                          {bookmakerNome && (
+                            <div className="flex items-center gap-1 text-muted-foreground truncate">
+                              <Building2 className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{bookmakerNome}</span>
+                            </div>
+                          )}
+                          {walletInfo && (
+                            <div className="flex items-center gap-1 text-muted-foreground truncate">
+                              <Wallet className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{walletInfo}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {adj.qtd_coin && adj.coin && (
+                          <div className="text-xs text-muted-foreground shrink-0 font-mono">
+                            {adj.qtd_coin.toFixed(2)} {adj.coin}
+                          </div>
+                        )}
+
+                        <div className="text-xs text-muted-foreground shrink-0">
+                          {format(new Date(adj.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0 ml-2">
+                        <p className={`font-semibold ${isGanho ? "text-emerald-400" : "text-red-400"}`}>
+                          {isGanho ? "+" : "-"}{formatCurrency(Math.abs(adj.diferenca))}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(adj.valor_nominal)} → {formatCurrency(adj.valor_confirmado)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="flex items-center gap-1.5 text-xs">
-                        <TrendingDown className="h-3 w-3 text-red-400" />
-                        Perdas
-                      </span>
-                      <span className="text-xs font-medium text-red-400">
-                        -{formatCurrency(adjustmentSummary.totalPerdas)}
-                      </span>
-                    </div>
-                    <div className="border-t border-border/50 pt-1.5 flex items-center justify-between gap-4">
-                      <span className="flex items-center gap-1.5 text-xs font-medium">
-                        <RefreshCcw className="h-3 w-3 text-primary" />
-                        Líquido
-                      </span>
-                      <span className={`text-xs font-bold ${adjustmentSummary.saldoLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {adjustmentSummary.saldoLiquido >= 0 ? '+' : ''}{formatCurrency(adjustmentSummary.saldoLiquido)}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/30">
-                    Diferenças entre valor estimado e valor real creditado nas conciliações.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                  );
+                })}
+              </div>
+            </ScrollArea>
           )}
         </div>
       )}
 
-      {/* Histórico de Ajustes Cambiais */}
-      {adjustmentHistory.length > 0 && (
-        <Collapsible open={showHistory} onOpenChange={setShowHistory}>
-          <Card className="border-border/50">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <History className="h-4 w-4 text-muted-foreground" />
-                    Histórico de Ajustes Cambiais
-                    <Badge variant="secondary" className="text-xs">
-                      {adjustmentHistory.length}
-                    </Badge>
-                  </CardTitle>
-                  {showHistory ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="pt-0">
-                <ScrollArea className="h-[300px]">
-                  <div className="space-y-2">
-                    {adjustmentHistory.map((adj) => {
-                      const isGanho = adj.tipo_ajuste === "GANHO_CAMBIAL";
-                      const bookmakerNome = adj.bookmaker_id ? getBookmakerName(adj.bookmaker_id) : null;
-                      const walletInfo = adj.wallet_id ? getWalletInfo(adj.wallet_id) : null;
-                      
-                      return (
-                        <div
-                          key={adj.id}
-                          className={`flex items-center justify-between p-3 rounded-lg border ${
-                            isGanho 
-                              ? "bg-emerald-500/5 border-emerald-500/20" 
-                              : "bg-red-500/5 border-red-500/20"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 flex-wrap min-w-0">
-                            {/* Tipo Badge */}
-                            <Badge
-                              className={
-                                isGanho
-                                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shrink-0"
-                                  : "bg-red-500/20 text-red-400 border-red-500/30 shrink-0"
-                              }
-                            >
-                              {isGanho ? (
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                              ) : (
-                                <TrendingDown className="h-3 w-3 mr-1" />
-                              )}
-                              {isGanho ? "Ganho" : "Perda"}
-                            </Badge>
-
-                            {/* Tipo transação */}
-                            <Badge variant="outline" className="text-xs shrink-0">
-                              {adj.tipo === "DEPOSITO" ? "Depósito" : "Saque"}
-                            </Badge>
-
-                            {/* Bookmaker/Wallet */}
-                            <div className="flex items-center gap-1 text-sm min-w-0">
-                              {bookmakerNome && (
-                                <div className="flex items-center gap-1 text-muted-foreground truncate">
-                                  <Building2 className="h-3.5 w-3.5 shrink-0" />
-                                  <span className="truncate">{bookmakerNome}</span>
-                                </div>
-                              )}
-                              {walletInfo && (
-                                <div className="flex items-center gap-1 text-muted-foreground truncate">
-                                  <Wallet className="h-3.5 w-3.5 shrink-0" />
-                                  <span className="truncate">{walletInfo}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Valores */}
-                            <div className="text-xs text-muted-foreground shrink-0">
-                              {adj.qtd_coin && adj.coin && (
-                                <span className="font-mono">
-                                  {adj.qtd_coin.toFixed(2)} {adj.coin}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Data */}
-                            <div className="text-xs text-muted-foreground shrink-0">
-                              {format(new Date(adj.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                            </div>
-                          </div>
-
-                          {/* Diferença */}
-                          <div className="text-right shrink-0 ml-2">
-                            <p className={`font-semibold ${isGanho ? "text-emerald-400" : "text-red-400"}`}>
-                              {isGanho ? "+" : "-"}{formatCurrency(Math.abs(adj.diferenca))}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatCurrency(adj.valor_nominal)} → {formatCurrency(adj.valor_confirmado)}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
-
-      {/* Estado vazio */}
-      {pendingTransactions.length === 0 ? (
-        <div className="text-center py-12">
-          <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Tudo Conciliado!</h3>
-          <p className="text-muted-foreground">
-            Não há transações pendentes de confirmação.
-          </p>
-        </div>
-      ) : (
-        <>
-          <p className="text-sm text-muted-foreground">
-            Confirme se os valores creditados/recebidos correspondem ao esperado
-          </p>
-          
-          {/* Lista de pendentes */}
-          <div className="space-y-3">
-            {pendingTransactions.map((t) => {
-              const isDeposito = t.tipo_transacao === "DEPOSITO";
-              const isCrypto = t.tipo_moeda === "CRYPTO";
-              const valorNominal = t.valor_usd || t.valor || 0;
-              const moedaOrigem = t.moeda_origem || (isCrypto ? t.coin : t.moeda) || "BRL";
-              const moedaDestino = t.moeda_destino || t.moeda || "BRL";
-              const valorOrigem = t.valor_origem || t.valor || 0;
-              
-              // Determinar origem: wallet (crypto) ou conta bancária (fiat)
-              const origemLabel = isCrypto 
-                ? (t.origem_wallet_id ? getWalletInfo(t.origem_wallet_id) : "Wallet")
-                : (t.moeda_origem || "FIAT");
-              
-              // Determinar destino
-              const destinoLabel = isDeposito
-                ? (t.destino_bookmaker_id ? getBookmakerName(t.destino_bookmaker_id) : "Bookmaker")
-                : (t.origem_bookmaker_id ? getBookmakerName(t.origem_bookmaker_id) : "Bookmaker");
-              
-              return (
-                <div
-                  key={t.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-card/30 hover:bg-card/50 transition-colors"
-                >
-                  <div className="flex items-center gap-4 flex-wrap">
-                    {/* Tipo Badge */}
-                    <Badge
-                      className={
-                        isDeposito
-                          ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                          : "bg-purple-500/20 text-purple-400 border-purple-500/30"
-                      }
-                    >
-                      {isDeposito ? "Depósito" : "Saque"}
-                    </Badge>
-                    
-                    {/* Badge de tipo de moeda */}
-                    <Badge variant="outline" className="text-xs">
-                      {isCrypto ? "CRYPTO" : "FIAT"}
-                    </Badge>
-
-                    {/* Fluxo */}
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="flex items-center gap-1">
-                        {isCrypto ? (
-                          <Wallet className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span className="text-muted-foreground">{origemLabel}</span>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex items-center gap-1">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span>{destinoLabel}</span>
-                      </div>
-                    </div>
-
-                    {/* Valores */}
-                    <div className="text-sm">
-                      {isCrypto ? (
-                        <>
-                          <div className="font-mono">
-                            {t.qtd_coin?.toFixed(4)} {t.coin}
-                          </div>
-                          <div className="text-muted-foreground">
-                            ≈ {formatCurrency(valorNominal)}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="font-mono font-medium">
-                            {moedaOrigem} {valorOrigem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </div>
-                          <div className="text-muted-foreground text-xs">
-                            → {moedaDestino} (aguardando confirmação)
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Data */}
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(t.data_transacao), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                    </div>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => handleOpenConfirm(t)}
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    Confirmar
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
 
       {/* Dialog de Confirmação */}
       <Dialog open={confirmDialog} onOpenChange={setConfirmDialog}>
