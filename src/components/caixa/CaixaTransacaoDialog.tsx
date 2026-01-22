@@ -2197,15 +2197,15 @@ export function CaixaTransacaoDialog({
             <div className="space-y-2">
               <Label>Bookmaker (com saldo disponível)</Label>
               <BookmakerSelect
-                key={`saque-fiat-${workspaceId}`}
+                key={`saque-fiat-${workspaceId}-${destinoParceiroId}`}
                 ref={bookmakerSelectRef}
                 value={origemBookmakerId}
                 onValueChange={setOrigemBookmakerId}
                 disabled={!isDestinoCompleta}
                 modoSaque={true}
                 workspaceId={workspaceId || undefined}
-                // Modo saque busca TODAS as bookmakers do workspace com saldo
-                // Não filtra por parceiroId nem moeda - conversão interna é permitida
+                parceiroId={destinoParceiroId} // CRÍTICO: Só casas deste parceiro!
+                // Saque filtra por parceiro mas NÃO por moeda - conversão interna é permitida
               />
             </div>
           </>
@@ -2229,15 +2229,15 @@ export function CaixaTransacaoDialog({
           <div className="space-y-2">
             <Label>Bookmaker (com saldo disponível)</Label>
             <BookmakerSelect
-              key={`saque-crypto-${workspaceId}`}
+              key={`saque-crypto-${workspaceId}-${destinoParceiroId}`}
               ref={bookmakerSelectRef}
               value={origemBookmakerId}
               onValueChange={setOrigemBookmakerId}
               disabled={!isDestinoCompletaCrypto}
               modoSaque={true}
               workspaceId={workspaceId || undefined}
-              // Modo saque busca TODAS as bookmakers do workspace com saldo
-              // Não filtra por parceiroId nem moeda - conversão interna é permitida
+              parceiroId={destinoParceiroId} // CRÍTICO: Só casas deste parceiro!
+              // Saque filtra por parceiro mas NÃO por moeda - conversão interna é permitida
             />
           </div>
         </>
