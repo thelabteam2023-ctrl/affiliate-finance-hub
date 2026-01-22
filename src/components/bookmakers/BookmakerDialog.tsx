@@ -71,8 +71,73 @@ export default function BookmakerDialog({
   const [saldoIrrecuperavel, setSaldoIrrecuperavel] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [showObservacoesDialog, setShowObservacoesDialog] = useState(false);
+  const [hasFinancialOperations, setHasFinancialOperations] = useState(false);
+  const [checkingOperations, setCheckingOperations] = useState(false);
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
+
+  // Verificar se existem operações financeiras associadas ao vínculo
+  const checkFinancialOperations = async (bookmakerId: string) => {
+    if (!bookmakerId) {
+      setHasFinancialOperations(false);
+      return;
+    }
+
+    setCheckingOperations(true);
+    try {
+      // Verificar cash_ledger (transações)
+      const { count: cashCount } = await supabase
+        .from("cash_ledger")
+        .select("id", { count: "exact", head: true })
+        .or(`origem_bookmaker_id.eq.${bookmakerId},destino_bookmaker_id.eq.${bookmakerId}`);
+
+      if (cashCount && cashCount > 0) {
+        setHasFinancialOperations(true);
+        return;
+      }
+
+      // Verificar apostas_unificada
+      const { count: apostasCount } = await supabase
+        .from("apostas_unificada")
+        .select("id", { count: "exact", head: true })
+        .eq("bookmaker_id", bookmakerId);
+
+      if (apostasCount && apostasCount > 0) {
+        setHasFinancialOperations(true);
+        return;
+      }
+
+      // Verificar apostas_pernas (apostas múltiplas)
+      const { count: pernasCount } = await supabase
+        .from("apostas_pernas")
+        .select("id", { count: "exact", head: true })
+        .eq("bookmaker_id", bookmakerId);
+
+      if (pernasCount && pernasCount > 0) {
+        setHasFinancialOperations(true);
+        return;
+      }
+
+      // Verificar bônus
+      const { count: bonusCount } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .select("id", { count: "exact", head: true })
+        .eq("bookmaker_id", bookmakerId);
+
+      if (bonusCount && bonusCount > 0) {
+        setHasFinancialOperations(true);
+        return;
+      }
+
+      setHasFinancialOperations(false);
+    } catch (error) {
+      console.error("Erro ao verificar operações:", error);
+      // Em caso de erro, assumir que há operações (fail-safe)
+      setHasFinancialOperations(true);
+    } finally {
+      setCheckingOperations(false);
+    }
+  };
 
   // Função para carregar detalhes da bookmaker
   const fetchBookmakerDetails = async (bookmakerIdToFetch: string, presetLink?: string, preserveMoeda = false) => {
@@ -159,10 +224,19 @@ export default function BookmakerDialog({
         setObservacoes("");
         setIsLoadingDetails(false);
         setIsInitialized(false);
+        setHasFinancialOperations(false);
+        setCheckingOperations(false);
       }, 100);
       return () => clearTimeout(timeout);
     }
   }, [open]);
+
+  // Verificar operações quando em modo edição
+  useEffect(() => {
+    if (open && bookmaker?.id) {
+      checkFinancialOperations(bookmaker.id);
+    }
+  }, [open, bookmaker?.id]);
 
   // Inicialização quando dialog abre - efeito separado para garantir execução determinística
   useEffect(() => {
@@ -492,13 +566,23 @@ export default function BookmakerDialog({
             </div>
 
             <div>
-              <Label htmlFor="moedaOperacional">Moeda Operacional</Label>
+              <Label htmlFor="moedaOperacional" className="flex items-center gap-2">
+                Moeda Operacional
+                {checkingOperations && (
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                )}
+                {hasFinancialOperations && !checkingOperations && (
+                  <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+                    Bloqueada
+                  </Badge>
+                )}
+              </Label>
               <Select 
                 value={moedaOperacional} 
                 onValueChange={(val) => setMoedaOperacional(val as FiatCurrency)} 
-                disabled={loading}
+                disabled={loading || hasFinancialOperations}
               >
-                <SelectTrigger>
+                <SelectTrigger className={hasFinancialOperations ? "bg-muted/50 cursor-not-allowed" : ""}>
                   <SelectValue placeholder="Selecione a moeda" />
                 </SelectTrigger>
                 <SelectContent>
@@ -512,9 +596,16 @@ export default function BookmakerDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                Moeda em que a casa opera (saldo e transações)
-              </p>
+              {hasFinancialOperations ? (
+                <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  A moeda não pode ser alterada pois existem operações financeiras associadas.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Moeda em que a casa opera (saldo e transações)
+                </p>
+              )}
             </div>
 
             <div>
