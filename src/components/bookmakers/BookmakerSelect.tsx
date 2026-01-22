@@ -504,21 +504,33 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                         </span>
                         {(item.saldo_atual !== undefined || item.saldo_usd !== undefined) && (
                           <span className="text-xs text-muted-foreground flex-shrink-0 flex items-center gap-1">
-                            {/* Exibir saldo baseado na moeda da bookmaker */}
+                            {/* Exibir saldo baseado na moeda nativa da bookmaker */}
                             {(() => {
                               const moeda = item.moeda || "BRL";
-                              const isUsdMoeda = moeda === "USD" || moeda === "USDT";
-                              const saldo = isUsdMoeda ? (item.saldo_usd ?? 0) : (item.saldo_atual ?? 0);
-                              const symbol = isUsdMoeda ? "$" : "R$";
-                              const suffix = isUsdMoeda ? " USD" : "";
+                              // Usar saldo_atual como fonte única de verdade (arquitetura v3)
+                              const saldo = item.saldo_atual ?? 0;
+                              
+                              // Mapear símbolos por moeda
+                              const currencyConfig: Record<string, { symbol: string; suffix: string; highlight: boolean }> = {
+                                BRL: { symbol: "R$", suffix: "", highlight: false },
+                                USD: { symbol: "$", suffix: " USD", highlight: true },
+                                EUR: { symbol: "€", suffix: " EUR", highlight: true },
+                                GBP: { symbol: "£", suffix: " GBP", highlight: true },
+                                MXN: { symbol: "$", suffix: " MXN", highlight: true },
+                                MYR: { symbol: "RM", suffix: " MYR", highlight: true },
+                                ARS: { symbol: "$", suffix: " ARS", highlight: true },
+                                COP: { symbol: "$", suffix: " COP", highlight: true },
+                              };
+                              
+                              const config = currencyConfig[moeda] || { symbol: moeda, suffix: "", highlight: true };
                               
                               if (saldo > 0) {
                                 return (
-                                  <span className={isUsdMoeda 
+                                  <span className={config.highlight 
                                     ? "bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded" 
                                     : "bg-muted/50 px-1.5 py-0.5 rounded"
                                   }>
-                                    {symbol} {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}{suffix}
+                                    {config.symbol} {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}{config.suffix}
                                   </span>
                                 );
                               }
@@ -526,7 +538,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                               // Saldo zero - exibir na moeda correta
                               return (
                                 <span className="opacity-50">
-                                  {symbol} 0,00{suffix}
+                                  {config.symbol} 0,00{config.suffix}
                                 </span>
                               );
                             })()}
