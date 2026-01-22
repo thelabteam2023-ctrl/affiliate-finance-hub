@@ -388,7 +388,13 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     };
   }, [parceiroId, somenteComSaldo, somenteComSaldoUsd, somenteComSaldoFiat, excludeVinculosDoParceiro, moedaOperacional, isModoSaque, workspaceId, modoSaqueAguardandoWorkspace]);
 
+  // Determinar se devemos buscar na tabela "bookmakers" (instâncias vinculadas) ou "bookmakers_catalogo"
+  // modoSaque também usa bookmakers (instâncias), não catálogo
+  const usaBookmakerInstancia = isVinculoMode || modoSaque;
+  
   // Buscar dados de exibição quando value muda - execução imediata e determinística
+  // CRÍTICO: Este useEffect deve rodar INDEPENDENTE de prerequisitesReady
+  // O select pode ter um valor definido antes mesmo de os items serem carregados
   useEffect(() => {
     // Reset se não há valor
     if (!value) {
@@ -399,7 +405,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     }
 
     // Skip APENAS se já temos os dados corretos para ESTE EXATO valor
-    if (lastFetchedValue.current === value) {
+    if (lastFetchedValue.current === value && displayData?.nome) {
       return;
     }
 
@@ -409,7 +415,8 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
 
     const fetchDisplayData = async () => {
       try {
-        if (isVinculoMode) {
+        if (usaBookmakerInstancia) {
+          // Buscar bookmaker vinculada (tanto modo vínculo quanto modo saque)
           const { data } = await supabase
             .from("bookmakers")
             .select(`
@@ -454,7 +461,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     };
 
     fetchDisplayData();
-  }, [value, isVinculoMode]); // REMOVIDO displayData das dependências para evitar loop
+  }, [value, usaBookmakerInstancia]); // Depende de value e modo de busca
 
   // Filtrar itens pela busca
   const filteredItems = items.filter((item) => 
