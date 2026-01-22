@@ -90,12 +90,13 @@ export function useMultiCurrencyConversion(cryptoSymbols: string[] = []) {
     // Crypto (já em USD)
     if (cryptoPrices[upper]) return cryptoPrices[upper];
     
-    // Moedas latinas (fallback aproximado baseado em cotação típica)
-    // Idealmente viriam do FastForex, por enquanto usamos aproximações
-    if (upper === "MXN") return 0.058;  // 1 MXN ≈ 0.058 USD
-    if (upper === "MYR") return 0.21;   // 1 MYR ≈ 0.21 USD
-    if (upper === "ARS") return 0.001;  // 1 ARS ≈ 0.001 USD (alta inflação)
-    if (upper === "COP") return 0.00024; // 1 COP ≈ 0.00024 USD
+    // Moedas secundárias (fallback aproximado - idealmente viriam do FastForex)
+    // Latinas
+    if (upper === "MXN") return 0.058;  // Peso Mexicano: 1 MXN ≈ 0.058 USD
+    if (upper === "ARS") return 0.001;  // Peso Argentino: 1 ARS ≈ 0.001 USD (alta inflação)
+    if (upper === "COP") return 0.00024; // Peso Colombiano: 1 COP ≈ 0.00024 USD
+    // Asiáticas
+    if (upper === "MYR") return 0.21;   // Ringgit Malaio: 1 MYR ≈ 0.21 USD
     
     // Fallback: assumir equivalente a USD
     console.warn(`[useMultiCurrencyConversion] Moeda não reconhecida: ${moeda}, usando 1.0`);
