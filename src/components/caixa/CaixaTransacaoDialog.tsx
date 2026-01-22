@@ -1865,29 +1865,49 @@ export function CaixaTransacaoDialog({
       // SAQUE FIAT: Corrigir valor_destino para moeda de DESTINO (BRL)
       // Modelo: Sacamos €102 → Esperamos R$ 6.320 → Recebemos R$ X.XXX
       // =========================================================================
+      // =========================================================================
+      // SAQUE FIAT: Modelo Multi-Moeda Correto
+      // Origem: Casa (EUR) → Destino: Conta Bancária (BRL)
+      // Cotação: EUR/BRL para auditoria
+      // =========================================================================
       if (tipoTransacao === "SAQUE" && origemBookmakerId && tipoMoeda === "FIAT") {
         const bm = bookmakers.find(b => b.id === origemBookmakerId);
         const moedaCasa = bm?.moeda || "BRL";
-        // Buscar moeda REAL da conta bancária de destino (não usar state 'moeda')
+        
+        // Buscar moeda REAL da conta bancária de destino
         const contaDestino = contasBancarias.find(c => c.id === destinoContaId);
         const moedaContaDestino = contaDestino?.moeda || "BRL";
         
-        // Valor de ORIGEM = valor na moeda da CASA
+        console.log("[SAQUE FIAT] Debug conversão:", {
+          origemBookmakerId,
+          destinoContaId,
+          moedaCasa,
+          moedaContaDestino,
+          valorOrigem,
+          contaDestinoEncontrada: !!contaDestino,
+        });
+        
+        // Valor de ORIGEM = valor na moeda da CASA (débito)
         transactionData.moeda_origem = moedaCasa;
         transactionData.valor_origem = valorOrigem;
         
-        // Valor de DESTINO = estimativa na moeda da CONTA de destino
+        // Valor de DESTINO = estimativa na moeda da CONTA de destino (crédito esperado)
         transactionData.moeda_destino = moedaContaDestino;
         
         if (moedaCasa !== moedaContaDestino) {
           // Calcular estimativa: Casa → Destino
-          const taxaCasa = getRate(moedaCasa);
-          const taxaDestino = getRate(moedaContaDestino);
+          const taxaCasa = getRate(moedaCasa);     // Ex: EUR → 6.21 (BRL por EUR)
+          const taxaDestino = getRate(moedaContaDestino); // Ex: BRL → 1 (BRL por BRL)
           
-          // Conversão: Casa → BRL → Destino
+          console.log("[SAQUE FIAT] Taxas obtidas:", {
+            taxaCasa,      // EUR/BRL = 6.21
+            taxaDestino,   // BRL/BRL = 1
+          });
+          
+          // Conversão: Casa → BRL → Destino (usando BRL como pivot)
           let valorBRLFromCasa = valorOrigem;
           if (moedaCasa !== "BRL") {
-            valorBRLFromCasa = valorOrigem * taxaCasa;
+            valorBRLFromCasa = valorOrigem * taxaCasa; // €102 * 6.21 = R$ 633.42
           }
           
           let valorDestinoEstimado = valorBRLFromCasa;
@@ -1895,17 +1915,24 @@ export function CaixaTransacaoDialog({
             valorDestinoEstimado = valorBRLFromCasa / taxaDestino;
           }
           
-          // Cotação direta entre as moedas para auditoria
-          const cotacaoSnapshot = moedaCasa === moedaContaDestino 
-            ? 1.0 
-            : taxaCasa / taxaDestino;
+          // Cotação direta: Casa → Destino (para auditoria)
+          // Ex: EUR → BRL = 6.21 / 1 = 6.21
+          const cotacaoDireta = taxaCasa / taxaDestino;
+          
+          console.log("[SAQUE FIAT] Cálculo final:", {
+            valorBRLFromCasa,
+            valorDestinoEstimado,
+            cotacaoDireta,
+          });
           
           transactionData.valor_destino = valorDestinoEstimado;
-          transactionData.cotacao_snapshot = cotacaoSnapshot;
+          transactionData.cotacao = cotacaoDireta; // CAMPO CORRETO NO BANCO
+          transactionData.cotacao_implicita = cotacaoDireta;
         } else {
           // Mesma moeda - sem conversão
           transactionData.valor_destino = valorOrigem;
-          transactionData.cotacao_snapshot = 1.0;
+          transactionData.cotacao = 1.0;
+          transactionData.cotacao_implicita = 1.0;
         }
         
         // Moeda canônica para ledger = moeda da CASA (para trigger de débito)

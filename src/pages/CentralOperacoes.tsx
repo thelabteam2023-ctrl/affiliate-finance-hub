@@ -215,7 +215,7 @@ interface SaquePendenteConfirmacao {
   moeda_destino?: string;
   valor_origem?: number; // Valor na moeda da casa
   valor_destino?: number; // Valor esperado na moeda de destino (estimativa)
-  cotacao_snapshot?: number; // Cotação usada na estimativa
+  cotacao?: number; // Cotação Casa→Destino usada na estimativa (ex: EUR/BRL = 6.21)
   // Dados da wallet de destino
   wallet_network?: string;
   wallet_exchange?: string;
@@ -402,10 +402,11 @@ export default function CentralOperacoes() {
           ? supabase.from("parcerias").select("parceiro_id").in("status", ["ATIVA", "EM_ENCERRAMENTO"])
           : Promise.resolve({ data: [], error: null }),
         // Saques pendentes - apenas se puder ver dados financeiros (incluindo dados cripto)
+        // NOTA: cotacao = Casa→Destino (ex: EUR/BRL), valor_destino = estimativa na moeda de destino
         canSeeFinancialData
           ? supabase
               .from("cash_ledger")
-              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id, destino_wallet_id, coin, qtd_coin, cotacao, moeda_origem, moeda_destino, valor_origem, valor_destino, cotacao_snapshot`)
+              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id, destino_wallet_id, coin, qtd_coin, cotacao, moeda_origem, moeda_destino, valor_origem, valor_destino`)
               .eq("tipo_transacao", "SAQUE")
               .eq("status", "PENDENTE")
               .order("data_transacao", { ascending: false })
