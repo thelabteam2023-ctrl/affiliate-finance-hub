@@ -1439,6 +1439,13 @@ export type Database = {
             referencedColumns: ["investidor_id"]
           },
           {
+            foreignKeyName: "cash_ledger_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores_multimoeda"
+            referencedColumns: ["investidor_id"]
+          },
+          {
             foreignKeyName: "cash_ledger_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
@@ -3346,6 +3353,13 @@ export type Database = {
             referencedColumns: ["investidor_id"]
           },
           {
+            foreignKeyName: "investidor_deals_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores_multimoeda"
+            referencedColumns: ["investidor_id"]
+          },
+          {
             foreignKeyName: "investidor_deals_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -4647,6 +4661,13 @@ export type Database = {
             referencedColumns: ["investidor_id"]
           },
           {
+            foreignKeyName: "participacao_ciclos_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores_multimoeda"
+            referencedColumns: ["investidor_id"]
+          },
+          {
             foreignKeyName: "participacao_ciclos_pagamento_ledger_id_fkey"
             columns: ["pagamento_ledger_id"]
             isOneToOne: false
@@ -5804,6 +5825,13 @@ export type Database = {
             columns: ["investidor_id"]
             isOneToOne: false
             referencedRelation: "v_roi_investidores"
+            referencedColumns: ["investidor_id"]
+          },
+          {
+            foreignKeyName: "projetos_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores_multimoeda"
             referencedColumns: ["investidor_id"]
           },
           {
@@ -8165,6 +8193,45 @@ export type Database = {
           liquidacoes_fiat_usd: number | null
           nome: string | null
           status: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investidores_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_roi_investidores_multimoeda: {
+        Row: {
+          aportes_ars: number | null
+          aportes_brl: number | null
+          aportes_cop: number | null
+          aportes_crypto_usd: number | null
+          aportes_eur: number | null
+          aportes_gbp: number | null
+          aportes_mxn: number | null
+          aportes_myr: number | null
+          aportes_usd: number | null
+          cpf: string | null
+          investidor_id: string | null
+          liquidacoes_ars: number | null
+          liquidacoes_brl: number | null
+          liquidacoes_cop: number | null
+          liquidacoes_crypto_usd: number | null
+          liquidacoes_eur: number | null
+          liquidacoes_gbp: number | null
+          liquidacoes_mxn: number | null
+          liquidacoes_myr: number | null
+          liquidacoes_usd: number | null
+          nome: string | null
+          status: string | null
+          total_aportes_usd_ref: number | null
+          total_liquidacoes_usd_ref: number | null
           user_id: string | null
           workspace_id: string | null
         }

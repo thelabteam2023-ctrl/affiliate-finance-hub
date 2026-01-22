@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Search, LayoutGrid, List, ChartBar, User } from "lucide-react";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { InvestidorDialog } from "@/components/investidores/InvestidorDialog";
-import { InvestidorPainelCard } from "@/components/investidores/InvestidorPainelCard";
+import { InvestidorPainelCard, InvestidorROIMultiMoeda } from "@/components/investidores/InvestidorPainelCard";
 import { InvestidorExtratoDialog } from "@/components/investidores/InvestidorExtratoDialog";
 import { InvestidorDetalhesDrawer } from "@/components/investidores/InvestidorDetalhesDrawer";
 import { RelatorioROI } from "@/components/caixa/RelatorioROI";
 import { HistoricoInvestidor } from "@/components/caixa/HistoricoInvestidor";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { NativeCurrencyKpi, CurrencyEntry } from "@/components/ui/native-currency-kpi";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,21 +36,7 @@ interface Investidor {
   created_at: string;
 }
 
-interface InvestidorROI {
-  investidor_id: string;
-  aportes_fiat_brl: number;
-  aportes_fiat_usd: number;
-  liquidacoes_fiat_brl: number;
-  liquidacoes_fiat_usd: number;
-  aportes_crypto_usd: number;
-  liquidacoes_crypto_usd: number;
-  saldo_fiat_brl: number;
-  saldo_fiat_usd: number;
-  saldo_crypto_usd: number;
-  total_aportes_usd: number;
-  total_liquidacoes_usd: number;
-  roi_percentual: number;
-}
+const FIAT_CURRENCIES = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP"] as const;
 
 interface InvestidorDeal {
   id: string;
@@ -63,7 +50,7 @@ interface InvestidorDeal {
 
 export default function GestaoInvestidores() {
   const [investidores, setInvestidores] = useState<Investidor[]>([]);
-  const [roiData, setRoiData] = useState<Map<string, InvestidorROI>>(new Map());
+  const [roiData, setRoiData] = useState<Map<string, InvestidorROIMultiMoeda>>(new Map());
   const [dealsData, setDealsData] = useState<Map<string, InvestidorDeal>>(new Map());
   const [projetosCount, setProjetosCount] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -130,47 +117,40 @@ export default function GestaoInvestidores() {
 
   const fetchROIData = async () => {
     try {
-      // Views already filter by workspace
+      // Nova view multi-moeda com suporte a 8 moedas FIAT
       const { data, error } = await supabase
-        .from("v_roi_investidores")
+        .from("v_roi_investidores_multimoeda")
         .select("*");
 
       if (error) throw error;
       
-      const roiMap = new Map<string, InvestidorROI>();
+      const roiMap = new Map<string, InvestidorROIMultiMoeda>();
       data?.forEach((roi: any) => {
-        const aportesFiatBrl = Number(roi.aportes_fiat_brl) || 0;
-        const aportesFiatUsd = Number(roi.aportes_fiat_usd) || 0;
-        const aportesCryptoUsd = Number(roi.aportes_crypto_usd) || 0;
-        const liquidacoesFiatBrl = Number(roi.liquidacoes_fiat_brl) || 0;
-        const liquidacoesFiatUsd = Number(roi.liquidacoes_fiat_usd) || 0;
-        const liquidacoesCryptoUsd = Number(roi.liquidacoes_crypto_usd) || 0;
-
-        const saldoFiatBrl = aportesFiatBrl - liquidacoesFiatBrl;
-        const saldoFiatUsd = aportesFiatUsd - liquidacoesFiatUsd;
-        const saldoCryptoUsd = aportesCryptoUsd - liquidacoesCryptoUsd;
-
-        const totalAportesUsd = aportesFiatUsd + aportesCryptoUsd;
-        const totalLiquidacoesUsd = liquidacoesFiatUsd + liquidacoesCryptoUsd;
-
-        const roiPercentual = totalAportesUsd > 0 
-          ? ((totalLiquidacoesUsd - totalAportesUsd) / totalAportesUsd) * 100 
-          : 0;
-
         roiMap.set(roi.investidor_id, {
           investidor_id: roi.investidor_id,
-          aportes_fiat_brl: aportesFiatBrl,
-          aportes_fiat_usd: aportesFiatUsd,
-          liquidacoes_fiat_brl: liquidacoesFiatBrl,
-          liquidacoes_fiat_usd: liquidacoesFiatUsd,
-          aportes_crypto_usd: aportesCryptoUsd,
-          liquidacoes_crypto_usd: liquidacoesCryptoUsd,
-          saldo_fiat_brl: saldoFiatBrl,
-          saldo_fiat_usd: saldoFiatUsd,
-          saldo_crypto_usd: saldoCryptoUsd,
-          total_aportes_usd: totalAportesUsd,
-          total_liquidacoes_usd: totalLiquidacoesUsd,
-          roi_percentual: roiPercentual,
+          // FIAT por moeda nativa
+          aportes_brl: Number(roi.aportes_brl) || 0,
+          liquidacoes_brl: Number(roi.liquidacoes_brl) || 0,
+          aportes_usd: Number(roi.aportes_usd) || 0,
+          liquidacoes_usd: Number(roi.liquidacoes_usd) || 0,
+          aportes_eur: Number(roi.aportes_eur) || 0,
+          liquidacoes_eur: Number(roi.liquidacoes_eur) || 0,
+          aportes_gbp: Number(roi.aportes_gbp) || 0,
+          liquidacoes_gbp: Number(roi.liquidacoes_gbp) || 0,
+          aportes_mxn: Number(roi.aportes_mxn) || 0,
+          liquidacoes_mxn: Number(roi.liquidacoes_mxn) || 0,
+          aportes_myr: Number(roi.aportes_myr) || 0,
+          liquidacoes_myr: Number(roi.liquidacoes_myr) || 0,
+          aportes_ars: Number(roi.aportes_ars) || 0,
+          liquidacoes_ars: Number(roi.liquidacoes_ars) || 0,
+          aportes_cop: Number(roi.aportes_cop) || 0,
+          liquidacoes_cop: Number(roi.liquidacoes_cop) || 0,
+          // Crypto
+          aportes_crypto_usd: Number(roi.aportes_crypto_usd) || 0,
+          liquidacoes_crypto_usd: Number(roi.liquidacoes_crypto_usd) || 0,
+          // Totais USD reference
+          total_aportes_usd_ref: Number(roi.total_aportes_usd_ref) || 0,
+          total_liquidacoes_usd_ref: Number(roi.total_liquidacoes_usd_ref) || 0,
         });
       });
       setRoiData(roiMap);
@@ -252,11 +232,37 @@ export default function GestaoInvestidores() {
     inativos: investidores.filter((i) => i.status === "inativo").length,
   };
 
-  // Calculate total exposure
-  const totalExposure = {
-    fiat: Array.from(roiData.values()).reduce((sum, roi) => sum + roi.saldo_fiat_brl, 0),
-    crypto: Array.from(roiData.values()).reduce((sum, roi) => sum + roi.saldo_crypto_usd, 0),
-  };
+  // Calculate total exposure multi-moeda
+  const totalExposureFiat = useMemo((): CurrencyEntry[] => {
+    const totals: Record<string, number> = {};
+    
+    Array.from(roiData.values()).forEach((roi) => {
+      for (const currency of FIAT_CURRENCIES) {
+        const key = currency.toLowerCase();
+        const aportes = Number(roi[`aportes_${key}` as keyof InvestidorROIMultiMoeda]) || 0;
+        const liquidacoes = Number(roi[`liquidacoes_${key}` as keyof InvestidorROIMultiMoeda]) || 0;
+        const saldo = aportes - liquidacoes;
+        if (saldo !== 0) {
+          totals[currency] = (totals[currency] || 0) + saldo;
+        }
+      }
+    });
+    
+    return Object.entries(totals)
+      .filter(([_, value]) => value !== 0)
+      .map(([currency, value]) => ({ currency, value }));
+  }, [roiData]);
+
+  const totalExposureCrypto = useMemo((): CurrencyEntry[] => {
+    const total = Array.from(roiData.values()).reduce((sum, roi) => {
+      const aportes = Number(roi.aportes_crypto_usd) || 0;
+      const liquidacoes = Number(roi.liquidacoes_crypto_usd) || 0;
+      return sum + (aportes - liquidacoes);
+    }, 0);
+    
+    if (total === 0) return [];
+    return [{ currency: "USDT", value: total }];
+  }, [roiData]);
 
   return (
     <TooltipProvider>
@@ -300,9 +306,13 @@ export default function GestaoInvestidores() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-mono text-amber-500">
-                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalExposure.fiat)}
-                </div>
+                <NativeCurrencyKpi
+                  entries={totalExposureFiat}
+                  size="lg"
+                  variant="default"
+                  className="text-amber-500 font-mono"
+                  showDashOnZero
+                />
               </CardContent>
             </Card>
             <Card>
@@ -312,9 +322,13 @@ export default function GestaoInvestidores() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold font-mono text-violet-500">
-                  {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totalExposure.crypto)}
-                </div>
+                <NativeCurrencyKpi
+                  entries={totalExposureCrypto}
+                  size="lg"
+                  variant="default"
+                  className="text-violet-500 font-mono"
+                  showDashOnZero
+                />
               </CardContent>
             </Card>
           </div>

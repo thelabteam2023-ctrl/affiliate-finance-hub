@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { FolderOpen, Layers, DollarSign, LayoutDashboard } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,22 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { InvestidorProjetosTab } from "./InvestidorProjetosTab";
 import { InvestidorParticipacoesList } from "./InvestidorParticipacoesList";
 import { InvestidorFinanceiroTab } from "./InvestidorFinanceiroTab";
+import { NativeCurrencyKpi, CurrencyEntry } from "@/components/ui/native-currency-kpi";
+import { InvestidorROIMultiMoeda } from "./InvestidorPainelCard";
 
-interface InvestidorROI {
-  investidor_id: string;
-  aportes_fiat_brl: number;
-  aportes_fiat_usd: number;
-  liquidacoes_fiat_brl: number;
-  liquidacoes_fiat_usd: number;
-  aportes_crypto_usd: number;
-  liquidacoes_crypto_usd: number;
-  saldo_fiat_brl: number;
-  saldo_fiat_usd: number;
-  saldo_crypto_usd: number;
-  total_aportes_usd: number;
-  total_liquidacoes_usd: number;
-  roi_percentual: number;
-}
+const FIAT_CURRENCIES = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP"] as const;
 
 interface InvestidorDeal {
   id: string;
@@ -48,14 +36,16 @@ interface InvestidorDetalhesDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   investidor: Investidor | null;
-  roi?: InvestidorROI;
+  roi?: InvestidorROIMultiMoeda;
   deal?: InvestidorDeal;
 }
 
-const formatCurrency = (value: number, currency: "BRL" | "USD" = "BRL") => {
-  return new Intl.NumberFormat(currency === "BRL" ? "pt-BR" : "en-US", {
+const formatCurrency = (value: number, currency: string = "BRL") => {
+  const locale = currency === "BRL" ? "pt-BR" : "en-US";
+  const currencyCode = ["USDT", "USDC"].includes(currency) ? "USD" : currency;
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: currency,
+    currency: currencyCode,
     minimumFractionDigits: 2,
   }).format(value);
 };
@@ -70,6 +60,80 @@ const formatCPF = (cpf: string) => {
   return cpf;
 };
 
+/**
+ * Extrai entries de capital em operação FIAT (aportes - liquidações) por moeda nativa
+ */
+function getFiatExposureEntries(roi: InvestidorROIMultiMoeda | undefined): CurrencyEntry[] {
+  if (!roi) return [];
+
+  const entries: CurrencyEntry[] = [];
+
+  for (const currency of FIAT_CURRENCIES) {
+    const key = currency.toLowerCase();
+    const aportes = Number(roi[`aportes_${key}` as keyof InvestidorROIMultiMoeda]) || 0;
+    const liquidacoes = Number(roi[`liquidacoes_${key}` as keyof InvestidorROIMultiMoeda]) || 0;
+    const saldo = aportes - liquidacoes;
+
+    if (saldo !== 0) {
+      entries.push({ currency, value: saldo });
+    }
+  }
+
+  return entries;
+}
+
+/**
+ * Extrai entries de crypto (consolidado em USD)
+ */
+function getCryptoExposureEntries(roi: InvestidorROIMultiMoeda | undefined): CurrencyEntry[] {
+  if (!roi) return [];
+
+  const aportes = Number(roi.aportes_crypto_usd) || 0;
+  const liquidacoes = Number(roi.liquidacoes_crypto_usd) || 0;
+  const saldo = aportes - liquidacoes;
+
+  if (saldo === 0) return [];
+  return [{ currency: "USDT", value: saldo }];
+}
+
+/**
+ * Extrai detalhes de aportes por moeda para breakdown
+ */
+function getAportesEntries(roi: InvestidorROIMultiMoeda | undefined): CurrencyEntry[] {
+  if (!roi) return [];
+
+  const entries: CurrencyEntry[] = [];
+
+  for (const currency of FIAT_CURRENCIES) {
+    const key = currency.toLowerCase();
+    const aportes = Number(roi[`aportes_${key}` as keyof InvestidorROIMultiMoeda]) || 0;
+    if (aportes !== 0) {
+      entries.push({ currency, value: aportes });
+    }
+  }
+
+  return entries;
+}
+
+/**
+ * Extrai detalhes de liquidações por moeda para breakdown
+ */
+function getLiquidacoesEntries(roi: InvestidorROIMultiMoeda | undefined): CurrencyEntry[] {
+  if (!roi) return [];
+
+  const entries: CurrencyEntry[] = [];
+
+  for (const currency of FIAT_CURRENCIES) {
+    const key = currency.toLowerCase();
+    const liquidacoes = Number(roi[`liquidacoes_${key}` as keyof InvestidorROIMultiMoeda]) || 0;
+    if (liquidacoes !== 0) {
+      entries.push({ currency, value: liquidacoes });
+    }
+  }
+
+  return entries;
+}
+
 export function InvestidorDetalhesDrawer({
   open,
   onOpenChange,
@@ -80,6 +144,27 @@ export function InvestidorDetalhesDrawer({
   const [activeTab, setActiveTab] = useState("visao-geral");
   const [projetosCount, setProjetosCount] = useState(0);
   const [participacoesCount, setParticipacoesCount] = useState(0);
+
+  // Memoized entries
+  const fiatEntries = useMemo(() => getFiatExposureEntries(roi), [roi]);
+  const cryptoEntries = useMemo(() => getCryptoExposureEntries(roi), [roi]);
+  const aportesEntries = useMemo(() => getAportesEntries(roi), [roi]);
+  const liquidacoesEntries = useMemo(() => getLiquidacoesEntries(roi), [roi]);
+
+  // ROI consolidado via USD reference
+  const roiPercentual = useMemo(() => {
+    if (!roi) return 0;
+    const totalAportes = Number(roi.total_aportes_usd_ref) || 0;
+    const totalLiquidacoes = Number(roi.total_liquidacoes_usd_ref) || 0;
+    return totalAportes > 0
+      ? ((totalLiquidacoes - totalAportes) / totalAportes) * 100
+      : 0;
+  }, [roi]);
+
+  // Crypto values
+  const totalAportesCrypto = Number(roi?.aportes_crypto_usd) || 0;
+  const totalLiquidacoesCrypto = Number(roi?.liquidacoes_crypto_usd) || 0;
+  const saldoCrypto = totalAportesCrypto - totalLiquidacoesCrypto;
 
   useEffect(() => {
     if (open && investidor) {
@@ -109,17 +194,6 @@ export function InvestidorDetalhesDrawer({
   };
 
   if (!investidor) return null;
-
-  // Calcular métricas
-  const totalAportesFiat = roi?.aportes_fiat_brl || 0;
-  const totalLiquidacoesFiat = roi?.liquidacoes_fiat_brl || 0;
-  const saldoFiat = totalAportesFiat - totalLiquidacoesFiat;
-
-  const totalAportesCrypto = roi?.aportes_crypto_usd || 0;
-  const totalLiquidacoesCrypto = roi?.liquidacoes_crypto_usd || 0;
-  const saldoCrypto = totalAportesCrypto - totalLiquidacoesCrypto;
-
-  const roiPercentual = roi?.roi_percentual || 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -224,43 +298,69 @@ export function InvestidorDetalhesDrawer({
                     <p className="text-[10px] text-muted-foreground uppercase">
                       Capital em Operação (FIAT)
                     </p>
-                    <p className="text-lg font-bold font-mono text-amber-500">
-                      {formatCurrency(saldoFiat, "BRL")}
-                    </p>
+                    <NativeCurrencyKpi
+                      entries={fiatEntries}
+                      size="lg"
+                      variant="default"
+                      className="text-amber-500 font-mono"
+                      showDashOnZero
+                    />
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] text-muted-foreground uppercase">
                       Capital em Operação (CRYPTO)
                     </p>
-                    <p className="text-lg font-bold font-mono text-violet-500">
-                      {formatCurrency(saldoCrypto, "USD")}
-                    </p>
+                    <NativeCurrencyKpi
+                      entries={cryptoEntries}
+                      size="lg"
+                      variant="default"
+                      className="text-violet-500 font-mono"
+                      showDashOnZero
+                    />
                   </div>
                 </div>
 
                 <Separator />
 
-                {/* Aportes e Recebidos - FIAT */}
+                {/* Aportes e Recebidos - FIAT Multi-moeda */}
                 <div className="space-y-2">
-                  <p className="text-[10px] text-amber-500 uppercase font-medium">FIAT (BRL)</p>
+                  <p className="text-[10px] text-amber-500 uppercase font-medium">FIAT (Multi-moeda)</p>
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase">Aportado</p>
-                      <p className="text-sm font-semibold font-mono mt-1">
-                        {formatCurrency(totalAportesFiat, "BRL")}
-                      </p>
+                      <div className="mt-1">
+                        <NativeCurrencyKpi
+                          entries={aportesEntries}
+                          size="sm"
+                          variant="default"
+                          className="font-mono justify-center"
+                          showDashOnZero
+                        />
+                      </div>
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase">Recebido</p>
-                      <p className="text-sm font-semibold font-mono mt-1">
-                        {formatCurrency(totalLiquidacoesFiat, "BRL")}
-                      </p>
+                      <div className="mt-1">
+                        <NativeCurrencyKpi
+                          entries={liquidacoesEntries}
+                          size="sm"
+                          variant="default"
+                          className="font-mono justify-center"
+                          showDashOnZero
+                        />
+                      </div>
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase">Saldo</p>
-                      <p className={`text-sm font-semibold font-mono mt-1 ${saldoFiat > 0 ? "text-amber-500" : "text-muted-foreground"}`}>
-                        {formatCurrency(saldoFiat, "BRL")}
-                      </p>
+                      <div className="mt-1">
+                        <NativeCurrencyKpi
+                          entries={fiatEntries}
+                          size="sm"
+                          variant="auto"
+                          className="font-mono justify-center"
+                          showDashOnZero
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
