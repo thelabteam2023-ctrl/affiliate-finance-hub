@@ -383,7 +383,7 @@ export async function registrarGanhoCambialViaLedger(params: {
     userId: params.userId,
     destinoBookmakerId: params.bookmakerId,
     descricao: params.descricao || 'Ganho cambial em conciliação',
-    impactaCaixaOperacional: true,
+    impactaCaixaOperacional: false, // Ajuste contábil, não cash real
     referenciaTransacaoId: params.transacaoOrigemId,
     auditoriaMetadata: { tipo: 'ganho_cambial' },
   });
@@ -409,7 +409,7 @@ export async function registrarPerdaCambialViaLedger(params: {
     userId: params.userId,
     origemBookmakerId: params.bookmakerId,
     descricao: params.descricao || 'Perda cambial em conciliação',
-    impactaCaixaOperacional: true,
+    impactaCaixaOperacional: false, // Ajuste contábil, não cash real
     referenciaTransacaoId: params.transacaoOrigemId,
     auditoriaMetadata: { tipo: 'perda_cambial' },
   });

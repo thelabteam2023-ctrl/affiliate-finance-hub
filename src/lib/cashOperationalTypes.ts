@@ -78,9 +78,8 @@ export const OPERATIONAL_MONEY_TYPES = [
   'PERDA_OPERACIONAL',
   'PERDA_REVERSAO',
   
-  // Variações Cambiais (contábil)
-  'GANHO_CAMBIAL',
-  'PERDA_CAMBIAL',
+  // NOTA: GANHO_CAMBIAL e PERDA_CAMBIAL foram REMOVIDOS daqui.
+  // São ajustes contábeis internos, não cash real.
 ] as const;
 
 /**
