@@ -36,6 +36,7 @@ interface PixKey {
 interface BankAccount {
   id?: string;
   banco_id: string;
+  moeda: string;
   agencia: string;
   conta: string;
   tipo_conta: string;
@@ -261,6 +262,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         
         return {
           ...acc,
+          moeda: acc.moeda || "BRL",
           pix_keys: acc.pix_key 
             ? [{ tipo: pixKeyType, chave: formattedKey }] 
             : [{ tipo: "", chave: "" }]
@@ -793,6 +795,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       ...bankAccounts,
       { 
         banco_id: "", 
+        moeda: "BRL",
         agencia: "", 
         conta: "", 
         tipo_conta: "corrente", 
@@ -1075,6 +1078,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             parceiro_id: currentParceiroId,
             banco_id: account.banco_id,
             banco: bancos.find(b => b.id === account.banco_id)?.nome || "",
+            moeda: account.moeda || "BRL",
             agencia: account.agencia || null,
             conta: account.conta || null,
             tipo_conta: account.tipo_conta,
@@ -1128,6 +1132,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         setBankAccounts(savedAccounts.map(acc => ({
           id: acc.id,
           banco_id: acc.banco_id || "",
+          moeda: acc.moeda || "BRL",
           agencia: acc.agencia || "",
           conta: acc.conta || "",
           tipo_conta: acc.tipo_conta,
@@ -1508,13 +1513,35 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           </Button>
                         </div>
                       )}
-                      <div className="col-span-2">
+                      <div>
                         <Label>Banco *</Label>
                         <BancoSelect
                           value={account.banco_id}
                           onValueChange={(value) => updateBankAccount(index, "banco_id", value)}
                           disabled={viewMode}
                         />
+                      </div>
+                      <div>
+                        <Label>Moeda *</Label>
+                        <Select 
+                          value={account.moeda || "BRL"} 
+                          onValueChange={(value) => updateBankAccount(index, "moeda", value)}
+                          disabled={viewMode}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Selecione a moeda" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="BRL">BRL - Real Brasileiro</SelectItem>
+                            <SelectItem value="USD">USD - Dólar Americano</SelectItem>
+                            <SelectItem value="EUR">EUR - Euro</SelectItem>
+                            <SelectItem value="GBP">GBP - Libra Esterlina</SelectItem>
+                            <SelectItem value="MXN">MXN - Peso Mexicano</SelectItem>
+                            <SelectItem value="MYR">MYR - Ringgit Malaio</SelectItem>
+                            <SelectItem value="ARS">ARS - Peso Argentino</SelectItem>
+                            <SelectItem value="COP">COP - Peso Colombiano</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label>

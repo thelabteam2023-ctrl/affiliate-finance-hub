@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 interface BankAccountCardProps {
   account: {
     banco: string;
+    moeda?: string;
     tipo_conta: string;
     titular: string;
     pix_keys?: Array<{ tipo: string; chave: string }>;
@@ -46,7 +47,12 @@ export function BankAccountCard({ account }: BankAccountCardProps) {
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <Building2 className="w-5 h-5 text-primary" />
             </div>
-            <h3 className="font-semibold text-foreground">{account.banco}</h3>
+            <div>
+              <h3 className="font-semibold text-foreground">{account.banco}</h3>
+              {account.moeda && (
+                <span className="text-xs text-muted-foreground font-medium">{account.moeda}</span>
+              )}
+            </div>
           </div>
           <Badge variant="outline" className="bg-accent/20 text-accent-foreground">
             {account.tipo_conta}
