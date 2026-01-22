@@ -8935,10 +8935,34 @@ export type Database = {
           source: string
         }[]
       }
+      get_cash_ledger_totals: {
+        Args: {
+          p_data_fim: string
+          p_data_inicio: string
+          p_tipos_transacao: string[]
+          p_workspace_id: string
+        }
+        Returns: {
+          count_transacoes: number
+          total_depositos: number
+          total_liquido: number
+          total_saques: number
+        }[]
+      }
       get_current_workspace: { Args: never; Returns: string }
       get_effective_access: {
         Args: { _user_id: string; _workspace_id?: string }
         Returns: Json
+      }
+      get_exchange_adjustment_totals: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          count_conciliacoes: number
+          moeda: string
+          total_ganhos: number
+          total_liquido: number
+          total_perdas: number
+        }[]
       }
       get_influence_config: {
         Args: never

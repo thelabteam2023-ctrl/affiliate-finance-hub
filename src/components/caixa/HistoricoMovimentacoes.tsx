@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Filter, Calendar, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet } from "lucide-react";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { format, subDays, startOfDay, endOfDay, isToday } from "date-fns";
+import { usePagination } from "@/hooks/usePagination";
+import { SimplePagination } from "@/components/ui/simple-pagination";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+const PAGE_SIZE = 50;
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -111,6 +117,12 @@ export function HistoricoMovimentacoes({
   onConfirmarSaque,
 }: HistoricoMovimentacoesProps) {
   const { getLogoUrl } = useBookmakerLogoMap();
+  
+  // Get all filtered transactions
+  const transacoesFiltradas = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
+  
+  // Client-side pagination
+  const pagination = usePagination(transacoesFiltradas, { initialPageSize: PAGE_SIZE });
 
   const handlePeriodoRapido = (dias: number | null) => {
     if (dias === null) {
@@ -123,6 +135,8 @@ export function HistoricoMovimentacoes({
       setDataInicio(subDays(new Date(), dias));
       setDataFim(new Date());
     }
+    // Reset to first page when changing date filter
+    pagination.goToFirstPage();
   };
 
   const getPeriodoAtivo = () => {
@@ -141,7 +155,7 @@ export function HistoricoMovimentacoes({
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Histórico de Movimentações</CardTitle>
           <div className="text-sm text-muted-foreground">
-            {getTransacoesFiltradas().length} transações no período
+            {transacoesFiltradas.length} transações no período
           </div>
         </div>
         <div className="space-y-4 mt-4">
@@ -219,15 +233,17 @@ export function HistoricoMovimentacoes({
       <CardContent>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Carregando...</div>
-        ) : getTransacoesFiltradas().length === 0 ? (
+        ) : transacoesFiltradas.length === 0 ? (
           <div className="text-center py-8">
             <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Nenhuma transação encontrada no período</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {getTransacoesFiltradas().map((transacao) => (
-              <div key={transacao.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
+          <div className="space-y-3">
+            <ScrollArea className="h-[500px]">
+              <div className="space-y-2 pr-4">
+                {pagination.paginatedItems.map((transacao) => (
+                  <div key={transacao.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-4 flex-1">
                   <Badge className={getTipoColor(transacao.tipo_transacao, transacao)}>
                     {getTipoLabel(transacao.tipo_transacao, transacao)}
@@ -410,6 +426,26 @@ export function HistoricoMovimentacoes({
                 </div>
               </div>
             ))}
+              </div>
+            </ScrollArea>
+            
+            {/* Paginação */}
+            {pagination.totalPages > 1 && (
+              <SimplePagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                startIndex={pagination.startIndex}
+                endIndex={pagination.endIndex}
+                hasNextPage={pagination.hasNextPage}
+                hasPrevPage={pagination.hasPrevPage}
+                onNextPage={pagination.goToNextPage}
+                onPrevPage={pagination.goToPrevPage}
+                onFirstPage={pagination.goToFirstPage}
+                onLastPage={pagination.goToLastPage}
+                className="pt-3 border-t border-border/50"
+              />
+            )}
           </div>
         )}
       </CardContent>

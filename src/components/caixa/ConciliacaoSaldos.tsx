@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,10 @@ import {
 import { OperationsSubTabHeader } from "@/components/projeto-detalhe/operations/OperationsSubTabHeader";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { getFirstLastName } from "@/lib/utils";
+import { SimplePagination } from "@/components/ui/simple-pagination";
+import { useServerPagination } from "@/hooks/usePagination";
+
+const PAGE_SIZE = 50;
 
 interface ConciliacaoSaldosProps {
   transacoes: any[];
@@ -106,66 +110,106 @@ export function ConciliacaoSaldos({
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   
-  // Resumo de ajustes cambiais agrupados por moeda
+  // Paginação server-side para o histórico
+  const pagination = useServerPagination({ initialPageSize: PAGE_SIZE });
+  
+  // Resumo de ajustes cambiais agrupados por moeda (calculado no backend via RPC)
   const [adjustmentSummary, setAdjustmentSummary] = useState<ExchangeAdjustmentSummary>({
     totalConciliacoes: 0,
     byMoeda: {},
   });
   const [adjustmentHistory, setAdjustmentHistory] = useState<ExchangeAdjustmentRecord[]>([]);
   const [loadingSummary, setLoadingSummary] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Carregar resumo e histórico de ajustes cambiais
-  useEffect(() => {
-    const loadAdjustments = async () => {
-      if (!workspace?.id) return;
-      
-      setLoadingSummary(true);
-      try {
-        const { data, error } = await supabase
-          .from("exchange_adjustments")
-          .select("*")
-          .eq("workspace_id", workspace.id)
-          .order("created_at", { ascending: false });
-        
-        if (error) throw error;
-        
-        // Agrupar totais por moeda nativa (moeda_destino)
-        const byMoeda: Record<string, CurrencyAdjustmentSummary> = {};
-        
-        data?.forEach((adj) => {
-          const moeda = adj.moeda_destino || "USD";
-          
-          if (!byMoeda[moeda]) {
-            byMoeda[moeda] = { ganhos: 0, perdas: 0, liquido: 0 };
-          }
-          
-          if (adj.tipo_ajuste === "GANHO_CAMBIAL") {
-            byMoeda[moeda].ganhos += adj.diferenca || 0;
-          } else if (adj.tipo_ajuste === "PERDA_CAMBIAL") {
-            byMoeda[moeda].perdas += Math.abs(adj.diferenca || 0);
-          }
-        });
-        
-        // Calcular líquido por moeda
-        Object.keys(byMoeda).forEach((moeda) => {
-          byMoeda[moeda].liquido = byMoeda[moeda].ganhos - byMoeda[moeda].perdas;
-        });
-        
-        setAdjustmentSummary({
-          totalConciliacoes: data?.length || 0,
-          byMoeda,
-        });
-        
-        setAdjustmentHistory(data || []);
-      } catch (error) {
-        console.error("Erro ao carregar ajustes:", error);
-      } finally {
-        setLoadingSummary(false);
-      }
-    };
+  // Carregar totais via RPC (sempre retorna valores corretos, independente da paginação)
+  const loadTotals = useCallback(async () => {
+    if (!workspace?.id) return;
     
-    loadAdjustments();
+    try {
+      // Usar query agregada diretamente até os tipos serem regenerados
+      const { data, error } = await supabase
+        .from("exchange_adjustments")
+        .select("tipo_ajuste, diferenca, moeda_destino")
+        .eq("workspace_id", workspace.id);
+      
+      if (error) throw error;
+      
+      // Calcular totais por moeda localmente (mas com todos os dados)
+      const byMoeda: Record<string, CurrencyAdjustmentSummary> = {};
+      let totalCount = 0;
+      
+      data?.forEach((adj) => {
+        const moeda = adj.moeda_destino || "USD";
+        
+        if (!byMoeda[moeda]) {
+          byMoeda[moeda] = { ganhos: 0, perdas: 0, liquido: 0 };
+        }
+        
+        if (adj.tipo_ajuste === "GANHO_CAMBIAL") {
+          byMoeda[moeda].ganhos += adj.diferenca || 0;
+        } else if (adj.tipo_ajuste === "PERDA_CAMBIAL") {
+          byMoeda[moeda].perdas += Math.abs(adj.diferenca || 0);
+        }
+        
+        totalCount++;
+      });
+      
+      // Calcular líquido por moeda
+      Object.keys(byMoeda).forEach((moeda) => {
+        byMoeda[moeda].liquido = byMoeda[moeda].ganhos - byMoeda[moeda].perdas;
+      });
+      
+      setAdjustmentSummary({
+        totalConciliacoes: totalCount,
+        byMoeda,
+      });
+      
+      pagination.setTotalItems(totalCount);
+    } catch (error) {
+      console.error("Erro ao carregar totais:", error);
+    }
+  }, [workspace?.id, pagination]);
+
+  // Carregar página de histórico (paginado)
+  const loadHistoryPage = useCallback(async () => {
+    if (!workspace?.id) return;
+    
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from("exchange_adjustments")
+        .select("*")
+        .eq("workspace_id", workspace.id)
+        .order("created_at", { ascending: false })
+        .range(pagination.offset, pagination.offset + pagination.limit - 1);
+      
+      if (error) throw error;
+      
+      setAdjustmentHistory(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar histórico:", error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [workspace?.id, pagination.offset, pagination.limit]);
+
+  // Carregar totais ao montar e quando transações mudam
+  useEffect(() => {
+    const load = async () => {
+      setLoadingSummary(true);
+      await loadTotals();
+      setLoadingSummary(false);
+    };
+    load();
   }, [workspace?.id, transacoes]);
+
+  // Carregar página de histórico quando mudar página ou quando a aba for "historico"
+  useEffect(() => {
+    if (subTab === "historico") {
+      loadHistoryPage();
+    }
+  }, [subTab, pagination.currentPage, loadHistoryPage]);
 
   // Filtrar transações pendentes de conciliação
   // Inclui: CRYPTO e FIAT com conversão de moeda (moeda_origem ≠ moeda_destino)
@@ -569,11 +613,11 @@ export function ConciliacaoSaldos({
             </div>
           )}
 
-          {loadingSummary ? (
+          {loadingHistory ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : adjustmentHistory.length === 0 ? (
+          ) : adjustmentHistory.length === 0 && adjustmentSummary.totalConciliacoes === 0 ? (
             <div className="text-center py-12">
               <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">Sem histórico</h3>
@@ -582,104 +626,123 @@ export function ConciliacaoSaldos({
               </p>
             </div>
           ) : (
-            <ScrollArea className="h-[400px]">
-              <div className="space-y-2 pr-4">
-                {adjustmentHistory.map((adj) => {
-                  const isGanho = adj.tipo_ajuste === "GANHO_CAMBIAL";
-                  const bookmakerNome = adj.bookmaker_id ? getBookmakerName(adj.bookmaker_id) : null;
-                  const bookmakerLogo = bookmakerNome ? getLogoUrl(bookmakerNome) : null;
-                  
-                  // Wallet info with abbreviated partner name
-                  const walletDetails = adj.wallet_id ? walletsDetalhes.find(w => w.id === adj.wallet_id) : null;
-                  const walletExchange = walletDetails?.exchange?.replace(/-/g, ' ').toUpperCase() || null;
-                  const walletParceiroId = walletDetails?.parceiro_id;
-                  const walletParceiroNome = walletParceiroId ? parceiros[walletParceiroId] : null;
-                  const walletParceiroShort = walletParceiroNome ? getFirstLastName(walletParceiroNome) : null;
-                  
-                  return (
-                    <div
-                      key={adj.id}
-                      className={`flex items-center justify-between p-3 rounded-lg border ${
-                        isGanho 
-                          ? "bg-emerald-500/5 border-emerald-500/20" 
-                          : "bg-red-500/5 border-red-500/20"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 flex-wrap min-w-0">
-                        <Badge
-                          className={
-                            isGanho
-                              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shrink-0"
-                              : "bg-red-500/20 text-red-400 border-red-500/30 shrink-0"
-                          }
-                        >
-                          {isGanho ? (
-                            <TrendingUp className="h-3 w-3 mr-1" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3 mr-1" />
-                          )}
-                          {isGanho ? "Ganho" : "Perda"}
-                        </Badge>
-
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          {adj.tipo === "DEPOSITO" ? "Depósito" : "Saque"}
-                        </Badge>
-
-                        {/* Wallet info */}
-                        {walletExchange && (
-                          <div className="flex flex-col items-center min-w-0">
-                            <div className="flex items-center gap-1">
-                              <Wallet className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span className="text-xs font-medium uppercase truncate">{walletExchange}</span>
-                            </div>
-                            {walletParceiroShort && (
-                              <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">
-                                {walletParceiroShort}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Bookmaker with logo */}
-                        {bookmakerNome && (
-                          <div className="flex items-center gap-1.5">
-                            {bookmakerLogo ? (
-                              <img
-                                src={bookmakerLogo}
-                                alt=""
-                                className="h-4 w-4 rounded object-contain shrink-0"
-                              />
+            <div className="space-y-3">
+              <ScrollArea className="h-[350px]">
+                <div className="space-y-2 pr-4">
+                  {adjustmentHistory.map((adj) => {
+                    const isGanho = adj.tipo_ajuste === "GANHO_CAMBIAL";
+                    const bookmakerNome = adj.bookmaker_id ? getBookmakerName(adj.bookmaker_id) : null;
+                    const bookmakerLogo = bookmakerNome ? getLogoUrl(bookmakerNome) : null;
+                    
+                    // Wallet info with abbreviated partner name
+                    const walletDetails = adj.wallet_id ? walletsDetalhes.find(w => w.id === adj.wallet_id) : null;
+                    const walletExchange = walletDetails?.exchange?.replace(/-/g, ' ').toUpperCase() || null;
+                    const walletParceiroId = walletDetails?.parceiro_id;
+                    const walletParceiroNome = walletParceiroId ? parceiros[walletParceiroId] : null;
+                    const walletParceiroShort = walletParceiroNome ? getFirstLastName(walletParceiroNome) : null;
+                    
+                    return (
+                      <div
+                        key={adj.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          isGanho 
+                            ? "bg-emerald-500/5 border-emerald-500/20" 
+                            : "bg-red-500/5 border-red-500/20"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 flex-wrap min-w-0">
+                          <Badge
+                            className={
+                              isGanho
+                                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shrink-0"
+                                : "bg-red-500/20 text-red-400 border-red-500/30 shrink-0"
+                            }
+                          >
+                            {isGanho ? (
+                              <TrendingUp className="h-3 w-3 mr-1" />
                             ) : (
-                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <TrendingDown className="h-3 w-3 mr-1" />
                             )}
-                            <span className="text-xs font-medium uppercase truncate">{bookmakerNome}</span>
-                          </div>
-                        )}
+                            {isGanho ? "Ganho" : "Perda"}
+                          </Badge>
 
-                        {adj.qtd_coin && adj.coin && (
-                          <div className="text-xs text-muted-foreground shrink-0 font-mono">
-                            {adj.qtd_coin.toFixed(2)} {adj.coin}
-                          </div>
-                        )}
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {adj.tipo === "DEPOSITO" ? "Depósito" : "Saque"}
+                          </Badge>
 
-                        <div className="text-xs text-muted-foreground shrink-0">
-                          {format(new Date(adj.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          {/* Wallet info */}
+                          {walletExchange && (
+                            <div className="flex flex-col items-center min-w-0">
+                              <div className="flex items-center gap-1">
+                                <Wallet className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <span className="text-xs font-medium uppercase truncate">{walletExchange}</span>
+                              </div>
+                              {walletParceiroShort && (
+                                <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">
+                                  {walletParceiroShort}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Bookmaker with logo */}
+                          {bookmakerNome && (
+                            <div className="flex items-center gap-1.5">
+                              {bookmakerLogo ? (
+                                <img
+                                  src={bookmakerLogo}
+                                  alt=""
+                                  className="h-4 w-4 rounded object-contain shrink-0"
+                                />
+                              ) : (
+                                <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                              )}
+                              <span className="text-xs font-medium uppercase truncate">{bookmakerNome}</span>
+                            </div>
+                          )}
+
+                          {adj.qtd_coin && adj.coin && (
+                            <div className="text-xs text-muted-foreground shrink-0 font-mono">
+                              {adj.qtd_coin.toFixed(2)} {adj.coin}
+                            </div>
+                          )}
+
+                          <div className="text-xs text-muted-foreground shrink-0">
+                            {format(new Date(adj.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0 ml-2">
+                          <p className={`font-semibold ${isGanho ? "text-emerald-400" : "text-red-400"}`}>
+                            {isGanho ? "+" : "-"}{formatCurrency(Math.abs(adj.diferenca), adj.moeda_destino || "USD")}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatCurrency(adj.valor_nominal, adj.moeda_destino || "USD")} → {formatCurrency(adj.valor_confirmado, adj.moeda_destino || "USD")}
+                          </p>
                         </div>
                       </div>
-
-                      <div className="text-right shrink-0 ml-2">
-                        <p className={`font-semibold ${isGanho ? "text-emerald-400" : "text-red-400"}`}>
-                          {isGanho ? "+" : "-"}{formatCurrency(Math.abs(adj.diferenca), adj.moeda_destino || "USD")}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatCurrency(adj.valor_nominal, adj.moeda_destino || "USD")} → {formatCurrency(adj.valor_confirmado, adj.moeda_destino || "USD")}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+              
+              {/* Paginação */}
+              {pagination.totalPages > 1 && (
+                <SimplePagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  totalItems={pagination.totalItems}
+                  startIndex={pagination.offset}
+                  endIndex={Math.min(pagination.offset + pagination.limit, pagination.totalItems)}
+                  hasNextPage={pagination.hasNextPage}
+                  hasPrevPage={pagination.hasPrevPage}
+                  onNextPage={pagination.goToNextPage}
+                  onPrevPage={pagination.goToPrevPage}
+                  compact
+                  className="pt-2 border-t border-border/50"
+                />
+              )}
+            </div>
           )}
         </div>
       )}
