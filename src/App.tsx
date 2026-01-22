@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { CalculadoraProvider } from "@/contexts/CalculadoraContext";
 import { ApostaPopupProvider } from "@/contexts/ApostaPopupContext";
 import { ApostaPopupContainer } from "@/components/popups/ApostaPopupContainer";
+import { ExchangeRatesProvider } from "@/contexts/ExchangeRatesContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -84,12 +85,13 @@ const App = () => (
       <AuthProvider>
         <PresenceProvider>
           <PermissionsProvider>
-            <CalculadoraProvider>
-              <ApostaPopupProvider>
-                <Toaster />
-                <Sonner />
-                <ApostaPopupContainer />
-                <BrowserRouter>
+            <ExchangeRatesProvider>
+              <CalculadoraProvider>
+                <ApostaPopupProvider>
+                  <Toaster />
+                  <Sonner />
+                  <ApostaPopupContainer />
+                  <BrowserRouter>
             <Routes>
             {/* Public routes - no layout */}
             <Route path="/landing" element={<Index />} />
@@ -302,9 +304,10 @@ const App = () => (
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-              </ApostaPopupProvider>
-            </CalculadoraProvider>
+            </BrowserRouter>
+                </ApostaPopupProvider>
+              </CalculadoraProvider>
+            </ExchangeRatesProvider>
           </PermissionsProvider>
         </PresenceProvider>
       </AuthProvider>
