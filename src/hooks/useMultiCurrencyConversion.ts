@@ -66,42 +66,50 @@ export function useMultiCurrencyConversion(cryptoSymbols: string[] = []) {
     cotacaoUSD, 
     cotacaoEUR, 
     cotacaoGBP,
+    cotacaoMXN,
+    cotacaoMYR,
+    cotacaoARS,
+    cotacaoCOP,
     cryptoPrices,
     loading,
     source,
+    sources,
     refreshAll 
   } = useCotacoes(cryptoSymbols);
 
   /**
    * Obtém a taxa de conversão de uma moeda para USD
    * Retorna: 1 MOEDA = X USD
+   * 
+   * Todas as cotações vêm do useCotacoes que busca do FastForex (primário) 
+   * ou PTAX/fallback (secundário). Não há mais valores hardcoded.
    */
   const getRateToUSD = useCallback((moeda: string): number => {
     const upper = moeda.toUpperCase();
     
-    // Moedas com cotação direta (BRL→USD)
-    // cotacaoUSD = 5.31 significa 1 USD = 5.31 BRL, então 1 BRL = 1/5.31 USD
+    // Moedas FIAT principais (cotação via FastForex/PTAX)
+    // cotacaoXXX = X BRL, então XXX→USD = cotacaoXXX / cotacaoUSD
     if (upper === "BRL") return 1 / cotacaoUSD;
     if (upper === "USD") return 1;
-    if (upper === "USDT" || upper === "USDC") return cryptoPrices[upper] || 1;
-    if (upper === "EUR") return cotacaoEUR / cotacaoUSD; // EUR→BRL / USD→BRL = EUR→USD
+    if (upper === "EUR") return cotacaoEUR / cotacaoUSD;
     if (upper === "GBP") return cotacaoGBP / cotacaoUSD;
     
-    // Crypto (já em USD)
+    // Moedas FIAT secundárias (cotação via FastForex com fallback)
+    if (upper === "MXN") return cotacaoMXN / cotacaoUSD;
+    if (upper === "MYR") return cotacaoMYR / cotacaoUSD;
+    if (upper === "ARS") return cotacaoARS / cotacaoUSD;
+    if (upper === "COP") return cotacaoCOP / cotacaoUSD;
+    
+    // Stablecoins (preço via Binance)
+    if (upper === "USDT" || upper === "USDC") return cryptoPrices[upper] || 1;
+    
+    // Outras Crypto (preço via Binance, já em USD)
     if (cryptoPrices[upper]) return cryptoPrices[upper];
     
-    // Moedas secundárias (fallback aproximado - idealmente viriam do FastForex)
-    // Latinas
-    if (upper === "MXN") return 0.058;  // Peso Mexicano: 1 MXN ≈ 0.058 USD
-    if (upper === "ARS") return 0.001;  // Peso Argentino: 1 ARS ≈ 0.001 USD (alta inflação)
-    if (upper === "COP") return 0.00024; // Peso Colombiano: 1 COP ≈ 0.00024 USD
-    // Asiáticas
-    if (upper === "MYR") return 0.21;   // Ringgit Malaio: 1 MYR ≈ 0.21 USD
-    
-    // Fallback: assumir equivalente a USD
+    // Fallback: moeda não reconhecida
     console.warn(`[useMultiCurrencyConversion] Moeda não reconhecida: ${moeda}, usando 1.0`);
     return 1;
-  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cryptoPrices]);
+  }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP, cryptoPrices]);
 
   /**
    * Converte um valor de uma moeda para outra
@@ -239,6 +247,18 @@ export function useMultiCurrencyConversion(cryptoSymbols: string[] = []) {
     loading,
     cotacaoUSD,
     source,
+    sources, // Exposição das fontes de cada moeda para UI
+    
+    // Cotações individuais (para debug/exibição)
+    cotacoes: {
+      USD: cotacaoUSD,
+      EUR: cotacaoEUR,
+      GBP: cotacaoGBP,
+      MXN: cotacaoMXN,
+      MYR: cotacaoMYR,
+      ARS: cotacaoARS,
+      COP: cotacaoCOP,
+    },
     
     // Conversão
     convert,
