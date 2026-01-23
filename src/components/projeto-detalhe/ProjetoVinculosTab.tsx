@@ -4,6 +4,14 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
 import { useProjectResponsibilities } from "@/hooks/useProjectResponsibilities";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
+import { 
+  useProjetoVinculos, 
+  useBookmakersDisponiveis, 
+  useAddVinculos, 
+  useChangeBookmakerStatus,
+  type Vinculo,
+  type BookmakerDisponivel 
+} from "@/hooks/useProjetoVinculos";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -80,38 +88,7 @@ interface ProjetoVinculosTabProps {
   projetoId: string;
 }
 
-interface Vinculo {
-  id: string;
-  nome: string;
-  parceiro_id: string | null;
-  parceiro_nome: string | null;
-  projeto_id: string | null;
-  bookmaker_status: string;
-  saldo_real: number;      // Saldo real (sem bônus)
-  saldo_em_aposta: number;
-  saldo_disponivel: number; // Real - Em Aposta
-  saldo_freebet: number;
-  saldo_bonus: number;      // NOVO: saldo de bônus creditados
-  saldo_operavel: number;   // NOVO: total operável (real + freebet + bonus - em_aposta)
-  moeda: string;
-  login_username: string;
-  login_password_encrypted: string | null;
-  bookmaker_catalogo_id: string | null;
-  logo_url?: string | null;
-  totalApostas: number;
-  has_pending_transactions: boolean; // NOVO: indica se há transações pendentes de conciliação
-}
-
-interface BookmakerDisponivel {
-  id: string;
-  nome: string;
-  parceiro_id: string | null;
-  parceiro_nome: string | null;
-  saldo_atual: number;
-  bookmaker_status: string;
-  logo_url?: string | null;
-  moeda: string;
-}
+// Interface Vinculo importada de useProjetoVinculos
 
 export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const { workspaceId } = useWorkspace();
@@ -123,21 +100,37 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     canManageBonus,
     loading: responsibilitiesLoading 
   } = useProjectResponsibilities(projetoId);
+
+  // ===== REACT QUERY HOOKS - Lifecycle management automático =====
+  // Isso elimina toasts "fantasmas" após navegação, pois as queries
+  // são automaticamente canceladas no unmount do componente.
   
-  const [vinculos, setVinculos] = useState<Vinculo[]>([]);
-  const [disponiveis, setDisponiveis] = useState<BookmakerDisponivel[]>([]);
-  const [historicoCount, setHistoricoCount] = useState({ total: 0, devolvidas: 0 });
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const { 
+    vinculos, 
+    isLoading: loading, 
+    historicoCount, 
+    refetch: refetchVinculos,
+    invalidate: invalidateVinculos 
+  } = useProjetoVinculos(projetoId);
+
+  // Bookmakers disponíveis (não vinculados) - habilitado apenas quando dialog abre
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const { 
+    data: disponiveis = [], 
+    refetch: refetchDisponiveis 
+  } = useBookmakersDisponiveis(addDialogOpen);
+
+  // Mutations com React Query
+  const addVinculosMutation = useAddVinculos(projetoId, workspaceId);
+  const changeStatusMutation = useChangeBookmakerStatus(projetoId);
+  
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   // Estados para busca e filtros do modal de adicionar vínculos
   const [addDialogSearchTerm, setAddDialogSearchTerm] = useState("");
   const [showOnlyWithBalance, setShowOnlyWithBalance] = useState(false);
   const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [statusPopoverId, setStatusPopoverId] = useState<string | null>(null);
-  const [changingStatus, setChangingStatus] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -174,15 +167,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     setBonusDrawerOpen(true);
   };
 
-  // Fonte de verdade de saldo por moeda:
-  // - Para USD/USDT, o saldo está no campo saldo_usd (legado).
-  // - Para BRL (e demais), o saldo está em saldo_atual.
-  const isUSDMoeda = (moeda?: string | null) => moeda === "USD" || moeda === "USDT";
-  const getSaldoBookmaker = (b: { moeda?: string | null; saldo_atual?: number | null; saldo_usd?: number | null }) => {
-    const moeda = b.moeda || "BRL";
-    return isUSDMoeda(moeda) ? (b.saldo_usd ?? 0) : (b.saldo_atual ?? 0);
-  };
-
   const fetchCotacaoTrabalho = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -207,162 +191,13 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   }, [projetoId]);
 
   useEffect(() => {
-    fetchVinculos();
-    fetchHistoricoCount();
     fetchCotacaoTrabalho();
   }, [projetoId, fetchCotacaoTrabalho]);
 
-  const fetchVinculos = async () => {
-    try {
-      setLoading(true);
-
-      // FONTE ÚNICA DE VERDADE: usar RPC get_bookmaker_saldos para saldos
-      const { data: saldosData, error: saldosError } = await supabase.rpc("get_bookmaker_saldos", {
-        p_projeto_id: projetoId
-      });
-
-      if (saldosError) throw saldosError;
-
-      // Buscar dados complementares (credenciais, status, etc) que a RPC não retorna
-      const bookmakerIds = (saldosData || []).map((s: any) => s.id);
-      
-      let credentialsMap: Record<string, { 
-        status: string; 
-        login_username: string; 
-        login_password_encrypted: string | null;
-        bookmaker_catalogo_id: string | null;
-      }> = {};
-      let apostasCount: Record<string, number> = {};
-
-      if (bookmakerIds.length > 0) {
-        // Buscar credenciais e status das bookmakers
-        const { data: bookmarkersDetails } = await supabase
-          .from("bookmakers")
-          .select("id, status, login_username, login_password_encrypted, bookmaker_catalogo_id")
-          .in("id", bookmakerIds);
-
-        if (bookmarkersDetails) {
-          bookmarkersDetails.forEach((b: any) => {
-            credentialsMap[b.id] = {
-              status: b.status,
-              login_username: b.login_username,
-              login_password_encrypted: b.login_password_encrypted,
-              bookmaker_catalogo_id: b.bookmaker_catalogo_id
-            };
-          });
-        }
-
-        // Contar apostas por bookmaker
-        const { data: apostasData } = await supabase
-          .from("apostas_unificada")
-          .select("bookmaker_id")
-          .eq("projeto_id", projetoId)
-          .not("bookmaker_id", "is", null)
-          .in("bookmaker_id", bookmakerIds);
-
-        if (apostasData) {
-          apostasData.forEach((a: any) => {
-            if (a.bookmaker_id) {
-              apostasCount[a.bookmaker_id] = (apostasCount[a.bookmaker_id] || 0) + 1;
-            }
-          });
-        }
-      }
-
-      // Mapear para interface Vinculo usando dados da RPC + complementos
-      const mappedVinculos: Vinculo[] = (saldosData || []).map((s: any) => {
-        const creds = credentialsMap[s.id] || {
-          status: "ativo",
-          login_username: "",
-          login_password_encrypted: null,
-          bookmaker_catalogo_id: null
-        };
-
-        return {
-          id: s.id,
-          nome: s.nome,
-          parceiro_id: s.parceiro_id,
-          parceiro_nome: s.parceiro_nome || null,
-          projeto_id: projetoId,
-          bookmaker_status: creds.status,
-          saldo_real: Number(s.saldo_real) || 0,
-          saldo_em_aposta: Number(s.saldo_em_aposta) || 0,
-          saldo_disponivel: Number(s.saldo_disponivel) || 0,
-          saldo_freebet: Number(s.saldo_freebet) || 0,
-          saldo_bonus: Number(s.saldo_bonus) || 0,
-          saldo_operavel: Number(s.saldo_operavel) || 0,
-          moeda: s.moeda || "BRL",
-          login_username: creds.login_username,
-          login_password_encrypted: creds.login_password_encrypted,
-          bookmaker_catalogo_id: creds.bookmaker_catalogo_id,
-          logo_url: s.logo_url || null,
-          totalApostas: apostasCount[s.id] || 0,
-          has_pending_transactions: Boolean(s.has_pending_transactions),
-        };
-      });
-
-      setVinculos(mappedVinculos);
-    } catch (error: any) {
-      toast.error("Erro ao carregar vínculos: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchHistoricoCount = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("projeto_bookmaker_historico")
-        .select("id, data_desvinculacao")
-        .eq("projeto_id", projetoId);
-
-      if (error) throw error;
-
-      const total = data?.length || 0;
-      const devolvidas = data?.filter(h => h.data_desvinculacao !== null).length || 0;
-      setHistoricoCount({ total, devolvidas });
-    } catch (error: any) {
-      console.error("Erro ao carregar histórico:", error.message);
-    }
-  };
-
-  const fetchDisponiveis = async () => {
-    try {
-      // Fetch available bookmakers (not linked to any active project)
-      const { data, error } = await supabase
-        .from("bookmakers")
-        .select(`
-          id,
-          nome,
-          parceiro_id,
-          status,
-          saldo_atual,
-          saldo_usd,
-          moeda,
-          parceiros!bookmakers_parceiro_id_fkey (nome),
-          bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
-        `)
-        .is("projeto_id", null)
-        .neq("status", "LIMITADA");
-
-      if (error) throw error;
-
-      const mapped: BookmakerDisponivel[] = (data || []).map((v: any) => ({
-        id: v.id,
-        nome: v.nome,
-        parceiro_id: v.parceiro_id,
-        parceiro_nome: v.parceiros?.nome || null,
-        saldo_atual: getSaldoBookmaker({ moeda: v.moeda, saldo_atual: v.saldo_atual, saldo_usd: v.saldo_usd }),
-        bookmaker_status: v.status,
-        logo_url: v.bookmakers_catalogo?.logo_url || null,
-        moeda: v.moeda || 'BRL',
-      }));
-
-      setDisponiveis(mapped);
-    } catch (error: any) {
-      toast.error("Erro ao carregar vínculos disponíveis: " + error.message);
-    }
-  };
+  // ===== FUNÇÕES MANUAIS REMOVIDAS =====
+  // fetchVinculos, fetchHistoricoCount, fetchDisponiveis, handleAddVinculos, handleChangeStatus
+  // foram substituídas por React Query hooks acima (useProjetoVinculos, useBookmakersDisponiveis, etc.)
+  // Isso garante lifecycle management automático e elimina toasts fantasmas.
 
   // Lógica de filtragem e ordenação para o modal de adicionar vínculos
   const disponiveisFiltrados = useMemo(() => {
@@ -396,85 +231,33 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   }, [disponiveis, addDialogSearchTerm, showOnlyWithBalance]);
 
   const handleOpenAddDialog = () => {
-    fetchDisponiveis();
+    refetchDisponiveis();
     setSelectedIds([]);
     setAddDialogOpen(true);
   };
 
-  const handleAddVinculos = async () => {
+  const handleAddVinculos = () => {
     if (selectedIds.length === 0) {
       toast.error("Selecione pelo menos um vínculo");
       return;
     }
 
-    try {
-      setSaving(true);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      // Update bookmakers with projeto_id and reset status to ativo
-      const { error } = await supabase
-        .from("bookmakers")
-        .update({ projeto_id: projetoId, status: "ativo" })
-        .in("id", selectedIds);
-
-      if (error) throw error;
-
-      // Get bookmaker details for history
-      const selectedBookmakers = disponiveis.filter(d => selectedIds.includes(d.id));
-      
-      // Insert history records
-      const historicoRecords = selectedBookmakers.map(bk => ({
-        user_id: user.id,
-        workspace_id: workspaceId,
-        projeto_id: projetoId,
-        bookmaker_id: bk.id,
-        parceiro_id: bk.parceiro_id,
-        bookmaker_nome: bk.nome,
-        parceiro_nome: bk.parceiro_nome,
-        data_vinculacao: new Date().toISOString(),
-      }));
-
-      await supabase
-        .from("projeto_bookmaker_historico")
-        .upsert(historicoRecords, { onConflict: "projeto_id,bookmaker_id" });
-
-      toast.success(`${selectedIds.length} vínculo(s) adicionado(s) ao projeto`);
-      setAddDialogOpen(false);
-      fetchVinculos();
-      fetchHistoricoCount();
-    } catch (error: any) {
-      toast.error("Erro ao adicionar vínculos: " + error.message);
-    } finally {
-      setSaving(false);
-    }
+    addVinculosMutation.mutate(selectedIds, {
+      onSuccess: () => {
+        setAddDialogOpen(false);
+        setSelectedIds([]);
+      }
+    });
   };
 
   // handleRemoveVinculo foi substituído pelo ConciliacaoVinculoDialog
 
-  const handleChangeStatus = async (vinculoId: string, newStatus: string) => {
-    try {
-      setChangingStatus(true);
-
-      // Database expects lowercase values
-      const statusLower = newStatus.toLowerCase();
-      
-      const { error } = await supabase
-        .from("bookmakers")
-        .update({ status: statusLower })
-        .eq("id", vinculoId);
-
-      if (error) throw error;
-
-      toast.success(`Status alterado para ${newStatus === "ATIVO" ? "Ativo" : "Limitada"}`);
-      setStatusPopoverId(null);
-      fetchVinculos();
-    } catch (error: any) {
-      toast.error("Erro ao alterar status: " + error.message);
-    } finally {
-      setChangingStatus(false);
-    }
+  const handleChangeStatus = (vinculoId: string, newStatus: string) => {
+    changeStatusMutation.mutate({ bookmarkerId: vinculoId, newStatus }, {
+      onSuccess: () => {
+        setStatusPopoverId(null);
+      }
+    });
   };
 
   const decryptPassword = (encrypted: string | null): string => {
@@ -657,7 +440,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       <BalanceDiscrepancyAlert
         projetoId={projetoId}
         formatCurrency={(val, moeda) => formatCurrency(val, moeda || "BRL")}
-        onFixed={fetchVinculos}
+        onFixed={invalidateVinculos}
       />
       
       <div className="flex items-center gap-4 flex-wrap">
@@ -944,7 +727,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                           <RadioGroup
                             value={vinculo.bookmaker_status.toUpperCase()}
                             onValueChange={(value) => handleChangeStatus(vinculo.id, value)}
-                            disabled={changingStatus}
+                            disabled={changeStatusMutation.isPending}
                           >
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="ATIVO" id={`ativo-${vinculo.id}`} />
@@ -961,7 +744,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                               </Label>
                             </div>
                           </RadioGroup>
-                          {changingStatus && (
+                          {changeStatusMutation.isPending && (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Loader2 className="h-3 w-3 animate-spin" />
                               Salvando...
@@ -1237,7 +1020,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                           <RadioGroup
                             value={vinculo.bookmaker_status.toUpperCase()}
                             onValueChange={(value) => handleChangeStatus(vinculo.id, value)}
-                            disabled={changingStatus}
+                            disabled={changeStatusMutation.isPending}
                           >
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="ATIVO" id={`ativo-list-${vinculo.id}`} />
@@ -1254,7 +1037,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                               </Label>
                             </div>
                           </RadioGroup>
-                          {changingStatus && (
+                          {changeStatusMutation.isPending && (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Loader2 className="h-3 w-3 animate-spin" />
                               Salvando...
@@ -1408,8 +1191,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleAddVinculos} disabled={saving || selectedIds.length === 0}>
-              {saving ? (
+            <Button onClick={handleAddVinculos} disabled={addVinculosMutation.isPending || selectedIds.length === 0}>
+              {addVinculosMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Adicionando...
@@ -1435,7 +1218,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           setTransacaoDialogOpen(false);
           // Delay para garantir que o trigger do banco tenha atualizado os saldos
           await new Promise(resolve => setTimeout(resolve, 300));
-          fetchVinculos();
+          invalidateVinculos();
         }}
       />
 
@@ -1459,7 +1242,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           bookmakerCatalogoId={selectedBookmakerForBonus.bookmakerCatalogoId}
           onBonusChange={() => {
             refetchBonuses();
-            fetchVinculos();
+            invalidateVinculos();
           }}
         />
       )}
@@ -1494,8 +1277,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         projetoId={projetoId}
         workspaceId={workspaceId}
         onConciliado={() => {
-          fetchVinculos();
-          fetchHistoricoCount();
+          invalidateVinculos();
         }}
       />
     </Tabs>
