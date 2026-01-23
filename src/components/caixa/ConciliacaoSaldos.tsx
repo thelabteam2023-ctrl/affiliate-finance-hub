@@ -270,8 +270,9 @@ export function ConciliacaoSaldos({
       // Isso garante que o trigger de saldo use o valor correto
       const isCrypto = selectedTransaction.tipo_moeda === "CRYPTO";
 
-      // 1. Atualizar transação - MANTER valor/valor_usd (contábil), adicionar valor_confirmado (operacional)
-      const { error: updateError } = await supabase
+      // 1. Atualizar transação com STATUS GUARD atômico para evitar concorrência
+      // CRÍTICO: .eq("status", "PENDENTE") garante que apenas UMA request pode conciliar
+      const { data: updateResult, error: updateError } = await supabase
         .from("cash_ledger")
         .update({
           status: "CONFIRMADO",
@@ -286,9 +287,20 @@ export function ConciliacaoSaldos({
             ? `${selectedTransaction.descricao || ""} | Obs: ${observacoes}` 
             : selectedTransaction.descricao,
         })
-        .eq("id", selectedTransaction.id);
+        .eq("id", selectedTransaction.id)
+        .eq("status", "PENDENTE") // STATUS GUARD: Proteção contra concorrência
+        .select("id");
 
       if (updateError) throw updateError;
+      
+      // Verificar se o update realmente afetou a linha (já pode ter sido conciliado por outro usuário)
+      if (!updateResult || updateResult.length === 0) {
+        toast.error("Esta transação já foi conciliada por outro usuário.");
+        onRefresh();
+        setConfirmDialog(false);
+        setSelectedTransaction(null);
+        return;
+      }
 
       // 2. Se houve diferença, registrar ajuste cambial E atualizar saldo do bookmaker
       if (hasDiferenca) {
