@@ -214,13 +214,11 @@ export function ConciliacaoSaldos({
   }, [subTab, pagination.currentPage, loadHistoryPage]);
 
   // Filtrar transações pendentes de conciliação
-  // Inclui: CRYPTO e FIAT com conversão de moeda (moeda_origem ≠ moeda_destino)
-  // Suporta tanto "pendente" (minúsculo) quanto "PENDENTE" (maiúsculo)
+  // As transações já vêm do hook usePendingTransactions filtradas por status PENDENTE
+  // Aqui filtramos apenas DEPOSITOs (SAQUEs têm fluxo separado de confirmação)
   const pendingTransactions = useMemo(() => {
     return transacoes.filter(
-      (t) =>
-        (t.status === "pendente" || t.status === "PENDENTE") &&
-        (t.tipo_transacao === "DEPOSITO" || t.tipo_transacao === "SAQUE")
+      (t) => t.tipo_transacao === "DEPOSITO"
     );
   }, [transacoes]);
 
