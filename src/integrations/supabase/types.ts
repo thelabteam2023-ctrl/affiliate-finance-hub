@@ -1166,6 +1166,7 @@ export type Database = {
           ajuste_direcao: string | null
           ajuste_motivo: string | null
           auditoria_metadata: Json | null
+          balance_processed_at: string | null
           coin: string | null
           conversao_aplicada: boolean | null
           conversao_referencia_id: string | null
@@ -1218,6 +1219,7 @@ export type Database = {
           ajuste_direcao?: string | null
           ajuste_motivo?: string | null
           auditoria_metadata?: Json | null
+          balance_processed_at?: string | null
           coin?: string | null
           conversao_aplicada?: boolean | null
           conversao_referencia_id?: string | null
@@ -1270,6 +1272,7 @@ export type Database = {
           ajuste_direcao?: string | null
           ajuste_motivo?: string | null
           auditoria_metadata?: Json | null
+          balance_processed_at?: string | null
           coin?: string | null
           conversao_aplicada?: boolean | null
           conversao_referencia_id?: string | null
@@ -9216,22 +9219,7 @@ export type Database = {
       }
       recalcular_saldo_bookmaker: {
         Args: { p_bookmaker_id: string }
-        Returns: {
-          bonus_creditado: number
-          bookmaker_id: string
-          cashback: number
-          depositos: number
-          diferenca: number
-          giros_gratis: number
-          lucro_apostas: number
-          moeda: string
-          nome: string
-          saldo_anterior: number
-          saldo_calculado: number
-          saques: number
-          transferencias_entrada: number
-          transferencias_saida: number
-        }[]
+        Returns: number
       }
       recalcular_saldos_projeto: {
         Args: { p_aplicar?: boolean; p_projeto_id: string }
