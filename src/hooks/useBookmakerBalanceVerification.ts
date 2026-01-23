@@ -46,10 +46,25 @@ export function useBookmakerBalanceVerification({
 
   /**
    * Verifica discrepâncias para um bookmaker específico
+   * NOTE: recalcular_saldo_bookmaker now returns a single numeric (the recalculated balance)
+   * This function now queries the bookmaker directly to get the current balance and compare
    */
   const checkBookmaker = useCallback(async (bookmakerId: string): Promise<BookmakerDiscrepancy | null> => {
     try {
-      const { data, error } = await supabase.rpc('recalcular_saldo_bookmaker', {
+      // Get current bookmaker data
+      const { data: bookmaker, error: bkError } = await supabase
+        .from('bookmakers')
+        .select('id, nome, moeda, saldo_atual')
+        .eq('id', bookmakerId)
+        .single();
+
+      if (bkError || !bookmaker) {
+        console.error('[useBookmakerBalanceVerification] Erro ao buscar bookmaker:', bkError);
+        return null;
+      }
+
+      // Get the recalculated balance (returns numeric)
+      const { data: saldoCalculado, error } = await supabase.rpc('recalcular_saldo_bookmaker', {
         p_bookmaker_id: bookmakerId
       });
 
@@ -58,26 +73,25 @@ export function useBookmakerBalanceVerification({
         return null;
       }
 
-      if (data && data.length > 0) {
-        const result = data[0];
-        if (Math.abs(result.diferenca) > 0.01) {
-          return {
-            bookmaker_id: result.bookmaker_id,
-            nome: result.nome,
-            moeda: result.moeda || 'BRL',
-            saldo_anterior: result.saldo_anterior,
-            saldo_calculado: result.saldo_calculado,
-            diferenca: result.diferenca,
-            depositos: result.depositos,
-            saques: result.saques,
-            transferencias_entrada: result.transferencias_entrada,
-            transferencias_saida: result.transferencias_saida,
-            lucro_apostas: result.lucro_apostas,
-            cashback: result.cashback || 0,
-            giros_gratis: result.giros_gratis || 0,
-            bonus_creditado: result.bonus_creditado || 0,
-          };
-        }
+      const diferenca = (saldoCalculado as number || 0) - (bookmaker.saldo_atual || 0);
+      
+      if (Math.abs(diferenca) > 0.01) {
+        return {
+          bookmaker_id: bookmaker.id,
+          nome: bookmaker.nome,
+          moeda: bookmaker.moeda || 'BRL',
+          saldo_anterior: bookmaker.saldo_atual || 0,
+          saldo_calculado: saldoCalculado as number || 0,
+          diferenca,
+          depositos: 0, // These details not available from simple recalc
+          saques: 0,
+          transferencias_entrada: 0,
+          transferencias_saida: 0,
+          lucro_apostas: 0,
+          cashback: 0,
+          giros_gratis: 0,
+          bonus_creditado: 0,
+        };
       }
       return null;
     } catch (error) {
@@ -136,26 +150,33 @@ export function useBookmakerBalanceVerification({
 
   /**
    * Corrige o saldo de um bookmaker específico
+   * NOTE: recalcular_saldo_bookmaker now returns a single numeric (the new calculated balance)
    */
   const fixBookmaker = useCallback(async (bookmakerId: string): Promise<boolean> => {
     try {
-      // Primeiro, obter o saldo calculado
-      const { data: calcData } = await supabase.rpc('recalcular_saldo_bookmaker', {
+      // Get bookmaker name for toast
+      const { data: bookmaker } = await supabase
+        .from('bookmakers')
+        .select('nome')
+        .eq('id', bookmakerId)
+        .single();
+
+      // Get the recalculated balance (returns numeric directly)
+      const { data: saldoCorreto, error: calcError } = await supabase.rpc('recalcular_saldo_bookmaker', {
         p_bookmaker_id: bookmakerId
       });
 
-      if (!calcData || calcData.length === 0) {
+      if (calcError || saldoCorreto === null || saldoCorreto === undefined) {
+        console.error('[useBookmakerBalanceVerification] Erro ao calcular saldo:', calcError);
         toast.error('Não foi possível calcular o saldo correto');
         return false;
       }
 
-      const saldoCorreto = calcData[0].saldo_calculado;
-
-      // Atualizar o saldo
+      // Atualizar o saldo (the RPC already updates it, but we can confirm)
       const { error: updateError } = await supabase
         .from('bookmakers')
         .update({ 
-          saldo_atual: saldoCorreto,
+          saldo_atual: saldoCorreto as number,
           updated_at: new Date().toISOString()
         })
         .eq('id', bookmakerId);
@@ -168,7 +189,7 @@ export function useBookmakerBalanceVerification({
 
       // Remover da lista de discrepâncias
       setDiscrepancies(prev => prev.filter(d => d.bookmaker_id !== bookmakerId));
-      toast.success(`Saldo corrigido para ${calcData[0].nome}`);
+      toast.success(`Saldo corrigido para ${bookmaker?.nome || 'bookmaker'}`);
       return true;
     } catch (error) {
       console.error('[useBookmakerBalanceVerification] Exceção fix:', error);
