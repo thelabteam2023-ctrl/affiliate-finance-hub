@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import {
@@ -262,6 +263,10 @@ export function AjusteManualDialog({
       });
 
       handleClose();
+      
+      // Disparar evento para atualizar UI imediatamente
+      dispatchCaixaDataChanged();
+      
       onSuccess();
     } catch (error: any) {
       console.error("Erro ao registrar ajuste:", error);
