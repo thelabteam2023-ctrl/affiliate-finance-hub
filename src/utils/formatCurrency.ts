@@ -140,10 +140,10 @@ export function formatCurrencyCompact(
   const sign = value < 0 ? "-" : "";
   
   if (absValue >= 1_000_000) {
-    return `${sign}${formatCurrency(absValue / 1_000_000, moeda, { maximumFractionDigits: 1 })}M`;
+    return `${sign}${formatCurrency(absValue / 1_000_000, moeda, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}M`;
   }
   if (absValue >= 1_000) {
-    return `${sign}${formatCurrency(absValue / 1_000, moeda, { maximumFractionDigits: 1 })}K`;
+    return `${sign}${formatCurrency(absValue / 1_000, moeda, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}K`;
   }
   
   return formatCurrency(value, moeda);
