@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -17,6 +17,8 @@ import { TabKey } from "@/hooks/useParceiroFinanceiroCache";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { MoneyDisplay, formatMoneyValue } from "@/components/ui/money-display";
 import { NativeCurrencyKpi } from "@/components/ui/native-currency-kpi";
+import { useBookmakerUsageStatus, getUsageCategoryConfig } from "@/hooks/useBookmakerUsageStatus";
+import { getTipoProjetoLabel, TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
 
 interface ParceiroCache {
   resumoData: ParceiroFinanceiroConsolidado | null;
@@ -93,6 +95,13 @@ export function ParceiroDetalhesPanel({
     data?.bookmakers.filter(b => b.status === "limitada").length ?? 0, 
     [data?.bookmakers]
   );
+
+  // IDs dos bookmakers para buscar status de uso
+  const bookmakerIds = useMemo(() => 
+    data?.bookmakers.map(b => b.bookmaker_id) ?? [], 
+    [data?.bookmakers]
+  );
+  const { usageMap } = useBookmakerUsageStatus(bookmakerIds);
 
   const handleBookmakersDataChange = useCallback(() => {
     if (parceiroId) {
@@ -583,28 +592,69 @@ export function ParceiroDetalhesPanel({
                                 </div>
                               </div>
                             </div>
-                            {/* Botão Histórico de Projetos */}
+                            {/* Botão Histórico de Projetos - com cor semântica */}
                             <div className="flex justify-center">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 w-7 p-0"
-                                    onClick={() => setHistoricoDialog({
-                                      open: true,
-                                      bookmakerId: bm.bookmaker_id,
-                                      bookmakerNome: bm.bookmaker_nome,
-                                      logoUrl: bm.logo_url
-                                    })}
-                                  >
-                                    <History className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Histórico de projetos</p>
-                                </TooltipContent>
-                              </Tooltip>
+                              {(() => {
+                                const usage = usageMap[bm.bookmaker_id];
+                                const config = usage ? getUsageCategoryConfig(usage.category) : null;
+                                const IconComponent = usage?.category === "ATIVA" 
+                                  ? CircleCheck 
+                                  : usage?.category === "JA_USADA" 
+                                    ? History 
+                                    : CircleDashed;
+                                const iconColorClass = config?.iconColor || "text-muted-foreground";
+                                
+                                return (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0"
+                                        onClick={() => setHistoricoDialog({
+                                          open: true,
+                                          bookmakerId: bm.bookmaker_id,
+                                          bookmakerNome: bm.bookmaker_nome,
+                                          logoUrl: bm.logo_url
+                                        })}
+                                      >
+                                        <IconComponent className={cn("h-4 w-4", iconColorClass, "hover:opacity-80")} />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-[200px]">
+                                      <div className="space-y-1">
+                                        <p className="font-medium text-xs">{config?.tooltip || "Histórico de projetos"}</p>
+                                        {usage && usage.tiposProjeto.length > 0 && (
+                                          <div className="pt-1 border-t border-border/50">
+                                            <p className="text-[10px] text-muted-foreground mb-1">
+                                              Estratégias utilizadas:
+                                            </p>
+                                            <div className="flex flex-wrap gap-1">
+                                              {usage.tiposProjeto.map((tipo) => {
+                                                const tipoConfig = TIPO_PROJETO_CONFIG[tipo as TipoProjeto];
+                                                return (
+                                                  <Badge
+                                                    key={tipo}
+                                                    variant="outline"
+                                                    className={cn("text-[9px] px-1 py-0", tipoConfig?.color || "")}
+                                                  >
+                                                    {tipoConfig?.icon} {getTipoProjetoLabel(tipo)}
+                                                  </Badge>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {usage && usage.totalVinculos > 0 && (
+                                          <p className="text-[10px] text-muted-foreground">
+                                            {usage.totalVinculos} vínculo{usage.totalVinculos !== 1 ? "s" : ""} no histórico
+                                          </p>
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                );
+                              })()}
                             </div>
                             {/* Depósito - sempre na moeda nativa da casa */}
                             <Tooltip>
