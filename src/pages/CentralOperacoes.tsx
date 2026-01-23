@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
+import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -766,23 +767,9 @@ export default function CentralOperacoes() {
     }
   };
 
+  // Usa helper centralizado que previne RangeError em tokens cripto
   const formatCurrency = (value: number, moeda: string = "BRL") => {
-    // Map crypto tokens to USD for Intl.NumberFormat compatibility
-    const cryptoTokens = ["USDT", "USDC", "BTC", "ETH", "BNB", "TRX", "SOL", "MATIC", "ADA", "DOT", "AVAX", "LINK", "UNI", "LTC", "XRP"];
-    const isCrypto = cryptoTokens.includes(moeda);
-    const currencyCode = isCrypto ? "USD" : moeda;
-    
-    const formatted = new Intl.NumberFormat("pt-BR", { 
-      style: "currency", 
-      currency: currencyCode,
-      minimumFractionDigits: 2,
-    }).format(value);
-    
-    // For crypto, replace the $ symbol with the token name
-    if (isCrypto) {
-      return formatted.replace("US$", `${moeda} `).replace("$", `${moeda} `);
-    }
-    return formatted;
+    return formatCurrencyUtil(value, moeda);
   };
 
   const handleSaqueAction = (alerta: Alerta) => {
