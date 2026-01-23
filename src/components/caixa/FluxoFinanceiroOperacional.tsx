@@ -13,6 +13,7 @@ import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users
 import { cn } from "@/lib/utils";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { getCurrencySymbol } from "@/types/currency";
+import { formatCurrencyCompact } from "@/utils/formatCurrency";
 
 // Helper para comparar objetos de cotações por valor (evita re-renders desnecessários)
 function areCotacoesEqual(prev: Record<string, number>, next: Record<string, number>): boolean {
@@ -817,9 +818,8 @@ export function FluxoFinanceiroOperacional({
                 showLabels={true}
                 formatLabel={(value, ctx) => {
                   if (value === 0) return "";
-                  const currency = ctx?.currency || "BRL";
-                  const symbol = getCurrencySymbol(String(currency));
-                  return symbol + " " + Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+                  const currency = String(ctx?.currency || "BRL");
+                  return formatCurrencyCompact(Math.abs(Number(value)), currency);
                 }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
@@ -1003,9 +1003,8 @@ export function FluxoFinanceiroOperacional({
                 showLabels={dadosCapitalOperacao.moedasAtivas.length <= 3}
                 formatLabel={(value, ctx) => {
                   if (value === 0) return "";
-                  const currency = ctx?.currency || "BRL";
-                  const symbol = getCurrencySymbol(currency);
-                  return symbol + " " + Math.abs(Number(value)).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+                  const currency = String(ctx?.currency || "BRL");
+                  return formatCurrencyCompact(Math.abs(Number(value)), currency);
                 }}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
