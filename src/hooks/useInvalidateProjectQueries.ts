@@ -73,6 +73,10 @@ export function useInvalidateProjectQueries() {
           }),
           queryClient.invalidateQueries({ 
             queryKey: ["bookmaker-saldos"] 
+          }),
+          // CRITICAL: Also invalidate the saldo-operavel-rpc query
+          queryClient.invalidateQueries({ 
+            queryKey: ["saldo-operavel-rpc", projetoId] 
           })
         );
       }

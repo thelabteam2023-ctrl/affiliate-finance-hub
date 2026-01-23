@@ -46,9 +46,10 @@ interface RolloverPorCasa {
 }
 
 export function useSaldoOperavel(projetoId: string) {
-  const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  const { convertToConsolidation, moedaConsolidacao, cotacaoAtual } = useProjetoCurrency(projetoId);
 
   // Usa a RPC canônica que já calcula corretamente todos os componentes do saldo
+  // CRITICAL FIX: Increased staleTime to prevent frequent refetches triggered by rate changes
   const { data: bookmakers = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ["saldo-operavel-rpc", projetoId],
     queryFn: async () => {
@@ -72,8 +73,10 @@ export function useSaldoOperavel(projetoId: string) {
       return (data || []) as BookmakerSaldoCompleto[];
     },
     enabled: !!projetoId,
-    staleTime: 10000, // 10 segundos
+    staleTime: 60000, // 60 segundos - prevents refetch cascade from rate changes
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
     retry: 2, // Retry até 2 vezes em caso de erro
+    refetchOnWindowFocus: false, // Prevent refetch on tab switch that could cascade
   });
 
   // Query separada para rollover por casa (individual)
@@ -98,6 +101,8 @@ export function useSaldoOperavel(projetoId: string) {
   });
 
   // Saldo Operável = soma do saldo_operavel de todas as casas (já inclui real + freebet + bonus - em_aposta)
+  // CRITICAL FIX: Depend on cotacaoAtual (primitive) instead of convertToConsolidation (function reference)
+  // This prevents infinite re-renders when the function reference changes due to rate updates
   const totals = useMemo(() => {
     let saldoOperavel = 0;
     let saldoReal = 0;
@@ -123,7 +128,8 @@ export function useSaldoOperavel(projetoId: string) {
       saldoFreebet,
       saldoEmAposta,
     };
-  }, [bookmakers, convertToConsolidation]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookmakers, moedaConsolidacao, cotacaoAtual]); // Primitive deps instead of function reference
 
   // Mapear rollover por bookmaker_id
   const rolloverPorCasa = useMemo(() => {

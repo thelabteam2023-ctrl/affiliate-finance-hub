@@ -167,30 +167,53 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
   });
 
   // ============= 1. LEITURA DO BANCO (FONTE PRIMÁRIA) =============
+  // CRITICAL FIX: Removed `sources` from dependency array to break the recreate cycle
+  // The function now constructs sources internally from DB data, not from current state
   const fetchFromDatabase = useCallback(async (): Promise<{
     rates: ExchangeRates;
-    sources: typeof sources;
+    sources: {
+      usd: CotacaoSourceInfo;
+      eur: CotacaoSourceInfo;
+      gbp: CotacaoSourceInfo;
+      myr: CotacaoSourceInfo;
+      mxn: CotacaoSourceInfo;
+      ars: CotacaoSourceInfo;
+      cop: CotacaoSourceInfo;
+      crypto: string;
+    };
     hasData: boolean;
     hasExpired: boolean;
     maxAgeMinutes: number;
   }> => {
     console.log("[ExchangeRatesContext] 📊 Lendo cotações do BANCO DE DADOS...");
     
+    // Default sources for fallback case - constructed fresh each call
+    const defaultSources = {
+      usd: DEFAULT_SOURCE_INFO,
+      eur: DEFAULT_SOURCE_INFO,
+      gbp: DEFAULT_SOURCE_INFO,
+      myr: DEFAULT_SOURCE_INFO,
+      mxn: DEFAULT_SOURCE_INFO,
+      ars: DEFAULT_SOURCE_INFO,
+      cop: DEFAULT_SOURCE_INFO,
+      crypto: "fallback",
+    };
+    
     try {
       const { data, error } = await supabase.rpc('get_cached_exchange_rates');
       
       if (error) {
         console.error("[ExchangeRatesContext] ❌ Erro RPC:", error);
-        return { rates: FALLBACK_RATES, sources, hasData: false, hasExpired: true, maxAgeMinutes: 999 };
+        return { rates: FALLBACK_RATES, sources: defaultSources, hasData: false, hasExpired: true, maxAgeMinutes: 999 };
       }
       
       if (!data || data.length === 0) {
         console.warn("[ExchangeRatesContext] ⚠️ Banco vazio, nenhuma cotação encontrada");
-        return { rates: FALLBACK_RATES, sources, hasData: false, hasExpired: true, maxAgeMinutes: 999 };
+        return { rates: FALLBACK_RATES, sources: defaultSources, hasData: false, hasExpired: true, maxAgeMinutes: 999 };
       }
       
       const newRates: ExchangeRates = { ...FALLBACK_RATES };
-      const newSources = { ...sources };
+      const newSources = { ...defaultSources };
       let hasExpired = false;
       let maxAgeMinutes = 0;
       
@@ -221,9 +244,9 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
       return { rates: newRates, sources: newSources, hasData: true, hasExpired, maxAgeMinutes };
     } catch (err) {
       console.error("[ExchangeRatesContext] ❌ Exceção ao ler banco:", err);
-      return { rates: FALLBACK_RATES, sources, hasData: false, hasExpired: true, maxAgeMinutes: 999 };
+      return { rates: FALLBACK_RATES, sources: defaultSources, hasData: false, hasExpired: true, maxAgeMinutes: 999 };
     }
-  }, [sources]);
+  }, []); // Empty dependency array - function is now stable
 
   // ============= 2. ATUALIZAÇÃO VIA EDGE FUNCTION =============
   const triggerEdgeFunctionRefresh = useCallback(async (): Promise<boolean> => {
