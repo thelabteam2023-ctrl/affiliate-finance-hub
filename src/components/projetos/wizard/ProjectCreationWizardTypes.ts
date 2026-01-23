@@ -68,6 +68,7 @@ export interface ProjectFormData {
   nome: string;
   descricao: string | null;
   status: string;
+  tipo_projeto: string;
   data_inicio: string | null;
   data_fim_prevista: string | null;
   tem_investimento_crypto: boolean;
@@ -116,6 +117,7 @@ export const DEFAULT_FORM_DATA: ProjectFormData = {
   nome: "",
   descricao: null,
   status: "EM_ANDAMENTO",
+  tipo_projeto: "OUTROS",
   data_inicio: null,
   data_fim_prevista: null,
   tem_investimento_crypto: false,

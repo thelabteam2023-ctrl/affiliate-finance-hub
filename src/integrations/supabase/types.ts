@@ -5298,6 +5298,7 @@ export type Database = {
           parceiro_nome: string | null
           projeto_id: string
           status_final: string | null
+          tipo_projeto_snapshot: string | null
           user_id: string
           workspace_id: string
         }
@@ -5312,6 +5313,7 @@ export type Database = {
           parceiro_nome?: string | null
           projeto_id: string
           status_final?: string | null
+          tipo_projeto_snapshot?: string | null
           user_id: string
           workspace_id: string
         }
@@ -5326,6 +5328,7 @@ export type Database = {
           parceiro_nome?: string | null
           projeto_id?: string
           status_final?: string | null
+          tipo_projeto_snapshot?: string | null
           user_id?: string
           workspace_id?: string
         }

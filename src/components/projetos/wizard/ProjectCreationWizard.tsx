@@ -216,7 +216,7 @@ export function ProjectCreationWizard({
         investidor_id: formData.investidor_id,
         percentual_investidor: formData.percentual_investidor,
         base_calculo_investidor: formData.base_calculo_investidor,
-        tipo_projeto: "INTERNO",
+        tipo_projeto: formData.tipo_projeto || "OUTROS",
         user_id: session.session.user.id,
         workspace_id: workspaceId!,
       };

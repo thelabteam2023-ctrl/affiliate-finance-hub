@@ -20,11 +20,13 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getTipoProjetoLabel, getTipoProjetoColor } from "@/types/projeto";
 
 interface HistoricoItem {
   id: string;
   projeto_id: string;
   projeto_nome: string;
+  tipo_projeto: string | null;
   data_vinculacao: string;
   data_desvinculacao: string | null;
   status_final: string | null;
@@ -68,7 +70,8 @@ export function BookmakerHistoricoDialog({
           data_vinculacao,
           data_desvinculacao,
           status_final,
-          projeto:projetos!projeto_bookmaker_historico_projeto_id_fkey(nome)
+          tipo_projeto_snapshot,
+          projeto:projetos!projeto_bookmaker_historico_projeto_id_fkey(nome, tipo_projeto)
         `)
         .eq("bookmaker_id", bookmakerId)
         .order("data_vinculacao", { ascending: false });
@@ -79,6 +82,7 @@ export function BookmakerHistoricoDialog({
         id: item.id,
         projeto_id: item.projeto_id,
         projeto_nome: item.projeto?.nome || "Projeto não encontrado",
+        tipo_projeto: item.tipo_projeto_snapshot || item.projeto?.tipo_projeto || null,
         data_vinculacao: item.data_vinculacao,
         data_desvinculacao: item.data_desvinculacao,
         status_final: item.status_final,
@@ -196,11 +200,18 @@ export function BookmakerHistoricoDialog({
                             : "border-border bg-muted/30"
                         }`}
                       >
-                        {/* Project name and status */}
+                        {/* Project name and tipo */}
                         <div className="flex items-center justify-between gap-2 mb-2">
-                          <h4 className="font-medium text-sm truncate">
-                            {item.projeto_nome}
-                          </h4>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <h4 className="font-medium text-sm truncate">
+                              {item.projeto_nome}
+                            </h4>
+                            {item.tipo_projeto && (
+                              <Badge className={`${getTipoProjetoColor(item.tipo_projeto)} text-[10px] shrink-0`}>
+                                {getTipoProjetoLabel(item.tipo_projeto)}
+                              </Badge>
+                            )}
+                          </div>
                           {isAtivo(item) ? (
                             <Badge className="bg-success/20 text-success border-success/30 text-[10px]">
                               Em uso

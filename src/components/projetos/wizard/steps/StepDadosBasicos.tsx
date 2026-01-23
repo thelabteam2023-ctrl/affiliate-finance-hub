@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Briefcase, Percent, Info } from "lucide-react";
+import { Coins, Briefcase, Percent, Info, Target } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,6 +21,7 @@ import {
 import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjectFormData } from "../ProjectCreationWizardTypes";
 import { cn } from "@/lib/utils";
+import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
 
 interface StepDadosBasicosProps {
   formData: ProjectFormData;
@@ -51,9 +52,9 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
         </p>
       </div>
 
-      {/* Grid responsivo: 3 colunas desktop (50%/25%/25%), 2 colunas tablet, stack mobile */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr] gap-4">
-        <div className="space-y-2 md:col-span-2 lg:col-span-1">
+      {/* Grid responsivo: Nome + Tipo (linha 1), Datas (linha 2) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="space-y-2 lg:col-span-2">
           <Label>Nome *</Label>
           <Input
             value={formData.nome}
@@ -61,6 +62,30 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
             placeholder="NOME DO PROJETO"
             className="uppercase"
           />
+        </div>
+        <div className="space-y-2 lg:col-span-2">
+          <Label className="flex items-center gap-2">
+            <Target className="h-3.5 w-3.5" />
+            Tipo do Projeto *
+          </Label>
+          <Select
+            value={formData.tipo_projeto}
+            onValueChange={(value) => onChange({ tipo_projeto: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(TIPO_PROJETO_CONFIG).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  <div className="flex items-center gap-2">
+                    <span>{config.icon}</span>
+                    <span>{config.label}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label>Data de Início *</Label>
