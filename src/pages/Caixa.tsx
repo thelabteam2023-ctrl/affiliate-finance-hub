@@ -6,6 +6,7 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 import { usePendingTransactions, useInvalidatePendingTransactions } from "@/hooks/usePendingTransactions";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
+import { CAIXA_DATA_CHANGED_EVENT } from "@/hooks/useInvalidateCaixaData";
 import { CASH_REAL_TYPES } from "@/lib/cashOperationalTypes";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
@@ -321,6 +322,21 @@ export default function Caixa() {
     setSaldoWalletsParceiros(0);
     setLoading(true);
   }, []));
+
+  // Listener para evento de mudança de dados do Caixa (reatividade pós-transação)
+  // Dispara refetch quando qualquer componente cria/atualiza transações
+  useEffect(() => {
+    const handleCaixaDataChanged = () => {
+      console.log("[Caixa] Data changed event received - refetching data");
+      fetchData();
+      refetchPending();
+    };
+
+    window.addEventListener(CAIXA_DATA_CHANGED_EVENT, handleCaixaDataChanged);
+    return () => {
+      window.removeEventListener(CAIXA_DATA_CHANGED_EVENT, handleCaixaDataChanged);
+    };
+  }, [fetchData, refetchPending]);
 
   // Handle navigation state to open dialog
   useEffect(() => {

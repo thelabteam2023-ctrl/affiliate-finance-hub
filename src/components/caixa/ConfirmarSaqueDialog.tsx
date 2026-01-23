@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
 import {
   Dialog,
   DialogContent,
@@ -339,6 +340,10 @@ export function ConfirmarSaqueDialog({
 
       toast.success("Saque confirmado com sucesso!");
       resetForm();
+      
+      // Disparar evento para atualizar UI imediatamente
+      dispatchCaixaDataChanged();
+      
       onSuccess();
       onClose();
     } catch (error: any) {

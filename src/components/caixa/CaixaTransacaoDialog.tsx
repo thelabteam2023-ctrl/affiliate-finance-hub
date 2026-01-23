@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
+import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
 import {
   Dialog,
   DialogContent,
@@ -2134,6 +2135,10 @@ export function CaixaTransacaoDialog({
       });
 
       resetForm();
+      
+      // Disparar evento para atualizar UI imediatamente
+      dispatchCaixaDataChanged();
+      
       onSuccess();
     } catch (error: any) {
       console.error("Erro ao registrar transação:", error);
