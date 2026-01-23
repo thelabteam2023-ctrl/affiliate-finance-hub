@@ -207,7 +207,7 @@ export function ConfirmarSaqueDialog({
         }
 
         // Atualizar com dados reais de cripto
-        const { error } = await supabase
+        const { data: updateResult, error } = await supabase
           .from("cash_ledger")
           .update({
             status: "CONFIRMADO",
@@ -215,9 +215,17 @@ export function ConfirmarSaqueDialog({
             descricao: descricaoFinal || null,
           })
           .eq("id", saque.id)
-          .eq("status", "PENDENTE");
+          .eq("status", "PENDENTE")
+          .select("id");
 
         if (error) throw error;
+        
+        // Verificar se o update afetou a linha (proteção contra concorrência)
+        if (!updateResult || updateResult.length === 0) {
+          toast.error("Este saque já foi processado por outro usuário.");
+          onClose();
+          return;
+        }
 
         // Registrar diferença se houver (SIMPLIFICADO - apenas em coins)
         if (temDiferencaCrypto && saque.origem_bookmaker_id) {
@@ -259,7 +267,7 @@ export function ConfirmarSaqueDialog({
             : `[Ajuste ${tipoDif}]: ${formatCurrency(Math.abs(diferencaFiat), moedaDestinoFiat)}`;
         }
 
-        const { error } = await supabase
+        const { data: updateResultFiat, error } = await supabase
           .from("cash_ledger")
           .update({
             status: "CONFIRMADO",
@@ -267,9 +275,17 @@ export function ConfirmarSaqueDialog({
             descricao: descricaoFinal || null,
           })
           .eq("id", saque.id)
-          .eq("status", "PENDENTE");
+          .eq("status", "PENDENTE")
+          .select("id");
 
         if (error) throw error;
+        
+        // Verificar se o update afetou a linha (proteção contra concorrência)
+        if (!updateResultFiat || updateResultFiat.length === 0) {
+          toast.error("Este saque já foi processado por outro usuário.");
+          onClose();
+          return;
+        }
 
         // Registrar ajuste cambial se houver diferença
         if (temDiferencaFiat && saque.origem_bookmaker_id) {
