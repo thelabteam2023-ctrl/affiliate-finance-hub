@@ -767,7 +767,22 @@ export default function CentralOperacoes() {
   };
 
   const formatCurrency = (value: number, moeda: string = "BRL") => {
-    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: moeda }).format(value);
+    // Map crypto tokens to USD for Intl.NumberFormat compatibility
+    const cryptoTokens = ["USDT", "USDC", "BTC", "ETH", "BNB", "TRX", "SOL", "MATIC", "ADA", "DOT", "AVAX", "LINK", "UNI", "LTC", "XRP"];
+    const isCrypto = cryptoTokens.includes(moeda);
+    const currencyCode = isCrypto ? "USD" : moeda;
+    
+    const formatted = new Intl.NumberFormat("pt-BR", { 
+      style: "currency", 
+      currency: currencyCode,
+      minimumFractionDigits: 2,
+    }).format(value);
+    
+    // For crypto, replace the $ symbol with the token name
+    if (isCrypto) {
+      return formatted.replace("US$", `${moeda} `).replace("$", `${moeda} `);
+    }
+    return formatted;
   };
 
   const handleSaqueAction = (alerta: Alerta) => {
