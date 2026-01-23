@@ -815,12 +815,7 @@ export function FluxoFinanceiroOperacional({
                 })}
                 height={300}
                 barSize={24}
-                showLabels={true}
-                formatLabel={(value, ctx) => {
-                  if (value === 0) return "";
-                  const currency = String(ctx?.currency || "BRL");
-                  return formatCurrencyCompact(Math.abs(Number(value)), currency);
-                }}
+                showLabels={false}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
                   
@@ -1000,12 +995,7 @@ export function FluxoFinanceiroOperacional({
                 }
                 height={300}
                 barSize={dadosCapitalOperacao.moedasAtivas.length > 2 ? 16 : 24}
-                showLabels={dadosCapitalOperacao.moedasAtivas.length <= 3}
-                formatLabel={(value, ctx) => {
-                  if (value === 0) return "";
-                  const currency = String(ctx?.currency || "BRL");
-                  return formatCurrencyCompact(Math.abs(Number(value)), currency);
-                }}
+                showLabels={false}
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
                   
