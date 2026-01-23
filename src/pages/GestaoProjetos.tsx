@@ -67,6 +67,7 @@ interface Projeto {
   saldo_bookmakers?: number;
   saldo_bookmakers_by_moeda?: SaldoByMoeda;
   saldo_irrecuperavel?: number;
+  saldo_irrecuperavel_by_moeda?: SaldoByMoeda; // NOVO: dados brutos por moeda
   total_depositado?: number;
   total_sacado?: number;
   total_bookmakers?: number;
@@ -98,12 +99,15 @@ export default function GestaoProjetos() {
   const { isFavorite, toggleFavorite } = useProjectFavorites();
   const { canCreate, canEdit, canDelete } = useActionAccess();
   
-  // COTAÇÃO CENTRALIZADA - Usa PTAX do BCB, nunca hardcoded
+  // COTAÇÃO CENTRALIZADA - Usado APENAS para DISPLAY, não para fetch
   const { cotacaoUSD, loading: loadingCotacao } = useCotacoes();
-  const USD_TO_BRL = cotacaoUSD || 5.37; // Fallback apenas para renderização inicial
-
+  
   // Check if user is operator (should only see linked projects)
   const isOperator = role === 'operator';
+  
+  // CRITICAL: Cotação usada APENAS no render, não no fetch
+  // Isso evita o loop de dependência cotação → fetch → cotação
+  const USD_TO_BRL_DISPLAY = cotacaoUSD || 5.37;
 
   const fetchProjetos = useCallback(async () => {
     if (!user) return;
@@ -210,50 +214,59 @@ export default function GestaoProjetos() {
           .eq("status", "ativo")
       ]);
       
-      // COTAÇÃO CENTRALIZADA - Usa PTAX do BCB obtida via hook
-      // NUNCA usar valores hardcoded conforme regra do sistema
-      const USD_TO_BRL = cotacaoUSD;
+      // ARQUITETURA DAG: Fetch armazena dados BRUTOS por moeda
+      // Conversão acontece APENAS no render usando cotação atual
+      // Isso quebra o ciclo cotação → fetch → cotação
       
-      // Mapear saldos da RPC canônica por projeto
+      // Mapear saldos da RPC canônica por projeto - DADOS BRUTOS POR MOEDA
       const bookmakersByProjeto: Record<string, { 
         saldo: number; 
         saldoBRL: number;
         saldoUSD: number;
         count: number; 
-        irrecuperavel: number 
+        irrecuperavel: number;
+        irrecuperavelBRL: number;
+        irrecuperavelUSD: number;
       }> = {};
       
-      // Processar resultado da RPC canônica
+      // Processar resultado da RPC canônica - ARMAZENAR APENAS DADOS BRUTOS
       (saldosRpcResult.data || []).forEach((row: any) => {
         const projetoId = row.projeto_id;
         const saldoBRL = Number(row.saldo_operavel_brl) || 0;
         const saldoUSD = Number(row.saldo_operavel_usd) || 0;
-        // Converter USD para BRL para total consolidado
-        const saldoConsolidado = saldoBRL + (saldoUSD * USD_TO_BRL);
+        // NÃO converter aqui - deixar para o render
+        // saldo será calculado no mapping final usando cotação do render
         
         bookmakersByProjeto[projetoId] = {
-          saldo: saldoConsolidado,
+          saldo: 0, // Será calculado no mapping final
           saldoBRL: saldoBRL,
           saldoUSD: saldoUSD,
           count: Number(row.total_bookmakers) || 0,
-          irrecuperavel: 0 // Será preenchido abaixo
+          irrecuperavel: 0, // Será calculado no mapping final
+          irrecuperavelBRL: 0,
+          irrecuperavelUSD: 0,
         };
       });
       
-      // Agregar saldo irrecuperável separadamente
+      // Agregar saldo irrecuperável separadamente - DADOS BRUTOS POR MOEDA
       (bookmakersCountResult.data || []).forEach((bk: any) => {
         if (!bk.projeto_id) return;
         const irrecuperavel = Number(bk.saldo_irrecuperavel) || 0;
         const moeda = bk.moeda || 'BRL';
         
         if (!bookmakersByProjeto[bk.projeto_id]) {
-          bookmakersByProjeto[bk.projeto_id] = { saldo: 0, saldoBRL: 0, saldoUSD: 0, count: 0, irrecuperavel: 0 };
+          bookmakersByProjeto[bk.projeto_id] = { 
+            saldo: 0, saldoBRL: 0, saldoUSD: 0, 
+            count: 0, irrecuperavel: 0, 
+            irrecuperavelBRL: 0, irrecuperavelUSD: 0 
+          };
         }
         
+        // Armazenar por moeda - conversão no render
         if (moeda === 'USD') {
-          bookmakersByProjeto[bk.projeto_id].irrecuperavel += irrecuperavel * USD_TO_BRL;
+          bookmakersByProjeto[bk.projeto_id].irrecuperavelUSD += irrecuperavel;
         } else {
-          bookmakersByProjeto[bk.projeto_id].irrecuperavel += irrecuperavel;
+          bookmakersByProjeto[bk.projeto_id].irrecuperavelBRL += irrecuperavel;
         }
       });
       
@@ -265,71 +278,57 @@ export default function GestaoProjetos() {
         }
       });
 
-      // Agregar lucro de apostas por projeto COM BREAKDOWN POR MOEDA
-      const lucroByProjeto: Record<string, { total: number; BRL: number; USD: number }> = {};
+      // Agregar lucro de apostas por projeto - APENAS DADOS BRUTOS POR MOEDA
+      // O campo 'total' será calculado no render usando cotação atual
+      const lucroByProjeto: Record<string, { BRL: number; USD: number }> = {};
       (apostasResult.data || []).forEach((ap: any) => {
         if (!ap.projeto_id) return;
         if (!lucroByProjeto[ap.projeto_id]) {
-          lucroByProjeto[ap.projeto_id] = { total: 0, BRL: 0, USD: 0 };
+          lucroByProjeto[ap.projeto_id] = { BRL: 0, USD: 0 };
         }
         
         const lucroOriginal = ap.lucro_prejuizo || 0;
         const moeda = ap.moeda_operacao || 'BRL';
         
-        // Acumular por moeda original
+        // Acumular por moeda original - SEM conversão
         if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
           lucroByProjeto[ap.projeto_id].USD += lucroOriginal;
-          // Para total consolidado, usar BRL referência se existir, senão converter
-          const valorBRL = ap.lucro_prejuizo_brl_referencia ?? (lucroOriginal * USD_TO_BRL);
-          lucroByProjeto[ap.projeto_id].total += valorBRL;
         } else {
           lucroByProjeto[ap.projeto_id].BRL += lucroOriginal;
-          lucroByProjeto[ap.projeto_id].total += lucroOriginal;
         }
       });
       
-      // Agregar lucro de giros grátis confirmados por projeto
-      // CORREÇÃO: Usar moeda da bookmaker para conversão correta
+      // Agregar lucro de giros grátis confirmados por projeto - SEM conversão
       (girosGratisResult.data || []).forEach((giro: any) => {
         if (!giro.projeto_id) return;
         if (!lucroByProjeto[giro.projeto_id]) {
-          lucroByProjeto[giro.projeto_id] = { total: 0, BRL: 0, USD: 0 };
+          lucroByProjeto[giro.projeto_id] = { BRL: 0, USD: 0 };
         }
         
         const valorRetorno = giro.valor_retorno || 0;
-        // Buscar moeda da bookmaker via join (bookmakers.moeda)
         const moedaBookmaker = giro.bookmakers?.moeda || bookmakerMoedaMap[giro.bookmaker_id] || 'BRL';
         
-        // Acumular por moeda da bookmaker
         if (moedaBookmaker === 'USD' || moedaBookmaker === 'USDT' || moedaBookmaker === 'USDC') {
           lucroByProjeto[giro.projeto_id].USD += valorRetorno;
-          lucroByProjeto[giro.projeto_id].total += valorRetorno * USD_TO_BRL;
         } else {
           lucroByProjeto[giro.projeto_id].BRL += valorRetorno;
-          lucroByProjeto[giro.projeto_id].total += valorRetorno;
         }
       });
       
-      // Agregar lucro de cashback manual por projeto
-      // CRÍTICO: Sempre converter via PTAX em tempo real para consistência
-      // NÃO usar valor_brl_referencia pois pode ter sido gravado com cotação incorreta
+      // Agregar lucro de cashback manual por projeto - SEM conversão
       (cashbackManualResult.data || []).forEach((cb: any) => {
         if (!cb.projeto_id) return;
         if (!lucroByProjeto[cb.projeto_id]) {
-          lucroByProjeto[cb.projeto_id] = { total: 0, BRL: 0, USD: 0 };
+          lucroByProjeto[cb.projeto_id] = { BRL: 0, USD: 0 };
         }
         
         const valor = cb.valor || 0;
         const moeda = cb.moeda_operacao || 'BRL';
         
-        // Acumular por moeda original
         if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
           lucroByProjeto[cb.projeto_id].USD += valor;
-          // SEMPRE converter via PTAX atual (não usar valor_brl_referencia do banco)
-          lucroByProjeto[cb.projeto_id].total += valor * USD_TO_BRL;
         } else {
           lucroByProjeto[cb.projeto_id].BRL += valor;
-          lucroByProjeto[cb.projeto_id].total += valor;
         }
       });
       
@@ -347,30 +346,43 @@ export default function GestaoProjetos() {
         perdasByProjeto[pd.projeto_id] = (perdasByProjeto[pd.projeto_id] || 0) + (pd.valor || 0);
       });
       
-      // Map to Projeto interface com dados agregados
-      const mapped = projetosData.map((proj: any) => ({
-        id: proj.id,
-        nome: proj.nome,
-        descricao: proj.descricao || null,
-        status: proj.status,
-        data_inicio: proj.data_inicio,
-        data_fim_prevista: proj.data_fim_prevista,
-        orcamento_inicial: proj.orcamento_inicial || 0,
-        saldo_bookmakers: bookmakersByProjeto[proj.id]?.saldo || 0,
-        saldo_bookmakers_by_moeda: {
-          BRL: bookmakersByProjeto[proj.id]?.saldoBRL || 0,
-          USD: bookmakersByProjeto[proj.id]?.saldoUSD || 0,
-        },
-        saldo_irrecuperavel: bookmakersByProjeto[proj.id]?.irrecuperavel || 0,
-        total_bookmakers: bookmakersByProjeto[proj.id]?.count || 0,
-        lucro_operacional: lucroByProjeto[proj.id]?.total || 0,
-        lucro_by_moeda: {
-          BRL: lucroByProjeto[proj.id]?.BRL || 0,
-          USD: lucroByProjeto[proj.id]?.USD || 0,
-        },
-        operadores_ativos: operadoresByProjeto[proj.id] || 0,
-        perdas_confirmadas: perdasByProjeto[proj.id] || 0,
-      }));
+      // Map to Projeto interface com dados agregados - APENAS DADOS BRUTOS
+      // Campos consolidados (saldo_bookmakers, lucro_operacional) serão calculados no render
+      const mapped = projetosData.map((proj: any) => {
+        const bkData = bookmakersByProjeto[proj.id];
+        const lucroData = lucroByProjeto[proj.id];
+        
+        return {
+          id: proj.id,
+          nome: proj.nome,
+          descricao: proj.descricao || null,
+          status: proj.status,
+          data_inicio: proj.data_inicio,
+          data_fim_prevista: proj.data_fim_prevista,
+          orcamento_inicial: proj.orcamento_inicial || 0,
+          // Saldo será calculado no render
+          saldo_bookmakers: 0, // Placeholder - calculado no render
+          saldo_bookmakers_by_moeda: {
+            BRL: bkData?.saldoBRL || 0,
+            USD: bkData?.saldoUSD || 0,
+          },
+          // Irrecuperável também por moeda
+          saldo_irrecuperavel: 0, // Placeholder - calculado no render
+          saldo_irrecuperavel_by_moeda: {
+            BRL: bkData?.irrecuperavelBRL || 0,
+            USD: bkData?.irrecuperavelUSD || 0,
+          },
+          total_bookmakers: bkData?.count || 0,
+          // Lucro será calculado no render
+          lucro_operacional: 0, // Placeholder - calculado no render
+          lucro_by_moeda: {
+            BRL: lucroData?.BRL || 0,
+            USD: lucroData?.USD || 0,
+          },
+          operadores_ativos: operadoresByProjeto[proj.id] || 0,
+          perdas_confirmadas: perdasByProjeto[proj.id] || 0,
+        };
+      });
       
       setProjetos(mapped);
     } catch (error: any) {
@@ -647,33 +659,39 @@ export default function GestaoProjetos() {
                     </div>
                   
                   <div className="pt-2 border-t space-y-3">
-                    {/* Saldo Bookmakers - Novo design com hierarquia clara */}
-                    <ProjectFinancialDisplay
-                      type="saldo"
-                      breakdown={{
-                        BRL: projeto.saldo_bookmakers_by_moeda?.BRL || 0,
-                        USD: projeto.saldo_bookmakers_by_moeda?.USD || 0,
-                      }}
-                      totalConsolidado={projeto.saldo_bookmakers || 0}
-                      cotacaoPTAX={USD_TO_BRL}
-                      isMultiCurrency={(projeto.saldo_bookmakers_by_moeda?.USD || 0) > 0}
-                    />
-                    
-                    {/* Lucro - Mesmo padrão do Saldo */}
+                    {/* Saldo Bookmakers - Cálculo de consolidação no RENDER */}
                     {(() => {
-                      const lucroOperacional = (projeto.lucro_operacional || 0) - (projeto.perdas_confirmadas || 0);
-                      const hasUSD = (projeto.lucro_by_moeda?.USD || 0) !== 0;
+                      const saldoBRL = projeto.saldo_bookmakers_by_moeda?.BRL || 0;
+                      const saldoUSD = projeto.saldo_bookmakers_by_moeda?.USD || 0;
+                      // CONVERSÃO NO RENDER - usando cotação atual
+                      const totalConsolidado = saldoBRL + (saldoUSD * USD_TO_BRL_DISPLAY);
+                      
+                      return (
+                        <ProjectFinancialDisplay
+                          type="saldo"
+                          breakdown={{ BRL: saldoBRL, USD: saldoUSD }}
+                          totalConsolidado={totalConsolidado}
+                          cotacaoPTAX={USD_TO_BRL_DISPLAY}
+                          isMultiCurrency={saldoUSD > 0}
+                        />
+                      );
+                    })()}
+                    
+                    {/* Lucro - Cálculo de consolidação no RENDER */}
+                    {(() => {
+                      const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
+                      const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
+                      const perdas = projeto.perdas_confirmadas || 0;
+                      // CONVERSÃO NO RENDER - usando cotação atual
+                      const lucroConsolidado = lucroBRL + (lucroUSD * USD_TO_BRL_DISPLAY) - perdas;
                       
                       return (
                         <ProjectFinancialDisplay
                           type="lucro"
-                          breakdown={{
-                            BRL: projeto.lucro_by_moeda?.BRL || 0,
-                            USD: projeto.lucro_by_moeda?.USD || 0,
-                          }}
-                          totalConsolidado={lucroOperacional}
-                          cotacaoPTAX={USD_TO_BRL}
-                          isMultiCurrency={hasUSD}
+                          breakdown={{ BRL: lucroBRL, USD: lucroUSD }}
+                          totalConsolidado={lucroConsolidado}
+                          cotacaoPTAX={USD_TO_BRL_DISPLAY}
+                          isMultiCurrency={lucroUSD !== 0}
                         />
                       );
                     })()}
@@ -748,12 +766,22 @@ export default function GestaoProjetos() {
                   <div className="flex items-center gap-6">
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Saldo Bookmakers</p>
-                      <p className="text-sm font-medium">{formatCurrency(projeto.saldo_bookmakers || 0)}</p>
+                      {/* CONVERSÃO NO RENDER - usando cotação atual */}
+                      <p className="text-sm font-medium">
+                        {formatCurrency(
+                          (projeto.saldo_bookmakers_by_moeda?.BRL || 0) + 
+                          ((projeto.saldo_bookmakers_by_moeda?.USD || 0) * USD_TO_BRL_DISPLAY)
+                        )}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Lucro</p>
                       {(() => {
-                        const lucroOperacional = (projeto.lucro_operacional || 0) - (projeto.perdas_confirmadas || 0);
+                        // CONVERSÃO NO RENDER - usando cotação atual
+                        const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
+                        const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
+                        const perdas = projeto.perdas_confirmadas || 0;
+                        const lucroOperacional = lucroBRL + (lucroUSD * USD_TO_BRL_DISPLAY) - perdas;
                         const isPositive = lucroOperacional >= 0;
                         return (
                           <p className={`text-sm font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
