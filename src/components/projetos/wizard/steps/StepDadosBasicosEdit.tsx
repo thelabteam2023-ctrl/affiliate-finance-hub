@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Coins, Briefcase, Percent, Info, Users } from "lucide-react";
+import { Coins, Briefcase, Percent, Info, Users, Target } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -24,6 +24,7 @@ import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjectFormData } from "../ProjectCreationWizardTypes";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
 
 interface OperadorVinculado {
   operador_id: string;
@@ -111,7 +112,7 @@ export function StepDadosBasicosEdit({
         </p>
       </div>
 
-      {/* Grid responsivo: Nome, Datas e Status */}
+      {/* Grid responsivo: Nome, Tipo, Datas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="space-y-2 lg:col-span-2">
           <Label>Nome *</Label>
@@ -121,6 +122,30 @@ export function StepDadosBasicosEdit({
             placeholder="NOME DO PROJETO"
             className="uppercase"
           />
+        </div>
+        <div className="space-y-2 lg:col-span-2">
+          <Label className="flex items-center gap-2">
+            <Target className="h-3.5 w-3.5" />
+            Tipo do Projeto *
+          </Label>
+          <Select
+            value={formData.tipo_projeto}
+            onValueChange={(value) => onChange({ tipo_projeto: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(TIPO_PROJETO_CONFIG).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  <div className="flex items-center gap-2">
+                    <span>{config.icon}</span>
+                    <span>{config.label}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label>Data de Início *</Label>

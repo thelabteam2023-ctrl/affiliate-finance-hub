@@ -4,12 +4,81 @@
 export type MoedaConsolidacao = 'BRL' | 'USD';
 export type FonteCotacao = 'PTAX' | 'TRABALHO';
 
+// Tipos de projeto (estratégia principal)
+export type TipoProjeto = 
+  | 'SUREBET' 
+  | 'DUPLO_GREEN' 
+  | 'VALUEBET' 
+  | 'PUNTER' 
+  | 'BONUS' 
+  | 'CASHBACK' 
+  | 'OUTROS';
+
+export const TIPO_PROJETO_CONFIG: Record<TipoProjeto, { 
+  label: string; 
+  color: string; 
+  icon: string;
+  description: string;
+}> = {
+  SUREBET: { 
+    label: 'Surebet', 
+    color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+    icon: '⚡',
+    description: 'Arbitragem entre casas',
+  },
+  DUPLO_GREEN: { 
+    label: 'Duplo Green', 
+    color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    icon: '🍀',
+    description: 'Operações de duplo green',
+  },
+  VALUEBET: { 
+    label: 'Valuebet', 
+    color: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    icon: '📊',
+    description: 'Apostas de valor esperado positivo',
+  },
+  PUNTER: { 
+    label: 'Punter', 
+    color: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    icon: '🎯',
+    description: 'Apostas tradicionais',
+  },
+  BONUS: { 
+    label: 'Bônus', 
+    color: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+    icon: '🎁',
+    description: 'Extração de bônus',
+  },
+  CASHBACK: { 
+    label: 'Cashback', 
+    color: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    icon: '💰',
+    description: 'Operações de cashback',
+  },
+  OUTROS: { 
+    label: 'Outros', 
+    color: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+    icon: '📁',
+    description: 'Outros tipos de operação',
+  },
+};
+
+export function getTipoProjetoLabel(tipo: string): string {
+  return TIPO_PROJETO_CONFIG[tipo as TipoProjeto]?.label || tipo;
+}
+
+export function getTipoProjetoColor(tipo: string): string {
+  return TIPO_PROJETO_CONFIG[tipo as TipoProjeto]?.color || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+}
+
 export interface Projeto {
   id: string;
   projeto_id?: string;
   nome: string;
   descricao?: string | null;
   status: ProjetoStatus;
+  tipo_projeto?: TipoProjeto;
   data_inicio: string | null;
   data_fim_prevista: string | null;
   data_fim_real?: string | null;
