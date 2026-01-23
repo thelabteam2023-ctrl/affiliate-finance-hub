@@ -401,11 +401,14 @@ export function CaixaTransacaoDialog({
     }
   }, [moeda, tipoMoeda, tipoTransacao]);
 
-  // Auto-focus FIAT: quando valor é preenchido (>0), abre o select Parceiro (apenas para tipos != DEPÓSITO)
+  // Auto-focus FIAT: quando valor é preenchido (>0), abre o select Parceiro
+  // IMPORTANTE: Apenas para tipos que NÃO são DEPOSITO e NÃO são SAQUE
+  // Em SAQUE, o parceiro já vem pré-selecionado ou é selecionado antes do valor
   useEffect(() => {
     const valorNum = parseFloat(valor);
     const prevValorNum = parseFloat(prevValor.current || "0");
-    if (tipoTransacao !== "DEPOSITO" && tipoMoeda === "FIAT" && valorNum > 0 && prevValorNum === 0 && parceiroSelectRef.current) {
+    // Excluir SAQUE pois o fluxo é diferente (parceiro → conta → bookmaker → valor)
+    if (tipoTransacao !== "DEPOSITO" && tipoTransacao !== "SAQUE" && tipoMoeda === "FIAT" && valorNum > 0 && prevValorNum === 0 && parceiroSelectRef.current) {
       setTimeout(() => {
         parceiroSelectRef.current?.open();
       }, 150);
