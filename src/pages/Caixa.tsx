@@ -351,6 +351,11 @@ export default function Caixa() {
 
   const getTransacoesFiltradas = () => {
     return transacoes.filter((t) => {
+      // Ocultar ajustes cambiais do histórico (são detalhes de conciliação, não operações principais)
+      if (t.tipo_transacao === 'GANHO_CAMBIAL' || t.tipo_transacao === 'PERDA_CAMBIAL') {
+        return false;
+      }
+      
       const dataTransacao = new Date(t.data_transacao);
       const matchDataInicio = !dataInicio || dataTransacao >= startOfDay(dataInicio);
       const matchDataFim = !dataFim || dataTransacao <= endOfDay(dataFim);
