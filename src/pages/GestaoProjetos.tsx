@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
+import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -76,6 +78,10 @@ interface Projeto {
 export default function GestaoProjetos() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  
+  // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
+  const { workspaceId } = useTabWorkspace();
+  
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -372,11 +378,22 @@ export default function GestaoProjetos() {
     } finally {
       setLoading(false);
     }
-  }, [user, isOperator, cotacaoUSD]);
+  }, [user, isOperator, cotacaoUSD, workspaceId]);
 
+  // SEGURANÇA: Refetch quando workspace muda
   useEffect(() => {
-    fetchProjetos();
-  }, [fetchProjetos]);
+    if (workspaceId) {
+      fetchProjetos();
+    }
+  }, [fetchProjetos, workspaceId]);
+
+  // Listener para reset de estados locais na troca de workspace
+  useWorkspaceChangeListener(useCallback(() => {
+    console.log("[GestaoProjetos] Workspace changed - resetting local state");
+    setProjetos([]);
+    setSelectedProjeto(null);
+    setLoading(true);
+  }, []));
 
   const filteredProjetos = projetos.filter((proj) => {
     const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());

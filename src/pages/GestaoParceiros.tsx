@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
+import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -104,6 +106,9 @@ export default function GestaoParceiros() {
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(null);
 
   const parceiroCache = useParceiroFinanceiroCache();
+  
+  // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
+  const { workspaceId } = useTabWorkspace();
 
   const handleSelectParceiroDetalhes = useCallback((id: string) => {
     setSelectedParceiroDetalhes(id);
@@ -144,11 +149,26 @@ export default function GestaoParceiros() {
     setSaldosData(new Map(saldosMap));
   }, [cryptoPrices, saldosCryptoRaw]);
 
+  // SEGURANÇA: Refetch quando workspace muda
   useEffect(() => {
-    checkAuth();
-    fetchParceiros();
-    fetchParceriasStatus();
-  }, []);
+    if (workspaceId) {
+      checkAuth();
+      fetchParceiros();
+      fetchParceriasStatus();
+    }
+  }, [workspaceId]);
+
+  // Listener para reset de estados locais na troca de workspace
+  useWorkspaceChangeListener(useCallback(() => {
+    console.log("[GestaoParceiros] Workspace changed - resetting local state");
+    setParceiros([]);
+    setRoiData(new Map());
+    setSaldosData(new Map());
+    setSaldosCryptoRaw([]);
+    setSelectedParceiroDetalhes(null);
+    parceiroCache.invalidateAllCache();
+    setLoading(true);
+  }, [parceiroCache]));
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();

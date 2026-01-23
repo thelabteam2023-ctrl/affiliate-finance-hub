@@ -1,4 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
+import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -194,6 +196,10 @@ export default function Financeiro() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  
+  // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
+  const { workspaceId } = useTabWorkspace();
+  
   const [loading, setLoading] = useState(true);
   const [caixaFiat, setCaixaFiat] = useState<CaixaFiat[]>([]);
   const [caixaCrypto, setCaixaCrypto] = useState<CaixaCrypto[]>([]);
@@ -262,9 +268,35 @@ export default function Financeiro() {
   const tabFromUrl = searchParams.get("tab");
   const investidorFiltroId = searchParams.get("investidor");
 
+  // SEGURANÇA: Refetch quando workspace muda
   useEffect(() => {
-    checkAuth();
-  }, []);
+    if (workspaceId) {
+      checkAuth();
+    }
+  }, [workspaceId]);
+
+  // Listener para reset de estados locais na troca de workspace
+  useWorkspaceChangeListener(useCallback(() => {
+    console.log("[Financeiro] Workspace changed - resetting local state");
+    setCaixaFiat([]);
+    setCaixaCrypto([]);
+    setDespesas([]);
+    setCustos([]);
+    setCashLedger([]);
+    setDespesasAdmin([]);
+    setDespesasAdminPendentes([]);
+    setPagamentosOperador([]);
+    setPagamentosOperadorPendentes([]);
+    setMovimentacoesIndicacao([]);
+    setBookmakersSaldos([]);
+    setBookmakersDetalhados([]);
+    setApostasHistorico([]);
+    setContasParceiros([]);
+    setContasDetalhadas([]);
+    setWalletsParceiros([]);
+    setWalletsDetalhadas([]);
+    setLoading(true);
+  }, []));
 
   useEffect(() => {
     // Aplicar presets de período
