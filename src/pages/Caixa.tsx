@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { usePendingTransactions, useInvalidatePendingTransactions } from "@/hooks/usePendingTransactions";
 import { CASH_REAL_TYPES } from "@/lib/cashOperationalTypes";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
@@ -124,6 +125,10 @@ export default function Caixa() {
   const cryptoSymbols = useMemo(() => saldosCrypto.map(s => s.coin), [saldosCrypto]);
   const { cotacaoUSD, cryptoPrices, getCryptoUSDValue, lastUpdate } = useCotacoes(cryptoSymbols);
 
+  // Hook para transações pendentes - busca GLOBAL sem filtro de data
+  const { data: pendingTransactions = [], refetch: refetchPending } = usePendingTransactions();
+  const invalidatePending = useInvalidatePendingTransactions();
+
   // NOTA: Cotações NÃO devem disparar refetch de dados.
   // As cotações são usadas apenas para exibição de valores convertidos.
   // O fetchData só deve rodar quando: filtros mudam, nova transação criada, ou mount inicial.
@@ -241,10 +246,11 @@ export default function Caixa() {
       setSaldosCrypto((saldosCryptoData || []) as unknown as SaldoCrypto[]);
 
       // Fetch total bookmaker balance - agregar por moeda
+      // Inclui status 'ativo' e 'limitada' (casas com saldo mas operacionalmente limitadas)
       const { data: bookmakersBalanceData } = await supabase
         .from("bookmakers")
         .select("saldo_atual, moeda")
-        .eq("status", "ativo");
+        .in("status", ["ativo", "ATIVO", "limitada", "LIMITADA"]);
       
       // Agregar saldos por moeda
       const saldosPorMoeda: Record<string, number> = {};
@@ -756,6 +762,7 @@ export default function Caixa() {
           {/* Container com Abas */}
           <CaixaTabsContainer
             transacoes={transacoes}
+            pendingTransactions={pendingTransactions}
             parceiros={parceiros}
             contas={contas}
             contasBancarias={contasBancarias}
@@ -785,7 +792,10 @@ export default function Caixa() {
               setConfirmSaqueDialogOpen(true);
             }}
             saldoBookmakers={saldoBookmakers}
-            onRefresh={fetchData}
+            onRefresh={async () => {
+              await fetchData();
+              refetchPending();
+            }}
             initialTab={initialTab}
           />
         </div>

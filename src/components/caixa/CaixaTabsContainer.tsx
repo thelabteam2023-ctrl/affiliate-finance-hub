@@ -4,6 +4,7 @@ import { BarChart3, History, RefreshCcw } from "lucide-react";
 import { FluxoFinanceiroOperacional } from "./FluxoFinanceiroOperacional";
 import { HistoricoMovimentacoes } from "./HistoricoMovimentacoes";
 import { ConciliacaoSaldos } from "./ConciliacaoSaldos";
+import type { PendingTransaction } from "@/hooks/usePendingTransactions";
 
 interface LabelInfo {
   primary: string;
@@ -12,6 +13,7 @@ interface LabelInfo {
 
 interface CaixaTabsContainerProps {
   transacoes: any[];
+  pendingTransactions?: PendingTransaction[];
   parceiros: { [key: string]: string };
   contas: { [key: string]: string };
   contasBancarias: Array<{ id: string; banco: string; titular: string }>;
@@ -44,6 +46,7 @@ interface CaixaTabsContainerProps {
 
 export function CaixaTabsContainer({
   transacoes,
+  pendingTransactions = [],
   parceiros,
   contas,
   contasBancarias,
@@ -74,12 +77,10 @@ export function CaixaTabsContainer({
   initialTab = "analise",
 }: CaixaTabsContainerProps) {
   // Conta transações pendentes de conciliação
-  // Inclui: CRYPTO (depósitos e saques) e FIAT com conversão de moeda
-  // Suporta tanto "pendente" (minúsculo) quanto "PENDENTE" (maiúsculo)
-  const pendingCount = transacoes.filter(
-    (t) => 
-      (t.status === "pendente" || t.status === "PENDENTE") && 
-      (t.tipo_transacao === "DEPOSITO" || t.tipo_transacao === "SAQUE")
+  // Usa pendingTransactions do hook (busca global sem filtro de data)
+  // Filtra apenas DEPOSITO (SAQUE tem fluxo separado de confirmação)
+  const pendingCount = pendingTransactions.filter(
+    (t) => t.tipo_transacao === "DEPOSITO"
   ).length;
 
   return (
@@ -151,7 +152,7 @@ export function CaixaTabsContainer({
 
         <TabsContent value="conciliacao" className="mt-0 p-4">
           <ConciliacaoSaldos
-            transacoes={transacoes}
+            transacoes={pendingTransactions}
             bookmakers={bookmakers}
             wallets={wallets}
             walletsDetalhes={walletsDetalhes}

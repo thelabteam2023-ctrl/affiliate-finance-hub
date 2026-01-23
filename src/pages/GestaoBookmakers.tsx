@@ -353,13 +353,15 @@ export default function GestaoBookmakers() {
 
   const stats = {
     total: bookmakers.length,
-    ativos: bookmakers.filter((b) => b.status === "ativo").length,
+    ativos: bookmakers.filter((b) => b.status === "ativo" || b.status === "ATIVO").length,
+    // Saldos totais por moeda - usa saldo_atual (canonical) para todas as moedas
     saldoTotalBrl: bookmakers.reduce((acc, b) => {
-      if (b.moeda === "BRL") return acc + Number(b.saldo_atual);
+      if (b.moeda === "BRL") return acc + Number(b.saldo_atual || 0);
       return acc;
     }, 0),
     saldoTotalUsd: bookmakers.reduce((acc, b) => {
-      if (b.moeda === "USD") return acc + Number(b.saldo_usd);
+      // saldo_atual é canonical para TODAS as moedas (saldo_usd é legado/deprecated)
+      if (b.moeda === "USD") return acc + Number(b.saldo_atual || 0);
       return acc;
     }, 0),
   };
