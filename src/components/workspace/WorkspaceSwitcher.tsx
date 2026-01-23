@@ -70,6 +70,12 @@ export function WorkspaceSwitcher({
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [targetWorkspace, setTargetWorkspace] = useState<WorkspaceItem | null>(null);
 
+  const handleConfirmDialogChange = (nextOpen: boolean) => {
+    setConfirmDialogOpen(nextOpen);
+    // Segurança operacional: ao fechar o modal (cancel/esc/click-out), zera o alvo.
+    if (!nextOpen) setTargetWorkspace(null);
+  };
+
   const currentWorkspace = workspaces.find(
     (w) => w.workspace_id === currentWorkspaceId
   );
@@ -84,10 +90,11 @@ export function WorkspaceSwitcher({
       return;
     }
     
-    // Fechar popover e abrir modal de confirmação
-    setOpen(false);
+    // Abrir modal de confirmação de forma determinística.
+    // (Abrir primeiro evita condições de corrida com o fechamento do Popover.)
     setTargetWorkspace(workspace);
     setConfirmDialogOpen(true);
+    setOpen(false);
   };
 
   // Executa a troca após confirmação
@@ -303,7 +310,7 @@ export function WorkspaceSwitcher({
     {/* Modal de confirmação de troca */}
     <WorkspaceSwitchConfirmDialog
       open={confirmDialogOpen}
-      onOpenChange={setConfirmDialogOpen}
+      onOpenChange={handleConfirmDialogChange}
       currentWorkspaceName={currentWorkspace?.workspace_name || "Workspace Atual"}
       targetWorkspaceName={targetWorkspace?.workspace_name || ""}
       targetWorkspaceRole={targetWorkspace ? getRoleLabel(targetWorkspace.role) : ""}
