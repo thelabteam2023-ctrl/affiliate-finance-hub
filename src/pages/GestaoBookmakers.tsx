@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen, Filter, UserCheck, UserX, Users, History } from "lucide-react";
+import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen, Filter, UserCheck, UserX, Users, History, Ban } from "lucide-react";
 import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
@@ -18,6 +18,8 @@ import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
 import CatalogoBookmakers from "@/components/bookmakers/CatalogoBookmakers";
 import AccessGroupsManager from "@/components/bookmakers/AccessGroupsManager";
 import { useAuth } from "@/hooks/useAuth";
+import { useBookmakerUsageStatus, canDeleteBookmaker } from "@/hooks/useBookmakerUsageStatus";
+import { BookmakerUsageBadge } from "@/components/bookmakers/BookmakerUsageBadge";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -82,6 +84,10 @@ export default function GestaoBookmakers() {
   const { toast } = useToast();
   const { isSystemOwner } = useAuth();
   const { canCreate, canEdit, canDelete } = useActionAccess();
+
+  // Hook para obter status de uso de cada bookmaker
+  const bookmakerIds = useMemo(() => bookmakers.map((b) => b.id), [bookmakers]);
+  const { usageMap, refetch: refetchUsage } = useBookmakerUsageStatus(bookmakerIds);
 
   // SEGURANÇA: Refetch quando workspace muda
   useEffect(() => {
@@ -200,7 +206,20 @@ export default function GestaoBookmakers() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este bookmaker? Todas as transações também serão removidas.")) return;
+    // Verificar se pode excluir baseado no status de uso
+    const usage = usageMap[id];
+    const { canDelete: canDeleteBm, reason } = canDeleteBookmaker(usage);
+    
+    if (!canDeleteBm) {
+      toast({
+        title: "Exclusão bloqueada",
+        description: reason,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!confirm("Tem certeza que deseja excluir este vínculo? Esta ação é irreversível.")) return;
 
     try {
       const { error } = await supabase
@@ -211,13 +230,13 @@ export default function GestaoBookmakers() {
       if (error) throw error;
 
       toast({
-        title: "Bookmaker excluído",
-        description: "O bookmaker foi removido com sucesso.",
+        title: "Vínculo excluído",
+        description: "O vínculo foi removido com sucesso.",
       });
       fetchBookmakers();
     } catch (error: any) {
       toast({
-        title: "Erro ao excluir bookmaker",
+        title: "Erro ao excluir vínculo",
         description: error.message,
         variant: "destructive",
       });
@@ -744,17 +763,24 @@ export default function GestaoBookmakers() {
                         </span>
                       </div>
                     </div>
-                    <Badge
-                      variant={
-                        bookmaker.status === "ativo"
-                          ? "default"
-                          : bookmaker.status === "inativo"
-                          ? "secondary"
-                          : "destructive"
-                      }
-                    >
-                      {bookmaker.status}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Badge
+                        variant={
+                          bookmaker.status === "ativo"
+                            ? "default"
+                            : bookmaker.status === "inativo"
+                            ? "secondary"
+                            : "destructive"
+                        }
+                      >
+                        {bookmaker.status}
+                      </Badge>
+                      <BookmakerUsageBadge
+                        usage={usageMap[bookmaker.id]}
+                        compact
+                        onClick={() => setHistoricoProjetoDialog({ open: true, bookmaker })}
+                      />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -872,17 +898,22 @@ export default function GestaoBookmakers() {
                           Editar
                         </Button>
                       )}
-                      {canDelete('bookmakers', 'bookmakers.accounts.delete') && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 text-red-600 hover:text-red-700"
-                          onClick={() => handleDelete(bookmaker.id)}
-                        >
-                          <Trash2 className="mr-1 h-4 w-4" />
-                          Excluir
-                        </Button>
-                      )}
+                      {canDelete('bookmakers', 'bookmakers.accounts.delete') && (() => {
+                        const usage = usageMap[bookmaker.id];
+                        const { canDelete: canDeleteBm } = canDeleteBookmaker(usage);
+                        return (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={`flex-1 ${canDeleteBm ? "text-destructive hover:text-destructive" : "text-muted-foreground cursor-not-allowed"}`}
+                            onClick={() => handleDelete(bookmaker.id)}
+                            disabled={!canDeleteBm}
+                          >
+                            {canDeleteBm ? <Trash2 className="mr-1 h-4 w-4" /> : <Ban className="mr-1 h-4 w-4" />}
+                            {canDeleteBm ? "Excluir" : "Protegida"}
+                          </Button>
+                        );
+                      })()}
                     </div>
                   </div>
                 </CardContent>
@@ -989,6 +1020,11 @@ export default function GestaoBookmakers() {
                                     {bookmaker.status}
                                   </Badge>
                                   <Badge variant="outline">{bookmaker.moeda}</Badge>
+                                  <BookmakerUsageBadge
+                                    usage={usageMap[bookmaker.id]}
+                                    compact
+                                    onClick={() => setHistoricoProjetoDialog({ open: true, bookmaker })}
+                                  />
                                 </div>
                                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                   <span className="flex items-center gap-1.5">
@@ -1075,16 +1111,21 @@ export default function GestaoBookmakers() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                             )}
-                            {canDelete('bookmakers', 'bookmakers.accounts.delete') && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(bookmaker.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
+                            {canDelete('bookmakers', 'bookmakers.accounts.delete') && (() => {
+                              const usage = usageMap[bookmaker.id];
+                              const { canDelete: canDeleteBm } = canDeleteBookmaker(usage);
+                              return (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDelete(bookmaker.id)}
+                                  disabled={!canDeleteBm}
+                                  className={canDeleteBm ? "text-destructive hover:text-destructive hover:bg-destructive/10" : "text-muted-foreground cursor-not-allowed"}
+                                >
+                                  {canDeleteBm ? <Trash2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                                </Button>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
