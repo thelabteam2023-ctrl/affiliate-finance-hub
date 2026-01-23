@@ -2,11 +2,14 @@
  * Hook para buscar transações pendentes de conciliação
  * Busca GLOBALMENTE no workspace, sem filtro de data
  * Garante que todas as transações pendentes apareçam na aba Conciliação
+ * 
+ * IMPORTANTE: Inclui workspaceId na queryKey para isolamento de tenant
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CASH_REAL_TYPES } from "@/lib/cashOperationalTypes";
+import { useWorkspace } from "./useWorkspace";
 
 export interface PendingTransaction {
   id: string;
@@ -43,8 +46,11 @@ export interface PendingTransaction {
 export const PENDING_TRANSACTIONS_QUERY_KEY = "pending-transactions";
 
 export function usePendingTransactions() {
+  const { workspaceId } = useWorkspace();
+  
   return useQuery({
-    queryKey: [PENDING_TRANSACTIONS_QUERY_KEY],
+    // CRÍTICO: Inclui workspaceId para isolamento de tenant
+    queryKey: [PENDING_TRANSACTIONS_QUERY_KEY, workspaceId],
     queryFn: async (): Promise<PendingTransaction[]> => {
       // Buscar TODAS as transações pendentes no workspace
       // Sem filtro de data para garantir visibilidade completa
@@ -62,15 +68,23 @@ export function usePendingTransactions() {
 
       return (data || []) as PendingTransaction[];
     },
+    // Só executa se tiver workspace
+    enabled: !!workspaceId,
     staleTime: 30 * 1000, // 30 segundos
     refetchOnWindowFocus: true,
   });
 }
 
+/**
+ * Hook para invalidar cache de transações pendentes
+ * Inclui workspaceId para invalidação precisa
+ */
 export function useInvalidatePendingTransactions() {
   const queryClient = useQueryClient();
+  const { workspaceId } = useWorkspace();
   
   return () => {
+    // Invalida todas as queries de pending transactions (qualquer workspace)
     queryClient.invalidateQueries({ queryKey: [PENDING_TRANSACTIONS_QUERY_KEY] });
   };
 }

@@ -22,6 +22,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "./useWorkspace";
 
 export interface BookmakerSaldoFinanceiro {
   id: string;
@@ -58,14 +59,19 @@ const QUERY_KEY = "bookmaker-saldos-financeiro";
 /**
  * Hook para operações financeiras - NÃO depende de projeto
  * Retorna TODAS as bookmakers do workspace com saldo
+ * 
+ * IMPORTANTE: Inclui workspaceId na queryKey para isolamento de tenant
  */
 export function useBookmakerSaldosFinanceiro({
   parceiroId = null,
   includeZeroBalance = false,
   enabled = true
 }: UseBookmakerSaldosFinanceiroOptions = {}) {
+  const { workspaceId } = useWorkspace();
+  
   return useQuery({
-    queryKey: [QUERY_KEY, parceiroId, includeZeroBalance],
+    // CRÍTICO: Inclui workspaceId para isolamento de tenant
+    queryKey: [QUERY_KEY, workspaceId, parceiroId, includeZeroBalance],
     queryFn: async (): Promise<BookmakerSaldoFinanceiro[]> => {
       const { data, error } = await supabase.rpc("get_bookmaker_saldos_financeiro", {
         p_parceiro_id: parceiroId || null,
@@ -98,7 +104,8 @@ export function useBookmakerSaldosFinanceiro({
         has_pending_transactions: Boolean(row.has_pending_transactions)
       }));
     },
-    enabled,
+    // Só executa se tiver workspace e enabled
+    enabled: enabled && !!workspaceId,
     staleTime: 10 * 1000,
     refetchOnWindowFocus: true,
     refetchOnMount: true
