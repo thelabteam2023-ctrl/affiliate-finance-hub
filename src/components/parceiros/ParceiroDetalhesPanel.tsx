@@ -18,7 +18,6 @@ import { useActionAccess } from "@/hooks/useModuleAccess";
 import { MoneyDisplay, formatMoneyValue } from "@/components/ui/money-display";
 import { NativeCurrencyKpi } from "@/components/ui/native-currency-kpi";
 import { useBookmakerUsageStatus, getUsageCategoryConfig } from "@/hooks/useBookmakerUsageStatus";
-import { getTipoProjetoLabel, TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
 
 interface ParceiroCache {
   resumoData: ParceiroFinanceiroConsolidado | null;
@@ -621,36 +620,13 @@ export function ParceiroDetalhesPanel({
                                         <IconComponent className={cn("h-4 w-4", iconColorClass, "hover:opacity-80")} />
                                       </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent className="max-w-[200px]">
-                                      <div className="space-y-1">
-                                        <p className="font-medium text-xs">{config?.tooltip || "Histórico de projetos"}</p>
-                                        {usage && usage.tiposProjeto.length > 0 && (
-                                          <div className="pt-1 border-t border-border/50">
-                                            <p className="text-[10px] text-muted-foreground mb-1">
-                                              Estratégias utilizadas:
-                                            </p>
-                                            <div className="flex flex-wrap gap-1">
-                                              {usage.tiposProjeto.map((tipo) => {
-                                                const tipoConfig = TIPO_PROJETO_CONFIG[tipo as TipoProjeto];
-                                                return (
-                                                  <Badge
-                                                    key={tipo}
-                                                    variant="outline"
-                                                    className={cn("text-[9px] px-1 py-0", tipoConfig?.color || "")}
-                                                  >
-                                                    {tipoConfig?.icon} {getTipoProjetoLabel(tipo)}
-                                                  </Badge>
-                                                );
-                                              })}
-                                            </div>
-                                          </div>
-                                        )}
-                                        {usage && usage.totalVinculos > 0 && (
-                                          <p className="text-[10px] text-muted-foreground">
-                                            {usage.totalVinculos} vínculo{usage.totalVinculos !== 1 ? "s" : ""} no histórico
-                                          </p>
-                                        )}
-                                      </div>
+                                    <TooltipContent>
+                                      <p className="text-xs">
+                                        {usage?.category === "ATIVA" && usage.projetoAtivoNome 
+                                          ? `Projeto: ${usage.projetoAtivoNome}`
+                                          : config?.tooltip || "Ver histórico"
+                                        }
+                                      </p>
                                     </TooltipContent>
                                   </Tooltip>
                                 );
