@@ -190,34 +190,41 @@ export function CaixaTransacaoDialog({
   // Flag para evitar re-execução de efeitos durante reset
   const isResettingContext = useRef<boolean>(false);
 
+  // ============================================================================
+  // FIX: Ref para armazenar defaults pendentes que devem ser aplicados
+  // APÓS o efeito de tipoTransacao ter sido executado (evita race condition)
+  // ============================================================================
+  const pendingDefaultsRef = useRef<{
+    origemBookmakerId?: string;
+    destinoParceiroId?: string;
+    tipoMoeda?: "FIAT" | "CRYPTO";
+    moeda?: string;
+    coin?: string;
+  } | null>(null);
+
   // Aplicar defaults quando dialog abre
   useEffect(() => {
     if (open) {
       resetForm();
-      // Aplicar defaults após reset (com delay para garantir que o estado foi limpo)
-      setTimeout(() => {
-        if (defaultTipoTransacao) {
-          setTipoTransacao(defaultTipoTransacao);
-        }
-        if (defaultOrigemBookmakerId) {
-          setOrigemBookmakerId(defaultOrigemBookmakerId);
-        }
-        if (defaultDestinoParceiroId) {
-          setDestinoParceiroId(defaultDestinoParceiroId);
-        }
-        // Aplicar tipo de moeda e moeda/coin
-        if (defaultTipoMoeda) {
-          setTipoMoeda(defaultTipoMoeda);
-          prevTipoMoeda.current = defaultTipoMoeda;
-        }
-        if (defaultMoeda) {
-          setMoeda(defaultMoeda);
-          prevMoeda.current = defaultMoeda;
-        }
-        if (defaultCoin) {
-          setCoin(defaultCoin);
-        }
-      }, 50);
+      
+      // CRÍTICO: Armazenar os defaults que devem ser aplicados APÓS o reset do tipoTransacao
+      if (defaultOrigemBookmakerId || defaultDestinoParceiroId || defaultTipoMoeda || defaultMoeda || defaultCoin) {
+        pendingDefaultsRef.current = {
+          origemBookmakerId: defaultOrigemBookmakerId,
+          destinoParceiroId: defaultDestinoParceiroId,
+          tipoMoeda: defaultTipoMoeda,
+          moeda: defaultMoeda,
+          coin: defaultCoin,
+        };
+      } else {
+        pendingDefaultsRef.current = null;
+      }
+      
+      // Aplicar tipo de transação imediatamente - isso dispara o reset de contexto
+      // Os outros defaults serão aplicados pelo efeito de tipoTransacao
+      if (defaultTipoTransacao) {
+        setTipoTransacao(defaultTipoTransacao);
+      }
     }
   }, [open, defaultTipoTransacao, defaultOrigemBookmakerId, defaultDestinoParceiroId, defaultTipoMoeda, defaultMoeda, defaultCoin]);
 
@@ -566,6 +573,9 @@ export function CaixaTransacaoDialog({
     // Nenhum dado do contexto anterior pode sobreviver
     // ========================================================================
     
+    // Capturar defaults pendentes ANTES do reset (podem ter sido setados pela abertura do dialog)
+    const pendingDefaults = pendingDefaultsRef.current;
+    
     // Reset ORIGEM
     setOrigemTipo("");
     setOrigemParceiroId("");
@@ -619,10 +629,48 @@ export function CaixaTransacaoDialog({
     } else if (tipoTransacao === "SAQUE") {
       setOrigemTipo("BOOKMAKER");
       setDestinoTipo("PARCEIRO_CONTA");
-      setTipoMoeda("FIAT");
+      // Aplicar tipoMoeda do default ou FIAT como fallback
+      const defaultedTipoMoeda = pendingDefaults?.tipoMoeda || "FIAT";
+      setTipoMoeda(defaultedTipoMoeda);
+      prevTipoMoeda.current = defaultedTipoMoeda;
     } else if (tipoTransacao === "TRANSFERENCIA") {
       setOrigemTipo("CAIXA_OPERACIONAL");
       setDestinoTipo("PARCEIRO_CONTA");
+    }
+    
+    // ========================================================================
+    // FIX: Aplicar defaults pendentes APÓS o reset, com delay para garantir
+    // que o React processe os resets antes de aplicar os novos valores
+    // ========================================================================
+    if (pendingDefaults && tipoTransacao) {
+      setTimeout(() => {
+        // Aplicar moeda/coin se especificado
+        if (pendingDefaults.moeda) {
+          setMoeda(pendingDefaults.moeda);
+          prevMoeda.current = pendingDefaults.moeda;
+        }
+        if (pendingDefaults.coin) {
+          setCoin(pendingDefaults.coin);
+          prevCoin.current = pendingDefaults.coin;
+        }
+        
+        // Aplicar parceiro destino
+        if (pendingDefaults.destinoParceiroId) {
+          setDestinoParceiroId(pendingDefaults.destinoParceiroId);
+          prevDestinoParceiroId.current = pendingDefaults.destinoParceiroId;
+        }
+        
+        // Aplicar bookmaker origem com delay adicional para garantir que o parceiro foi processado
+        if (pendingDefaults.origemBookmakerId) {
+          setTimeout(() => {
+            setOrigemBookmakerId(pendingDefaults.origemBookmakerId!);
+            prevOrigemBookmakerId.current = pendingDefaults.origemBookmakerId!;
+          }, 100);
+        }
+        
+        // Limpar ref após aplicar
+        pendingDefaultsRef.current = null;
+      }, 50);
     }
   }, [tipoTransacao]);
   
@@ -700,9 +748,17 @@ export function CaixaTransacaoDialog({
 
   // Limpar ORIGEM quando DESTINO mudar (somente para SAQUE FIAT)
   // SAQUE CRYPTO usa fluxo invertido: bookmaker é selecionada primeiro
+  // CRÍTICO: Não limpar se estamos no fluxo de defaults (pendingDefaultsRef não foi limpo ainda)
   useEffect(() => {
     if (tipoTransacao === "SAQUE" && tipoMoeda === "FIAT") {
-      setOrigemBookmakerId("");
+      // Se ainda há defaults pendentes ou se já temos origemBookmakerId setado via defaults, não limpar
+      if (pendingDefaultsRef.current?.origemBookmakerId) {
+        return; // Não limpar - o default será aplicado
+      }
+      // Só limpar se houve uma mudança REAL no parceiro (não a primeira aplicação via default)
+      if (prevDestinoParceiroId.current && prevDestinoParceiroId.current !== destinoParceiroId) {
+        setOrigemBookmakerId("");
+      }
     }
   }, [destinoParceiroId, destinoContaId, tipoTransacao, tipoMoeda]);
 
@@ -760,6 +816,12 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "FIAT") return;
     if (!destinoParceiroId || destinoParceiroId === prevDestinoParceiroId.current) return;
     
+    // Se estamos no fluxo de defaults (bookmaker já pré-setado), não fazer auto-select/focus
+    if (pendingDefaultsRef.current?.origemBookmakerId) {
+      prevDestinoParceiroId.current = destinoParceiroId;
+      return;
+    }
+    
     // Verificar quantas contas o parceiro tem
     const contasDoParceiro = contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId);
     
@@ -782,6 +844,12 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "FIAT") return;
     if (!destinoContaId || destinoContaId === prevDestinoContaId.current) return;
     
+    // Se o bookmaker já está pré-setado (fluxo de defaults), não abrir o select
+    if (origemBookmakerId) {
+      prevDestinoContaId.current = destinoContaId;
+      return;
+    }
+    
     if (bookmakerSelectRef.current) {
       setTimeout(() => {
         bookmakerSelectRef.current?.open();
@@ -789,7 +857,7 @@ export function CaixaTransacaoDialog({
     }
     
     prevDestinoContaId.current = destinoContaId;
-  }, [destinoContaId, tipoTransacao, tipoMoeda]);
+  }, [destinoContaId, tipoTransacao, tipoMoeda, origemBookmakerId]);
 
   // SAQUE: quando bookmaker (origem) é selecionada, foca no campo Valor/Quantidade
   useEffect(() => {
