@@ -45,6 +45,11 @@ export const CASH_REAL_TYPES = [
   'AJUSTE_MANUAL',
   'AJUSTE_SALDO',
   'CONCILIACAO',
+  
+  // Ajustes Cambiais (diferenças reais entre valor esperado e recebido)
+  // CRÍTICO: Creditam/debitam wallets, DEVEM aparecer para trilha de auditoria
+  'GANHO_CAMBIAL',
+  'PERDA_CAMBIAL',
 ] as const;
 
 /**
@@ -78,8 +83,8 @@ export const OPERATIONAL_MONEY_TYPES = [
   'PERDA_OPERACIONAL',
   'PERDA_REVERSAO',
   
-  // NOTA: GANHO_CAMBIAL e PERDA_CAMBIAL foram REMOVIDOS daqui.
-  // São ajustes contábeis internos, não cash real.
+  // NOTA: GANHO_CAMBIAL e PERDA_CAMBIAL foram movidos para CASH_REAL_TYPES
+  // pois creditam/debitam wallets e precisam aparecer na trilha de auditoria.
 ] as const;
 
 /**
