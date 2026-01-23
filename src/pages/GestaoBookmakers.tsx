@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
+import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -53,6 +55,9 @@ interface Bookmaker {
 }
 
 export default function GestaoBookmakers() {
+  // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
+  const { workspaceId } = useTabWorkspace();
+  
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
@@ -78,12 +83,26 @@ export default function GestaoBookmakers() {
   const { isSystemOwner } = useAuth();
   const { canCreate, canEdit, canDelete } = useActionAccess();
 
+  // SEGURANÇA: Refetch quando workspace muda
   useEffect(() => {
-    checkAuth();
-    fetchBookmakers();
-    fetchParceiros();
-    fetchBookmakersCatalogo();
-  }, []);
+    if (workspaceId) {
+      checkAuth();
+      fetchBookmakers();
+      fetchParceiros();
+      fetchBookmakersCatalogo();
+    }
+  }, [workspaceId]);
+
+  // Listener para reset de estados locais na troca de workspace
+  useWorkspaceChangeListener(useCallback(() => {
+    console.log("[GestaoBookmakers] Workspace changed - resetting local state");
+    setBookmakers([]);
+    setParceiros([]);
+    setBookmakersCatalogo([]);
+    setSelectedBookmaker(null);
+    setEditingBookmaker(null);
+    setLoading(true);
+  }, []));
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useWorkspaceResetKey } from "@/hooks/useWorkspaceCacheClear";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StickyNote, GitBranch } from "lucide-react";
 import { FluxoTab } from "@/components/anotacoes/FluxoTab";
@@ -14,6 +15,9 @@ import { LivreTab } from "@/components/anotacoes/LivreTab";
  */
 export default function Anotacoes() {
   const [activeTab, setActiveTab] = useState<string>("fluxo");
+  
+  // SEGURANÇA: resetKey incrementa quando workspace muda, forçando remount dos componentes filhos
+  const resetKey = useWorkspaceResetKey();
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -53,18 +57,19 @@ export default function Anotacoes() {
         </div>
 
         {/* Content area - flex-1 para ocupar todo espaço */}
+        {/* key=resetKey força remount completo quando workspace muda */}
         <TabsContent 
           value="fluxo" 
           className="flex-1 min-h-0 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
-          <FluxoTab />
+          <FluxoTab key={`fluxo-${resetKey}`} />
         </TabsContent>
 
         <TabsContent 
           value="livre" 
           className="flex-1 min-h-0 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
-          <LivreTab />
+          <LivreTab key={`livre-${resetKey}`} />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,4 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
+import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { Plus, Search, LayoutGrid, List, ChartBar, User } from "lucide-react";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Button } from "@/components/ui/button";
@@ -49,6 +51,9 @@ interface InvestidorDeal {
 }
 
 export default function GestaoInvestidores() {
+  // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
+  const { workspaceId } = useTabWorkspace();
+  
   const [investidores, setInvestidores] = useState<Investidor[]>([]);
   const [roiData, setRoiData] = useState<Map<string, InvestidorROIMultiMoeda>>(new Map());
   const [dealsData, setDealsData] = useState<Map<string, InvestidorDeal>>(new Map());
@@ -187,9 +192,23 @@ export default function GestaoInvestidores() {
     }
   };
 
+  // SEGURANÇA: Refetch quando workspace muda
   useEffect(() => {
-    fetchInvestidores();
-  }, []);
+    if (workspaceId) {
+      fetchInvestidores();
+    }
+  }, [workspaceId]);
+
+  // Listener para reset de estados locais na troca de workspace
+  useWorkspaceChangeListener(useCallback(() => {
+    console.log("[GestaoInvestidores] Workspace changed - resetting local state");
+    setInvestidores([]);
+    setRoiData(new Map());
+    setDealsData(new Map());
+    setProjetosCount(new Map());
+    setSelectedInvestidor(null);
+    setLoading(true);
+  }, []));
 
   const handleDelete = async () => {
     if (!investidorToDelete) return;
