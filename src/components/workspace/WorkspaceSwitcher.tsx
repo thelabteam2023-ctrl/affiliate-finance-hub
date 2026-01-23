@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { getRoleLabel } from "@/lib/roleLabels";
 import { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { WorkspaceSwitchConfirmDialog } from "./WorkspaceSwitchConfirmDialog";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -64,6 +65,10 @@ export function WorkspaceSwitcher({
 }: WorkspaceSwitcherProps) {
   const [open, setOpen] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  
+  // Estado para modal de confirmação
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [targetWorkspace, setTargetWorkspace] = useState<WorkspaceItem | null>(null);
 
   const currentWorkspace = workspaces.find(
     (w) => w.workspace_id === currentWorkspaceId
@@ -72,16 +77,28 @@ export function WorkspaceSwitcher({
   const hasPendingInvites = pendingInvites.length > 0;
   const hasMultipleOptions = workspaces.length > 1 || hasPendingInvites;
 
-  const handleSwitch = async (workspaceId: string) => {
-    if (workspaceId === currentWorkspaceId) {
+  // Abre o modal de confirmação ao invés de trocar diretamente
+  const handleSwitchRequest = (workspace: WorkspaceItem) => {
+    if (workspace.workspace_id === currentWorkspaceId) {
       setOpen(false);
       return;
     }
+    
+    // Fechar popover e abrir modal de confirmação
+    setOpen(false);
+    setTargetWorkspace(workspace);
+    setConfirmDialogOpen(true);
+  };
 
-    const result = await onSwitch(workspaceId);
+  // Executa a troca após confirmação
+  const handleConfirmedSwitch = async () => {
+    if (!targetWorkspace) return;
+    
+    const result = await onSwitch(targetWorkspace.workspace_id);
     if (result.success) {
-      toast.success("Workspace alterado com sucesso");
-      setOpen(false);
+      toast.success(`Workspace alterado para ${targetWorkspace.workspace_name}`);
+      setConfirmDialogOpen(false);
+      setTargetWorkspace(null);
     } else {
       toast.error(result.error || "Erro ao trocar de workspace");
     }
@@ -132,6 +149,7 @@ export function WorkspaceSwitcher({
   }
 
   return (
+    <>
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
@@ -238,7 +256,7 @@ export function WorkspaceSwitcher({
                 <CommandItem
                   key={workspace.workspace_id}
                   value={workspace.workspace_name}
-                  onSelect={() => handleSwitch(workspace.workspace_id)}
+                  onSelect={() => handleSwitchRequest(workspace)}
                   className="cursor-pointer"
                   disabled={switching}
                 >
@@ -281,5 +299,17 @@ export function WorkspaceSwitcher({
         </Command>
       </PopoverContent>
     </Popover>
+    
+    {/* Modal de confirmação de troca */}
+    <WorkspaceSwitchConfirmDialog
+      open={confirmDialogOpen}
+      onOpenChange={setConfirmDialogOpen}
+      currentWorkspaceName={currentWorkspace?.workspace_name || "Workspace Atual"}
+      targetWorkspaceName={targetWorkspace?.workspace_name || ""}
+      targetWorkspaceRole={targetWorkspace ? getRoleLabel(targetWorkspace.role) : ""}
+      onConfirm={handleConfirmedSwitch}
+      isLoading={switching}
+    />
+    </>
   );
 }
