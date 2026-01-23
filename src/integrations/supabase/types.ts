@@ -8891,9 +8891,10 @@ export type Database = {
       }
       generate_public_id: { Args: never; Returns: string }
       get_bookmaker_saldos: {
-        Args: { p_projeto_id: string }
+        Args: { p_projeto_id?: string }
         Returns: {
           bonus_rollover_started: boolean
+          has_pending_transactions: boolean
           id: string
           logo_url: string
           moeda: string
@@ -8907,6 +8908,29 @@ export type Database = {
           saldo_freebet: number
           saldo_operavel: number
           saldo_real: number
+        }[]
+      }
+      get_bookmaker_saldos_financeiro: {
+        Args: { p_include_zero_balance?: boolean; p_parceiro_id?: string }
+        Returns: {
+          bonus_rollover_started: boolean
+          has_pending_transactions: boolean
+          id: string
+          logo_url: string
+          moeda: string
+          nome: string
+          parceiro_id: string
+          parceiro_nome: string
+          parceiro_primeiro_nome: string
+          projeto_id: string
+          projeto_nome: string
+          saldo_bonus: number
+          saldo_disponivel: number
+          saldo_em_aposta: number
+          saldo_freebet: number
+          saldo_operavel: number
+          saldo_real: number
+          status: string
         }[]
       }
       get_bookmakers_pendentes_conciliacao: {
