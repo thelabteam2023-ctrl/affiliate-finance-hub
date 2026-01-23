@@ -12,6 +12,7 @@ export interface BookmakerUsageInfo {
   tiposProjeto: TipoProjeto[];
   totalVinculos: number;
   projetosAtivos: number;
+  projetoAtivoNome: string | null; // Nome do projeto ativo (se houver)
 }
 
 export interface BookmakerUsageMap {
@@ -22,6 +23,7 @@ interface HistoricoRow {
   bookmaker_id: string;
   data_desvinculacao: string | null;
   tipo_projeto_snapshot: string | null;
+  projeto_id: string | null;
 }
 
 /**
@@ -48,10 +50,10 @@ export function useBookmakerUsageStatus(bookmakerIds: string[]) {
     setError(null);
 
     try {
-      // Buscar histórico de vínculos
+      // Buscar histórico de vínculos com dados do projeto
       const { data: historico, error: histError } = await supabase
         .from("projeto_bookmaker_historico")
-        .select("bookmaker_id, data_desvinculacao, tipo_projeto_snapshot")
+        .select("bookmaker_id, data_desvinculacao, tipo_projeto_snapshot, projeto_id, projetos(nome)")
         .in("bookmaker_id", bookmakerIds);
 
       if (histError) throw histError;
@@ -86,17 +88,23 @@ export function useBookmakerUsageStatus(bookmakerIds: string[]) {
 
       bookmakerIds.forEach((id) => {
         const bookmakerHistorico = (historico || []).filter(
-          (h: HistoricoRow) => h.bookmaker_id === id
+          (h: any) => h.bookmaker_id === id
         );
 
-        const projetosAtivos = bookmakerHistorico.filter(
-          (h: HistoricoRow) => !h.data_desvinculacao
-        ).length;
+        const vinculosAtivos = bookmakerHistorico.filter(
+          (h: any) => !h.data_desvinculacao
+        );
+        const projetosAtivos = vinculosAtivos.length;
+
+        // Pegar o nome do primeiro projeto ativo
+        const projetoAtivoNome = vinculosAtivos.length > 0 
+          ? vinculosAtivos[0]?.projetos?.nome || null 
+          : null;
 
         const tiposProjeto = [
           ...new Set(
             bookmakerHistorico
-              .map((h: HistoricoRow) => h.tipo_projeto_snapshot)
+              .map((h: any) => h.tipo_projeto_snapshot)
               .filter(Boolean) as TipoProjeto[]
           ),
         ];
@@ -105,10 +113,11 @@ export function useBookmakerUsageStatus(bookmakerIds: string[]) {
         const hasOperations = operacoesSet.has(id);
         const isActiveInProject = projetosAtivos > 0;
 
+        // Categoria baseada APENAS em vínculos a projetos (não operações)
         let category: BookmakerUsageCategory;
         if (isActiveInProject) {
           category = "ATIVA";
-        } else if (hasHistory || hasOperations) {
+        } else if (hasHistory) {
           category = "JA_USADA";
         } else {
           category = "VIRGEM";
@@ -122,6 +131,7 @@ export function useBookmakerUsageStatus(bookmakerIds: string[]) {
           tiposProjeto,
           totalVinculos: bookmakerHistorico.length,
           projetosAtivos,
+          projetoAtivoNome,
         };
       });
 
