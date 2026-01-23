@@ -317,14 +317,9 @@ export default function GestaoBookmakers() {
   };
 
   // Retorna o saldo principal baseado na moeda operacional do bookmaker
+  // REGRA: saldo_atual é a fonte canônica para TODAS as moedas (saldo_usd é deprecated)
   const getBookmakerDisplayBalance = (bookmaker: Bookmaker) => {
     const moeda = bookmaker.moeda || "BRL";
-    // EUR e GBP usam saldo_atual (serão tratados na moeda operacional)
-    // USD usa saldo_usd
-    // BRL usa saldo_atual
-    if (moeda === "USD") {
-      return { value: bookmaker.saldo_usd, currency: "USD" };
-    }
     return { value: bookmaker.saldo_atual, currency: moeda };
   };
 
