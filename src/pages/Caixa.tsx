@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { usePendingTransactions, useInvalidatePendingTransactions } from "@/hooks/usePendingTransactions";
+import { useTabWorkspace } from "@/hooks/useTabWorkspace";
+import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { CASH_REAL_TYPES } from "@/lib/cashOperationalTypes";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
@@ -88,7 +90,9 @@ export default function Caixa() {
   
   // Ler aba inicial da URL (?tab=conciliacao)
   const initialTab = searchParams.get("tab") || "analise";
-  // Note: workspaceId não é necessário aqui pois as views usam get_current_workspace()
+  
+  // Workspace reactivo para isolamento multi-tenant
+  const { workspaceId } = useTabWorkspace();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
@@ -297,9 +301,26 @@ export default function Caixa() {
     }
   };
 
+  // SEGURANÇA: workspaceId como dependência garante refetch na troca de tenant
   useEffect(() => {
-    fetchData();
-  }, [dataInicio, dataFim]);
+    if (workspaceId) {
+      fetchData();
+    }
+  }, [dataInicio, dataFim, workspaceId]);
+
+  // Listener para evento global de troca de workspace
+  // Garante reset completo de estados locais não cobertos pelo React Query
+  useWorkspaceChangeListener(useCallback(() => {
+    console.log("[Caixa] Workspace changed - resetting local state");
+    setTransacoes([]);
+    setSaldosFiat([]);
+    setSaldosCrypto([]);
+    setSaldosBookmakersPorMoeda([]);
+    setSaldoBookmakers(0);
+    setSaldoContasParceiros(0);
+    setSaldoWalletsParceiros(0);
+    setLoading(true);
+  }, []));
 
   // Handle navigation state to open dialog
   useEffect(() => {
