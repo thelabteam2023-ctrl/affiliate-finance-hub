@@ -229,7 +229,9 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
             `)
             .eq("workspace_id", workspaceId!)
             .eq("parceiro_id", parceiroId) // CRÍTICO: Filtrar por parceiro!
-            .eq("status", "ativo")
+            // SAQUE: Permitir casas ativas OU limitadas (ambas podem ter saldo para saque)
+            // Apenas excluir casas com status 'encerrada' ou 'bloqueada'
+            .in("status", ["ativo", "limitada"])
             .gt("saldo_atual", 0); // Saque sempre requer saldo_atual > 0
 
           // Filtrar por moeda operacional se especificado
