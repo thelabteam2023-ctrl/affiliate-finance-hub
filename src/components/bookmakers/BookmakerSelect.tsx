@@ -145,16 +145,18 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     const prev = prevContextRef.current;
     
     // Na montagem inicial, apenas marcar como inicializado
+    // CRÍTICO: Se um value já foi fornecido na montagem, NÃO limpar
     if (!prev.initialized) {
       prevContextRef.current = { 
         parceiroId, 
         moedaOperacional, 
         initialized: true 
       };
+      // Se já temos um value pré-setado, não fazer nada - deixar o fetchDisplayData cuidar da exibição
       return;
     }
     
-    // Detectar se houve mudança REAL de contexto
+    // Detectar se houve mudança REAL de contexto (após inicialização)
     const contextChanged = prev.parceiroId !== parceiroId || prev.moedaOperacional !== moedaOperacional;
     
     if (contextChanged) {
@@ -166,7 +168,10 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
       lastFetchedValue.current = "";
       
       // Se o value atual não pode mais existir no novo contexto, limpar
-      if (value) {
+      // MAS: Se o novo parceiroId foi setado junto com o value (fluxo de defaults),
+      // NÃO limpar o value - confiar que o parent sabe o que está fazendo
+      const isInitialDefaultFlow = prev.parceiroId === undefined && parceiroId !== undefined;
+      if (value && !isInitialDefaultFlow) {
         onValueChange("");
       }
     }
