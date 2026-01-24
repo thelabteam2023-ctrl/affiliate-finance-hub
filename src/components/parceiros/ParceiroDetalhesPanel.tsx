@@ -123,6 +123,46 @@ export function ParceiroDetalhesPanel({
     return data.bookmakers.filter(b => (b.moeda || "BRL") === filtroMoeda);
   }, [data?.bookmakers, filtroMoeda]);
 
+  // KPIs filtrados por moeda - recalcula com base nos bookmakers filtrados
+  const kpisFiltrados = useMemo(() => {
+    if (filtroMoeda === "todas") {
+      return {
+        depositado: depositadoEntries,
+        sacado: sacadoEntries,
+        saldo: saldoEntries,
+        resultado: resultadoEntries,
+        apostas: data?.qtd_apostas_total ?? 0,
+      };
+    }
+    
+    // Agregar valores apenas dos bookmakers da moeda selecionada
+    let depositadoTotal = 0;
+    let sacadoTotal = 0;
+    let saldoTotal = 0;
+    let resultadoTotal = 0;
+    let apostasTotal = 0;
+    
+    bookmakersFiltrados.forEach(bm => {
+      depositadoTotal += bm.total_depositado ?? 0;
+      sacadoTotal += bm.total_sacado ?? 0;
+      saldoTotal += bm.saldo_atual ?? 0;
+      resultadoTotal += bm.lucro_prejuizo ?? 0;
+      apostasTotal += bm.qtd_apostas ?? 0;
+    });
+    
+    return {
+      depositado: [{ currency: filtroMoeda, value: depositadoTotal }],
+      sacado: [{ currency: filtroMoeda, value: sacadoTotal }],
+      saldo: [{ currency: filtroMoeda, value: saldoTotal }],
+      resultado: [{ currency: filtroMoeda, value: resultadoTotal }],
+      apostas: apostasTotal,
+    };
+  }, [filtroMoeda, bookmakersFiltrados, depositadoEntries, sacadoEntries, saldoEntries, resultadoEntries, data?.qtd_apostas_total]);
+
+  // Determinar lucro/prejuízo baseado nos KPIs filtrados
+  const hasLucroFiltrado = useMemo(() => kpisFiltrados.resultado.some(e => e.value > 0), [kpisFiltrados.resultado]);
+  const hasPrejuizoFiltrado = useMemo(() => kpisFiltrados.resultado.some(e => e.value < 0), [kpisFiltrados.resultado]);
+
   const handleBookmakersDataChange = useCallback(() => {
     if (parceiroId) {
       parceiroCache.invalidateCache(parceiroId);
@@ -376,11 +416,11 @@ export function ParceiroDetalhesPanel({
                 <div className="grid gap-2 grid-cols-2 lg:grid-cols-5">
                   {/* Depositado */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
-                    <ArrowDownToLine className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                    <ArrowDownToLine className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Depositado</p>
                       <NativeCurrencyKpi
-                        entries={depositadoEntries}
+                        entries={kpisFiltrados.depositado}
                         size="sm"
                         masked={!showSensitiveData}
                         showDashOnZero
@@ -390,11 +430,11 @@ export function ParceiroDetalhesPanel({
 
                   {/* Sacado */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
-                    <ArrowUpFromLine className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                    <ArrowUpFromLine className="h-4 w-4 text-success shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Sacado</p>
                       <NativeCurrencyKpi
-                        entries={sacadoEntries}
+                        entries={kpisFiltrados.sacado}
                         size="sm"
                         masked={!showSensitiveData}
                         showDashOnZero
@@ -408,7 +448,7 @@ export function ParceiroDetalhesPanel({
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-primary/80 font-medium uppercase tracking-wide">💰 Saldo Atual</p>
                       <NativeCurrencyKpi
-                        entries={saldoEntries}
+                        entries={kpisFiltrados.saldo}
                         size="sm"
                         masked={!showSensitiveData}
                         className="font-bold"
@@ -419,7 +459,7 @@ export function ParceiroDetalhesPanel({
                   {/* Resultado */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
                     {showSensitiveData ? (
-                      hasLucro && !hasPrejuizo ? (
+                      hasLucroFiltrado && !hasPrejuizoFiltrado ? (
                         <TrendingUp className="h-4 w-4 text-success shrink-0 mt-0.5" />
                       ) : (
                         <TrendingDown className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
@@ -430,7 +470,7 @@ export function ParceiroDetalhesPanel({
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Resultado</p>
                       <NativeCurrencyKpi
-                        entries={resultadoEntries}
+                        entries={kpisFiltrados.resultado}
                         size="sm"
                         variant="auto"
                         masked={!showSensitiveData}
@@ -441,10 +481,10 @@ export function ParceiroDetalhesPanel({
 
                   {/* Apostas */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
-                    <Target className="h-4 w-4 text-purple-500 shrink-0 mt-0.5" />
+                    <Target className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Apostas</p>
-                      <p className="text-sm font-semibold">{data.qtd_apostas_total.toLocaleString("pt-BR")}</p>
+                      <p className="text-sm font-semibold">{kpisFiltrados.apostas.toLocaleString("pt-BR")}</p>
                     </div>
                   </div>
                 </div>
