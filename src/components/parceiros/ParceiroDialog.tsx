@@ -68,7 +68,7 @@ interface RedeCrypto {
 
 interface ParceiroDialogProps {
   open: boolean;
-  onClose: () => void;
+  onClose: (options?: { saved?: boolean }) => void;
   parceiro: any | null;
   viewMode?: boolean;
   initialTab?: "dados" | "bancos" | "crypto";
@@ -762,7 +762,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         description: "Os dados foram salvos com sucesso.",
       });
 
-      onClose();
+      onClose({ saved: true });
     } catch (error: any) {
       let errorMessage = error.message;
       
@@ -1186,8 +1186,14 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     }
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onClose(); // Sem saved = apenas fechou sem salvar
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -1773,7 +1779,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
           </Tabs>
 
           <div className="flex gap-3 mt-6">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+            <Button type="button" variant="outline" onClick={() => onClose()} className="flex-1">
               {viewMode ? "Fechar" : "Cancelar"}
             </Button>
             {!viewMode && (parceiro || parceiroId) && (

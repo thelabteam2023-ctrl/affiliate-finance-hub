@@ -507,15 +507,20 @@ export default function GestaoParceiros() {
     }
   };
 
-  const handleDialogClose = useCallback(() => {
+  // OTIMIZAÇÃO: Só recarrega dados quando houve salvamento real
+  const handleDialogClose = useCallback((options?: { saved?: boolean }) => {
     const editedParceiroId = editingParceiro?.id;
     setDialogOpen(false);
     setEditingParceiro(null);
     setViewMode(false);
-    fetchParceiros();
-    fetchSaldosData();
-    if (editedParceiroId) {
-      parceiroCache.invalidateCache(editedParceiroId);
+    
+    // Só recarrega dados se houve salvamento (evita reload desnecessário em visualização)
+    if (options?.saved) {
+      fetchParceiros();
+      fetchSaldosData();
+      if (editedParceiroId) {
+        parceiroCache.invalidateCache(editedParceiroId);
+      }
     }
   }, [editingParceiro?.id, parceiroCache]);
 
