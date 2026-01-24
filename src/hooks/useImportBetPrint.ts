@@ -138,19 +138,51 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       
       setImagePreview(base64);
 
-      // Call the edge function with validated base64
-      const { data, error } = await supabase.functions.invoke("parse-betting-slip", {
-        body: { imageBase64: base64 }
-      });
+      // Call the edge function with validated base64 (with automatic retry)
+      let data: any = null;
+      let error: any = null;
+      let attempts = 0;
+      const maxAttempts = 2;
+      
+      while (attempts < maxAttempts) {
+        attempts++;
+        console.log(`[useImportBetPrint] Attempt ${attempts}/${maxAttempts}`);
+        
+        const result = await supabase.functions.invoke("parse-betting-slip", {
+          body: { imageBase64: base64 }
+        });
+        
+        data = result.data;
+        error = result.error;
+        
+        // If successful or it's a non-retriable error, break
+        if (!error || (error.message && !error.message.includes("Failed to send"))) {
+          break;
+        }
+        
+        // Wait before retry on network errors
+        if (attempts < maxAttempts) {
+          console.log("[useImportBetPrint] Network error, retrying in 1s...");
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
 
       if (error) {
-        console.error("[useImportBetPrint] Edge function error:", error);
+        console.error("[useImportBetPrint] Edge function error after retries:", {
+          message: error.message,
+          name: error.name,
+          status: error.status,
+          details: error.details || error.context || "none"
+        });
+        
         // Provide user-friendly error message instead of technical SDK message
         let userMessage = "Erro ao processar imagem";
-        if (error.message?.includes("Failed to send")) {
-          userMessage = "Erro de conexão ao processar imagem. Verifique sua internet e tente novamente.";
+        if (error.message?.includes("Failed to send") || error.message?.includes("fetch")) {
+          userMessage = "Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.";
         } else if (error.message?.includes("timeout") || error.message?.includes("Timeout")) {
           userMessage = "A análise da imagem demorou demais. Tente novamente.";
+        } else if (error.message?.includes("Invalid") || error.status === 400) {
+          userMessage = "Formato de imagem inválido. Tente colar o print novamente.";
         } else if (error.message) {
           userMessage = error.message;
         }
