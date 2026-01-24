@@ -11,6 +11,7 @@ import {
   Plus,
   ShieldCheck,
   ShieldAlert,
+  ShieldBan,
   AlertCircle,
   ChevronDown,
   ChevronUp,
@@ -266,18 +267,41 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
                     </TooltipContent>
                   </Tooltip>
                   {/* Botão Status */}
-                  <Popover>
-                    <PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-6 px-1.5" disabled={editingStatus === bm.id}>{bm.status === "ativo" ? <ShieldCheck className="h-4 w-4 text-success" /> : <ShieldAlert className="h-4 w-4 text-warning" />}</Button></PopoverTrigger>
-                    <PopoverContent className="w-auto p-3" align="end">
-                      <div className="space-y-2">
-                        <p className="text-xs text-muted-foreground">Alterar status para <span className="font-semibold">{bm.status === "ativo" ? "LIMITADA" : "ATIVO"}</span>?</p>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={(e) => { const trigger = document.querySelector(`[aria-expanded="true"]`) as HTMLButtonElement; trigger?.click(); }}>Cancelar</Button>
-                          <Button size="sm" className="h-7 text-xs" onClick={() => handleToggleStatus(bm.id, bm.status)} disabled={editingStatus === bm.id}>Confirmar</Button>
+                  {bm.status === "bloqueada" ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-6 px-1.5 cursor-not-allowed" disabled>
+                          <ShieldBan className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Bloqueada (parceiro inativo)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-6 px-1.5" disabled={editingStatus === bm.id}>
+                          {bm.status === "ativo" ? (
+                            <ShieldCheck className="h-4 w-4 text-success" />
+                          ) : (
+                            <ShieldAlert className="h-4 w-4 text-warning" />
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-3" align="end">
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground">
+                            Alterar status para <span className="font-semibold">{bm.status === "ativo" ? "LIMITADA" : "ATIVO"}</span>?
+                          </p>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { const trigger = document.querySelector(`[aria-expanded="true"]`) as HTMLButtonElement; trigger?.click(); }}>Cancelar</Button>
+                            <Button size="sm" className="h-7 text-xs" onClick={() => handleToggleStatus(bm.id, bm.status)} disabled={editingStatus === bm.id}>Confirmar</Button>
+                          </div>
                         </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
               ))}
               {hasMoreVinculados && !showAllVinculados && <Button variant="ghost" size="sm" className="w-full h-7 text-xs text-muted-foreground" onClick={() => setShowAllVinculados(true)}><ChevronDown className="h-3 w-3 mr-1" />Ver mais ({filteredVinculados.length - 6})</Button>}
