@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,31 +23,12 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
-
-interface BookmakerVinculado {
-  id: string;
-  nome: string;
-  saldo_atual: number;  // Fonte única normalizada
-  status: string;
-  moeda: string;
-  login_username: string;
-  login_password_encrypted: string;
-  bookmaker_catalogo_id: string | null;
-  instance_identifier: string | null; // MULTI-CONTA: identificador de instância
-  logo_url?: string;
-}
-
-interface BookmakerCatalogo {
-  id: string;
-  nome: string;
-  logo_url: string | null;
-  status: string;
-}
-
-interface BookmakersData {
-  vinculados: BookmakerVinculado[];
-  disponiveis: BookmakerCatalogo[];
-}
+import { 
+  getGlobalBookmakersCache, 
+  BookmakersData, 
+  BookmakerVinculado, 
+  BookmakerCatalogo 
+} from "@/hooks/useParceiroTabsCache";
 
 interface ParceiroBookmakersTabProps {
   parceiroId: string;
@@ -57,15 +38,26 @@ interface ParceiroBookmakersTabProps {
   onDataChange?: () => void;
 }
 
-/*
- * ARQUITETURA: Tab de Bookmakers
+/**
+ * ARQUITETURA: Tab de Bookmakers com Cache
  * 
- * Este componente APENAS retorna conteúdo.
+ * Este componente usa um cache global (LRU) para evitar refetch ao alternar entre abas.
+ * Os dados só são recarregados quando:
+ * - O parceiroId muda
+ * - O usuário clica em "Atualizar" explicitamente
+ * - O cache expira (TTL de 5 minutos)
+ * - Ocorre uma mutação (onDataChange)
+ * 
  * O layout (altura, scroll) é controlado pelo container pai (TabViewport).
  */
-export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateVinculo, onDataChange }: ParceiroBookmakersTabProps) {
+export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({ 
+  parceiroId, 
+  showSensitiveData, 
+  onCreateVinculo, 
+  onDataChange 
+}: ParceiroBookmakersTabProps) {
   const [data, setData] = useState<BookmakersData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [searchVinculados, setSearchVinculados] = useState("");
@@ -77,7 +69,36 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
   const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmaker: BookmakerVinculado | null }>({ open: false, bookmaker: null });
   const { toast } = useToast();
 
-  const fetchData = async () => {
+  // Referências para controle de cache
+  const lastFetchedIdRef = useRef<string | null>(null);
+  const isFetchingRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  const fetchData = useCallback(async (forceRefresh = false) => {
+    if (!parceiroId) return;
+    
+    if (isFetchingRef.current) return;
+    
+    const cache = getGlobalBookmakersCache();
+    
+    // Verificar cache primeiro
+    if (!forceRefresh) {
+      const cached = cache.get(parceiroId);
+      if (cached) {
+        setData(cached);
+        setLoading(false);
+        setError(null);
+        lastFetchedIdRef.current = parceiroId;
+        return;
+      }
+    }
+    
+    // Evitar refetch desnecessário
+    if (!forceRefresh && lastFetchedIdRef.current === parceiroId && data) {
+      return;
+    }
+    
+    isFetchingRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -111,16 +132,53 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
       // Todas as casas do catálogo estão disponíveis para criar nova instância
       const disponiveis = catalogoData || [];
 
-      setData({ vinculados: vinculadosComLogo, disponiveis });
+      const newData: BookmakersData = { 
+        vinculados: vinculadosComLogo, 
+        disponiveis 
+      };
+
+      // Salvar no cache global
+      cache.set(parceiroId, newData);
+      lastFetchedIdRef.current = parceiroId;
+      
+      if (isMountedRef.current) {
+        setData(newData);
+      }
     } catch (err: any) {
       console.error("Erro ao carregar bookmakers:", err);
-      setError(err.message || "Erro ao carregar dados");
+      if (isMountedRef.current) {
+        setError(err.message || "Erro ao carregar dados");
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+      isFetchingRef.current = false;
     }
-  };
+  }, [parceiroId, data]);
 
-  useEffect(() => { fetchData(); }, [parceiroId]);
+  // Effect: Carregar dados apenas quando parceiroId muda
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    const cache = getGlobalBookmakersCache();
+    const cached = cache.get(parceiroId);
+    
+    if (cached && lastFetchedIdRef.current !== parceiroId) {
+      setData(cached);
+      lastFetchedIdRef.current = parceiroId;
+    } else if (lastFetchedIdRef.current !== parceiroId) {
+      fetchData(false);
+    }
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [parceiroId]);
+
+  const handleRefresh = useCallback(() => {
+    fetchData(true);
+  }, [fetchData]);
 
   const handleToggleStatus = async (bookmakerId: string, currentStatus: string) => {
     setEditingStatus(bookmakerId);
@@ -130,7 +188,12 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
       const { error } = await supabase.from("bookmakers").update({ status: newStatus }).eq("id", bookmakerId);
       if (error) throw error;
       toast({ title: "Status atualizado", description: `Status alterado para ${newStatus.toUpperCase()}` });
-      fetchData();
+      
+      // Invalidar cache e recarregar
+      const cache = getGlobalBookmakersCache();
+      cache.delete(parceiroId);
+      lastFetchedIdRef.current = null;
+      fetchData(true);
       onDataChange?.();
     } catch (error: any) {
       toast({ title: "Erro ao atualizar status", description: error.message, variant: "destructive" });
@@ -165,8 +228,8 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
 
   const hasCredentials = (bm: BookmakerVinculado) => bm.login_username && bm.login_username.trim();
 
-  // LOADING
-  if (loading) {
+  // LOADING (apenas no primeiro carregamento)
+  if (loading && !data) {
     return (
       <div className="h-full flex flex-col gap-3 p-1">
         <div className="grid grid-cols-2 gap-3">
@@ -178,12 +241,12 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
   }
 
   // ERROR
-  if (error) {
+  if (error && !data) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-destructive gap-3">
         <AlertCircle className="h-8 w-8 opacity-50" />
         <p className="text-sm">Erro ao carregar bookmakers</p>
-        <Button variant="outline" size="sm" onClick={fetchData}><RefreshCw className="h-3 w-3 mr-2" />Tentar novamente</Button>
+        <Button variant="outline" size="sm" onClick={handleRefresh}><RefreshCw className="h-3 w-3 mr-2" />Tentar novamente</Button>
       </div>
     );
   }
@@ -321,9 +384,9 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
           onOpenChange={(open) => setHistoricoDialog({ open, bookmaker: open ? historicoDialog.bookmaker : null })}
           bookmakerId={historicoDialog.bookmaker?.id || ""}
           bookmakerNome={historicoDialog.bookmaker?.nome || ""}
-          logoUrl={historicoDialog.bookmaker?.logo_url}
+          logoUrl={historicoDialog.bookmaker?.logo_url || null}
         />
       </div>
     </TooltipProvider>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,66 +10,67 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-interface Transacao {
-  id: string;
-  tipo_transacao: string;
-  valor: number;
-  moeda: string;
-  tipo_moeda: string;
-  valor_usd: number | null;
-  data_transacao: string;
-  status: string;
-  descricao: string | null;
-  origem_bookmaker_id: string | null;
-  destino_bookmaker_id: string | null;
-  origem_tipo: string | null;
-  destino_tipo: string | null;
-  origem_parceiro_id: string | null;
-  destino_parceiro_id: string | null;
-  origem_conta_bancaria_id: string | null;
-  destino_conta_bancaria_id: string | null;
-  origem_wallet_id: string | null;
-  destino_wallet_id: string | null;
-  nome_investidor: string | null;
-  ajuste_direcao: string | null;
-  ajuste_motivo: string | null;
-}
-
-interface ContaBancaria {
-  id: string;
-  banco: string;
-  titular: string;
-  parceiro_id: string;
-}
-
-interface WalletCrypto {
-  id: string;
-  exchange: string;
-  endereco: string;
-  network?: string;
-  parceiro_id: string;
-}
-
-interface MovimentacoesData {
-  transacoes: Transacao[];
-  bookmakerNames: Map<string, string>;
-  parceiroNames: Map<string, string>;
-  contasBancarias: ContaBancaria[];
-  walletsCrypto: WalletCrypto[];
-}
+import { 
+  getGlobalMovimentacoesCache, 
+  MovimentacoesData, 
+  Transacao, 
+  ContaBancaria, 
+  WalletCrypto 
+} from "@/hooks/useParceiroTabsCache";
 
 interface ParceiroMovimentacoesTabProps {
   parceiroId: string;
   showSensitiveData: boolean;
 }
 
-export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: ParceiroMovimentacoesTabProps) {
+/**
+ * ARQUITETURA: Tab de Movimentações com Cache
+ * 
+ * Este componente usa um cache global (LRU) para evitar refetch ao alternar entre abas.
+ * Os dados só são recarregados quando:
+ * - O parceiroId muda
+ * - O usuário clica em "Atualizar" explicitamente
+ * - O cache expira (TTL de 5 minutos)
+ */
+export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({ 
+  parceiroId, 
+  showSensitiveData 
+}: ParceiroMovimentacoesTabProps) {
   const [data, setData] = useState<MovimentacoesData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Referência para evitar race conditions
+  const lastFetchedIdRef = useRef<string | null>(null);
+  const isFetchingRef = useRef(false);
+  const isMountedRef = useRef(true);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async (forceRefresh = false) => {
+    if (!parceiroId) return;
+    
+    // Evitar fetch duplicado
+    if (isFetchingRef.current) return;
+    
+    const cache = getGlobalMovimentacoesCache();
+    
+    // Verificar cache primeiro (se não for refresh forçado)
+    if (!forceRefresh) {
+      const cached = cache.get(parceiroId);
+      if (cached) {
+        setData(cached);
+        setLoading(false);
+        setError(null);
+        lastFetchedIdRef.current = parceiroId;
+        return;
+      }
+    }
+    
+    // Evitar refetch se já buscamos esse parceiro e não é refresh forçado
+    if (!forceRefresh && lastFetchedIdRef.current === parceiroId && data) {
+      return;
+    }
+    
+    isFetchingRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -159,24 +160,59 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
         walletsCryptoResult = walletsData || [];
       }
 
-      setData({
+      const newData: MovimentacoesData = {
         transacoes: transacoesData || [],
         bookmakerNames: bmNames,
         parceiroNames: pNames,
         contasBancarias: contasBancariasResult,
         walletsCrypto: walletsCryptoResult,
-      });
+      };
+
+      // Salvar no cache global
+      cache.set(parceiroId, newData);
+      lastFetchedIdRef.current = parceiroId;
+      
+      if (isMountedRef.current) {
+        setData(newData);
+      }
     } catch (err: any) {
       console.error("Erro ao carregar movimentações:", err);
-      setError(err.message || "Erro ao carregar dados");
+      if (isMountedRef.current) {
+        setError(err.message || "Erro ao carregar dados");
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+      isFetchingRef.current = false;
     }
-  };
+  }, [parceiroId, data]);
 
+  // Effect: Carregar dados apenas quando parceiroId muda
   useEffect(() => {
-    fetchData();
+    isMountedRef.current = true;
+    
+    // Verificar cache antes de fazer fetch
+    const cache = getGlobalMovimentacoesCache();
+    const cached = cache.get(parceiroId);
+    
+    if (cached && lastFetchedIdRef.current !== parceiroId) {
+      // Temos cache - usar imediatamente
+      setData(cached);
+      lastFetchedIdRef.current = parceiroId;
+    } else if (lastFetchedIdRef.current !== parceiroId) {
+      // Sem cache e parceiro diferente - buscar
+      fetchData(false);
+    }
+    
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [parceiroId]);
+
+  const handleRefresh = useCallback(() => {
+    fetchData(true);
+  }, [fetchData]);
 
   const formatCurrency = (value: number, moeda: string = "BRL") => {
     const symbol = moeda === "USD" || moeda === "USDT" ? "$" : "R$";
@@ -442,8 +478,8 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
     );
   };
 
-  // LOADING
-  if (loading) {
+  // LOADING (apenas no primeiro carregamento)
+  if (loading && !data) {
     return (
       <div className="h-full flex flex-col gap-2 overflow-y-auto p-1">
         {[...Array(5)].map((_, i) => (
@@ -454,12 +490,12 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
   }
 
   // ERROR
-  if (error) {
+  if (error && !data) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-destructive gap-3">
         <AlertCircle className="h-8 w-8 opacity-50" />
         <p className="text-sm">Erro ao carregar movimentações</p>
-        <Button variant="outline" size="sm" onClick={fetchData}>
+        <Button variant="outline" size="sm" onClick={handleRefresh}>
           <RefreshCw className="h-3 w-3 mr-2" />
           Tentar novamente
         </Button>
@@ -496,48 +532,56 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
                 {/* Header: Badge + Info Icon + Data */}
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex items-center gap-1.5">
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs font-medium ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}
-                    >
+                    <Badge variant="outline" className={`text-[10px] ${getTipoBadgeColor(transacao.tipo_transacao, transacao.status)}`}>
                       {getTipoLabel(transacao.tipo_transacao, transacao)}
                     </Badge>
-                    
-                    {/* Info icon com descrição/motivo ao lado do badge */}
-                    {(transacao.descricao || transacao.ajuste_motivo) && (
+                    {getMoedaBadge(transacao)}
+                    {transacao.descricao && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div className="flex items-center justify-center h-5 w-5 rounded-full bg-muted/50 hover:bg-muted cursor-help transition-colors">
-                            <Info className="h-3 w-3 text-muted-foreground" />
-                          </div>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-[300px]">
-                          <p className="text-xs whitespace-pre-wrap">
-                            {transacao.ajuste_motivo || transacao.descricao}
-                          </p>
+                        <TooltipContent side="right" className="max-w-[200px]">
+                          <p className="text-xs">{transacao.descricao}</p>
                         </TooltipContent>
                       </Tooltip>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  <span className="text-[10px] text-muted-foreground shrink-0">
                     {formatDate(transacao.data_transacao)}
                   </span>
                 </div>
 
-                {/* Flow: Origem → Destino */}
-                <div className="flex items-center gap-2 mb-3">
+                {/* Flow: Origem → Valor → Destino */}
+                <div className="flex items-center gap-3">
                   <FlowLabel label={origem} align="left" />
-                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <FlowLabel label={destino} align="left" />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-foreground">
+                      {maskCurrency(transacao)}
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <FlowLabel label={destino} align="right" />
                 </div>
 
-                {/* Footer: Valor */}
-                <div className="flex items-center">
-                  <span className="text-sm font-semibold flex items-center">
-                    {maskCurrency(transacao)}
-                    {getMoedaBadge(transacao)}
-                  </span>
-                </div>
+                {/* Footer: Status Badge */}
+                {transacao.status !== "CONFIRMADO" && (
+                  <div className="mt-2 flex justify-end">
+                    <Badge
+                      variant="outline"
+                      className={`text-[9px] ${
+                        transacao.status === "PENDENTE"
+                          ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/30"
+                          : transacao.status === "RECUSADO"
+                          ? "bg-destructive/10 text-destructive border-destructive/30"
+                          : "bg-muted text-muted-foreground border-muted"
+                      }`}
+                    >
+                      {transacao.status}
+                    </Badge>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -545,4 +589,4 @@ export function ParceiroMovimentacoesTab({ parceiroId, showSensitiveData }: Parc
       </div>
     </TooltipProvider>
   );
-}
+});
