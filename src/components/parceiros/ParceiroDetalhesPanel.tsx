@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, memo } from "react";
+import { useState, useCallback, useMemo, memo, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ParceiroFinanceiroConsolidado, saldosToEntries } from "@/hooks/useParceiroFinanceiroConsolidado";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +70,12 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const [filtroMoeda, setFiltroMoeda] = useState<string>("todas");
   const { canEdit, canDelete } = useActionAccess();
   const { convertToBRL, dataSource, isUsingFallback, rates } = useCotacoes();
+
+  // Reset currency filter when partner changes to prevent filtering with a currency
+  // that may not exist for the new partner
+  useEffect(() => {
+    setFiltroMoeda("todas");
+  }, [parceiroId]);
   
   // Converter rates para um mapa simples de moeda → cotação em BRL
   const ratesMap: Record<string, number> = {
