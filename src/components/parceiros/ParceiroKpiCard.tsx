@@ -83,9 +83,15 @@ export function ParceiroKpiCard({
   // Filtrar entries com valor zero
   const nonZeroEntries = entries.filter(e => e.value !== 0);
   
+  // Determinar se está mostrando valor consolidado em BRL
+  const isConsolidado = consolidadoBRL !== undefined && showBreakdown;
+  
   // Determinar o total para exibição
-  const displayValue = consolidadoBRL ?? entries.reduce((sum, e) => sum + e.value, 0);
-  const displayCurrency = consolidadoBRL !== undefined ? "BRL" : (entries[0]?.currency || "BRL");
+  // Quando consolidado, usa o valor em BRL; senão, soma os entries na moeda nativa
+  const displayValue = isConsolidado ? consolidadoBRL : entries.reduce((sum, e) => sum + e.value, 0);
+  
+  // Moeda de exibição: BRL quando consolidado, senão a moeda do primeiro entry
+  const displayCurrency = isConsolidado ? "BRL" : (entries[0]?.currency || "BRL");
   
   // Determinar cor baseada no variant
   const getValueColor = () => {
