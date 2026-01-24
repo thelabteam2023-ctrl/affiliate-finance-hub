@@ -102,12 +102,31 @@ export function useResetOperacional(): UseResetOperacionalReturn {
         throw new Error(result.error || 'Erro desconhecido no reset');
       }
 
-      // Se não foi dry run, invalidar caches
+      // Se não foi dry run, invalidar TODOS os caches relevantes
       if (!dryRun) {
+        // Caches de projeto
         await queryClient.invalidateQueries({ queryKey: ['projeto-resultado', projetoId] });
         await queryClient.invalidateQueries({ queryKey: ['projeto-breakdowns', projetoId] });
-        await queryClient.invalidateQueries({ queryKey: ['bookmaker-saldos', projetoId] });
+        await queryClient.invalidateQueries({ queryKey: ['projeto-painel-contas', projetoId] });
+        
+        // Caches de bookmakers (globais - afeta todos os parceiros)
+        await queryClient.invalidateQueries({ queryKey: ['bookmaker-saldos'] });
+        await queryClient.invalidateQueries({ queryKey: ['bookmaker-saldos-financeiro'] });
+        
+        // Caches de parceiros (CRÍTICO para evitar saldos stale)
+        await queryClient.invalidateQueries({ queryKey: ['parceiro-financeiro'] });
+        await queryClient.invalidateQueries({ queryKey: ['parceiro-consolidado'] });
+        
+        // Caches operacionais
         await queryClient.invalidateQueries({ queryKey: ['apostas'] });
+        await queryClient.invalidateQueries({ queryKey: ['cashback-manual'] });
+        await queryClient.invalidateQueries({ queryKey: ['giros-gratis'] });
+        await queryClient.invalidateQueries({ queryKey: ['bonus'] });
+        
+        // Disparar evento global para componentes com state local
+        window.dispatchEvent(new CustomEvent('lovable:reset-operacional-completed', {
+          detail: { projetoId, bookmakers: result.bookmakers_afetados }
+        }));
         
         toast.success('Reset operacional concluído', {
           description: result.mensagem,
