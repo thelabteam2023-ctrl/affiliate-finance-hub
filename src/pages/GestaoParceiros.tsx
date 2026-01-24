@@ -206,147 +206,101 @@ export default function GestaoParceiros() {
 
   const fetchROIData = async () => {
     try {
-      const { data: financialData, error: financialError } = await supabase
-        .from("cash_ledger")
-        .select("*")
-        .in("tipo_transacao", ["DEPOSITO", "SAQUE"])
-        .eq("status", "CONFIRMADO");
-
-      if (financialError) throw financialError;
-
+      // =====================================================================
+      // NOVO: Usar view de resultado operacional PURO
+      // Inclui APENAS: apostas + giros + cashback
+      // Exclui: depósitos, saques, FX, ajustes
+      // =====================================================================
+      
+      // Step 1: Get bookmakers with their operational results
       const { data: bookmakersData, error: bookmakersError } = await supabase
         .from("bookmakers")
-        .select("parceiro_id, saldo_atual, saldo_usd, moeda, status");
+        .select("id, parceiro_id, saldo_atual, moeda, status");
 
       if (bookmakersError) throw bookmakersError;
 
-      const roiMap = new Map<string, ParceiroROI>();
-      
-      // Multi-currency financial aggregation
-      const parceiroFinancials = new Map<string, { 
-        depositado: SaldosPorMoeda; 
-        sacado: SaldosPorMoeda;
-      }>();
-      
-      financialData?.forEach((tx) => {
-        // Determine execution currency based on 3-layer model
-        let moedaExec: string;
-        if (tx.tipo_moeda === "CRYPTO") {
-          moedaExec = "USD"; // Crypto transactions are treated as USD
-        } else if (tx.moeda_destino && tx.tipo_transacao === "DEPOSITO") {
-          moedaExec = tx.moeda_destino;
-        } else if (tx.moeda_origem && tx.tipo_transacao === "SAQUE") {
-          moedaExec = tx.moeda_origem;
-        } else {
-          moedaExec = tx.moeda || "BRL";
-        }
-        
-        // Use execution layer values when available
-        const valorExec = Number(tx.valor_destino) || Number(tx.valor_origem) || Number(tx.valor) || 0;
-        
-        if (tx.tipo_transacao === "DEPOSITO" && tx.origem_parceiro_id) {
-          const current = parceiroFinancials.get(tx.origem_parceiro_id) || { 
-            depositado: createEmptySaldos(), 
-            sacado: createEmptySaldos() 
-          };
-          current.depositado[moedaExec] = (current.depositado[moedaExec] || 0) + valorExec;
-          parceiroFinancials.set(tx.origem_parceiro_id, current);
-        } else if (tx.tipo_transacao === "SAQUE" && tx.destino_parceiro_id) {
-          const current = parceiroFinancials.get(tx.destino_parceiro_id) || { 
-            depositado: createEmptySaldos(), 
-            sacado: createEmptySaldos() 
-          };
-          current.sacado[moedaExec] = (current.sacado[moedaExec] || 0) + valorExec;
-          parceiroFinancials.set(tx.destino_parceiro_id, current);
-        }
+      // Step 2: Get operational results from the view
+      const bookmakerIds = (bookmakersData || []).map(b => b.id);
+      let resultadosOperacionais: Array<{
+        bookmaker_id: string;
+        resultado_operacional_total: number;
+      }> = [];
+
+      if (bookmakerIds.length > 0) {
+        const { data: resultados, error: resultadosError } = await supabase
+          .from("v_bookmaker_resultado_operacional")
+          .select("bookmaker_id, resultado_operacional_total")
+          .in("bookmaker_id", bookmakerIds);
+
+        if (resultadosError) throw resultadosError;
+        resultadosOperacionais = resultados || [];
+      }
+
+      // Build map of bookmaker_id -> resultado
+      const resultadoMap = new Map<string, number>();
+      resultadosOperacionais.forEach((r) => {
+        resultadoMap.set(r.bookmaker_id, Number(r.resultado_operacional_total) || 0);
       });
 
-      // Aggregate bookmaker balances by currency
-      const parceiroBookmakers = new Map<string, { 
-        count: number; 
-        countLimitadas: number; 
+      // Step 3: Aggregate by partner and currency
+      const roiMap = new Map<string, ParceiroROI>();
+      const parceiroAggregates = new Map<string, {
+        count: number;
+        countLimitadas: number;
         saldo: SaldosPorMoeda;
+        resultado: SaldosPorMoeda;
       }>();
-      
+
       bookmakersData?.forEach((bm) => {
         if (!bm.parceiro_id) return;
-        const current = parceiroBookmakers.get(bm.parceiro_id) || { 
-          count: 0, 
-          countLimitadas: 0, 
-          saldo: createEmptySaldos() 
+        
+        const current = parceiroAggregates.get(bm.parceiro_id) || {
+          count: 0,
+          countLimitadas: 0,
+          saldo: createEmptySaldos(),
+          resultado: createEmptySaldos(),
         };
+
+        // Count bookmakers by status
         if (bm.status === "ativo") {
           current.count += 1;
         } else if (bm.status === "limitada") {
           current.countLimitadas += 1;
         }
-        
-        // Use bookmaker's native currency for balance
+
+        // Use bookmaker's native currency
         const moedaNativa = bm.moeda || "BRL";
         const saldoNativo = Number(bm.saldo_atual) || 0;
+        const resultadoOperacional = resultadoMap.get(bm.id) || 0;
+
         current.saldo[moedaNativa] = (current.saldo[moedaNativa] || 0) + saldoNativo;
-        
-        parceiroBookmakers.set(bm.parceiro_id, current);
+        current.resultado[moedaNativa] = (current.resultado[moedaNativa] || 0) + resultadoOperacional;
+
+        parceiroAggregates.set(bm.parceiro_id, current);
       });
 
-      // Calculate ROI per partner using multi-currency formula
-      parceiroFinancials.forEach((financials, parceiroId) => {
-        const bookmakerInfo = parceiroBookmakers.get(parceiroId) || { 
-          count: 0, 
-          countLimitadas: 0, 
-          saldo: createEmptySaldos() 
-        };
-        
-        // Calculate resultado per currency: Sacado + Saldo - Depositado
-        const resultadoPorMoeda = createEmptySaldos();
-        const moedasUtilizadas: string[] = [];
-        
-        SUPPORTED_FIAT.forEach(moeda => {
-          const sacado = financials.sacado[moeda] || 0;
-          const saldo = bookmakerInfo.saldo[moeda] || 0;
-          const depositado = financials.depositado[moeda] || 0;
-          resultadoPorMoeda[moeda] = sacado + saldo - depositado;
-          
-          if (sacado !== 0 || saldo !== 0 || depositado !== 0) {
-            moedasUtilizadas.push(moeda);
-          }
-        });
-        
-        // ROI calculation (using BRL as base for simplicity, with fallback)
-        const depositadoBRL = financials.depositado["BRL"] || 0;
-        const resultadoBRL = resultadoPorMoeda["BRL"] || 0;
-        const roi = depositadoBRL > 0 ? (resultadoBRL / depositadoBRL) * 100 : 0;
-        
+      // Step 4: Build ROI data for each partner
+      parceiroAggregates.forEach((aggregates, parceiroId) => {
+        const moedasUtilizadas = SUPPORTED_FIAT.filter(
+          (moeda) => (aggregates.saldo[moeda] || 0) !== 0 || (aggregates.resultado[moeda] || 0) !== 0
+        );
+
+        // ROI calculation (using BRL as base for simplicity)
+        const resultadoBRL = aggregates.resultado["BRL"] || 0;
+        // Note: We don't have deposits here, so ROI is just the result for display
+        // Real ROI would need deposit data, but for sidebar we show resultado
+
         roiMap.set(parceiroId, {
           parceiro_id: parceiroId,
-          depositado_por_moeda: financials.depositado,
-          sacado_por_moeda: financials.sacado,
-          saldo_por_moeda: bookmakerInfo.saldo,
-          resultado_por_moeda: resultadoPorMoeda,
+          depositado_por_moeda: createEmptySaldos(), // Not needed for sidebar
+          sacado_por_moeda: createEmptySaldos(), // Not needed for sidebar
+          saldo_por_moeda: aggregates.saldo,
+          resultado_por_moeda: aggregates.resultado,
           moedas_utilizadas: moedasUtilizadas,
-          roi_percentual: roi,
-          num_bookmakers: bookmakerInfo.count,
-          num_bookmakers_limitadas: bookmakerInfo.countLimitadas,
+          roi_percentual: 0, // Not calculated here
+          num_bookmakers: aggregates.count,
+          num_bookmakers_limitadas: aggregates.countLimitadas,
         });
-      });
-
-      // Add partners with only bookmakers (no transactions)
-      parceiroBookmakers.forEach((bookmakerInfo, parceiroId) => {
-        if (!roiMap.has(parceiroId)) {
-          const moedasUtilizadas = SUPPORTED_FIAT.filter(m => (bookmakerInfo.saldo[m] || 0) !== 0);
-          
-          roiMap.set(parceiroId, {
-            parceiro_id: parceiroId,
-            depositado_por_moeda: createEmptySaldos(),
-            sacado_por_moeda: createEmptySaldos(),
-            saldo_por_moeda: bookmakerInfo.saldo,
-            resultado_por_moeda: bookmakerInfo.saldo, // Resultado = saldo when no deposits
-            moedas_utilizadas: moedasUtilizadas,
-            roi_percentual: 0,
-            num_bookmakers: bookmakerInfo.count,
-            num_bookmakers_limitadas: bookmakerInfo.countLimitadas,
-          });
-        }
       });
 
       setRoiData(roiMap);
