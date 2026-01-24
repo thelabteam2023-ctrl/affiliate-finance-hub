@@ -45,7 +45,7 @@ export function ParceiroListaSidebar({
   onAddParceiro,
 }: ParceiroListaSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("todos");
+  const [statusFilter, setStatusFilter] = useState("ativo");
   const { canCreate } = useActionAccess();
 
   const filteredParceiros = useMemo(() => {
