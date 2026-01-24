@@ -2618,7 +2618,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     setSelecao(e.target.value);
                     if (selecaoFromPrint) setSelecaoFromPrint(false);
                   }}
-                  placeholder="Ex: Real Madrid -1.5, Over 2.5"
+                  placeholder="Over 2.5"
                   className={`h-10 ${printFieldsNeedingReview.selecao ? 'border-amber-500/50' : ''}`}
                 />
               </div>
