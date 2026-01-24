@@ -64,8 +64,14 @@ export const OPERATIONAL_MONEY_TYPES = [
   'GIRO_GRATIS_GANHO',
   'GIRO_GRATIS_ESTORNO',
   'CREDITO_PROMOCIONAL',
-  'FREEBET_CONVERTIDA',
   'EVENTO_PROMOCIONAL',
+  
+  // Freebet (movimentam apenas saldo_freebet, não saldo_atual)
+  'FREEBET_CREDITADA',    // Freebet recebida/liberada
+  'FREEBET_CONSUMIDA',    // Freebet usada em aposta
+  'FREEBET_ESTORNO',      // Reversão de consumo
+  'FREEBET_EXPIRADA',     // Freebet expirou sem uso
+  'FREEBET_CONVERTIDA',   // Extração: debita freebet, credita real
   
   // Cashback (é lucro operacional, não entrada de caixa)
   'CASHBACK_MANUAL',

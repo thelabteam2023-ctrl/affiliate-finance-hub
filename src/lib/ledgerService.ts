@@ -51,7 +51,13 @@ export type LedgerTransactionType =
   | 'GANHO_CAMBIAL'
   | 'PERDA_CAMBIAL'
   | 'GIRO_GRATIS'
-  | 'GIRO_GRATIS_ESTORNO';
+  | 'GIRO_GRATIS_ESTORNO'
+  // Tipos de Freebet (movimentam saldo_freebet via trigger v4)
+  | 'FREEBET_CREDITADA'
+  | 'FREEBET_CONSUMIDA'
+  | 'FREEBET_ESTORNO'
+  | 'FREEBET_EXPIRADA'
+  | 'FREEBET_CONVERTIDA';
 
 export interface LedgerEntryInput {
   /** Tipo da transação - determina como o trigger processa */

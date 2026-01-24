@@ -153,6 +153,9 @@ export function FreebetDialog({
 
       if (!workspaceId) throw new Error("Workspace não definido nesta aba");
 
+      // Import do serviço de ledger de freebet
+      const { creditarFreebetViaLedger, consumirFreebetViaLedger, estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+
       if (isEditing && freebet) {
         // Calculate delta for saldo_freebet update
         const oldValue = freebet.valor;
@@ -177,55 +180,42 @@ export function FreebetDialog({
 
         if (error) throw error;
 
-        // Update saldo_freebet based on status changes
-        // Only LIBERADA status affects saldo_freebet
+        // MIGRADO PARA LEDGER: Update saldo_freebet via RPCs atômicas
         const oldContribution = oldStatus === "LIBERADA" ? oldValue : 0;
         const newContribution = newValue; // Always LIBERADA now
 
         if (oldBookmakerId === newBookmakerId) {
-          // Same bookmaker - just update the delta
+          // Same bookmaker - calcular delta e aplicar
           const delta = newContribution - oldContribution;
-          if (delta !== 0) {
-            const { data: currentBk } = await supabase
-              .from("bookmakers")
-              .select("saldo_freebet")
-              .eq("id", newBookmakerId)
-              .single();
-            
-            const novoSaldo = Math.max(0, (currentBk?.saldo_freebet || 0) + delta);
-            await supabase
-              .from("bookmakers")
-              .update({ saldo_freebet: novoSaldo })
-              .eq("id", newBookmakerId);
+          if (delta > 0) {
+            // Crédito adicional
+            await creditarFreebetViaLedger(newBookmakerId, delta, 'EDICAO_MANUAL', {
+              userId: user.id,
+              workspaceId,
+              descricao: `Ajuste de valor de freebet (edição): +${delta}`,
+            });
+          } else if (delta < 0) {
+            // Débito (estorno parcial)
+            await estornarFreebetViaLedger(newBookmakerId, Math.abs(delta), 'Redução de valor (edição)', {
+              userId: user.id,
+              workspaceId,
+            });
           }
         } else {
-          // Different bookmaker - subtract from old, add to new
+          // Different bookmaker - estornar da antiga, creditar na nova
           if (oldContribution > 0) {
-            const { data: oldBk } = await supabase
-              .from("bookmakers")
-              .select("saldo_freebet")
-              .eq("id", oldBookmakerId)
-              .single();
-            
-            const novoSaldoOld = Math.max(0, (oldBk?.saldo_freebet || 0) - oldContribution);
-            await supabase
-              .from("bookmakers")
-              .update({ saldo_freebet: novoSaldoOld })
-              .eq("id", oldBookmakerId);
+            await estornarFreebetViaLedger(oldBookmakerId, oldContribution, 'Transferência para outra casa (edição)', {
+              userId: user.id,
+              workspaceId,
+            });
           }
           
           if (newContribution > 0) {
-            const { data: newBk } = await supabase
-              .from("bookmakers")
-              .select("saldo_freebet")
-              .eq("id", newBookmakerId)
-              .single();
-            
-            const novoSaldoNew = (newBk?.saldo_freebet || 0) + newContribution;
-            await supabase
-              .from("bookmakers")
-              .update({ saldo_freebet: novoSaldoNew })
-              .eq("id", newBookmakerId);
+            await creditarFreebetViaLedger(newBookmakerId, newContribution, 'EDICAO_MANUAL', {
+              userId: user.id,
+              workspaceId,
+              descricao: `Freebet transferida de outra casa (edição)`,
+            });
           }
         }
       } else {
@@ -249,18 +239,13 @@ export function FreebetDialog({
 
         if (error) throw error;
 
-        // Always update saldo_freebet since status is always LIBERADA
-        const { data: currentBk } = await supabase
-          .from("bookmakers")
-          .select("saldo_freebet")
-          .eq("id", data.bookmaker_id)
-          .single();
-        
-        const novoSaldo = (currentBk?.saldo_freebet || 0) + data.valor;
-        await supabase
-          .from("bookmakers")
-          .update({ saldo_freebet: novoSaldo })
-          .eq("id", data.bookmaker_id);
+        // MIGRADO PARA LEDGER: Creditar saldo_freebet via RPC atômica
+        await creditarFreebetViaLedger(data.bookmaker_id, data.valor, 'MANUAL', {
+          projetoId,
+          userId: user.id,
+          workspaceId,
+          descricao: 'Freebet adicionada manualmente',
+        });
       }
 
       onSuccess();

@@ -2136,21 +2136,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   };
 
   // Função para debitar freebet usada e marcar como utilizada na tabela freebets_recebidas
+  // MIGRADO PARA LEDGER: Usa RPC consumir_freebet em vez de UPDATE direto
   const debitarFreebetUsada = async (bookmakerIdFreebet: string, valor: number, apostaId?: string) => {
     try {
-      // 1. Debitar saldo_freebet do bookmaker
-      const { data: bookmaker } = await supabase
-        .from("bookmakers")
-        .select("saldo_freebet")
-        .eq("id", bookmakerIdFreebet)
-        .maybeSingle();
+      // 1. Debitar saldo_freebet via ledger (RPC atômica)
+      const { consumirFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+      const result = await consumirFreebetViaLedger(bookmakerIdFreebet, valor, {
+        apostaId,
+        descricao: `Freebet consumida em aposta${apostaId ? ` #${apostaId.slice(0, 8)}` : ''}`,
+      });
 
-      if (bookmaker) {
-        const novoSaldoFreebet = Math.max(0, (bookmaker.saldo_freebet || 0) - valor);
-        await supabase
-          .from("bookmakers")
-          .update({ saldo_freebet: novoSaldoFreebet })
-          .eq("id", bookmakerIdFreebet);
+      if (!result.success) {
+        console.error("Erro ao consumir freebet via ledger:", result.error);
+        // Fallback não é mais necessário - o ledger é a fonte de verdade
+        throw new Error(result.error);
       }
 
       // 2. Buscar freebet disponível para marcar como usada
@@ -2179,6 +2178,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       }
     } catch (error) {
       console.error("Erro ao debitar freebet usada:", error);
+      throw error; // Propagar erro para tratamento upstream
     }
   };
 
