@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -6,13 +6,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Filter, Calendar, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet } from "lucide-react";
+import { Filter, Calendar, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X } from "lucide-react";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { format, subDays, startOfDay, endOfDay, isToday } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { SimplePagination } from "@/components/ui/simple-pagination";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
+import { Input } from "@/components/ui/input";
 const PAGE_SIZE = 50;
 
 const getStatusBadge = (status: string) => {
@@ -123,12 +123,68 @@ export function HistoricoMovimentacoes({
   onConfirmarSaque,
 }: HistoricoMovimentacoesProps) {
   const { getLogoUrl } = useBookmakerLogoMap();
+  const [termoBusca, setTermoBusca] = useState("");
   
   // Get all filtered transactions
   const transacoesFiltradas = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
   
+  // Apply text search filter
+  const transacoesComBusca = useMemo(() => {
+    if (!termoBusca.trim()) return transacoesFiltradas;
+    
+    const termo = termoBusca.toLowerCase().trim();
+    return transacoesFiltradas.filter((t) => {
+      // Search in bookmaker names
+      const origemBookmaker = t.origem_bookmaker_id ? bookmakers[t.origem_bookmaker_id]?.nome?.toLowerCase() : "";
+      const destinoBookmaker = t.destino_bookmaker_id ? bookmakers[t.destino_bookmaker_id]?.nome?.toLowerCase() : "";
+      
+      // Search in partner names
+      const origemParceiro = t.origem_parceiro_id ? parceiros[t.origem_parceiro_id]?.toLowerCase() : "";
+      const destinoParceiro = t.destino_parceiro_id ? parceiros[t.destino_parceiro_id]?.toLowerCase() : "";
+      
+      // Search in wallet details
+      const origemWallet = t.origem_wallet_id ? walletsDetalhes.find(w => w.id === t.origem_wallet_id) : null;
+      const destinoWallet = t.destino_wallet_id ? walletsDetalhes.find(w => w.id === t.destino_wallet_id) : null;
+      const walletOrigemStr = origemWallet ? `${origemWallet.exchange} ${origemWallet.endereco}`.toLowerCase() : "";
+      const walletDestinoStr = destinoWallet ? `${destinoWallet.exchange} ${destinoWallet.endereco}`.toLowerCase() : "";
+      
+      // Search in bank account details
+      const origemConta = t.origem_conta_bancaria_id ? contasBancarias.find(c => c.id === t.origem_conta_bancaria_id) : null;
+      const destinoConta = t.destino_conta_bancaria_id ? contasBancarias.find(c => c.id === t.destino_conta_bancaria_id) : null;
+      const contaOrigemStr = origemConta ? `${origemConta.banco} ${origemConta.titular}`.toLowerCase() : "";
+      const contaDestinoStr = destinoConta ? `${destinoConta.banco} ${destinoConta.titular}`.toLowerCase() : "";
+      
+      // Search in description
+      const descricao = t.descricao?.toLowerCase() || "";
+      
+      // Search in transaction type
+      const tipoTransacao = t.tipo_transacao?.toLowerCase() || "";
+      
+      // Search in coin
+      const coin = t.coin?.toLowerCase() || "";
+      
+      // Search in valor (formatted)
+      const valorStr = t.valor?.toString() || "";
+      
+      return (
+        origemBookmaker.includes(termo) ||
+        destinoBookmaker.includes(termo) ||
+        origemParceiro.includes(termo) ||
+        destinoParceiro.includes(termo) ||
+        walletOrigemStr.includes(termo) ||
+        walletDestinoStr.includes(termo) ||
+        contaOrigemStr.includes(termo) ||
+        contaDestinoStr.includes(termo) ||
+        descricao.includes(termo) ||
+        tipoTransacao.includes(termo) ||
+        coin.includes(termo) ||
+        valorStr.includes(termo)
+      );
+    });
+  }, [transacoesFiltradas, termoBusca, bookmakers, parceiros, walletsDetalhes, contasBancarias]);
+  
   // Client-side pagination
-  const pagination = usePagination(transacoesFiltradas, { initialPageSize: PAGE_SIZE });
+  const pagination = usePagination(transacoesComBusca, { initialPageSize: PAGE_SIZE });
 
   const handlePeriodoRapido = (dias: number | null) => {
     if (dias === null) {
@@ -142,6 +198,11 @@ export function HistoricoMovimentacoes({
       setDataFim(new Date());
     }
     // Reset to first page when changing date filter
+    pagination.goToFirstPage();
+  };
+  
+  const handleBuscaChange = (value: string) => {
+    setTermoBusca(value);
     pagination.goToFirstPage();
   };
 
@@ -161,10 +222,30 @@ export function HistoricoMovimentacoes({
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Histórico de Movimentações</CardTitle>
           <div className="text-sm text-muted-foreground">
-            {transacoesFiltradas.length} transações no período
+            {transacoesComBusca.length} transações {termoBusca ? "encontradas" : "no período"}
           </div>
         </div>
         <div className="space-y-4 mt-4">
+          {/* Campo de busca */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por casa, parceiro, wallet, banco, descrição..."
+              value={termoBusca}
+              onChange={(e) => handleBuscaChange(e.target.value)}
+              className="pl-9 pr-9"
+            />
+            {termoBusca && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                onClick={() => handleBuscaChange("")}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
