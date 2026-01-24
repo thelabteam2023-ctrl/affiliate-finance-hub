@@ -5,10 +5,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-workspace-id',
 };
 
+// ================================================================
+// STABLECOINS: USDT e USDC são sempre 1:1 com USD
+// Não consultar API para evitar spreads de mercado (ex: 1.0003)
+// que causam diferenças falsas de -$0.03 nos depósitos
+// ================================================================
+const STABLECOINS: Record<string, number> = {
+  'USDT': 1.0,
+  'USDC': 1.0,
+};
+
 // Mapeamento de símbolos de criptomoedas para pares da Binance
+// Apenas criptomoedas voláteis precisam de cotação real
 const BINANCE_SYMBOL_MAP: Record<string, string> = {
-  'USDT': 'BUSDUSDT', // USDT é stablecoin, usar par com BUSD como aproximação
-  'USDC': 'USDCUSDT',
+  // Stablecoins removidas - sempre usam valor fixo 1.0
   'BTC': 'BTCUSDT',
   'ETH': 'ETHUSDT',
   'BNB': 'BNBUSDT',
@@ -61,22 +71,34 @@ serve(async (req) => {
 
     console.log('Fetching prices for symbols:', symbols);
 
-    // Mapear símbolos para pares da Binance
-    const binanceSymbols = symbols
+    // ================================================================
+    // IMPORTANTE: Stablecoins SEMPRE usam valor fixo 1.0
+    // Não consultar API para evitar spreads (ex: 1.0003 → -$0.03)
+    // ================================================================
+    const prices: Record<string, number> = {};
+    const symbolsToFetch: string[] = [];
+    
+    for (const symbol of symbols) {
+      if (STABLECOINS[symbol] !== undefined) {
+        // Stablecoin: usar valor fixo 1.0 (SEM consultar API)
+        prices[symbol] = STABLECOINS[symbol];
+        console.log(`[STABLECOIN] ${symbol} = ${STABLECOINS[symbol]} (fixed, no API)`);
+      } else if (BINANCE_SYMBOL_MAP[symbol]) {
+        // Crypto volátil: precisa buscar da API
+        symbolsToFetch.push(symbol);
+      }
+    }
+
+    // Mapear símbolos para pares da Binance (apenas cryptos voláteis)
+    const binanceSymbols = symbolsToFetch
       .map(s => BINANCE_SYMBOL_MAP[s])
       .filter(Boolean);
 
-    // Inicializar prices com stablecoins
-    const prices: Record<string, number> = {
-      'USDT': 1.0,
-      'USDC': 1.0,
-    };
-
     if (binanceSymbols.length === 0) {
-      // Return stablecoins if no other symbols
-      console.log('No valid non-stablecoin symbols, returning stablecoins only');
+      // Retornar apenas stablecoins (nenhuma crypto volátil solicitada)
+      console.log('Only stablecoins requested, returning fixed values');
       return new Response(
-        JSON.stringify({ prices, source: 'stablecoins_only' }),
+        JSON.stringify({ prices, source: 'stablecoins_fixed' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
