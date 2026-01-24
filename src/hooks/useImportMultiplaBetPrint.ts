@@ -85,7 +85,11 @@ export function useImportMultiplaBetPrint(): UseImportMultiplaBetPrintReturn {
 
       if (error) {
         console.error("Edge function error:", error);
-        throw new Error(error.message || "Erro ao processar imagem");
+        // Provide user-friendly error message instead of technical SDK message
+        const userMessage = error.message?.includes("Failed to send")
+          ? "Erro de conexão ao processar imagem. Verifique sua internet e tente novamente."
+          : error.message || "Erro ao processar imagem";
+        throw new Error(userMessage);
       }
 
       if (data?.error) {
