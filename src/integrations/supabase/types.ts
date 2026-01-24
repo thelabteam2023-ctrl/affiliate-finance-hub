@@ -9027,6 +9027,28 @@ export type Database = {
         Args: { p_bookmaker_id: string }
         Returns: undefined
       }
+      consumir_freebet: {
+        Args: {
+          p_aposta_id?: string
+          p_bookmaker_id: string
+          p_descricao?: string
+          p_user_id?: string
+          p_valor: number
+          p_workspace_id?: string
+        }
+        Returns: string
+      }
+      converter_freebet: {
+        Args: {
+          p_aposta_id?: string
+          p_bookmaker_id: string
+          p_descricao?: string
+          p_user_id?: string
+          p_valor: number
+          p_workspace_id?: string
+        }
+        Returns: string
+      }
       create_audit_log: {
         Args: {
           _action: Database["public"]["Enums"]["audit_action"]
@@ -9055,6 +9077,19 @@ export type Database = {
           _workspace_id: string
         }
         Returns: Json
+      }
+      creditar_freebet: {
+        Args: {
+          p_bookmaker_id: string
+          p_descricao?: string
+          p_freebet_id?: string
+          p_origem?: string
+          p_projeto_id?: string
+          p_user_id?: string
+          p_valor: number
+          p_workspace_id?: string
+        }
+        Returns: string
       }
       criar_aposta_atomica:
         | { Args: { p_aposta_data: Json; p_pernas_data: Json }; Returns: Json }
@@ -9089,6 +9124,26 @@ export type Database = {
         Returns: string
       }
       end_user_session: { Args: { p_user_id: string }; Returns: number }
+      estornar_freebet: {
+        Args: {
+          p_bookmaker_id: string
+          p_motivo?: string
+          p_user_id?: string
+          p_valor: number
+          p_workspace_id?: string
+        }
+        Returns: string
+      }
+      expirar_freebet: {
+        Args: {
+          p_bookmaker_id: string
+          p_motivo?: string
+          p_user_id?: string
+          p_valor: number
+          p_workspace_id?: string
+        }
+        Returns: string
+      }
       expire_old_invites: { Args: never; Returns: number }
       expire_session_by_inactivity: {
         Args: { p_user_id: string }
@@ -9425,6 +9480,13 @@ export type Database = {
       recalcular_saldo_bookmaker: {
         Args: { p_bookmaker_id: string }
         Returns: number
+      }
+      recalcular_saldo_bookmaker_v2: {
+        Args: { p_bookmaker_id: string }
+        Returns: {
+          saldo_freebet_calculado: number
+          saldo_real_calculado: number
+        }[]
       }
       recalcular_saldos_projeto: {
         Args: { p_aplicar?: boolean; p_projeto_id: string }

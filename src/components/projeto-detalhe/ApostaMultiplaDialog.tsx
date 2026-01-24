@@ -960,24 +960,22 @@ export function ApostaMultiplaDialog({
     }
   };
 
-  // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
+  // MIGRADO PARA LEDGER: Usar RPCs atômicas para freebet
   const debitarSaldo = async (
     bkId: string,
     valor: number,
     isFreebet: boolean
   ) => {
     if (isFreebet) {
-      const { data: bk } = await supabase
-        .from("bookmakers")
-        .select("saldo_freebet")
-        .eq("id", bkId)
-        .single();
-
-      if (bk) {
-        await supabase
-          .from("bookmakers")
-          .update({ saldo_freebet: bk.saldo_freebet - valor })
-          .eq("id", bkId);
+      // MIGRADO PARA LEDGER: Consumir freebet via RPC atômica
+      const { consumirFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+      const result = await consumirFreebetViaLedger(bkId, valor, {
+        descricao: 'Freebet consumida em aposta múltipla',
+      });
+      
+      if (!result.success) {
+        console.error("Erro ao consumir freebet via ledger:", result.error);
+        throw new Error(result.error);
       }
     } else {
       // Usar helper que respeita moeda do bookmaker
@@ -1020,13 +1018,12 @@ export function ApostaMultiplaDialog({
 
       const moedaOperacao = bookmaker?.moeda || "BRL";
 
-      // Só incrementar saldo_freebet se a freebet for liberada
-      if (status === "LIBERADA" && bookmaker) {
-        const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
-        await supabase
-          .from("bookmakers")
-          .update({ saldo_freebet: novoSaldoFreebet })
-          .eq("id", bkId);
+      // MIGRADO PARA LEDGER: Só creditar saldo_freebet se a freebet for liberada
+      if (status === "LIBERADA") {
+        const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+        await creditarFreebetViaLedger(bkId, valor, 'APOSTA_MULTIPLA_QUALIFICADORA', {
+          descricao: 'Freebet de aposta múltipla qualificadora',
+        });
       }
 
       // Registrar na tabela freebets_recebidas com status e MOEDA da bookmaker
@@ -1068,20 +1065,11 @@ export function ApostaMultiplaDialog({
           .update({ status: "LIBERADA" })
           .eq("id", freebetPendente.id);
 
-        // Incrementar saldo_freebet do bookmaker
-        const { data: bookmaker } = await supabase
-          .from("bookmakers")
-          .select("saldo_freebet")
-          .eq("id", freebetPendente.bookmaker_id)
-          .maybeSingle();
-
-        if (bookmaker) {
-          const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + freebetPendente.valor;
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_freebet: novoSaldoFreebet })
-            .eq("id", freebetPendente.bookmaker_id);
-        }
+        // MIGRADO PARA LEDGER: Creditar via RPC atômica
+        const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+        await creditarFreebetViaLedger(freebetPendente.bookmaker_id, freebetPendente.valor, 'LIBERACAO_PENDENTE', {
+          descricao: 'Freebet liberada após liquidação de aposta múltipla',
+        });
       }
     } catch (error) {
       console.error("Erro ao liberar freebet pendente:", error);
@@ -1113,20 +1101,13 @@ export function ApostaMultiplaDialog({
         .maybeSingle();
 
       if (freebetLiberada) {
-        // Decrementar saldo_freebet do bookmaker (reverter o crédito)
-        const { data: bookmaker } = await supabase
-          .from("bookmakers")
-          .select("saldo_freebet")
-          .eq("id", freebetLiberada.bookmaker_id)
-          .maybeSingle();
-
-        if (bookmaker) {
-          const novoSaldoFreebet = Math.max(0, (bookmaker.saldo_freebet || 0) - freebetLiberada.valor);
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_freebet: novoSaldoFreebet })
-            .eq("id", freebetLiberada.bookmaker_id);
-        }
+        // MIGRADO PARA LEDGER: Estornar via RPC atômica
+        const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+        await estornarFreebetViaLedger(
+          freebetLiberada.bookmaker_id, 
+          freebetLiberada.valor, 
+          'Reversão para PENDENTE (aposta múltipla reaberta)'
+        );
 
         // Voltar status para PENDENTE
         await supabase
