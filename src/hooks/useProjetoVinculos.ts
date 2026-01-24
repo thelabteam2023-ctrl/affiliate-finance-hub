@@ -282,6 +282,8 @@ export function useAddVinculos(projetoId: string, workspaceId: string | undefine
         .in("id", selectedIds);
 
       // Insert history records
+      // IMPORTANT: When re-linking a bookmaker that was previously unlinked,
+      // we must clear data_desvinculacao and status_final to prevent date inconsistencies
       if (bookmakers && workspaceId) {
         const historicoRecords = bookmakers.map((bk: any) => ({
           user_id: userData.user!.id,
@@ -292,6 +294,9 @@ export function useAddVinculos(projetoId: string, workspaceId: string | undefine
           bookmaker_nome: bk.nome,
           parceiro_nome: bk.parceiros?.nome || null,
           data_vinculacao: new Date().toISOString(),
+          // Clear unlinking data when re-linking to fix date inversion bug
+          data_desvinculacao: null,
+          status_final: null,
         }));
 
         await supabase
