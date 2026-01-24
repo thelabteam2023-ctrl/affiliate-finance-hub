@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -86,12 +86,17 @@ export function ParceiroDetalhesPanel({
   const hasLucro = useMemo(() => resultadoEntries.some(e => e.value > 0), [resultadoEntries]);
   const hasPrejuizo = useMemo(() => resultadoEntries.some(e => e.value < 0), [resultadoEntries]);
   
+  // Contagem baseada no status REAL da conta (não no bloqueio por parceiro)
   const bookmarkersAtivos = useMemo(() => 
     data?.bookmakers.filter(b => b.status === "ativo").length ?? 0, 
     [data?.bookmakers]
   );
   const bookmakersLimitados = useMemo(() => 
     data?.bookmakers.filter(b => b.status === "limitada").length ?? 0, 
+    [data?.bookmakers]
+  );
+  const bookmakersEncerrados = useMemo(() => 
+    data?.bookmakers.filter(b => b.status === "encerrada").length ?? 0, 
     [data?.bookmakers]
   );
 
@@ -338,6 +343,17 @@ export function ParceiroDetalhesPanel({
               value="resumo" 
               className="absolute inset-0 mt-0 p-4 flex flex-col data-[state=inactive]:hidden"
             >
+              {/* Alerta quando parceiro está inativo */}
+              {parceiroStatus === "inativo" && (
+                <div className="shrink-0 mb-3 flex items-center gap-2 p-2.5 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive">
+                  <Lock className="h-4 w-4 shrink-0" />
+                  <div className="text-xs">
+                    <span className="font-medium">Parceiro Inativo</span>
+                    <span className="text-destructive/80"> — Operações financeiras bloqueadas. O status real das contas está preservado.</span>
+                  </div>
+                </div>
+              )}
+
               {/* Conteúdo fixo: KPIs e Info */}
               <div className="shrink-0 space-y-3">
                 {/* KPIs principais - 5 colunas: Depositado → Sacado → SALDO → Resultado → Apostas */}
@@ -562,17 +578,45 @@ export function ParceiroDetalhesPanel({
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1 flex-wrap">
+                                  {/* Badge de status REAL da conta */}
                                   <Badge
                                     variant="outline"
                                     className={cn(
                                       "text-[9px] px-1 py-0 h-4",
                                       bm.status === "ativo"
                                         ? "border-success/50 text-success"
-                                        : "border-warning/50 text-warning"
+                                        : bm.status === "limitada"
+                                          ? "border-warning/50 text-warning"
+                                          : bm.status === "encerrada"
+                                            ? "border-destructive/50 text-destructive"
+                                            : "border-muted-foreground/50 text-muted-foreground"
                                     )}
                                   >
-                                    {bm.status === "ativo" ? "Ativa" : "Limitada"}
+                                    {bm.status === "ativo" 
+                                      ? "Ativa" 
+                                      : bm.status === "limitada"
+                                        ? "Limitada"
+                                        : bm.status === "encerrada"
+                                          ? "Encerrada"
+                                          : bm.status}
                                   </Badge>
+                                  {/* Badge de bloqueio quando parceiro está inativo */}
+                                  {parceiroStatus === "inativo" && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge
+                                          variant="outline"
+                                          className="text-[9px] px-1 py-0 h-4 border-destructive/50 text-destructive"
+                                        >
+                                          <Lock className="h-2.5 w-2.5 mr-0.5" />
+                                          Bloq.
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="max-w-[200px]">
+                                        <p className="text-xs">Parceiro inativo. Operações financeiras bloqueadas.</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
                                   <Badge
                                     variant="outline"
                                     className={cn(

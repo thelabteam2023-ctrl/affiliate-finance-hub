@@ -7221,18 +7221,36 @@ export type Database = {
       }
       v_bookmaker_status_operacional: {
         Row: {
+          bloqueada_por_parceiro: boolean | null
+          bookmaker_catalogo_id: string | null
           estado_conta: string | null
           id: string | null
+          moeda: string | null
           nome: string | null
           parceiro_id: string | null
           parceiro_nome: string | null
           parceiro_status: string | null
           pode_operar: boolean | null
-          status_operacional: string | null
-          status_pre_bloqueio: string | null
+          saldo_atual: number | null
+          status_display: string | null
           status_real: string | null
+          workspace_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "bookmakers_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmakers_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
           {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
             columns: ["parceiro_id"]
@@ -7260,6 +7278,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
             referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
           },
         ]
       }
