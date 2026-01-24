@@ -107,13 +107,56 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, imageUrl, mode } = await req.json();
+    const requestBody = await req.json();
+    const { imageBase64, imageUrl, mode } = requestBody;
 
+    console.log("[parse-betting-slip] Request received:", {
+      hasImageBase64: !!imageBase64,
+      imageBase64Length: imageBase64?.length || 0,
+      imageBase64Prefix: imageBase64?.substring(0, 50) || "N/A",
+      hasImageUrl: !!imageUrl,
+      mode: mode || "simples"
+    });
+
+    // CRITICAL VALIDATION: Check for valid image data
     if (!imageBase64 && !imageUrl) {
+      console.error("[parse-betting-slip] No image data provided");
       return new Response(
-        JSON.stringify({ error: "Image data is required" }),
+        JSON.stringify({ error: "Nenhuma imagem fornecida. Cole ou arraste uma imagem válida." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // VALIDATION: If imageBase64 is provided, ensure it's a valid data URI
+    if (imageBase64) {
+      // Must be a data:image/... base64 string
+      if (!imageBase64.startsWith("data:image/")) {
+        console.error("[parse-betting-slip] Invalid base64 format - not a data URI:", imageBase64.substring(0, 100));
+        return new Response(
+          JSON.stringify({ error: "Formato de imagem inválido. A imagem deve ser um print válido (PNG, JPEG, etc)." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Check minimum length for a valid image (a tiny 1x1 pixel is ~70 chars)
+      if (imageBase64.length < 100) {
+        console.error("[parse-betting-slip] Base64 too short to be valid image:", imageBase64.length);
+        return new Response(
+          JSON.stringify({ error: "Imagem muito pequena ou corrompida. Tente colar o print novamente." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // VALIDATION: If imageUrl is provided, ensure it's a valid URL
+    if (imageUrl && !imageBase64) {
+      if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://") && !imageUrl.startsWith("data:image/")) {
+        console.error("[parse-betting-slip] Invalid imageUrl format:", imageUrl.substring(0, 100));
+        return new Response(
+          JSON.stringify({ error: "URL de imagem inválida. Use uma URL válida (https://) ou cole a imagem diretamente." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -121,14 +164,13 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Prepare image content for the AI
-    const imageContent = imageUrl 
-      ? { type: "image_url", image_url: { url: imageUrl } }
-      : { type: "image_url", image_url: { url: imageBase64 } };
+    // Determine which image source to use (prefer base64 if both provided)
+    const imageSource = imageBase64 || imageUrl;
+    const imageContent = { type: "image_url", image_url: { url: imageSource } };
 
     const isMultipla = mode === "multipla";
     const currentYear = getCurrentYear();
-    console.log(`Processing betting slip image... Mode: ${isMultipla ? "multipla" : "simples"}, CurrentYear: ${currentYear}`);
+    console.log(`[parse-betting-slip] Processing... Mode: ${isMultipla ? "multipla" : "simples"}, CurrentYear: ${currentYear}, ImageSize: ${imageSource.length} chars`);
 
     // Choose prompt based on mode
     const systemPrompt = isMultipla ? MULTIPLA_SYSTEM_PROMPT : `Você é um especialista em ler boletins de apostas esportivas. Sua tarefa é extrair TODAS as informações visíveis do print de um boletim de aposta.
@@ -215,6 +257,9 @@ DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[parse-betting-slip] AI Gateway error:", response.status, errorText);
+      
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }),
@@ -227,9 +272,25 @@ DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
-      throw new Error(`AI Gateway error: ${response.status}`);
+      if (response.status === 400) {
+        // Parse the error to provide more context
+        try {
+          const errorData = JSON.parse(errorText);
+          const errorMessage = errorData?.error?.message || "Erro ao processar imagem";
+          console.error("[parse-betting-slip] 400 Error details:", errorMessage);
+          return new Response(
+            JSON.stringify({ error: `Erro ao processar imagem: ${errorMessage}. Tente novamente com outra imagem.` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch {
+          // If we can't parse, return generic error
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({ error: `Erro ao processar imagem (código ${response.status}). Tente novamente.` }),
+        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const aiResponse = await response.json();

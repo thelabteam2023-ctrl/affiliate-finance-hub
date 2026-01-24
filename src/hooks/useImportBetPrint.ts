@@ -107,6 +107,12 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       toast.error("Imagem muito grande. Máximo: 10MB");
       return;
     }
+    
+    // Validate minimum file size (too small = likely corrupted)
+    if (file.size < 100) {
+      toast.error("Imagem muito pequena ou corrompida.");
+      return;
+    }
 
     setIsProcessing(true);
     setParsedData(null);
@@ -115,19 +121,39 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     try {
       // Convert to base64
       const base64 = await fileToBase64(file);
+      
+      // CRITICAL VALIDATION: Ensure base64 is a valid data URI
+      if (!base64 || !base64.startsWith("data:image/")) {
+        console.error("[useImportBetPrint] Invalid base64 result:", base64?.substring(0, 50));
+        throw new Error("Falha ao processar imagem. Formato inválido.");
+      }
+      
+      // Log for debugging
+      console.log("[useImportBetPrint] Processing image:", {
+        fileType: file.type,
+        fileSize: file.size,
+        base64Length: base64.length,
+        base64Prefix: base64.substring(0, 30)
+      });
+      
       setImagePreview(base64);
 
-      // Call the edge function
+      // Call the edge function with validated base64
       const { data, error } = await supabase.functions.invoke("parse-betting-slip", {
         body: { imageBase64: base64 }
       });
 
       if (error) {
-        console.error("Edge function error:", error);
+        console.error("[useImportBetPrint] Edge function error:", error);
         // Provide user-friendly error message instead of technical SDK message
-        const userMessage = error.message?.includes("Failed to send")
-          ? "Erro de conexão ao processar imagem. Verifique sua internet e tente novamente."
-          : error.message || "Erro ao processar imagem";
+        let userMessage = "Erro ao processar imagem";
+        if (error.message?.includes("Failed to send")) {
+          userMessage = "Erro de conexão ao processar imagem. Verifique sua internet e tente novamente.";
+        } else if (error.message?.includes("timeout") || error.message?.includes("Timeout")) {
+          userMessage = "A análise da imagem demorou demais. Tente novamente.";
+        } else if (error.message) {
+          userMessage = error.message;
+        }
         throw new Error(userMessage);
       }
 
@@ -233,17 +259,37 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
 
   const processFromClipboard = useCallback(async (event: ClipboardEvent) => {
     const items = event.clipboardData?.items;
-    if (!items) return;
+    if (!items) {
+      console.log("[useImportBetPrint] No clipboard items found");
+      return;
+    }
 
+    console.log("[useImportBetPrint] Clipboard items count:", items.length);
+    
+    let foundImage = false;
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
+      console.log(`[useImportBetPrint] Item ${i}: type=${item.type}, kind=${item.kind}`);
+      
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         if (file) {
+          console.log("[useImportBetPrint] Found image file:", file.type, file.size);
+          foundImage = true;
           event.preventDefault();
           await processImage(file);
           break;
+        } else {
+          console.warn("[useImportBetPrint] Image item found but getAsFile() returned null");
         }
+      }
+    }
+    
+    if (!foundImage) {
+      // Check if there's text that might be mistaken for an image
+      const textItem = Array.from(items).find(item => item.type === "text/plain");
+      if (textItem) {
+        console.log("[useImportBetPrint] No image found, but text was pasted - ignoring");
       }
     }
   }, [processImage]);
