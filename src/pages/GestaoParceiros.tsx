@@ -507,7 +507,7 @@ export default function GestaoParceiros() {
     }
   };
 
-  const handleDialogClose = () => {
+  const handleDialogClose = useCallback(() => {
     const editedParceiroId = editingParceiro?.id;
     setDialogOpen(false);
     setEditingParceiro(null);
@@ -517,9 +517,9 @@ export default function GestaoParceiros() {
     if (editedParceiroId) {
       parceiroCache.invalidateCache(editedParceiroId);
     }
-  };
+  }, [editingParceiro?.id, parceiroCache]);
 
-  const handleVinculoDialogClose = () => {
+  const handleVinculoDialogClose = useCallback(() => {
     const parceiroId = vinculoParceiroId;
     setVinculoDialogOpen(false);
     setVinculoParceiroId(null);
@@ -528,13 +528,61 @@ export default function GestaoParceiros() {
     if (parceiroId) {
       parceiroCache.invalidateCache(parceiroId);
     }
-  };
+  }, [vinculoParceiroId, parceiroCache]);
 
-  const handleCreateVinculo = (parceiroId: string, bookmakerCatalogoId: string) => {
+  const handleCreateVinculo = useCallback((parceiroId: string, bookmakerCatalogoId: string) => {
     setVinculoParceiroId(parceiroId);
     setVinculoBookmakerId(bookmakerCatalogoId);
     setVinculoDialogOpen(true);
-  };
+  }, []);
+
+  // ============== MEMOIZED MODAL HANDLERS ==============
+  // Estes handlers são memoizados para evitar re-render do ParceiroDetalhesPanel
+  // quando o estado do dialog (dialogOpen, viewMode) muda
+  
+  const handleViewParceiro = useCallback(() => {
+    const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
+    if (parceiro) {
+      setEditingParceiro(parceiro);
+      setViewMode(true);
+      setDialogOpen(true);
+    }
+  }, [parceiros, selectedParceiroDetalhes]);
+
+  const handleEditParceiro = useCallback(() => {
+    const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
+    if (parceiro) {
+      setEditingParceiro(parceiro);
+      setViewMode(false);
+      setDialogOpen(true);
+    }
+  }, [parceiros, selectedParceiroDetalhes]);
+
+  const handleDeleteParceiroClick = useCallback(() => {
+    if (selectedParceiroDetalhes) {
+      setParceiroToDelete(selectedParceiroDetalhes);
+      setDeleteDialogOpen(true);
+    }
+  }, [selectedParceiroDetalhes]);
+
+  // ============== MEMOIZED DERIVED PROPS ==============
+  // Evita recriação de objetos/valores a cada render do parent
+  
+  const handleToggleSensitiveData = useCallback(() => {
+    setShowSensitiveData(prev => !prev);
+  }, []);
+
+  const currentParceiroStatus = useMemo(() => {
+    return parceiros.find(p => p.id === selectedParceiroDetalhes)?.status;
+  }, [parceiros, selectedParceiroDetalhes]);
+
+  const currentHasParceria = useMemo(() => {
+    return parceriasData.has(selectedParceiroDetalhes || '');
+  }, [parceriasData, selectedParceiroDetalhes]);
+
+  const currentDiasRestantes = useMemo(() => {
+    return parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null;
+  }, [parceriasData, selectedParceiroDetalhes]);
 
   // Persistência: Restaura último parceiro selecionado ou fallback para primeiro
   useEffect(() => {
@@ -632,33 +680,14 @@ export default function GestaoParceiros() {
               <ParceiroDetalhesPanel 
                 parceiroId={selectedParceiroDetalhes} 
                 showSensitiveData={showSensitiveData}
-                onToggleSensitiveData={() => setShowSensitiveData(!showSensitiveData)}
+                onToggleSensitiveData={handleToggleSensitiveData}
                 onCreateVinculo={handleCreateVinculo}
-                parceiroStatus={parceiros.find(p => p.id === selectedParceiroDetalhes)?.status}
-                hasParceria={parceriasData.has(selectedParceiroDetalhes || '')}
-                diasRestantes={parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null}
-                onViewParceiro={() => {
-                  const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
-                  if (parceiro) {
-                    setEditingParceiro(parceiro);
-                    setViewMode(true);
-                    setDialogOpen(true);
-                  }
-                }}
-                onEditParceiro={() => {
-                  const parceiro = parceiros.find(p => p.id === selectedParceiroDetalhes);
-                  if (parceiro) {
-                    setEditingParceiro(parceiro);
-                    setViewMode(false);
-                    setDialogOpen(true);
-                  }
-                }}
-                onDeleteParceiro={() => {
-                  if (selectedParceiroDetalhes) {
-                    setParceiroToDelete(selectedParceiroDetalhes);
-                    setDeleteDialogOpen(true);
-                  }
-                }}
+                parceiroStatus={currentParceiroStatus}
+                hasParceria={currentHasParceria}
+                diasRestantes={currentDiasRestantes}
+                onViewParceiro={handleViewParceiro}
+                onEditParceiro={handleEditParceiro}
+                onDeleteParceiro={handleDeleteParceiroClick}
                 parceiroCache={parceiroCache}
               />
             </div>

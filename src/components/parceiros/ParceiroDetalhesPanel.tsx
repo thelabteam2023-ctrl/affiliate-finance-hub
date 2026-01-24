@@ -1,9 +1,8 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, memo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ParceiroFinanceiroConsolidado, saldosToEntries } from "@/hooks/useParceiroFinanceiroConsolidado";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -45,7 +44,9 @@ interface ParceiroDetalhesPanelProps {
   parceiroCache: ParceiroCache;
 }
 
-export function ParceiroDetalhesPanel({ 
+// Memoizado para evitar re-renders desnecessários quando o parent re-renderiza
+// (ex: abertura/fechamento de modais)
+export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({ 
   parceiroId, 
   showSensitiveData = false,
   onToggleSensitiveData,
@@ -887,4 +888,4 @@ export function ParceiroDetalhesPanel({
       />
     </>
   );
-}
+});
