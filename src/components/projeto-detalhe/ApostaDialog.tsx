@@ -2612,31 +2612,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 <Label className={`block text-center uppercase text-[10px] tracking-wider ${printFieldsNeedingReview.selecao ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Seleção {printFieldsNeedingReview.selecao && <span className="text-[9px]">⚠</span>}
                 </Label>
-                {isMoneyline ? (
-                  <Select value={selecao} onValueChange={(val) => {
-                    setSelecao(val);
+                <Input
+                  value={selecao}
+                  onChange={(e) => {
+                    setSelecao(e.target.value);
                     if (selecaoFromPrint) setSelecaoFromPrint(false);
-                  }}>
-                    <SelectTrigger className={`h-10 ${printFieldsNeedingReview.selecao ? 'border-amber-500/50' : ''}`}>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {moneylineOptions.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    value={selecao}
-                    onChange={(e) => {
-                      setSelecao(e.target.value);
-                      if (selecaoFromPrint) setSelecaoFromPrint(false);
-                    }}
-                    placeholder="Ex: Real Madrid -1.5, Over 2.5, Mapa 1 Team A"
-                    className={`h-10 ${printFieldsNeedingReview.selecao ? 'border-amber-500/50' : ''}`}
-                  />
-                )}
+                  }}
+                  placeholder="Ex: Real Madrid -1.5, Over 2.5"
+                  className={`h-10 ${printFieldsNeedingReview.selecao ? 'border-amber-500/50' : ''}`}
+                />
               </div>
             </div>
 
