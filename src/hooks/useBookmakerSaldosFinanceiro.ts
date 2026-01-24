@@ -83,26 +83,32 @@ export function useBookmakerSaldosFinanceiro({
         throw error;
       }
 
-      return (data || []).map((row: any) => ({
-        id: row.id,
-        nome: row.nome,
-        parceiro_id: row.parceiro_id,
-        parceiro_nome: row.parceiro_nome || null,
-        parceiro_primeiro_nome: row.parceiro_primeiro_nome || null,
-        projeto_id: row.projeto_id || null,
-        projeto_nome: row.projeto_nome || null,
-        moeda: row.moeda || "BRL",
-        logo_url: row.logo_url || null,
-        status: row.status || "ativo",
-        saldo_real: Number(row.saldo_real) || 0,
-        saldo_freebet: Number(row.saldo_freebet) || 0,
-        saldo_bonus: Number(row.saldo_bonus) || 0,
-        saldo_em_aposta: Number(row.saldo_em_aposta) || 0,
-        saldo_disponivel: Number(row.saldo_disponivel) || 0,
-        saldo_operavel: Number(row.saldo_operavel) || 0,
-        bonus_rollover_started: Boolean(row.bonus_rollover_started),
-        has_pending_transactions: Boolean(row.has_pending_transactions)
-      }));
+      return (data || [])
+        // PROTEÇÃO: Excluir bookmakers bloqueadas (parceiro inativo) ou encerradas
+        .filter((row: any) => {
+          const status = (row.status || "ativo").toLowerCase();
+          return status !== "bloqueada" && status !== "encerrada";
+        })
+        .map((row: any) => ({
+          id: row.id,
+          nome: row.nome,
+          parceiro_id: row.parceiro_id,
+          parceiro_nome: row.parceiro_nome || null,
+          parceiro_primeiro_nome: row.parceiro_primeiro_nome || null,
+          projeto_id: row.projeto_id || null,
+          projeto_nome: row.projeto_nome || null,
+          moeda: row.moeda || "BRL",
+          logo_url: row.logo_url || null,
+          status: row.status || "ativo",
+          saldo_real: Number(row.saldo_real) || 0,
+          saldo_freebet: Number(row.saldo_freebet) || 0,
+          saldo_bonus: Number(row.saldo_bonus) || 0,
+          saldo_em_aposta: Number(row.saldo_em_aposta) || 0,
+          saldo_disponivel: Number(row.saldo_disponivel) || 0,
+          saldo_operavel: Number(row.saldo_operavel) || 0,
+          bonus_rollover_started: Boolean(row.bonus_rollover_started),
+          has_pending_transactions: Boolean(row.has_pending_transactions)
+        }));
     },
     // Só executa se tiver workspace e enabled
     enabled: enabled && !!workspaceId,

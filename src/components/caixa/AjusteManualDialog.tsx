@@ -190,6 +190,9 @@ export function AjusteManualDialog({
   const fetchData = async () => {
     setFetchingData(true);
     try {
+      // PROTEÇÃO DE PARCEIROS INATIVOS:
+      // Buscar bookmakers, contas e wallets apenas de PARCEIROS ATIVOS
+      // O banco de dados também valida via trigger, mas a UI deve prevenir a seleção
       const [bookmakersRes, contasRes, walletsRes] = await Promise.all([
         supabase
           .from("bookmakers")
@@ -199,17 +202,37 @@ export function AjusteManualDialog({
             saldo_atual, 
             moeda, 
             parceiro_id,
-            parceiros:parceiro_id (nome)
+            parceiros!inner(nome, status)
           `)
           .in("status", ["ativo", "limitada"])
+          // CRÍTICO: Apenas bookmakers de parceiros ATIVOS
+          .eq("parceiros.status", "ativo")
           .order("nome"),
         supabase
           .from("contas_bancarias")
-          .select("id, banco, titular, parceiro_id, moeda")
+          .select(`
+            id, 
+            banco, 
+            titular, 
+            parceiro_id, 
+            moeda,
+            parceiros!inner(status)
+          `)
+          // CRÍTICO: Apenas contas de parceiros ATIVOS
+          .eq("parceiros.status", "ativo")
           .order("banco"),
         supabase
           .from("wallets_crypto")
-          .select("id, exchange, endereco, parceiro_id, moeda")
+          .select(`
+            id, 
+            exchange, 
+            endereco, 
+            parceiro_id, 
+            moeda,
+            parceiros!inner(status)
+          `)
+          // CRÍTICO: Apenas wallets de parceiros ATIVOS
+          .eq("parceiros.status", "ativo")
           .order("exchange"),
       ]);
 
