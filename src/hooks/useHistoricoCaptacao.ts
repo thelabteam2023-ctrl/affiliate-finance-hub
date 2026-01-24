@@ -70,31 +70,74 @@ export function useHistoricoCaptacao() {
     try {
       setLoading(true);
 
-      // Fetch all required data in parallel
-      const [custosResult, movimentacoesResult, indicadoresResult, fornecedoresResult, apostasResult, bookmarkersResult] = await Promise.all([
-        // Custos de aquisição por parceria
-        supabase.from("v_custos_aquisicao").select("*"),
+      // Fetch all required data in parallel - usando tabelas diretas, não views com RLS complexo
+      const [
+        parceriasResult,
+        parceirosResult,
+        indicacoesResult,
+        indicadoresResult,
+        fornecedoresResult,
+        movimentacoesResult,
+        apostasResult,
+        bookmarkersResult
+      ] = await Promise.all([
+        // Parcerias direto da tabela
+        supabase.from("parcerias").select(`
+          id,
+          parceiro_id,
+          origem_tipo,
+          data_inicio,
+          status,
+          indicacao_id,
+          fornecedor_id,
+          valor_indicador,
+          valor_parceiro,
+          valor_fornecedor
+        `),
+        // Parceiros para nomes
+        supabase.from("parceiros").select("id, nome"),
+        // Indicações para mapear indicador_id
+        supabase.from("indicacoes").select("id, indicador_id"),
+        // Indicadores para nomes
+        supabase.from("indicadores_referral").select("id, nome"),
+        // Fornecedores para nomes
+        supabase.from("fornecedores").select("id, nome"),
         // Movimentações para calcular comissões pagas
-        supabase
-          .from("v_movimentacoes_indicacao_workspace")
+        supabase.from("movimentacoes_indicacao")
           .select("parceria_id, tipo, valor, status")
           .eq("status", "CONFIRMADO"),
-        // Indicadores para lista de responsáveis
-        supabase.from("indicadores_referral").select("id, nome"),
-        // Fornecedores para lista de responsáveis
-        supabase.from("fornecedores").select("id, nome"),
-        // Apostas para calcular lucro (mais confiável que a view)
-        supabase
-          .from("apostas_unificada")
+        // Apostas para calcular lucro
+        supabase.from("apostas_unificada")
           .select("bookmaker_id, lucro_prejuizo, resultado")
           .not("resultado", "in", "(PENDENTE,VOID)"),
         // Bookmakers para mapear parceiro_id
-        supabase
-          .from("bookmakers")
-          .select("id, parceiro_id"),
+        supabase.from("bookmakers").select("id, parceiro_id"),
       ]);
 
-      if (custosResult.error) throw custosResult.error;
+      if (parceriasResult.error) throw parceriasResult.error;
+
+      // Build maps for lookups
+      const parceiroNomeMap: Record<string, string> = {};
+      (parceirosResult.data || []).forEach((p: any) => {
+        parceiroNomeMap[p.id] = p.nome;
+      });
+
+      const indicacaoIndicadorMap: Record<string, string> = {};
+      (indicacoesResult.data || []).forEach((i: any) => {
+        if (i.indicador_id) {
+          indicacaoIndicadorMap[i.id] = i.indicador_id;
+        }
+      });
+
+      const indicadorNomeMap: Record<string, string> = {};
+      (indicadoresResult.data || []).forEach((i: any) => {
+        indicadorNomeMap[i.id] = i.nome;
+      });
+
+      const fornecedorNomeMap: Record<string, string> = {};
+      (fornecedoresResult.data || []).forEach((f: any) => {
+        fornecedorNomeMap[f.id] = f.nome;
+      });
 
       // Build bookmaker -> parceiro map
       const bookmakerParceiroMap: Record<string, string> = {};
@@ -104,7 +147,7 @@ export function useHistoricoCaptacao() {
         }
       });
 
-      // Build lucro map by parceiro_id (calculated from apostas, not from view)
+      // Build lucro map by parceiro_id (calculated from apostas)
       const lucroMap: Record<string, number> = {};
       (apostasResult.data || []).forEach((a: any) => {
         if (a.bookmaker_id && a.lucro_prejuizo != null) {
@@ -123,28 +166,22 @@ export function useHistoricoCaptacao() {
         }
       });
 
-      // Process records
+      // Process records from parcerias table
       // CORREÇÃO: Evitar duplicação de custos
-      // - valor_indicador é o valor ACORDADO para pagar ao indicador (estático)
-      // - comissoesPagas são os pagamentos EFETIVOS registrados no cash_ledger
-      // Devemos usar apenas UM deles, não somar ambos.
-      // Estratégia: Se há comissões pagas no ledger, usar o valor pago (mais preciso).
-      //             Caso contrário, usar o valor acordado como estimativa.
-      const processedRecords: CaptacaoRecord[] = (custosResult.data || []).map((c: any) => {
-        const valorIndicadorAcordado = c.valor_indicador || 0;
-        const valorParceiro = c.valor_parceiro || 0;
-        const valorFornecedor = c.valor_fornecedor || 0;
-        const comissoesPagas = comissaoMap[c.parceria_id] || 0;
+      const processedRecords: CaptacaoRecord[] = (parceriasResult.data || []).map((p: any) => {
+        const valorIndicadorAcordado = p.valor_indicador || 0;
+        const valorParceiro = p.valor_parceiro || 0;
+        const valorFornecedor = p.valor_fornecedor || 0;
+        const comissoesPagas = comissaoMap[p.id] || 0;
         
         // Custo real de indicador: usar o maior entre acordado e pago
-        // (Se pagou mais do que acordado, conta o pago; se ainda não pagou, conta o acordado)
         const custoIndicador = Math.max(valorIndicadorAcordado, comissoesPagas);
         
         // Custo total de aquisição = indicador + parceiro + fornecedor (sem duplicar)
         const custoTotal = custoIndicador + valorParceiro + valorFornecedor;
-        const lucroGerado = lucroMap[c.parceiro_id] || 0;
+        const lucroGerado = lucroMap[p.parceiro_id] || 0;
         
-        // ROI = (lucro / custo) * 100
+        // ROI = (lucro / custo) * 100 - PROTEÇÃO CONTRA DIVISÃO POR ZERO
         let roi: number | null = null;
         let roiStatus: "positivo" | "negativo" | "neutro" = "neutro";
         
@@ -152,33 +189,42 @@ export function useHistoricoCaptacao() {
           roi = ((lucroGerado - custoTotal) / custoTotal) * 100;
           roiStatus = roi > 0 ? "positivo" : roi < 0 ? "negativo" : "neutro";
         } else if (lucroGerado > 0) {
-          roi = 100; // Free acquisition with profit = 100% ROI
+          // Aquisição gratuita com lucro = ROI infinito, representamos como 100%
+          roi = 100;
           roiStatus = "positivo";
+        } else if (lucroGerado < 0) {
+          // Aquisição gratuita com prejuízo
+          roi = -100;
+          roiStatus = "negativo";
         }
+        // else: lucro = 0 e custo = 0 -> roi permanece null (neutro)
 
         // Determine responsável
         let responsavelNome: string | null = null;
         let responsavelId: string | null = null;
 
-        if (c.origem_tipo === "INDICADOR") {
-          responsavelNome = c.indicador_nome;
-          responsavelId = c.indicador_id;
-        } else if (c.origem_tipo === "FORNECEDOR") {
-          responsavelNome = c.fornecedor_nome;
-          responsavelId = c.fornecedor_id;
+        if (p.origem_tipo === "INDICADOR" && p.indicacao_id) {
+          const indicadorId = indicacaoIndicadorMap[p.indicacao_id];
+          if (indicadorId) {
+            responsavelNome = indicadorNomeMap[indicadorId] || null;
+            responsavelId = indicadorId;
+          }
+        } else if (p.origem_tipo === "FORNECEDOR" && p.fornecedor_id) {
+          responsavelNome = fornecedorNomeMap[p.fornecedor_id] || null;
+          responsavelId = p.fornecedor_id;
         }
 
         return {
-          parceriaId: c.parceria_id,
-          parceiroId: c.parceiro_id,
-          parceiroNome: c.parceiro_nome,
-          origemTipo: c.origem_tipo || "DIRETO",
+          parceriaId: p.id,
+          parceiroId: p.parceiro_id,
+          parceiroNome: parceiroNomeMap[p.parceiro_id] || "Parceiro desconhecido",
+          origemTipo: p.origem_tipo || "DIRETO",
           responsavelNome,
           responsavelId,
-          dataEntrada: c.data_inicio,
-          status: c.status || "ATIVA",
+          dataEntrada: p.data_inicio,
+          status: p.status || "ATIVA",
           custoAquisicao: custoTotal,
-          valorIndicador: custoIndicador, // Usar o custo efetivo (não duplicado)
+          valorIndicador: custoIndicador,
           valorParceiro,
           valorFornecedor,
           comissoesPagas,
@@ -292,12 +338,19 @@ export function useHistoricoCaptacao() {
       byOrigem[r.origemTipo].lucro += r.lucroGerado;
     });
 
-    // Calculate ROI for each origin
+    // Calculate ROI for each origin - PROTEÇÃO CONTRA DIVISÃO POR ZERO
     Object.keys(byOrigem).forEach((key) => {
       const { custo, lucro } = byOrigem[key];
       if (custo > 0) {
         byOrigem[key].roi = ((lucro - custo) / custo) * 100;
+      } else if (lucro > 0) {
+        // Custo zero com lucro positivo = ROI infinito, representamos como 100%
+        byOrigem[key].roi = 100;
+      } else if (lucro < 0) {
+        // Custo zero com prejuízo
+        byOrigem[key].roi = -100;
       }
+      // else: custo = 0 e lucro = 0 -> roi permanece 0
     });
 
     return byOrigem;
