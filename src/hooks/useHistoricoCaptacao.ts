@@ -71,11 +71,9 @@ export function useHistoricoCaptacao() {
       setLoading(true);
 
       // Fetch all required data in parallel
-      const [custosResult, lucrosResult, movimentacoesResult, indicadoresResult, fornecedoresResult] = await Promise.all([
+      const [custosResult, movimentacoesResult, indicadoresResult, fornecedoresResult, apostasResult, bookmarkersResult] = await Promise.all([
         // Custos de aquisição por parceria
         supabase.from("v_custos_aquisicao").select("*"),
-        // Lucro por parceiro
-        supabase.from("v_parceiro_lucro_total").select("parceiro_id, lucro_projetos"),
         // Movimentações para calcular comissões pagas
         supabase
           .from("v_movimentacoes_indicacao_workspace")
@@ -85,14 +83,36 @@ export function useHistoricoCaptacao() {
         supabase.from("indicadores_referral").select("id, nome"),
         // Fornecedores para lista de responsáveis
         supabase.from("fornecedores").select("id, nome"),
+        // Apostas para calcular lucro (mais confiável que a view)
+        supabase
+          .from("apostas_unificada")
+          .select("bookmaker_id, lucro_prejuizo, resultado")
+          .not("resultado", "in", "(PENDENTE,VOID)"),
+        // Bookmakers para mapear parceiro_id
+        supabase
+          .from("bookmakers")
+          .select("id, parceiro_id"),
       ]);
 
       if (custosResult.error) throw custosResult.error;
 
-      // Build lucro map by parceiro_id
+      // Build bookmaker -> parceiro map
+      const bookmakerParceiroMap: Record<string, string> = {};
+      (bookmarkersResult.data || []).forEach((b: any) => {
+        if (b.parceiro_id) {
+          bookmakerParceiroMap[b.id] = b.parceiro_id;
+        }
+      });
+
+      // Build lucro map by parceiro_id (calculated from apostas, not from view)
       const lucroMap: Record<string, number> = {};
-      (lucrosResult.data || []).forEach((l: any) => {
-        lucroMap[l.parceiro_id] = l.lucro_projetos || 0;
+      (apostasResult.data || []).forEach((a: any) => {
+        if (a.bookmaker_id && a.lucro_prejuizo != null) {
+          const parceiroId = bookmakerParceiroMap[a.bookmaker_id];
+          if (parceiroId) {
+            lucroMap[parceiroId] = (lucroMap[parceiroId] || 0) + (a.lucro_prejuizo || 0);
+          }
+        }
       });
 
       // Build comissões map by parceria_id
