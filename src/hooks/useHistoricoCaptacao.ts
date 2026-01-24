@@ -104,10 +104,24 @@ export function useHistoricoCaptacao() {
       });
 
       // Process records
+      // CORREÇÃO: Evitar duplicação de custos
+      // - valor_indicador é o valor ACORDADO para pagar ao indicador (estático)
+      // - comissoesPagas são os pagamentos EFETIVOS registrados no cash_ledger
+      // Devemos usar apenas UM deles, não somar ambos.
+      // Estratégia: Se há comissões pagas no ledger, usar o valor pago (mais preciso).
+      //             Caso contrário, usar o valor acordado como estimativa.
       const processedRecords: CaptacaoRecord[] = (custosResult.data || []).map((c: any) => {
-        const custoAquisicao = (c.valor_indicador || 0) + (c.valor_parceiro || 0) + (c.valor_fornecedor || 0);
+        const valorIndicadorAcordado = c.valor_indicador || 0;
+        const valorParceiro = c.valor_parceiro || 0;
+        const valorFornecedor = c.valor_fornecedor || 0;
         const comissoesPagas = comissaoMap[c.parceria_id] || 0;
-        const custoTotal = custoAquisicao + comissoesPagas;
+        
+        // Custo real de indicador: usar o maior entre acordado e pago
+        // (Se pagou mais do que acordado, conta o pago; se ainda não pagou, conta o acordado)
+        const custoIndicador = Math.max(valorIndicadorAcordado, comissoesPagas);
+        
+        // Custo total de aquisição = indicador + parceiro + fornecedor (sem duplicar)
+        const custoTotal = custoIndicador + valorParceiro + valorFornecedor;
         const lucroGerado = lucroMap[c.parceiro_id] || 0;
         
         // ROI = (lucro / custo) * 100
@@ -144,16 +158,15 @@ export function useHistoricoCaptacao() {
           dataEntrada: c.data_inicio,
           status: c.status || "ATIVA",
           custoAquisicao: custoTotal,
-          valorIndicador: c.valor_indicador || 0,
-          valorParceiro: c.valor_parceiro || 0,
-          valorFornecedor: c.valor_fornecedor || 0,
+          valorIndicador: custoIndicador, // Usar o custo efetivo (não duplicado)
+          valorParceiro,
+          valorFornecedor,
           comissoesPagas,
           lucroGerado,
           roi,
           roiStatus,
         };
       });
-
       setRecords(processedRecords);
 
       // Build responsáveis list
