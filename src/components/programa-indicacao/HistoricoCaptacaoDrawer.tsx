@@ -272,35 +272,43 @@ export function HistoricoCaptacaoDrawer({
                 <CardTitle className="text-sm font-medium">Comparativo por Origem</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {Object.entries(comparativoPorOrigem).map(([origem, data]) => (
-                    <div
-                      key={origem}
-                      className="p-3 rounded-lg border bg-muted/30 space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        {getOrigemBadge(origem)}
-                        <span className="text-sm text-muted-foreground">{data.count} parceiros</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <p className="text-muted-foreground text-xs">Investido</p>
-                          <p className="font-medium">{formatCurrency(data.custo)}</p>
+                {Object.keys(comparativoPorOrigem).length === 0 ? (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nenhum dado de captação encontrado</p>
+                    <p className="text-xs mt-1">Verifique os filtros ou aguarde novas captações</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {Object.entries(comparativoPorOrigem).map(([origem, data]) => (
+                      <div
+                        key={origem}
+                        className="p-3 rounded-lg border bg-muted/30 space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          {getOrigemBadge(origem)}
+                          <span className="text-sm text-muted-foreground">{data.count} parceiros</span>
                         </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">Lucro</p>
-                          <p className={`font-medium ${data.lucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                            {formatCurrency(data.lucro)}
-                          </p>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs">Investido</p>
+                            <p className="font-medium">{formatCurrency(data.custo)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Lucro</p>
+                            <p className={`font-medium ${data.lucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                              {formatCurrency(data.lucro)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-1 border-t">
+                          <span className="text-xs text-muted-foreground">ROI</span>
+                          {getRoiBadge(data.roi, data.roi > 0 ? "positivo" : data.roi < 0 ? "negativo" : "neutro")}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between pt-1 border-t">
-                        <span className="text-xs text-muted-foreground">ROI</span>
-                        {getRoiBadge(data.roi, data.roi > 0 ? "positivo" : data.roi < 0 ? "negativo" : "neutro")}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
