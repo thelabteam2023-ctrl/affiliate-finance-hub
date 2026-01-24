@@ -1,6 +1,7 @@
 // Hook para operações CRUD na tabela apostas_unificada
 // Suporte completo a multi-moeda (BRL + USD/USDT)
 // REFACTOR: Dual-write para apostas_pernas (tabela normalizada)
+// REFACTOR: Liquidação agora usa RPCs atômicos (ledger-based)
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ import { pernasToInserts } from "@/types/apostasPernas";
 import { SupportedCurrency } from "@/types/currency";
 import { useCurrencySnapshot } from "./useCurrencySnapshot";
 import { useWorkspace } from "./useWorkspace";
+import { liquidarAposta as liquidarApostaService, reliquidarAposta as reliquidarApostaService } from "@/services/aposta/ApostaService";
 
 export interface UseApostasUnificadaReturn {
   loading: boolean;
@@ -248,6 +250,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
   }, [workspaceId]);
 
   // Deletar operação
+  // REFACTOR: Agora usa RPC atômica para reversão financeira antes de deletar
   const deletarArbitragem = useCallback(async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -255,17 +258,17 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
       // Buscar a operação para verificar se precisa reverter saldos
       const { data: operacao } = await supabase
         .from("apostas_unificada")
-        .select("pernas, status, projeto_id")
+        .select("pernas, status, projeto_id, resultado")
         .eq("id", id)
         .single();
 
-      if (operacao && operacao.status === "LIQUIDADA" && operacao.pernas) {
-        // Reverter saldos das bookmakers - passa projetoId para verificar bônus ativo
-        const pernas = parsePernaFromJson(operacao.pernas);
-        for (const perna of pernas) {
-          if (perna.resultado && perna.resultado !== "PENDENTE") {
-            await reverterSaldoBookmaker(perna.bookmaker_id, perna, operacao.projeto_id);
-          }
+      if (operacao && operacao.status === "LIQUIDADA" && operacao.resultado !== "PENDENTE") {
+        // Usar RPC atômica para reverter impacto financeiro via ledger
+        const result = await reliquidarApostaService(id, 'VOID', 0);
+        
+        if (!result.success) {
+          console.error("[useApostasUnificada] Erro ao reverter antes de deletar:", result.error);
+          // Continuar com delete mesmo se reversão falhar (mas logar o erro)
         }
       }
 
@@ -279,6 +282,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
       toast.success("Operação excluída!");
       return true;
     } catch (error: any) {
+      console.error("[useApostasUnificada] Erro ao excluir:", error);
       toast.error("Erro ao excluir: " + error.message);
       return false;
     } finally {
@@ -287,11 +291,12 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
   }, []);
 
   // Liquidar operação (resolver resultados)
+  // REFACTOR: Agora usa RPC atômica via ApostaService (ledger-based)
   const liquidarArbitragem = useCallback(async (params: LiquidarArbitragemParams): Promise<boolean> => {
     try {
       setLoading(true);
 
-      // Buscar operação atual
+      // Buscar operação atual para calcular resultado geral
       const { data: operacao, error: fetchError } = await supabase
         .from("apostas_unificada")
         .select("*")
@@ -304,7 +309,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
 
       const pernasAtuais = parsePernaFromJson(operacao.pernas);
       
-      // Atualizar resultados das pernas
+      // Atualizar resultados das pernas localmente para calcular resultado geral
       for (const update of params.pernas) {
         if (update.index >= 0 && update.index < pernasAtuais.length) {
           pernasAtuais[update.index].resultado = update.resultado;
@@ -314,62 +319,76 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         }
       }
 
-      // Calcular resultado geral
+      // Calcular resultado geral e lucro
       const resultadoGeral = determinarResultadoArbitragem(pernasAtuais);
       const lucroReal = calcularLucroReal(pernasAtuais);
-      const stakeTotal = calcularStakeTotalPernas(pernasAtuais);
-      const roiReal = stakeTotal && stakeTotal > 0 ? (lucroReal / stakeTotal) * 100 : 0;
 
       // Determinar se todas as pernas estão liquidadas
       const todasLiquidadas = pernasAtuais.every(p => 
         p.resultado && p.resultado !== "PENDENTE"
       );
 
-      // Atualizar operação
-      const { error: updateError } = await supabase
-        .from("apostas_unificada")
-        .update({
-          pernas: pernasAtuais as any,
-          status: todasLiquidadas ? "LIQUIDADA" : "PENDENTE",
-          resultado: resultadoGeral,
-          lucro_prejuizo: lucroReal,
-          roi_real: roiReal,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", params.id);
-
-      if (updateError) throw updateError;
-
-      // DUAL-WRITE: Atualizar pernas na tabela normalizada
-      // Atualizar resultado e lucro_prejuizo em cada perna
-      for (const update of params.pernas) {
-        if (update.index >= 0 && update.index < pernasAtuais.length) {
-          const { error: pernaUpdateError } = await supabase
-            .from("apostas_pernas")
-            .update({
-              resultado: update.resultado,
-              lucro_prejuizo: update.lucro_prejuizo ?? null,
-            })
-            .eq("aposta_id", params.id)
-            .eq("ordem", update.index);
-          
-          if (pernaUpdateError) {
-            console.error("[useApostasUnificada] Erro ao atualizar perna normalizada:", pernaUpdateError);
-          }
-        }
-      }
-
-      // Atualizar saldos das bookmakers se liquidado
-      // Passa projetoId para verificar se há bônus ativo
+      // Só chamar RPC atômica se todas liquidadas (impacto financeiro)
       if (todasLiquidadas) {
-        for (const perna of pernasAtuais) {
-          await atualizarSaldoBookmaker(perna.bookmaker_id, perna, operacao.projeto_id);
+        // Preparar resultados por perna para o RPC
+        const resultadosPernas = params.pernas.map((update) => ({
+          ordem: update.index,
+          resultado: update.resultado,
+          lucro_prejuizo: update.lucro_prejuizo ?? 0,
+        }));
+
+        // Mapear resultado geral para tipo esperado pelo RPC
+        const resultadoMapped = resultadoGeral === 'PENDENTE' ? 'VOID' : resultadoGeral;
+
+        // Usar ApostaService.liquidarAposta (RPC atômica com ledger)
+        const result = await liquidarApostaService({
+          id: params.id,
+          resultado: resultadoMapped as 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID',
+          lucro_prejuizo: lucroReal,
+          resultados_pernas: resultadosPernas,
+        });
+
+        if (!result.success) {
+          throw new Error(result.error?.message || "Erro ao liquidar via RPC");
+        }
+      } else {
+        // Liquidação parcial - apenas atualizar dados sem impacto financeiro
+        const stakeTotal = calcularStakeTotalPernas(pernasAtuais);
+        const roiReal = stakeTotal && stakeTotal > 0 ? (lucroReal / stakeTotal) * 100 : 0;
+
+        const { error: updateError } = await supabase
+          .from("apostas_unificada")
+          .update({
+            pernas: pernasAtuais as any,
+            status: "PENDENTE",
+            resultado: resultadoGeral,
+            lucro_prejuizo: lucroReal,
+            roi_real: roiReal,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", params.id);
+
+        if (updateError) throw updateError;
+
+        // DUAL-WRITE: Atualizar pernas na tabela normalizada
+        for (const update of params.pernas) {
+          if (update.index >= 0 && update.index < pernasAtuais.length) {
+            await supabase
+              .from("apostas_pernas")
+              .update({
+                resultado: update.resultado,
+                lucro_prejuizo: update.lucro_prejuizo ?? null,
+              })
+              .eq("aposta_id", params.id)
+              .eq("ordem", update.index);
+          }
         }
       }
 
       toast.success("Operação liquidada!");
       return true;
     } catch (error: any) {
+      console.error("[useApostasUnificada] Erro ao liquidar:", error);
       toast.error("Erro ao liquidar: " + error.message);
       return false;
     } finally {
@@ -378,6 +397,7 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
   }, []);
 
   // Reverter liquidação
+  // REFACTOR: Agora usa RPC atômica via ApostaService (ledger-based)
   const reverterLiquidacao = useCallback(async (id: string): Promise<boolean> => {
     try {
       setLoading(true);
@@ -392,34 +412,60 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         throw new Error("Operação não encontrada");
       }
 
-      const pernas = parsePernaFromJson(operacao.pernas);
-      
-      // Reverter saldos - passa projetoId para verificar bônus ativo
-      for (const perna of pernas) {
-        if (perna.resultado && perna.resultado !== "PENDENTE") {
-          await reverterSaldoBookmaker(perna.bookmaker_id, perna, operacao.projeto_id);
+      // Verificar se está liquidada
+      if (operacao.status !== "LIQUIDADA") {
+        // Se não está liquidada, apenas resetar campos sem impacto financeiro
+        const pernas = parsePernaFromJson(operacao.pernas);
+        const pernasResetadas = pernas.map(p => ({
+          ...p,
+          resultado: null,
+          lucro_prejuizo: null
+        }));
+
+        const { error: updateError } = await supabase
+          .from("apostas_unificada")
+          .update({
+            pernas: pernasResetadas as any,
+            status: "PENDENTE",
+            resultado: "PENDENTE",
+            lucro_prejuizo: null,
+            roi_real: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Usar RPC reliquidar para reverter com impacto no ledger
+        // Reliquidar para VOID efetivamente reverte o impacto financeiro
+        const result = await reliquidarApostaService(id, 'VOID', 0);
+
+        if (!result.success) {
+          throw new Error(result.error?.message || "Erro ao reverter via RPC");
         }
+
+        // Agora resetar para PENDENTE (após reversão financeira)
+        const pernas = parsePernaFromJson(operacao.pernas);
+        const pernasResetadas = pernas.map(p => ({
+          ...p,
+          resultado: null,
+          lucro_prejuizo: null
+        }));
+
+        const { error: updateError } = await supabase
+          .from("apostas_unificada")
+          .update({
+            pernas: pernasResetadas as any,
+            status: "PENDENTE",
+            resultado: "PENDENTE",
+            lucro_prejuizo: null,
+            roi_real: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", id);
+
+        if (updateError) throw updateError;
       }
-
-      // Resetar resultados das pernas
-      const pernasResetadas = pernas.map(p => ({
-        ...p,
-        resultado: null,
-        lucro_prejuizo: null
-      }));
-
-      // Atualizar operação para pendente
-      const { error: updateError } = await supabase
-        .from("apostas_unificada")
-        .update({
-          pernas: pernasResetadas as any,
-          status: "PENDENTE",
-          resultado: "PENDENTE",
-          lucro_prejuizo: null,
-          roi_real: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", id);
 
       // DUAL-WRITE: Resetar pernas na tabela normalizada
       const { error: pernasResetError } = await supabase
@@ -434,11 +480,10 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         console.error("[useApostasUnificada] Erro ao resetar pernas normalizadas:", pernasResetError);
       }
 
-      if (updateError) throw updateError;
-
       toast.success("Liquidação revertida!");
       return true;
     } catch (error: any) {
+      console.error("[useApostasUnificada] Erro ao reverter:", error);
       toast.error("Erro ao reverter: " + error.message);
       return false;
     } finally {
@@ -458,9 +503,8 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
   };
 }
 
-// Helpers internos para manipulação de saldos - AGORA USANDO RPC LEDGER
-// O RPC reliquidar_aposta_atomica cria registros no cash_ledger e o trigger atualiza saldos
-
+// Helper interno para calcular impacto financeiro de um resultado
+// NOTA: Usado apenas para cálculos locais - impacto real é via ledger
 function calcularImpactoResultado(stake: number, odd: number, resultado: string): number {
   switch (resultado) {
     case 'GREEN':
@@ -477,25 +521,6 @@ function calcularImpactoResultado(stake: number, odd: number, resultado: string)
   }
 }
 
-async function atualizarSaldoBookmaker(
-  bookmakerId: string,
-  perna: PernaArbitragem,
-  projetoId?: string
-): Promise<void> {
-  // NOTA: Esta função agora é um no-op porque a liquidação via RPC
-  // (liquidar_aposta_atomica / reliquidar_aposta_atomica) já cuida dos saldos
-  // via registros no cash_ledger + trigger.
-  // Mantemos a assinatura para não quebrar chamadas existentes,
-  // mas o trabalho real é feito pelo RPC.
-  console.log("[useApostasUnificada] atualizarSaldoBookmaker chamado - saldos gerenciados via RPC/ledger");
-}
-
-async function reverterSaldoBookmaker(
-  bookmakerId: string,
-  perna: PernaArbitragem,
-  projetoId?: string
-): Promise<void> {
-  // NOTA: Similar ao acima - reversão é feita via RPC reliquidar_aposta_atomica
-  // que registra APOSTA_REVERSAO no ledger.
-  console.log("[useApostasUnificada] reverterSaldoBookmaker chamado - saldos gerenciados via RPC/ledger");
-}
+// DEPRECATED: Funções abaixo foram substituídas por RPCs atômicos
+// Mantidas apenas para documentação - não são mais chamadas
+// Ver: ApostaService.liquidarAposta() e ApostaService.reliquidarAposta()
