@@ -78,20 +78,20 @@ const getCurrencyBadgeClass = (currency: string): string => {
 // Obter label amigável da fonte de dados
 const getDataSourceLabel = (dataSource?: DataSource, isUsingFallback?: boolean): { label: string; isOfficial: boolean } => {
   if (isUsingFallback) {
-    return { label: "Cotação de Referência (Fallback)", isOfficial: false };
+    return { label: "Cotação Fallback (Referência)", isOfficial: false };
   }
   
   switch (dataSource) {
     case "database":
-      return { label: "Cotação Oficial (Cache)", isOfficial: true };
+      return { label: "FastForex (Cache)", isOfficial: true };
     case "edge_function":
-      return { label: "Cotação Oficial (Tempo Real)", isOfficial: true };
+      return { label: "FastForex (Tempo Real)", isOfficial: true };
     case "localstorage":
-      return { label: "Cotação Oficial (Local)", isOfficial: true };
+      return { label: "FastForex (Local)", isOfficial: true };
     case "fallback":
-      return { label: "Cotação de Referência (Fallback)", isOfficial: false };
+      return { label: "Cotação Fallback (Referência)", isOfficial: false };
     default:
-      return { label: "Cotação Atual", isOfficial: true };
+      return { label: "FastForex", isOfficial: true };
   }
 };
 
