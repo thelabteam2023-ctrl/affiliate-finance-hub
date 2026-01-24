@@ -20,6 +20,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface ParceiroFinanceiroDialogProps {
   open: boolean;
@@ -228,7 +229,7 @@ export default function ParceiroFinanceiroDialog({
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("pt-BR", {
+    return parseLocalDateTime(date).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

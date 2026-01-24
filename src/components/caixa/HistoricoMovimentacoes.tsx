@@ -13,6 +13,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { SimplePagination } from "@/components/ui/simple-pagination";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 const PAGE_SIZE = 50;
 
 const getStatusBadge = (status: string) => {
@@ -523,8 +524,8 @@ export function HistoricoMovimentacoes({
                     </Button>
                   )}
                   <div className="text-right min-w-[80px]">
-                    <div className="text-sm font-medium">{format(new Date(transacao.data_transacao), "dd/MM/yyyy")}</div>
-                    <div className="text-xs text-muted-foreground">{format(new Date(transacao.data_transacao), "HH:mm")}</div>
+                    <div className="text-sm font-medium">{format(parseLocalDateTime(transacao.data_transacao), "dd/MM/yyyy")}</div>
+                    <div className="text-xs text-muted-foreground">{format(parseLocalDateTime(transacao.data_transacao), "HH:mm")}</div>
                   </div>
                 </div>
               </div>

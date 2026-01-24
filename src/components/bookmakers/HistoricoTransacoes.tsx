@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TrendingUp, TrendingDown, DollarSign, Award, Settings } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface Transacao {
   id: string;
@@ -148,7 +149,7 @@ export default function HistoricoTransacoes({ open, onClose, bookmaker }: Histor
                       {getTipoLabel(transacao.tipo)}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {format(new Date(transacao.data_transacao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {format(parseLocalDateTime(transacao.data_transacao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </span>
                   </div>
                   

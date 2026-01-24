@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface InvestidorExtratoDialogProps {
   open: boolean;
@@ -122,7 +123,7 @@ export function InvestidorExtratoDialog({
     const rows = transacoes.map((t) => {
       const tipo = getTipoLabel(t);
       return [
-        format(new Date(t.data_transacao), "dd/MM/yyyy HH:mm"),
+        format(parseLocalDateTime(t.data_transacao), "dd/MM/yyyy HH:mm"),
         tipo.label,
         t.tipo_moeda === "CRYPTO" ? t.coin : t.moeda,
         t.valor.toString(),
@@ -269,7 +270,7 @@ export function InvestidorExtratoDialog({
                   return (
                     <TableRow key={t.id}>
                       <TableCell className="font-mono text-xs">
-                        {format(new Date(t.data_transacao), "dd/MM/yy HH:mm")}
+                        {format(parseLocalDateTime(t.data_transacao), "dd/MM/yy HH:mm")}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">

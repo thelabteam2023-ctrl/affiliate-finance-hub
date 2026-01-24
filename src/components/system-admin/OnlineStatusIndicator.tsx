@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useUserLoginHistory } from '@/hooks/useUserLoginHistory';
 import { cn } from '@/lib/utils';
+import { parseLocalDateTime } from '@/utils/dateUtils';
 
 interface OnlineStatusIndicatorProps {
   userId: string;
@@ -59,7 +60,7 @@ export function OnlineStatusIndicator({ userId, isOnline, userName }: OnlineStat
                 {history.map((record) => (
                   <div key={record.id} className="text-xs text-muted-foreground flex justify-between gap-4">
                     <span>
-                      {format(new Date(record.login_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      {format(parseLocalDateTime(record.login_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                     </span>
                     {record.ip_address && (
                       <span className="font-mono text-[10px]">{record.ip_address}</span>
