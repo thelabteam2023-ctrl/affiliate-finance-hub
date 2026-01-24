@@ -37,6 +37,11 @@ export interface HistoricoCaptacaoKpis {
   roiMedio: number;
   captacoesPositivas: number;
   captacoesNegativas: number;
+  // NEW: CAC Pago Real metrics
+  cpfsPagos: number;
+  cpfsSemCusto: number;
+  cacPago: number;
+  taxaOrganica: number;
 }
 
 interface ResponsavelOption {
@@ -203,12 +208,23 @@ export function useHistoricoCaptacao() {
   }, [records, filters]);
 
   // Calculate KPIs from filtered records
+  // NEW CAC LOGIC: Only CPFs with cost > 0 enter CAC calculation
   const kpis = useMemo((): HistoricoCaptacaoKpis => {
     const totalCaptacoes = filteredRecords.length;
     const custoTotalAquisicao = filteredRecords.reduce((acc, r) => acc + r.custoAquisicao, 0);
     const lucroTotalGerado = filteredRecords.reduce((acc, r) => acc + r.lucroGerado, 0);
     const captacoesPositivas = filteredRecords.filter((r) => r.roiStatus === "positivo").length;
     const captacoesNegativas = filteredRecords.filter((r) => r.roiStatus === "negativo").length;
+    
+    // CPFs com custo > 0 (pagos) vs sem custo (orgânicos/migrados)
+    const cpfsPagos = filteredRecords.filter((r) => r.custoAquisicao > 0).length;
+    const cpfsSemCusto = filteredRecords.filter((r) => r.custoAquisicao === 0).length;
+    
+    // CAC Pago Real: apenas CPFs com custo financeiro
+    const cacPago = cpfsPagos > 0 ? custoTotalAquisicao / cpfsPagos : 0;
+    
+    // Taxa orgânica
+    const taxaOrganica = totalCaptacoes > 0 ? (cpfsSemCusto / totalCaptacoes) * 100 : 0;
 
     // ROI médio ponderado pelo custo
     let roiMedio = 0;
@@ -223,6 +239,10 @@ export function useHistoricoCaptacao() {
       roiMedio,
       captacoesPositivas,
       captacoesNegativas,
+      cpfsPagos,
+      cpfsSemCusto,
+      cacPago,
+      taxaOrganica,
     };
   }, [filteredRecords]);
 
