@@ -157,6 +157,13 @@ class LRUCache<K, V> {
 }
 
 // ============================================================================
+// CACHES GLOBAIS (singletons que persistem entre navegações de página)
+// ============================================================================
+
+const globalMovimentacoesCache = new LRUCache<string, MovimentacoesData>(MAX_CACHED_PARTNERS, CACHE_TTL);
+const globalBookmakersCache = new LRUCache<string, BookmakersData>(MAX_CACHED_PARTNERS, CACHE_TTL);
+
+// ============================================================================
 // HOOK: useParceiroMovimentacoesCache
 // ============================================================================
 
@@ -169,14 +176,15 @@ interface UseMovimentacoesCacheReturn {
 }
 
 export function useParceiroMovimentacoesCache(parceiroId: string): UseMovimentacoesCacheReturn {
-  const [data, setData] = useState<MovimentacoesData | null>(null);
+  const [data, setData] = useState<MovimentacoesData | null>(() => {
+    // Inicializa do cache global se disponível
+    if (parceiroId) {
+      return globalMovimentacoesCache.get(parceiroId);
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Cache persistente entre renders (singleton por hook instance)
-  const cacheRef = useRef<LRUCache<string, MovimentacoesData>>(
-    new LRUCache(MAX_CACHED_PARTNERS, CACHE_TTL)
-  );
   
   // Track last fetched ID para evitar fetch duplicado
   const lastFetchedIdRef = useRef<string | null>(null);
@@ -188,9 +196,9 @@ export function useParceiroMovimentacoesCache(parceiroId: string): UseMovimentac
     // Evitar fetch duplicado
     if (isFetchingRef.current) return;
     
-    // Verificar cache primeiro (se não for refresh forçado)
+    // Verificar cache global primeiro (se não for refresh forçado)
     if (!forceRefresh) {
-      const cached = cacheRef.current.get(parceiroId);
+      const cached = globalMovimentacoesCache.get(parceiroId);
       if (cached) {
         setData(cached);
         setLoading(false);
@@ -305,8 +313,8 @@ export function useParceiroMovimentacoesCache(parceiroId: string): UseMovimentac
         walletsCrypto: walletsCryptoResult,
       };
 
-      // Salvar no cache
-      cacheRef.current.set(parceiroId, newData);
+      // Salvar no cache global
+      globalMovimentacoesCache.set(parceiroId, newData);
       lastFetchedIdRef.current = parceiroId;
       
       setData(newData);
@@ -321,7 +329,7 @@ export function useParceiroMovimentacoesCache(parceiroId: string): UseMovimentac
 
   const invalidate = useCallback(() => {
     if (parceiroId) {
-      cacheRef.current.delete(parceiroId);
+      globalMovimentacoesCache.delete(parceiroId);
       lastFetchedIdRef.current = null;
     }
   }, [parceiroId]);
@@ -342,13 +350,15 @@ interface UseBookmakersCacheReturn {
 }
 
 export function useParceiroBookmakersCache(parceiroId: string): UseBookmakersCacheReturn {
-  const [data, setData] = useState<BookmakersData | null>(null);
+  const [data, setData] = useState<BookmakersData | null>(() => {
+    // Inicializa do cache global se disponível
+    if (parceiroId) {
+      return globalBookmakersCache.get(parceiroId);
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const cacheRef = useRef<LRUCache<string, BookmakersData>>(
-    new LRUCache(MAX_CACHED_PARTNERS, CACHE_TTL)
-  );
   
   const lastFetchedIdRef = useRef<string | null>(null);
   const isFetchingRef = useRef(false);
@@ -358,9 +368,9 @@ export function useParceiroBookmakersCache(parceiroId: string): UseBookmakersCac
     
     if (isFetchingRef.current) return;
     
-    // Verificar cache primeiro
+    // Verificar cache global primeiro
     if (!forceRefresh) {
-      const cached = cacheRef.current.get(parceiroId);
+      const cached = globalBookmakersCache.get(parceiroId);
       if (cached) {
         setData(cached);
         setLoading(false);
@@ -413,7 +423,7 @@ export function useParceiroBookmakersCache(parceiroId: string): UseBookmakersCac
         disponiveis: catalogoData || [],
       };
 
-      cacheRef.current.set(parceiroId, newData);
+      globalBookmakersCache.set(parceiroId, newData);
       lastFetchedIdRef.current = parceiroId;
       
       setData(newData);
@@ -428,7 +438,7 @@ export function useParceiroBookmakersCache(parceiroId: string): UseBookmakersCac
 
   const invalidate = useCallback(() => {
     if (parceiroId) {
-      cacheRef.current.delete(parceiroId);
+      globalBookmakersCache.delete(parceiroId);
       lastFetchedIdRef.current = null;
     }
   }, [parceiroId]);
@@ -437,12 +447,8 @@ export function useParceiroBookmakersCache(parceiroId: string): UseBookmakersCac
 }
 
 // ============================================================================
-// CONTEXTO GLOBAL DE CACHE (para manter entre navegações)
+// FUNÇÕES AUXILIARES DE CACHE GLOBAL
 // ============================================================================
-
-// Singletons globais para persistir cache entre montagens/desmontagens
-const globalMovimentacoesCache = new LRUCache<string, MovimentacoesData>(MAX_CACHED_PARTNERS, CACHE_TTL);
-const globalBookmakersCache = new LRUCache<string, BookmakersData>(MAX_CACHED_PARTNERS, CACHE_TTL);
 
 export function getGlobalMovimentacoesCache(): LRUCache<string, MovimentacoesData> {
   return globalMovimentacoesCache;

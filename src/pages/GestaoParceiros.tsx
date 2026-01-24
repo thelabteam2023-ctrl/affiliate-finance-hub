@@ -177,7 +177,12 @@ export default function GestaoParceiros() {
     // Persistência: Limpar parceiro selecionado ao trocar workspace
     setSelectedParceiroDetalhes(null);
     localStorage.removeItem('last_selected_partner_id');
+    // Limpar TODOS os caches (incluindo globais de abas)
     parceiroCache.invalidateAllCache();
+    // Importar e limpar caches de abas
+    import('@/hooks/useParceiroTabsCache').then(({ clearAllParceiroTabsCaches }) => {
+      clearAllParceiroTabsCaches();
+    });
     setLoading(true);
   }, [parceiroCache]));
 

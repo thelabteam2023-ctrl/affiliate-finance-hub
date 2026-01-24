@@ -81,11 +81,14 @@ class LRUCache<K, V> {
   }
 }
 
+// ============== CACHE GLOBAL (singleton) ==============
+// O cache é criado fora do hook para persistir entre navegações de página
+
+const globalResumoCache = new LRUCache<string, ResumoCacheEntry>(MAX_CACHED_PARTNERS);
+
 // ============== HOOK ==============
 
 export function useParceiroFinanceiroCache() {
-  // Cache ONLY for Resumo
-  const resumoCacheRef = useRef(new LRUCache<string, ResumoCacheEntry>(MAX_CACHED_PARTNERS));
   
   // Current state
   const [currentParceiroId, setCurrentParceiroId] = useState<string | null>(null);
@@ -334,9 +337,9 @@ export function useParceiroFinanceiroCache() {
   // ============== LOAD RESUMO (with cache) ==============
 
   const loadResumo = useCallback(async (parceiroId: string, forceRefresh = false) => {
-    // Check cache first
+    // Check global cache first
     if (!forceRefresh) {
-      const cached = resumoCacheRef.current.get(parceiroId);
+      const cached = globalResumoCache.get(parceiroId);
       if (isCacheValid(cached)) {
         setResumoData(cached!.data);
         setResumoLoading(false);
@@ -351,8 +354,8 @@ export function useParceiroFinanceiroCache() {
     try {
       const data = await fetchResumoData(parceiroId);
       
-      // Update cache
-      resumoCacheRef.current.set(parceiroId, {
+      // Update global cache
+      globalResumoCache.set(parceiroId, {
         data,
         timestamp: Date.now(),
       });
@@ -394,7 +397,7 @@ export function useParceiroFinanceiroCache() {
   }, []);
 
   const invalidateCache = useCallback((parceiroId: string) => {
-    resumoCacheRef.current.delete(parceiroId);
+    globalResumoCache.delete(parceiroId);
     
     // If current partner, reload (use ref for current value)
     if (currentParceiroIdRef.current === parceiroId) {
@@ -403,7 +406,7 @@ export function useParceiroFinanceiroCache() {
   }, [loadResumo]);
 
   const invalidateAllCache = useCallback(() => {
-    resumoCacheRef.current.clear();
+    globalResumoCache.clear();
     
     const currentId = currentParceiroIdRef.current;
     if (currentId) {
