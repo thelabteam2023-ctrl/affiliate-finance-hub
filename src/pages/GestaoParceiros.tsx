@@ -103,16 +103,25 @@ export default function GestaoParceiros() {
   const [vinculoDialogOpen, setVinculoDialogOpen] = useState(false);
   const [vinculoParceiroId, setVinculoParceiroId] = useState<string | null>(null);
   const [vinculoBookmakerId, setVinculoBookmakerId] = useState<string | null>(null);
-  const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(null);
+  // Persistência: Inicializa com o último parceiro selecionado do localStorage
+  const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('last_selected_partner_id');
+    }
+    return null;
+  });
 
   const parceiroCache = useParceiroFinanceiroCache();
   
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
 
+  // Persistência: Salva no localStorage ao selecionar parceiro
   const handleSelectParceiroDetalhes = useCallback((id: string) => {
     setSelectedParceiroDetalhes(id);
     parceiroCache.selectParceiro(id);
+    // Persistir no localStorage para manter contexto entre sessões
+    localStorage.setItem('last_selected_partner_id', id);
   }, [parceiroCache.selectParceiro]);
 
   const navigate = useNavigate();
@@ -165,7 +174,9 @@ export default function GestaoParceiros() {
     setRoiData(new Map());
     setSaldosData(new Map());
     setSaldosCryptoRaw([]);
+    // Persistência: Limpar parceiro selecionado ao trocar workspace
     setSelectedParceiroDetalhes(null);
+    localStorage.removeItem('last_selected_partner_id');
     parceiroCache.invalidateAllCache();
     setLoading(true);
   }, [parceiroCache]));
@@ -483,6 +494,8 @@ export default function GestaoParceiros() {
       if (selectedParceiroDetalhes === parceiroToDelete) {
         setSelectedParceiroDetalhes(null);
         parceiroCache.selectParceiro(null);
+        // Persistência: Limpar localStorage quando parceiro selecionado é deletado
+        localStorage.removeItem('last_selected_partner_id');
       }
       setParceiroToDelete(null);
     } catch (error: any) {
@@ -523,13 +536,27 @@ export default function GestaoParceiros() {
     setVinculoDialogOpen(true);
   };
 
-  // Auto-select first partner when list loads and none is selected
+  // Persistência: Restaura último parceiro selecionado ou fallback para primeiro
   useEffect(() => {
-    if (!selectedParceiroDetalhes && parceiros.length > 0) {
-      const firstParceiroId = parceiros[0].id;
-      setSelectedParceiroDetalhes(firstParceiroId);
-      parceiroCache.selectParceiro(firstParceiroId);
+    if (parceiros.length === 0) return;
+    
+    // Se já temos um parceiro selecionado que existe na lista, mantém
+    if (selectedParceiroDetalhes) {
+      const parceiroExiste = parceiros.some(p => p.id === selectedParceiroDetalhes);
+      if (parceiroExiste) {
+        // Parceiro existe, apenas garantir que o cache está sincronizado
+        parceiroCache.selectParceiro(selectedParceiroDetalhes);
+        return;
+      }
+      // Parceiro não existe mais, limpar localStorage
+      localStorage.removeItem('last_selected_partner_id');
     }
+    
+    // Fallback: seleciona o primeiro da lista
+    const firstParceiroId = parceiros[0].id;
+    setSelectedParceiroDetalhes(firstParceiroId);
+    parceiroCache.selectParceiro(firstParceiroId);
+    localStorage.setItem('last_selected_partner_id', firstParceiroId);
   }, [parceiros, selectedParceiroDetalhes, parceiroCache.selectParceiro]);
 
   // Prepare data for sidebar with multi-currency support
