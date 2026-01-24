@@ -113,6 +113,11 @@ export async function insertLedgerEntry(
     const dataTransacao = input.dataTransacao || new Date().toISOString().split('T')[0];
     
     // Build insert payload - using type assertion since trigger handles custom tipos
+    // CRÍTICO: valor_destino DEVE ser preenchido para créditos (destino_bookmaker_id)
+    // Isso garante que triggers e reconstrução de saldo funcionem corretamente
+    const isCredit = !!input.destinoBookmakerId;
+    const isDebit = !!input.origemBookmakerId;
+    
     const insertPayload = {
       tipo_transacao: input.tipoTransacao,
       valor: input.valor,
@@ -131,6 +136,9 @@ export async function insertLedgerEntry(
       status: 'CONFIRMADO',
       ajuste_motivo: input.ajusteMotivo || null,
       ajuste_direcao: input.ajusteDirecao || null,
+      // INTEGRIDADE LEDGER: Preencher valor_destino/valor_origem para reconstrução de saldo
+      valor_destino: isCredit ? input.valor : null,
+      valor_origem: isDebit ? input.valor : null,
     };
     
     console.log('[insertLedgerEntry] Tentando inserir:', {

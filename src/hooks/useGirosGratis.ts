@@ -377,19 +377,22 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
         // ARQUITETURA: Giros Grátis são eventos operacionais internos
         // NÃO impactam o Caixa Operacional (dinheiro real)
         // São movimentos dentro da bookmaker (promocionais)
+        // CRÍTICO: valor_destino/valor_origem DEVE ser preenchido para reconstrução de saldo
+        const valorAbs = Math.abs(delta);
         const ledgerData = {
           tipo_transacao: isAumento ? "GIRO_GRATIS" : "GIRO_GRATIS_ESTORNO",
-          valor: Math.abs(delta),
+          valor: valorAbs,
           moeda,
           workspace_id: giroAtual.workspace_id,
           user_id: user.id,
-          descricao: `Ajuste de giro grátis: ${giroAtual.bookmaker_nome} (${isAumento ? "+" : "-"}${Math.abs(delta).toFixed(2)})`,
+          descricao: `Ajuste de giro grátis: ${giroAtual.bookmaker_nome} (${isAumento ? "+" : "-"}${valorAbs.toFixed(2)})`,
           status: "CONFIRMADO",
           impacta_caixa_operacional: false, // Evento promocional - não impacta caixa real
           tipo_moeda: "FIAT",
+          // Integridade ledger: preencher valor_destino/valor_origem
           ...(isAumento 
-            ? { destino_bookmaker_id: giroAtual.bookmaker_id }
-            : { origem_bookmaker_id: giroAtual.bookmaker_id }
+            ? { destino_bookmaker_id: giroAtual.bookmaker_id, valor_destino: valorAbs }
+            : { origem_bookmaker_id: giroAtual.bookmaker_id, valor_origem: valorAbs }
           ),
         };
 
