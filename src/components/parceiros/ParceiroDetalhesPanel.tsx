@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, ShieldBan } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -92,10 +92,6 @@ export function ParceiroDetalhesPanel({
   );
   const bookmakersLimitados = useMemo(() => 
     data?.bookmakers.filter(b => b.status === "limitada").length ?? 0, 
-    [data?.bookmakers]
-  );
-  const bookmakersBloqueados = useMemo(() => 
-    data?.bookmakers.filter(b => b.status === "bloqueada").length ?? 0, 
     [data?.bookmakers]
   );
 
@@ -421,7 +417,7 @@ export function ParceiroDetalhesPanel({
                   </div>
                 </div>
 
-                {/* Info secundária: casas ativas/limitadas/bloqueadas */}
+                {/* Info secundária: apenas casas ativas/limitadas */}
                 <div className="flex flex-wrap gap-3 text-xs">
                   <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
                     <Building2 className="h-3 w-3 text-success" />
@@ -433,13 +429,6 @@ export function ParceiroDetalhesPanel({
                     <span className="text-muted-foreground">Limitadas:</span>
                     <span className="font-medium text-warning">{bookmakersLimitados}</span>
                   </div>
-                  {bookmakersBloqueados > 0 && (
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
-                      <ShieldBan className="h-3 w-3 text-destructive" />
-                      <span className="text-muted-foreground">Bloqueadas:</span>
-                      <span className="font-medium text-destructive">{bookmakersBloqueados}</span>
-                    </div>
-                  )}
                 </div>
               </div>
 
