@@ -180,6 +180,11 @@ export function useSaldoOperavel(projetoId: string) {
         const saldoFreebet = convertToConsolidation(Number(bk.saldo_freebet) || 0, moeda);
         const saldoBonus = convertToConsolidation(Number(bk.saldo_bonus) || 0, moeda);
         
+        // Valores nativos (sem conversão) para exibição na lista "Saldo por Casa"
+        const saldoRealNativo = Number(bk.saldo_real) || 0;
+        const saldoFreebetNativo = Number(bk.saldo_freebet) || 0;
+        const saldoEmApostaNativo = Number(bk.saldo_em_aposta) || 0;
+        
         // Rollover individual desta casa
         const rolloverInfo = rolloverPorCasa.get(bk.id);
         
@@ -196,6 +201,10 @@ export function useSaldoOperavel(projetoId: string) {
           saldoBonus,
           moedaOriginal: moeda,
           logoUrl: bk.logo_url,
+          // Valores nativos para exibição por casa
+          saldoRealNativo,
+          saldoFreebetNativo,
+          saldoEmApostaNativo,
           // Rollover individual
           hasRollover: !!rolloverInfo,
           rolloverProgress: rolloverInfo?.progress || 0,

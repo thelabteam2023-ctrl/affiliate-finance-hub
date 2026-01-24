@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { SaldoCompostoSimples } from "@/components/ui/saldo-composto";
+import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 
 interface SaldoOperavelCardProps {
   projetoId: string;
@@ -181,7 +182,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         Os valores acima são apenas a decomposição do total.
       </p>
 
-      {/* Lista de casas com rollover individual */}
+      {/* Lista de casas com saldo NA MOEDA NATIVA */}
       <div className="space-y-2">
         <p className="text-xs font-medium text-foreground">Saldo por Casa</p>
         <ScrollArea className={cn(
@@ -193,7 +194,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                 key={casa.id} 
                 className="p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors space-y-1.5"
               >
-                {/* Nome e Saldo Composto */}
+                {/* Nome e Saldo Composto NA MOEDA NATIVA */}
                 <div className="flex justify-between items-center gap-2">
                   <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
                     {casa.nome}
@@ -203,12 +204,20 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                       </span>
                     )}
                   </span>
-                  <SaldoCompostoSimples
-                    saldoReal={casa.saldoReal}
-                    saldoFreebet={casa.saldoFreebet}
-                    formatCurrency={(val) => formatCurrency(val)}
-                    className="text-sm text-primary"
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <Badge 
+                      variant="outline" 
+                      className="text-[9px] px-1 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
+                    >
+                      {casa.moedaOriginal}
+                    </Badge>
+                    <SaldoCompostoSimples
+                      saldoReal={casa.saldoRealNativo}
+                      saldoFreebet={casa.saldoFreebetNativo}
+                      formatCurrency={(val) => formatCurrencyUtil(val, casa.moedaOriginal)}
+                      className="text-sm text-primary"
+                    />
+                  </div>
                 </div>
                 
                 {/* Rollover individual com 🎁 */}
@@ -247,11 +256,11 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                   </div>
                 )}
                 
-                {/* Info extra: Em aposta */}
-                {casa.saldoEmAposta > 0 && (
+                {/* Info extra: Em aposta (na moeda nativa) */}
+                {casa.saldoEmApostaNativo > 0 && (
                   <div className="flex gap-3 text-[10px]">
                     <span className="text-muted-foreground">
-                      Pendente: <span className="font-medium">{formatCurrency(casa.saldoEmAposta)}</span>
+                      Pendente: <span className="font-medium">{formatCurrencyUtil(casa.saldoEmApostaNativo, casa.moedaOriginal)}</span>
                     </span>
                   </div>
                 )}
