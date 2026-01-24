@@ -98,6 +98,7 @@ export function ConfirmarSaqueDialog({
   const [loading, setLoading] = useState(false);
   const [observacoes, setObservacoes] = useState("");
   const [showRecusaConfirm, setShowRecusaConfirm] = useState(false);
+  const [parceiroInativo, setParceiroInativo] = useState<string | null>(null);
   
   // Estados para saque FIAT
   const [valorRecebido, setValorRecebido] = useState<string>("");
@@ -108,10 +109,11 @@ export function ConfirmarSaqueDialog({
   // Determinar se é saque cripto
   const isCryptoWithdrawal = !!saque?.destino_wallet_id;
 
-  // Resetar estados quando abre o dialog
+  // Resetar estados quando abre o dialog e verificar status do parceiro
   useEffect(() => {
     if (open && saque) {
       setObservacoes("");
+      setParceiroInativo(null);
       
       if (isCryptoWithdrawal) {
         // Pré-preencher com estimativa
@@ -123,6 +125,24 @@ export function ConfirmarSaqueDialog({
         setValorRecebido(valorDestinoEstimado.toString());
         setQtdCoinRecebida("");
       }
+      
+      // PROTEÇÃO: Verificar se o parceiro ainda está ativo
+      // O banco também valida via trigger, mas a UI deve prevenir ação
+      const verificarParceiroAtivo = async () => {
+        if (saque.origem_bookmaker_id) {
+          const { data } = await supabase
+            .from("bookmakers")
+            .select("parceiros:parceiro_id(nome, status)")
+            .eq("id", saque.origem_bookmaker_id)
+            .single();
+          
+          const parceiro = (data as any)?.parceiros;
+          if (parceiro && parceiro.status !== "ativo") {
+            setParceiroInativo(parceiro.nome);
+          }
+        }
+      };
+      verificarParceiroAtivo();
     }
   }, [open, saque, isCryptoWithdrawal]);
 
@@ -165,9 +185,10 @@ export function ConfirmarSaqueDialog({
   const temDiferencaFiat = Math.abs(diferencaFiat) > 0.01;
 
   // Validação - SIMPLIFICADA para crypto (apenas quantidade)
+  // PROTEÇÃO: Bloquear se parceiro está inativo
   const isValidCrypto = isCryptoWithdrawal && qtdCoinRecebidaNum > 0;
   const isValidFiat = !isCryptoWithdrawal && valorRecebidoNum > 0;
-  const isValid = isValidCrypto || isValidFiat;
+  const isValid = (isValidCrypto || isValidFiat) && !parceiroInativo;
 
   const handleConfirmar = async () => {
     if (!saque || !isValid) return;
@@ -347,7 +368,12 @@ export function ConfirmarSaqueDialog({
       onSuccess();
       onClose();
     } catch (error: any) {
-      toast.error("Erro ao confirmar saque: " + error.message);
+      // Tratamento especial para erros de parceiro inativo (trigger do banco)
+      if (error.message?.includes("inativo") || error.message?.includes("Parceiro")) {
+        toast.error("Parceiro está inativo. Reative-o antes de confirmar esta operação.");
+      } else {
+        toast.error("Erro ao confirmar saque: " + error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -445,6 +471,24 @@ export function ConfirmarSaqueDialog({
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* ALERTA DE PARCEIRO INATIVO */}
+            {parceiroInativo && (
+              <Card className="border-destructive/50 bg-destructive/10">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-destructive">Parceiro Inativo</p>
+                      <p className="text-sm text-muted-foreground">
+                        O parceiro <strong>{parceiroInativo}</strong> está inativo. 
+                        Não é possível confirmar este saque até que o parceiro seja reativado.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Resumo do Saque */}
             <Card className="bg-muted/30 border-border/50">
               <CardContent className="pt-4 space-y-3">

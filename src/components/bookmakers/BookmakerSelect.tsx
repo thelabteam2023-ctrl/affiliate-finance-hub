@@ -288,7 +288,9 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                 logo_url
               )
             `)
-            .eq("parceiro_id", parceiroId);
+            .eq("parceiro_id", parceiroId)
+            // PROTEÇÃO: Excluir bookmakers bloqueadas (parceiro inativo) e encerradas
+            .in("status", ["ativo", "ATIVO", "limitada", "LIMITADA", "EM_USO", "em_uso"]);
 
           // Filtrar por moeda operacional (mecanismo de depósito)
           if (moedaOperacional) {
