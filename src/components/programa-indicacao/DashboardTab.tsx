@@ -162,7 +162,19 @@ export function DashboardTab() {
   // Total Investment = same as "Total Geral" in Financeiro tab
   const totalInvestimento = totalPagtoParceiros + totalComissoes + totalBonus;
   const totalParceiros = filteredCustos.length;
-  const custoMedio = totalParceiros > 0 ? totalInvestimento / totalParceiros : 0;
+  
+  // NEW CAC LOGIC: Only CPFs with cost > 0 enter the CAC calculation
+  // CPFs without cost (organic, migrated, own) are displayed but don't dilute CAC
+  const cpfsPagos = filteredCustos.filter((c) => c.custo_total > 0);
+  const cpfsSemCusto = filteredCustos.filter((c) => c.custo_total === 0 || c.custo_total === null);
+  const qtdCpfsPagos = cpfsPagos.length;
+  const qtdCpfsSemCusto = cpfsSemCusto.length;
+  
+  // CAC Pago Real: Only CPFs with financial cost
+  const cacPago = qtdCpfsPagos > 0 ? totalInvestimento / qtdCpfsPagos : 0;
+  
+  // Taxa Orgânica: Percentage of CPFs without cost
+  const taxaOrganica = totalParceiros > 0 ? (qtdCpfsSemCusto / totalParceiros) * 100 : 0;
 
   // Calculate by origin
   const porOrigem = {
@@ -324,7 +336,7 @@ export function DashboardTab() {
         </Button>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs - Row 1: Main Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -341,30 +353,53 @@ export function DashboardTab() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Parceiros Adquiridos</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de CPFs</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalParceiros}</div>
-            <p className="text-xs text-muted-foreground">
-              Total de parcerias
-            </p>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">{qtdCpfsPagos}</span> pagos
+              </span>
+              <span className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">{qtdCpfsSemCusto}</span> sem custo
+              </span>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Custo Médio</CardTitle>
+            <CardTitle className="text-sm font-medium">CAC Pago Real</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(custoMedio)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(cacPago)}</div>
             <p className="text-xs text-muted-foreground">
-              Por parceiro (CPF)
+              Apenas CPFs com custo ({qtdCpfsPagos})
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* KPIs - Row 2: Organic Rate Warning */}
+      {qtdCpfsSemCusto > 0 && (
+        <Card className="border-dashed border-muted-foreground/30 bg-muted/30">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="font-normal">
+                  {taxaOrganica.toFixed(1)}% orgânico
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {qtdCpfsSemCusto} CPF{qtdCpfsSemCusto !== 1 ? 's' : ''} não entra{qtdCpfsSemCusto !== 1 ? 'm' : ''} no CAC (sem custo financeiro)
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Evolution Chart */}
       {evolucaoMensal.length > 1 && (
