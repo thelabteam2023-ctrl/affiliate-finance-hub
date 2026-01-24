@@ -68,7 +68,7 @@ export function ParceiroDetalhesPanel({
   const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null });
   const [filtroMoeda, setFiltroMoeda] = useState<string>("todas");
   const { canEdit, canDelete } = useActionAccess();
-  const { convertToBRL } = useCotacoes();
+  const { convertToBRL, dataSource, isUsingFallback } = useCotacoes();
 
   // Mover hooks useMemo ANTES de qualquer early return
   const depositadoEntries = useMemo(() => 
@@ -443,6 +443,8 @@ export function ParceiroDetalhesPanel({
                     consolidadoBRL={kpisFiltrados.depositadoBRL}
                     showBreakdown={kpisFiltrados.isConsolidado}
                     masked={!showSensitiveData}
+                    dataSource={dataSource}
+                    isUsingFallback={isUsingFallback}
                   />
 
                   {/* Sacado */}
@@ -453,6 +455,8 @@ export function ParceiroDetalhesPanel({
                     consolidadoBRL={kpisFiltrados.sacadoBRL}
                     showBreakdown={kpisFiltrados.isConsolidado}
                     masked={!showSensitiveData}
+                    dataSource={dataSource}
+                    isUsingFallback={isUsingFallback}
                   />
 
                   {/* SALDO ATUAL - Destaque principal */}
@@ -465,6 +469,8 @@ export function ParceiroDetalhesPanel({
                     masked={!showSensitiveData}
                     cardClassName="bg-primary/10 border-primary/30 ring-1 ring-primary/20"
                     labelClassName="text-primary/80 font-medium"
+                    dataSource={dataSource}
+                    isUsingFallback={isUsingFallback}
                   />
 
                   {/* Resultado */}
@@ -486,6 +492,8 @@ export function ParceiroDetalhesPanel({
                     showBreakdown={kpisFiltrados.isConsolidado}
                     masked={!showSensitiveData}
                     variant="auto"
+                    dataSource={dataSource}
+                    isUsingFallback={isUsingFallback}
                   />
 
                   {/* Apostas */}

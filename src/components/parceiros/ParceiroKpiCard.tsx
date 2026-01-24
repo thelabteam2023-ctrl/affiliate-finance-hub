@@ -1,9 +1,10 @@
 import { ReactNode } from "react";
-import { Info } from "lucide-react";
+import { Info, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { CurrencyEntry } from "@/components/ui/native-currency-kpi";
+import type { DataSource } from "@/hooks/useCotacoes";
 
 interface ParceiroKpiCardProps {
   icon: ReactNode;
@@ -24,6 +25,10 @@ interface ParceiroKpiCardProps {
   iconClassName?: string;
   /** Classe CSS adicional para o label */
   labelClassName?: string;
+  /** Fonte dos dados de cotação */
+  dataSource?: DataSource;
+  /** Se está usando cotação fallback */
+  isUsingFallback?: boolean;
 }
 
 // Formatar valor com símbolo da moeda
@@ -68,6 +73,26 @@ const getCurrencyBadgeClass = (currency: string): string => {
   }
 };
 
+// Obter label amigável da fonte de dados
+const getDataSourceLabel = (dataSource?: DataSource, isUsingFallback?: boolean): { label: string; isOfficial: boolean } => {
+  if (isUsingFallback) {
+    return { label: "Cotação de Referência (Fallback)", isOfficial: false };
+  }
+  
+  switch (dataSource) {
+    case "database":
+      return { label: "Cotação Oficial (Cache)", isOfficial: true };
+    case "edge_function":
+      return { label: "Cotação Oficial (Tempo Real)", isOfficial: true };
+    case "localstorage":
+      return { label: "Cotação Oficial (Local)", isOfficial: true };
+    case "fallback":
+      return { label: "Cotação de Referência (Fallback)", isOfficial: false };
+    default:
+      return { label: "Cotação Atual", isOfficial: true };
+  }
+};
+
 export function ParceiroKpiCard({
   icon,
   label,
@@ -79,6 +104,8 @@ export function ParceiroKpiCard({
   cardClassName,
   iconClassName,
   labelClassName,
+  dataSource,
+  isUsingFallback,
 }: ParceiroKpiCardProps) {
   // Filtrar entries com valor zero
   const nonZeroEntries = entries.filter(e => e.value !== 0);
@@ -109,6 +136,9 @@ export function ParceiroKpiCard({
   const formattedValue = masked 
     ? "••••••" 
     : formatCurrencyValue(displayValue, displayCurrency);
+
+  // Info da fonte de cotação
+  const sourceInfo = getDataSourceLabel(dataSource, isUsingFallback);
 
   return (
     <div className={cn("flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border", cardClassName)}>
@@ -148,10 +178,27 @@ export function ParceiroKpiCard({
                       </span>
                     </div>
                   ))}
+                  
+                  {/* Indicador de fonte da cotação */}
                   {hasForeignCurrency && (
-                    <p className="text-[10px] text-muted-foreground mt-2 pt-2 border-t">
-                      Consolidado em BRL usando cotação atual
-                    </p>
+                    <div className="mt-2 pt-2 border-t border-border/50">
+                      <div className="flex items-center gap-1.5 text-[10px]">
+                        {sourceInfo.isOfficial ? (
+                          <CheckCircle2 className="h-3 w-3 text-success shrink-0" />
+                        ) : (
+                          <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
+                        )}
+                        <span className={cn(
+                          "font-medium",
+                          sourceInfo.isOfficial ? "text-success" : "text-warning"
+                        )}>
+                          {sourceInfo.label}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Consolidado em BRL
+                      </p>
+                    </div>
                   )}
                 </div>
               </TooltipContent>
