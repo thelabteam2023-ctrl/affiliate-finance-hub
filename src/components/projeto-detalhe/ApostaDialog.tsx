@@ -191,10 +191,11 @@ import { parseOcrMarket, resolveOcrResultToOption } from "@/lib/marketOcrParser"
 const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
   "Futebol": [
     "1X2",
-    "Total de Gols",        // ANTES: "Over (Gols)" + "Under (Gols)"
+    "Total de Gols",
     "Total de Escanteios",
     "Total de Cartões",
-    "Handicap de Gols",     // ANTES: "Handicap Asiático" + "Handicap Europeu"
+    "Handicap",
+    "Handicap de Gols",
     "Ambas Marcam (BTTS)",
     "Dupla Chance",
     "Draw No Bet",
