@@ -19,6 +19,8 @@ import { useActionAccess } from "@/hooks/useModuleAccess";
 import { MoneyDisplay, formatMoneyValue } from "@/components/ui/money-display";
 import { NativeCurrencyKpi } from "@/components/ui/native-currency-kpi";
 import { useBookmakerUsageStatus, getUsageCategoryConfig } from "@/hooks/useBookmakerUsageStatus";
+import { useCotacoes } from "@/hooks/useCotacoes";
+import { ParceiroKpiCard } from "./ParceiroKpiCard";
 
 interface ParceiroCache {
   resumoData: ParceiroFinanceiroConsolidado | null;
@@ -66,6 +68,7 @@ export function ParceiroDetalhesPanel({
   const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null });
   const [filtroMoeda, setFiltroMoeda] = useState<string>("todas");
   const { canEdit, canDelete } = useActionAccess();
+  const { convertToBRL } = useCotacoes();
 
   // Mover hooks useMemo ANTES de qualquer early return
   const depositadoEntries = useMemo(() => 
@@ -124,14 +127,27 @@ export function ParceiroDetalhesPanel({
   }, [data?.bookmakers, filtroMoeda]);
 
   // KPIs filtrados por moeda - recalcula com base nos bookmakers filtrados
+  // Quando "todas", consolida em BRL e mantém breakdown por moeda original
   const kpisFiltrados = useMemo(() => {
     if (filtroMoeda === "todas") {
+      // Calcular totais consolidados em BRL
+      const consolidarEmBRL = (entries: { currency: string; value: number }[]): number => {
+        return entries.reduce((total, e) => {
+          return total + convertToBRL(e.value, e.currency);
+        }, 0);
+      };
+
       return {
         depositado: depositadoEntries,
+        depositadoBRL: consolidarEmBRL(depositadoEntries),
         sacado: sacadoEntries,
+        sacadoBRL: consolidarEmBRL(sacadoEntries),
         saldo: saldoEntries,
+        saldoBRL: consolidarEmBRL(saldoEntries),
         resultado: resultadoEntries,
+        resultadoBRL: consolidarEmBRL(resultadoEntries),
         apostas: data?.qtd_apostas_total ?? 0,
+        isConsolidado: true,
       };
     }
     
@@ -152,12 +168,17 @@ export function ParceiroDetalhesPanel({
     
     return {
       depositado: [{ currency: filtroMoeda, value: depositadoTotal }],
+      depositadoBRL: undefined,
       sacado: [{ currency: filtroMoeda, value: sacadoTotal }],
+      sacadoBRL: undefined,
       saldo: [{ currency: filtroMoeda, value: saldoTotal }],
+      saldoBRL: undefined,
       resultado: [{ currency: filtroMoeda, value: resultadoTotal }],
+      resultadoBRL: undefined,
       apostas: apostasTotal,
+      isConsolidado: false,
     };
-  }, [filtroMoeda, bookmakersFiltrados, depositadoEntries, sacadoEntries, saldoEntries, resultadoEntries, data?.qtd_apostas_total]);
+  }, [filtroMoeda, bookmakersFiltrados, depositadoEntries, sacadoEntries, saldoEntries, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
 
   // Determinar lucro/prejuízo baseado nos KPIs filtrados
   const hasLucroFiltrado = useMemo(() => kpisFiltrados.resultado.some(e => e.value > 0), [kpisFiltrados.resultado]);
@@ -415,69 +436,57 @@ export function ParceiroDetalhesPanel({
                 {/* KPIs principais - 5 colunas: Depositado → Sacado → SALDO → Resultado → Apostas */}
                 <div className="grid gap-2 grid-cols-2 lg:grid-cols-5">
                   {/* Depositado */}
-                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
-                    <ArrowDownToLine className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Depositado</p>
-                      <NativeCurrencyKpi
-                        entries={kpisFiltrados.depositado}
-                        size="sm"
-                        masked={!showSensitiveData}
-                        showDashOnZero
-                      />
-                    </div>
-                  </div>
+                  <ParceiroKpiCard
+                    icon={<ArrowDownToLine className="h-4 w-4 text-destructive" />}
+                    label="Depositado"
+                    entries={kpisFiltrados.depositado}
+                    consolidadoBRL={kpisFiltrados.depositadoBRL}
+                    showBreakdown={kpisFiltrados.isConsolidado}
+                    masked={!showSensitiveData}
+                  />
 
                   {/* Sacado */}
-                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
-                    <ArrowUpFromLine className="h-4 w-4 text-success shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Sacado</p>
-                      <NativeCurrencyKpi
-                        entries={kpisFiltrados.sacado}
-                        size="sm"
-                        masked={!showSensitiveData}
-                        showDashOnZero
-                      />
-                    </div>
-                  </div>
+                  <ParceiroKpiCard
+                    icon={<ArrowUpFromLine className="h-4 w-4 text-success" />}
+                    label="Sacado"
+                    entries={kpisFiltrados.sacado}
+                    consolidadoBRL={kpisFiltrados.sacadoBRL}
+                    showBreakdown={kpisFiltrados.isConsolidado}
+                    masked={!showSensitiveData}
+                  />
 
                   {/* SALDO ATUAL - Destaque principal */}
-                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-primary/10 border border-primary/30 ring-1 ring-primary/20">
-                    <Wallet className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] text-primary/80 font-medium uppercase tracking-wide">💰 Saldo Atual</p>
-                      <NativeCurrencyKpi
-                        entries={kpisFiltrados.saldo}
-                        size="sm"
-                        masked={!showSensitiveData}
-                        className="font-bold"
-                      />
-                    </div>
-                  </div>
+                  <ParceiroKpiCard
+                    icon={<Wallet className="h-4 w-4 text-primary" />}
+                    label="💰 Saldo Atual"
+                    entries={kpisFiltrados.saldo}
+                    consolidadoBRL={kpisFiltrados.saldoBRL}
+                    showBreakdown={kpisFiltrados.isConsolidado}
+                    masked={!showSensitiveData}
+                    cardClassName="bg-primary/10 border-primary/30 ring-1 ring-primary/20"
+                    labelClassName="text-primary/80 font-medium"
+                  />
 
                   {/* Resultado */}
-                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
-                    {showSensitiveData ? (
-                      hasLucroFiltrado && !hasPrejuizoFiltrado ? (
-                        <TrendingUp className="h-4 w-4 text-success shrink-0 mt-0.5" />
+                  <ParceiroKpiCard
+                    icon={
+                      showSensitiveData ? (
+                        hasLucroFiltrado && !hasPrejuizoFiltrado ? (
+                          <TrendingUp className="h-4 w-4 text-success" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4 text-destructive" />
+                        )
                       ) : (
-                        <TrendingDown className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
                       )
-                    ) : (
-                      <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Resultado</p>
-                      <NativeCurrencyKpi
-                        entries={kpisFiltrados.resultado}
-                        size="sm"
-                        variant="auto"
-                        masked={!showSensitiveData}
-                        showDashOnZero
-                      />
-                    </div>
-                  </div>
+                    }
+                    label="Resultado"
+                    entries={kpisFiltrados.resultado}
+                    consolidadoBRL={kpisFiltrados.resultadoBRL}
+                    showBreakdown={kpisFiltrados.isConsolidado}
+                    masked={!showSensitiveData}
+                    variant="auto"
+                  />
 
                   {/* Apostas */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
