@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "./useWorkspace";
 
 export interface CaptacaoRecord {
   parceriaId: string;
@@ -51,6 +52,7 @@ interface ResponsavelOption {
 }
 
 export function useHistoricoCaptacao() {
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(true);
   const [records, setRecords] = useState<CaptacaoRecord[]>([]);
   const [responsaveis, setResponsaveis] = useState<ResponsavelOption[]>([]);
@@ -63,14 +65,24 @@ export function useHistoricoCaptacao() {
   });
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (workspaceId) {
+      fetchData();
+    }
+  }, [workspaceId]);
 
   const fetchData = async () => {
+    // CRITICAL: Não fazer query sem workspaceId - isolamento de tenant
+    if (!workspaceId) {
+      console.warn("[useHistoricoCaptacao] Sem workspaceId, abortando fetch");
+      setRecords([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // Fetch all required data in parallel - usando tabelas diretas, não views com RLS complexo
+      // Fetch all required data in parallel - TODAS as queries filtradas por workspace_id
       const [
         parceriasResult,
         parceirosResult,
@@ -81,7 +93,7 @@ export function useHistoricoCaptacao() {
         apostasResult,
         bookmarkersResult
       ] = await Promise.all([
-        // Parcerias direto da tabela
+        // Parcerias - filtrar por workspace_id
         supabase.from("parcerias").select(`
           id,
           parceiro_id,
@@ -92,26 +104,29 @@ export function useHistoricoCaptacao() {
           fornecedor_id,
           valor_indicador,
           valor_parceiro,
-          valor_fornecedor
-        `),
-        // Parceiros para nomes
-        supabase.from("parceiros").select("id, nome"),
-        // Indicações para mapear indicador_id
-        supabase.from("indicacoes").select("id, indicador_id"),
-        // Indicadores para nomes
-        supabase.from("indicadores_referral").select("id, nome"),
-        // Fornecedores para nomes
-        supabase.from("fornecedores").select("id, nome"),
-        // Movimentações para calcular comissões pagas
+          valor_fornecedor,
+          workspace_id
+        `).eq("workspace_id", workspaceId),
+        // Parceiros - filtrar por workspace_id
+        supabase.from("parceiros").select("id, nome, workspace_id").eq("workspace_id", workspaceId),
+        // Indicações - filtrar por workspace_id
+        supabase.from("indicacoes").select("id, indicador_id, workspace_id").eq("workspace_id", workspaceId),
+        // Indicadores - filtrar por workspace_id
+        supabase.from("indicadores_referral").select("id, nome, workspace_id").eq("workspace_id", workspaceId),
+        // Fornecedores - filtrar por workspace_id
+        supabase.from("fornecedores").select("id, nome, workspace_id").eq("workspace_id", workspaceId),
+        // Movimentações - filtrar por workspace_id
         supabase.from("movimentacoes_indicacao")
-          .select("parceria_id, tipo, valor, status")
+          .select("parceria_id, tipo, valor, status, workspace_id")
+          .eq("workspace_id", workspaceId)
           .eq("status", "CONFIRMADO"),
-        // Apostas para calcular lucro
+        // Apostas - filtrar por workspace_id
         supabase.from("apostas_unificada")
-          .select("bookmaker_id, lucro_prejuizo, resultado")
+          .select("bookmaker_id, lucro_prejuizo, resultado, workspace_id")
+          .eq("workspace_id", workspaceId)
           .not("resultado", "in", "(PENDENTE,VOID)"),
-        // Bookmakers para mapear parceiro_id
-        supabase.from("bookmakers").select("id, parceiro_id"),
+        // Bookmakers - filtrar por workspace_id
+        supabase.from("bookmakers").select("id, parceiro_id, workspace_id").eq("workspace_id", workspaceId),
       ]);
 
       if (parceriasResult.error) throw parceriasResult.error;
