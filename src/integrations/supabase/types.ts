@@ -9535,6 +9535,10 @@ export type Database = {
         Returns: string
       }
       resend_workspace_invite: { Args: { _invite_id: string }; Returns: Json }
+      reset_projeto_operacional_seguro: {
+        Args: { p_dry_run?: boolean; p_projeto_id: string; p_user_id: string }
+        Returns: Json
+      }
       schedule_downgrade: {
         Args: {
           p_reason?: string
