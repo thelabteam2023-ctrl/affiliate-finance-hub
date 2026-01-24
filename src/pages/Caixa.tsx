@@ -32,6 +32,7 @@ import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface LocationState {
   openDialog?: boolean;
@@ -373,7 +374,7 @@ export default function Caixa() {
         return false;
       }
       
-      const dataTransacao = new Date(t.data_transacao);
+      const dataTransacao = parseLocalDateTime(t.data_transacao);
       const matchDataInicio = !dataInicio || dataTransacao >= startOfDay(dataInicio);
       const matchDataFim = !dataFim || dataTransacao <= endOfDay(dataFim);
       

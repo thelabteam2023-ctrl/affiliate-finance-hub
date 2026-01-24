@@ -18,6 +18,7 @@ import {
   WalletCrypto 
 } from "@/hooks/useParceiroTabsCache";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface ParceiroMovimentacoesTabProps {
   parceiroId: string;
@@ -257,7 +258,7 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("pt-BR", {
+    return parseLocalDateTime(date).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

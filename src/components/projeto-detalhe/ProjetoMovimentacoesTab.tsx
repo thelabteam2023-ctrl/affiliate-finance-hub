@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface ProjetoMovimentacoesTabProps {
   projetoId: string;
@@ -701,7 +702,7 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
                             {formatCurrency(transacao.valor, transacao.moeda)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(transacao.data_transacao), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            {format(parseLocalDateTime(transacao.data_transacao), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                           </p>
                         </div>
                       </div>
