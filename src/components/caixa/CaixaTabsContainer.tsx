@@ -25,7 +25,10 @@ interface CaixaTabsContainerProps {
   setFiltroTipo: (tipo: string) => void;
   filtroProjeto: string;
   setFiltroProjeto: (projeto: string) => void;
+  filtroParceiro: string;
+  setFiltroParceiro: (parceiro: string) => void;
   projetos: Array<{ id: string; nome: string }>;
+  parceirosLista: Array<{ id: string; nome: string }>;
   dataInicio: Date | undefined;
   setDataInicio: (date: Date | undefined) => void;
   dataFim: Date | undefined;
@@ -58,7 +61,10 @@ export function CaixaTabsContainer({
   setFiltroTipo,
   filtroProjeto,
   setFiltroProjeto,
+  filtroParceiro,
+  setFiltroParceiro,
   projetos,
+  parceirosLista,
   dataInicio,
   setDataInicio,
   dataFim,
@@ -133,7 +139,10 @@ export function CaixaTabsContainer({
             setFiltroTipo={setFiltroTipo}
             filtroProjeto={filtroProjeto}
             setFiltroProjeto={setFiltroProjeto}
+            filtroParceiro={filtroParceiro}
+            setFiltroParceiro={setFiltroParceiro}
             projetos={projetos}
+            parceirosLista={parceirosLista}
             dataInicio={dataInicio}
             setDataInicio={setDataInicio}
             dataFim={dataFim}

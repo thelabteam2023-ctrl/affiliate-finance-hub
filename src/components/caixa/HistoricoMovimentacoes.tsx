@@ -75,7 +75,10 @@ interface HistoricoMovimentacoesProps {
   setFiltroTipo: (tipo: string) => void;
   filtroProjeto: string;
   setFiltroProjeto: (projeto: string) => void;
+  filtroParceiro: string;
+  setFiltroParceiro: (parceiro: string) => void;
   projetos: Array<{ id: string; nome: string }>;
+  parceirosLista: Array<{ id: string; nome: string }>;
   dataInicio: Date | undefined;
   setDataInicio: (date: Date | undefined) => void;
   dataFim: Date | undefined;
@@ -97,7 +100,10 @@ export function HistoricoMovimentacoes({
   setFiltroTipo,
   filtroProjeto,
   setFiltroProjeto,
+  filtroParceiro,
+  setFiltroParceiro,
   projetos,
+  parceirosLista,
   dataInicio,
   setDataInicio,
   dataFim,
@@ -186,6 +192,22 @@ export function HistoricoMovimentacoes({
                   {projetos.map(p => (
                     <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={filtroParceiro} onValueChange={setFiltroParceiro}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Parceiro" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TODOS">Todos os parceiros</SelectItem>
+                  {parceirosLista
+                    .sort((a, b) => a.nome.localeCompare(b.nome))
+                    .map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                    ))
+                  }
                 </SelectContent>
               </Select>
             </div>
