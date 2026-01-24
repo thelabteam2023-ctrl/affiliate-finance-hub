@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ParceiroFinanceiroConsolidado, saldosToEntries } from "@/hooks/useParceiroFinanceiroConsolidado";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,7 @@ export function ParceiroDetalhesPanel({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null });
+  const [filtroMoeda, setFiltroMoeda] = useState<string>("todas");
   const { canEdit, canDelete } = useActionAccess();
 
   // Mover hooks useMemo ANTES de qualquer early return
@@ -106,6 +108,20 @@ export function ParceiroDetalhesPanel({
     [data?.bookmakers]
   );
   const { usageMap } = useBookmakerUsageStatus(bookmakerIds);
+
+  // Lista de moedas únicas para o filtro
+  const moedasDisponiveis = useMemo(() => {
+    if (!data?.bookmakers) return [];
+    const moedas = new Set(data.bookmakers.map(b => b.moeda || "BRL"));
+    return Array.from(moedas).sort();
+  }, [data?.bookmakers]);
+
+  // Bookmakers filtrados por moeda
+  const bookmakersFiltrados = useMemo(() => {
+    if (!data?.bookmakers) return [];
+    if (filtroMoeda === "todas") return data.bookmakers;
+    return data.bookmakers.filter(b => (b.moeda || "BRL") === filtroMoeda);
+  }, [data?.bookmakers, filtroMoeda]);
 
   const handleBookmakersDataChange = useCallback(() => {
     if (parceiroId) {
@@ -450,17 +466,30 @@ export function ParceiroDetalhesPanel({
 
               {/* Card Desempenho por Casa - ocupa espaço restante com scroll interno */}
               <div className="flex-1 min-h-0 mt-3 border border-border rounded-lg flex flex-col">
-                  {/* Header do card */}
-                  <div className="px-3 py-2 bg-muted/30 border-b border-border">
+                  {/* Header do card com filtro de moeda */}
+                  <div className="px-3 py-2 bg-muted/30 border-b border-border flex items-center justify-between gap-2">
                     <h3 className="text-xs font-medium flex items-center gap-1.5">
                       <Building2 className="h-3.5 w-3.5 text-primary" />
-                      Desempenho por Casa ({data.bookmakers.length})
+                      Desempenho por Casa ({bookmakersFiltrados.length}{filtroMoeda !== "todas" ? `/${data.bookmakers.length}` : ""})
                     </h3>
+                    {moedasDisponiveis.length > 1 && (
+                      <Select value={filtroMoeda} onValueChange={setFiltroMoeda}>
+                        <SelectTrigger className="h-6 w-[80px] text-[10px] px-2 py-0">
+                          <SelectValue placeholder="Moeda" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todas" className="text-xs">Todas</SelectItem>
+                          {moedasDisponiveis.map(moeda => (
+                            <SelectItem key={moeda} value={moeda} className="text-xs">{moeda}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
 
-                  {data.bookmakers.length === 0 ? (
+                  {bookmakersFiltrados.length === 0 ? (
                     <div className="text-center py-6 text-muted-foreground text-xs">
-                      Nenhuma casa vinculada
+                      {data.bookmakers.length === 0 ? "Nenhuma casa vinculada" : "Nenhuma casa com esta moeda"}
                     </div>
                   ) : (
                     <>
@@ -476,7 +505,7 @@ export function ParceiroDetalhesPanel({
 
                       {/* Lista de bookmakers - único elemento rolável */}
                       <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border">
-                        {data.bookmakers.map((bm) => (
+                        {bookmakersFiltrados.map((bm) => (
                           <div
                             key={bm.bookmaker_id}
                             className="grid grid-cols-7 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center"
