@@ -68,7 +68,20 @@ export function ParceiroDetalhesPanel({
   const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null });
   const [filtroMoeda, setFiltroMoeda] = useState<string>("todas");
   const { canEdit, canDelete } = useActionAccess();
-  const { convertToBRL, dataSource, isUsingFallback } = useCotacoes();
+  const { convertToBRL, dataSource, isUsingFallback, rates } = useCotacoes();
+  
+  // Converter rates para um mapa simples de moeda → cotação em BRL
+  const ratesMap: Record<string, number> = {
+    USD: rates.USDBRL,
+    EUR: rates.EURBRL,
+    GBP: rates.GBPBRL,
+    MYR: rates.MYRBRL,
+    MXN: rates.MXNBRL,
+    ARS: rates.ARSBRL,
+    COP: rates.COPBRL,
+    USDT: rates.USDBRL, // Stablecoins = USD
+    USDC: rates.USDBRL,
+  };
 
   // Mover hooks useMemo ANTES de qualquer early return
   const depositadoEntries = useMemo(() => 
@@ -445,6 +458,7 @@ export function ParceiroDetalhesPanel({
                     masked={!showSensitiveData}
                     dataSource={dataSource}
                     isUsingFallback={isUsingFallback}
+                    rates={ratesMap}
                   />
 
                   {/* Sacado */}
@@ -457,6 +471,7 @@ export function ParceiroDetalhesPanel({
                     masked={!showSensitiveData}
                     dataSource={dataSource}
                     isUsingFallback={isUsingFallback}
+                    rates={ratesMap}
                   />
 
                   {/* SALDO ATUAL - Destaque principal */}
@@ -471,6 +486,7 @@ export function ParceiroDetalhesPanel({
                     labelClassName="text-primary/80 font-medium"
                     dataSource={dataSource}
                     isUsingFallback={isUsingFallback}
+                    rates={ratesMap}
                   />
 
                   {/* Resultado */}
@@ -494,6 +510,7 @@ export function ParceiroDetalhesPanel({
                     variant="auto"
                     dataSource={dataSource}
                     isUsingFallback={isUsingFallback}
+                    rates={ratesMap}
                   />
 
                   {/* Apostas */}

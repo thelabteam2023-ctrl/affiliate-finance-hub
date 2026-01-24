@@ -29,6 +29,8 @@ interface ParceiroKpiCardProps {
   dataSource?: DataSource;
   /** Se está usando cotação fallback */
   isUsingFallback?: boolean;
+  /** Mapa de cotações por moeda (ex: { USD: 5.75, EUR: 6.20 }) */
+  rates?: Record<string, number>;
 }
 
 // Formatar valor com símbolo da moeda
@@ -106,6 +108,7 @@ export function ParceiroKpiCard({
   labelClassName,
   dataSource,
   isUsingFallback,
+  rates = {},
 }: ParceiroKpiCardProps) {
   // Filtrar entries com valor zero
   const nonZeroEntries = entries.filter(e => e.value !== 0);
@@ -140,6 +143,14 @@ export function ParceiroKpiCard({
   // Info da fonte de cotação
   const sourceInfo = getDataSourceLabel(dataSource, isUsingFallback);
 
+  // Formatar cotação para exibição sutil
+  const formatRate = (currency: string): string | null => {
+    if (currency === "BRL") return null;
+    const rate = rates[currency];
+    if (!rate) return null;
+    return `1 ${currency} = R$ ${rate.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+  };
+
   return (
     <div className={cn("flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border", cardClassName)}>
       <div className={cn("shrink-0 mt-0.5", iconClassName)}>
@@ -161,23 +172,33 @@ export function ParceiroKpiCard({
               <TooltipContent side="bottom" className="max-w-xs">
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium mb-2">Valores por moeda original:</p>
-                  {nonZeroEntries.map((entry) => (
-                    <div key={entry.currency} className="flex items-center justify-between gap-4 text-xs">
-                      <Badge 
-                        variant="outline" 
-                        className={cn("text-[10px] px-1.5 py-0", getCurrencyBadgeClass(entry.currency))}
-                      >
-                        {entry.currency}
-                      </Badge>
-                      <span className={cn(
-                        "font-medium",
-                        variant === "auto" && entry.value > 0 && "text-success",
-                        variant === "auto" && entry.value < 0 && "text-destructive"
-                      )}>
-                        {formatCurrencyValue(entry.value, entry.currency)}
-                      </span>
-                    </div>
-                  ))}
+                  {nonZeroEntries.map((entry) => {
+                    const rateText = formatRate(entry.currency);
+                    return (
+                      <div key={entry.currency} className="flex items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant="outline" 
+                            className={cn("text-[10px] px-1.5 py-0", getCurrencyBadgeClass(entry.currency))}
+                          >
+                            {entry.currency}
+                          </Badge>
+                          {rateText && (
+                            <span className="text-[9px] text-muted-foreground/70 italic">
+                              {rateText}
+                            </span>
+                          )}
+                        </div>
+                        <span className={cn(
+                          "font-medium shrink-0",
+                          variant === "auto" && entry.value > 0 && "text-success",
+                          variant === "auto" && entry.value < 0 && "text-destructive"
+                        )}>
+                          {formatCurrencyValue(entry.value, entry.currency)}
+                        </span>
+                      </div>
+                    );
+                  })}
                   
                   {/* Indicador de fonte da cotação */}
                   {hasForeignCurrency && (
