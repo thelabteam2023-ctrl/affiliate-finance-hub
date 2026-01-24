@@ -61,39 +61,53 @@ export function StepDadosBasicosEdit({
     
     setLoadingOperadores(true);
     try {
-      // Query direta com join para profiles
-      const { data, error } = await supabase
+      // Step 1: Get operador_projetos
+      const { data: opProjetos, error: opError } = await supabase
         .from("operador_projetos")
-        .select(`
-          id,
-          operador_id,
-          status,
-          operadores!inner(
-            id,
-            auth_user_id,
-            profiles:auth_user_id(
-              full_name
-            )
-          )
-        `)
+        .select("id, operador_id, status")
         .eq("projeto_id", projetoId)
         .eq("status", "ATIVO");
 
-      if (error) throw error;
+      if (opError) throw opError;
 
-      if (data && data.length > 0) {
-        const operadoresComNome = data.map((op: any) => {
-          const fullName = op.operadores?.profiles?.full_name;
-          return {
-            operador_id: op.operador_id,
-            nome: fullName || "Sem nome",
-            status: op.status,
-          };
-        });
-        setOperadoresVinculados(operadoresComNome);
-      } else {
+      if (!opProjetos || opProjetos.length === 0) {
         setOperadoresVinculados([]);
+        return;
       }
+
+      // Step 2: Get operadores with auth_user_id
+      const operadorIds = opProjetos.map((op) => op.operador_id);
+      const { data: operadores, error: opDetailsError } = await supabase
+        .from("operadores")
+        .select("id, auth_user_id")
+        .in("id", operadorIds);
+
+      if (opDetailsError) throw opDetailsError;
+
+      // Step 3: Get profiles for names
+      const authUserIds = operadores?.map((op) => op.auth_user_id).filter(Boolean) || [];
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", authUserIds);
+
+      if (profilesError) throw profilesError;
+
+      // Step 4: Map everything together
+      const profilesMap = new Map(profiles?.map((p) => [p.id, p.full_name]) || []);
+      const operadoresMap = new Map(operadores?.map((o) => [o.id, o.auth_user_id]) || []);
+
+      const operadoresComNome = opProjetos.map((op) => {
+        const authUserId = operadoresMap.get(op.operador_id);
+        const fullName = authUserId ? profilesMap.get(authUserId) : null;
+        return {
+          operador_id: op.operador_id,
+          nome: fullName || "Sem nome",
+          status: op.status,
+        };
+      });
+
+      setOperadoresVinculados(operadoresComNome);
     } catch (error) {
       console.error("Erro ao carregar operadores:", error);
     } finally {
