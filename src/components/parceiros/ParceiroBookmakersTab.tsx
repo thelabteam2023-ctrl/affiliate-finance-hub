@@ -33,6 +33,7 @@ interface BookmakerVinculado {
   login_username: string;
   login_password_encrypted: string;
   bookmaker_catalogo_id: string | null;
+  instance_identifier: string | null; // MULTI-CONTA: identificador de instância
   logo_url?: string;
 }
 
@@ -84,7 +85,7 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
       // Usando apenas saldo_atual como fonte única (já normalizado no banco)
       const { data: vinculadosData, error: vinculadosError } = await supabase
         .from("bookmakers")
-        .select("id, nome, saldo_atual, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id")
+        .select("id, nome, saldo_atual, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id, instance_identifier")
         .eq("parceiro_id", parceiroId);
 
       if (vinculadosError) throw vinculadosError;
@@ -105,8 +106,10 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
       const { data: catalogoData, error: catalogoError } = await supabase.from("bookmakers_catalogo").select("id, nome, logo_url, status").order("nome");
       if (catalogoError) throw catalogoError;
 
-      const vinculadosCatalogoIds = new Set(vinculadosData?.map((b) => b.bookmaker_catalogo_id).filter(Boolean) || []);
-      const disponiveis = catalogoData?.filter((c) => !vinculadosCatalogoIds.has(c.id)) || [];
+      // MULTI-CONTA: Não filtramos mais casas já vinculadas
+      // Um parceiro pode ter múltiplas contas da mesma bookmaker
+      // Todas as casas do catálogo estão disponíveis para criar nova instância
+      const disponiveis = catalogoData || [];
 
       setData({ vinculados: vinculadosComLogo, disponiveis });
     } catch (err: any) {
@@ -223,6 +226,12 @@ export function ParceiroBookmakersTab({ parceiroId, showSensitiveData, onCreateV
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-xs font-medium truncate">{bm.nome}</p>
+                      {/* MULTI-CONTA: Exibir identificador de instância se existir */}
+                      {bm.instance_identifier && (
+                        <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 border-primary/50 text-primary">
+                          {bm.instance_identifier}
+                        </Badge>
+                      )}
                       {hasCredentials(bm) && (
                         <Popover open={credentialsPopoverOpen === bm.id} onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.id : null)}>
                           <PopoverTrigger asChild><button type="button" className="h-6 w-6 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setCredentialsPopoverOpen(credentialsPopoverOpen === bm.id ? null : bm.id); }}><IdCard className="h-5 w-5 text-muted-foreground hover:text-foreground" /></button></PopoverTrigger>

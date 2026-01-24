@@ -69,6 +69,7 @@ export default function BookmakerDialog({
   const [moedaOperacional, setMoedaOperacional] = useState<FiatCurrency>("USD");
   const [status, setStatus] = useState("ativo");
   const [saldoIrrecuperavel, setSaldoIrrecuperavel] = useState("");
+  const [instanceIdentifier, setInstanceIdentifier] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [showObservacoesDialog, setShowObservacoesDialog] = useState(false);
   const [hasFinancialOperations, setHasFinancialOperations] = useState(false);
@@ -221,6 +222,7 @@ export default function BookmakerDialog({
         setMoedaOperacional("USD");
         setStatus("ativo");
         setSaldoIrrecuperavel("");
+        setInstanceIdentifier("");
         setObservacoes("");
         setIsLoadingDetails(false);
         setIsInitialized(false);
@@ -257,6 +259,7 @@ export default function BookmakerDialog({
       setMoedaOperacional((bookmaker.moeda as FiatCurrency) || "BRL");
       setStatus(bookmaker.status || "ativo");
       setSaldoIrrecuperavel(bookmaker.saldo_irrecuperavel?.toString() || "0");
+      setInstanceIdentifier(bookmaker.instance_identifier || "");
       setObservacoes(bookmaker.observacoes || "");
       setSelectedLink(bookmaker.link_origem || "");
       setSelectedBookmaker(null);
@@ -274,6 +277,7 @@ export default function BookmakerDialog({
       setLoginPassword("");
       setStatus("ativo");
       setSaldoIrrecuperavel("");
+      setInstanceIdentifier("");
       setObservacoes("");
       setSelectedLink("");
       setSelectedBookmaker(null);
@@ -348,6 +352,7 @@ export default function BookmakerDialog({
         saldo_irrecuperavel: parseFloat(saldoIrrecuperavel) || 0,
         moeda: moedaOperacional,
         status,
+        instance_identifier: instanceIdentifier || null,
         observacoes: observacoes || null,
       };
 
@@ -380,10 +385,10 @@ export default function BookmakerDialog({
     } catch (error: any) {
       let errorMessage = error.message;
       
-      // Detectar erro de vínculo duplicado
-      if (error.message?.includes('bookmakers_user_parceiro_bookmaker_unique') || 
-          error.code === '23505') {
-        errorMessage = "Este parceiro já possui um vínculo cadastrado com esta bookmaker. Cada parceiro pode ter apenas um vínculo por casa de apostas.";
+      // MULTI-CONTA: A constraint foi removida, mas mantemos tratamento de erro genérico 23505
+      // para outros possíveis conflitos de unicidade
+      if (error.code === '23505') {
+        errorMessage = "Conflito de dados detectado. Verifique se os dados são válidos.";
       }
       
       toast({
@@ -537,6 +542,26 @@ export default function BookmakerDialog({
               </RadioGroup>
             </div>
           )}
+
+          {/* MULTI-CONTA: Identificador de instância para diferenciar contas da mesma casa */}
+          <div>
+            <Label htmlFor="instanceIdentifier" className="flex items-center gap-2">
+              Identificador da Conta
+              <span className="text-xs text-muted-foreground">(opcional)</span>
+            </Label>
+            <Input
+              id="instanceIdentifier"
+              value={instanceIdentifier}
+              onChange={(e) => setInstanceIdentifier(e.target.value)}
+              placeholder="Ex: Principal, Backup, Email João, #1"
+              disabled={loading}
+              autoComplete="off"
+              maxLength={50}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Use para diferenciar múltiplas contas da mesma casa para este parceiro
+            </p>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>

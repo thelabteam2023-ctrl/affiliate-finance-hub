@@ -942,6 +942,7 @@ export type Database = {
           created_at: string
           estado_conta: string | null
           id: string
+          instance_identifier: string | null
           link_origem: string | null
           login_password_encrypted: string
           login_username: string
@@ -967,6 +968,7 @@ export type Database = {
           created_at?: string
           estado_conta?: string | null
           id?: string
+          instance_identifier?: string | null
           link_origem?: string | null
           login_password_encrypted: string
           login_username: string
@@ -992,6 +994,7 @@ export type Database = {
           created_at?: string
           estado_conta?: string | null
           id?: string
+          instance_identifier?: string | null
           link_origem?: string | null
           login_password_encrypted?: string
           login_username?: string

@@ -348,19 +348,13 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           
           let catalogoItems = data || [];
           
+          // MULTI-CONTA: Não filtramos mais por vínculos existentes
+          // Um parceiro pode ter múltiplas contas da mesma bookmaker
+          // A prop excludeVinculosDoParceiro é mantida para compatibilidade mas não filtra mais
           if (excludeVinculosDoParceiro) {
-            const { data: vinculosExistentes } = await supabase
-              .from("bookmakers")
-              .select("bookmaker_catalogo_id")
-              .eq("parceiro_id", excludeVinculosDoParceiro);
-            
-            const idsJaVinculados = new Set(
-              (vinculosExistentes || [])
-                .map(v => v.bookmaker_catalogo_id)
-                .filter(Boolean)
-            );
-            
-            catalogoItems = catalogoItems.filter(b => !idsJaVinculados.has(b.id));
+            // Antes: filtrava casas já vinculadas
+            // Agora: permite criar múltiplas instâncias da mesma casa
+            console.log("[BookmakerSelect] Multi-conta habilitado - não filtrando por vínculos existentes");
           }
           
           setItems(catalogoItems);
