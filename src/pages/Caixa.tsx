@@ -141,6 +141,7 @@ export default function Caixa() {
   // Filters
   const [filtroTipo, setFiltroTipo] = useState<string>("TODOS");
   const [filtroProjeto, setFiltroProjeto] = useState<string>("TODOS");
+  const [filtroParceiro, setFiltroParceiro] = useState<string>("TODOS");
   const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
   const [dataFim, setDataFim] = useState<Date | undefined>(new Date());
   
@@ -396,7 +397,32 @@ export default function Caixa() {
         }
       }
       
-      return matchTipo && matchDataInicio && matchDataFim && matchProjeto;
+      // Filtro por parceiro via bookmaker/wallet/conta origem/destino
+      let matchParceiro = true;
+      if (filtroParceiro !== "TODOS") {
+        // Buscar parceiro via bookmaker
+        const origemParceiroViaBm = t.origem_bookmaker_id ? bookmakers[t.origem_bookmaker_id]?.parceiro_id : null;
+        const destinoParceiroViaBm = t.destino_bookmaker_id ? bookmakers[t.destino_bookmaker_id]?.parceiro_id : null;
+        
+        // Buscar parceiro via wallet
+        const origemParceiroViaWallet = t.origem_wallet_id ? walletsDetalhes.find(w => w.id === t.origem_wallet_id)?.parceiro_id : null;
+        const destinoParceiroViaWallet = t.destino_wallet_id ? walletsDetalhes.find(w => w.id === t.destino_wallet_id)?.parceiro_id : null;
+        
+        // Parceiro direto
+        const origemParceiroDireto = t.origem_parceiro_id;
+        const destinoParceiroDireto = t.destino_parceiro_id;
+        
+        // Verificar se alguma das origens/destinos pertence ao parceiro selecionado
+        matchParceiro = 
+          origemParceiroViaBm === filtroParceiro ||
+          destinoParceiroViaBm === filtroParceiro ||
+          origemParceiroViaWallet === filtroParceiro ||
+          destinoParceiroViaWallet === filtroParceiro ||
+          origemParceiroDireto === filtroParceiro ||
+          destinoParceiroDireto === filtroParceiro;
+      }
+      
+      return matchTipo && matchDataInicio && matchDataFim && matchProjeto && matchParceiro;
     });
   };
 
@@ -816,7 +842,10 @@ export default function Caixa() {
             setFiltroTipo={setFiltroTipo}
             filtroProjeto={filtroProjeto}
             setFiltroProjeto={setFiltroProjeto}
+            filtroParceiro={filtroParceiro}
+            setFiltroParceiro={setFiltroParceiro}
             projetos={projetos}
+            parceirosLista={Object.entries(parceiros).map(([id, nome]) => ({ id, nome }))}
             dataInicio={dataInicio}
             setDataInicio={setDataInicio}
             dataFim={dataFim}

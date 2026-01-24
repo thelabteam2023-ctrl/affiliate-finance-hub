@@ -14,7 +14,10 @@ interface CaixaRelatoriosProps {
   setFiltroTipo: (tipo: string) => void;
   filtroProjeto: string;
   setFiltroProjeto: (projeto: string) => void;
+  filtroParceiro: string;
+  setFiltroParceiro: (parceiro: string) => void;
   projetos: Array<{ id: string; nome: string }>;
+  parceirosLista: Array<{ id: string; nome: string }>;
   dataInicio: Date | undefined;
   setDataInicio: (date: Date | undefined) => void;
   dataFim: Date | undefined;
