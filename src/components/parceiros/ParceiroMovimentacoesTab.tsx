@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, AlertCircle, RefreshCw, Info } from "lucide-react";
+import { ArrowRight, AlertCircle, RefreshCw, Info, Building2, Wallet, Landmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -17,6 +17,7 @@ import {
   ContaBancaria, 
   WalletCrypto 
 } from "@/hooks/useParceiroTabsCache";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 
 interface ParceiroMovimentacoesTabProps {
   parceiroId: string;
@@ -39,6 +40,7 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
   const [data, setData] = useState<MovimentacoesData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { getLogoUrl } = useBookmakerLogoMap();
   
   // Referência para evitar race conditions
   const lastFetchedIdRef = useRef<string | null>(null);
@@ -351,22 +353,40 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
     return parts.join(" ");
   };
 
+  // Helper to abbreviate wallet address (0x5d6A...fa1070)
+  const abbreviateAddress = (address: string | null | undefined): string | undefined => {
+    if (!address) return undefined;
+    if (address.length <= 14) return address;
+    return `${address.slice(0, 6)}...${address.slice(-6)}`;
+  };
+
+  // Tipo de entidade para escolher o ícone correto
+  type EntityType = "bookmaker" | "wallet" | "conta_bancaria" | "caixa" | "parceiro" | "investidor" | "despesa" | "unknown";
+  
+  interface FlowLabelData {
+    principal: string;
+    secundario?: string;
+    tipo: EntityType;
+    logoUrl?: string | null;
+  }
+
   // Gera label de origem com informações completas
-  const getOrigemLabel = (transacao: Transacao): { principal: string; secundario?: string } => {
+  const getOrigemLabel = (transacao: Transacao): FlowLabelData => {
     // Caixa Operacional
     if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-      return { principal: "Caixa Operacional" };
+      return { principal: "Caixa Operacional", tipo: "caixa" };
     }
 
     // Investidor
     if (transacao.origem_tipo === "INVESTIDOR" && transacao.nome_investidor) {
-      return { principal: "Investidor", secundario: transacao.nome_investidor };
+      return { principal: "Investidor", secundario: transacao.nome_investidor, tipo: "investidor" };
     }
 
     // Bookmaker/Casa
     if (transacao.origem_bookmaker_id) {
-      const nome = data?.bookmakerNames.get(transacao.origem_bookmaker_id);
-      return { principal: nome || "Casa de Apostas" };
+      const nome = data?.bookmakerNames.get(transacao.origem_bookmaker_id) || "Casa de Apostas";
+      const logoUrl = getLogoUrl(nome);
+      return { principal: nome, tipo: "bookmaker", logoUrl };
     }
 
     // Conta Bancária
@@ -379,10 +399,11 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       if (conta) {
         return { 
           principal: conta.banco, 
-          secundario: parceiroNome || conta.titular 
+          secundario: parceiroNome || conta.titular,
+          tipo: "conta_bancaria"
         };
       }
-      return { principal: "Conta Bancária" };
+      return { principal: "Conta Bancária", tipo: "conta_bancaria" };
     }
 
     // Wallet Crypto
@@ -391,37 +412,39 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       if (wallet) {
         return { 
           principal: formatWallet(wallet),
-          secundario: wallet.endereco ? `${wallet.endereco.slice(0, 8)}...` : undefined
+          secundario: abbreviateAddress(wallet.endereco),
+          tipo: "wallet"
         };
       }
-      return { principal: "Wallet Crypto" };
+      return { principal: "Wallet Crypto", tipo: "wallet" };
     }
 
     // Parceiro direto
     if (transacao.origem_parceiro_id) {
       const nome = data?.parceiroNames.get(transacao.origem_parceiro_id);
-      return { principal: nome || "Parceiro" };
+      return { principal: nome || "Parceiro", tipo: "parceiro" };
     }
 
-    return { principal: "-" };
+    return { principal: "-", tipo: "unknown" };
   };
 
   // Gera label de destino com informações completas
-  const getDestinoLabel = (transacao: Transacao): { principal: string; secundario?: string } => {
+  const getDestinoLabel = (transacao: Transacao): FlowLabelData => {
     // Despesas administrativas → destino é "Despesa Externa"
     if (transacao.tipo_transacao === "DESPESA_ADMINISTRATIVA") {
-      return { principal: "Despesa Externa" };
+      return { principal: "Despesa Externa", tipo: "despesa" };
     }
 
     // Caixa Operacional
     if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
-      return { principal: "Caixa Operacional" };
+      return { principal: "Caixa Operacional", tipo: "caixa" };
     }
 
     // Bookmaker/Casa
     if (transacao.destino_bookmaker_id) {
-      const nome = data?.bookmakerNames.get(transacao.destino_bookmaker_id);
-      return { principal: nome || "Casa de Apostas" };
+      const nome = data?.bookmakerNames.get(transacao.destino_bookmaker_id) || "Casa de Apostas";
+      const logoUrl = getLogoUrl(nome);
+      return { principal: nome, tipo: "bookmaker", logoUrl };
     }
 
     // Conta Bancária
@@ -434,10 +457,11 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       if (conta) {
         return { 
           principal: conta.banco, 
-          secundario: parceiroNome || conta.titular 
+          secundario: parceiroNome || conta.titular,
+          tipo: "conta_bancaria"
         };
       }
-      return { principal: "Conta Bancária" };
+      return { principal: "Conta Bancária", tipo: "conta_bancaria" };
     }
 
     // Wallet Crypto
@@ -446,34 +470,69 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       if (wallet) {
         return { 
           principal: formatWallet(wallet),
-          secundario: wallet.endereco ? `${wallet.endereco.slice(0, 8)}...` : undefined
+          secundario: abbreviateAddress(wallet.endereco),
+          tipo: "wallet"
         };
       }
-      return { principal: "Wallet Crypto" };
+      return { principal: "Wallet Crypto", tipo: "wallet" };
     }
 
     // Parceiro direto
     if (transacao.destino_parceiro_id) {
       const nome = data?.parceiroNames.get(transacao.destino_parceiro_id);
-      return { principal: nome || "Parceiro" };
+      return { principal: nome || "Parceiro", tipo: "parceiro" };
     }
 
-    return { principal: "-" };
+    return { principal: "-", tipo: "unknown" };
   };
 
-  // Componente para exibir origem/destino com duas linhas
-  const FlowLabel = ({ label, align = "left" }: { label: { principal: string; secundario?: string }; align?: "left" | "right" }) => {
-    const alignClass = align === "right" ? "text-right items-end" : "text-left items-start";
+  // Componente para renderizar o ícone apropriado
+  const EntityIcon = ({ data: labelData }: { data: FlowLabelData }) => {
+    const iconClass = "h-5 w-5 shrink-0";
+    
+    // Bookmaker com logo
+    if (labelData.tipo === "bookmaker" && labelData.logoUrl) {
+      return (
+        <img 
+          src={labelData.logoUrl} 
+          alt={labelData.principal} 
+          className="h-5 w-5 rounded object-contain bg-background shrink-0"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />
+      );
+    }
+    
+    // Fallback icons por tipo
+    switch (labelData.tipo) {
+      case "bookmaker":
+        return <Building2 className={`${iconClass} text-muted-foreground`} />;
+      case "wallet":
+        return <Wallet className={`${iconClass} text-muted-foreground`} />;
+      case "conta_bancaria":
+        return <Landmark className={`${iconClass} text-muted-foreground`} />;
+      case "caixa":
+        return <Building2 className={`${iconClass} text-muted-foreground`} />;
+      default:
+        return null;
+    }
+  };
+
+  // Componente para exibir origem/destino com ícone e duas linhas
+  const FlowLabel = ({ label, align = "left" }: { label: FlowLabelData; align?: "left" | "right" }) => {
+    const isRight = align === "right";
     return (
-      <div className={`flex flex-col ${alignClass} min-w-0`}>
-        <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
-          {label.principal}
-        </span>
-        {label.secundario && (
-          <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">
-            {label.secundario}
+      <div className={`flex items-center gap-2 min-w-0 ${isRight ? "flex-row-reverse" : ""}`}>
+        <EntityIcon data={label} />
+        <div className={`flex flex-col min-w-0 ${isRight ? "text-right items-end" : "text-left items-start"}`}>
+          <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
+            {label.principal}
           </span>
-        )}
+          {label.secundario && (
+            <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">
+              {label.secundario}
+            </span>
+          )}
+        </div>
       </div>
     );
   };
