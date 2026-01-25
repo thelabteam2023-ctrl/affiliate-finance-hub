@@ -10,7 +10,7 @@ export interface WindowOpenParams {
   estrategia?: string;
 }
 
-const DEFAULT_WINDOW_FEATURES = 'width=680,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+const DEFAULT_WINDOW_FEATURES = 'width=680,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
 
 /**
  * Abre o formulário de Surebet em uma nova janela.

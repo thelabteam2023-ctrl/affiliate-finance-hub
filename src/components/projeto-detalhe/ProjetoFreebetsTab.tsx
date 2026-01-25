@@ -337,10 +337,10 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   const handleEditClick = useCallback((aposta: ApostaOperacionalFreebet) => {
     if (aposta.tipo === "multipla") {
       const url = `/janela/multipla/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=freebets&estrategia=FREEBET`;
-      window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+      window.open(url, '_blank', 'width=680,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     } else {
       const url = `/janela/aposta/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=freebets&estrategia=FREEBET`;
-      window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+      window.open(url, '_blank', 'width=680,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     }
   }, [projetoId]);
 

@@ -962,14 +962,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const handleOpenDialog = (aposta: Aposta | null) => {
     const apostaId = aposta?.id || 'novo';
     const url = `/janela/aposta/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&estrategia=PUNTER`;
-    window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+    window.open(url, '_blank', 'width=680,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   };
 
   // Abrir aposta múltipla em janela externa (mesmo comportamento do Surebet)
   const handleOpenMultiplaDialog = (aposta: ApostaMultipla | null) => {
     const apostaId = aposta?.id || 'novo';
     const url = `/janela/multipla/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&estrategia=PUNTER`;
-    window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+    window.open(url, '_blank', 'width=680,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   };
 
   if (loading) {
