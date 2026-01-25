@@ -952,7 +952,7 @@ export function ApostaMultiplaDialog({
       }
 
       onSuccess();
-      onOpenChange(false);
+      if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao salvar aposta: " + error.message);
     } finally {
@@ -1234,7 +1234,7 @@ export function ApostaMultiplaDialog({
       toast.success("Aposta múltipla excluída!");
       setDeleteDialogOpen(false);
       onSuccess();
-      onOpenChange(false);
+      if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);
     } finally {
