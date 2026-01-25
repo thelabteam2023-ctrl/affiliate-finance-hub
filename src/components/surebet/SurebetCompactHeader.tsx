@@ -58,7 +58,7 @@ export function SurebetCompactHeader({
         <Input
           value={evento}
           onChange={(e) => setEvento(e.target.value)}
-          placeholder="Evento (ex: Real Madrid vs Barcelona)"
+          placeholder="TIME 1 X TIME 2"
           className="flex-1 h-8 text-xs border-0 bg-muted/40"
         />
       </div>
