@@ -93,7 +93,7 @@ export function SurebetTableRow({
       className={`border-b border-border/30 relative ${
         isFocused ? "bg-muted/30" : "hover:bg-muted/20"
       }`}
-      style={{ height: '52px' }}
+      style={{ height: '78px' }}
       onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
       onMouseLeave={() => !isEditing && onBlur()}
     >
@@ -109,7 +109,7 @@ export function SurebetTableRow({
       
       {/* Perna Label */}
       {rowSpan > 0 && (
-        <td rowSpan={rowSpan} className="px-2 text-center align-middle" style={{ height: '52px' }}>
+        <td rowSpan={rowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
           <div className={`inline-flex items-center justify-center w-9 h-9 rounded-lg font-bold text-sm ${getPernaColor()}`}>
             {label}
           </div>
@@ -120,7 +120,7 @@ export function SurebetTableRow({
       )}
       
       {/* Casa */}
-      <td className="px-2" style={{ height: '52px' }}>
+      <td className="px-2" style={{ height: '78px' }}>
         {isEditing ? (
           <div>
             <div className="text-xs font-medium uppercase truncate">
@@ -176,7 +176,7 @@ export function SurebetTableRow({
       </td>
       
       {/* Odd */}
-      <td className="px-2" style={{ height: '52px' }}>
+      <td className="px-2" style={{ height: '78px' }}>
         {isEditing ? (
           <div className="text-sm font-medium text-center">{entry.odd || "—"}</div>
         ) : (
@@ -195,7 +195,7 @@ export function SurebetTableRow({
       </td>
       
       {/* Stake */}
-      <td className="px-2" style={{ height: '52px' }}>
+      <td className="px-2" style={{ height: '78px' }}>
         {isEditing ? (
           <div className="text-sm font-medium text-center">
             {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
@@ -214,7 +214,7 @@ export function SurebetTableRow({
       </td>
       
       {/* Linha */}
-      <td className="px-2" style={{ height: '52px' }}>
+      <td className="px-2" style={{ height: '78px' }}>
         {isEditing ? (
           <div className="text-xs text-muted-foreground text-center truncate">
             {entry.selecaoLivre || "—"}
@@ -230,7 +230,7 @@ export function SurebetTableRow({
       </td>
       
       {/* Referência (Target) */}
-      <td className="px-2 text-center" style={{ height: '52px' }}>
+      <td className="px-2 text-center" style={{ height: '78px' }}>
         {!isEditing && (
           <button
             type="button"
@@ -248,7 +248,7 @@ export function SurebetTableRow({
       
       {/* Checkbox D — Distribuição de lucro */}
       {!isEditing && (
-        <td className="px-2 text-center" style={{ height: '52px' }}>
+        <td className="px-2 text-center" style={{ height: '78px' }}>
           <button
             type="button"
             onClick={() => onToggleDirected(pernaIndex)}
@@ -265,7 +265,7 @@ export function SurebetTableRow({
       )}
       
       {/* Lucro */}
-      <td className="px-2 text-center" style={{ height: '52px' }}>
+      <td className="px-2 text-center" style={{ height: '78px' }}>
         <span className={`text-sm font-medium ${
           lucro >= 0 ? "text-emerald-500" : "text-red-500"
         }`}>
@@ -274,7 +274,7 @@ export function SurebetTableRow({
       </td>
       
       {/* ROI */}
-      <td className="px-2 text-center" style={{ height: '52px' }}>
+      <td className="px-2 text-center" style={{ height: '78px' }}>
         <span className={`text-xs ${
           roi >= 0 ? "text-emerald-500" : "text-red-500"
         }`}>
@@ -284,7 +284,7 @@ export function SurebetTableRow({
       
       {/* Ações */}
       {!isEditing && (
-        <td className="px-1" style={{ height: '52px' }}>
+        <td className="px-1" style={{ height: '78px' }}>
           <Button
             type="button"
             variant="ghost"
