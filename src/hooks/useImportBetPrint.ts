@@ -140,6 +140,11 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
 
     try {
       console.log(`[useImportBetPrint] Calling ${model} AI (timeout: ${timeoutMs}ms)`);
+      console.log("[🔍 DEBUG] Enviando para edge function:", {
+        model: model,
+        base64Length: base64.length,
+        base64Prefix: base64.substring(0, 50)
+      });
       
       const result = await Promise.race([
         supabase.functions.invoke("parse-betting-slip", {
@@ -156,9 +161,21 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       ]);
 
       clearTimeout(timeoutId);
+      console.log("[🔍 DEBUG] Resposta recebida do backend:", {
+        model: model,
+        hasData: !!result.data,
+        hasError: !!result.error,
+        data: result.data,
+        error: result.error
+      });
       return { data: result.data, error: result.error, timedOut: false };
     } catch (error: any) {
       clearTimeout(timeoutId);
+      console.log("[🔍 DEBUG] Exceção capturada:", {
+        model: model,
+        errorMessage: error.message,
+        errorType: error.constructor.name
+      });
       if (error.message === 'TIMEOUT') {
         console.log(`[useImportBetPrint] ${model} AI timed out after ${timeoutMs}ms`);
         return { data: null, error: null, timedOut: true };
@@ -169,13 +186,22 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
 
   // Process single image with primary + backup fallback
   const processImageInternal = async (file: File, currentProcessingId: number): Promise<void> => {
+    console.log("[🔍 DEBUG] ========== processImageInternal ==========");
+    console.log("[🔍 DEBUG] ProcessingID:", currentProcessingId);
+
     setProcessingPhase("analyzing");
     setParsedData(null);
     setPendingData({ mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null });
 
     try {
       // Convert to base64
+      console.log("[🔍 DEBUG] Convertendo para base64...");
       const base64 = await fileToBase64(file);
+      console.log("[🔍 DEBUG] Base64 gerado:", {
+        length: base64.length,
+        startsWithDataImage: base64.startsWith("data:image/"),
+        prefix: base64.substring(0, 50)
+      });
       
       // Check if superseded
       if (processingIdRef.current !== currentProcessingId) {
@@ -190,6 +216,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       
       setImagePreview(base64);
       
+      console.log("[🔍 DEBUG] 🚀 Iniciando IA...");
       console.log("[useImportBetPrint] Processing image:", {
         fileType: file.type,
         fileSize: file.size,
@@ -197,22 +224,31 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       });
 
       // ========== PRIMARY AI (8 seconds) ==========
+      console.log("[🔍 DEBUG] ━━━ CHAMANDO IA PRIMÁRIA ━━━");
       const primaryResult = await callAIWithTimeout(base64, "primary", PRIMARY_TIMEOUT_MS);
+      console.log("[🔍 DEBUG] 📥 Resultado IA PRIMÁRIA:", {
+        timedOut: primaryResult.timedOut,
+        hasError: !!primaryResult.error,
+        hasData: !!primaryResult.data,
+        errorMsg: primaryResult.error?.message || "N/A",
+        isValid: primaryResult.data ? isValidResponse(primaryResult.data) : false
+      });
       
       // Check if superseded
       if (processingIdRef.current !== currentProcessingId) return;
       
       // Check if primary succeeded
       if (!primaryResult.timedOut && !primaryResult.error && isValidResponse(primaryResult.data)) {
-        console.log("[useImportBetPrint] Primary AI succeeded");
+        console.log("[🔍 DEBUG] ✅✅✅ IA PRIMÁRIA SUCESSO ✅✅✅");
         await processSuccessfulResponse(primaryResult.data.data, currentProcessingId);
         return;
       }
       
       // Primary failed - try backup
-      console.log("[useImportBetPrint] Primary AI failed, trying backup...", {
+      console.log("[🔍 DEBUG] ⚠️ IA PRIMÁRIA FALHOU", {
         timedOut: primaryResult.timedOut,
         hasError: !!primaryResult.error,
+        errorDetails: primaryResult.error,
         validResponse: primaryResult.data ? isValidResponse(primaryResult.data) : false
       });
       
@@ -220,22 +256,33 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       setProcessingPhase("backup");
       toast.info("Tentando leitura alternativa...", { duration: 2000 });
       
+      console.log("[🔍 DEBUG] ━━━ CHAMANDO IA BACKUP ━━━");
       const backupResult = await callAIWithTimeout(base64, "backup", BACKUP_TIMEOUT_MS);
+      console.log("[🔍 DEBUG] 📥 Resultado IA BACKUP:", {
+        timedOut: backupResult.timedOut,
+        hasError: !!backupResult.error,
+        hasData: !!backupResult.data,
+        errorMsg: backupResult.error?.message || "N/A",
+        isValid: backupResult.data ? isValidResponse(backupResult.data) : false
+      });
       
       // Check if superseded
       if (processingIdRef.current !== currentProcessingId) return;
       
       // Check if backup succeeded
       if (!backupResult.timedOut && !backupResult.error && isValidResponse(backupResult.data)) {
-        console.log("[useImportBetPrint] Backup AI succeeded");
+        console.log("[🔍 DEBUG] ✅✅✅ IA BACKUP SUCESSO ✅✅✅");
         await processSuccessfulResponse(backupResult.data.data, currentProcessingId);
         return;
       }
       
       // Both failed
-      console.log("[useImportBetPrint] Both AIs failed", {
+      console.log("[🔍 DEBUG] ❌❌❌ AMBAS IAs FALHARAM ❌❌❌");
+      console.log("[🔍 DEBUG] Detalhes da falha:", {
         primaryTimedOut: primaryResult.timedOut,
-        backupTimedOut: backupResult.timedOut
+        backupTimedOut: backupResult.timedOut,
+        primaryError: primaryResult.error,
+        backupError: backupResult.error
       });
       
       // Determine best error message
@@ -366,24 +413,35 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
 
   // Main processImage - adds to queue
   const processImage = useCallback(async (file: File) => {
+    console.log("[🔍 DEBUG] ========== processImage CHAMADO ==========");
+    console.log("[🔍 DEBUG] File:", {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+
     // Validate file
     if (!file.type.startsWith("image/")) {
+      console.log("[🔍 DEBUG] ❌ Tipo inválido");
       toast.error("Por favor, selecione uma imagem válida.");
       return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
+      console.log("[🔍 DEBUG] ❌ Muito grande");
       toast.error("Imagem muito grande. Máximo: 10MB");
       return;
     }
     
     if (file.size < 100) {
+      console.log("[🔍 DEBUG] ❌ Muito pequeno");
       toast.error("Imagem muito pequena ou corrompida.");
       return;
     }
 
     // If already processing, add to queue
     if (processingLockRef.current) {
+      console.log("[🔍 DEBUG] ⏳ Adicionando à fila");
       console.log("[useImportBetPrint] Adding to queue");
       toast.info("Print adicionado à fila de processamento");
       
@@ -410,6 +468,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
   }, []);
 
   const processFromClipboard = useCallback(async (event: ClipboardEvent) => {
+    console.log("[🔍 DEBUG] ========== PASTE EVENT ==========");
     // Debounce rapid pastes
     const now = Date.now();
     if (now - lastPasteTimeRef.current < DEBOUNCE_MS) {
@@ -419,12 +478,23 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     lastPasteTimeRef.current = now;
 
     const items = event.clipboardData?.items;
-    if (!items) return;
+    if (!items) {
+      console.log("[🔍 DEBUG] Clipboard vazio");
+      return;
+    }
+    
+    console.log("[🔍 DEBUG] Clipboard items:", items.length);
     
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
+      console.log("[🔍 DEBUG] Item", i, "tipo:", item.type);
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
+        console.log("[🔍 DEBUG] ✅ Imagem encontrada:", {
+          name: file?.name || "N/A",
+          size: file?.size || 0,
+          type: file?.type || "N/A"
+        });
         if (file) {
           event.preventDefault();
           await processImage(file);
