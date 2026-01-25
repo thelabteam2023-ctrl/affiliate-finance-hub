@@ -2601,7 +2601,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   value={evento}
                   onChange={(e) => setEvento(e.target.value.toUpperCase())}
                   placeholder="TIME 1 X TIME 2"
-                  className={`uppercase h-10 ${printFieldsNeedingReview.evento ? 'border-amber-500/50 focus:ring-amber-500/30' : ''}`}
+                  className={`uppercase h-10 text-center placeholder:text-center ${printFieldsNeedingReview.evento ? 'border-amber-500/50 focus:ring-amber-500/30' : ''}`}
                 />
               </div>
               <div className={`space-y-1.5 w-full sm:min-w-[180px] ${printFieldsNeedingReview.dataHora ? '[&_button]:border-amber-500/50' : ''}`}>
@@ -2671,7 +2671,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     if (selecaoFromPrint) setSelecaoFromPrint(false);
                   }}
                   placeholder="Over 2.5"
-                  className={`h-10 ${printFieldsNeedingReview.selecao ? 'border-amber-500/50' : ''}`}
+                  className={`h-10 text-center placeholder:text-center ${printFieldsNeedingReview.selecao ? 'border-amber-500/50' : ''}`}
                 />
               </div>
             </div>
@@ -2709,7 +2709,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                       }}
                     >
                       <SelectTrigger className="w-full">
-                        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                        <div className={`flex items-center min-w-0 flex-1 overflow-hidden ${!bookmakerId ? 'justify-center' : 'gap-2'}`}>
                           <span className="truncate" title={(() => {
                             const selectedBk = bookmakers.find(b => b.id === bookmakerId);
                             if (selectedBk) {
