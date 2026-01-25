@@ -199,6 +199,7 @@ export default function ApostaMultiplaWindowPage() {
           defaultEstrategia={estrategia as any}
           activeTab={activeTab}
           rascunho={rascunhoCarregado}
+          embedded={true}
         />
       </div>
     </div>

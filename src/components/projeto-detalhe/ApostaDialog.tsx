@@ -2445,19 +2445,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     }).format(value);
   };
 
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent 
           className={`max-w-3xl max-h-[90vh] overflow-y-auto transition-all ${
             isDragging && !aposta ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
-          }`}
+          } ${embedded ? 'fixed inset-0 !max-w-none !max-h-none !translate-x-0 !translate-y-0 !left-0 !top-0 !rounded-none !border-0' : ''}`}
           ref={dialogContentRef}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
+          hideOverlay={embedded}
+          hideCloseButton={embedded}
         >
           {/* Drag overlay */}
           {isDragging && !aposta && (
