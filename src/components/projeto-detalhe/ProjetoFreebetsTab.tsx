@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,8 +40,9 @@ import {
   BookmakerComFreebet,
   BookmakerFreebetStats
 } from "./freebets";
-import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
-import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
+// Removido: Dialogs agora abrem em janelas externas
+// import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
+// import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, NavigationMode as FilterNavMode } from "./StandardTimeFilter";
 import { DateRange } from "react-day-picker";
 
@@ -91,10 +92,11 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   const [activeNavTab, setActiveNavTab] = useState<NavTabValue>("estoque");
   const [isTransitioning, setIsTransitioning] = useState(false);
   
-  // Dialog states
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
-  const [selectedAposta, setSelectedAposta] = useState<any>(null);
+  // Estados removidos - dialogs agora abrem em janelas externas
+  // const [dialogOpen, setDialogOpen] = useState(false);
+  // const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
+  // const [selectedAposta, setSelectedAposta] = useState<any>(null);
+  // const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<any>(null);
   const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<any>(null);
   const [bookmakers, setBookmakers] = useState<any[]>([]);
   
@@ -331,69 +333,60 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
     onDataChange?.();
   };
 
-  const handleEditClick = (aposta: ApostaOperacionalFreebet) => {
+  // Abrir formulário em janela externa (padronizado com Surebet)
+  const handleEditClick = useCallback((aposta: ApostaOperacionalFreebet) => {
     if (aposta.tipo === "multipla") {
-      setSelectedApostaMultipla({
-        id: aposta.id,
-        bookmaker_id: aposta.bookmaker_id,
-        stake: aposta.stake,
-        odd_final: aposta.odd,
-        resultado: aposta.resultado,
-        status: aposta.status,
-        lucro_prejuizo: aposta.lucro_prejuizo,
-        valor_retorno: aposta.valor_retorno,
-        data_aposta: aposta.data_aposta,
-        tipo_freebet: aposta.tipo_freebet,
-        gerou_freebet: aposta.gerou_freebet,
-        valor_freebet_gerada: aposta.valor_freebet_gerada,
-        selecoes: aposta.selecao.split(" + ").map(s => ({ descricao: s, selecao: s, odd: "1.00" })),
-        estrategia: aposta.estrategia,
-        contexto_operacional: aposta.contexto_operacional,
-        forma_registro: aposta.forma_registro,
-        bookmaker: {
-          nome: aposta.bookmaker_nome,
-          bookmakers_catalogo: { logo_url: aposta.logo_url }
-        }
-      });
-      setDialogMultiplaOpen(true);
+      const url = `/janela/multipla/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=freebets&estrategia=FREEBET`;
+      window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     } else {
-      setSelectedAposta({
-        id: aposta.id,
-        bookmaker_id: aposta.bookmaker_id,
-        evento: aposta.evento,
-        mercado: aposta.mercado,
-        selecao: aposta.selecao,
-        odd: aposta.odd,
-        stake: aposta.stake,
-        resultado: aposta.resultado,
-        status: aposta.status,
-        lucro_prejuizo: aposta.lucro_prejuizo,
-        valor_retorno: aposta.valor_retorno,
-        data_aposta: aposta.data_aposta,
-        tipo_freebet: aposta.tipo_freebet,
-        gerou_freebet: aposta.gerou_freebet,
-        valor_freebet_gerada: aposta.valor_freebet_gerada,
-        estrategia: aposta.estrategia,
-        contexto_operacional: aposta.contexto_operacional,
-        modo_entrada: aposta.lado_aposta,
-        esporte: aposta.esporte,
-        forma_registro: aposta.forma_registro,
-        // Campos de cobertura/lay
-        lay_exchange: aposta.lay_exchange,
-        lay_odd: aposta.lay_odd,
-        lay_stake: aposta.lay_stake,
-        lay_liability: aposta.lay_liability,
-        lay_comissao: aposta.lay_comissao,
-        back_comissao: aposta.back_comissao,
-        back_em_exchange: aposta.back_em_exchange,
-        bookmaker: {
-          nome: aposta.bookmaker_nome,
-          bookmakers_catalogo: { logo_url: aposta.logo_url }
-        }
-      });
-      setDialogOpen(true);
+      const url = `/janela/aposta/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=freebets&estrategia=FREEBET`;
+      window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     }
-  };
+  }, [projetoId]);
+
+  // Listener para sincronização com janelas externas via BroadcastChannel
+  useEffect(() => {
+    const channels: BroadcastChannel[] = [];
+    
+    try {
+      const apostaChannel = new BroadcastChannel("aposta_channel");
+      apostaChannel.onmessage = (event) => {
+        if (event.data?.type === "APOSTA_SAVED" && event.data?.projetoId === projetoId) {
+          fetchData();
+          onDataChange?.();
+        }
+      };
+      channels.push(apostaChannel);
+
+      const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
+      multiplaChannel.onmessage = (event) => {
+        if (event.data?.type === "APOSTA_MULTIPLA_SAVED" && event.data?.projetoId === projetoId) {
+          fetchData();
+          onDataChange?.();
+        }
+      };
+      channels.push(multiplaChannel);
+    } catch (err) {
+      // Fallback para localStorage
+      const handleStorage = (event: StorageEvent) => {
+        if ((event.key === "aposta_saved" || event.key === "aposta_multipla_saved") && event.newValue) {
+          try {
+            const data = JSON.parse(event.newValue);
+            if (data.projetoId === projetoId) {
+              fetchData();
+              onDataChange?.();
+            }
+          } catch (e) { /* ignore */ }
+        }
+      };
+      window.addEventListener("storage", handleStorage);
+      return () => window.removeEventListener("storage", handleStorage);
+    }
+
+    return () => {
+      channels.forEach(ch => ch.close());
+    };
+  }, [projetoId, onDataChange]);
 
   // Navigation handlers
   const handleModeToggle = () => {
@@ -1045,23 +1038,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           </TabsContent>
         </Tabs>
 
-        {/* Dialogs */}
-        <ApostaDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          projetoId={projetoId}
-          aposta={selectedAposta}
-          onSuccess={handleApostaUpdated}
-        />
-
-        <ApostaMultiplaDialog
-          open={dialogMultiplaOpen}
-          onOpenChange={setDialogMultiplaOpen}
-          projetoId={projetoId}
-          aposta={selectedApostaMultipla}
-          onSuccess={handleApostaUpdated}
-        />
-
+        {/* FreebetDialog mantido - é específico para adicionar freebets */}
         <FreebetDialog
           open={freebetDialogOpen}
           onOpenChange={setFreebetDialogOpen}
@@ -1146,23 +1123,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
         </div>
       </div>
 
-      {/* Dialogs */}
-      <ApostaDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        projetoId={projetoId}
-        aposta={selectedAposta}
-        onSuccess={handleApostaUpdated}
-      />
-
-      <ApostaMultiplaDialog
-        open={dialogMultiplaOpen}
-        onOpenChange={setDialogMultiplaOpen}
-        projetoId={projetoId}
-        aposta={selectedApostaMultipla}
-        onSuccess={handleApostaUpdated}
-      />
-
+      {/* FreebetDialog mantido - é específico para adicionar freebets */}
       <FreebetDialog
         open={freebetDialogOpen}
         onOpenChange={setFreebetDialogOpen}

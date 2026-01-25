@@ -39,9 +39,9 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ApostaDialog } from "./ApostaDialog";
-import { ApostaMultiplaDialog } from "./ApostaMultiplaDialog";
-import { ResultadoPill } from "./ResultadoPill";
+// Removido: Dialogs agora abrem em janelas externas
+// import { ApostaDialog } from "./ApostaDialog";
+// import { ApostaMultiplaDialog } from "./ApostaMultiplaDialog";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
@@ -174,11 +174,11 @@ export function ProjetoValueBetTab({
   // Hook global de logos de bookmakers (busca do catálogo)
   const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
-
-  const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
-  const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<any | null>(null);
+  // Estados removidos - dialogs agora abrem em janelas externas
+  // const [dialogOpen, setDialogOpen] = useState(false);
+  // const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
+  // const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
+  // const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<any | null>(null);
 
   // Sub-abas Abertas/Histórico - usa tipo padronizado
   const [apostasSubTab, setApostasSubTab] = useState<HistorySubTab>("abertas");
@@ -571,55 +571,65 @@ export function ProjetoValueBetTab({
     return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
   };
 
-  const toApostaMultiplaEdit = (a: Aposta) => {
-    const selecoes = Array.isArray(a.selecoes) ? a.selecoes : [];
-
-    return {
-      id: a.id,
-      tipo_multipla: (a.tipo_multipla as any) || (selecoes.length === 3 ? "TRIPLA" : "DUPLA"),
-      stake: typeof a.stake === "number" ? a.stake : (a.stake_total ?? 0),
-      odd_final: a.odd_final ?? 0,
-      retorno_potencial: null,
-      lucro_prejuizo: a.lucro_prejuizo ?? null,
-      valor_retorno: a.valor_retorno ?? null,
-      selecoes: selecoes.map((s: any) => ({
-        descricao: s?.descricao || "",
-        odd: String(s?.odd ?? ""),
-        resultado: s?.resultado,
-      })),
-      status: a.status,
-      resultado: a.resultado ?? null,
-      bookmaker_id: a.bookmaker_id,
-      tipo_freebet: a.tipo_freebet ?? null,
-      gerou_freebet: Boolean(a.gerou_freebet),
-      valor_freebet_gerada: a.valor_freebet_gerada ?? null,
-      data_aposta: a.data_aposta,
-      observacoes: a.observacoes ?? null,
-      estrategia: a.estrategia ?? APOSTA_ESTRATEGIA.VALUEBET,
-      forma_registro: a.forma_registro ?? "MULTIPLA",
-      contexto_operacional: a.contexto_operacional ?? "NORMAL",
-    } as any;
-  };
-
-  const openEditDialog = (a: Aposta) => {
+  // Abrir formulário em janela externa (padronizado com Surebet)
+  const openEditDialog = useCallback((a: Aposta) => {
     const isMultipla =
       a.forma_registro === "MULTIPLA" ||
       Boolean(a.tipo_multipla) ||
       (Array.isArray(a.selecoes) && a.selecoes.length > 0);
 
     if (isMultipla) {
-      setDialogOpen(false);
-      setSelectedAposta(null);
-      setSelectedApostaMultipla(toApostaMultiplaEdit(a));
-      setDialogMultiplaOpen(true);
-      return;
+      const url = `/janela/multipla/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=valuebet&estrategia=VALUEBET`;
+      window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+    } else {
+      const url = `/janela/aposta/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=valuebet&estrategia=VALUEBET`;
+      window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+    }
+  }, [projetoId]);
+
+  // Listener para sincronização com janelas externas via BroadcastChannel
+  useEffect(() => {
+    const channels: BroadcastChannel[] = [];
+    
+    try {
+      const apostaChannel = new BroadcastChannel("aposta_channel");
+      apostaChannel.onmessage = (event) => {
+        if (event.data?.type === "APOSTA_SAVED" && event.data?.projetoId === projetoId) {
+          fetchData();
+          onDataChange?.();
+        }
+      };
+      channels.push(apostaChannel);
+
+      const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
+      multiplaChannel.onmessage = (event) => {
+        if (event.data?.type === "APOSTA_MULTIPLA_SAVED" && event.data?.projetoId === projetoId) {
+          fetchData();
+          onDataChange?.();
+        }
+      };
+      channels.push(multiplaChannel);
+    } catch (err) {
+      // Fallback para localStorage
+      const handleStorage = (event: StorageEvent) => {
+        if ((event.key === "aposta_saved" || event.key === "aposta_multipla_saved") && event.newValue) {
+          try {
+            const data = JSON.parse(event.newValue);
+            if (data.projetoId === projetoId) {
+              fetchData();
+              onDataChange?.();
+            }
+          } catch (e) { /* ignore */ }
+        }
+      };
+      window.addEventListener("storage", handleStorage);
+      return () => window.removeEventListener("storage", handleStorage);
     }
 
-    setDialogMultiplaOpen(false);
-    setSelectedApostaMultipla(null);
-    setSelectedAposta(a);
-    setDialogOpen(true);
-  };
+    return () => {
+      channels.forEach(ch => ch.close());
+    };
+  }, [projetoId, onDataChange]);
 
   const handleApostaUpdated = () => {
     fetchData();
@@ -1065,37 +1075,6 @@ export function ProjetoValueBetTab({
             {renderMainContent()}
           </TabsContent>
         </Tabs>
-
-        {selectedAposta && (
-          <ApostaDialog
-            open={dialogOpen}
-            onOpenChange={setDialogOpen}
-            projetoId={projetoId}
-            aposta={{
-              ...selectedAposta,
-              forma_registro: selectedAposta.forma_registro || "SIMPLES",
-              contexto_operacional: selectedAposta.contexto_operacional || "NORMAL",
-            } as any}
-            onSuccess={handleApostaUpdated}
-            defaultEstrategia={APOSTA_ESTRATEGIA.VALUEBET}
-            activeTab="valuebet"
-          />
-        )}
-
-        {selectedApostaMultipla && (
-          <ApostaMultiplaDialog
-            open={dialogMultiplaOpen}
-            onOpenChange={(open) => {
-              setDialogMultiplaOpen(open);
-              if (!open) setSelectedApostaMultipla(null);
-            }}
-            projetoId={projetoId}
-            aposta={selectedApostaMultipla}
-            onSuccess={handleApostaUpdated}
-            defaultEstrategia={APOSTA_ESTRATEGIA.VALUEBET}
-            activeTab="valuebet"
-          />
-        )}
       </div>
     );
   }
@@ -1151,37 +1130,6 @@ export function ProjetoValueBetTab({
           {renderMainContent()}
         </div>
       </div>
-
-      {selectedAposta && (
-        <ApostaDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          projetoId={projetoId}
-          aposta={{
-            ...selectedAposta,
-            forma_registro: selectedAposta.forma_registro || "SIMPLES",
-            contexto_operacional: selectedAposta.contexto_operacional || "NORMAL",
-          } as any}
-          onSuccess={handleApostaUpdated}
-          defaultEstrategia={APOSTA_ESTRATEGIA.VALUEBET}
-          activeTab="valuebet"
-        />
-      )}
-
-      {selectedApostaMultipla && (
-        <ApostaMultiplaDialog
-          open={dialogMultiplaOpen}
-          onOpenChange={(open) => {
-            setDialogMultiplaOpen(open);
-            if (!open) setSelectedApostaMultipla(null);
-          }}
-          projetoId={projetoId}
-          aposta={selectedApostaMultipla}
-          onSuccess={handleApostaUpdated}
-          defaultEstrategia={APOSTA_ESTRATEGIA.VALUEBET}
-          activeTab="valuebet"
-        />
-      )}
     </div>
   );
 }
