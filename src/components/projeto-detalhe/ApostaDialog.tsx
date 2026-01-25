@@ -2600,7 +2600,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 <Input
                   value={evento}
                   onChange={(e) => setEvento(e.target.value.toUpperCase())}
-                  placeholder="Ex: REAL MADRID x BARCELONA, Over 2.5 - PSG"
+                  placeholder="TIME 1 X TIME 2"
                   className={`uppercase h-10 ${printFieldsNeedingReview.evento ? 'border-amber-500/50 focus:ring-amber-500/30' : ''}`}
                 />
               </div>
