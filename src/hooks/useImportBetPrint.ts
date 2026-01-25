@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
@@ -75,6 +75,8 @@ interface UseImportBetPrintReturn {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const PROCESSING_TIMEOUT_MS = 45000; // 45 seconds timeout
+const DEBOUNCE_MS = 500; // 500ms debounce for rapid pastes
 
 export function useImportBetPrint(): UseImportBetPrintReturn {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -86,6 +88,12 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     esporteDetectado: null
   });
 
+  // Refs for concurrency control
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const processingLockRef = useRef<boolean>(false);
+  const lastPasteTimeRef = useRef<number>(0);
+  const processingIdRef = useRef<number>(0); // Track which processing is current
+
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -96,6 +104,13 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
   };
 
   const processImage = useCallback(async (file: File) => {
+    // CONCURRENCY GUARD: Prevent overlapping processing
+    if (processingLockRef.current) {
+      console.log("[useImportBetPrint] Already processing, ignoring new request");
+      toast.info("Aguarde o processamento atual terminar");
+      return;
+    }
+
     // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error("Por favor, selecione uma imagem válida.");
@@ -114,13 +129,46 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       return;
     }
 
+    // Cancel any previous processing
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this processing
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    
+    // Track this processing with a unique ID
+    const currentProcessingId = ++processingIdRef.current;
+
+    // Acquire lock
+    processingLockRef.current = true;
     setIsProcessing(true);
     setParsedData(null);
     setPendingData({ mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null });
 
+    // Set up timeout
+    const timeoutId = setTimeout(() => {
+      if (processingIdRef.current === currentProcessingId) {
+        console.log("[useImportBetPrint] Processing timeout reached");
+        abortController.abort();
+      }
+    }, PROCESSING_TIMEOUT_MS);
+
     try {
+      // Check if aborted before starting
+      if (abortController.signal.aborted) {
+        throw new Error("Processamento cancelado");
+      }
+
       // Convert to base64
       const base64 = await fileToBase64(file);
+      
+      // Check if this processing is still current
+      if (processingIdRef.current !== currentProcessingId) {
+        console.log("[useImportBetPrint] Processing superseded by newer request");
+        return;
+      }
       
       // CRITICAL VALIDATION: Ensure base64 is a valid data URI
       if (!base64 || !base64.startsWith("data:image/")) {
@@ -133,7 +181,8 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
         fileType: file.type,
         fileSize: file.size,
         base64Length: base64.length,
-        base64Prefix: base64.substring(0, 30)
+        base64Prefix: base64.substring(0, 30),
+        processingId: currentProcessingId
       });
       
       setImagePreview(base64);
@@ -145,8 +194,19 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       const maxAttempts = 2;
       
       while (attempts < maxAttempts) {
+        // Check if aborted before each attempt
+        if (abortController.signal.aborted) {
+          throw new Error("Processamento cancelado - timeout");
+        }
+        
+        // Check if superseded
+        if (processingIdRef.current !== currentProcessingId) {
+          console.log("[useImportBetPrint] Processing superseded during retry");
+          return;
+        }
+
         attempts++;
-        console.log(`[useImportBetPrint] Attempt ${attempts}/${maxAttempts}`);
+        console.log(`[useImportBetPrint] Attempt ${attempts}/${maxAttempts} (ID: ${currentProcessingId})`);
         
         const result = await supabase.functions.invoke("parse-betting-slip", {
           body: { imageBase64: base64 }
@@ -165,6 +225,12 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
           console.log("[useImportBetPrint] Network error, retrying in 1s...");
           await new Promise(r => setTimeout(r, 1000));
         }
+      }
+
+      // Final check if still current
+      if (processingIdRef.current !== currentProcessingId) {
+        console.log("[useImportBetPrint] Processing completed but superseded");
+        return;
       }
 
       if (error) {
@@ -281,15 +347,35 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
         throw new Error("Resposta inválida do servidor");
       }
     } catch (error: any) {
-      console.error("Error processing image:", error);
-      toast.error(error.message || "Erro ao processar o print");
-      setImagePreview(null);
+      // Only show error if this processing is still current
+      if (processingIdRef.current === currentProcessingId) {
+        console.error("Error processing image:", error);
+        if (error.message !== "Processamento cancelado" && error.message !== "Processamento cancelado - timeout") {
+          toast.error(error.message || "Erro ao processar o print");
+        } else {
+          toast.warning("Processamento cancelado por timeout. Tente novamente.");
+        }
+        setImagePreview(null);
+      }
     } finally {
-      setIsProcessing(false);
+      clearTimeout(timeoutId);
+      // Only release lock if this is still the current processing
+      if (processingIdRef.current === currentProcessingId) {
+        processingLockRef.current = false;
+        setIsProcessing(false);
+      }
     }
   }, []);
 
   const processFromClipboard = useCallback(async (event: ClipboardEvent) => {
+    // DEBOUNCE: Prevent rapid successive pastes
+    const now = Date.now();
+    if (now - lastPasteTimeRef.current < DEBOUNCE_MS) {
+      console.log("[useImportBetPrint] Debouncing rapid paste");
+      return;
+    }
+    lastPasteTimeRef.current = now;
+
     const items = event.clipboardData?.items;
     if (!items) {
       console.log("[useImportBetPrint] No clipboard items found");
