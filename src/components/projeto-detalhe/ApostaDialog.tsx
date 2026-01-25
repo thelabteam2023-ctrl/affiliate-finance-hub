@@ -2456,6 +2456,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
         >
           {/* Drag overlay */}
           {isDragging && !aposta && (
