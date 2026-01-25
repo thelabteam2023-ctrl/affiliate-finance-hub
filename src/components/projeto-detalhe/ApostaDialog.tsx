@@ -424,6 +424,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [isDragging, setIsDragging] = useState(false);
   const {
     isProcessing: isPrintProcessing,
+    processingPhase: printProcessingPhase,
     parsedData: printParsedData,
     imagePreview: printImagePreview,
     fieldsNeedingReview: printFieldsNeedingReview,
@@ -2455,7 +2456,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         ) : (
                           <Camera className="h-3.5 w-3.5" />
                         )}
-                        {isPrintProcessing ? "Lendo..." : "Importar"}
+                        {isPrintProcessing 
+                          ? (printProcessingPhase === "backup" ? "Alternativo..." : "Analisando...") 
+                          : "Importar"}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" align="end" className="max-w-[200px]">
@@ -2477,9 +2480,21 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           <div className="grid gap-5 py-2">
             {/* Estado: Processando print */}
             {isPrintProcessing && !aposta && (
-              <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-primary/10">
-                <div className="h-3 w-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs text-primary font-medium">Analisando...</span>
+              <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg ${
+                printProcessingPhase === "backup" 
+                  ? "bg-amber-500/10 border border-amber-500/30" 
+                  : "bg-primary/10"
+              }`}>
+                <div className={`h-3 w-3 border-2 border-t-transparent rounded-full animate-spin ${
+                  printProcessingPhase === "backup" ? "border-amber-500" : "border-primary"
+                }`} />
+                <span className={`text-xs font-medium ${
+                  printProcessingPhase === "backup" ? "text-amber-500" : "text-primary"
+                }`}>
+                  {printProcessingPhase === "backup" 
+                    ? "Tentando leitura alternativa..." 
+                    : "Analisando seu print..."}
+                </span>
               </div>
             )}
             
