@@ -600,11 +600,11 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     if (aposta.forma_registro === "ARBITRAGEM") {
       // Surebet/Arbitragem
       const url = `/janela/surebet/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen`;
-      window.open(url, '_blank', 'width=680,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+      window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     } else {
       // Aposta simples
       const url = `/janela/aposta/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&estrategia=DUPLO_GREEN`;
-      window.open(url, '_blank', 'width=680,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+      window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     }
   }, [projetoId]);
 
