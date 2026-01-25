@@ -445,14 +445,21 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
   // Handle paste for importing prints (Ctrl+V)
   const handlePaste = useCallback((event: ClipboardEvent) => {
+   console.error("🚨🚨🚨 PASTE CAPTURADO NO DIALOG", { open, aposta: !!aposta });
     if (!open || aposta) return; // Only for new bets
+   console.error("🚨🚨🚨 PASSOU VALIDAÇÃO, chamando processPrintClipboard");
     processPrintClipboard(event);
   }, [open, aposta, processPrintClipboard]);
 
   useEffect(() => {
+   console.error("🚨🚨🚨 useEffect[paste listener]", { open, aposta: !!aposta, shouldRegister: open && !aposta });
     if (open && !aposta) {
+     console.error("🚨🚨🚨 REGISTRANDO listener de paste");
       document.addEventListener("paste", handlePaste);
-      return () => document.removeEventListener("paste", handlePaste);
+     return () => {
+       console.error("🚨🚨🚨 REMOVENDO listener de paste");
+       document.removeEventListener("paste", handlePaste);
+     };
     }
   }, [open, aposta, handlePaste]);
 
