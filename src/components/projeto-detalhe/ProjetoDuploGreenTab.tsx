@@ -41,8 +41,9 @@ import {
 } from "lucide-react";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ApostaDialog } from "./ApostaDialog";
-import { SurebetDialog } from "./SurebetDialog";
+// Removido: Dialogs agora abrem em janelas externas
+// import { ApostaDialog } from "./ApostaDialog";
+// import { SurebetDialog } from "./SurebetDialog";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { ApostaCard } from "./ApostaCard";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
@@ -166,10 +167,11 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   
   // Hook global de logos de bookmakers (busca do catálogo)
   const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [surebetDialogOpen, setSurebetDialogOpen] = useState(false);
-  const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
-  const [selectedSurebet, setSelectedSurebet] = useState<any>(null);
+  // Estados removidos - dialogs agora abrem em janelas externas
+  // const [dialogOpen, setDialogOpen] = useState(false);
+  // const [surebetDialogOpen, setSurebetDialogOpen] = useState(false);
+  // const [selectedAposta, setSelectedAposta] = useState<Aposta | null>(null);
+  // const [selectedSurebet, setSelectedSurebet] = useState<any>(null);
 
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
@@ -593,15 +595,62 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   // formatCurrency agora vem do useProjetoCurrency
   const formatPercent = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
   const handleApostaUpdated = () => { fetchData(); onDataChange?.(); };
-  const handleOpenAposta = (aposta: Aposta) => {
+  // Abrir formulário em janela externa (padronizado com Surebet)
+  const handleOpenAposta = useCallback((aposta: Aposta) => {
     if (aposta.forma_registro === "ARBITRAGEM") {
-      setSelectedSurebet({ id: aposta.id, evento: aposta.evento, esporte: aposta.esporte, modelo: aposta.modelo || "SUREBET", stake_total: aposta.stake_total || aposta.stake || 0, spread_calculado: aposta.spread_calculado || 0, roi_esperado: aposta.roi_esperado || 0, roi_real: aposta.roi_real || 0, lucro_esperado: aposta.lucro_esperado || 0, lucro_real: aposta.lucro_prejuizo || 0, status: aposta.status, resultado: aposta.resultado, data_operacao: aposta.data_aposta, observacoes: aposta.observacoes, pernas: aposta.pernas || [] });
-      setSurebetDialogOpen(true);
+      // Surebet/Arbitragem
+      const url = `/janela/surebet/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen`;
+      window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     } else {
-      setSelectedAposta(aposta);
-      setDialogOpen(true);
+      // Aposta simples
+      const url = `/janela/aposta/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&estrategia=DUPLO_GREEN`;
+      window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     }
-  };
+  }, [projetoId]);
+
+  // Listener para sincronização com janelas externas via BroadcastChannel
+  useEffect(() => {
+    const channels: BroadcastChannel[] = [];
+    
+    try {
+      const apostaChannel = new BroadcastChannel("aposta_channel");
+      apostaChannel.onmessage = (event) => {
+        if (event.data?.type === "APOSTA_SAVED" && event.data?.projetoId === projetoId) {
+          fetchData();
+          onDataChange?.();
+        }
+      };
+      channels.push(apostaChannel);
+
+      const surebetChannel = new BroadcastChannel("surebet_channel");
+      surebetChannel.onmessage = (event) => {
+        if (event.data?.type === "SUREBET_SAVED" && event.data?.projetoId === projetoId) {
+          fetchData();
+          onDataChange?.();
+        }
+      };
+      channels.push(surebetChannel);
+    } catch (err) {
+      // Fallback para localStorage (navegadores sem BroadcastChannel)
+      const handleStorage = (event: StorageEvent) => {
+        if ((event.key === "aposta_saved" || event.key === "surebet_saved") && event.newValue) {
+          try {
+            const data = JSON.parse(event.newValue);
+            if (data.projetoId === projetoId) {
+              fetchData();
+              onDataChange?.();
+            }
+          } catch (e) { /* ignore */ }
+        }
+      };
+      window.addEventListener("storage", handleStorage);
+      return () => window.removeEventListener("storage", handleStorage);
+    }
+
+    return () => {
+      channels.forEach(ch => ch.close());
+    };
+  }, [projetoId, onDataChange]);
   const handleModeToggle = () => { setIsTransitioning(true); setTimeout(() => { setNavMode(p => p === "tabs" ? "sidebar" : "tabs"); setTimeout(() => setIsTransitioning(false), 50); }, 150); };
   const handleNavTabChange = (v: string) => { if (v !== activeNavTab) { setIsTransitioning(true); setActiveNavTab(v as NavTabValue); setTimeout(() => setIsTransitioning(false), 180); } };
 
@@ -983,8 +1032,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           </div>
           <TabsContent value={activeNavTab} className="mt-0">{renderMainContent()}</TabsContent>
         </Tabs>
-        {selectedAposta && <ApostaDialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setSelectedAposta(null); }} projetoId={projetoId} aposta={selectedAposta as any} onSuccess={handleApostaUpdated} defaultEstrategia={APOSTA_ESTRATEGIA.DUPLO_GREEN} activeTab="duplogreen" />}
-        <SurebetDialog open={surebetDialogOpen} onOpenChange={(o) => { setSurebetDialogOpen(o); if (!o) setSelectedSurebet(null); }} projetoId={projetoId} surebet={selectedSurebet} onSuccess={handleApostaUpdated} activeTab="duplogreen" />
       </div>
     );
   }
@@ -1029,8 +1076,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
         </div>
         <div className="flex-1 min-w-0">{renderMainContent()}</div>
       </div>
-      {selectedAposta && <ApostaDialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setSelectedAposta(null); }} projetoId={projetoId} aposta={selectedAposta as any} onSuccess={handleApostaUpdated} defaultEstrategia={APOSTA_ESTRATEGIA.DUPLO_GREEN} activeTab="duplogreen" />}
-      <SurebetDialog open={surebetDialogOpen} onOpenChange={(o) => { setSurebetDialogOpen(o); if (!o) setSelectedSurebet(null); }} projetoId={projetoId} surebet={selectedSurebet} onSuccess={handleApostaUpdated} activeTab="duplogreen" />
     </div>
   );
 }
