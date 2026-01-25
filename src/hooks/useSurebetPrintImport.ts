@@ -2,6 +2,12 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { ParsedBetSlip, ParsedField } from "./useImportBetPrint";
+import { 
+  normalizeOcrData, 
+  resolveMarketForSport as resolveMarketFn,
+  type NormalizationPendingData,
+  type NormalizedBetData
+} from "@/lib/ocrNormalization";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -18,6 +24,10 @@ const BINARY_MARKETS = [
   "Não",
   "Yes",
   "No",
+  "Total de Gols",
+  "Total de Pontos",
+  "Total de Games",
+  "Total de Sets",
 ];
 
 // Mapping of binary line pairs (both directions)
@@ -25,6 +35,8 @@ const BINARY_LINE_PAIRS: Record<string, string> = {
   // Over/Under
   "over": "under",
   "under": "over",
+  "mais": "menos",
+  "menos": "mais",
   // Sim/Não
   "sim": "não",
   "não": "sim",
@@ -43,6 +55,7 @@ export interface LegPrintData {
   isProcessing: boolean;
   isInferred: boolean;
   inferredFrom: number | null; // Index of the leg from which line was inferred
+  pendingData: NormalizationPendingData;
 }
 
 export interface UseSurebetPrintImportReturn {
@@ -67,6 +80,7 @@ export interface UseSurebetPrintImportReturn {
   getInferredLine: (sourceLine: string) => string | null;
   acceptInference: (legIndex: number) => void;
   rejectInference: (legIndex: number) => void;
+  resolveMarketForSport: (legIndex: number, sport: string, availableOptions: string[]) => string;
 }
 
 const createEmptyLegPrint = (): LegPrintData => ({
@@ -75,6 +89,7 @@ const createEmptyLegPrint = (): LegPrintData => ({
   isProcessing: false,
   isInferred: false,
   inferredFrom: null,
+  pendingData: { mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null },
 });
 
 export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
@@ -179,6 +194,7 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
             },
             isInferred: true,
             inferredFrom: processedLegIndex,
+            pendingData: { mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null },
           };
         }
 
@@ -237,18 +253,24 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
       }
 
       if (data?.success && data?.data) {
-        const rawData = data.data as ParsedBetSlip;
+        const rawData = data.data;
         
-        // Update leg data
+        // ★ APLICAR PIPELINE DE NORMALIZAÇÃO (igual ao fluxo de aposta simples)
+        const normalizationResult = normalizeOcrData(rawData);
+        const normalizedData = normalizationResult.data as unknown as ParsedBetSlip;
+        const pendingData = normalizationResult.pendingData;
+        
+        // Update leg data with normalized data
         setLegPrints(prev => {
           const updated = [...prev];
           if (updated[legIndex]) {
             updated[legIndex] = {
-              parsedData: rawData,
+              parsedData: normalizedData,
               imagePreview: base64,
               isProcessing: false,
               isInferred: false,
               inferredFrom: null,
+              pendingData,
             };
           }
           return updated;
@@ -364,6 +386,21 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     };
   }, [legPrints]);
 
+  // ★ NOVA FUNÇÃO: Resolver mercado para opções do dropdown (igual ao fluxo simples)
+  const resolveMarketForSport = useCallback((legIndex: number, sport: string, availableOptions: string[]): string => {
+    const legPrint = legPrints[legIndex];
+    if (!legPrint?.pendingData?.mercadoIntencao && !legPrint?.pendingData?.mercadoRaw) {
+      return "";
+    }
+    
+    return resolveMarketFn(
+      legPrint.pendingData,
+      legPrint.parsedData?.selecao?.value,
+      sport,
+      availableOptions
+    );
+  }, [legPrints]);
+
   const isProcessingAny = legPrints.some(leg => leg.isProcessing);
 
   return {
@@ -380,5 +417,6 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     getInferredLine,
     acceptInference,
     rejectInference,
+    resolveMarketForSport,
   };
 }

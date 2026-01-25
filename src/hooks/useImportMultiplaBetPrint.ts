@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeDetectedSport, normalizeDetectedMarket, formatSelection } from "@/lib/ocrNormalization";
 
 export interface ParsedField {
   value: string | null;
@@ -11,6 +12,9 @@ export interface ParsedSelecao {
   evento: ParsedField;
   selecao: ParsedField;
   odd: ParsedField;
+  // Campos opcionais que podem vir do OCR para normalização
+  esporte?: ParsedField;
+  mercado?: ParsedField;
 }
 
 export interface ParsedMultiplaBetSlip {
@@ -18,6 +22,9 @@ export interface ParsedMultiplaBetSlip {
   stake: ParsedField;
   retornoPotencial: ParsedField;
   selecoes: ParsedSelecao[];
+  // Campos de contexto compartilhado (detectados uma vez)
+  esporte?: ParsedField;
+  mercado?: ParsedField;
 }
 
 export interface MultiplaPrintFieldsNeedingReview {
@@ -42,6 +49,93 @@ interface UseImportMultiplaBetPrintReturn {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+/**
+ * ★ NORMALIZA DADOS DE APOSTA MÚLTIPLA
+ * Aplica o mesmo pipeline de normalização usado em apostas simples
+ */
+function normalizeMultiplaBetData(rawData: any): ParsedMultiplaBetSlip {
+  const normalized: ParsedMultiplaBetSlip = {
+    tipo: rawData.tipo || { value: null, confidence: "none" },
+    stake: rawData.stake || { value: null, confidence: "none" },
+    retornoPotencial: rawData.retornoPotencial || { value: null, confidence: "none" },
+    selecoes: [],
+    esporte: rawData.esporte,
+    mercado: rawData.mercado,
+  };
+  
+  // Normalizar esporte global (se presente)
+  if (rawData.esporte?.value) {
+    const sportNorm = normalizeDetectedSport(rawData.esporte.value);
+    normalized.esporte = {
+      value: sportNorm.normalized,
+      confidence: sportNorm.confidence
+    };
+  }
+  
+  // Normalizar mercado global (se presente)
+  if (rawData.mercado?.value) {
+    const sport = normalized.esporte?.value || "Outro";
+    const marketNorm = normalizeDetectedMarket(rawData.mercado.value, "", sport);
+    normalized.mercado = {
+      value: marketNorm.displayName,
+      confidence: marketNorm.confidence === "exact" ? "high" : marketNorm.confidence
+    };
+  }
+  
+  // Normalizar cada seleção individualmente
+  if (rawData.selecoes && Array.isArray(rawData.selecoes)) {
+    normalized.selecoes = rawData.selecoes.map((sel: any) => {
+      const normalizedSel: ParsedSelecao = {
+        evento: sel.evento || { value: null, confidence: "none" },
+        selecao: sel.selecao || { value: null, confidence: "none" },
+        odd: sel.odd || { value: null, confidence: "none" },
+      };
+      
+      // Se a seleção tiver esporte/mercado próprios, normalizar
+      if (sel.esporte?.value) {
+        const sportNorm = normalizeDetectedSport(sel.esporte.value);
+        normalizedSel.esporte = {
+          value: sportNorm.normalized,
+          confidence: sportNorm.confidence
+        };
+      }
+      
+      if (sel.mercado?.value) {
+        const sport = normalizedSel.esporte?.value || normalized.esporte?.value || "Outro";
+        const selectionRaw = sel.selecao?.value || "";
+        const marketNorm = normalizeDetectedMarket(sel.mercado.value, selectionRaw, sport);
+        
+        normalizedSel.mercado = {
+          value: marketNorm.displayName,
+          confidence: marketNorm.confidence === "exact" ? "high" : marketNorm.confidence
+        };
+        
+        // Se for TOTAL ou HANDICAP, formatar a seleção
+        if (
+          marketNorm.ocrResult &&
+          (marketNorm.ocrResult.type === "TOTAL" || marketNorm.ocrResult.type === "HANDICAP") &&
+          marketNorm.ocrResult.side &&
+          marketNorm.ocrResult.line !== undefined
+        ) {
+          const formattedSelection = formatSelection(marketNorm.ocrResult);
+          if (formattedSelection) {
+            normalizedSel.selecao = {
+              value: formattedSelection,
+              confidence: normalizedSel.selecao.confidence === "low" ? "medium" : normalizedSel.selecao.confidence
+            };
+          }
+        }
+      }
+      
+      return normalizedSel;
+    });
+  }
+  
+  console.log("[useImportMultiplaBetPrint] Normalized data:", normalized);
+  
+  return normalized;
+}
 
 export function useImportMultiplaBetPrint(): UseImportMultiplaBetPrintReturn {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -97,16 +191,19 @@ export function useImportMultiplaBetPrint(): UseImportMultiplaBetPrintReturn {
       }
 
       if (data?.success && data?.data) {
-        const rawData = data.data as ParsedMultiplaBetSlip;
+        const rawData = data.data;
         
         // Ensure we have at least 2 selections
         if (!rawData.selecoes || rawData.selecoes.length < 2) {
           throw new Error("Não foi possível detectar seleções suficientes no print. Mínimo: 2 seleções.");
         }
         
-        setParsedData(rawData);
+        // ★ APLICAR PIPELINE DE NORMALIZAÇÃO (igual aos outros fluxos)
+        const normalizedData = normalizeMultiplaBetData(rawData);
         
-        const numSelecoes = rawData.selecoes.length;
+        setParsedData(normalizedData);
+        
+        const numSelecoes = normalizedData.selecoes.length;
         const tipo = numSelecoes >= 3 ? "Tripla" : "Dupla";
         toast.success(`Print analisado! Detectado: ${tipo} (${numSelecoes} seleções)`);
       } else {
