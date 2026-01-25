@@ -200,6 +200,7 @@ export default function ApostaWindowPage() {
           onSuccess={handleSuccess}
           defaultEstrategia={estrategia as any}
           activeTab={activeTab}
+          embedded={true}
         />
       </div>
     </div>
