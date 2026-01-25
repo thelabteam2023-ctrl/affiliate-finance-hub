@@ -468,40 +468,42 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
   }, []);
 
   const processFromClipboard = useCallback(async (event: ClipboardEvent) => {
-    console.log("[🔍 DEBUG] ========== PASTE EVENT ==========");
+   console.error("🚨🚨🚨 [useImportBetPrint] ========== PROCESSANDO PASTE ==========");
     // Debounce rapid pastes
     const now = Date.now();
     if (now - lastPasteTimeRef.current < DEBOUNCE_MS) {
-      console.log("[useImportBetPrint] Debouncing rapid paste");
+     console.error("🚨🚨🚨 [useImportBetPrint] ⏱️ DEBOUNCE - colou muito rápido");
       return;
     }
     lastPasteTimeRef.current = now;
 
     const items = event.clipboardData?.items;
     if (!items) {
-      console.log("[🔍 DEBUG] Clipboard vazio");
+     console.error("🚨🚨🚨 [useImportBetPrint] ❌ Clipboard VAZIO (sem items)");
       return;
     }
     
-    console.log("[🔍 DEBUG] Clipboard items:", items.length);
+   console.error("🚨🚨🚨 [useImportBetPrint] 📋 Clipboard tem", items.length, "items");
     
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      console.log("[🔍 DEBUG] Item", i, "tipo:", item.type);
+     console.error("🚨🚨🚨 [useImportBetPrint] Item[" + i + "] tipo:", item.type);
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
-        console.log("[🔍 DEBUG] ✅ Imagem encontrada:", {
+       console.error("🚨🚨🚨 [useImportBetPrint] ✅ IMAGEM ENCONTRADA!", {
           name: file?.name || "N/A",
           size: file?.size || 0,
           type: file?.type || "N/A"
         });
         if (file) {
           event.preventDefault();
+         console.error("🚨🚨🚨 [useImportBetPrint] 🚀 Chamando processImage...");
           await processImage(file);
           break;
         }
       }
     }
+   console.error("🚨🚨🚨 [useImportBetPrint] ========== FIM PASTE ==========");
   }, [processImage]);
 
   const clearParsedData = useCallback(() => {

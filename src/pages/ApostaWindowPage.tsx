@@ -42,6 +42,25 @@ export default function ApostaWindowPage() {
       aposta: !!aposta,
       windowLocation: window.location.href 
     });
+   
+   // Add a global paste listener to detect ANY paste in this window
+   const globalPasteDetector = (e: ClipboardEvent) => {
+     console.error("🚨🚨🚨 [ApostaWindowPage] PASTE GLOBAL DETECTADO!", {
+       timestamp: new Date().toISOString(),
+       target: (e.target as HTMLElement)?.tagName,
+       hasClipboardData: !!e.clipboardData,
+       itemsCount: e.clipboardData?.items?.length || 0,
+       types: e.clipboardData?.types || []
+     });
+   };
+   
+   window.addEventListener("paste", globalPasteDetector);
+   console.error("🚨🚨🚨 [ApostaWindowPage] ✅ Listener global de paste ativado na window");
+   
+   return () => {
+     console.error("🚨🚨🚨 [ApostaWindowPage] ❌ Removendo listener global");
+     window.removeEventListener("paste", globalPasteDetector);
+   };
   }, []);
 
   // Buscar dados da aposta se estiver editando
