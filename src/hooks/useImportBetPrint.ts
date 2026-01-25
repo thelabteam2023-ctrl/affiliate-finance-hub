@@ -18,20 +18,20 @@ export interface ParsedField {
 export interface ParsedBetSlip {
   mandante: ParsedField;
   visitante: ParsedField;
-  evento: ParsedField; // Campo unificado (mandante x visitante ou valor livre)
+  evento: ParsedField;
   dataHora: ParsedField;
   esporte: ParsedField;
   mercado: ParsedField;
   selecao: ParsedField;
   odd: ParsedField;
   stake: ParsedField;
-  retorno: ParsedField;      // NEW: Valor de retorno potencial
-  resultado: ParsedField;    // NEW: GREEN/RED/VOID ou null se pendente
-  bookmakerNome: ParsedField; // NEW: Nome da casa de apostas identificada
+  retorno: ParsedField;
+  resultado: ParsedField;
+  bookmakerNome: ParsedField;
 }
 
 export type FieldsNeedingReview = {
-  evento: boolean; // Campo unificado
+  evento: boolean;
   dataHora: boolean;
   esporte: boolean;
   mercado: boolean;
@@ -43,15 +43,18 @@ export type FieldsNeedingReview = {
   bookmakerNome: boolean;
 };
 
-// Store intended market value that may need to be resolved later
 export interface PendingPrintData {
   mercadoIntencao: string | null;
   mercadoRaw: string | null;
   esporteDetectado: string | null;
 }
 
+// Processing phase for UI feedback
+export type ProcessingPhase = "idle" | "analyzing" | "backup" | "error";
+
 interface UseImportBetPrintReturn {
   isProcessing: boolean;
+  processingPhase: ProcessingPhase;
   parsedData: ParsedBetSlip | null;
   imagePreview: string | null;
   fieldsNeedingReview: FieldsNeedingReview;
@@ -60,7 +63,7 @@ interface UseImportBetPrintReturn {
   processFromClipboard: (event: ClipboardEvent) => Promise<void>;
   clearParsedData: () => void;
   applyParsedData: () => {
-    evento: string; // Campo unificado
+    evento: string;
     dataHora: string;
     esporte: string;
     mercado: string;
@@ -75,11 +78,19 @@ interface UseImportBetPrintReturn {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const PROCESSING_TIMEOUT_MS = 45000; // 45 seconds timeout
+const PRIMARY_TIMEOUT_MS = 8000; // 8 seconds for primary AI
+const BACKUP_TIMEOUT_MS = 8000; // 8 seconds for backup AI
 const DEBOUNCE_MS = 500; // 500ms debounce for rapid pastes
+
+// Queue system for multiple prints
+interface QueuedImage {
+  file: File;
+  resolve: () => void;
+}
 
 export function useImportBetPrint(): UseImportBetPrintReturn {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingPhase, setProcessingPhase] = useState<ProcessingPhase>("idle");
   const [parsedData, setParsedData] = useState<ParsedBetSlip | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [pendingData, setPendingData] = useState<PendingPrintData>({
@@ -89,10 +100,11 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
   });
 
   // Refs for concurrency control
-  const abortControllerRef = useRef<AbortController | null>(null);
   const processingLockRef = useRef<boolean>(false);
   const lastPasteTimeRef = useRef<number>(0);
-  const processingIdRef = useRef<number>(0); // Track which processing is current
+  const processingIdRef = useRef<number>(0);
+  const queueRef = useRef<QueuedImage[]>([]);
+  const isProcessingQueueRef = useRef<boolean>(false);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -103,272 +115,302 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     });
   };
 
-  const processImage = useCallback(async (file: File) => {
-    // CONCURRENCY GUARD: Prevent overlapping processing
-    if (processingLockRef.current) {
-      console.log("[useImportBetPrint] Already processing, ignoring new request");
-      toast.info("Aguarde o processamento atual terminar");
-      return;
-    }
+  // Validate AI response has usable data
+  const isValidResponse = (data: any): boolean => {
+    if (!data?.success || !data?.data) return false;
+    
+    const result = data.data;
+    // Check if at least ODD or STAKE or EVENTO was detected with some value
+    const hasOdd = result.odd?.value && result.odd.confidence !== "none";
+    const hasStake = result.stake?.value && result.stake.confidence !== "none";
+    const hasTeams = (result.mandante?.value || result.visitante?.value);
+    const hasSelection = result.selecao?.value;
+    
+    return hasOdd || hasStake || hasTeams || hasSelection;
+  };
 
-    // Validate file type
+  // Call AI with timeout
+  const callAIWithTimeout = async (
+    base64: string, 
+    model: "primary" | "backup",
+    timeoutMs: number
+  ): Promise<{ data: any; error: any; timedOut: boolean }> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      console.log(`[useImportBetPrint] Calling ${model} AI (timeout: ${timeoutMs}ms)`);
+      
+      const result = await Promise.race([
+        supabase.functions.invoke("parse-betting-slip", {
+          body: { 
+            imageBase64: base64,
+            model: model === "backup" ? "backup" : undefined 
+          }
+        }),
+        new Promise<never>((_, reject) => {
+          controller.signal.addEventListener('abort', () => {
+            reject(new Error('TIMEOUT'));
+          });
+        })
+      ]);
+
+      clearTimeout(timeoutId);
+      return { data: result.data, error: result.error, timedOut: false };
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.message === 'TIMEOUT') {
+        console.log(`[useImportBetPrint] ${model} AI timed out after ${timeoutMs}ms`);
+        return { data: null, error: null, timedOut: true };
+      }
+      return { data: null, error, timedOut: false };
+    }
+  };
+
+  // Process single image with primary + backup fallback
+  const processImageInternal = async (file: File, currentProcessingId: number): Promise<void> => {
+    setProcessingPhase("analyzing");
+    setParsedData(null);
+    setPendingData({ mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null });
+
+    try {
+      // Convert to base64
+      const base64 = await fileToBase64(file);
+      
+      // Check if superseded
+      if (processingIdRef.current !== currentProcessingId) {
+        console.log("[useImportBetPrint] Processing superseded");
+        return;
+      }
+      
+      // Validate base64
+      if (!base64 || !base64.startsWith("data:image/")) {
+        throw new Error("Falha ao processar imagem. Formato inválido.");
+      }
+      
+      setImagePreview(base64);
+      
+      console.log("[useImportBetPrint] Processing image:", {
+        fileType: file.type,
+        fileSize: file.size,
+        processingId: currentProcessingId
+      });
+
+      // ========== PRIMARY AI (8 seconds) ==========
+      const primaryResult = await callAIWithTimeout(base64, "primary", PRIMARY_TIMEOUT_MS);
+      
+      // Check if superseded
+      if (processingIdRef.current !== currentProcessingId) return;
+      
+      // Check if primary succeeded
+      if (!primaryResult.timedOut && !primaryResult.error && isValidResponse(primaryResult.data)) {
+        console.log("[useImportBetPrint] Primary AI succeeded");
+        await processSuccessfulResponse(primaryResult.data.data, currentProcessingId);
+        return;
+      }
+      
+      // Primary failed - try backup
+      console.log("[useImportBetPrint] Primary AI failed, trying backup...", {
+        timedOut: primaryResult.timedOut,
+        hasError: !!primaryResult.error,
+        validResponse: primaryResult.data ? isValidResponse(primaryResult.data) : false
+      });
+      
+      // ========== BACKUP AI (8 seconds) ==========
+      setProcessingPhase("backup");
+      toast.info("Tentando leitura alternativa...", { duration: 2000 });
+      
+      const backupResult = await callAIWithTimeout(base64, "backup", BACKUP_TIMEOUT_MS);
+      
+      // Check if superseded
+      if (processingIdRef.current !== currentProcessingId) return;
+      
+      // Check if backup succeeded
+      if (!backupResult.timedOut && !backupResult.error && isValidResponse(backupResult.data)) {
+        console.log("[useImportBetPrint] Backup AI succeeded");
+        await processSuccessfulResponse(backupResult.data.data, currentProcessingId);
+        return;
+      }
+      
+      // Both failed
+      console.log("[useImportBetPrint] Both AIs failed", {
+        primaryTimedOut: primaryResult.timedOut,
+        backupTimedOut: backupResult.timedOut
+      });
+      
+      // Determine best error message
+      let errorMessage = "Não foi possível ler o print. Tente novamente.";
+      
+      if (primaryResult.timedOut && backupResult.timedOut) {
+        errorMessage = "Tempo limite excedido. O servidor está lento. Tente novamente.";
+      } else if (primaryResult.error?.message?.includes("429") || backupResult.error?.message?.includes("429")) {
+        errorMessage = "Limite de requisições atingido. Aguarde alguns segundos.";
+      } else if (primaryResult.error?.message?.includes("402") || backupResult.error?.message?.includes("402")) {
+        errorMessage = "Créditos de IA insuficientes.";
+      }
+      
+      setProcessingPhase("error");
+      throw new Error(errorMessage);
+      
+    } catch (error: any) {
+      if (processingIdRef.current === currentProcessingId) {
+        console.error("[useImportBetPrint] Error:", error);
+        toast.error(error.message || "Erro ao processar o print");
+        setImagePreview(null);
+        setProcessingPhase("error");
+      }
+    }
+  };
+
+  // Process successful AI response
+  const processSuccessfulResponse = async (rawData: ParsedBetSlip, currentProcessingId: number) => {
+    if (processingIdRef.current !== currentProcessingId) return;
+    
+    // Build unified evento field
+    const mandanteVal = rawData.mandante?.value || "";
+    const visitanteVal = rawData.visitante?.value || "";
+    const mandanteConf = rawData.mandante?.confidence || "none";
+    const visitanteConf = rawData.visitante?.confidence || "none";
+    
+    let eventoValue = "";
+    let eventoConfidence: "high" | "medium" | "low" | "none" = "none";
+    
+    if (mandanteVal && visitanteVal) {
+      eventoValue = `${mandanteVal} x ${visitanteVal}`;
+      const confOrder = { high: 3, medium: 2, low: 1, none: 0 };
+      eventoConfidence = confOrder[mandanteConf] <= confOrder[visitanteConf] ? mandanteConf : visitanteConf;
+    } else if (mandanteVal) {
+      eventoValue = mandanteVal;
+      eventoConfidence = mandanteConf;
+    } else if (visitanteVal) {
+      eventoValue = visitanteVal;
+      eventoConfidence = visitanteConf;
+    }
+    
+    rawData.evento = { value: eventoValue, confidence: eventoConfidence };
+    
+    // Normalize sport
+    if (rawData.esporte?.value) {
+      const sportResult = normalizeSport(rawData.esporte.value);
+      rawData.esporte.value = sportResult.normalized;
+      if (sportResult.confidence === "low" && rawData.esporte.confidence === "high") {
+        rawData.esporte.confidence = "medium";
+      }
+    }
+    
+    // Normalize market using OCR parser
+    if (rawData.mercado?.value) {
+      const marketRaw = rawData.mercado.value;
+      const sportDetected = rawData.esporte?.value || "Outro";
+      const selectionRaw = rawData.selecao?.value || "";
+      
+      const ocrResult = parseOcrMarket(marketRaw, selectionRaw, sportDetected);
+      
+      setPendingData({
+        mercadoIntencao: ocrResult.displayName,
+        mercadoRaw: marketRaw,
+        esporteDetectado: sportDetected
+      });
+      
+      rawData.mercado.value = ocrResult.displayName;
+      
+      if (ocrResult.confidence === "low") {
+        rawData.mercado.confidence = "low";
+      } else if (ocrResult.confidence === "medium" && rawData.mercado.confidence === "high") {
+        rawData.mercado.confidence = "medium";
+      }
+      
+      if ((ocrResult.type === "TOTAL" || ocrResult.type === "HANDICAP") && ocrResult.side && ocrResult.line !== undefined) {
+        const formattedSelection = formatSelectionFromOcrResult(ocrResult);
+        if (formattedSelection && rawData.selecao) {
+          rawData.selecao.value = formattedSelection;
+          if (rawData.selecao.confidence === "low") {
+            rawData.selecao.confidence = "medium";
+          }
+        }
+      }
+    }
+    
+    setParsedData(rawData);
+    setProcessingPhase("idle");
+    toast.success("Print analisado com sucesso!");
+  };
+
+  // Process queue
+  const processQueue = async () => {
+    if (isProcessingQueueRef.current) return;
+    if (queueRef.current.length === 0) return;
+    
+    isProcessingQueueRef.current = true;
+    
+    while (queueRef.current.length > 0) {
+      const item = queueRef.current.shift();
+      if (!item) continue;
+      
+      processingLockRef.current = true;
+      setIsProcessing(true);
+      
+      const currentProcessingId = ++processingIdRef.current;
+      
+      try {
+        await processImageInternal(item.file, currentProcessingId);
+      } finally {
+        processingLockRef.current = false;
+        setIsProcessing(false);
+        item.resolve();
+      }
+    }
+    
+    isProcessingQueueRef.current = false;
+  };
+
+  // Main processImage - adds to queue
+  const processImage = useCallback(async (file: File) => {
+    // Validate file
     if (!file.type.startsWith("image/")) {
       toast.error("Por favor, selecione uma imagem válida.");
       return;
     }
 
-    // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       toast.error("Imagem muito grande. Máximo: 10MB");
       return;
     }
     
-    // Validate minimum file size (too small = likely corrupted)
     if (file.size < 100) {
       toast.error("Imagem muito pequena ou corrompida.");
       return;
     }
 
-    // Cancel any previous processing
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    // If already processing, add to queue
+    if (processingLockRef.current) {
+      console.log("[useImportBetPrint] Adding to queue");
+      toast.info("Print adicionado à fila de processamento");
+      
+      return new Promise<void>((resolve) => {
+        queueRef.current.push({ file, resolve });
+      });
     }
 
-    // Create new abort controller for this processing
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-    
-    // Track this processing with a unique ID
-    const currentProcessingId = ++processingIdRef.current;
-
-    // Acquire lock
+    // Process immediately
     processingLockRef.current = true;
     setIsProcessing(true);
-    setParsedData(null);
-    setPendingData({ mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null });
-
-    // Set up timeout
-    const timeoutId = setTimeout(() => {
-      if (processingIdRef.current === currentProcessingId) {
-        console.log("[useImportBetPrint] Processing timeout reached");
-        abortController.abort();
-      }
-    }, PROCESSING_TIMEOUT_MS);
-
+    
+    const currentProcessingId = ++processingIdRef.current;
+    
     try {
-      // Check if aborted before starting
-      if (abortController.signal.aborted) {
-        throw new Error("Processamento cancelado");
-      }
-
-      // Convert to base64
-      const base64 = await fileToBase64(file);
-      
-      // Check if this processing is still current
-      if (processingIdRef.current !== currentProcessingId) {
-        console.log("[useImportBetPrint] Processing superseded by newer request");
-        return;
-      }
-      
-      // CRITICAL VALIDATION: Ensure base64 is a valid data URI
-      if (!base64 || !base64.startsWith("data:image/")) {
-        console.error("[useImportBetPrint] Invalid base64 result:", base64?.substring(0, 50));
-        throw new Error("Falha ao processar imagem. Formato inválido.");
-      }
-      
-      // Log for debugging
-      console.log("[useImportBetPrint] Processing image:", {
-        fileType: file.type,
-        fileSize: file.size,
-        base64Length: base64.length,
-        base64Prefix: base64.substring(0, 30),
-        processingId: currentProcessingId
-      });
-      
-      setImagePreview(base64);
-
-      // Call the edge function with validated base64 (with automatic retry)
-      let data: any = null;
-      let error: any = null;
-      let attempts = 0;
-      const maxAttempts = 2;
-      
-      while (attempts < maxAttempts) {
-        // Check if aborted before each attempt
-        if (abortController.signal.aborted) {
-          throw new Error("Processamento cancelado - timeout");
-        }
-        
-        // Check if superseded
-        if (processingIdRef.current !== currentProcessingId) {
-          console.log("[useImportBetPrint] Processing superseded during retry");
-          return;
-        }
-
-        attempts++;
-        console.log(`[useImportBetPrint] Attempt ${attempts}/${maxAttempts} (ID: ${currentProcessingId})`);
-        
-        const result = await supabase.functions.invoke("parse-betting-slip", {
-          body: { imageBase64: base64 }
-        });
-        
-        data = result.data;
-        error = result.error;
-        
-        // If successful or it's a non-retriable error, break
-        if (!error || (error.message && !error.message.includes("Failed to send"))) {
-          break;
-        }
-        
-        // Wait before retry on network errors
-        if (attempts < maxAttempts) {
-          console.log("[useImportBetPrint] Network error, retrying in 1s...");
-          await new Promise(r => setTimeout(r, 1000));
-        }
-      }
-
-      // Final check if still current
-      if (processingIdRef.current !== currentProcessingId) {
-        console.log("[useImportBetPrint] Processing completed but superseded");
-        return;
-      }
-
-      if (error) {
-        console.error("[useImportBetPrint] Edge function error after retries:", {
-          message: error.message,
-          name: error.name,
-          status: error.status,
-          details: error.details || error.context || "none"
-        });
-        
-        // Provide user-friendly error message instead of technical SDK message
-        let userMessage = "Erro ao processar imagem";
-        if (error.message?.includes("Failed to send") || error.message?.includes("fetch")) {
-          userMessage = "Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.";
-        } else if (error.message?.includes("timeout") || error.message?.includes("Timeout")) {
-          userMessage = "A análise da imagem demorou demais. Tente novamente.";
-        } else if (error.message?.includes("Invalid") || error.status === 400) {
-          userMessage = "Formato de imagem inválido. Tente colar o print novamente.";
-        } else if (error.message) {
-          userMessage = error.message;
-        }
-        throw new Error(userMessage);
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      if (data?.success && data?.data) {
-        const rawData = data.data as ParsedBetSlip;
-        
-        // Criar campo evento unificado a partir de mandante/visitante
-        const mandanteVal = rawData.mandante?.value || "";
-        const visitanteVal = rawData.visitante?.value || "";
-        const mandanteConf = rawData.mandante?.confidence || "none";
-        const visitanteConf = rawData.visitante?.confidence || "none";
-        
-        // Calcular evento e sua confiança
-        let eventoValue = "";
-        let eventoConfidence: "high" | "medium" | "low" | "none" = "none";
-        
-        if (mandanteVal && visitanteVal) {
-          eventoValue = `${mandanteVal} x ${visitanteVal}`;
-          // Confiança do evento é a menor entre mandante e visitante
-          const confOrder = { high: 3, medium: 2, low: 1, none: 0 };
-          eventoConfidence = confOrder[mandanteConf] <= confOrder[visitanteConf] ? mandanteConf : visitanteConf;
-        } else if (mandanteVal) {
-          eventoValue = mandanteVal;
-          eventoConfidence = mandanteConf;
-        } else if (visitanteVal) {
-          eventoValue = visitanteVal;
-          eventoConfidence = visitanteConf;
-        }
-        
-        rawData.evento = {
-          value: eventoValue,
-          confidence: eventoConfidence
-        };
-        
-        // Normalize sport
-        if (rawData.esporte?.value) {
-          const sportResult = normalizeSport(rawData.esporte.value);
-          rawData.esporte.value = sportResult.normalized;
-          // Downgrade confidence if normalization was uncertain
-          if (sportResult.confidence === "low" && rawData.esporte.confidence === "high") {
-            rawData.esporte.confidence = "medium";
-          }
-        }
-        
-        // Normalize market using the NEW OCR parser (v2.0)
-        if (rawData.mercado?.value) {
-          const marketRaw = rawData.mercado.value;
-          const sportDetected = rawData.esporte?.value || "Outro";
-          const selectionRaw = rawData.selecao?.value || "";
-          
-          // Use the new OCR parser that extracts domain, side, line separately
-          const ocrResult = parseOcrMarket(marketRaw, selectionRaw, sportDetected);
-          
-          // Store the intention for later resolution
-          setPendingData({
-            mercadoIntencao: ocrResult.displayName,
-            mercadoRaw: marketRaw,
-            esporteDetectado: sportDetected
-          });
-          
-          // Set the normalized value
-          rawData.mercado.value = ocrResult.displayName;
-          
-          // Adjust confidence based on OCR result
-          if (ocrResult.confidence === "low") {
-            rawData.mercado.confidence = "low";
-          } else if (ocrResult.confidence === "medium" && rawData.mercado.confidence === "high") {
-            rawData.mercado.confidence = "medium";
-          }
-          
-          // Format selection if TOTAL or HANDICAP detected
-          if ((ocrResult.type === "TOTAL" || ocrResult.type === "HANDICAP") && ocrResult.side && ocrResult.line !== undefined) {
-            const formattedSelection = formatSelectionFromOcrResult(ocrResult);
-            if (formattedSelection && rawData.selecao) {
-              rawData.selecao.value = formattedSelection;
-              // Improve confidence since we formatted it intelligently
-              if (rawData.selecao.confidence === "low") {
-                rawData.selecao.confidence = "medium";
-              }
-            }
-          }
-          
-          console.log(`[OCR Market v2.0] Raw: "${marketRaw}", Selection: "${selectionRaw}" → ${ocrResult.type} (${ocrResult.displayName}) for sport ${sportDetected}`);
-        }
-        
-        setParsedData(rawData);
-        toast.success("Print analisado com sucesso!");
-      } else {
-        throw new Error("Resposta inválida do servidor");
-      }
-    } catch (error: any) {
-      // Only show error if this processing is still current
-      if (processingIdRef.current === currentProcessingId) {
-        console.error("Error processing image:", error);
-        if (error.message !== "Processamento cancelado" && error.message !== "Processamento cancelado - timeout") {
-          toast.error(error.message || "Erro ao processar o print");
-        } else {
-          toast.warning("Processamento cancelado por timeout. Tente novamente.");
-        }
-        setImagePreview(null);
-      }
+      await processImageInternal(file, currentProcessingId);
     } finally {
-      clearTimeout(timeoutId);
-      // Only release lock if this is still the current processing
-      if (processingIdRef.current === currentProcessingId) {
-        processingLockRef.current = false;
-        setIsProcessing(false);
-      }
+      processingLockRef.current = false;
+      setIsProcessing(false);
+      
+      // Process any queued items
+      processQueue();
     }
   }, []);
 
   const processFromClipboard = useCallback(async (event: ClipboardEvent) => {
-    // DEBOUNCE: Prevent rapid successive pastes
+    // Debounce rapid pastes
     const now = Date.now();
     if (now - lastPasteTimeRef.current < DEBOUNCE_MS) {
       console.log("[useImportBetPrint] Debouncing rapid paste");
@@ -377,37 +419,17 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     lastPasteTimeRef.current = now;
 
     const items = event.clipboardData?.items;
-    if (!items) {
-      console.log("[useImportBetPrint] No clipboard items found");
-      return;
-    }
-
-    console.log("[useImportBetPrint] Clipboard items count:", items.length);
+    if (!items) return;
     
-    let foundImage = false;
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      console.log(`[useImportBetPrint] Item ${i}: type=${item.type}, kind=${item.kind}`);
-      
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         if (file) {
-          console.log("[useImportBetPrint] Found image file:", file.type, file.size);
-          foundImage = true;
           event.preventDefault();
           await processImage(file);
           break;
-        } else {
-          console.warn("[useImportBetPrint] Image item found but getAsFile() returned null");
         }
-      }
-    }
-    
-    if (!foundImage) {
-      // Check if there's text that might be mistaken for an image
-      const textItem = Array.from(items).find(item => item.type === "text/plain");
-      if (textItem) {
-        console.log("[useImportBetPrint] No image found, but text was pasted - ignoring");
       }
     }
   }, [processImage]);
@@ -416,35 +438,29 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     setParsedData(null);
     setImagePreview(null);
     setPendingData({ mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null });
+    setProcessingPhase("idle");
   }, []);
 
-  // Resolve market for a specific sport and available options (using new OCR parser v2.0)
   const resolveMarketForSport = useCallback((sport: string, availableOptions: string[]): string => {
     if (!pendingData.mercadoIntencao && !pendingData.mercadoRaw) {
       return "";
     }
     
-    // Use the raw market and selection for OCR analysis
     const marketRaw = pendingData.mercadoRaw || pendingData.mercadoIntencao || "";
     const selectionValue = parsedData?.selecao?.value || "";
-    
-    // Use the new OCR parser with sport context
     const ocrResult = parseOcrMarket(marketRaw, selectionValue, sport);
     
-    // If no available options provided, get them from sport
     const options = availableOptions.length > 0 
       ? availableOptions 
       : getMarketsForSport(sport);
     
-    // Resolve OCR result to an available option
     const resolved = resolveOcrResultToOption(ocrResult, options);
     
-    console.log(`[resolveMarketForSport v2.0] Raw: "${marketRaw}" (sel: "${selectionValue}") → ${ocrResult.type} → "${resolved}" for ${sport}`);
+    console.log(`[resolveMarketForSport] "${marketRaw}" → "${resolved}" for ${sport}`);
     
     return resolved;
   }, [pendingData, parsedData]);
 
-  // Apply parsed data - ALWAYS fill fields, even with low confidence
   const applyParsedData = useCallback(() => {
     if (!parsedData) {
       return {
@@ -461,8 +477,6 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       };
     }
 
-    // CRITICAL CHANGE: Always fill if there's a value, regardless of confidence
-    // The "Revisar" indicator is now ONLY a visual warning, NOT a block
     return {
       evento: parsedData.evento?.value || "",
       dataHora: parsedData.dataHora?.value || "",
@@ -477,7 +491,6 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     };
   }, [parsedData]);
 
-  // Calculate which fields need review (medium or low confidence, but still filled)
   const fieldsNeedingReview: FieldsNeedingReview = {
     evento: (parsedData?.evento?.confidence === "medium" || parsedData?.evento?.confidence === "low") && !!parsedData?.evento?.value,
     dataHora: (parsedData?.dataHora?.confidence === "medium" || parsedData?.dataHora?.confidence === "low") && !!parsedData?.dataHora?.value,
@@ -493,6 +506,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
 
   return {
     isProcessing,
+    processingPhase,
     parsedData,
     imagePreview,
     fieldsNeedingReview,

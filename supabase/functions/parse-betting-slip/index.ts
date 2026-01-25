@@ -108,14 +108,20 @@ serve(async (req) => {
 
   try {
     const requestBody = await req.json();
-    const { imageBase64, imageUrl, mode } = requestBody;
+    const { imageBase64, imageUrl, mode, model } = requestBody;
+
+    // Determine which AI model to use (primary or backup)
+    const aiModel = model === "backup" 
+      ? "google/gemini-2.5-flash-lite"  // Backup: faster, cheaper
+      : "google/gemini-2.5-flash";       // Primary: more accurate
 
     console.log("[parse-betting-slip] Request received:", {
       hasImageBase64: !!imageBase64,
       imageBase64Length: imageBase64?.length || 0,
       imageBase64Prefix: imageBase64?.substring(0, 50) || "N/A",
       hasImageUrl: !!imageUrl,
-      mode: mode || "simples"
+      mode: mode || "simples",
+      model: aiModel
     });
 
     // CRITICAL VALIDATION: Check for valid image data
@@ -170,7 +176,7 @@ serve(async (req) => {
 
     const isMultipla = mode === "multipla";
     const currentYear = getCurrentYear();
-    console.log(`[parse-betting-slip] Processing... Mode: ${isMultipla ? "multipla" : "simples"}, CurrentYear: ${currentYear}, ImageSize: ${imageSource.length} chars`);
+    console.log(`[parse-betting-slip] Processing... Mode: ${isMultipla ? "multipla" : "simples"}, Model: ${aiModel}, CurrentYear: ${currentYear}, ImageSize: ${imageSource.length} chars`);
 
     // Choose prompt based on mode
     const systemPrompt = isMultipla ? MULTIPLA_SYSTEM_PROMPT : `Você é um especialista em ler boletins de apostas esportivas. Sua tarefa é extrair TODAS as informações visíveis do print de um boletim de aposta.
@@ -241,7 +247,7 @@ DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: aiModel,
         messages: [
           { role: "system", content: systemPrompt },
           {
