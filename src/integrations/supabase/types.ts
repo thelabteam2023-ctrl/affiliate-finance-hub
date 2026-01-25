@@ -1261,6 +1261,7 @@ export type Database = {
           origem_parceiro_id: string | null
           origem_tipo: string | null
           origem_wallet_id: string | null
+          projeto_id_snapshot: string | null
           qtd_coin: number | null
           referencia_transacao_id: string | null
           status: string
@@ -1314,6 +1315,7 @@ export type Database = {
           origem_parceiro_id?: string | null
           origem_tipo?: string | null
           origem_wallet_id?: string | null
+          projeto_id_snapshot?: string | null
           qtd_coin?: number | null
           referencia_transacao_id?: string | null
           status?: string
@@ -1367,6 +1369,7 @@ export type Database = {
           origem_parceiro_id?: string | null
           origem_tipo?: string | null
           origem_wallet_id?: string | null
+          projeto_id_snapshot?: string | null
           qtd_coin?: number | null
           referencia_transacao_id?: string | null
           status?: string
@@ -1648,6 +1651,13 @@ export type Database = {
             columns: ["origem_wallet_id"]
             isOneToOne: false
             referencedRelation: "wallets_crypto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_projeto_id_snapshot_fkey"
+            columns: ["projeto_id_snapshot"]
+            isOneToOne: false
+            referencedRelation: "projetos"
             referencedColumns: ["id"]
           },
           {

@@ -56,6 +56,8 @@ interface Transacao {
   destino_parceiro_id: string | null;
   investidor_id: string | null;
   nome_investidor: string | null;
+  // Snapshot imutável do projeto no momento da transação
+  projeto_id_snapshot: string | null;
 }
 
 interface BookmakerInfo {
@@ -269,26 +271,25 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     }
   }, []);
 
-  // Buscar transações do cash_ledger relacionadas às bookmakers do projeto
+  // Buscar transações do cash_ledger pelo projeto_id_snapshot
   const fetchTransacoes = useCallback(async () => {
     setLoading(true);
     try {
-      const bookmakerIds = await fetchBookmakers();
-      
-      if (bookmakerIds.length === 0) {
-        setTransacoes([]);
-        setLoading(false);
-        return;
-      }
+      // Buscar dados auxiliares em paralelo (para exibição de nomes/logos)
+      await Promise.all([
+        fetchBookmakers(),
+        fetchContasBancarias(), 
+        fetchWallets(), 
+        fetchAllBookmakers(), 
+        fetchParceiros()
+      ]);
 
-      // Buscar dados auxiliares em paralelo
-      await Promise.all([fetchContasBancarias(), fetchWallets(), fetchAllBookmakers(), fetchParceiros()]);
-
-      // Buscar transações onde origem OU destino é uma bookmaker do projeto
+      // Buscar transações pelo projeto_id_snapshot (imutável, gravado no momento da transação)
+      // MODELO: Atribuição temporal - mostra apenas movimentações do período de vínculo
       let query = supabase
         .from("cash_ledger")
         .select("*")
-        .or(`origem_bookmaker_id.in.(${bookmakerIds.join(",")}),destino_bookmaker_id.in.(${bookmakerIds.join(",")})`)
+        .eq("projeto_id_snapshot", projetoId)
         .order("data_transacao", { ascending: false });
 
       if (dataInicio) {
