@@ -70,6 +70,8 @@ interface Transacao {
   destino_bookmaker_id: string | null;
   nome_investidor: string | null;
   operador_id: string | null;
+  // Snapshot imutável do projeto no momento da transação
+  projeto_id_snapshot: string | null;
 }
 
 interface SaldoFiat {
@@ -383,18 +385,19 @@ export default function Caixa() {
         (filtroTipo === "APORTE_FINANCEIRO" && (t.tipo_transacao === "APORTE" || t.tipo_transacao === "LIQUIDACAO")) ||
         t.tipo_transacao === filtroTipo;
       
-      // Filtro por projeto via bookmaker origem/destino
+      // Filtro por projeto usando projeto_id_snapshot (imutável, gravado no momento da transação)
+      // MODELO: Atribuição temporal - cada transação pertence ao projeto que era dono no momento
       let matchProjeto = true;
       if (filtroProjeto !== "TODOS") {
-        const origemProjetoId = t.origem_bookmaker_id ? bookmakers[t.origem_bookmaker_id]?.projeto_id : null;
-        const destinoProjetoId = t.destino_bookmaker_id ? bookmakers[t.destino_bookmaker_id]?.projeto_id : null;
+        // Usar o snapshot imutável ao invés de inferir do vínculo atual
+        const projetoSnapshot = t.projeto_id_snapshot;
         
         if (filtroProjeto === "SEM_PROJETO") {
-          // Transações sem bookmaker vinculada a projeto
-          matchProjeto = !origemProjetoId && !destinoProjetoId;
+          // Transações órfãs (sem projeto no momento da transação)
+          matchProjeto = !projetoSnapshot;
         } else {
           // Transações do projeto específico
-          matchProjeto = origemProjetoId === filtroProjeto || destinoProjetoId === filtroProjeto;
+          matchProjeto = projetoSnapshot === filtroProjeto;
         }
       }
       
