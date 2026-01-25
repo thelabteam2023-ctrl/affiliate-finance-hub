@@ -1250,6 +1250,8 @@ export function ApostaMultiplaDialog({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
         >
           <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
