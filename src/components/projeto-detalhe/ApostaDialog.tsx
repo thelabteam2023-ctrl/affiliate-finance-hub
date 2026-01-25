@@ -710,11 +710,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     if (matchedOption) {
       // Found a match - update to the canonical option value
       setSelecao(matchedOption);
-    } else {
-      // No match found - clear the selection so user must choose manually
-      // Keep selecaoFromPrint true to indicate OCR attempted but failed
-      setSelecao("");
     }
+    // IMPORTANT: If no match found, KEEP the OCR value instead of clearing
+    // The user can see what OCR detected and manually adjust if needed
+    // This matches the behavior of SurebetDialogTable which preserves OCR values
   }, [selecaoFromPrint, selecao, isMoneyline, evento, esporte, mercado, moneylineOptions]);
 
   useEffect(() => {
