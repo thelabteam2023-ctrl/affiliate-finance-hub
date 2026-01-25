@@ -134,9 +134,10 @@ export default function SurebetWindowPage() {
     fetchSurebet();
   }, [id, isEditing]);
   
-  // Handler de sucesso - notifica janela pai e gerencia ciclo de vida
+  // MODO OPERACIONAL CONTÍNUO: Nunca fecha automaticamente
+  // O formulário permanece aberto após salvar, seja novo ou edição
   const handleSuccess = useCallback(() => {
-    // Usar BroadcastChannel para notificar a janela principal
+    // Notificar janela principal para atualizar listas/KPIs/saldos
     try {
       const channel = new BroadcastChannel("surebet_channel");
       channel.postMessage({ 
@@ -154,32 +155,23 @@ export default function SurebetWindowPage() {
       }));
     }
     
-    // Se estava editando, fechar a janela após salvar
-    if (isEditing) {
-      toast.success("Arbitragem atualizada!", {
-        description: "Janela será fechada...",
-        duration: 2000,
-      });
-      setTimeout(() => window.close(), 1500);
-    } else {
-      // Se veio de rascunho, deletar o rascunho após salvar com sucesso
-      if (isFromRascunho && rascunhoCarregado) {
-        deletarRascunho(rascunhoCarregado.id);
-        setRascunhoCarregado(null);
-      }
-      
-      // Novo registro: manter aberta e resetar formulário
-      setSaveCount(prev => prev + 1);
-      setSurebet(null);
-      setFormKey(prev => prev + 1);
-      
-      // Toast de confirmação com contador
-      toast.success("Arbitragem registrada!", {
-        description: `${saveCount + 1}ª operação salva. Formulário pronto para nova entrada.`,
-        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-        duration: 3000,
-      });
+    // Se veio de rascunho, deletar o rascunho após salvar com sucesso
+    if (isFromRascunho && rascunhoCarregado) {
+      deletarRascunho(rascunhoCarregado.id);
+      setRascunhoCarregado(null);
     }
+    
+    // Incrementar contador e resetar formulário
+    setSaveCount(prev => prev + 1);
+    setSurebet(null);
+    setFormKey(prev => prev + 1);
+    
+    // Toast de confirmação visual
+    toast.success(isEditing ? "Arbitragem atualizada!" : "Arbitragem registrada!", {
+      description: `${saveCount + 1}ª operação salva. Formulário pronto para nova entrada.`,
+      icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+      duration: 3000,
+    });
   }, [isEditing, projetoId, id, saveCount, isFromRascunho, rascunhoCarregado, deletarRascunho]);
   
   // Handler de fechamento com confirmação

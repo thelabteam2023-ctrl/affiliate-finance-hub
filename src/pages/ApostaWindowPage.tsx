@@ -93,7 +93,10 @@ export default function ApostaWindowPage() {
   }, [id, isEditing]);
 
   // Notificar janela principal após salvar
+  // MODO OPERACIONAL CONTÍNUO: Nunca fecha automaticamente
+  // O formulário permanece aberto após salvar, seja novo ou edição
   const handleSuccess = useCallback(() => {
+    // Notificar janela principal para atualizar listas/KPIs/saldos
     try {
       const channel = new BroadcastChannel('aposta_channel');
       channel.postMessage({ type: 'APOSTA_SAVED', projetoId });
@@ -102,23 +105,17 @@ export default function ApostaWindowPage() {
       localStorage.setItem('aposta_saved', JSON.stringify({ projetoId, timestamp: Date.now() }));
     }
     
-    if (isEditing) {
-      toast.success("Aposta atualizada!", {
-        description: "Janela será fechada...",
-        duration: 2000,
-      });
-      setTimeout(() => window.close(), 1500);
-    } else {
-      setSaveCount(prev => prev + 1);
-      setAposta(null);
-      setFormKey(prev => prev + 1);
-      
-      toast.success("Aposta registrada!", {
-        description: `${saveCount + 1}ª aposta salva. Formulário pronto para nova entrada.`,
-        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-        duration: 3000,
-      });
-    }
+    // Incrementar contador e resetar formulário
+    setSaveCount(prev => prev + 1);
+    setAposta(null);
+    setFormKey(prev => prev + 1);
+    
+    // Toast de confirmação visual
+    toast.success(isEditing ? "Aposta atualizada!" : "Aposta registrada!", {
+      description: `${saveCount + 1}ª operação salva. Formulário pronto para nova entrada.`,
+      icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+      duration: 3000,
+    });
   }, [isEditing, projetoId, saveCount]);
 
   const handleClose = useCallback(() => {
