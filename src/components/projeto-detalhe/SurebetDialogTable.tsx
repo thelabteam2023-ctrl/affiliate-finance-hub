@@ -1512,7 +1512,7 @@ export function SurebetDialogTable({
                     {row.rowSpan > 0 && (
                       <td 
                         rowSpan={row.rowSpan} 
-                        className="py-4 px-2 text-center align-middle"
+                        className="py-6 px-2 text-center align-middle"
                       >
                         <div className={`inline-flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm ${
                           pernaIndex === 0 ? "bg-blue-500/20 text-blue-400" :
@@ -1529,7 +1529,7 @@ export function SurebetDialogTable({
                     )}
                     
                     {/* Casa */}
-                    <td className="py-4 px-2">
+                    <td className="py-6 px-2">
                       {isEditing ? (
                         <div className="text-xs font-medium uppercase truncate">
                           {selectedBookmaker?.nome || "—"}
@@ -1571,7 +1571,7 @@ export function SurebetDialogTable({
                     </td>
                     
                     {/* Odd */}
-                    <td className="py-4 px-2">
+                    <td className="py-6 px-2">
                       {isEditing ? (
                         <div className="text-xs font-medium text-center">{entry.odd || "—"}</div>
                       ) : (
@@ -1590,7 +1590,7 @@ export function SurebetDialogTable({
                     </td>
                     
                     {/* Stake */}
-                    <td className="py-4 px-2">
+                    <td className="py-6 px-2">
                       {isEditing ? (
                         <div className="text-xs font-medium text-center">
                           {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
@@ -1609,7 +1609,7 @@ export function SurebetDialogTable({
                     </td>
                     
                     {/* Linha */}
-                    <td className="py-4 px-2">
+                    <td className="py-6 px-2">
                       {isEditing ? (
                         <div className="text-[10px] text-muted-foreground text-center truncate">
                           {entry.selecaoLivre || "—"}
@@ -1625,7 +1625,7 @@ export function SurebetDialogTable({
                     </td>
                     
                     {/* Referência (Target) */}
-                    <td className="py-4 px-2 text-center">
+                    <td className="py-6 px-2 text-center">
                       {!isEditing && (
                         <button
                           type="button"
@@ -1645,7 +1645,7 @@ export function SurebetDialogTable({
                     
                     {/* Checkbox D — Distribuição de lucro */}
                     {!isEditing && (
-                      <td className="py-4 px-2 text-center">
+                      <td className="py-6 px-2 text-center">
                         <button
                           type="button"
                           onClick={() => {
@@ -1670,7 +1670,7 @@ export function SurebetDialogTable({
                     )}
                     
                     {/* Lucro */}
-                    <td className="py-4 px-2 text-center">
+                    <td className="py-6 px-2 text-center">
                       {analysis.stakeTotal > 0 && (
                         <span className={`font-medium ${lucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                           {lucro >= 0 ? "+" : ""}{formatCurrency(lucro, analysis.moedaDominante)}
@@ -1679,7 +1679,7 @@ export function SurebetDialogTable({
                     </td>
                     
                     {/* ROI */}
-                    <td className="py-4 px-2 text-center">
+                    <td className="py-6 px-2 text-center">
                       {analysis.stakeTotal > 0 && (
                         <span className={`text-[10px] font-medium ${roi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                           {roi >= 0 ? "+" : ""}{roi.toFixed(1)}%
@@ -1689,7 +1689,7 @@ export function SurebetDialogTable({
                     
                     {/* Ações - Adicionar casa */}
                     {!isEditing && (
-                      <td className="py-4 px-1">
+                      <td className="py-6 px-1">
                         <Button
                           type="button"
                           variant="ghost"
