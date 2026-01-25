@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, CheckCircle2, X, Target } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Debug: Confirm this file is loading in standalone window
+console.error("🚨🚨🚨 ApostaWindowPage MODULE LOADED");
+
 /**
  * Página standalone para o formulário de Aposta Simples.
  * Abre em uma janela separada do navegador para posicionamento flexível.
@@ -30,6 +33,16 @@ export default function ApostaWindowPage() {
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [saveCount, setSaveCount] = useState(0);
+
+  // Debug: Log when component mounts
+  useEffect(() => {
+    console.error("🚨🚨🚨 ApostaWindowPage MOUNTED", { 
+      projetoId, 
+      isEditing, 
+      aposta: !!aposta,
+      windowLocation: window.location.href 
+    });
+  }, []);
 
   // Buscar dados da aposta se estiver editando
   useEffect(() => {
