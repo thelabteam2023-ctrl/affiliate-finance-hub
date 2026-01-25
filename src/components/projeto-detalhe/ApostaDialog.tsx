@@ -445,19 +445,45 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
   // Handle paste for importing prints (Ctrl+V)
   const handlePaste = useCallback((event: ClipboardEvent) => {
-   console.error("🚨🚨🚨 PASTE CAPTURADO NO DIALOG", { open, aposta: !!aposta });
+   console.error("🚨🚨🚨 [ApostaDialog] PASTE CAPTURADO!", { 
+     open, 
+     aposta: !!aposta,
+     timestamp: new Date().toISOString(),
+     clipboardData: !!event.clipboardData,
+     itemsLength: event.clipboardData?.items?.length || 0
+   });
     if (!open || aposta) return; // Only for new bets
-   console.error("🚨🚨🚨 PASSOU VALIDAÇÃO, chamando processPrintClipboard");
+   console.error("🚨🚨🚨 [ApostaDialog] PASSOU VALIDAÇÃO → Chamando processPrintClipboard");
     processPrintClipboard(event);
   }, [open, aposta, processPrintClipboard]);
 
   useEffect(() => {
-   console.error("🚨🚨🚨 useEffect[paste listener]", { open, aposta: !!aposta, shouldRegister: open && !aposta });
+   console.error("🚨🚨🚨 [ApostaDialog] useEffect[paste listener]", { 
+     open, 
+     aposta: !!aposta, 
+     shouldRegister: open && !aposta,
+     timestamp: new Date().toISOString()
+   });
+   
     if (open && !aposta) {
-     console.error("🚨🚨🚨 REGISTRANDO listener de paste");
+     console.error("🚨🚨🚨 [ApostaDialog] ✅ REGISTRANDO listener no document");
+     
+     // Test: Log when ANY paste happens on the document
+     const testListener = (e: Event) => {
+       console.error("🚨🚨🚨 [ApostaDialog] PASTE DETECTADO NO DOCUMENT!", {
+         target: (e.target as HTMLElement)?.tagName,
+         timestamp: new Date().toISOString()
+       });
+     };
+     
+     document.addEventListener("paste", testListener);
       document.addEventListener("paste", handlePaste);
+     
+     console.error("🚨🚨🚨 [ApostaDialog] ✅ Listeners registrados. Teste colando agora (Ctrl+V)");
+     
      return () => {
-       console.error("🚨🚨🚨 REMOVENDO listener de paste");
+       console.error("🚨🚨🚨 [ApostaDialog] ❌ REMOVENDO listeners");
+       document.removeEventListener("paste", testListener);
        document.removeEventListener("paste", handlePaste);
      };
     }
