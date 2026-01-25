@@ -317,11 +317,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     fetchAllApostas();
   }, [projetoId, tabFilters.period, tabFilters.customDateRange, refreshTrigger]);
 
-  // Listener para BroadcastChannel - atualiza quando surebet é salva em janela externa
+  // Listeners para BroadcastChannel - atualizam quando operações são salvas em janelas externas
   useEffect(() => {
-    const channel = new BroadcastChannel("surebet_channel");
+    // Canais para cada tipo de operação
+    const surebetChannel = new BroadcastChannel("surebet_channel");
+    const apostaChannel = new BroadcastChannel("aposta_channel");
+    const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
     
-    const handleMessage = (event: MessageEvent) => {
+    const handleSurebetMessage = (event: MessageEvent) => {
       if (event.data?.type === "SUREBET_SAVED" && event.data?.projetoId === projetoId) {
         console.log("[ProjetoApostasTab] Surebet salva em janela externa, atualizando lista...");
         fetchAllApostas();
@@ -329,15 +332,33 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       }
     };
     
-    channel.addEventListener("message", handleMessage);
+    const handleApostaMessage = (event: MessageEvent) => {
+      if (event.data?.type === "APOSTA_SAVED" && event.data?.projetoId === projetoId) {
+        console.log("[ProjetoApostasTab] Aposta salva em janela externa, atualizando lista...");
+        fetchAllApostas();
+        onDataChange?.();
+      }
+    };
+    
+    const handleMultiplaMessage = (event: MessageEvent) => {
+      if (event.data?.type === "APOSTA_MULTIPLA_SAVED" && event.data?.projetoId === projetoId) {
+        console.log("[ProjetoApostasTab] Aposta Múltipla salva em janela externa, atualizando lista...");
+        fetchAllApostas();
+        onDataChange?.();
+      }
+    };
+    
+    surebetChannel.addEventListener("message", handleSurebetMessage);
+    apostaChannel.addEventListener("message", handleApostaMessage);
+    multiplaChannel.addEventListener("message", handleMultiplaMessage);
     
     // Fallback: listener para localStorage (browsers que não suportam BroadcastChannel)
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === "surebet_saved") {
+      if (event.key === "surebet_saved" || event.key === "aposta_saved" || event.key === "aposta_multipla_saved") {
         try {
           const data = JSON.parse(event.newValue || "{}");
           if (data.projetoId === projetoId) {
-            console.log("[ProjetoApostasTab] Surebet salva (localStorage fallback), atualizando lista...");
+            console.log(`[ProjetoApostasTab] ${event.key} (localStorage fallback), atualizando lista...`);
             fetchAllApostas();
             onDataChange?.();
           }
@@ -350,8 +371,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     window.addEventListener("storage", handleStorage);
     
     return () => {
-      channel.removeEventListener("message", handleMessage);
-      channel.close();
+      surebetChannel.removeEventListener("message", handleSurebetMessage);
+      surebetChannel.close();
+      apostaChannel.removeEventListener("message", handleApostaMessage);
+      apostaChannel.close();
+      multiplaChannel.removeEventListener("message", handleMultiplaMessage);
+      multiplaChannel.close();
       window.removeEventListener("storage", handleStorage);
     };
   }, [projetoId, onDataChange]);
@@ -933,14 +958,18 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     }
   };
 
+  // Abrir aposta simples em janela externa (mesmo comportamento do Surebet)
   const handleOpenDialog = (aposta: Aposta | null) => {
-    setSelectedAposta(aposta);
-    setDialogOpen(true);
+    const apostaId = aposta?.id || 'novo';
+    const url = `/janela/aposta/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&estrategia=PUNTER`;
+    window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   };
 
+  // Abrir aposta múltipla em janela externa (mesmo comportamento do Surebet)
   const handleOpenMultiplaDialog = (aposta: ApostaMultipla | null) => {
-    setSelectedApostaMultipla(aposta);
-    setDialogMultiplaOpen(true);
+    const apostaId = aposta?.id || 'novo';
+    const url = `/janela/multipla/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&estrategia=PUNTER`;
+    window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   };
 
   if (loading) {
@@ -1209,79 +1238,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       )}
 
 
-      {/* Dialogs */}
-      <ApostaDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        projetoId={projetoId}
-        aposta={selectedAposta ? {
-          id: selectedAposta.id,
-          bookmaker_id: selectedAposta.bookmaker_id,
-          esporte: selectedAposta.esporte,
-          evento: selectedAposta.evento,
-          mercado: selectedAposta.mercado || "",
-          selecao: selectedAposta.selecao,
-          odd: selectedAposta.odd,
-          stake: selectedAposta.stake,
-          estrategia: selectedAposta.estrategia || "VALOR",
-          status: selectedAposta.status,
-          resultado: selectedAposta.resultado,
-          valor_retorno: selectedAposta.valor_retorno,
-          lucro_prejuizo: selectedAposta.lucro_prejuizo,
-          observacoes: selectedAposta.observacoes,
-          data_aposta: selectedAposta.data_aposta,
-          modo_entrada: selectedAposta.modo_entrada || "PADRAO",
-          lay_exchange: selectedAposta.lay_exchange,
-          lay_odd: selectedAposta.lay_odd,
-          lay_stake: selectedAposta.lay_stake,
-          lay_liability: selectedAposta.lay_liability,
-          lay_comissao: selectedAposta.lay_comissao,
-          back_em_exchange: selectedAposta.back_em_exchange,
-          back_comissao: selectedAposta.back_comissao,
-          gerou_freebet: selectedAposta.gerou_freebet,
-          valor_freebet_gerada: selectedAposta.valor_freebet_gerada,
-          tipo_freebet: selectedAposta.tipo_freebet,
-          forma_registro: selectedAposta.forma_registro || "SIMPLES",
-          contexto_operacional: selectedAposta.contexto_operacional || "NORMAL",
-        } : null}
-        onSuccess={handleApostaUpdated}
-      />
-
-      <ApostaMultiplaDialog
-        open={dialogMultiplaOpen}
-        onOpenChange={setDialogMultiplaOpen}
-        projetoId={projetoId}
-        aposta={selectedApostaMultipla ? {
-          id: selectedApostaMultipla.id,
-          bookmaker_id: selectedApostaMultipla.bookmaker_id,
-          tipo_multipla: selectedApostaMultipla.tipo_multipla,
-          stake: selectedApostaMultipla.stake,
-          odd_final: selectedApostaMultipla.odd_final,
-          retorno_potencial: selectedApostaMultipla.retorno_potencial,
-          selecoes: selectedApostaMultipla.selecoes,
-          status: selectedApostaMultipla.status,
-          resultado: selectedApostaMultipla.resultado,
-          lucro_prejuizo: selectedApostaMultipla.lucro_prejuizo,
-          valor_retorno: selectedApostaMultipla.valor_retorno,
-          observacoes: selectedApostaMultipla.observacoes,
-          data_aposta: selectedApostaMultipla.data_aposta,
-          tipo_freebet: selectedApostaMultipla.tipo_freebet,
-          gerou_freebet: selectedApostaMultipla.gerou_freebet,
-          valor_freebet_gerada: selectedApostaMultipla.valor_freebet_gerada,
-          estrategia: selectedApostaMultipla.estrategia || null,
-          forma_registro: selectedApostaMultipla.forma_registro || "MULTIPLA",
-          contexto_operacional: selectedApostaMultipla.contexto_operacional || "NORMAL",
-        } : null}
-        onSuccess={handleApostaUpdated}
-      />
-
-      <SurebetDialog
-        open={dialogSurebetOpen}
-        onOpenChange={setDialogSurebetOpen}
-        projetoId={projetoId}
-        surebet={selectedSurebet || null}
-        onSuccess={handleApostaUpdated}
-      />
+      {/* Dialogs removidos - todos os formulários abrem em janela externa */}
     </div>
   );
 }
