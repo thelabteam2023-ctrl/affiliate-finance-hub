@@ -233,6 +233,7 @@ export default function SurebetWindowPage() {
       rascunho={rascunhoCarregado}
       activeTab={activeTab}
       onSuccess={handleSuccess}
+      embedded={true}
     />
   );
 }

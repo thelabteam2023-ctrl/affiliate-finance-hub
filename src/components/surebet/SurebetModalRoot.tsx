@@ -87,6 +87,8 @@ interface SurebetModalRootProps {
   rascunho?: ApostaRascunho | null;
   activeTab?: string;
   onSuccess: () => void;
+  /** Quando true, não fecha automaticamente após salvar (modo workstation contínuo) */
+  embedded?: boolean;
 }
 
 // ============================================
@@ -134,7 +136,8 @@ export function SurebetModalRoot({
   surebet = null,
   rascunho = null,
   activeTab = 'surebet',
-  onSuccess 
+  onSuccess,
+  embedded = false
 }: SurebetModalRootProps) {
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
@@ -816,7 +819,7 @@ export function SurebetModalRoot({
       }
 
       onSuccess();
-      onOpenChange(false);
+      if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao salvar: " + error.message);
     } finally {
@@ -882,7 +885,7 @@ export function SurebetModalRoot({
       toast.success(`${apostasSimples.length} apostas simples registradas!`);
       setShowConversionDialog(false);
       onSuccess();
-      onOpenChange(false);
+      if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao converter: " + error.message);
     } finally {
@@ -903,7 +906,7 @@ export function SurebetModalRoot({
       
       toast.success("Operação excluída!");
       onSuccess();
-      onOpenChange(false);
+      if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);
     }
@@ -966,7 +969,7 @@ export function SurebetModalRoot({
     );
     
     // Fechar o formulário
-    onOpenChange(false);
+    if (!embedded) onOpenChange(false);
   }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, workspaceId, bookmakerSaldos, criarRascunho, onOpenChange]);
 
   const getBookmakerNome = (id: string) => bookmakerSaldos.find(b => b.id === id)?.nome || "";

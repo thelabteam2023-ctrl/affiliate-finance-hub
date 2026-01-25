@@ -2008,7 +2008,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       invalidateSaldos(projetoId);
 
       onSuccess();
-      onOpenChange(false);
+      if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao salvar aposta: " + error.message);
     } finally {
@@ -2429,7 +2429,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       if (error) throw error;
       toast.success("Aposta excluída com sucesso!");
       onSuccess();
-      onOpenChange(false);
+      if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao excluir aposta: " + error.message);
     } finally {
