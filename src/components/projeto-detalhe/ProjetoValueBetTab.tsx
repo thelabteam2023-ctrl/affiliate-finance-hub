@@ -580,10 +580,10 @@ export function ProjetoValueBetTab({
 
     if (isMultipla) {
       const url = `/janela/multipla/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=valuebet&estrategia=VALUEBET`;
-      window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+      window.open(url, '_blank', 'width=680,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     } else {
       const url = `/janela/aposta/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=valuebet&estrategia=VALUEBET`;
-      window.open(url, '_blank', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+      window.open(url, '_blank', 'width=680,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     }
   }, [projetoId]);
 
