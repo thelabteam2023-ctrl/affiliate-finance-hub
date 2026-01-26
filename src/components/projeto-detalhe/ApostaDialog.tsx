@@ -881,6 +881,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     }
   }, [open, aposta]);
 
+  // Sincronizar estratégia quando está "travada" pela aba
+  // CRÍTICO: Quando a aba define uma estratégia fixa (ex: bonus, freebets, surebet),
+  // precisamos atualizar o registroValues.estrategia automaticamente,
+  // pois o Select no header é substituído por um Badge estático
+  useEffect(() => {
+    if (!aposta && open) {
+      const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
+      
+      if (lockedEstrategia && registroValues.estrategia !== lockedEstrategia) {
+        setRegistroValues(prev => ({ ...prev, estrategia: lockedEstrategia }));
+      }
+    }
+  }, [open, aposta, activeTab, registroValues.estrategia]);
+
   // Atualizar saldo quando bookmakerId mudar ou bookmakers forem carregados
   useEffect(() => {
     if (bookmakerId && bookmakers.length > 0) {
