@@ -50,7 +50,8 @@ import { useImportBetPrint } from "@/hooks/useImportBetPrint";
 import { RegistroApostaFields, RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
 import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, isAbaEstrategiaFixa, getEstrategiaFromTab, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional } from "@/lib/apostaConstants";
 import { 
-  BookmakerSelectOption, 
+  BookmakerSelectOption,
+  BookmakerSelectTrigger,
   SaldoBreakdownDisplay, 
   formatCurrency as formatCurrencyCanonical,
   getCurrencyTextColor,
@@ -2802,24 +2803,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         }
                       }}
                     >
-                      <SelectTrigger className="w-full">
-                        <div className={`flex items-center min-w-0 flex-1 overflow-hidden ${!bookmakerId ? 'justify-center' : 'gap-2'}`}>
-                          <span className="truncate" title={(() => {
+                      <SelectTrigger className="w-full h-10">
+                        <BookmakerSelectTrigger
+                          bookmaker={bookmakerId ? (() => {
                             const selectedBk = bookmakers.find(b => b.id === bookmakerId);
                             if (selectedBk) {
-                              return `${selectedBk.nome} • ${selectedBk.parceiro_nome || ""}`;
+                              // Usar saldo com reservas (em tempo real) se disponível
+                              const saldoDisplay = saldoComReservas?.disponivel ?? selectedBk.saldo_operavel;
+                              return {
+                                nome: selectedBk.nome,
+                                parceiro_nome: selectedBk.parceiro_nome,
+                                moeda: selectedBk.moeda,
+                                saldo_operavel: saldoDisplay,
+                                logo_url: selectedBk.logo_url,
+                              };
                             }
-                            return "";
-                          })()}>
-                            {bookmakerId ? (() => {
-                              const selectedBk = bookmakers.find(b => b.id === bookmakerId);
-                              if (selectedBk) {
-                                return `${selectedBk.nome} • ${selectedBk.parceiro_nome || ""}`;
-                              }
-                              return "Selecione";
-                            })() : "Selecione"}
-                          </span>
-                        </div>
+                            return null;
+                          })() : null}
+                          placeholder="Selecione"
+                        />
                       </SelectTrigger>
                       <SelectContent className="max-w-[400px]">
                         {bookmakers.length === 0 ? (
@@ -2848,7 +2850,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         )}
                       </SelectContent>
                     </Select>
-                    {bookmakerSaldo && (
+                    {/* Saldo com reservas em tempo real */}
+                    {bookmakerId && saldoComReservas && saldoComReservas.reservado > 0 ? (
+                      <SaldoReservaCompact
+                        saldoContabil={saldoComReservas.contabil}
+                        saldoReservado={saldoComReservas.reservado}
+                        saldoDisponivel={saldoComReservas.disponivel}
+                        moeda={bookmakerSaldo?.moeda || 'BRL'}
+                        stakeAtual={parseFloat(stake) || 0}
+                        loading={saldoReservasLoading}
+                      />
+                    ) : bookmakerSaldo && (
                       <SaldoBreakdownDisplay
                         saldoReal={bookmakerSaldo.saldoDisponivel}
                         saldoFreebet={bookmakerSaldo.saldoFreebet}
