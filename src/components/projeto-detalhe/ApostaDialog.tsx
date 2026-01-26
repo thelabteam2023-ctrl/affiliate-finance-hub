@@ -397,11 +397,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   
   // ========== SISTEMA DE RESERVA DE SALDO EM TEMPO REAL ==========
   // Previne race conditions entre operadores simultâneos
-  const stakeReservation = useStakeReservation({
+  const {
+    reserving: stakeReserving,
+    sessionId: stakeSessionId,
+    currentReservation,
+    reserveStake,
+    commitReservation,
+    cancelReservation
+  } = useStakeReservation({
     workspaceId: workspaceId || '',
     formType: 'SIMPLES',
     enabled: open && !!workspaceId
   });
+  // O hook useBookmakerSaldoComReservas é usado após a declaração de bookmakerId
   
   // Hook para gerenciamento de bônus (rollover)
   const { atualizarProgressoRollover } = useBonusBalanceManager();
@@ -566,6 +574,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
   // Bookmaker mode
   const [bookmakerId, setBookmakerId] = useState("");
+  
+  // Saldo com reservas em tempo real (exclui nossa própria sessão)
+  const {
+    saldo: saldoComReservas,
+    loading: saldoReservasLoading,
+    refetch: refetchSaldoReservas
+  } = useBookmakerSaldoComReservas(
+    bookmakerId || null,
+    workspaceId || '',
+    stakeSessionId,
+    open && !!workspaceId && !!bookmakerId
+  );
+  
   const [modoBackLay, setModoBackLay] = useState(false);
   const [layExchange, setLayExchange] = useState("");
   const [layOdd, setLayOdd] = useState("");
@@ -930,6 +951,69 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       setLayLiability(null);
     }
   }, [tipoAposta, modoBackLay, stake, odd, layOdd, layComissao]);
+
+  // ========== SISTEMA DE RESERVA - DEBOUNCE E CLEANUP ==========
+  const stakeReserveDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const lastBookmakerIdRef = useRef<string | null>(null);
+  
+  // Reservar stake com debounce quando usuário digita
+  useEffect(() => {
+    // Limpar debounce anterior
+    if (stakeReserveDebounceRef.current) {
+      clearTimeout(stakeReserveDebounceRef.current);
+    }
+    
+    // Só reservar se: está aberto, não é edição, tem bookmaker, tem stake válido
+    if (!open || aposta || !bookmakerId || !workspaceId) {
+      return;
+    }
+    
+    const stakeNum = parseFloat(stake);
+    if (isNaN(stakeNum) || stakeNum <= 0) {
+      // Cancelar reserva se stake zerado
+      cancelReservation();
+      return;
+    }
+    
+    const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+    const moeda = selectedBk?.moeda || 'BRL';
+    
+    // Debounce de 500ms para não sobrecarregar
+    stakeReserveDebounceRef.current = setTimeout(async () => {
+      await reserveStake(bookmakerId, stakeNum, moeda);
+      refetchSaldoReservas();
+    }, 500);
+    
+    return () => {
+      if (stakeReserveDebounceRef.current) {
+        clearTimeout(stakeReserveDebounceRef.current);
+      }
+    };
+  }, [stake, bookmakerId, open, aposta, workspaceId, reserveStake, cancelReservation, bookmakers, refetchSaldoReservas]);
+  
+  // Cancelar reserva quando bookmaker muda
+  useEffect(() => {
+    if (lastBookmakerIdRef.current && lastBookmakerIdRef.current !== bookmakerId) {
+      cancelReservation();
+    }
+    lastBookmakerIdRef.current = bookmakerId;
+  }, [bookmakerId, cancelReservation]);
+  
+  // Cancelar reserva quando fecha o dialog
+  useEffect(() => {
+    if (!open) {
+      cancelReservation();
+    }
+  }, [open, cancelReservation]);
+  
+  // Cleanup ao desmontar
+  useEffect(() => {
+    return () => {
+      if (stakeReserveDebounceRef.current) {
+        clearTimeout(stakeReserveDebounceRef.current);
+      }
+    };
+  }, []);
 
   // Cálculos para Exchange mode (novo modelo)
   useEffect(() => {
@@ -2828,15 +2912,28 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                       }}
                       placeholder="100.00"
                       className={`text-center ${(() => {
-                        const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+                        // Usar saldo disponível COM reservas para validação
+                        const saldoDisponivelReal = saldoComReservas?.disponivel ?? bookmakers.find(b => b.id === bookmakerId)?.saldo_operavel ?? 0;
                         const stakeNum = parseFloat(stake);
-                        if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_operavel) {
+                        if (!isNaN(stakeNum) && stakeNum > saldoDisponivelReal) {
                           return "border-destructive focus-visible:ring-destructive";
                         }
                         return "";
                       })()}`}
                     />
-                    {(() => {
+                    {/* Exibir saldo com reservas em tempo real */}
+                    {bookmakerId && saldoComReservas && (
+                      <SaldoReservaCompact
+                        saldoContabil={saldoComReservas.contabil}
+                        saldoReservado={saldoComReservas.reservado}
+                        saldoDisponivel={saldoComReservas.disponivel}
+                        moeda={bookmakers.find(b => b.id === bookmakerId)?.moeda || 'BRL'}
+                        stakeAtual={parseFloat(stake) || 0}
+                        loading={saldoReservasLoading}
+                      />
+                    )}
+                    {/* Fallback: mostrar operável se não tiver reservas carregadas */}
+                    {bookmakerId && !saldoComReservas && (() => {
                       const selectedBk = bookmakers.find(b => b.id === bookmakerId);
                       const stakeNum = parseFloat(stake);
                       if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_operavel) {
@@ -3810,8 +3907,21 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
                 Cancelar
               </Button>
-              <Button onClick={handleSave} disabled={loading}>
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              <Button 
+                onClick={handleSave} 
+                disabled={loading || stakeReserving || (() => {
+                  // Bloquear se stake > saldo disponível (com reservas)
+                  if (!aposta && tipoAposta === "bookmaker" && bookmakerId) {
+                    const stakeNum = parseFloat(stake);
+                    const saldoDisponivelReal = saldoComReservas?.disponivel ?? bookmakers.find(b => b.id === bookmakerId)?.saldo_operavel ?? 0;
+                    if (!isNaN(stakeNum) && stakeNum > saldoDisponivelReal) {
+                      return true;
+                    }
+                  }
+                  return false;
+                })()}
+              >
+                {loading || stakeReserving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Salvar
               </Button>
             </div>
