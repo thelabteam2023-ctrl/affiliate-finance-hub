@@ -2658,7 +2658,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             {/* Layout padronizado com Arbitragem: Esporte | Evento | Mercado | Data em linha */}
             <div className="grid grid-cols-4 gap-3 pb-3 border-b border-border/50">
               {/* Esporte */}
-              <div>
+              <div className="text-center">
                 <Label className={`text-xs ${printFieldsNeedingReview.esporte ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Esporte {printFieldsNeedingReview.esporte && <span className="text-[9px]">⚠</span>}
                 </Label>
@@ -2678,7 +2678,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </div>
               
               {/* Evento */}
-              <div>
+              <div className="text-center">
                 <Label className={`text-xs ${printFieldsNeedingReview.evento ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Evento {printFieldsNeedingReview.evento && <span className="text-[9px]">⚠</span>}
                 </Label>
@@ -2691,7 +2691,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </div>
               
               {/* Mercado */}
-              <div>
+              <div className="text-center">
                 <Label className={`text-xs ${printFieldsNeedingReview.mercado ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Mercado {printFieldsNeedingReview.mercado && <span className="text-[9px]">⚠</span>}
                 </Label>
@@ -2716,7 +2716,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </div>
               
               {/* Data/Hora */}
-              <div className={printFieldsNeedingReview.dataHora ? '[&_button]:border-amber-500/50' : ''}>
+              <div className={`text-center ${printFieldsNeedingReview.dataHora ? '[&_button]:border-amber-500/50' : ''}`}>
                 <Label className={`text-xs ${printFieldsNeedingReview.dataHora ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Data/Hora {printFieldsNeedingReview.dataHora && <span className="text-[9px]">⚠</span>}
                 </Label>
@@ -2731,15 +2731,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             {/* Linha de entrada principal: Bookmaker | Odd | Stake | Linha | Retorno (estilo Arbitragem) */}
             <div className="border border-border/50 rounded-lg overflow-hidden">
               <table className="w-full">
-    <thead>
-      <tr className="border-b border-border/30 bg-muted/30">
-        <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-left w-[240px]">Casa</th>
-        <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[70px]">Odd</th>
-        <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[100px]">Stake</th>
-        <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center w-[120px]">Linha</th>
-        <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[110px]">Retorno</th>
-      </tr>
-    </thead>
+                <thead>
+                  <tr className="border-b border-border/30 bg-muted/30">
+                    <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center w-[240px]">Bookmaker</th>
+                    <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[70px]">Odd</th>
+                    <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[100px]">Stake</th>
+                    <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center w-[120px]">Linha</th>
+                    <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[110px]">Retorno</th>
+                  </tr>
+                </thead>
                 <tbody>
                   <tr className="border-b border-border/30">
                     {/* Casa */}
