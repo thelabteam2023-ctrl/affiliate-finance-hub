@@ -2542,138 +2542,165 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   };
 
 
-  return (
+  // ============================================
+  // SHARED HEADER PROPS
+  // ============================================
+  const headerProps = {
+    formType: "simples" as const,
+    estrategia: registroValues.estrategia,
+    contexto: registroValues.contexto_operacional || 'NORMAL' as const,
+    onEstrategiaChange: (v: any) => setRegistroValues(prev => ({ ...prev, estrategia: v })),
+    onContextoChange: (v: any) => setRegistroValues(prev => ({ ...prev, contexto_operacional: v })),
+    isEditing: !!aposta,
+    activeTab,
+    lockedEstrategia: !aposta && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null,
+    gameFields: {
+      esporte,
+      evento,
+      mercado,
+      dataAposta,
+      onEsporteChange: (val: string) => {
+        setEsporte(val);
+        incrementSportUsage(val);
+      },
+      onEventoChange: setEvento,
+      onMercadoChange: (val: string) => {
+        setMercado(val);
+        setSelecao("");
+        if (mercadoFromPrint) setMercadoFromPrint(false);
+      },
+      onDataApostaChange: setDataAposta,
+      esportesList: getSortedEsportes(),
+      fieldsNeedingReview: printFieldsNeedingReview,
+    },
+    showImport: !aposta,
+    onImportClick: () => fileInputRef.current?.click(),
+    isPrintProcessing,
+    printProcessingPhase,
+    fileInputRef,
+    onFileSelect: handleFileSelect,
+    showCloseButton: !embedded,
+    onClose: () => onOpenChange(false),
+    embedded,
+  };
+
+  // ============================================
+  // SHARED CONTENT - Print status indicators
+  // ============================================
+  const renderPrintStatusIndicators = () => (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent 
-          className={`max-w-3xl max-h-[90vh] overflow-y-auto transition-all ${
-            isDragging && !aposta ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
-          } ${embedded ? 'fixed inset-0 !max-w-none !max-h-none !translate-x-0 !translate-y-0 !left-0 !top-0 !rounded-none !border-0' : ''}`}
+      {/* Estado: Processando print */}
+      {isPrintProcessing && !aposta && (
+        <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg ${
+          printProcessingPhase === "backup" 
+            ? "bg-amber-500/10 border border-amber-500/30" 
+            : "bg-primary/10"
+        }`}>
+          <div className={`h-3 w-3 border-2 border-t-transparent rounded-full animate-spin ${
+            printProcessingPhase === "backup" ? "border-amber-500" : "border-primary"
+          }`} />
+          <span className={`text-xs font-medium ${
+            printProcessingPhase === "backup" ? "text-amber-500" : "text-primary"
+          }`}>
+            {printProcessingPhase === "backup" 
+              ? "Tentando leitura alternativa..." 
+              : "Analisando seu print..."}
+          </span>
+        </div>
+      )}
+      
+      {/* Estado: Print carregado - Compacto */}
+      {!isPrintProcessing && printParsedData && printImagePreview && !aposta && (
+        <div className="flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+          {/* Miniatura - clicável para ampliar */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <div 
+                className="relative w-8 h-8 flex-shrink-0 cursor-pointer rounded overflow-hidden hover:ring-2 hover:ring-primary transition-all"
+                title="Clique para ampliar"
+              >
+                <img 
+                  src={printImagePreview} 
+                  alt="Print" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl p-2">
+              <img 
+                src={printImagePreview} 
+                alt="Print do boletim" 
+                className="w-full h-auto max-h-[80vh] object-contain rounded-md"
+              />
+            </DialogContent>
+          </Dialog>
+          
+          {/* Badge de sucesso - centralizado */}
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            <span className="text-xs text-emerald-400 font-medium">Print importado</span>
+          </div>
+          
+          {/* Botão limpar */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={clearPrintData}
+            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+          >
+            <XCircle className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+    </>
+  );
+
+  // ============================================
+  // DRAG OVERLAY COMPONENT
+  // ============================================
+  const renderDragOverlay = () => isDragging && !aposta && (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 rounded-lg border-2 border-dashed border-primary">
+      <div className="text-center space-y-2">
+        <Camera className="h-10 w-10 mx-auto text-primary" />
+        <p className="text-sm font-medium text-primary">Solte a imagem para importar</p>
+      </div>
+    </div>
+  );
+
+  // ============================================
+  // EMBEDDED MODE (Fullscreen - igual ao Surebet)
+  // ============================================
+  if (embedded && open) {
+    return (
+      <>
+        <div 
+          className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in-0 duration-200"
           ref={dialogContentRef}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-          hideOverlay={embedded}
-          hideCloseButton={embedded}
         >
-          {/* Drag overlay */}
-          {isDragging && !aposta && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 rounded-lg border-2 border-dashed border-primary">
-              <div className="text-center space-y-2">
-                <Camera className="h-10 w-10 mx-auto text-primary" />
-                <p className="text-sm font-medium text-primary">Solte a imagem para importar</p>
-              </div>
-            </div>
-          )}
-
-          {/* HEADER UNIFICADO */}
-          {/* HEADER UNIFICADO V2 - 3 linhas fixas */}
-          <BetFormHeaderV2
-            formType="simples"
-            estrategia={registroValues.estrategia}
-            contexto={registroValues.contexto_operacional || 'NORMAL'}
-            onEstrategiaChange={(v) => setRegistroValues(prev => ({ ...prev, estrategia: v }))}
-            onContextoChange={(v) => setRegistroValues(prev => ({ ...prev, contexto_operacional: v }))}
-            isEditing={!!aposta}
-            activeTab={activeTab}
-            lockedEstrategia={!aposta && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
-            gameFields={{
-              esporte,
-              evento,
-              mercado,
-              dataAposta,
-              onEsporteChange: (val) => {
-                setEsporte(val);
-                incrementSportUsage(val);
-              },
-              onEventoChange: setEvento,
-              onMercadoChange: (val) => {
-                setMercado(val);
-                setSelecao("");
-                if (mercadoFromPrint) setMercadoFromPrint(false);
-              },
-              onDataApostaChange: setDataAposta,
-              esportesList: getSortedEsportes(),
-              fieldsNeedingReview: printFieldsNeedingReview,
-            }}
-            showImport={!aposta}
-            onImportClick={() => fileInputRef.current?.click()}
-            isPrintProcessing={isPrintProcessing}
-            printProcessingPhase={printProcessingPhase}
-            fileInputRef={fileInputRef}
-            onFileSelect={handleFileSelect}
-            showCloseButton={!embedded}
-            onClose={() => onOpenChange(false)}
-            embedded={embedded}
-          />
-
-          <div className="grid gap-5 py-2 px-4">
-            {/* Estado: Processando print */}
-            {isPrintProcessing && !aposta && (
-              <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg ${
-                printProcessingPhase === "backup" 
-                  ? "bg-amber-500/10 border border-amber-500/30" 
-                  : "bg-primary/10"
-              }`}>
-                <div className={`h-3 w-3 border-2 border-t-transparent rounded-full animate-spin ${
-                  printProcessingPhase === "backup" ? "border-amber-500" : "border-primary"
-                }`} />
-                <span className={`text-xs font-medium ${
-                  printProcessingPhase === "backup" ? "text-amber-500" : "text-primary"
-                }`}>
-                  {printProcessingPhase === "backup" 
-                    ? "Tentando leitura alternativa..." 
-                    : "Analisando seu print..."}
-                </span>
-              </div>
-            )}
+          <div className="relative w-full h-full flex flex-col overflow-hidden">
+            {/* Hidden file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
             
-            {/* Estado: Print carregado - Compacto */}
-            {!isPrintProcessing && printParsedData && printImagePreview && !aposta && (
-              <div className="flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                {/* Miniatura - clicável para ampliar */}
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <div 
-                      className="relative w-8 h-8 flex-shrink-0 cursor-pointer rounded overflow-hidden hover:ring-2 hover:ring-primary transition-all"
-                      title="Clique para ampliar"
-                    >
-                      <img 
-                        src={printImagePreview} 
-                        alt="Print" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl p-2">
-                    <img 
-                      src={printImagePreview} 
-                      alt="Print do boletim" 
-                      className="w-full h-auto max-h-[80vh] object-contain rounded-md"
-                    />
-                  </DialogContent>
-                </Dialog>
-                
-                {/* Badge de sucesso - centralizado */}
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className="text-xs text-emerald-400 font-medium">Print importado</span>
-                </div>
-                
-                {/* Botão limpar */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearPrintData}
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                >
-                  <XCircle className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
+            {/* Drag overlay */}
+            {renderDragOverlay()}
+            
+            {/* HEADER UNIFICADO V2 - 3 linhas fixas (sem padding, full width) */}
+            <BetFormHeaderV2 {...headerProps} />
+
+            {/* CONTENT - com scroll e padding interno */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="grid gap-5">
+                {renderPrintStatusIndicators()}
 
             {/* ========== SELETOR DE MODO: BOOKMAKER vs EXCHANGE ========== */}
             <div className="flex items-center justify-center border-b border-border/30">
@@ -3626,9 +3653,346 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 moeda={getSelectedBookmakerMoeda()}
               />
             )}
+              </div>
+            </div>
+
+            {/* FOOTER para modo embedded */}
+            <div className="shrink-0 border-t border-border/50 bg-background px-4 py-3 flex justify-between">
+              {aposta && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  disabled={loading}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir
+                </Button>
+              )}
+              <div className="flex gap-2 ml-auto">
+                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleSave} 
+                  disabled={loading || stakeReserving || (() => {
+                    if (!aposta && tipoAposta === "bookmaker" && bookmakerId) {
+                      const stakeNum = parseFloat(stake);
+                      const saldoDisponivelReal = saldoComReservas?.disponivel ?? bookmakers.find(b => b.id === bookmakerId)?.saldo_operavel ?? 0;
+                      if (!isNaN(stakeNum) && stakeNum > saldoDisponivelReal) {
+                        return true;
+                      }
+                    }
+                    return false;
+                  })()}
+                >
+                  {loading || stakeReserving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Aposta</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir esta aposta? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    );
+  }
+
+  // ============================================
+  // DIALOG MODE (Modal padrão shadcn)
+  // ============================================
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent 
+          className={`max-w-3xl max-h-[90vh] overflow-y-auto transition-all p-0 ${
+            isDragging && !aposta ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+          }`}
+          ref={dialogContentRef}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          {/* Drag overlay */}
+          {renderDragOverlay()}
+
+          {/* HEADER UNIFICADO V2 - 3 linhas fixas (full width, sem padding do DialogContent) */}
+          <BetFormHeaderV2 {...headerProps} />
+
+          {/* CONTENT - com padding interno */}
+          <div className="grid gap-5 p-4">
+            {renderPrintStatusIndicators()}
+
+            {/* ========== SELETOR DE MODO: BOOKMAKER vs EXCHANGE ========== */}
+            <div className="flex items-center justify-center border-b border-border/30">
+              <button
+                type="button"
+                onClick={() => setTipoAposta("bookmaker")}
+                className={`relative px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
+                  tipoAposta === "bookmaker"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>Bookmaker</span>
+                {tipoAposta === "bookmaker" && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTipoAposta("exchange")}
+                className={`relative px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
+                  tipoAposta === "exchange"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span>Exchange</span>
+                {tipoAposta === "exchange" && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+            </div>
+
+            {/* ========== MODO BOOKMAKER (Dialog) ========== */}
+            {tipoAposta === "bookmaker" && (
+              <>
+                <div className="border border-border/50 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border/30 bg-muted/30">
+                        <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center w-[240px]">Bookmaker</th>
+                        <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[70px]">Odd</th>
+                        <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[100px]">Stake</th>
+                        <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center w-[120px]">Linha</th>
+                        <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[110px]">Retorno</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-border/30">
+                        {/* Casa */}
+                        <td className="px-2 py-3">
+                          <div className="flex flex-col gap-1">
+                            <Select 
+                              value={bookmakerId} 
+                              onValueChange={(val) => {
+                                setBookmakerId(val);
+                                const selectedBk = bookmakers.find(b => b.id === val);
+                                if (selectedBk) {
+                                  setBookmakerSaldo({ 
+                                    saldo: selectedBk.saldo_total, 
+                                    saldoDisponivel: selectedBk.saldo_disponivel, 
+                                    saldoFreebet: selectedBk.saldo_freebet, 
+                                    saldoBonus: selectedBk.saldo_bonus,
+                                    saldoOperavel: selectedBk.saldo_operavel,
+                                    moeda: selectedBk.moeda,
+                                    bonusRolloverStarted: selectedBk.bonus_rollover_started || false
+                                  });
+                                } else {
+                                  setBookmakerSaldo(null);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-9 text-xs w-full border-dashed">
+                                <BookmakerSelectTrigger
+                                  bookmaker={bookmakerId ? (() => {
+                                    const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+                                    if (selectedBk) {
+                                      return {
+                                        nome: selectedBk.nome,
+                                        parceiro_nome: selectedBk.parceiro_nome,
+                                        moeda: selectedBk.moeda,
+                                        saldo_operavel: selectedBk.saldo_operavel,
+                                        logo_url: selectedBk.logo_url,
+                                      };
+                                    }
+                                    return null;
+                                  })() : null}
+                                  placeholder="Selecione"
+                                />
+                              </SelectTrigger>
+                              <SelectContent className="max-w-[400px]">
+                                {bookmakers.length === 0 ? (
+                                  <div className="p-3 text-center text-sm text-muted-foreground">
+                                    Nenhuma bookmaker com saldo disponível
+                                  </div>
+                                ) : (
+                                  bookmakers.map((bk) => (
+                                    <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
+                                      <BookmakerSelectOption 
+                                        bookmaker={{
+                                          id: bk.id,
+                                          nome: bk.nome,
+                                          parceiro_nome: bk.parceiro_nome,
+                                          moeda: bk.moeda,
+                                          saldo_operavel: bk.saldo_operavel,
+                                          saldo_disponivel: bk.saldo_disponivel,
+                                          saldo_freebet: bk.saldo_freebet,
+                                          saldo_bonus: bk.saldo_bonus,
+                                          logo_url: bk.logo_url,
+                                          bonus_rollover_started: bk.bonus_rollover_started,
+                                        }}
+                                      />
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            
+                            {/* Detalhes abaixo do select: Parceiro • Saldo */}
+                            {bookmakerId && (() => {
+                              const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+                              if (!selectedBk) return null;
+                              const saldoDisplay = saldoComReservas?.disponivel ?? selectedBk.saldo_operavel;
+                              const parceiroShort = selectedBk.parceiro_nome?.split(' ')[0];
+                              const getCurrencyTextColor = (moeda: string) => {
+                                if (moeda === 'USD') return 'text-emerald-500';
+                                if (moeda === 'EUR') return 'text-blue-500';
+                                return 'text-muted-foreground';
+                              };
+                              return (
+                                <div className="text-[10px] text-muted-foreground text-center truncate px-1">
+                                  {parceiroShort && <span>{parceiroShort} • </span>}
+                                  <span className={getCurrencyTextColor(selectedBk.moeda)}>
+                                    {formatCurrencyCanonical(saldoDisplay, selectedBk.moeda)}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </td>
+                        {/* Odd */}
+                        <td className="px-2 py-3 text-center">
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            value={odd}
+                            onChange={(e) => setOdd(e.target.value.replace(',', '.'))}
+                            placeholder="2.50"
+                            className="h-9 text-center text-xs w-full"
+                          />
+                        </td>
+                        {/* Stake */}
+                        <td className="px-2 py-3 text-center">
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            value={stake}
+                            onChange={(e) => setStake(e.target.value.replace(',', '.'))}
+                            placeholder="0,00"
+                            className="h-9 text-center text-xs w-full"
+                          />
+                        </td>
+                        {/* Linha/Seleção */}
+                        <td className="px-2 py-3 text-center">
+                          <Input
+                            value={selecao}
+                            onChange={(e) => setSelecao(e.target.value)}
+                            placeholder="Ex: Casa"
+                            className="h-9 text-center text-xs w-full"
+                          />
+                        </td>
+                        {/* Retorno Potencial */}
+                        <td className="px-2 py-3 text-center">
+                          <div className="h-9 flex items-center justify-center">
+                            <span className="text-xs font-medium text-primary">
+                              {odd && stake && parseFloat(odd) > 1 && parseFloat(stake) > 0
+                                ? formatCurrencyCanonical(parseFloat(stake) * parseFloat(odd), getSelectedBookmakerMoeda())
+                                : "—"
+                              }
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {/* Observações */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Observações</Label>
+              <Textarea
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                placeholder="Anotações opcionais sobre esta aposta..."
+                className="text-xs min-h-[60px] resize-none"
+              />
+            </div>
+
+            {/* Freebet e Resultado para Dialog mode */}
+            {aposta && (
+              <div className="border border-border/50 rounded-lg p-3 space-y-3">
+                <Label className="text-xs font-medium">Resultado</Label>
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    { value: "PENDENTE", label: "Pendente", selectedClass: "bg-muted text-muted-foreground", hoverClass: "hover:bg-muted" },
+                    { value: "GREEN", label: "Green", selectedClass: "bg-emerald-500/20 text-emerald-500", hoverClass: "hover:bg-emerald-500/20 hover:text-emerald-500" },
+                    { value: "RED", label: "Red", selectedClass: "bg-red-500/20 text-red-500", hoverClass: "hover:bg-red-500/20 hover:text-red-500" },
+                    { value: "MEIO_GREEN", label: "½ Green", selectedClass: "bg-teal-500/20 text-teal-500", hoverClass: "hover:bg-teal-500/20 hover:text-teal-500" },
+                    { value: "MEIO_RED", label: "½ Red", selectedClass: "bg-orange-500/20 text-orange-500", hoverClass: "hover:bg-orange-500/20 hover:text-orange-500" },
+                    { value: "VOID", label: "Void", selectedClass: "bg-slate-500/20 text-slate-400", hoverClass: "hover:bg-slate-500/20 hover:text-slate-400" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setStatusResultado(option.value)}
+                      className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                        statusResultado === option.value 
+                          ? option.selectedClass
+                          : `text-muted-foreground/60 ${option.hoverClass}`
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Freebet Gerada */}
+            {tipoAposta === "bookmaker" && !usarFreebetBookmaker && (
+              <GerouFreebetInput
+                gerouFreebet={gerouFreebet}
+                onGerouFreebetChange={setGerouFreebet}
+                valorFreebetGerada={valorFreebetGerada}
+                onValorFreebetGeradaChange={setValorFreebetGerada}
+                moeda={getSelectedBookmakerMoeda()}
+              />
+            )}
           </div>
 
-          <DialogFooter className="flex justify-between">
+          <DialogFooter className="px-4 py-3 border-t border-border/50">
             {aposta && (
               <Button
                 variant="destructive"
@@ -3639,14 +4003,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 Excluir
               </Button>
             )}
-            <div className="flex gap-2">
+            <div className="flex gap-2 ml-auto">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
                 Cancelar
               </Button>
               <Button 
                 onClick={handleSave} 
                 disabled={loading || stakeReserving || (() => {
-                  // Bloquear se stake > saldo disponível (com reservas)
                   if (!aposta && tipoAposta === "bookmaker" && bookmakerId) {
                     const stakeNum = parseFloat(stake);
                     const saldoDisponivelReal = saldoComReservas?.disponivel ?? bookmakers.find(b => b.id === bookmakerId)?.saldo_operavel ?? 0;
