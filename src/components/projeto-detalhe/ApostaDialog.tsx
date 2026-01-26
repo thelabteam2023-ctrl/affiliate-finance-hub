@@ -2736,8 +2736,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 <tbody>
                   <tr className="border-b border-border/30">
                     {/* Casa */}
-                    <td className="px-2 py-3">
-                      <div className="flex flex-col gap-1">
+                    <td className="px-3 py-3 text-center">
+                      <div className="flex flex-col gap-1 items-center">
                         <Select 
                           value={bookmakerId} 
                           onValueChange={(val) => {
