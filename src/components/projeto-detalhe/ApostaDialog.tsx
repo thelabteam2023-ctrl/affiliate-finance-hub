@@ -2655,6 +2655,39 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </div>
             )}
 
+            {/* ========== SELETOR DE MODO: BOOKMAKER vs EXCHANGE ========== */}
+            {/* Posicionado ANTES dos campos comuns como um "modo de operação" global */}
+            <div className="flex items-center justify-center gap-1 p-1 bg-muted/30 rounded-lg border border-border/50">
+              <button
+                type="button"
+                onClick={() => setTipoAposta("bookmaker")}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  tipoAposta === "bookmaker"
+                    ? "bg-background text-foreground shadow-sm border border-border/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  <span>Bookmaker</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTipoAposta("exchange")}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  tipoAposta === "exchange"
+                    ? "bg-background text-foreground shadow-sm border border-border/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Exchange</span>
+                </div>
+              </button>
+            </div>
+
             {/* Layout padronizado com Arbitragem: Esporte | Evento | Mercado | Data em linha */}
             <div className="grid grid-cols-4 gap-3 pb-3 border-b border-border/50">
               {/* Esporte */}
@@ -2755,8 +2788,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </div>
             </div>
 
-            {/* Linha de entrada principal: Bookmaker | Odd | Stake | Linha | Retorno (estilo Arbitragem) */}
-            <div className="border border-border/50 rounded-lg overflow-hidden">
+            {/* ========== MODO BOOKMAKER ========== */}
+            {tipoAposta === "bookmaker" && (
+              <>
+              <div className="border border-border/50 rounded-lg overflow-hidden">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border/30 bg-muted/30">
@@ -2947,62 +2982,55 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               )}
             </div>
 
-            {/* Abas: Bookmaker vs Exchange */}
-            <Tabs value={tipoAposta} onValueChange={(v) => setTipoAposta(v as "bookmaker" | "exchange")} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="bookmaker">Bookmaker</TabsTrigger>
-                <TabsTrigger value="exchange">Exchange</TabsTrigger>
-              </TabsList>
-
-              {/* Aba Bookmaker - campos já estão na tabela acima, aqui só opções adicionais */}
-              <TabsContent value="bookmaker" className="space-y-4 mt-3">
-                {/* Toggle "Usar Freebet nesta aposta?" - compacto e discreto */}
-                {bookmakerSaldo && bookmakerSaldo.saldoFreebet > 0 && !aposta?.gerou_freebet && (
-                  <div className="flex items-center justify-between py-2 px-3 rounded-md border border-border/30 bg-muted/10">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="usarFreebet"
-                        checked={usarFreebetBookmaker}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setUsarFreebetBookmaker(checked);
-                          if (checked && bookmakerSaldo.saldoFreebet > 0) {
-                            setStake(bookmakerSaldo.saldoFreebet.toString());
-                          }
-                          if (checked) {
-                            setGerouFreebet(false);
-                            setValorFreebetGerada("");
-                          }
-                        }}
-                        disabled={!!aposta?.tipo_freebet}
-                        className="h-3.5 w-3.5 rounded border-border/50 text-primary focus:ring-primary/30 focus:ring-offset-0"
-                      />
-                      <label htmlFor="usarFreebet" className="text-xs text-muted-foreground cursor-pointer">
-                        Usar Freebet
-                      </label>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <HelpCircle className="h-3 w-3 text-muted-foreground/50 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-[200px] text-xs">
-                            <p>Stake será debitada do saldo de Freebet ({formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)})</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    {usarFreebetBookmaker && (
-                      <span className="text-[10px] text-muted-foreground/60">
-                        {formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} disponível
-                      </span>
-                    )}
+              {/* Toggle "Usar Freebet nesta aposta?" - compacto e discreto */}
+              {bookmakerSaldo && bookmakerSaldo.saldoFreebet > 0 && !aposta?.gerou_freebet && (
+                <div className="flex items-center justify-between py-2 px-3 rounded-md border border-border/30 bg-muted/10 mt-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="usarFreebet"
+                      checked={usarFreebetBookmaker}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setUsarFreebetBookmaker(checked);
+                        if (checked && bookmakerSaldo.saldoFreebet > 0) {
+                          setStake(bookmakerSaldo.saldoFreebet.toString());
+                        }
+                        if (checked) {
+                          setGerouFreebet(false);
+                          setValorFreebetGerada("");
+                        }
+                      }}
+                      disabled={!!aposta?.tipo_freebet}
+                      className="h-3.5 w-3.5 rounded border-border/50 text-primary focus:ring-primary/30 focus:ring-offset-0"
+                    />
+                    <label htmlFor="usarFreebet" className="text-xs text-muted-foreground cursor-pointer">
+                      Usar Freebet
+                    </label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[200px] text-xs">
+                          <p>Stake será debitada do saldo de Freebet ({formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)})</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
-                )}
-              </TabsContent>
+                  {usarFreebetBookmaker && (
+                    <span className="text-[10px] text-muted-foreground/60">
+                      {formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} disponível
+                    </span>
+                  )}
+                </div>
+              )}
+              </>
+            )}
 
-              {/* Aba Exchange - 3 tipos de operação */}
-              <TabsContent value="exchange" className="space-y-4 mt-4">
+            {/* ========== MODO EXCHANGE ========== */}
+            {tipoAposta === "exchange" && (
+              <div className="space-y-4">
                 {/* Seletor de tipo de operação com ícone de ajuda */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-center gap-2">
@@ -3813,8 +3841,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     </div>
                   </div>
                 )}
-              </TabsContent>
-            </Tabs>
+              </div>
+            )}
 
             {/* Resultado - Segmented control compacto */}
             {/* Só exibir para Bookmaker (Sportsbooks). Para Exchange/Cobertura o resultado é calculado automaticamente */}
