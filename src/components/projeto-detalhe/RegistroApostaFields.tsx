@@ -30,6 +30,7 @@ import {
   type FormaRegistro,
   type ApostaEstrategia,
   type ContextoOperacional,
+  type FonteSaldo,
 } from "@/lib/apostaConstants";
 import {
   Tooltip,
@@ -43,6 +44,8 @@ export interface RegistroApostaValues {
   forma_registro: FormaRegistro | null;
   estrategia: ApostaEstrategia | null;
   contexto_operacional: ContextoOperacional | null;
+  /** NOVO: Fonte de saldo é a VERDADE FINANCEIRA - qual pool de capital é usado */
+  fonte_saldo?: FonteSaldo | null;
 }
 
 export interface RegistroApostaFieldsProps {
