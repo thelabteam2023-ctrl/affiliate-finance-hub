@@ -875,8 +875,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         }
         
         // Restaurar campos de registro (estrategia, forma_registro, contexto_operacional)
+        // CRÍTICO: forma_registro NUNCA pode ser null - usar 'SIMPLES' como fallback robusto
         setRegistroValues({
-          forma_registro: (aposta.forma_registro as FormaRegistro) || null,
+          forma_registro: (aposta.forma_registro as FormaRegistro) || 'SIMPLES',
           estrategia: (aposta.estrategia as ApostaEstrategia) || null,
           contexto_operacional: (aposta.contexto_operacional as ContextoOperacional) || null,
         });
