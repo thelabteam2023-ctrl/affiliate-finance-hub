@@ -71,11 +71,18 @@ export function SurebetAdditionalRow({
             onValueChange={(v) => onUpdate(pernaIndex, additionalIndex, "bookmaker_id", v)}
           >
             <SelectTrigger className="h-7 text-[10px] w-full">
-              <SelectValue placeholder="Selecione">
-                {selectedBookmaker?.nome && (
-                  <span className="truncate uppercase">{selectedBookmaker.nome}</span>
-                )}
-              </SelectValue>
+              {selectedBookmaker ? (
+                <div className="flex items-center justify-center gap-1.5 w-full">
+                  {selectedBookmaker.logo_url ? (
+                    <img src={selectedBookmaker.logo_url} alt="" className="h-4 w-4 rounded object-contain flex-shrink-0" />
+                  ) : (
+                    <div className="h-4 w-4 flex-shrink-0" />
+                  )}
+                  <span className="truncate uppercase text-[10px] font-medium">{selectedBookmaker.nome}</span>
+                </div>
+              ) : (
+                <span className="text-muted-foreground">+ Casa</span>
+              )}
             </SelectTrigger>
             <SelectContent className="max-w-[300px]">
               {bookmakers.map(bk => (
@@ -98,11 +105,10 @@ export function SurebetAdditionalRow({
               ))}
             </SelectContent>
           </Select>
-          {selectedBookmaker?.parceiro_nome && (
-            <div className="text-[9px] text-muted-foreground truncate mt-0.5 pl-1">
-              {selectedBookmaker.parceiro_nome}
-            </div>
-          )}
+          {/* Meta row com altura fixa para estabilidade */}
+          <div className="h-3 text-[9px] text-muted-foreground truncate pl-1 flex items-center">
+            {selectedBookmaker?.parceiro_nome || <span className="opacity-0">—</span>}
+          </div>
         </div>
       </td>
       
