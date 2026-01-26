@@ -1324,6 +1324,7 @@ export function ApostaMultiplaDialog({
             showCloseButton={!embedded}
             onClose={() => onOpenChange(false)}
             embedded={embedded}
+            fonteSaldo={registroValues.fonte_saldo || null}
             extraBadge={
               printImagePreview && !isPrintProcessing && (
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded text-xs">

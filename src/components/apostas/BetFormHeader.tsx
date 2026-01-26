@@ -4,13 +4,14 @@
  * Componente padronizado que exibe:
  * - Título do formulário (Aposta Simples, Aposta Múltipla, Arbitragem)
  * - Seletores de Estratégia e Contexto
+ * - Badge de Fonte de Saldo (financial truth)
  * - Botão de Importar (opcional)
  * 
  * Baseado no layout do formulário de Arbitragem como referência.
  */
 
 import React, { RefObject } from "react";
-import { Calculator, Layers, FileStack, Camera, Loader2, X } from "lucide-react";
+import { Calculator, Layers, FileStack, Camera, Loader2, X, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -33,8 +34,10 @@ import {
   CONTEXTOS_LIST,
   ESTRATEGIA_LABELS,
   isAbaEstrategiaFixa,
+  FONTE_SALDO_LABELS,
   type ApostaEstrategia,
   type ContextoOperacional,
+  type FonteSaldo,
 } from "@/lib/apostaConstants";
 
 export type BetFormType = "simples" | "multipla" | "arbitragem";
@@ -65,6 +68,9 @@ interface BetFormHeaderProps {
   
   /** Badge extra (ex: número de pernas para arbitragem) */
   extraBadge?: React.ReactNode;
+  
+  /** Fonte de Saldo - verdade financeira */
+  fonteSaldo?: FonteSaldo | null;
   
   /** Botão de fechar (para modais embedded) */
   showCloseButton?: boolean;
@@ -114,11 +120,19 @@ export function BetFormHeader({
   fileInputRef,
   onFileSelect,
   extraBadge,
+  fonteSaldo,
   showCloseButton = false,
   onClose,
   embedded = false,
 }: BetFormHeaderProps) {
   const config = FormTypeConfig[formType];
+  
+  // Configuração visual do badge de fonte de saldo
+  const fonteSaldoConfig: Record<FonteSaldo, { bg: string; text: string; icon: string }> = {
+    REAL: { bg: "bg-emerald-500/10", text: "text-emerald-600", icon: "💵" },
+    FREEBET: { bg: "bg-amber-500/10", text: "text-amber-600", icon: "🎁" },
+    BONUS: { bg: "bg-violet-500/10", text: "text-violet-600", icon: "🎰" },
+  };
   const Icon = config.icon;
   
   const isEstrategiaFixed = !isEditing && isAbaEstrategiaFixa(activeTab);
@@ -134,6 +148,30 @@ export function BetFormHeader({
           <Icon className={cn("h-5 w-5", config.iconColor)} />
           <h2 className="font-semibold text-base">{title}</h2>
           {extraBadge}
+          
+          {/* Badge de Fonte de Saldo - verdade financeira */}
+          {fonteSaldo && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "text-[10px] font-medium gap-1 border-0",
+                      fonteSaldoConfig[fonteSaldo].bg,
+                      fonteSaldoConfig[fonteSaldo].text
+                    )}
+                  >
+                    <span>{fonteSaldoConfig[fonteSaldo].icon}</span>
+                    {FONTE_SALDO_LABELS[fonteSaldo]}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">Fonte do capital utilizado nesta aposta</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
         
         <div className="flex items-center gap-2">
