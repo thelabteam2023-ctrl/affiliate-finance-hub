@@ -57,7 +57,10 @@ import {
   SaldoBreakdownDisplay, 
   formatCurrency as formatCurrencyCanonical,
   getCurrencyTextColor,
-  getCurrencySymbol 
+  getCurrencySymbol
+} from "@/components/bookmakers/BookmakerSelectOption";
+import { BookmakerMetaRow } from "@/components/bookmakers/BookmakerMetaRow";
+import {
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { reliquidarAposta } from "@/services/aposta";
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
@@ -2803,22 +2806,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                           </SelectContent>
                         </Select>
                         
-                        {/* Detalhes abaixo do select: Parceiro • Moeda • Saldo */}
-                        {bookmakerId && (() => {
-                          const selectedBk = bookmakers.find(b => b.id === bookmakerId);
-                          if (!selectedBk) return null;
-                          const saldoDisplay = saldoComReservas?.disponivel ?? selectedBk.saldo_operavel;
-                          const parceiroShort = selectedBk.parceiro_nome?.split(' ')[0] || '';
-                          return (
-                            <div className="text-[10px] text-muted-foreground text-center truncate px-1">
-                              {parceiroShort && <span>{parceiroShort}</span>}
-                              {parceiroShort && <span className="mx-1">•</span>}
-                              <span className={getCurrencyTextColor(selectedBk.moeda)}>
-                                {formatCurrencyCanonical(saldoDisplay, selectedBk.moeda)}
-                              </span>
-                            </div>
-                          );
-                        })()}
+                        {/* Metadados abaixo do select: Parceiro • Saldo (altura fixa) */}
+                        <BookmakerMetaRow
+                          parceiroNome={bookmakerId ? bookmakers.find(b => b.id === bookmakerId)?.parceiro_nome : null}
+                          saldoDisponivel={bookmakerId ? (saldoComReservas?.disponivel ?? bookmakers.find(b => b.id === bookmakerId)?.saldo_operavel) : undefined}
+                          moeda={bookmakerId ? bookmakers.find(b => b.id === bookmakerId)?.moeda : undefined}
+                        />
                       </div>
                     </td>
                     {/* Odd */}
@@ -3109,21 +3102,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     )}
                                   </SelectContent>
                                 </Select>
-                                {/* Detalhes abaixo do select */}
-                                {exchangeBookmakerId && (() => {
-                                  const selectedBk = bookmakers.find(b => b.id === exchangeBookmakerId);
-                                  if (!selectedBk) return null;
-                                  const parceiroShort = selectedBk.parceiro_nome?.split(' ')[0] || '';
-                                  return (
-                                    <div className="text-[10px] text-muted-foreground text-center truncate px-1">
-                                      {parceiroShort && <span>{parceiroShort}</span>}
-                                      {parceiroShort && <span className="mx-1">•</span>}
-                                      <span className={getCurrencyTextColor(selectedBk.moeda)}>
-                                        {formatCurrencyCanonical(selectedBk.saldo_operavel, selectedBk.moeda)}
-                                      </span>
-                                    </div>
-                                  );
-                                })()}
+                                {/* Metadados abaixo do select: Parceiro • Saldo (altura fixa) */}
+                                <BookmakerMetaRow
+                                  parceiroNome={exchangeBookmakerId ? bookmakers.find(b => b.id === exchangeBookmakerId)?.parceiro_nome : null}
+                                  saldoDisponivel={exchangeBookmakerId ? bookmakers.find(b => b.id === exchangeBookmakerId)?.saldo_operavel : undefined}
+                                  moeda={exchangeBookmakerId ? bookmakers.find(b => b.id === exchangeBookmakerId)?.moeda : undefined}
+                                />
                               </div>
                             </td>
                             {/* Odd */}
@@ -3354,20 +3338,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     ))}
                                   </SelectContent>
                                 </Select>
-                                {coberturaBackBookmakerId && (() => {
-                                  const selectedBk = bookmakers.find(b => b.id === coberturaBackBookmakerId);
-                                  if (!selectedBk) return null;
-                                  const parceiroShort = selectedBk.parceiro_nome?.split(' ')[0] || '';
-                                  return (
-                                    <div className="text-[10px] text-muted-foreground text-center truncate px-1">
-                                      {parceiroShort && <span>{parceiroShort}</span>}
-                                      {parceiroShort && <span className="mx-1">•</span>}
-                                      <span className={getCurrencyTextColor(selectedBk.moeda)}>
-                                        {formatCurrencyCanonical(selectedBk.saldo_operavel, selectedBk.moeda)}
-                                      </span>
-                                    </div>
-                                  );
-                                })()}
+                                <BookmakerMetaRow
+                                  parceiroNome={coberturaBackBookmakerId ? bookmakers.find(b => b.id === coberturaBackBookmakerId)?.parceiro_nome : null}
+                                  saldoDisponivel={coberturaBackBookmakerId ? bookmakers.find(b => b.id === coberturaBackBookmakerId)?.saldo_operavel : undefined}
+                                  moeda={coberturaBackBookmakerId ? bookmakers.find(b => b.id === coberturaBackBookmakerId)?.moeda : undefined}
+                                />
                               </div>
                             </td>
                             <td className="px-1 py-3">
@@ -3480,20 +3455,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     ))}
                                   </SelectContent>
                                 </Select>
-                                {coberturaLayBookmakerId && (() => {
-                                  const selectedBk = bookmakers.find(b => b.id === coberturaLayBookmakerId);
-                                  if (!selectedBk) return null;
-                                  const parceiroShort = selectedBk.parceiro_nome?.split(' ')[0] || '';
-                                  return (
-                                    <div className="text-[10px] text-muted-foreground text-center truncate px-1">
-                                      {parceiroShort && <span>{parceiroShort}</span>}
-                                      {parceiroShort && <span className="mx-1">•</span>}
-                                      <span className={getCurrencyTextColor(selectedBk.moeda)}>
-                                        {formatCurrencyCanonical(selectedBk.saldo_operavel, selectedBk.moeda)}
-                                      </span>
-                                    </div>
-                                  );
-                                })()}
+                                <BookmakerMetaRow
+                                  parceiroNome={coberturaLayBookmakerId ? bookmakers.find(b => b.id === coberturaLayBookmakerId)?.parceiro_nome : null}
+                                  saldoDisponivel={coberturaLayBookmakerId ? bookmakers.find(b => b.id === coberturaLayBookmakerId)?.saldo_operavel : undefined}
+                                  moeda={coberturaLayBookmakerId ? bookmakers.find(b => b.id === coberturaLayBookmakerId)?.moeda : undefined}
+                                />
                               </div>
                             </td>
                             <td className="px-1 py-3">
