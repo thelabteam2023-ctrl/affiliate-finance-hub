@@ -1545,8 +1545,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         evento,
         mercado: mercado || null,
         selecao: effectiveSelecao,
-        status: statusResultado === "PENDENTE" ? "PENDENTE" : "LIQUIDADA",
-        resultado: statusResultado === "PENDENTE" ? null : statusResultado,
+        // CORREÇÃO CRÍTICA: Sempre inserir como PENDENTE
+        // A RPC liquidar_aposta_atomica irá:
+        // 1. Atualizar status para LIQUIDADA
+        // 2. Inserir entrada no cash_ledger
+        // 3. Trigger atualiza saldo automaticamente
+        // Se inserirmos direto como LIQUIDADA, a RPC aborta e o ledger fica vazio!
+        status: "PENDENTE",
+        resultado: null,
         observacoes: observacoes || null,
         gerou_freebet: gerouFreebet,
         valor_freebet_gerada: gerouFreebet && valorFreebetGerada ? parseFloat(valorFreebetGerada) : null,
