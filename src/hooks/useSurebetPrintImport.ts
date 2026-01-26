@@ -276,18 +276,35 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
           return updated;
         });
 
-        // Update shared context from first print if not set
+        // Update shared context - first valid print defines the global event
+        // Regardless of which leg it comes from
         setSharedContext(prev => {
           const newContext = { ...prev };
+          
+          // Esporte: atualiza se não definido
           if (!prev.esporte && rawData.esporte?.value) {
             newContext.esporte = rawData.esporte.value;
           }
-          if (!prev.evento && rawData.mandante?.value && rawData.visitante?.value) {
-            newContext.evento = `${rawData.mandante.value} x ${rawData.visitante.value}`;
+          
+          // Evento: PRIMEIRO PRINT VÁLIDO define o evento global
+          // O evento vem de mandante x visitante
+          if (!prev.evento) {
+            const mandante = rawData.mandante?.value;
+            const visitante = rawData.visitante?.value;
+            if (mandante && visitante) {
+              newContext.evento = `${mandante} x ${visitante}`;
+            } else if (mandante) {
+              newContext.evento = mandante;
+            } else if (visitante) {
+              newContext.evento = visitante;
+            }
           }
+          
+          // Mercado: atualiza se não definido
           if (!prev.mercado && rawData.mercado?.value) {
             newContext.mercado = rawData.mercado.value;
           }
+          
           return newContext;
         });
 

@@ -2828,7 +2828,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Evento</Label>
                 <Input 
-                  placeholder="Ex: Brasil x Argentina" 
+                  placeholder="TIME 1 X TIME 2" 
                   value={evento}
                   onChange={(e) => setEvento(e.target.value)}
                   className="h-8 text-sm uppercase"
