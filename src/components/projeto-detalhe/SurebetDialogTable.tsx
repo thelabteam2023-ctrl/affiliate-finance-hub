@@ -41,6 +41,7 @@ import { RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFiel
 import { getMarketsForSportAndModel, isMercadoCompativelComModelo } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
+  BookmakerMetaRow,
   formatCurrency
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
@@ -1530,44 +1531,54 @@ export function SurebetDialogTable({
                     
                     {/* Casa */}
                     <td className="py-6 px-2">
-                      {isEditing ? (
-                        <div className="text-xs font-medium uppercase truncate">
-                          {selectedBookmaker?.nome || "—"}
-                        </div>
-                      ) : (
-                        <Select 
-                          value={entry.bookmaker_id}
-                          onValueChange={(v) => updateOdd(pernaIndex, "bookmaker_id", v)}
-                        >
-                          <SelectTrigger className="h-7 text-[10px] w-full">
-                            <SelectValue placeholder="Selecione">
-                              {selectedBookmaker?.nome && (
-                                <span className="truncate uppercase">{selectedBookmaker.nome}</span>
-                              )}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent className="max-w-[300px]">
-                            {bookmakersDisponiveis.map(bk => (
-                              <SelectItem key={bk.id} value={bk.id}>
-                                <BookmakerSelectOption
-                                  bookmaker={{
-                                    id: bk.id,
-                                    nome: bk.nome,
-                                    parceiro_nome: bk.parceiro_nome,
-                                    moeda: bk.moeda,
-                                    saldo_operavel: bk.saldo_operavel,
-                                    saldo_disponivel: bk.saldo_disponivel,
-                                    saldo_freebet: bk.saldo_freebet,
-                                    saldo_bonus: bk.saldo_bonus,
-                                    logo_url: bk.logo_url,
-                                    bonus_rollover_started: bk.bonus_rollover_started,
-                                  }}
-                                />
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
+                      <div className="flex flex-col">
+                        {isEditing ? (
+                          <div className="text-xs font-medium uppercase truncate text-center">
+                            {selectedBookmaker?.nome || "—"}
+                          </div>
+                        ) : (
+                          <Select 
+                            value={entry.bookmaker_id}
+                            onValueChange={(v) => updateOdd(pernaIndex, "bookmaker_id", v)}
+                          >
+                            <SelectTrigger className="h-7 text-[10px] w-full">
+                              <SelectValue placeholder="Selecione">
+                                {selectedBookmaker?.nome && (
+                                  <span className="truncate uppercase">{selectedBookmaker.nome}</span>
+                                )}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent className="max-w-[300px]">
+                              {bookmakersDisponiveis.map(bk => (
+                                <SelectItem key={bk.id} value={bk.id}>
+                                  <BookmakerSelectOption
+                                    bookmaker={{
+                                      id: bk.id,
+                                      nome: bk.nome,
+                                      parceiro_nome: bk.parceiro_nome,
+                                      moeda: bk.moeda,
+                                      saldo_operavel: bk.saldo_operavel,
+                                      saldo_disponivel: bk.saldo_disponivel,
+                                      saldo_freebet: bk.saldo_freebet,
+                                      saldo_bonus: bk.saldo_bonus,
+                                      logo_url: bk.logo_url,
+                                      bonus_rollover_started: bk.bonus_rollover_started,
+                                    }}
+                                  />
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {/* Metadados fixos - altura fixa para evitar layout jumps */}
+                        <BookmakerMetaRow 
+                          bookmaker={selectedBookmaker ? {
+                            parceiro_nome: selectedBookmaker.parceiro_nome || null,
+                            moeda: selectedBookmaker.moeda,
+                            saldo_operavel: selectedBookmaker.saldo_operavel
+                          } : null}
+                        />
+                      </div>
                     </td>
                     
                     {/* Odd */}

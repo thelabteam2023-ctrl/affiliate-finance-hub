@@ -168,6 +168,48 @@ export function BookmakerSelectTrigger({
 }
 
 /**
+ * COMPONENTE DE METADADOS com altura fixa para evitar layout jumps
+ * Sempre renderiza um container h-4, mesmo quando vazio
+ * 
+ * DEVE SER USADO LOGO ABAIXO DO SELECT EM TODOS OS FORMS
+ */
+export interface BookmakerMetaRowData {
+  parceiro_nome: string | null;
+  moeda: string;
+  saldo_operavel: number;
+}
+
+interface BookmakerMetaRowProps {
+  bookmaker: BookmakerMetaRowData | null | undefined;
+  className?: string;
+}
+
+export function BookmakerMetaRow({ bookmaker, className }: BookmakerMetaRowProps) {
+  // Container com altura fixa - SEMPRE renderiza para evitar layout jumps
+  if (!bookmaker) {
+    return (
+      <div className={cn("h-4 text-[10px] text-muted-foreground text-center", className)} />
+    );
+  }
+  
+  const { parceiro_nome, moeda, saldo_operavel } = bookmaker;
+  const parceiroShort = parceiro_nome?.split(' ')[0] || '';
+  
+  return (
+    <div className={cn(
+      "h-4 text-[10px] text-muted-foreground text-center truncate flex items-center justify-center gap-1",
+      className
+    )}>
+      {parceiroShort && <span>{parceiroShort}</span>}
+      {parceiroShort && <span className="opacity-50">•</span>}
+      <span className={getCurrencyTextColor(moeda)}>
+        {formatCurrency(saldo_operavel, moeda)}
+      </span>
+    </div>
+  );
+}
+
+/**
  * Badge de moeda com cores distintas por tipo
  */
 export function CurrencyBadge({ moeda, size = "sm" }: { moeda: string; size?: "sm" | "xs" }) {
