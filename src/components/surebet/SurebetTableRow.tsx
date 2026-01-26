@@ -111,10 +111,8 @@ export function SurebetTableRow({
       {rowSpan > 0 && (
         <td rowSpan={rowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
           <div className={`inline-flex items-center justify-center w-9 h-9 rounded-lg font-bold text-sm ${getPernaColor()}`}>
-            {label}
-          </div>
-          <div className="text-[10px] text-muted-foreground truncate max-w-[60px]">
-            {entry.selecao}
+            {/* Para 4+ pernas: índice numérico. Para 2-3 pernas: valor do campo Linha */}
+            {numPernas >= 4 ? (pernaIndex + 1) : (entry.selecaoLivre?.trim() || (pernaIndex + 1))}
           </div>
         </td>
       )}
