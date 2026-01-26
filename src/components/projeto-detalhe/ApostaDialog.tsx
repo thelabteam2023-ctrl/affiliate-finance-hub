@@ -1924,16 +1924,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 // Não lançar exceção - a atualização de dados já foi feita
               }
             }
-            // Se mudou de resultado final para PENDENTE, precisamos reverter o efeito no ledger
-            // Não existe RPC específica, então usamos reliquidar com resultado PENDENTE
-            // que vai inserir reversão no cash_ledger
+            // Se mudou de resultado final para PENDENTE, usar RPC de reversão
             else if (!eraPendente && agoraPendente && resultadoAnterior) {
-              console.log("[ApostaDialog] Revertendo aposta para PENDENTE - resultado anterior:", resultadoAnterior);
-              // O reliquidar_aposta_atomica já lida com reversão quando detecta mudança de status
-              // Porém ela não aceita PENDENTE como novo resultado, então precisamos
-              // reverter manualmente via ledger ou atualizar status para PENDENTE e limpar efeitos
-              // Por agora, só atualizamos o status e deixamos o saldo (será corrigido em recálculo)
-              console.warn("[ApostaDialog] Reversão para PENDENTE: ledger não afetado. Considerar recálculo de saldo.");
+              console.log("[ApostaDialog] Revertendo aposta para PENDENTE via RPC - resultado anterior:", resultadoAnterior);
+              const { data: revertResult, error: revertError } = await supabase.rpc('reverter_liquidacao_para_pendente', {
+                p_aposta_id: aposta.id,
+              });
+              
+              if (revertError) {
+                console.error("[ApostaDialog] Erro ao reverter para PENDENTE:", revertError);
+                toast.error("Erro ao reverter aposta: " + revertError.message);
+              } else {
+                const result = revertResult as unknown as { success: boolean; error?: string };
+                if (!result.success) {
+                  console.error("[ApostaDialog] Falha na reversão:", result.error);
+                  toast.error("Falha na reversão: " + result.error);
+                } else {
+                  console.log("[ApostaDialog] Reversão concluída:", result);
+                }
+              }
             }
             // Outros casos (mudança entre resultados finais): usar reliquidação
             else if (!eraPendente && !agoraPendente && houveMudancaResultado) {
