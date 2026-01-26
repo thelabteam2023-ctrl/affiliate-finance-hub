@@ -1004,9 +1004,11 @@ export function SurebetModalRoot({
               <Badge variant="outline" className="text-[10px]">{numPernas} pernas</Badge>
             </div>
             
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-8 w-8 p-0">
-              <X className="h-4 w-4" />
-            </Button>
+            {!embedded && (
+              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-8 w-8 p-0">
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
           {/* CONTENT */}
