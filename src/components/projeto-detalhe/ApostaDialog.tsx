@@ -2731,15 +2731,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             {/* Linha de entrada principal: Bookmaker | Odd | Stake | Linha | Retorno (estilo Arbitragem) */}
             <div className="border border-border/50 rounded-lg overflow-hidden">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border/30 bg-muted/30">
-                    <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-left w-[180px]">Casa</th>
-                    <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[80px]">Odd</th>
-                    <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[100px]">Stake</th>
-                    <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center flex-1">Linha</th>
-                    <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[100px]">Retorno</th>
-                  </tr>
-                </thead>
+    <thead>
+      <tr className="border-b border-border/30 bg-muted/30">
+        <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-left w-[240px]">Casa</th>
+        <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[70px]">Odd</th>
+        <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[100px]">Stake</th>
+        <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center w-[120px]">Linha</th>
+        <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[110px]">Retorno</th>
+      </tr>
+    </thead>
                 <tbody>
                   <tr className="border-b border-border/30">
                     {/* Casa */}
