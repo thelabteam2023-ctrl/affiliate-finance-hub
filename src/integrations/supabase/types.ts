@@ -10033,9 +10033,9 @@ export type Database = {
       upsert_stake_reservation: {
         Args: {
           p_bookmaker_id: string
-          p_form_session_id: string
-          p_form_type: string
-          p_moeda: string
+          p_form_session_id?: string
+          p_form_type?: string
+          p_moeda?: string
           p_stake: number
           p_workspace_id: string
         }
