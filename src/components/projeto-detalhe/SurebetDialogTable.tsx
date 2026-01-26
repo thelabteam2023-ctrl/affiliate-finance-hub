@@ -267,19 +267,7 @@ const getPernaLabel = (index: number, total: number): string => {
 
 // Seleções padrão por número de pernas
 const getDefaultSelecoes = (numPernas: number): string[] => {
-  // Para 2 ou 3 pernas, iniciar vazio (será preenchido pelo campo Linha)
-  if (numPernas <= 3) return Array.from({ length: numPernas }, () => "");
-  return Array.from({ length: numPernas }, (_, i) => `${i + 1}`);
-};
-
-// Determina o label a exibir para cada perna
-const getPernaDisplayLabel = (entry: OddEntry, pernaIndex: number, numPernas: number): string => {
-  // Para 4+ pernas: usar índice numérico
-  if (numPernas >= 4) {
-    return String(pernaIndex + 1);
-  }
-  // Para 2-3 pernas: usar o valor do campo Linha (selecaoLivre)
-  return entry.selecaoLivre?.trim() || String(pernaIndex + 1);
+  return Array.from({ length: numPernas }, () => "");
 };
 
 // ============================================
@@ -1530,8 +1518,13 @@ export function SurebetDialogTable({
                           pernaIndex === odds.length - 1 ? "bg-emerald-500/20 text-emerald-400" :
                           "bg-purple-500/20 text-purple-400"
                         }`}>
-                          {getPernaDisplayLabel(entry, pernaIndex, odds.length)}
+                          {pernaIndex + 1}
                         </div>
+                        {entry.selecaoLivre?.trim() && (
+                          <div className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[60px]">
+                            {entry.selecaoLivre}
+                          </div>
+                        )}
                       </td>
                     )}
                     
