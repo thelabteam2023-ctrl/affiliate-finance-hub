@@ -223,11 +223,11 @@ export function BetFormHeaderV2({
         </div>
       </div>
       
-      {/* ========== LINHA 2: Estratégia + Contexto ========== */}
+      {/* ========== LINHA 2: Estratégia (Contexto é auto-inferido internamente) ========== */}
       <div className="px-4 py-2.5 border-b border-border/30">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="flex justify-center">
           {/* Estratégia */}
-          <div className="text-center">
+          <div className="text-center w-full max-w-[320px]">
             <Label className="text-xs text-muted-foreground block mb-1">
               Estratégia <span className="text-destructive">*</span>
               {isEstrategiaFixed && (
@@ -264,33 +264,6 @@ export function BetFormHeaderV2({
                 </SelectContent>
               </Select>
             )}
-          </div>
-          
-          {/* Contexto */}
-          <div className="text-center">
-            <Label className="text-xs text-muted-foreground block mb-1">
-              Contexto
-              {isEstrategiaFixed && (
-                <span className="ml-1 text-[10px] text-primary">(fixo)</span>
-              )}
-            </Label>
-            <Select 
-              value={contexto} 
-              onValueChange={(v) => onContextoChange(v as ContextoOperacional)}
-              disabled={isEstrategiaFixed}
-            >
-              <SelectTrigger className={cn(
-                "h-8 text-xs text-center [&>span]:text-center [&>span]:w-full",
-                isEstrategiaFixed && "opacity-70 cursor-not-allowed"
-              )}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CONTEXTOS_LIST.map(c => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
       </div>
