@@ -1247,6 +1247,10 @@ export function ApostaMultiplaDialog({
 
       if (error) throw error;
 
+      // CRÍTICO: Invalidar saldos imediatamente após exclusão
+      // Garante que o "Saldo Operável" no formulário reflita o valor atualizado
+      invalidateSaldos(projetoId);
+
       toast.success("Aposta múltipla excluída!");
       setDeleteDialogOpen(false);
       onSuccess('delete');
