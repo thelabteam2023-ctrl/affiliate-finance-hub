@@ -67,6 +67,8 @@ interface SurebetTableRowProps {
   directedProfitLegs: number[];
   numPernas: number;
   moedaDominante: SupportedCurrency;
+  /** Indica se esta perna tem saldo insuficiente */
+  hasInsufficientBalance?: boolean;
   onUpdateOdd: (index: number, field: keyof OddEntry, value: string | boolean) => void;
   onSetReference: (index: number) => void;
   onToggleDirected: (index: number) => void;
@@ -89,6 +91,7 @@ export function SurebetTableRow({
   directedProfitLegs,
   numPernas,
   moedaDominante,
+  hasInsufficientBalance = false,
   onUpdateOdd,
   onSetReference,
   onToggleDirected,
@@ -231,15 +234,22 @@ export function SurebetTableRow({
             {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
           </div>
         ) : (
-          <MoneyInput 
-            value={entry.stake}
-            onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
-            currency={entry.moeda}
-            minDigits={6}
-            className="h-8 text-xs text-center w-[90px] tabular-nums"
-            data-field-type="stake"
-            onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
-          />
+          <div className="flex flex-col items-center gap-0.5">
+            <MoneyInput 
+              value={entry.stake}
+              onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
+              currency={entry.moeda}
+              minDigits={6}
+              className={`h-8 text-xs text-center w-[90px] tabular-nums ${
+                hasInsufficientBalance ? "border-destructive focus-visible:ring-destructive/50" : ""
+              }`}
+              data-field-type="stake"
+              onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
+            />
+            {hasInsufficientBalance && (
+              <span className="text-[9px] text-destructive font-medium">Saldo insuf.</span>
+            )}
+          </div>
         )}
       </td>
       
