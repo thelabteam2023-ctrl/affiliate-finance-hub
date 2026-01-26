@@ -59,7 +59,8 @@ import { useSurebetService, type SurebetPerna as SurebetPernaService } from "@/h
 import { useApostaRascunho, type RascunhoPernaData, type ApostaRascunho } from "@/hooks/useApostaRascunho";
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
-  BookmakerSelectOption, 
+  BookmakerSelectOption,
+  BookmakerSelectTrigger,
   CurrencyBadge, 
   formatCurrency, 
   getCurrencySymbol, 
@@ -3292,11 +3293,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                                     className="h-8 text-[10px] w-full px-1.5"
                                     tabIndex={index * 4 + 1}
                                   >
-                                    <SelectValue placeholder="Casa">
-                                      {selectedBookmaker?.nome && (
-                                        <span className="truncate uppercase">{selectedBookmaker.nome}</span>
-                                      )}
-                                    </SelectValue>
+                                    <BookmakerSelectTrigger
+                                      bookmaker={selectedBookmaker ? {
+                                        nome: selectedBookmaker.nome,
+                                        logo_url: selectedBookmaker.logo_url,
+                                      } : null}
+                                      placeholder="Casa"
+                                      className="text-[10px]"
+                                    />
                                   </SelectTrigger>
                                 <SelectContent className="max-w-[320px]">
                                     {bookmakersDisponiveis.map(bk => {
