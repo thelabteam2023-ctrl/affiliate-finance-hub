@@ -191,9 +191,13 @@ REGRA CRÍTICA DE DATA/HORA:
 
 REGRAS IMPORTANTES:
 1. Extraia TODOS os campos visíveis: times, data, esporte, mercado, seleção, ODD, STAKE, RETORNO, RESULTADO, NOME DA CASA
-2. A ODD é o valor numérico da cotação (ex: 1.85, 2.10, 3.50)
-3. O STAKE é o valor apostado em dinheiro (ex: 100, 50.00, R$ 200)
-4. O RETORNO é o valor total a receber se ganhar (stake * odd)
+2. A ODD é o valor numérico da cotação (ex: 1.85, 2.10, 3.50) - geralmente em verde ou destacado
+3. O STAKE é o valor apostado em dinheiro - PROCURE:
+   - Valores numéricos na lateral direita do print (ex: 120.00, 100, 50.00)
+   - Textos como "Valor da aposta", "Stake", "Aposta", "Quantia"
+   - Valores próximos a símbolos de moeda (R$, $, €)
+   - IMPORTANTE: O valor 120.00 visível na imagem é o STAKE, não o retorno!
+4. O RETORNO é o valor total a receber se ganhar (stake * odd) - normalmente maior que stake
 5. O RESULTADO pode ser: "GREEN" (ganhou), "RED" (perdeu), "VOID" (cancelado), ou null se pendente
    - Identifique por textos como: "GANHOU", "VENCIDO", "PERDIDO", "CANCELADO", etc.
    - Badge verde/vermelho também indica resultado
@@ -203,15 +207,14 @@ REGRAS IMPORTANTES:
 7. Se não tiver certeza sobre um campo, retorne o valor mesmo assim com confiança baixa
 8. Para eventos esportivos, procure por padrões como "Time A x Time B", "Time A vs Time B", "Time A - Time B"
 9. Identifique o mandante (primeiro time) e visitante (segundo time)
-10. Reconheça mercados comuns: 1X2, Over/Under, Handicap, BTTS, etc.
+10. MERCADO: Extraia o texto EXATAMENTE como aparece no print, SEM normalizar ou traduzir
+    - Exemplo: Se o print mostra "Vencedor da partida - Incluindo prorrogação", retorne exatamente isso
+    - NÃO substitua por nomenclaturas padrão como "1X2" ou "Moneyline"
 11. Identifique o esporte a partir de indicadores visuais ou textuais
-12. Para a seleção, extraia o que foi apostado (ex: "Over 2.5", "Time A", "1")
+12. Para a seleção, extraia o que foi apostado (ex: "Over 2.5", "Team Name", "1")
 13. Para valores numéricos (odd, stake, retorno), extraia APENAS os números, sem símbolos de moeda
 
 Esportes reconhecidos: ${SPORTS_LIST.join(", ")}
-
-Mercados comuns e suas palavras-chave:
-${Object.entries(MARKETS_KEYWORDS).map(([market, keywords]) => `- ${market}: ${keywords.join(", ")}`).join("\n")}
 
 FORMATO DE RESPOSTA (JSON estrito):
 {
@@ -219,7 +222,7 @@ FORMATO DE RESPOSTA (JSON estrito):
   "visitante": { "value": "NOME DO TIME VISITANTE ou null", "confidence": "high|medium|low|none" },
   "dataHora": { "value": "YYYY-MM-DDTHH:mm ou null", "confidence": "high|medium|low|none" },
   "esporte": { "value": "NOME DO ESPORTE DA LISTA ou null", "confidence": "high|medium|low|none" },
-  "mercado": { "value": "NOME DO MERCADO ou null", "confidence": "high|medium|low|none" },
+  "mercado": { "value": "TEXTO EXATO DO MERCADO COMO APARECE NO PRINT ou null", "confidence": "high|medium|low|none" },
   "selecao": { "value": "TEXTO DA SELEÇÃO ou null", "confidence": "high|medium|low|none" },
   "odd": { "value": "VALOR NUMÉRICO DA ODD ou null", "confidence": "high|medium|low|none" },
   "stake": { "value": "VALOR NUMÉRICO APOSTADO ou null", "confidence": "high|medium|low|none" },
@@ -234,7 +237,7 @@ Nível de confiança:
 - "low": texto parcialmente visível ou muito incerto
 - "none": não foi possível detectar
 
-DICA: Em boletins de apostas, a ODD geralmente aparece próximo à seleção com formato decimal (1.85, 2.10). O STAKE aparece como "Valor da aposta", "Stake", "Aposta", ou próximo a símbolos de moeda. O RETORNO aparece como "Ganho total", "Retorno potencial", etc.`;
+DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próximo à seleção com formato decimal (2.90). O STAKE é o valor apostado que aparece na lateral ou rodapé (ex: 120.00). O RETORNO é calculado como stake * odd.`;
 
     const userPrompt = isMultipla 
       ? "Analise este print de APOSTA MÚLTIPLA (combinada/acumuladora) e extraia as informações de TODAS as seleções. Retorne APENAS o JSON, sem explicações adicionais."
