@@ -345,7 +345,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       }
     }
     
-    // Normalize market using OCR parser
+    // Normalize market using OCR parser - PRESERVAR TEXTO BRUTO (igual ao Surebet)
     if (rawData.mercado?.value) {
       const marketRaw = rawData.mercado.value;
       const sportDetected = rawData.esporte?.value || "Outro";
@@ -359,14 +359,18 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
         esporteDetectado: sportDetected
       });
       
-      rawData.mercado.value = ocrResult.displayName;
+      // ★ CRÍTICO: NÃO sobrescrever mercado.value com displayName!
+      // O texto bruto do OCR deve ser preservado (igual ao pipeline do Surebet)
+      // rawData.mercado.value = ocrResult.displayName; // ← REMOVIDO!
       
+      // Ajustar confiança baseado na categorização
       if (ocrResult.confidence === "low") {
         rawData.mercado.confidence = "low";
       } else if (ocrResult.confidence === "medium" && rawData.mercado.confidence === "high") {
         rawData.mercado.confidence = "medium";
       }
       
+      // Formatar seleção para mercados TOTAL/HANDICAP
       if ((ocrResult.type === "TOTAL" || ocrResult.type === "HANDICAP") && ocrResult.side && ocrResult.line !== undefined) {
         const formattedSelection = formatSelectionFromOcrResult(ocrResult);
         if (formattedSelection && rawData.selecao) {
