@@ -651,8 +651,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [valorFreebetGeradaLay, setValorFreebetGeradaLay] = useState("");
 
   // Registro de Aposta - Campos EXPLÍCITOS (Prompt Oficial)
+  // CRÍTICO: forma_registro é SEMPRE 'SIMPLES' para este formulário
   const [registroValues, setRegistroValues] = useState<RegistroApostaValues>({
-    forma_registro: null,
+    forma_registro: 'SIMPLES',
     estrategia: null,
     contexto_operacional: null,
   });
@@ -1237,9 +1238,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     setValorFreebetGeradaBack("");
     setGerouFreebetLay(false);
     setValorFreebetGeradaLay("");
-    // Reset registro values to null (will be populated by suggestions)
+    // Reset registro values - forma_registro sempre SIMPLES neste form
     setRegistroValues({
-      forma_registro: null,
+      forma_registro: 'SIMPLES',
       estrategia: null,
       contexto_operacional: null,
     });
