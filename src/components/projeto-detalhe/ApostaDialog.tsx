@@ -115,12 +115,16 @@ interface Bookmaker {
   bonus_rollover_started?: boolean;
 }
 
+/** Tipo de ação executada para distinguir save de delete */
+export type ApostaActionType = 'save' | 'delete';
+
 interface ApostaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   aposta: Aposta | null;
   projetoId: string;
-  onSuccess: () => void;
+  /** Callback após sucesso. O parâmetro action distingue 'save' (criar/atualizar) de 'delete' (exclusão) */
+  onSuccess: (action?: ApostaActionType) => void;
   defaultEstrategia?: string;
   activeTab?: string;
   /** Quando true, renderiza apenas o conteúdo interno (sem Dialog wrapper) para uso em janelas flutuantes */
@@ -2118,7 +2122,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       // Invalidar cache de saldos para atualizar todas as UIs
       invalidateSaldos(projetoId);
 
-      onSuccess();
+      onSuccess('save');
       if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao salvar aposta: " + error.message);
@@ -2539,7 +2543,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
       if (error) throw error;
       toast.success("Aposta excluída com sucesso!");
-      onSuccess();
+      onSuccess('delete');
       if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao excluir aposta: " + error.message);

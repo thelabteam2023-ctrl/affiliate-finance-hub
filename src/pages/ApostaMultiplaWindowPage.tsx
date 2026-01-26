@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ApostaMultiplaDialog } from '@/components/projeto-detalhe/ApostaMultiplaDialog';
+import { ApostaMultiplaDialog, type ApostaMultiplaActionType } from '@/components/projeto-detalhe/ApostaMultiplaDialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, CheckCircle2, X, Layers, FileText } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle2, X, Layers, FileText, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useApostaRascunho, type ApostaRascunho } from '@/hooks/useApostaRascunho';
@@ -86,23 +86,35 @@ export default function ApostaMultiplaWindowPage() {
 
   // MODO OPERACIONAL CONTÍNUO: Nunca fecha automaticamente
   // O formulário permanece aberto após salvar, seja novo ou edição
-  const handleSuccess = useCallback(() => {
+  const handleSuccess = useCallback((action?: ApostaMultiplaActionType) => {
     // Notificar janela principal para atualizar listas/KPIs/saldos
     try {
       const channel = new BroadcastChannel('aposta_multipla_channel');
-      channel.postMessage({ type: 'APOSTA_MULTIPLA_SAVED', projetoId });
+      channel.postMessage({ type: 'APOSTA_MULTIPLA_SAVED', projetoId, action });
       channel.close();
     } catch (err) {
-      localStorage.setItem('aposta_multipla_saved', JSON.stringify({ projetoId, timestamp: Date.now() }));
+      localStorage.setItem('aposta_multipla_saved', JSON.stringify({ projetoId, action, timestamp: Date.now() }));
     }
     
-    // Se veio de rascunho, deletar o rascunho após salvar com sucesso
-    if (isFromRascunho && rascunhoCarregado) {
+    // Se veio de rascunho, deletar o rascunho após salvar com sucesso (não em delete)
+    if (action === 'save' && isFromRascunho && rascunhoCarregado) {
       deletarRascunho(rascunhoCarregado.id);
       setRascunhoCarregado(null);
     }
     
-    // Incrementar contador e resetar formulário
+    // Se foi exclusão, fechar a janela (não faz sentido continuar editando algo que não existe)
+    if (action === 'delete') {
+      toast.success("Múltipla excluída!", {
+        description: "A operação foi removida com sucesso.",
+        icon: <Trash2 className="h-5 w-5 text-destructive" />,
+        duration: 2000,
+      });
+      // Pequeno delay para o toast ser visto antes de fechar
+      setTimeout(() => window.close(), 1500);
+      return;
+    }
+    
+    // Para salvamento: Incrementar contador e resetar formulário
     setSaveCount(prev => prev + 1);
     setAposta(null);
     setFormKey(prev => prev + 1);

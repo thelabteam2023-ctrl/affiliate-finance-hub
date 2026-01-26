@@ -81,6 +81,9 @@ interface SurebetPerna {
   valor_freebet_gerada: number | null;
 }
 
+/** Tipo de ação executada para distinguir save de delete */
+export type SurebetActionType = 'save' | 'delete';
+
 interface SurebetModalRootProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -88,7 +91,8 @@ interface SurebetModalRootProps {
   surebet?: Surebet | null;
   rascunho?: ApostaRascunho | null;
   activeTab?: string;
-  onSuccess: () => void;
+  /** Callback após sucesso. O parâmetro action distingue 'save' (criar/atualizar) de 'delete' (exclusão) */
+  onSuccess: (action?: SurebetActionType) => void;
   /** Quando true, não fecha automaticamente após salvar (modo workstation contínuo) */
   embedded?: boolean;
 }
@@ -870,7 +874,7 @@ export function SurebetModalRoot({
         if (insertPernasError) throw insertPernasError;
       }
 
-      onSuccess();
+      onSuccess('save');
       if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao salvar: " + error.message);
@@ -957,7 +961,7 @@ export function SurebetModalRoot({
       if (error) throw error;
       
       toast.success("Operação excluída!");
-      onSuccess();
+      onSuccess('delete');
       if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);
