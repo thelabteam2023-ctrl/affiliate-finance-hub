@@ -867,8 +867,6 @@ export function ApostaMultiplaDialog({
             }
           }
         }
-
-        toast.success("Aposta múltipla atualizada!");
       } else {
         // ========== USAR criarAposta DO SERVIÇO CENTRALIZADO ==========
         const result = await criarAposta({
@@ -930,8 +928,6 @@ export function ApostaMultiplaDialog({
             resultadoFinal // Passar resultado para determinar status (PENDENTE ou GREEN)
           );
         }
-
-        toast.success("Aposta múltipla registrada!");
       }
 
       onSuccess();
