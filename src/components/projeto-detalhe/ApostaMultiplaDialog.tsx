@@ -104,12 +104,16 @@ interface Bookmaker {
   bonus_rollover_started?: boolean;
 }
 
+/** Tipo de ação executada para distinguir save de delete */
+export type ApostaMultiplaActionType = 'save' | 'delete';
+
 interface ApostaMultiplaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   aposta: ApostaMultipla | null;
   projetoId: string;
-  onSuccess: () => void;
+  /** Callback após sucesso. O parâmetro action distingue 'save' (criar/atualizar) de 'delete' (exclusão) */
+  onSuccess: (action?: ApostaMultiplaActionType) => void;
   defaultEstrategia?: string;
   activeTab?: string;
   /** Quando true, renderiza apenas o conteúdo interno (sem Dialog wrapper) para uso em janelas flutuantes */
@@ -963,7 +967,7 @@ export function ApostaMultiplaDialog({
         }
       }
 
-      onSuccess();
+      onSuccess('save');
       if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao salvar aposta: " + error.message);
@@ -1245,7 +1249,7 @@ export function ApostaMultiplaDialog({
 
       toast.success("Aposta múltipla excluída!");
       setDeleteDialogOpen(false);
-      onSuccess();
+      onSuccess('delete');
       if (!embedded) onOpenChange(false);
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);

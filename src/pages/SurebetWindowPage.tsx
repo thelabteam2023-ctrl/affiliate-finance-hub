@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { SurebetModalRoot } from "@/components/surebet/SurebetModalRoot";
+import { SurebetModalRoot, type SurebetActionType } from "@/components/surebet/SurebetModalRoot";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertTriangle, FileText, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertTriangle, FileText, CheckCircle2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useApostaRascunho, type ApostaRascunho } from "@/hooks/useApostaRascunho";
@@ -136,14 +136,15 @@ export default function SurebetWindowPage() {
   
   // MODO OPERACIONAL CONTÍNUO: Nunca fecha automaticamente
   // O formulário permanece aberto após salvar, seja novo ou edição
-  const handleSuccess = useCallback(() => {
+  const handleSuccess = useCallback((action?: SurebetActionType) => {
     // Notificar janela principal para atualizar listas/KPIs/saldos
     try {
       const channel = new BroadcastChannel("surebet_channel");
       channel.postMessage({ 
         type: "SUREBET_SAVED", 
         projetoId,
-        surebetId: id || "novo"
+        surebetId: id || "novo",
+        action
       });
       channel.close();
     } catch (err) {
@@ -151,17 +152,30 @@ export default function SurebetWindowPage() {
       localStorage.setItem("surebet_saved", JSON.stringify({ 
         projetoId, 
         surebetId: id || "novo",
+        action,
         timestamp: Date.now() 
       }));
     }
     
-    // Se veio de rascunho, deletar o rascunho após salvar com sucesso
-    if (isFromRascunho && rascunhoCarregado) {
+    // Se veio de rascunho, deletar o rascunho após salvar com sucesso (não em delete)
+    if (action === 'save' && isFromRascunho && rascunhoCarregado) {
       deletarRascunho(rascunhoCarregado.id);
       setRascunhoCarregado(null);
     }
     
-    // Incrementar contador e resetar formulário
+    // Se foi exclusão, fechar a janela (não faz sentido continuar editando algo que não existe)
+    if (action === 'delete') {
+      toast.success("Arbitragem excluída!", {
+        description: "A operação foi removida com sucesso.",
+        icon: <Trash2 className="h-5 w-5 text-destructive" />,
+        duration: 2000,
+      });
+      // Pequeno delay para o toast ser visto antes de fechar
+      setTimeout(() => window.close(), 1500);
+      return;
+    }
+    
+    // Para salvamento: Incrementar contador e resetar formulário
     setSaveCount(prev => prev + 1);
     setSurebet(null);
     setFormKey(prev => prev + 1);

@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ApostaDialog } from '@/components/projeto-detalhe/ApostaDialog';
+import { ApostaDialog, type ApostaActionType } from '@/components/projeto-detalhe/ApostaDialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, CheckCircle2, X, Target } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle2, X, Target, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Debug: Confirm this file is loading in standalone window
@@ -92,20 +92,32 @@ export default function ApostaWindowPage() {
     fetchAposta();
   }, [id, isEditing]);
 
-  // Notificar janela principal após salvar
+  // Notificar janela principal após salvar OU excluir
   // MODO OPERACIONAL CONTÍNUO: Nunca fecha automaticamente
   // O formulário permanece aberto após salvar, seja novo ou edição
-  const handleSuccess = useCallback(() => {
+  const handleSuccess = useCallback((action?: ApostaActionType) => {
     // Notificar janela principal para atualizar listas/KPIs/saldos
     try {
       const channel = new BroadcastChannel('aposta_channel');
-      channel.postMessage({ type: 'APOSTA_SAVED', projetoId });
+      channel.postMessage({ type: 'APOSTA_SAVED', projetoId, action });
       channel.close();
     } catch (err) {
-      localStorage.setItem('aposta_saved', JSON.stringify({ projetoId, timestamp: Date.now() }));
+      localStorage.setItem('aposta_saved', JSON.stringify({ projetoId, action, timestamp: Date.now() }));
     }
     
-    // Incrementar contador e resetar formulário
+    // Se foi exclusão, fechar a janela (não faz sentido continuar editando algo que não existe)
+    if (action === 'delete') {
+      toast.success("Aposta excluída!", {
+        description: "A operação foi removida com sucesso.",
+        icon: <Trash2 className="h-5 w-5 text-destructive" />,
+        duration: 2000,
+      });
+      // Pequeno delay para o toast ser visto antes de fechar
+      setTimeout(() => window.close(), 1500);
+      return;
+    }
+    
+    // Para salvamento: Incrementar contador e resetar formulário
     setSaveCount(prev => prev + 1);
     setAposta(null);
     setFormKey(prev => prev + 1);
