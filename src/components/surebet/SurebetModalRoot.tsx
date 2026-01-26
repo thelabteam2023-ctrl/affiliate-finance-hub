@@ -32,7 +32,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { UnifiedBetHeader } from "@/components/apostas/UnifiedBetHeader";
+import { BetFormHeader } from "@/components/apostas/BetFormHeader";
 
 import { SurebetTableRow } from "./SurebetTableRow";
 import { SurebetTableFooter } from "./SurebetTableFooter";
@@ -164,14 +164,6 @@ export function SurebetModalRoot({
   const [esporte, setEsporte] = useState("Futebol");
   const [evento, setEvento] = useState("");
   const [mercado, setMercado] = useState("");
-  const [dataOperacao, setDataOperacao] = useState(() => {
-    // Default: hoje às 12:00
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}T12:00`;
-  });
   
   const [modeloTipo, setModeloTipo] = useState<"2" | "3" | "4+">("2");
   const [numPernasCustom, setNumPernasCustom] = useState<number>(4);
@@ -251,7 +243,6 @@ export function SurebetModalRoot({
       setEvento(surebet.evento);
       setEsporte(surebet.esporte);
       setMercado(surebet.mercado || "");
-      setDataOperacao(surebet.data_operacao || "");
       setEstrategia((surebet.estrategia || APOSTA_ESTRATEGIA.SUREBET) as ApostaEstrategia);
       setContexto((surebet.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
       
@@ -1023,29 +1014,18 @@ export function SurebetModalRoot({
             className="hidden"
           />
           
-          {/* HEADER UNIFICADO COM CAMPOS DO JOGO */}
-          <UnifiedBetHeader
+          {/* HEADER UNIFICADO */}
+          <BetFormHeader
             formType="arbitragem"
             estrategia={estrategia}
             contexto={contexto}
             onEstrategiaChange={(v) => setEstrategia(v)}
             onContextoChange={(v) => setContexto(v)}
-            esporte={esporte}
-            evento={evento}
-            mercado={mercado}
-            dataHora={dataOperacao}
-            onEsporteChange={setEsporte}
-            onEventoChange={setEvento}
-            onMercadoChange={setMercado}
-            onDataHoraChange={setDataOperacao}
-            esportesList={ESPORTES}
             isEditing={isEditing}
             activeTab={activeTab}
             lockedEstrategia={!isEditing && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
             showImport={!isEditing}
             onImportClick={() => fileInputRef.current?.click()}
-            fileInputRef={fileInputRef}
-            onFileSelect={handleFileChange}
             showCloseButton={!embedded}
             onClose={() => onOpenChange(false)}
             embedded={embedded}
@@ -1073,6 +1053,43 @@ export function SurebetModalRoot({
                 </Button>
               </div>
             )}
+
+            {/* Campos do Evento - SEMPRE editáveis */}
+            <div className="grid grid-cols-3 gap-3 pb-3 border-b border-border/50">
+              <div>
+                <Label className="text-xs text-muted-foreground">Esporte</Label>
+                <Select value={esporte} onValueChange={setEsporte}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ESPORTES.map(e => (
+                      <SelectItem key={e} value={e}>{e}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label className="text-xs text-muted-foreground">Evento</Label>
+                <Input 
+                  placeholder="TIME 1 X TIME 2" 
+                  value={evento}
+                  onChange={(e) => setEvento(e.target.value)}
+                  className="h-8 text-xs uppercase"
+                />
+              </div>
+              
+              <div>
+                <Label className="text-xs text-muted-foreground">Mercado</Label>
+                <Input
+                  placeholder="Mercado"
+                  value={mercado}
+                  onChange={(e) => setMercado(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
 
             {/* Modelo de Pernas */}
             <div className="flex flex-wrap items-center gap-4 pb-3 border-b border-border/50">
