@@ -21,8 +21,11 @@ export type Estrategia =
   | "EXTRACAO_BONUS"
   | "DUPLO_GREEN";
 
-// Contextos operacionais
+// Contextos operacionais (APENAS UI - não usar para decisões financeiras)
 export type ContextoOperacional = "NORMAL" | "FREEBET" | "BONUS";
+
+// Fonte de Saldo (VERDADE FINANCEIRA - determina qual wallet é usada)
+export type FonteSaldo = "REAL" | "FREEBET" | "BONUS";
 
 // Status da aposta
 export type ApostaStatus = "PENDENTE" | "LIQUIDADA";

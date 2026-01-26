@@ -6,7 +6,7 @@
  * deve acontecer fora do ApostaService.
  */
 
-import type { ApostaEstrategia, FormaRegistro, ContextoOperacional } from '@/lib/apostaConstants';
+import type { ApostaEstrategia, FormaRegistro, ContextoOperacional, FonteSaldo } from '@/lib/apostaConstants';
 
 // ============================================================================
 // INVARIANTES DE DOMÍNIO
@@ -83,7 +83,8 @@ export interface CriarApostaInput {
   // Classificação (obrigatória e explícita)
   forma_registro: FormaRegistro;
   estrategia: ApostaEstrategia;
-  contexto_operacional: ContextoOperacional;
+  contexto_operacional: ContextoOperacional; // Apenas informativo (UI)
+  fonte_saldo?: FonteSaldo; // VERDADE FINANCEIRA - qual pool de capital (default: REAL)
   
   // Dados do evento
   data_aposta: string;

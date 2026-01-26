@@ -67,18 +67,53 @@ export const FORMA_REGISTRO = {
 export type FormaRegistro = typeof FORMA_REGISTRO[keyof typeof FORMA_REGISTRO];
 
 /**
- * Contexto Operacional - define a ORIGEM do capital utilizado
+ * Fonte de Saldo - define qual POOL de capital é usado
  * Campo EXPLÍCITO e OBRIGATÓRIO no registro de aposta
  * 
  * REGRAS:
- * - Contexto é escolhido pelo usuário na criação
- * - Contexto NUNCA é inferido
- * - Contexto NUNCA muda depois
+ * - Fonte de saldo determina qual wallet é debitada/creditada
+ * - É a VERDADE FINANCEIRA junto com a estratégia
+ * - NUNCA deve ser confundido com Contexto Operacional (UI-only)
+ */
+export const FONTE_SALDO = {
+  REAL: 'REAL',       // Debita/credita bookmakers.saldo_atual
+  FREEBET: 'FREEBET', // Debita/credita bookmakers.saldo_freebet
+  BONUS: 'BONUS',     // Debita/credita bookmakers.saldo_bonus (quando implementado)
+} as const;
+
+export type FonteSaldo = typeof FONTE_SALDO[keyof typeof FONTE_SALDO];
+
+/**
+ * Labels para exibição de Fonte de Saldo
+ */
+export const FONTE_SALDO_LABELS: Record<FonteSaldo, string> = {
+  REAL: 'Saldo Real',
+  FREEBET: 'Freebet',
+  BONUS: 'Bônus',
+};
+
+/**
+ * Lista de fontes de saldo para selects
+ */
+export const FONTES_SALDO_LIST = [
+  { value: FONTE_SALDO.REAL, label: FONTE_SALDO_LABELS.REAL },
+  { value: FONTE_SALDO.FREEBET, label: FONTE_SALDO_LABELS.FREEBET },
+  { value: FONTE_SALDO.BONUS, label: FONTE_SALDO_LABELS.BONUS },
+] as const;
+
+/**
+ * Contexto Operacional - APENAS INFORMATIVO (UI/UX)
+ * 
+ * REGRAS ATUALIZADAS:
+ * - NÃO determina qual wallet é debitada (use fonte_saldo)
+ * - NÃO determina qual ledger é usado (use estrategia)
+ * - Serve APENAS para estatísticas, logs e filtros de UI
+ * - Indica de onde o formulário foi aberto
  */
 export const CONTEXTO_OPERACIONAL = {
-  NORMAL: 'NORMAL',   // Saldo real
-  FREEBET: 'FREEBET', // Freebet
-  BONUS: 'BONUS',     // Bônus
+  NORMAL: 'NORMAL',   // Formulário aberto da aba normal
+  FREEBET: 'FREEBET', // Formulário aberto da aba de freebets
+  BONUS: 'BONUS',     // Formulário aberto da aba de bônus
 } as const;
 
 export type ContextoOperacional = typeof CONTEXTO_OPERACIONAL[keyof typeof CONTEXTO_OPERACIONAL];
@@ -87,13 +122,14 @@ export type ContextoOperacional = typeof CONTEXTO_OPERACIONAL[keyof typeof CONTE
  * Labels para exibição de Contexto Operacional
  */
 export const CONTEXTO_LABELS: Record<ContextoOperacional, string> = {
-  NORMAL: 'Saldo Real',
-  FREEBET: 'Freebet',
-  BONUS: 'Bônus',
+  NORMAL: 'Normal',
+  FREEBET: 'Aba Freebet',
+  BONUS: 'Aba Bônus',
 };
 
 /**
  * Lista de contextos para selects
+ * @deprecated Preferir usar fonte_saldo para decisões financeiras
  */
 export const CONTEXTOS_LIST = [
   { value: CONTEXTO_OPERACIONAL.NORMAL, label: CONTEXTO_LABELS.NORMAL },
