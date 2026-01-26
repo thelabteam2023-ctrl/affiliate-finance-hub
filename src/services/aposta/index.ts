@@ -36,6 +36,10 @@ export type {
 // Exportar constantes
 export { DOMAIN_INVARIANTS } from './types';
 
+// Re-exportar FonteSaldo do apostaConstants para conveniência
+export { FONTE_SALDO, FONTE_SALDO_LABELS, FONTES_SALDO_LIST } from '@/lib/apostaConstants';
+export type { FonteSaldo } from '@/lib/apostaConstants';
+
 // Exportar validadores (para uso em testes/debugging)
 export {
   validateInvariants,

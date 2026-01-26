@@ -139,6 +139,9 @@ export async function criarAposta(
     forma_registro: input.forma_registro,
     estrategia: input.estrategia,
     contexto_operacional: input.contexto_operacional,
+    // NOVO: fonte_saldo é a VERDADE FINANCEIRA
+    // Se não fornecido, inferir do contexto_operacional para retrocompatibilidade
+    fonte_saldo: input.fonte_saldo || inferFonteSaldo(input.contexto_operacional, input.estrategia),
     data_aposta: input.data_aposta,
     evento: input.evento,
     esporte: input.esporte,
@@ -694,6 +697,32 @@ export async function healthCheck(
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+/**
+ * Infere fonte_saldo para retrocompatibilidade
+ * 
+ * REGRAS:
+ * 1. Estratégias de extração usam o pool correspondente
+ * 2. Contexto FREEBET/BONUS sugere o pool (mas estratégia tem prioridade)
+ * 3. Fallback para REAL
+ * 
+ * NOTA: Este é um fallback - o ideal é sempre receber fonte_saldo explícito
+ */
+function inferFonteSaldo(
+  contexto: string | null | undefined,
+  estrategia: string | null | undefined
+): string {
+  // Estratégia tem prioridade máxima
+  if (estrategia === 'EXTRACAO_FREEBET') return 'FREEBET';
+  if (estrategia === 'EXTRACAO_BONUS') return 'BONUS';
+  
+  // Fallback para contexto (retrocompatibilidade)
+  if (contexto === 'FREEBET') return 'FREEBET';
+  if (contexto === 'BONUS') return 'BONUS';
+  
+  // Default
+  return 'REAL';
+}
 
 function detectarMoeda(pernas: PernaInput[]): string {
   if (pernas.length === 0) return 'BRL';

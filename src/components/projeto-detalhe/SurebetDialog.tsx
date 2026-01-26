@@ -2579,20 +2579,21 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       const perna = pernas[pernaIndex];
       if (!perna) return;
 
-      // CORREÇÃO: Determinar se é contexto de bônus
-      // Em contexto BONUS, o delta deve ir para o saldo do bônus (skipBonusCheck = false)
-      const contextoOperacional = operacaoData.contexto_operacional || "NORMAL";
-      const isContextoBonus = contextoOperacional === "BONUS";
+      // REENGENHARIA: Usar fonte_saldo (VERDADE FINANCEIRA) em vez de contexto_operacional
+      // contexto_operacional é APENAS UI/UX - não usar para decisões financeiras
+      const fonteSaldo = (operacaoData as { fonte_saldo?: string }).fonte_saldo || 'REAL';
+      const isFonteFreebet = fonteSaldo === 'FREEBET';
+      const isFonteBonus = fonteSaldo === 'BONUS';
 
       const stake = perna.stake || 0;
       const odd = perna.odd || 0;
       const resultadoAnterior = perna.resultado;
       const bookmakerId = perna.bookmaker_id;
       
-      // CORREÇÃO: Verificar se a perna usa stake_bonus OU se é contexto de bônus
-      // Se tem stake_bonus explícito OU é contexto BONUS, o delta deve ir para o bônus
+      // REENGENHARIA: Usar fonte_saldo para determinar se o delta vai para saldo especial
+      // stake_bonus explícito ainda funciona como override
       const stakeBonus = (perna as { stake_bonus?: number }).stake_bonus || 0;
-      const temBonusComStake = stakeBonus > 0 || isContextoBonus;
+      const temBonusComStake = stakeBonus > 0 || isFonteBonus;
 
       // Se o resultado não mudou, não fazer nada
       if (resultadoAnterior === resultado) return;
