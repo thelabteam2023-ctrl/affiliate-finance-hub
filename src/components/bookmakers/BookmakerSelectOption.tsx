@@ -142,49 +142,27 @@ export function BookmakerSelectTrigger({
     );
   }
   
-  const { nome, parceiro_nome, moeda, saldo_operavel, logo_url } = bookmaker;
-  const parceiroShortName = getFirstLastName(parceiro_nome || "");
+  const { nome, logo_url } = bookmaker;
   
+  // Trigger simplificado: apenas Logo + Nome
   return (
     <div className={cn(
-      "grid grid-cols-[auto_1fr_auto] items-center w-full gap-2 min-w-0",
+      "flex items-center justify-center gap-2 w-full",
       className
     )}>
       {/* Logo */}
-      <div className="flex-shrink-0">
-        {logo_url ? (
-          <img
-            src={logo_url}
-            alt=""
-            className="h-5 w-5 rounded object-contain"
-          />
-        ) : (
-          <div className="h-5 w-5" aria-hidden="true" />
-        )}
-      </div>
-
-      {/* Nome + Badge + Parceiro */}
-      <div className="flex flex-col items-center justify-center min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="uppercase text-xs font-medium truncate">{nome}</span>
-          <CurrencyBadge moeda={moeda} />
-        </div>
-        {parceiroShortName && (
-          <span className="text-[10px] text-muted-foreground truncate">
-            {parceiroShortName}
-          </span>
-        )}
-      </div>
+      {logo_url ? (
+        <img
+          src={logo_url}
+          alt=""
+          className="h-5 w-5 rounded object-contain flex-shrink-0"
+        />
+      ) : (
+        <div className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+      )}
       
-      {/* Saldo */}
-      <div className="flex flex-col items-end flex-shrink-0">
-        <span className={cn(
-          "text-xs font-medium",
-          getCurrencyTextColor(moeda)
-        )}>
-          {formatCurrency(saldo_operavel, moeda)}
-        </span>
-      </div>
+      {/* Nome */}
+      <span className="uppercase text-xs font-medium truncate">{nome}</span>
     </div>
   );
 }
