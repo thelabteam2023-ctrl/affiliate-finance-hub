@@ -364,7 +364,13 @@ export function validateRegistroAposta(values: RegistroApostaValues): {
 } {
   const errors: string[] = [];
   
-  // forma_registro NÃO é validada - é definida automaticamente pelo tipo de formulário
+  // CRÍTICO: forma_registro DEVE existir para evitar violação de NOT NULL
+  // Mesmo sendo definida automaticamente, validamos como camada de segurança
+  if (!values.forma_registro) {
+    errors.push("Forma de registro não definida");
+    console.error('[validateRegistroAposta] ERRO CRÍTICO: forma_registro é null/undefined', values);
+  }
+  
   if (!values.estrategia) {
     errors.push("Estratégia obrigatória");
   }
