@@ -67,6 +67,7 @@ import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { GerouFreebetInput } from "./GerouFreebetInput";
 import { useActiveBonusInfo } from "@/hooks/useActiveBonusInfo";
 import { BonusImpactAlert } from "./BonusImpactAlert";
+import { FreebetToggle, SaldoWaterfallPreview } from "@/components/apostas/waterfall";
 
 interface Aposta {
   id: string;
@@ -1637,6 +1638,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           back_em_exchange: false,
           back_comissao: null,
           tipo_freebet: usarFreebetBookmaker ? "freebet_snr" : null,
+          // WATERFALL: Flag para indicar se freebet deve ser usado no waterfall
+          usar_freebet: usarFreebetBookmaker,
         };
       } else if (tipoOperacaoExchange === "cobertura") {
         // ===== MODO COBERTURA LAY =====
@@ -3072,46 +3075,34 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               )}
             </div>
 
-              {/* Toggle "Usar Freebet nesta aposta?" - compacto e discreto */}
-              {bookmakerSaldo && bookmakerSaldo.saldoFreebet > 0 && !aposta?.gerou_freebet && (
-                <div className="flex items-center justify-between py-2 px-3 rounded-md border border-border/30 bg-muted/10 mt-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="usarFreebet"
-                      checked={usarFreebetBookmaker}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setUsarFreebetBookmaker(checked);
-                        if (checked && bookmakerSaldo.saldoFreebet > 0) {
-                          setStake(bookmakerSaldo.saldoFreebet.toString());
-                        }
-                        if (checked) {
-                          setGerouFreebet(false);
-                          setValorFreebetGerada("");
-                        }
-                      }}
-                      disabled={!!aposta?.tipo_freebet}
-                      className="h-3.5 w-3.5 rounded border-border/50 text-primary focus:ring-primary/30 focus:ring-offset-0"
+              {/* WATERFALL: Toggle Freebet + Preview de distribuição */}
+              {bookmakerSaldo && !aposta?.gerou_freebet && (
+                <div className="space-y-3 mt-3">
+                  {/* FreebetToggle - novo componente waterfall */}
+                  <FreebetToggle
+                    checked={usarFreebetBookmaker}
+                    onCheckedChange={(checked) => {
+                      setUsarFreebetBookmaker(checked);
+                      if (checked) {
+                        setGerouFreebet(false);
+                        setValorFreebetGerada("");
+                      }
+                    }}
+                    saldoFreebet={bookmakerSaldo.saldoFreebet}
+                    moeda={bookmakerSaldo.moeda}
+                    disabled={!!aposta?.tipo_freebet}
+                  />
+                  
+                  {/* SaldoWaterfallPreview - mostra como stake será distribuído */}
+                  {bookmakerId && parseFloat(stake) > 0 && (
+                    <SaldoWaterfallPreview
+                      stake={parseFloat(stake) || 0}
+                      saldoBonus={bookmakerSaldo.saldoBonus}
+                      saldoFreebet={bookmakerSaldo.saldoFreebet}
+                      saldoReal={bookmakerSaldo.saldoDisponivel}
+                      usarFreebet={usarFreebetBookmaker}
+                      moeda={bookmakerSaldo.moeda}
                     />
-                    <label htmlFor="usarFreebet" className="text-xs text-muted-foreground cursor-pointer">
-                      Usar Freebet
-                    </label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <HelpCircle className="h-3 w-3 text-muted-foreground/50 cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[200px] text-xs">
-                          <p>Stake será debitada do saldo de Freebet ({formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)})</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  {usarFreebetBookmaker && (
-                    <span className="text-[10px] text-muted-foreground/60">
-                      {formatCurrencyWithSymbol(bookmakerSaldo.saldoFreebet, bookmakerSaldo.moeda)} disponível
-                    </span>
                   )}
                 </div>
               )}
@@ -4047,6 +4038,36 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   </table>
                 </div>
               </>
+            )}
+
+            {/* WATERFALL: Toggle Freebet + Preview de distribuição (Dialog Mode) */}
+            {tipoAposta === "bookmaker" && bookmakerSaldo && !aposta?.gerou_freebet && (
+              <div className="space-y-3 mt-3 p-3 rounded-lg border border-border/30 bg-muted/5">
+                <FreebetToggle
+                  checked={usarFreebetBookmaker}
+                  onCheckedChange={(checked) => {
+                    setUsarFreebetBookmaker(checked);
+                    if (checked) {
+                      setGerouFreebet(false);
+                      setValorFreebetGerada("");
+                    }
+                  }}
+                  saldoFreebet={bookmakerSaldo.saldoFreebet}
+                  moeda={bookmakerSaldo.moeda}
+                  disabled={!!aposta?.tipo_freebet}
+                />
+                
+                {bookmakerId && parseFloat(stake) > 0 && (
+                  <SaldoWaterfallPreview
+                    stake={parseFloat(stake) || 0}
+                    saldoBonus={bookmakerSaldo.saldoBonus}
+                    saldoFreebet={bookmakerSaldo.saldoFreebet}
+                    saldoReal={bookmakerSaldo.saldoDisponivel}
+                    usarFreebet={usarFreebetBookmaker}
+                    moeda={bookmakerSaldo.moeda}
+                  />
+                )}
+              </div>
             )}
 
             {/* Observações */}
