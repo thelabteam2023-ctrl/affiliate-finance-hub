@@ -1501,6 +1501,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         return;
       }
       
+      // CRÍTICO: Obter moeda da bookmaker selecionada para evitar conversão incorreta
+      // A moeda_operacao DEVE refletir a moeda nativa da casa de apostas
+      const selectedBookmakerId = tipoAposta === "bookmaker" 
+        ? bookmakerId 
+        : (tipoOperacaoExchange === "cobertura" ? coberturaBackBookmakerId : exchangeBookmakerId);
+      const selectedBookmaker = bookmakers.find(bk => bk.id === selectedBookmakerId);
+      const moedaOperacao = selectedBookmaker?.moeda || "BRL";
+
       const commonData = {
         user_id: userData.user.id,
         workspace_id: workspaceId,
@@ -1519,6 +1527,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         estrategia: registroValues.estrategia,
         forma_registro: registroValues.forma_registro,
         contexto_operacional: registroValues.contexto_operacional,
+        // CRÍTICO: Moeda da operação = moeda nativa da bookmaker
+        moeda_operacao: moedaOperacao,
       };
 
       if (tipoAposta === "bookmaker") {
