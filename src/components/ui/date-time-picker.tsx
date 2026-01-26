@@ -140,7 +140,7 @@ export function DateTimePicker({
   };
 
   const displayValue = date
-    ? `${format(date, "dd/MM/yyyy", { locale: ptBR })} ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`
+    ? `${format(date, "dd/MM", { locale: ptBR })} ${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`
     : null;
 
   return (
