@@ -2657,34 +2657,30 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
             {/* ========== SELETOR DE MODO: BOOKMAKER vs EXCHANGE ========== */}
             {/* Posicionado ANTES dos campos comuns como um "modo de operação" global */}
-            <div className="flex items-center justify-center gap-1 p-1 bg-muted/30 rounded-lg border border-border/50">
+            <div className="inline-flex w-full rounded-lg border border-border/50 bg-muted/30 p-1 gap-1">
               <button
                 type="button"
                 onClick={() => setTipoAposta("bookmaker")}
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                   tipoAposta === "bookmaker"
-                    ? "bg-background text-foreground shadow-sm border border-border/50"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
-                <div className="flex items-center justify-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  <span>Bookmaker</span>
-                </div>
+                <BookOpen className="h-4 w-4" />
+                <span>Bookmaker</span>
               </button>
               <button
                 type="button"
                 onClick={() => setTipoAposta("exchange")}
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                   tipoAposta === "exchange"
-                    ? "bg-background text-foreground shadow-sm border border-border/50"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
-                <div className="flex items-center justify-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  <span>Exchange</span>
-                </div>
+                <BarChart3 className="h-4 w-4" />
+                <span>Exchange</span>
               </button>
             </div>
 
