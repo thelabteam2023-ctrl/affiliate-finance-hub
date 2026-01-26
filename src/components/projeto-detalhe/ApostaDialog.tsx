@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { usePreCommitValidation } from "@/hooks/usePreCommitValidation";
+import { useStakeReservation, useBookmakerSaldoComReservas } from "@/hooks/useStakeReservation";
+import { SaldoReservaCompact } from "@/components/saldo/SaldoReservaDisplay";
 import {
   Dialog,
   DialogContent,
@@ -393,9 +395,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   // Hook para validação pré-commit (anti-concorrência)
   const { validateAndReserve, showValidationErrors, validating } = usePreCommitValidation();
   
+  // ========== SISTEMA DE RESERVA DE SALDO EM TEMPO REAL ==========
+  // Previne race conditions entre operadores simultâneos
+  const stakeReservation = useStakeReservation({
+    workspaceId: workspaceId || '',
+    formType: 'SIMPLES',
+    enabled: open && !!workspaceId
+  });
+  
   // Hook para gerenciamento de bônus (rollover)
   const { atualizarProgressoRollover } = useBonusBalanceManager();
-  
+
   // Mapear saldos canônicos para formato local (retrocompatibilidade)
   // IMPORTANTE: Filtrar casas com transações pendentes (bloqueio de conciliação)
   const bookmakers = useMemo((): Bookmaker[] => {

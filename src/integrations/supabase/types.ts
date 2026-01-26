@@ -868,6 +868,101 @@ export type Database = {
           },
         ]
       }
+      bookmaker_stake_reservations: {
+        Row: {
+          bookmaker_id: string
+          created_at: string
+          expires_at: string
+          form_session_id: string
+          form_type: string
+          id: string
+          moeda: string
+          stake: number
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          bookmaker_id: string
+          created_at?: string
+          expires_at?: string
+          form_session_id: string
+          form_type: string
+          id?: string
+          moeda?: string
+          stake: number
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          bookmaker_id?: string
+          created_at?: string
+          expires_at?: string
+          form_session_id?: string
+          form_type?: string
+          id?: string
+          moeda?: string
+          stake?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmaker_stake_reservations_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_stake_reservations_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_stake_reservations_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_stake_reservations_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_status_operacional"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_stake_reservations_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_stake_reservations_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_stake_reservations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookmaker_unlinked_acks: {
         Row: {
           acknowledged_at: string
@@ -9263,6 +9358,10 @@ export type Database = {
         Returns: number
       }
       can_moderate_community: { Args: { _user_id: string }; Returns: boolean }
+      cancel_stake_reservation: {
+        Args: { p_form_session_id: string }
+        Returns: boolean
+      }
       cancel_workspace_invite: { Args: { _invite_id: string }; Returns: Json }
       change_member_role: {
         Args: {
@@ -9303,6 +9402,7 @@ export type Database = {
       }
       check_user_limit: { Args: { workspace_uuid: string }; Returns: Json }
       cleanup_expired_chat_messages: { Args: never; Returns: number }
+      cleanup_expired_reservations: { Args: never; Returns: number }
       cleanup_orphan_sessions: {
         Args: { p_hours_threshold?: number }
         Returns: number
@@ -9313,6 +9413,10 @@ export type Database = {
       }
       column_exists: {
         Args: { _column_name: string; _table_name: string }
+        Returns: boolean
+      }
+      commit_stake_reservation: {
+        Args: { p_form_session_id: string }
         Returns: boolean
       }
       compute_subscription_status: {
@@ -9616,6 +9720,14 @@ export type Database = {
       }
       get_public_plans: { Args: never; Returns: Json }
       get_remaining_days: { Args: { p_expires_at: string }; Returns: number }
+      get_saldo_disponivel_com_reservas: {
+        Args: { p_bookmaker_id: string; p_exclude_session_id?: string }
+        Returns: {
+          saldo_contabil: number
+          saldo_disponivel: number
+          saldo_reservado: number
+        }[]
+      }
       get_saldo_operavel_por_projeto: {
         Args: { p_projeto_ids: string[] }
         Returns: {
@@ -9918,6 +10030,25 @@ export type Database = {
       }
       update_parcerias_em_encerramento: { Args: never; Returns: undefined }
       update_user_activity: { Args: { p_user_id: string }; Returns: boolean }
+      upsert_stake_reservation: {
+        Args: {
+          p_bookmaker_id: string
+          p_form_session_id: string
+          p_form_type: string
+          p_moeda: string
+          p_stake: number
+          p_workspace_id: string
+        }
+        Returns: {
+          error_code: string
+          error_message: string
+          reservation_id: string
+          saldo_contabil: number
+          saldo_disponivel: number
+          saldo_reservado: number
+          success: boolean
+        }[]
+      }
       user_belongs_to_workspace: {
         Args: { _workspace_id: string }
         Returns: boolean
