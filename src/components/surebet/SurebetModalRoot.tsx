@@ -16,6 +16,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, KeyboardEvent } from
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { deletarAposta } from "@/services/aposta";
 import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
 import { useApostaRascunho, type ApostaRascunho, type RascunhoPernaData } from "@/hooks/useApostaRascunho";
@@ -954,12 +955,8 @@ export function SurebetModalRoot({
     if (!surebet) return;
     
     try {
-      const { error } = await supabase
-        .from("apostas_unificada")
-        .delete()
-        .eq("id", surebet.id);
-
-      if (error) throw error;
+      const result = await deletarAposta(surebet.id);
+      if (!result.success) throw new Error(result.error?.message || 'Falha ao excluir');
       
       // CRÍTICO: Invalidar saldos imediatamente após exclusão
       // Garante que o "Saldo Operável" no formulário reflita o valor atualizado

@@ -397,7 +397,73 @@ export async function deletarAposta(
   console.log("[ApostaService] Iniciando deleção de aposta:", apostaId);
 
   try {
-    // 1. Deletar pernas primeiro (FK constraint)
+    // 0) Carregar estado atual para decidir reversão
+    const { data: aposta, error: fetchError } = await supabase
+      .from('apostas_unificada')
+      .select('id, status, resultado')
+      .eq('id', apostaId)
+      .single();
+
+    if (fetchError || !aposta) {
+      return {
+        success: false,
+        error: {
+          code: 'BET_NOT_FOUND',
+          message: fetchError?.message || 'Aposta não encontrada',
+          details: { error: fetchError },
+        },
+      };
+    }
+
+    const statusAtual = (aposta.status || 'PENDENTE') as string;
+    const resultadoAtual = (aposta.resultado || 'PENDENTE') as string;
+    const jaRefundado = resultadoAtual === 'VOID' || resultadoAtual === 'REEMBOLSO';
+
+    // 1) Se estava liquidada (ou em qualquer status != PENDENTE), desfazer para PENDENTE de forma atômica
+    // Isso remove qualquer impacto de GREEN/RED/MEIO_* e retorna a aposta ao estado pré-liquidação.
+    if (statusAtual !== 'PENDENTE') {
+      const { data: revertData, error: revertError } = await supabase.rpc(
+        'reverter_liquidacao_para_pendente',
+        { p_aposta_id: apostaId }
+      );
+
+      if (revertError) {
+        return {
+          success: false,
+          error: {
+            code: 'REVERT_TO_PENDING_FAILED',
+            message: `Falha ao reverter aposta para PENDENTE: ${revertError.message}`,
+            details: { error: revertError },
+          },
+        };
+      }
+
+      const revertResult = revertData as { success?: boolean; error?: string; message?: string } | null;
+      if (revertResult && revertResult.success === false && revertResult.error !== 'APOSTA_JA_PENDENTE') {
+        return {
+          success: false,
+          error: {
+            code: revertResult.error || 'REVERT_TO_PENDING_FAILED',
+            message: revertResult.message || 'Falha ao reverter aposta para PENDENTE',
+            details: { revertResult },
+          },
+        };
+      }
+    }
+
+    // 2) Garantir que o stake seja devolvido (Waterfall) antes de excluir.
+    // Estratégia: liquidar como VOID (crédito de devolução) e depois apagar o registro.
+    if (!jaRefundado) {
+      const voidResult = await liquidarAposta({
+        id: apostaId,
+        resultado: 'VOID',
+        lucro_prejuizo: 0,
+      });
+
+      if (!voidResult.success) return voidResult;
+    }
+
+    // 3) Deletar pernas primeiro (FK constraint)
     const { error: pernasError } = await supabase
       .from('apostas_pernas')
       .delete()
@@ -407,7 +473,7 @@ export async function deletarAposta(
       console.warn("[ApostaService] Erro ao deletar pernas:", pernasError);
     }
 
-    // 2. Deletar aposta
+    // 4) Deletar aposta
     const { error: apostaError } = await supabase
       .from('apostas_unificada')
       .delete()
@@ -425,7 +491,7 @@ export async function deletarAposta(
     }
 
     console.log("[ApostaService] Aposta deletada com sucesso:", apostaId);
-    
+
     return { success: true };
 
   } catch (err: any) {
@@ -487,7 +553,7 @@ export async function liquidarAposta(
     const { data, error } = await supabase.rpc('liquidar_aposta_atomica', {
       p_aposta_id: input.id,
       p_resultado: input.resultado,
-      p_lucro_prejuizo: input.lucro_prejuizo || null,
+      p_lucro_prejuizo: input.lucro_prejuizo ?? null,
       p_resultados_pernas: resultadosPernasMap,
     });
 
