@@ -14,7 +14,7 @@ import { MoneyInput } from '@/components/ui/money-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Plus, Minus, Check } from 'lucide-react';
-import { BookmakerSelectOption, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
+import { BookmakerSelectOption, BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { getFirstLastName } from '@/lib/utils';
@@ -146,15 +146,18 @@ export function SurebetTableRow({
       {/* Casa */}
       <td className="px-2" style={{ height: '78px' }}>
         {isEditing ? (
-          <div>
-            <div className="text-xs font-medium uppercase truncate">
+          <div className="flex flex-col">
+            <div className="text-xs font-medium uppercase truncate text-center">
               {selectedBookmaker?.nome || "—"}
             </div>
-            {selectedBookmaker?.parceiro_nome && (
-              <div className="text-[9px] text-muted-foreground truncate text-center">
-                {getFirstLastName(selectedBookmaker.parceiro_nome)}
-              </div>
-            )}
+            {/* Metadados fixos - altura fixa para evitar layout jumps */}
+            <BookmakerMetaRow 
+              bookmaker={selectedBookmaker ? {
+                parceiro_nome: selectedBookmaker.parceiro_nome || null,
+                moeda: selectedBookmaker.moeda,
+                saldo_operavel: selectedBookmaker.saldo_operavel
+              } : null}
+            />
           </div>
         ) : (
           <div className="flex flex-col">
@@ -190,11 +193,14 @@ export function SurebetTableRow({
                 ))}
               </SelectContent>
             </Select>
-            {selectedBookmaker?.parceiro_nome && (
-              <div className="text-[9px] text-muted-foreground truncate mt-0.5 text-center">
-                {getFirstLastName(selectedBookmaker.parceiro_nome)}
-              </div>
-            )}
+            {/* Metadados fixos - altura fixa para evitar layout jumps */}
+            <BookmakerMetaRow 
+              bookmaker={selectedBookmaker ? {
+                parceiro_nome: selectedBookmaker.parceiro_nome || null,
+                moeda: selectedBookmaker.moeda,
+                saldo_operavel: selectedBookmaker.saldo_operavel
+              } : null}
+            />
           </div>
         )}
       </td>
