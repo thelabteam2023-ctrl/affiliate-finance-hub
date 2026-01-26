@@ -45,8 +45,9 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Card, CardContent } from "@/components/ui/card";
-import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
+import { RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
+import { BetFormHeader } from "@/components/apostas/BetFormHeader";
 import { getFirstLastName } from "@/lib/utils";
 import { 
   BookmakerSelectOption, 
@@ -1255,72 +1256,43 @@ export function ApostaMultiplaDialog({
           hideOverlay={embedded}
           hideCloseButton={embedded}
         >
-          <DialogHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-sm font-medium">
-                {aposta ? "Editar Aposta Múltipla" : "Nova Aposta Múltipla"}
-              </DialogTitle>
-              {!aposta && (
-                <div className="flex items-center gap-2">
-                  {/* Print preview when imported */}
-                  {printImagePreview && !isPrintProcessing && (
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded text-xs">
-                      <CheckCircle2 className="h-3 w-3 text-primary" />
-                      <span className="text-primary font-medium">
-                        {printParsedData?.selecoes?.length || 0} seleções
-                      </span>
-                      <button 
-                        onClick={clearPrintData}
-                        className="ml-1 text-muted-foreground hover:text-foreground"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  )}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isPrintProcessing}
-                          className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          {isPrintProcessing ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Camera className="h-3.5 w-3.5" />
-                          )}
-                          {isPrintProcessing ? "Lendo..." : "Importar"}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" align="end" className="max-w-[200px]">
-                        <p className="text-xs">Cole com Ctrl+V ou clique para selecionar imagem do bilhete</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
+          {/* HEADER UNIFICADO */}
+          <BetFormHeader
+            formType="multipla"
+            estrategia={registroValues.estrategia}
+            contexto={registroValues.contexto_operacional || 'NORMAL'}
+            onEstrategiaChange={(v) => setRegistroValues(prev => ({ ...prev, estrategia: v }))}
+            onContextoChange={(v) => setRegistroValues(prev => ({ ...prev, contexto_operacional: v }))}
+            isEditing={!!aposta}
+            activeTab={activeTab}
+            lockedEstrategia={!aposta && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
+            showImport={!aposta}
+            onImportClick={() => fileInputRef.current?.click()}
+            isPrintProcessing={isPrintProcessing}
+            fileInputRef={fileInputRef}
+            onFileSelect={handleFileSelect}
+            showCloseButton={!embedded}
+            onClose={() => onOpenChange(false)}
+            embedded={embedded}
+            extraBadge={
+              printImagePreview && !isPrintProcessing && (
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded text-xs">
+                  <CheckCircle2 className="h-3 w-3 text-primary" />
+                  <span className="text-primary font-medium">
+                    {printParsedData?.selecoes?.length || 0} seleções
+                  </span>
+                  <button 
+                    onClick={clearPrintData}
+                    className="ml-1 text-muted-foreground hover:text-foreground"
+                  >
+                    ✕
+                  </button>
                 </div>
-              )}
-            </div>
-          </DialogHeader>
+              )
+            }
+          />
 
-          <div className="space-y-4 py-4">
-
-            {/* Campos de Registro Obrigatórios */}
-            <RegistroApostaFields
-              values={registroValues}
-              onChange={setRegistroValues}
-              suggestions={aposta ? undefined : getSuggestionsForTab(activeTab)}
-              lockedEstrategia={!aposta && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : undefined}
-            />
+          <div className="space-y-4 py-4 px-4">
 
             {/* Bookmaker / Vínculo */}
             <div className="space-y-2">

@@ -47,7 +47,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useImportBetPrint } from "@/hooks/useImportBetPrint";
-import { RegistroApostaFields, RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
+import { RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
+import { BetFormHeader } from "@/components/apostas/BetFormHeader";
 import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, isAbaEstrategiaFixa, getEstrategiaFromTab, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional } from "@/lib/apostaConstants";
 import { 
   BookmakerSelectOption,
@@ -2567,49 +2568,28 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             </div>
           )}
 
-          <DialogHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
-                {aposta ? "Editar Aposta" : "Registrar Aposta"}
-              </DialogTitle>
-              {!aposta && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isPrintProcessing}
-                        className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        {isPrintProcessing ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Camera className="h-3.5 w-3.5" />
-                        )}
-                        {isPrintProcessing 
-                          ? (printProcessingPhase === "backup" ? "Alternativo..." : "Analisando...") 
-                          : "Importar"}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" align="end" className="max-w-[200px]">
-                      <p className="text-xs">Cole com Ctrl+V ou clique para selecionar imagem do bilhete</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-            </div>
-          </DialogHeader>
+          {/* HEADER UNIFICADO */}
+          <BetFormHeader
+            formType="simples"
+            estrategia={registroValues.estrategia}
+            contexto={registroValues.contexto_operacional || 'NORMAL'}
+            onEstrategiaChange={(v) => setRegistroValues(prev => ({ ...prev, estrategia: v }))}
+            onContextoChange={(v) => setRegistroValues(prev => ({ ...prev, contexto_operacional: v }))}
+            isEditing={!!aposta}
+            activeTab={activeTab}
+            lockedEstrategia={!aposta && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
+            showImport={!aposta}
+            onImportClick={() => fileInputRef.current?.click()}
+            isPrintProcessing={isPrintProcessing}
+            printProcessingPhase={printProcessingPhase}
+            fileInputRef={fileInputRef}
+            onFileSelect={handleFileSelect}
+            showCloseButton={!embedded}
+            onClose={() => onOpenChange(false)}
+            embedded={embedded}
+          />
 
-          <div className="grid gap-5 py-2">
+          <div className="grid gap-5 py-2 px-4">
             {/* Estado: Processando print */}
             {isPrintProcessing && !aposta && (
               <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg ${
@@ -2674,17 +2654,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 </Button>
               </div>
             )}
-
-            {/* Campos de Registro Explícito (Prompt Oficial) */}
-            <div className="p-3 rounded-lg border border-border/50 bg-muted/30">
-              <RegistroApostaFields
-                values={registroValues}
-                onChange={setRegistroValues}
-                suggestions={aposta ? undefined : getSuggestionsForTab(activeTab)}
-                lockedEstrategia={!aposta && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : undefined}
-                compact
-              />
-            </div>
 
             {/* Linha 1: Evento + Data/Hora */}
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">

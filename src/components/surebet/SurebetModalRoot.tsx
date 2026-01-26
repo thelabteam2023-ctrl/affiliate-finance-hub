@@ -32,6 +32,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BetFormHeader } from "@/components/apostas/BetFormHeader";
 
 import { SurebetTableRow } from "./SurebetTableRow";
 import { SurebetTableFooter } from "./SurebetTableFooter";
@@ -994,22 +995,23 @@ export function SurebetModalRoot({
             className="hidden"
           />
           
-          {/* HEADER */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-            <div className="flex items-center gap-3">
-              <Calculator className="h-5 w-5 text-amber-500" />
-              <h2 className="font-semibold text-base">
-                {isEditing ? "Editar Arbitragem" : "Arbitragem"}
-              </h2>
-              <Badge variant="outline" className="text-[10px]">{numPernas} pernas</Badge>
-            </div>
-            
-            {!embedded && (
-              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="h-8 w-8 p-0">
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+          {/* HEADER UNIFICADO */}
+          <BetFormHeader
+            formType="arbitragem"
+            estrategia={estrategia}
+            contexto={contexto}
+            onEstrategiaChange={(v) => setEstrategia(v)}
+            onContextoChange={(v) => setContexto(v)}
+            isEditing={isEditing}
+            activeTab={activeTab}
+            lockedEstrategia={!isEditing && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
+            showImport={!isEditing}
+            onImportClick={() => fileInputRef.current?.click()}
+            showCloseButton={!embedded}
+            onClose={() => onOpenChange(false)}
+            embedded={embedded}
+            extraBadge={<Badge variant="outline" className="text-[10px]">{numPernas} pernas</Badge>}
+          />
 
           {/* CONTENT */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -1033,64 +1035,6 @@ export function SurebetModalRoot({
                 </Button>
               </div>
             )}
-
-            {/* Estratégia e Contexto - travados quando aberto de aba específica */}
-            <div className="grid grid-cols-2 gap-3 pb-3 border-b border-border/50">
-              <div>
-                <Label className="text-xs text-muted-foreground">
-                  Estratégia <span className="text-red-400">*</span>
-                  {!isEditing && isAbaEstrategiaFixa(activeTab) && (
-                    <span className="ml-1 text-[10px] text-primary">(fixo)</span>
-                  )}
-                </Label>
-                <Select 
-                  value={estrategia || ""} 
-                  onValueChange={(v) => setEstrategia(v as ApostaEstrategia)}
-                  disabled={!isEditing && isAbaEstrategiaFixa(activeTab)}
-                >
-                  <SelectTrigger className={cn(
-                    "h-8 text-xs", 
-                    !estrategia && "border-red-500/50",
-                    !isEditing && isAbaEstrategiaFixa(activeTab) && "opacity-70 cursor-not-allowed"
-                  )}>
-                    <SelectValue placeholder="Selecione uma estratégia" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ESTRATEGIAS_LIST.map(e => (
-                      <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {!estrategia && (
-                  <p className="text-[10px] text-red-400 mt-0.5">Obrigatório</p>
-                )}
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">
-                  Contexto
-                  {!isEditing && isAbaEstrategiaFixa(activeTab) && (
-                    <span className="ml-1 text-[10px] text-primary">(fixo)</span>
-                  )}
-                </Label>
-                <Select 
-                  value={contexto} 
-                  onValueChange={(v) => setContexto(v as ContextoOperacional)}
-                  disabled={!isEditing && isAbaEstrategiaFixa(activeTab)}
-                >
-                  <SelectTrigger className={cn(
-                    "h-8 text-xs",
-                    !isEditing && isAbaEstrategiaFixa(activeTab) && "opacity-70 cursor-not-allowed"
-                  )}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CONTEXTOS_LIST.map(c => (
-                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
             {/* Campos do Evento - SEMPRE editáveis */}
             <div className="grid grid-cols-3 gap-3 pb-3 border-b border-border/50">
