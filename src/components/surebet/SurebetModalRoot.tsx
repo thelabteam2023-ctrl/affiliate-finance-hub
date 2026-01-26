@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
+import { toLocalTimestamp } from "@/utils/dateUtils";
 
 import { SurebetTableRow } from "./SurebetTableRow";
 import { SurebetTableFooter } from "./SurebetTableFooter";
@@ -832,7 +833,7 @@ export function SurebetModalRoot({
             roi_esperado: analysis.minRoi,
             status: "PENDENTE",
             resultado: "PENDENTE",
-            data_aposta: new Date().toISOString()
+          data_aposta: toLocalTimestamp(dataAposta)
           })
           .select()
           .single();
@@ -902,7 +903,7 @@ export function SurebetModalRoot({
           cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
           status: "PENDENTE",
           resultado: "PENDENTE",
-          data_aposta: new Date().toISOString(),
+          data_aposta: toLocalTimestamp(dataAposta),
           observacoes: `Convertida de operação parcial (grupo: ${operationGroupId.slice(0, 8)})`
         };
       });
