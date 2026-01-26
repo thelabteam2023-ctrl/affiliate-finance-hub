@@ -15,7 +15,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, KeyboardEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
+import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
 import { useApostaRascunho, type ApostaRascunho, type RascunhoPernaData } from "@/hooks/useApostaRascunho";
@@ -161,6 +161,7 @@ export function SurebetModalRoot({
     enabled: open,
     includeZeroBalance: isEditing,
   });
+  const invalidateSaldos = useInvalidateBookmakerSaldos();
 
   // ============================================
   // ESTADOS DO FORMULÁRIO
@@ -959,6 +960,10 @@ export function SurebetModalRoot({
         .eq("id", surebet.id);
 
       if (error) throw error;
+      
+      // CRÍTICO: Invalidar saldos imediatamente após exclusão
+      // Garante que o "Saldo Operável" no formulário reflita o valor atualizado
+      invalidateSaldos(projetoId);
       
       toast.success("Operação excluída!");
       onSuccess('delete');
