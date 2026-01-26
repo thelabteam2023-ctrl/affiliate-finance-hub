@@ -7,7 +7,6 @@
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { getMarketsForSportAndModel, type ModeloAposta } from '@/lib/marketNormalizer';
 
 interface SurebetCompactHeaderProps {
   esporte: string;
@@ -38,7 +37,6 @@ export function SurebetCompactHeader({
   setModelo,
   isEditing,
 }: SurebetCompactHeaderProps) {
-  const mercadosDisponiveis = getMarketsForSportAndModel(esporte, modelo);
 
   return (
     <div className="space-y-3">
@@ -66,16 +64,12 @@ export function SurebetCompactHeader({
       {/* Linha 2: Mercado + Modelo */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span className="text-xs font-medium">Mercado:</span>
-        <Select value={mercado} onValueChange={setMercado}>
-          <SelectTrigger className="w-[180px] h-7 text-xs border-0 bg-transparent hover:bg-muted/30">
-            <SelectValue placeholder="Selecionar..." />
-          </SelectTrigger>
-          <SelectContent>
-            {mercadosDisponiveis.map(m => (
-              <SelectItem key={m} value={m} className="text-xs">{m}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Input
+          value={mercado}
+          onChange={(e) => setMercado(e.target.value)}
+          placeholder="Ex: Resultado Final"
+          className="w-[200px] h-7 text-xs border-0 bg-transparent hover:bg-muted/30"
+        />
         
         <span className="text-muted-foreground/50 mx-2">|</span>
         

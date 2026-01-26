@@ -198,7 +198,7 @@ export function normalizeOcrData(rawData: any): NormalizationResult {
     }
   }
   
-  // 3. NORMALIZAR MERCADO
+  // 3. PROCESSAR MERCADO (preservar texto original, categorizar para pendingData)
   if (data.mercado?.value) {
     const marketRaw = data.mercado.value;
     const sportDetected = data.esporte?.value || "Outro";
@@ -207,17 +207,18 @@ export function normalizeOcrData(rawData: any): NormalizationResult {
     const marketNorm = normalizeDetectedMarket(marketRaw, selectionRaw, sportDetected);
     ocrResult = marketNorm.ocrResult;
     
-    // Atualizar pendingData
+    // Atualizar pendingData com categorização (para lógica interna)
     pendingData = {
       mercadoIntencao: marketNorm.displayName,
       mercadoRaw: marketRaw,
       esporteDetectado: sportDetected
     };
     
-    // Atualizar mercado
-    data.mercado.value = marketNorm.displayName;
+    // MANTER O MERCADO EXATO DO OCR (não substituir pelo displayName normalizado)
+    // O campo mercado.value preserva o texto original extraído pelo OCR
+    // data.mercado.value = marketNorm.displayName; // <- REMOVIDO: não normalizar mais
     
-    // Ajustar confiança
+    // Ajustar confiança baseado na categorização
     if (marketNorm.confidence === "low") {
       data.mercado.confidence = "low";
     } else if (marketNorm.confidence === "medium" && data.mercado.confidence === "high") {
