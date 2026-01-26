@@ -193,6 +193,32 @@ export const getEstrategiaFromTab = (activeTab: string): ApostaEstrategia | null
 };
 
 /**
+ * Mapeia a aba ativa para o contexto operacional default
+ * Retorna null para abas que não requerem contexto específico (usa NORMAL)
+ */
+export const getContextoFromTab = (activeTab: string): ContextoOperacional | null => {
+  const tabToContexto: Record<string, ContextoOperacional | null> = {
+    apostas: null, // Apostas livres: usa NORMAL por padrão
+    'apostas-livres': null,
+    'visao-geral': null,
+    freebets: 'FREEBET',
+    bonus: 'BONUS',
+    surebet: null, // Surebet pode usar qualquer contexto
+    valuebet: null, // ValueBet pode usar qualquer contexto
+    duplogreen: null, // Duplo Green pode usar qualquer contexto
+  };
+  return tabToContexto[activeTab] ?? null;
+};
+
+/**
+ * Verifica se a aba atual requer contexto operacional fixo (não editável)
+ */
+export const isAbaContextoFixo = (activeTab: string): boolean => {
+  const abasContextoFixo = ['freebets', 'bonus'];
+  return abasContextoFixo.includes(activeTab);
+};
+
+/**
  * Mapeia a estratégia para a aba principal
  */
 export const getTabFromEstrategia = (estrategia: ApostaEstrategia | string | null): string => {

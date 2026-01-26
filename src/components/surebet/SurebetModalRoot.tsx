@@ -110,7 +110,9 @@ import {
   APOSTA_ESTRATEGIA,
   CONTEXTO_OPERACIONAL,
   getEstrategiaFromTab,
+  getContextoFromTab,
   isAbaEstrategiaFixa,
+  isAbaContextoFixo,
   type ApostaEstrategia,
   type ContextoOperacional,
 } from "@/lib/apostaConstants";
@@ -340,15 +342,25 @@ export function SurebetModalRoot({
 
   // Sincronizar estratégia quando está "travada" pela aba
   // CRÍTICO: Garante que o estado de estratégia acompanhe a aba ativa mesmo após mudanças
+  // Sincronizar estratégia E contexto quando estão "travados" pela aba
+  // CRÍTICO: Quando a aba define estratégia/contexto fixos (ex: bonus, freebets),
+  // precisamos atualizar os estados automaticamente
   useEffect(() => {
     if (!isEditing && open) {
       const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
+      const lockedContexto = isAbaContextoFixo(activeTab) ? getContextoFromTab(activeTab) : null;
       
+      // Sincronizar estratégia se locked
       if (lockedEstrategia && estrategia !== lockedEstrategia) {
         setEstrategia(lockedEstrategia);
       }
+      
+      // Sincronizar contexto se locked (abas bonus/freebets)
+      if (lockedContexto && contexto !== lockedContexto) {
+        setContexto(lockedContexto);
+      }
     }
-  }, [open, isEditing, activeTab, estrategia]);
+  }, [open, isEditing, activeTab, estrategia, contexto]);
 
   // Atualizar pernas quando numPernas muda
   useEffect(() => {
