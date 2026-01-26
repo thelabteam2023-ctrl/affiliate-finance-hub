@@ -454,6 +454,19 @@ export function ApostaMultiplaDialog({
     });
   };
 
+  // Sincronizar estratégia quando está "travada" pela aba
+  // CRÍTICO: Quando a aba define uma estratégia fixa (ex: bonus, freebets),
+  // precisamos atualizar o registroValues.estrategia automaticamente
+  useEffect(() => {
+    if (!aposta && open) {
+      const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
+      
+      if (lockedEstrategia && registroValues.estrategia !== lockedEstrategia) {
+        setRegistroValues(prev => ({ ...prev, estrategia: lockedEstrategia }));
+      }
+    }
+  }, [open, aposta, activeTab, registroValues.estrategia]);
+
   const getLocalDateTimeString = () => {
     const now = new Date();
     const year = now.getFullYear();

@@ -338,6 +338,18 @@ export function SurebetModalRoot({
     }
   }, [open, surebet, rascunho, activeTab]);
 
+  // Sincronizar estratégia quando está "travada" pela aba
+  // CRÍTICO: Garante que o estado de estratégia acompanhe a aba ativa mesmo após mudanças
+  useEffect(() => {
+    if (!isEditing && open) {
+      const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
+      
+      if (lockedEstrategia && estrategia !== lockedEstrategia) {
+        setEstrategia(lockedEstrategia);
+      }
+    }
+  }, [open, isEditing, activeTab, estrategia]);
+
   // Atualizar pernas quando numPernas muda
   useEffect(() => {
     if (isEditing || !open) return;
