@@ -32,7 +32,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BetFormHeader } from "@/components/apostas/BetFormHeader";
+import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
 
 import { SurebetTableRow } from "./SurebetTableRow";
 import { SurebetTableFooter } from "./SurebetTableFooter";
@@ -164,6 +164,7 @@ export function SurebetModalRoot({
   const [esporte, setEsporte] = useState("Futebol");
   const [evento, setEvento] = useState("");
   const [mercado, setMercado] = useState("");
+  const [dataAposta, setDataAposta] = useState("");
   
   const [modeloTipo, setModeloTipo] = useState<"2" | "3" | "4+">("2");
   const [numPernasCustom, setNumPernasCustom] = useState<number>(4);
@@ -1014,8 +1015,8 @@ export function SurebetModalRoot({
             className="hidden"
           />
           
-          {/* HEADER UNIFICADO */}
-          <BetFormHeader
+          {/* HEADER UNIFICADO V2 - 3 linhas fixas */}
+          <BetFormHeaderV2
             formType="arbitragem"
             estrategia={estrategia}
             contexto={contexto}
@@ -1024,6 +1025,17 @@ export function SurebetModalRoot({
             isEditing={isEditing}
             activeTab={activeTab}
             lockedEstrategia={!isEditing && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
+            gameFields={{
+              esporte,
+              evento,
+              mercado,
+              dataAposta,
+              onEsporteChange: setEsporte,
+              onEventoChange: setEvento,
+              onMercadoChange: setMercado,
+              onDataApostaChange: setDataAposta,
+              esportesList: ESPORTES,
+            }}
             showImport={!isEditing}
             onImportClick={() => fileInputRef.current?.click()}
             showCloseButton={!embedded}
@@ -1053,43 +1065,6 @@ export function SurebetModalRoot({
                 </Button>
               </div>
             )}
-
-            {/* Campos do Evento - SEMPRE editáveis */}
-            <div className="grid grid-cols-3 gap-3 pb-3 border-b border-border/50">
-              <div>
-                <Label className="text-xs text-muted-foreground">Esporte</Label>
-                <Select value={esporte} onValueChange={setEsporte}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ESPORTES.map(e => (
-                      <SelectItem key={e} value={e}>{e}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label className="text-xs text-muted-foreground">Evento</Label>
-                <Input 
-                  placeholder="TIME 1 X TIME 2" 
-                  value={evento}
-                  onChange={(e) => setEvento(e.target.value)}
-                  className="h-8 text-xs uppercase"
-                />
-              </div>
-              
-              <div>
-                <Label className="text-xs text-muted-foreground">Mercado</Label>
-                <Input
-                  placeholder="Mercado"
-                  value={mercado}
-                  onChange={(e) => setMercado(e.target.value)}
-                  className="h-8 text-xs"
-                />
-              </div>
-            </div>
 
             {/* Modelo de Pernas */}
             <div className="flex flex-wrap items-center gap-4 pb-3 border-b border-border/50">
