@@ -59,14 +59,12 @@ import { useSurebetService, type SurebetPerna as SurebetPernaService } from "@/h
 import { useApostaRascunho, type RascunhoPernaData, type ApostaRascunho } from "@/hooks/useApostaRascunho";
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
-  BookmakerSelectOption,
-  BookmakerSelectTrigger,
+  BookmakerSelectOption, 
   CurrencyBadge, 
   formatCurrency, 
   getCurrencySymbol, 
   getCurrencyTextColor 
 } from "@/components/bookmakers/BookmakerSelectOption";
-import { BookmakerMetaRow } from "@/components/bookmakers/BookmakerMetaRow";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
 import { 
   MultiCurrencyIndicator, 
@@ -3293,14 +3291,11 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                                     className="h-8 text-[10px] w-full px-1.5"
                                     tabIndex={index * 4 + 1}
                                   >
-                                    <BookmakerSelectTrigger
-                                      bookmaker={selectedBookmaker ? {
-                                        nome: selectedBookmaker.nome,
-                                        logo_url: selectedBookmaker.logo_url,
-                                      } : null}
-                                      placeholder="Casa"
-                                      className="text-[10px]"
-                                    />
+                                    <SelectValue placeholder="Casa">
+                                      {selectedBookmaker?.nome && (
+                                        <span className="truncate uppercase">{selectedBookmaker.nome}</span>
+                                      )}
+                                    </SelectValue>
                                   </SelectTrigger>
                                 <SelectContent className="max-w-[320px]">
                                     {bookmakersDisponiveis.map(bk => {
@@ -3449,16 +3444,73 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                             </div>
                           </div>
                           
-                          {/* Parceiro + Saldo - Altura fixa para estabilidade visual */}
-                          <div className="h-5">
-                            <BookmakerMetaRow
-                              parceiroNome={entry.bookmaker_id ? selectedBookmaker?.parceiro_nome : null}
-                              saldoDisponivel={entry.bookmaker_id && !isEditing && saldoDisponivelPosicao !== null ? saldoDisponivelPosicao : undefined}
-                              moeda={selectedBookmaker?.moeda}
-                              showWalletIcon={true}
-                              saldoInsuficiente={saldoInsuficiente}
-                            />
-                          </div>
+                          {/* Parceiro + Saldo IMEDIATAMENTE após entrada principal - DENTRO DO BLOCO */}
+                          {entry.bookmaker_id && (
+                            <div className="px-1 text-[11px] text-muted-foreground space-y-0.5">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="truncate max-w-[60%]">
+                                  {parceiroShortName || "—"}
+                                </span>
+                                {!isEditing && saldoDisponivelPosicao !== null && (
+                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                    <Wallet className={`h-3 w-3 ${saldoInsuficiente ? "text-destructive" : getCurrencyTextColor(selectedBookmaker?.moeda || "BRL")}`} />
+                                    <span className={`font-medium ${saldoInsuficiente ? "text-destructive" : getCurrencyTextColor(selectedBookmaker?.moeda || "BRL")}`}>
+                                      {formatCurrency(saldoDisponivelPosicao, selectedBookmaker?.moeda || "BRL")}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              {/* Breakdown do saldo operável - MULTI-MOEDA - TAMANHO MAIOR */}
+                              {/* Após 1ª aposta de bônus: mostra saldo total unificado com 🎁 */}
+                              {/* Antes da 1ª aposta: mostra breakdown separado (real + freebet + bônus) */}
+                              {!isEditing && selectedBookmaker && (() => {
+                                const hasBonusAndRolloverStarted = 
+                                  (Number(selectedBookmaker.saldo_bonus) || 0) > 0 && 
+                                  selectedBookmaker.bonus_rollover_started;
+                                
+                                // Após 1ª aposta: exibir saldo total integrado
+                                if (hasBonusAndRolloverStarted) {
+                                  const saldoTotal = 
+                                    (Number(selectedBookmaker.saldo_real) || 0) + 
+                                    (Number(selectedBookmaker.saldo_freebet) || 0) + 
+                                    (Number(selectedBookmaker.saldo_bonus) || 0);
+                                  return (
+                                    <div className="flex items-center justify-center gap-1 text-[10px]">
+                                      <span className={getCurrencyTextColor(selectedBookmaker.moeda)}>
+                                        {formatCurrency(saldoTotal, selectedBookmaker.moeda)}
+                                      </span>
+                                      <span className="text-purple-400" title="Bônus ativo em rollover">🎁</span>
+                                    </div>
+                                  );
+                                }
+                                
+                                // Antes da 1ª aposta ou sem bônus: breakdown separado
+                                return (
+                                  <div className="flex items-center justify-center gap-2 text-[10px] flex-wrap">
+                                    <span className="text-emerald-400">
+                                      {getCurrencySymbol(selectedBookmaker.moeda)} {(Number(selectedBookmaker.saldo_real) || 0).toFixed(0)}
+                                    </span>
+                                    {(Number(selectedBookmaker.saldo_freebet) || 0) > 0 && (
+                                      <span className="text-amber-400">
+                                        FB: {(Number(selectedBookmaker.saldo_freebet) || 0).toFixed(0)}
+                                      </span>
+                                    )}
+                                    {(Number(selectedBookmaker.saldo_bonus) || 0) > 0 && (
+                                      <span className="text-purple-400">
+                                        🎁: {(Number(selectedBookmaker.saldo_bonus) || 0).toFixed(0)}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                              {/* Aviso de saldo insuficiente (apenas para criação) */}
+                              {!isEditing && saldoInsuficiente && (
+                                <Badge variant="destructive" className="text-[10px] h-4 px-1 w-fit">
+                                  Saldo Insuficiente
+                                </Badge>
+                              )}
+                            </div>
+                          )}
                           
                           {/* ========== ENTRADAS ADICIONAIS (MÚLTIPLAS ENTRADAS) ========== */}
                           {!isEditing && (

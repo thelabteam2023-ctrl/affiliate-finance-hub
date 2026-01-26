@@ -113,16 +113,14 @@ export function BookmakerSelectOption({
 
 /**
  * COMPONENTE DE TRIGGER para exibir bookmaker selecionado no botão do Select
- * Formato simplificado: apenas logo + nome (sem parceiro, saldo, moeda)
- * O metadado deve ser renderizado FORA do trigger para estabilidade de layout
+ * Formato visual igual ao dropdown (logo, nome, badge de moeda, parceiro, saldo)
  */
 export interface BookmakerSelectTriggerData {
   nome: string;
+  parceiro_nome: string | null;
+  moeda: string;
+  saldo_operavel: number;
   logo_url?: string | null;
-  // Propriedades opcionais para compatibilidade
-  parceiro_nome?: string | null;
-  moeda?: string;
-  saldo_operavel?: number;
 }
 
 interface BookmakerSelectTriggerProps {
