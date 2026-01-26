@@ -2808,72 +2808,90 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   <tr className="border-b border-border/30">
                     {/* Casa */}
                     <td className="px-2 py-3">
-                      <Select 
-                        value={bookmakerId} 
-                        onValueChange={(val) => {
-                          setBookmakerId(val);
-                          const selectedBk = bookmakers.find(b => b.id === val);
-                          if (selectedBk) {
-                            setBookmakerSaldo({ 
-                              saldo: selectedBk.saldo_total, 
-                              saldoDisponivel: selectedBk.saldo_disponivel, 
-                              saldoFreebet: selectedBk.saldo_freebet, 
-                              saldoBonus: selectedBk.saldo_bonus,
-                              saldoOperavel: selectedBk.saldo_operavel,
-                              moeda: selectedBk.moeda,
-                              bonusRolloverStarted: selectedBk.bonus_rollover_started || false
-                            });
-                          } else {
-                            setBookmakerSaldo(null);
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="h-9 text-xs w-full border-dashed">
-                          <BookmakerSelectTrigger
-                            bookmaker={bookmakerId ? (() => {
-                              const selectedBk = bookmakers.find(b => b.id === bookmakerId);
-                              if (selectedBk) {
-                                const saldoDisplay = saldoComReservas?.disponivel ?? selectedBk.saldo_operavel;
-                                return {
-                                  nome: selectedBk.nome,
-                                  parceiro_nome: selectedBk.parceiro_nome,
-                                  moeda: selectedBk.moeda,
-                                  saldo_operavel: saldoDisplay,
-                                  logo_url: selectedBk.logo_url,
-                                };
-                              }
-                              return null;
-                            })() : null}
-                            placeholder="Selecione"
-                          />
-                        </SelectTrigger>
-                        <SelectContent className="max-w-[400px]">
-                          {bookmakers.length === 0 ? (
-                            <div className="p-3 text-center text-sm text-muted-foreground">
-                              Nenhuma bookmaker com saldo disponível
+                      <div className="flex flex-col gap-1">
+                        <Select 
+                          value={bookmakerId} 
+                          onValueChange={(val) => {
+                            setBookmakerId(val);
+                            const selectedBk = bookmakers.find(b => b.id === val);
+                            if (selectedBk) {
+                              setBookmakerSaldo({ 
+                                saldo: selectedBk.saldo_total, 
+                                saldoDisponivel: selectedBk.saldo_disponivel, 
+                                saldoFreebet: selectedBk.saldo_freebet, 
+                                saldoBonus: selectedBk.saldo_bonus,
+                                saldoOperavel: selectedBk.saldo_operavel,
+                                moeda: selectedBk.moeda,
+                                bonusRolloverStarted: selectedBk.bonus_rollover_started || false
+                              });
+                            } else {
+                              setBookmakerSaldo(null);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-9 text-xs w-full border-dashed">
+                            <BookmakerSelectTrigger
+                              bookmaker={bookmakerId ? (() => {
+                                const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+                                if (selectedBk) {
+                                  return {
+                                    nome: selectedBk.nome,
+                                    parceiro_nome: selectedBk.parceiro_nome,
+                                    moeda: selectedBk.moeda,
+                                    saldo_operavel: selectedBk.saldo_operavel,
+                                    logo_url: selectedBk.logo_url,
+                                  };
+                                }
+                                return null;
+                              })() : null}
+                              placeholder="Selecione"
+                            />
+                          </SelectTrigger>
+                          <SelectContent className="max-w-[400px]">
+                            {bookmakers.length === 0 ? (
+                              <div className="p-3 text-center text-sm text-muted-foreground">
+                                Nenhuma bookmaker com saldo disponível
+                              </div>
+                            ) : (
+                              bookmakers.map((bk) => (
+                                <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
+                                  <BookmakerSelectOption 
+                                    bookmaker={{
+                                      id: bk.id,
+                                      nome: bk.nome,
+                                      parceiro_nome: bk.parceiro_nome,
+                                      moeda: bk.moeda,
+                                      saldo_operavel: bk.saldo_operavel,
+                                      saldo_disponivel: bk.saldo_disponivel,
+                                      saldo_freebet: bk.saldo_freebet,
+                                      saldo_bonus: bk.saldo_bonus,
+                                      logo_url: bk.logo_url,
+                                      bonus_rollover_started: bk.bonus_rollover_started,
+                                    }}
+                                  />
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        
+                        {/* Detalhes abaixo do select: Parceiro • Moeda • Saldo */}
+                        {bookmakerId && (() => {
+                          const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+                          if (!selectedBk) return null;
+                          const saldoDisplay = saldoComReservas?.disponivel ?? selectedBk.saldo_operavel;
+                          const parceiroShort = selectedBk.parceiro_nome?.split(' ')[0] || '';
+                          return (
+                            <div className="text-[10px] text-muted-foreground text-center truncate px-1">
+                              {parceiroShort && <span>{parceiroShort}</span>}
+                              {parceiroShort && <span className="mx-1">•</span>}
+                              <span className={getCurrencyTextColor(selectedBk.moeda)}>
+                                {formatCurrencyCanonical(saldoDisplay, selectedBk.moeda)}
+                              </span>
                             </div>
-                          ) : (
-                            bookmakers.map((bk) => (
-                              <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
-                                <BookmakerSelectOption 
-                                  bookmaker={{
-                                    id: bk.id,
-                                    nome: bk.nome,
-                                    parceiro_nome: bk.parceiro_nome,
-                                    moeda: bk.moeda,
-                                    saldo_operavel: bk.saldo_operavel,
-                                    saldo_disponivel: bk.saldo_disponivel,
-                                    saldo_freebet: bk.saldo_freebet,
-                                    saldo_bonus: bk.saldo_bonus,
-                                    logo_url: bk.logo_url,
-                                    bonus_rollover_started: bk.bonus_rollover_started,
-                                  }}
-                                />
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                          );
+                        })()}
+                      </div>
                     </td>
                     {/* Odd */}
                     <td className="px-1 py-3">
