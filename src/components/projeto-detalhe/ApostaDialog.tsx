@@ -2595,6 +2595,24 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             showCloseButton={!embedded}
             onClose={() => onOpenChange(false)}
             embedded={embedded}
+            // Campos de jogo no header
+            esporte={esporte}
+            onEsporteChange={(val) => {
+              setEsporte(val);
+              incrementSportUsage(val);
+            }}
+            evento={evento}
+            onEventoChange={setEvento}
+            mercado={mercado}
+            onMercadoChange={(val) => {
+              setMercado(val);
+              setSelecao("");
+              if (mercadoFromPrint) setMercadoFromPrint(false);
+            }}
+            esporteNeedsReview={printFieldsNeedingReview.esporte}
+            eventoNeedsReview={printFieldsNeedingReview.evento}
+            mercadoNeedsReview={printFieldsNeedingReview.mercado}
+            esportesList={getSortedEsportes()}
           />
 
           {/* CONTENT - Mesmo layout do Surebet: flex-1 overflow-y-auto p-4 space-y-4 */}
@@ -2699,58 +2717,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </button>
             </div>
 
-            {/* Layout padronizado com Arbitragem: Esporte | Evento | Mercado em grid-cols-3 */}
-            <div className="grid grid-cols-3 gap-3 pb-3 border-b border-border/50">
-              {/* Esporte */}
-              <div>
-                <Label className={`text-xs ${printFieldsNeedingReview.esporte ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                  Esporte {printFieldsNeedingReview.esporte && <span className="text-[9px]">⚠</span>}
-                </Label>
-                <Select value={esporte} onValueChange={(val) => {
-                  setEsporte(val);
-                  incrementSportUsage(val);
-                }}>
-                  <SelectTrigger className={`h-8 text-xs ${printFieldsNeedingReview.esporte ? 'border-amber-500/50' : ''}`}>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getSortedEsportes().map((esp) => (
-                      <SelectItem key={esp} value={esp}>{esp}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Evento */}
-              <div>
-                <Label className={`text-xs ${printFieldsNeedingReview.evento ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                  Evento {printFieldsNeedingReview.evento && <span className="text-[9px]">⚠</span>}
-                </Label>
-                <Input
-                  value={evento}
-                  onChange={(e) => setEvento(e.target.value.toUpperCase())}
-                  placeholder="TIME 1 X TIME 2"
-                  className={`h-8 text-xs uppercase ${printFieldsNeedingReview.evento ? 'border-amber-500/50' : ''}`}
-                />
-              </div>
-              
-              {/* Mercado - Campo livre */}
-              <div>
-                <Label className={`text-xs ${printFieldsNeedingReview.mercado ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                  Mercado {printFieldsNeedingReview.mercado && <span className="text-[9px]">⚠</span>}
-                </Label>
-                <Input
-                  value={mercado}
-                  onChange={(e) => {
-                    setMercado(e.target.value);
-                    setSelecao("");
-                    if (mercadoFromPrint) setMercadoFromPrint(false);
-                  }}
-                  placeholder="Ex: Resultado Final"
-                  className={`h-8 text-xs ${printFieldsNeedingReview.mercado ? 'border-amber-500/50' : ''}`}
-                />
-              </div>
-            </div>
+            {/* Campos de jogo (Esporte/Evento/Mercado) agora estão no BetFormHeader acima */}
 
             {/* Data/Hora - Linha separada para manter layout consistente */}
             <div className="flex items-center gap-2 pb-3 border-b border-border/50">

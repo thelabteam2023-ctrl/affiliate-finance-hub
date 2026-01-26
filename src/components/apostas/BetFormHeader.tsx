@@ -4,6 +4,7 @@
  * Componente padronizado que exibe:
  * - Título do formulário (Aposta Simples, Aposta Múltipla, Arbitragem)
  * - Seletores de Estratégia e Contexto
+ * - Campos de jogo (Esporte, Evento, Mercado)
  * - Botão de Importar (opcional)
  * 
  * Baseado no layout do formulário de Arbitragem como referência.
@@ -14,6 +15,7 @@ import { Calculator, Layers, FileStack, Camera, Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -38,6 +40,13 @@ import {
 } from "@/lib/apostaConstants";
 
 export type BetFormType = "simples" | "multipla" | "arbitragem";
+
+// Lista de esportes disponíveis
+const ESPORTES = [
+  "Futebol", "Basquete", "Tênis", "Baseball", "Hockey", 
+  "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe",
+  "League of Legends", "Counter-Strike", "Dota 2", "eFootball"
+];
 
 interface BetFormHeaderProps {
   /** Tipo do formulário */
@@ -70,6 +79,20 @@ interface BetFormHeaderProps {
   showCloseButton?: boolean;
   onClose?: () => void;
   embedded?: boolean;
+  
+  /** Campos de jogo (Esporte, Evento, Mercado) - Opcionais */
+  esporte?: string;
+  onEsporteChange?: (value: string) => void;
+  evento?: string;
+  onEventoChange?: (value: string) => void;
+  mercado?: string;
+  onMercadoChange?: (value: string) => void;
+  /** Destaques de review do OCR */
+  esporteNeedsReview?: boolean;
+  eventoNeedsReview?: boolean;
+  mercadoNeedsReview?: boolean;
+  /** Lista customizada de esportes ordenados por frequência */
+  esportesList?: string[];
 }
 
 const FormTypeConfig: Record<BetFormType, { 
@@ -117,6 +140,17 @@ export function BetFormHeader({
   showCloseButton = false,
   onClose,
   embedded = false,
+  // Campos de jogo
+  esporte,
+  onEsporteChange,
+  evento,
+  onEventoChange,
+  mercado,
+  onMercadoChange,
+  esporteNeedsReview = false,
+  eventoNeedsReview = false,
+  mercadoNeedsReview = false,
+  esportesList,
 }: BetFormHeaderProps) {
   const config = FormTypeConfig[formType];
   const Icon = config.icon;
@@ -125,6 +159,12 @@ export function BetFormHeader({
   const displayEstrategia = lockedEstrategia || estrategia;
   
   const title = isEditing ? config.editTitle : config.title;
+  
+  // Lista de esportes a usar (customizada ou padrão)
+  const esportesDisponiveis = esportesList || ESPORTES;
+  
+  // Verifica se os campos de jogo foram fornecidos
+  const hasGameFields = onEsporteChange !== undefined;
 
   return (
     <div className="border-b border-border/50 bg-muted/20">
@@ -262,6 +302,74 @@ export function BetFormHeader({
           </div>
         </div>
       </div>
+      
+      {/* Linha 3: Esporte, Evento, Mercado - Se fornecidos */}
+      {hasGameFields && (
+        <div className="px-4 pb-3">
+          <div className="grid grid-cols-3 gap-3">
+            {/* Esporte */}
+            <div className="space-y-1">
+              <Label className={cn(
+                "text-xs",
+                esporteNeedsReview ? "text-amber-500" : "text-muted-foreground"
+              )}>
+                Esporte {esporteNeedsReview && <span className="text-[9px]">⚠</span>}
+              </Label>
+              <Select value={esporte || "Futebol"} onValueChange={onEsporteChange}>
+                <SelectTrigger className={cn(
+                  "h-8 text-xs",
+                  esporteNeedsReview && "border-amber-500/50"
+                )}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {esportesDisponiveis.map(e => (
+                    <SelectItem key={e} value={e}>{e}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Evento */}
+            <div className="space-y-1">
+              <Label className={cn(
+                "text-xs",
+                eventoNeedsReview ? "text-amber-500" : "text-muted-foreground"
+              )}>
+                Evento {eventoNeedsReview && <span className="text-[9px]">⚠</span>}
+              </Label>
+              <Input
+                value={evento || ""}
+                onChange={(e) => onEventoChange?.(e.target.value.toUpperCase())}
+                placeholder="TIME 1 X TIME 2"
+                className={cn(
+                  "h-8 text-xs uppercase",
+                  eventoNeedsReview && "border-amber-500/50"
+                )}
+              />
+            </div>
+            
+            {/* Mercado */}
+            <div className="space-y-1">
+              <Label className={cn(
+                "text-xs",
+                mercadoNeedsReview ? "text-amber-500" : "text-muted-foreground"
+              )}>
+                Mercado {mercadoNeedsReview && <span className="text-[9px]">⚠</span>}
+              </Label>
+              <Input
+                value={mercado || ""}
+                onChange={(e) => onMercadoChange?.(e.target.value)}
+                placeholder="Mercado"
+                className={cn(
+                  "h-8 text-xs",
+                  mercadoNeedsReview && "border-amber-500/50"
+                )}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
