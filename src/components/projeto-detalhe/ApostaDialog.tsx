@@ -3051,815 +3051,593 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             {/* ========== MODO EXCHANGE ========== */}
             {tipoAposta === "exchange" && (
               <div className="space-y-4">
-                {/* Seletor de tipo de operação com ícone de ajuda */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-center gap-2">
-                    <Label className="block text-center uppercase text-xs tracking-wider">Tipo de Operação</Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                            <HelpCircle className="h-4 w-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-[320px] p-4 space-y-3">
-                          <div>
-                            <p className="font-semibold text-emerald-400">📗 BACK (a favor)</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Aposta em um resultado acontecer diretamente em uma exchange. 
-                              O lucro vem se o resultado ocorrer.
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-rose-400">📕 LAY (contra)</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Aposta contra um resultado acontecer. Você assume o papel da 
-                              "casa" e paga se o resultado ocorrer.
-                            </p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-purple-400">🛡️ COBERTURA LAY</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Protege uma aposta em bookmaker usando Lay na exchange. Ideal para:
-                            </p>
-                            <ul className="text-xs text-muted-foreground mt-1 list-disc list-inside">
-                              <li>Extrair valor de bônus de boas-vindas</li>
-                              <li>Matched Betting (lucro garantido)</li>
-                              <li>Garantir lucro em Free Bets</li>
-                            </ul>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <div className="flex justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setTipoOperacaoExchange("back")}
-                      className={`flex-1 max-w-[140px] px-3 py-2.5 rounded-lg border-2 transition-all ${
-                        tipoOperacaoExchange === "back"
-                          ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
-                          : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                      }`}
-                    >
-                      <div className="font-semibold text-sm">BACK</div>
-                      <div className="text-[10px] opacity-70">(a favor)</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTipoOperacaoExchange("lay")}
-                      className={`flex-1 max-w-[140px] px-3 py-2.5 rounded-lg border-2 transition-all ${
-                        tipoOperacaoExchange === "lay"
-                          ? "border-rose-500 bg-rose-500/10 text-rose-400"
-                          : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                      }`}
-                    >
-                      <div className="font-semibold text-sm">LAY</div>
-                      <div className="text-[10px] opacity-70">(contra)</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTipoOperacaoExchange("cobertura")}
-                      className={`flex-1 max-w-[180px] px-3 py-2.5 rounded-lg border-2 transition-all ${
-                        tipoOperacaoExchange === "cobertura"
-                          ? "border-purple-500 bg-purple-500/10 text-purple-400"
-                          : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                      }`}
-                    >
-                      <div className="font-semibold text-sm">COBERTURA</div>
-                      <div className="text-[10px] opacity-70">(Back + Lay)</div>
-                    </button>
-                  </div>
+                {/* Seletor de tipo de operação - estilo tabs com underline */}
+                <div className="flex items-center justify-center border-b border-border/30">
+                  <button
+                    type="button"
+                    onClick={() => setTipoOperacaoExchange("back")}
+                    className={`relative px-5 py-2.5 text-sm font-medium transition-colors ${
+                      tipoOperacaoExchange === "back"
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    BACK
+                    {tipoOperacaoExchange === "back" && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTipoOperacaoExchange("lay")}
+                    className={`relative px-5 py-2.5 text-sm font-medium transition-colors ${
+                      tipoOperacaoExchange === "lay"
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    LAY
+                    {tipoOperacaoExchange === "lay" && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTipoOperacaoExchange("cobertura")}
+                    className={`relative px-5 py-2.5 text-sm font-medium transition-colors ${
+                      tipoOperacaoExchange === "cobertura"
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    COBERTURA
+                    {tipoOperacaoExchange === "cobertura" && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                    )}
+                  </button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="ml-2 text-muted-foreground hover:text-foreground transition-colors">
+                          <HelpCircle className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-[280px] p-3 text-xs space-y-2">
+                        <p><span className="font-medium">BACK:</span> Aposta a favor de um resultado.</p>
+                        <p><span className="font-medium">LAY:</span> Aposta contra um resultado.</p>
+                        <p><span className="font-medium">COBERTURA:</span> Back + Lay para lucro garantido.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
 
-                {/* Campos para Back ou Lay simples */}
+                {/* BACK ou LAY simples - Layout tabular igual ao Bookmaker */}
                 {(tipoOperacaoExchange === "back" || tipoOperacaoExchange === "lay") && (
-                  <div className={`p-4 rounded-lg border ${
-                    tipoOperacaoExchange === "back" 
-                      ? "border-emerald-500/30 bg-emerald-500/5" 
-                      : "border-rose-500/30 bg-rose-500/5"
-                  }`}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div className="space-y-1">
-                        <Label className="block text-center uppercase text-xs tracking-wider">Casa *</Label>
-                        <Select value={exchangeBookmakerId} onValueChange={setExchangeBookmakerId}>
-                          <SelectTrigger className="w-full">
-                            <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                              <span className="truncate">
-                                {exchangeBookmakerId ? (() => {
+                  <>
+                    <div className="border border-border/50 rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border/30 bg-muted/30">
+                            <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center w-[220px]">Casa</th>
+                            <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[70px]">
+                              Odd {tipoOperacaoExchange === "back" ? "Back" : "Lay"}
+                            </th>
+                            <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[90px]">Stake</th>
+                            <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[60px]">Com. %</th>
+                            <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[100px]">Linha</th>
+                            <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[100px]">
+                              {tipoOperacaoExchange === "back" ? "Retorno" : "Responsab."}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-border/30">
+                            {/* Casa */}
+                            <td className="px-2 py-3">
+                              <div className="flex flex-col gap-1">
+                                <Select value={exchangeBookmakerId} onValueChange={setExchangeBookmakerId}>
+                                  <SelectTrigger className="h-9 text-xs w-full border-dashed">
+                                    <BookmakerSelectTrigger
+                                      bookmaker={exchangeBookmakerId ? (() => {
+                                        const selectedBk = bookmakers.find(b => b.id === exchangeBookmakerId);
+                                        if (selectedBk) {
+                                          return {
+                                            nome: selectedBk.nome,
+                                            parceiro_nome: selectedBk.parceiro_nome,
+                                            moeda: selectedBk.moeda,
+                                            saldo_operavel: selectedBk.saldo_operavel,
+                                            logo_url: selectedBk.logo_url,
+                                          };
+                                        }
+                                        return null;
+                                      })() : null}
+                                      placeholder="Selecione"
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent className="max-w-[400px]">
+                                    {bookmakers.length === 0 ? (
+                                      <div className="p-3 text-center text-sm text-muted-foreground">
+                                        Nenhuma bookmaker disponível
+                                      </div>
+                                    ) : (
+                                      bookmakers.map((bk) => (
+                                        <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
+                                          <BookmakerSelectOption
+                                            bookmaker={{
+                                              id: bk.id,
+                                              nome: bk.nome,
+                                              parceiro_nome: bk.parceiro_nome,
+                                              moeda: bk.moeda,
+                                              saldo_operavel: bk.saldo_operavel,
+                                              saldo_disponivel: bk.saldo_disponivel,
+                                              saldo_freebet: bk.saldo_freebet,
+                                              saldo_bonus: bk.saldo_bonus,
+                                              logo_url: bk.logo_url,
+                                              bonus_rollover_started: bk.bonus_rollover_started,
+                                            }}
+                                          />
+                                        </SelectItem>
+                                      ))
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                                {/* Detalhes abaixo do select */}
+                                {exchangeBookmakerId && (() => {
                                   const selectedBk = bookmakers.find(b => b.id === exchangeBookmakerId);
-                                  return selectedBk ? selectedBk.nome : "Selecione";
-                                })() : "Selecione"}
-                              </span>
-                            </div>
-                          </SelectTrigger>
-                          <SelectContent className="max-w-[400px]">
-                            {bookmakers.length === 0 ? (
-                              <div className="p-3 text-center text-sm text-muted-foreground">
-                                Nenhuma bookmaker disponível
+                                  if (!selectedBk) return null;
+                                  const parceiroShort = selectedBk.parceiro_nome?.split(' ')[0] || '';
+                                  return (
+                                    <div className="text-[10px] text-muted-foreground text-center truncate px-1">
+                                      {parceiroShort && <span>{parceiroShort}</span>}
+                                      {parceiroShort && <span className="mx-1">•</span>}
+                                      <span className={getCurrencyTextColor(selectedBk.moeda)}>
+                                        {formatCurrencyCanonical(selectedBk.saldo_operavel, selectedBk.moeda)}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
-                            ) : (
-                              bookmakers.map((bk) => (
-                                <SelectItem key={bk.id} value={bk.id}>
-                                  <div className="flex items-center justify-between w-full gap-2 min-w-0">
-                                    <span className="truncate min-w-0 flex-1">
-                                      {bk.nome} • {bk.parceiro_nome || ""}
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                        {exchangeBookmakerSaldo && (
-                          <div className="text-center text-xs text-muted-foreground space-y-0.5">
-                            <div>
-                              Saldo Total: <span className={`font-medium ${tipoOperacaoExchange === "back" ? "text-emerald-400" : "text-rose-400"}`}>
-                                {exchangeBookmakerSaldo.moeda} {(exchangeBookmakerSaldo.saldo + exchangeBookmakerSaldo.saldoFreebet).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                            <div className="text-muted-foreground/70 text-[10px]">
-                              ({exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} real
-                              {exchangeBookmakerSaldo.saldoFreebet > 0 && (
-                                <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{exchangeBookmakerSaldo.moeda} {exchangeBookmakerSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} freebet</>
-                              )})
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="block text-center uppercase text-xs tracking-wider">
-                          Odd {tipoOperacaoExchange === "back" ? "Back" : "Lay"} *
-                        </Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="1.01"
-                          value={exchangeOdd}
-                          onChange={(e) => setExchangeOdd(e.target.value)}
-                          placeholder="Ex: 2.10"
-                          className="text-center"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="block text-center uppercase text-xs tracking-wider">
-                          {tipoOperacaoExchange === "back" ? "Stake" : "Stake Lay"} *
-                        </Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          value={exchangeStake}
-                          onChange={(e) => setExchangeStake(e.target.value)}
-                          placeholder="Ex: 100.00"
-                          className="text-center"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="block text-center uppercase text-xs tracking-wider">Comissão %</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={exchangeComissao}
-                          onChange={(e) => setExchangeComissao(e.target.value)}
-                          placeholder="5"
-                          className="text-center"
-                        />
-                      </div>
+                            </td>
+                            {/* Odd */}
+                            <td className="px-1 py-3">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="1.01"
+                                value={exchangeOdd}
+                                onChange={(e) => setExchangeOdd(e.target.value)}
+                                placeholder="0.00"
+                                className="h-8 text-xs text-center px-1 w-[72px] tabular-nums"
+                              />
+                            </td>
+                            {/* Stake */}
+                            <td className="px-1 py-3">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                value={exchangeStake}
+                                onChange={(e) => setExchangeStake(e.target.value)}
+                                placeholder="0.00"
+                                className="h-8 text-xs text-center px-1 w-[90px] tabular-nums"
+                              />
+                            </td>
+                            {/* Comissão */}
+                            <td className="px-1 py-3">
+                              <Input
+                                type="number"
+                                step="0.1"
+                                value={exchangeComissao}
+                                onChange={(e) => setExchangeComissao(e.target.value)}
+                                placeholder="5"
+                                className="h-8 text-xs text-center px-1 w-[60px] tabular-nums"
+                              />
+                            </td>
+                            {/* Linha (Seleção) */}
+                            <td className="px-1 py-3">
+                              <Input
+                                value={selecao}
+                                onChange={(e) => setSelecao(e.target.value)}
+                                placeholder="Linha"
+                                className="h-8 text-xs text-center px-1 w-full"
+                              />
+                            </td>
+                            {/* Retorno ou Responsabilidade */}
+                            <td className="px-1 py-3 text-center">
+                              {tipoOperacaoExchange === "back" ? (
+                                <span className={`text-xs font-medium tabular-nums ${
+                                  exchangeRetornoTotal !== null && exchangeRetornoTotal > 0 ? "text-primary" : "text-muted-foreground"
+                                }`}>
+                                  {exchangeRetornoTotal !== null ? formatCurrencyCanonical(exchangeRetornoTotal, exchangeBookmakerSaldo?.moeda || "BRL") : "-"}
+                                </span>
+                              ) : (
+                                <span className={`text-xs font-medium tabular-nums ${
+                                  exchangeLiability !== null && exchangeBookmakerSaldo && exchangeLiability > exchangeBookmakerSaldo.saldoDisponivel
+                                    ? "text-destructive"
+                                    : "text-muted-foreground"
+                                }`}>
+                                  {exchangeLiability !== null ? formatCurrencyCanonical(exchangeLiability, exchangeBookmakerSaldo?.moeda || "BRL") : "-"}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
-
-                    {/* Resultados calculados */}
-                    <div className={`mt-4 p-3 rounded-lg border ${
-                      tipoOperacaoExchange === "back"
-                        ? "border-emerald-500/20 bg-emerald-500/5"
-                        : "border-rose-500/20 bg-rose-500/5"
-                    }`}>
+                    
+                    {/* Resultados inline - discreto abaixo da tabela */}
+                    <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
                       {tipoOperacaoExchange === "back" ? (
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground flex items-center gap-1.5">
-                              <Coins className="h-3.5 w-3.5 text-emerald-500" />
-                              Lucro Potencial (líquido):
-                            </span>
-                            <span className="font-medium text-emerald-500">
-                              {exchangeLucroPotencial !== null ? formatCurrency(exchangeLucroPotencial) : "-"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground flex items-center gap-1.5">
-                              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                              Retorno Total (se ganhar):
-                            </span>
-                            <span className="font-medium text-emerald-500">
-                              {exchangeRetornoTotal !== null ? formatCurrency(exchangeRetornoTotal) : "-"}
-                            </span>
-                          </div>
-                        </div>
+                        <span>
+                          Lucro líquido: <span className="font-medium text-primary">
+                            {exchangeLucroPotencial !== null ? formatCurrencyCanonical(exchangeLucroPotencial, exchangeBookmakerSaldo?.moeda || "BRL") : "-"}
+                          </span>
+                        </span>
                       ) : (
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground flex items-center gap-1.5">
-                              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                              Responsabilidade (exposição):
+                        <>
+                          <span>
+                            Se ganhar: <span className="font-medium text-primary">
+                              +{exchangeLucroPotencial !== null ? formatCurrencyCanonical(exchangeLucroPotencial, exchangeBookmakerSaldo?.moeda || "BRL") : "-"}
                             </span>
-                            <span className={`font-medium ${
-                              exchangeLiability !== null && exchangeBookmakerSaldo && exchangeLiability > exchangeBookmakerSaldo.saldoDisponivel
-                                ? 'text-red-500'
-                                : 'text-amber-500'
-                            }`}>
-                              {exchangeLiability !== null ? formatCurrency(exchangeLiability) : "-"}
+                          </span>
+                          <span>
+                            Se perder: <span className="font-medium text-destructive">
+                              {exchangePrejuizo !== null ? formatCurrencyCanonical(exchangePrejuizo, exchangeBookmakerSaldo?.moeda || "BRL") : "-"}
                             </span>
-                          </div>
-                          {exchangeLiability !== null && exchangeBookmakerSaldo && exchangeLiability > exchangeBookmakerSaldo.saldoDisponivel && (
-                            <div className="flex items-center gap-1 text-red-400 text-xs bg-red-500/10 p-2 rounded">
-                              <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
-                              <span>
-                                Responsabilidade excede o saldo disponível ({formatCurrency(exchangeBookmakerSaldo.saldoDisponivel)}). 
-                                Necessário: {formatCurrency(exchangeLiability - exchangeBookmakerSaldo.saldoDisponivel)} adicional.
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground flex items-center gap-1.5">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                              Se GANHAR (lucro líquido):
-                            </span>
-                            <span className="font-medium text-emerald-500">
-                              {exchangeLucroPotencial !== null ? `+${formatCurrency(exchangeLucroPotencial)}` : "-"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground flex items-center gap-1.5">
-                              <XCircle className="h-3.5 w-3.5 text-red-500" />
-                              Se PERDER (responsabilidade):
-                            </span>
-                            <span className="font-medium text-red-500">
-                              {exchangePrejuizo !== null ? formatCurrency(exchangePrejuizo) : "-"}
-                            </span>
-                          </div>
-                        </div>
+                          </span>
+                        </>
                       )}
                     </div>
                     
-                    {/* Seletor de tipo de aposta Freebet para Exchange Back */}
+                    {/* Seletor Freebet - compacto */}
                     {tipoOperacaoExchange === "back" && exchangeBookmakerSaldo && exchangeBookmakerSaldo.saldoFreebet > 0 && (
-                      <div className="mt-4 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
-                        <Label className="block text-center uppercase text-xs tracking-wider text-amber-400 mb-2">Tipo de Aposta</Label>
-                        <div className="flex justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setTipoApostaExchangeBack("normal")}
-                            className={`flex flex-col items-center px-3 py-1.5 rounded-lg border-2 transition-all ${
-                              tipoApostaExchangeBack === "normal"
-                                ? "border-blue-500 bg-blue-500/10 text-blue-400"
-                                : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                            }`}
-                          >
-                            <Coins className="h-3 w-3 mb-0.5" />
-                            <div className="font-semibold text-[10px]">NORMAL</div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setTipoApostaExchangeBack("freebet_snr")}
-                            className={`flex flex-col items-center px-3 py-1.5 rounded-lg border-2 transition-all ${
-                              tipoApostaExchangeBack === "freebet_snr"
-                                ? "border-amber-500 bg-amber-500/10 text-amber-400"
-                                : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                            }`}
-                          >
-                            <Gift className="h-3 w-3 mb-0.5" />
-                            <div className="font-semibold text-[10px]">FB SNR</div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setTipoApostaExchangeBack("freebet_sr")}
-                            className={`flex flex-col items-center px-3 py-1.5 rounded-lg border-2 transition-all ${
-                              tipoApostaExchangeBack === "freebet_sr"
-                                ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
-                                : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                            }`}
-                          >
-                            <Gift className="h-3 w-3 mb-0.5" />
-                            <div className="font-semibold text-[10px]">FB SR</div>
-                          </button>
+                      <div className="flex items-center justify-center gap-4 pt-2 border-t border-border/30">
+                        <span className="text-xs text-muted-foreground">Tipo:</span>
+                        <div className="flex items-center gap-1 p-0.5 rounded bg-muted/30 border border-border/30">
+                          {[
+                            { value: "normal", label: "Normal" },
+                            { value: "freebet_snr", label: "FB SNR" },
+                            { value: "freebet_sr", label: "FB SR" },
+                          ].map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setTipoApostaExchangeBack(opt.value as any)}
+                              className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                                tipoApostaExchangeBack === opt.value
+                                  ? "bg-primary text-primary-foreground"
+                                  : "text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
                         </div>
-                        {tipoApostaExchangeBack !== "normal" && (
-                          <p className="text-center text-[10px] text-amber-400 mt-1">
-                            Stake será debitada do saldo de Freebet
-                          </p>
-                        )}
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
 
-                {/* Campos para Cobertura Lay */}
+                {/* Campos para Cobertura Lay - Layout tabular compacto */}
                 {tipoOperacaoExchange === "cobertura" && (
-                  <div className="space-y-4">
-                    {/* Seletor de Tipo de Aposta (Normal/Freebet) */}
-                    <div className="flex justify-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setTipoApostaBack("normal")}
-                        className={`flex flex-col items-center px-4 py-2.5 rounded-lg border-2 transition-all ${
-                          tipoApostaBack === "normal"
-                            ? "border-blue-500 bg-blue-500/10 text-blue-400"
-                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                        }`}
-                      >
-                        <Coins className="h-4 w-4 mb-1" />
-                        <div className="font-semibold text-xs">NORMAL</div>
-                        <div className="text-[9px] opacity-70">(Qualifying Bet)</div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTipoApostaBack("freebet_snr")}
-                        className={`flex flex-col items-center px-4 py-2.5 rounded-lg border-2 transition-all ${
-                          tipoApostaBack === "freebet_snr"
-                            ? "border-amber-500 bg-amber-500/10 text-amber-400"
-                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                        }`}
-                      >
-                        <Gift className="h-4 w-4 mb-1" />
-                        <div className="font-semibold text-xs">FREEBET SNR</div>
-                        <div className="text-[9px] opacity-70">(Stake Não Volta)</div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTipoApostaBack("freebet_sr")}
-                        className={`flex flex-col items-center px-4 py-2.5 rounded-lg border-2 transition-all ${
-                          tipoApostaBack === "freebet_sr"
-                            ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
-                            : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                        }`}
-                      >
-                        <Gift className="h-4 w-4 mb-1" />
-                        <div className="font-semibold text-xs">FREEBET SR</div>
-                        <div className="text-[9px] opacity-70">(Stake Volta)</div>
-                      </button>
-                    </div>
-
-                    {/* Card explicativo - dinâmico baseado no tipo */}
-                    <div className={`p-3 rounded-lg border ${
-                      tipoApostaBack === "normal" 
-                        ? "bg-purple-500/5 border-purple-500/20" 
-                        : tipoApostaBack === "freebet_snr"
-                          ? "bg-amber-500/5 border-amber-500/20"
-                          : "bg-cyan-500/5 border-cyan-500/20"
-                    }`}>
-                      <div className="flex items-start gap-2">
-                        {tipoApostaBack === "normal" ? (
-                          <Shield className="h-5 w-5 text-purple-400 mt-0.5 flex-shrink-0" />
-                        ) : (
-                          <Gift className={`h-5 w-5 mt-0.5 flex-shrink-0 ${tipoApostaBack === "freebet_snr" ? "text-amber-400" : "text-cyan-400"}`} />
-                        )}
-                        <div>
-                          <p className={`text-sm font-medium ${
-                            tipoApostaBack === "normal" 
-                              ? "text-purple-400" 
-                              : tipoApostaBack === "freebet_snr" 
-                                ? "text-amber-400" 
-                                : "text-cyan-400"
-                          }`}>
-                            {tipoApostaBack === "normal" && "COBERTURA LAY - QUALIFYING BET"}
-                            {tipoApostaBack === "freebet_snr" && "EXTRAÇÃO DE FREEBET (SNR)"}
-                            {tipoApostaBack === "freebet_sr" && "EXTRAÇÃO DE FREEBET (SR)"}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {tipoApostaBack === "normal" && (
-                              "Aposta de qualificação onde você investe dinheiro real. A stake volta se você ganhar. Usado para desbloquear freebets ou cumprir rollover."
-                            )}
-                            {tipoApostaBack === "freebet_snr" && (
-                              <>
-                                <span className="font-medium text-amber-400">Stake Not Returned:</span> A freebet mais comum (~95% dos casos). Se ganhar, você recebe apenas o lucro - a stake não volta.
-                                <br />
-                                <span className="text-[10px] opacity-80 mt-1 block">💡 Dica: Odds maiores (4.0+) resultam em taxas de extração melhores.</span>
-                              </>
-                            )}
-                            {tipoApostaBack === "freebet_sr" && (
-                              <>
-                                <span className="font-medium text-cyan-400">Stake Returned:</span> Raro, mas algumas casas oferecem. Se ganhar, você recebe o lucro + valor da freebet.
-                                <br />
-                                <span className="text-[10px] opacity-80 mt-1 block">💡 Comportamento idêntico a uma aposta normal.</span>
-                              </>
-                            )}
-                          </p>
-                        </div>
+                  <>
+                    {/* Seletor tipo de aposta - inline compacto */}
+                    <div className="flex items-center justify-center gap-4 pb-3 border-b border-border/30">
+                      <span className="text-xs text-muted-foreground">Tipo:</span>
+                      <div className="flex items-center gap-1 p-0.5 rounded bg-muted/30 border border-border/30">
+                        {[
+                          { value: "normal", label: "Normal" },
+                          { value: "freebet_snr", label: "FB SNR" },
+                          { value: "freebet_sr", label: "FB SR" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setTipoApostaBack(opt.value as any)}
+                            className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                              tipoApostaBack === opt.value
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
-                    {/* Dois painéis lado a lado */}
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Painel BACK */}
-                      <div className="p-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5">
-                        <Label className="text-sm font-medium text-emerald-400 flex items-center gap-2 mb-3">
-                          <BookOpen className="h-4 w-4" />
-                          BACK (Aposta a Favor)
-                        </Label>
-                        <div className="space-y-3">
-                          <div className="space-y-1">
-                            <Label className="block text-center uppercase text-[10px] tracking-wider">Casa (Bookmaker) *</Label>
-                            <Select 
-                              value={coberturaBackBookmakerId} 
-                              onValueChange={(val) => {
-                                setCoberturaBackBookmakerId(val);
-                                const bk = bookmakers.find(b => b.id === val);
-                                if (bk) {
-                                  setCoberturaBackSaldo({ 
-                                    saldo: bk.saldo_total, 
-                                    saldoDisponivel: bk.saldo_disponivel, 
-                                    saldoFreebet: bk.saldo_freebet, 
-                                    saldoBonus: bk.saldo_bonus,
-                                    saldoOperavel: bk.saldo_operavel,
-                                    moeda: bk.moeda,
-                                    bonusRolloverStarted: bk.bonus_rollover_started || false
-                                  });
-                                } else {
-                                  setCoberturaBackSaldo(null);
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="w-full h-9 text-sm">
-                                <span className="truncate">
-                                  {coberturaBackBookmakerId ? (() => {
-                                    const selectedBk = bookmakers.find(b => b.id === coberturaBackBookmakerId);
-                                    return selectedBk ? selectedBk.nome : "Selecione";
-                                  })() : "Selecione"}
-                                </span>
-                              </SelectTrigger>
-                              <SelectContent className="max-w-[320px]">
-                                {bookmakers.map((bk) => (
-                                  <SelectItem key={bk.id} value={bk.id}>
-                                    <span className="truncate">{bk.nome} • {bk.parceiro_nome || ""}</span>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {coberturaBackSaldo && (
-                              <div className="text-center text-xs text-muted-foreground space-y-0.5">
-                                <div>
-                                  Saldo Total: <span className="font-medium text-emerald-400">
-                                    {coberturaBackSaldo.moeda} {(coberturaBackSaldo.saldo + coberturaBackSaldo.saldoFreebet).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                                <div className="text-muted-foreground/70 text-[10px]">
-                                  ({coberturaBackSaldo.moeda} {coberturaBackSaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} real
-                                  {coberturaBackSaldo.saldoFreebet > 0 && (
-                                    <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{coberturaBackSaldo.moeda} {coberturaBackSaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} freebet</>
-                                  )})
-                                </div>
+                    {/* Tabela BACK + LAY lado a lado */}
+                    <div className="border border-border/50 rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border/30 bg-muted/30">
+                            <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[60px]">Lado</th>
+                            <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[180px]">Casa</th>
+                            <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[70px]">Odd</th>
+                            <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[90px]">Stake</th>
+                            <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[60px]">Com. %</th>
+                            <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[90px]">Resultado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {/* Linha BACK */}
+                          <tr className="border-b border-border/30">
+                            <td className="px-2 py-3 text-center">
+                              <span className="text-xs font-medium text-foreground">BACK</span>
+                            </td>
+                            <td className="px-2 py-3">
+                              <div className="flex flex-col gap-1">
+                                <Select 
+                                  value={coberturaBackBookmakerId} 
+                                  onValueChange={(val) => {
+                                    setCoberturaBackBookmakerId(val);
+                                    const bk = bookmakers.find(b => b.id === val);
+                                    if (bk) {
+                                      setCoberturaBackSaldo({ 
+                                        saldo: bk.saldo_total, 
+                                        saldoDisponivel: bk.saldo_disponivel, 
+                                        saldoFreebet: bk.saldo_freebet, 
+                                        saldoBonus: bk.saldo_bonus,
+                                        saldoOperavel: bk.saldo_operavel,
+                                        moeda: bk.moeda,
+                                        bonusRolloverStarted: bk.bonus_rollover_started || false
+                                      });
+                                    } else {
+                                      setCoberturaBackSaldo(null);
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8 text-xs w-full border-dashed">
+                                    <BookmakerSelectTrigger
+                                      bookmaker={coberturaBackBookmakerId ? (() => {
+                                        const selectedBk = bookmakers.find(b => b.id === coberturaBackBookmakerId);
+                                        if (selectedBk) {
+                                          return {
+                                            nome: selectedBk.nome,
+                                            parceiro_nome: selectedBk.parceiro_nome,
+                                            moeda: selectedBk.moeda,
+                                            saldo_operavel: selectedBk.saldo_operavel,
+                                            logo_url: selectedBk.logo_url,
+                                          };
+                                        }
+                                        return null;
+                                      })() : null}
+                                      placeholder="Selecione"
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent className="max-w-[400px]">
+                                    {bookmakers.map((bk) => (
+                                      <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
+                                        <BookmakerSelectOption
+                                          bookmaker={{
+                                            id: bk.id,
+                                            nome: bk.nome,
+                                            parceiro_nome: bk.parceiro_nome,
+                                            moeda: bk.moeda,
+                                            saldo_operavel: bk.saldo_operavel,
+                                            saldo_disponivel: bk.saldo_disponivel,
+                                            saldo_freebet: bk.saldo_freebet,
+                                            saldo_bonus: bk.saldo_bonus,
+                                            logo_url: bk.logo_url,
+                                            bonus_rollover_started: bk.bonus_rollover_started,
+                                          }}
+                                        />
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                {coberturaBackBookmakerId && (() => {
+                                  const selectedBk = bookmakers.find(b => b.id === coberturaBackBookmakerId);
+                                  if (!selectedBk) return null;
+                                  const parceiroShort = selectedBk.parceiro_nome?.split(' ')[0] || '';
+                                  return (
+                                    <div className="text-[10px] text-muted-foreground text-center truncate px-1">
+                                      {parceiroShort && <span>{parceiroShort}</span>}
+                                      {parceiroShort && <span className="mx-1">•</span>}
+                                      <span className={getCurrencyTextColor(selectedBk.moeda)}>
+                                        {formatCurrencyCanonical(selectedBk.saldo_operavel, selectedBk.moeda)}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-2">
-                              <Label className="block text-center uppercase text-[10px] tracking-wider">Odd Back *</Label>
+                            </td>
+                            <td className="px-1 py-3">
                               <Input
                                 type="number"
                                 step="0.01"
                                 min="1.01"
                                 value={coberturaBackOdd}
                                 onChange={(e) => setCoberturaBackOdd(e.target.value)}
-                                placeholder="2.10"
-                                className="text-center h-9"
+                                placeholder="0.00"
+                                className="h-8 text-xs text-center px-1 w-[68px] tabular-nums"
                               />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="block text-center uppercase text-[10px] tracking-wider">
-                                {tipoApostaBack !== "normal" ? (
-                                  <span className="flex items-center justify-center gap-1">
-                                    <Gift className="h-3 w-3 text-amber-400" />
-                                    Stake (Freebet)
-                                  </span>
-                                ) : "Stake *"}
-                              </Label>
+                            </td>
+                            <td className="px-1 py-3">
                               <Input
                                 type="number"
                                 step="0.01"
                                 min="0.01"
                                 value={coberturaBackStake}
                                 onChange={(e) => setCoberturaBackStake(e.target.value)}
-                                placeholder="100.00"
-                                className={`text-center h-9 ${tipoApostaBack !== "normal" ? "border-amber-500/50" : ""}`}
+                                placeholder="0.00"
+                                className="h-8 text-xs text-center px-1 w-[90px] tabular-nums"
                               />
-                              {tipoApostaBack !== "normal" && coberturaBackSaldo && (
-                                <p className="text-[10px] text-amber-400 text-center">
-                                  Será debitado do saldo de Freebet
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="pt-2 border-t border-emerald-500/20 space-y-1">
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground">
-                                {tipoApostaBack === "freebet_snr" ? "Retorno (somente lucro):" : "Retorno Potencial:"}
-                              </span>
-                              <span className="font-medium text-emerald-400">
+                            </td>
+                            <td className="px-1 py-3 text-center">
+                              <span className="text-xs text-muted-foreground">-</span>
+                            </td>
+                            <td className="px-1 py-3 text-center">
+                              <span className={`text-xs font-medium tabular-nums ${
+                                coberturaLucroBack !== null && coberturaLucroBack >= 0 ? "text-primary" : "text-muted-foreground"
+                              }`}>
                                 {(() => {
                                   const odd = parseFloat(coberturaBackOdd);
                                   const stake = parseFloat(coberturaBackStake);
                                   if (!isNaN(odd) && !isNaN(stake) && odd > 1 && stake > 0) {
                                     if (tipoApostaBack === "freebet_snr") {
-                                      // SNR: retorna apenas lucro
-                                      return formatCurrency(stake * (odd - 1));
+                                      return formatCurrencyCanonical(stake * (odd - 1), coberturaBackSaldo?.moeda || "BRL");
                                     }
-                                    // Normal ou SR: retorna stake + lucro
-                                    return formatCurrency(odd * stake);
+                                    return formatCurrencyCanonical(odd * stake, coberturaBackSaldo?.moeda || "BRL");
                                   }
                                   return "-";
                                 })()}
                               </span>
-                            </div>
-                            {tipoApostaBack === "freebet_snr" && (
-                              <p className="text-[10px] text-amber-400/70 italic">
-                                * Stake da freebet não volta
-                              </p>
-                            )}
-                            {/* Gerou Freebet Back - só aparece se não está usando freebet */}
-                            {tipoApostaBack === "normal" && (
-                              <div className={`mt-2 pt-2 border-t border-emerald-500/20 flex items-center justify-between ${
-                                gerouFreebetBack ? "bg-emerald-500/10 -mx-2 px-2 py-1.5 rounded" : ""
-                              }`}>
-                                <button
-                                  type="button"
-                                  onClick={() => setGerouFreebetBack(!gerouFreebetBack)}
-                                  className="flex items-center gap-2 group"
+                            </td>
+                          </tr>
+                          
+                          {/* Linha LAY */}
+                          <tr className="border-b border-border/30">
+                            <td className="px-2 py-3 text-center">
+                              <span className="text-xs font-medium text-foreground">LAY</span>
+                            </td>
+                            <td className="px-2 py-3">
+                              <div className="flex flex-col gap-1">
+                                <Select 
+                                  value={coberturaLayBookmakerId} 
+                                  onValueChange={(val) => {
+                                    setCoberturaLayBookmakerId(val);
+                                    const bk = bookmakers.find(b => b.id === val);
+                                    if (bk) {
+                                      setCoberturaLaySaldo({ 
+                                        saldo: bk.saldo_total, 
+                                        saldoDisponivel: bk.saldo_disponivel, 
+                                        saldoFreebet: bk.saldo_freebet, 
+                                        saldoBonus: bk.saldo_bonus,
+                                        saldoOperavel: bk.saldo_operavel,
+                                        moeda: bk.moeda,
+                                        bonusRolloverStarted: bk.bonus_rollover_started || false
+                                      });
+                                    } else {
+                                      setCoberturaLaySaldo(null);
+                                    }
+                                  }}
                                 >
-                                  <div className={`relative w-8 h-[18px] rounded-full transition-all duration-200 ${
-                                    gerouFreebetBack 
-                                      ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]" 
-                                      : "bg-muted-foreground/30"
-                                  }`}>
-                                    <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all duration-200 ${
-                                      gerouFreebetBack 
-                                        ? "left-[16px]" 
-                                        : "left-[2px]"
-                                    }`} />
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Gift className={`h-3 w-3 transition-colors ${
-                                      gerouFreebetBack ? "text-emerald-400" : "text-muted-foreground"
-                                    }`} />
-                                    <span className={`text-[10px] font-medium transition-colors ${
-                                      gerouFreebetBack ? "text-emerald-400" : "text-muted-foreground"
-                                    }`}>
-                                      Gerou FB
-                                    </span>
-                                  </div>
-                                </button>
-                                {gerouFreebetBack && (
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0.01"
-                                    value={valorFreebetGeradaBack}
-                                    onChange={(e) => setValorFreebetGeradaBack(e.target.value)}
-                                    placeholder="Valor"
-                                    className="w-20 h-6 text-xs text-center border-emerald-500/30"
-                                  />
-                                )}
+                                  <SelectTrigger className="h-8 text-xs w-full border-dashed">
+                                    <BookmakerSelectTrigger
+                                      bookmaker={coberturaLayBookmakerId ? (() => {
+                                        const selectedBk = bookmakers.find(b => b.id === coberturaLayBookmakerId);
+                                        if (selectedBk) {
+                                          return {
+                                            nome: selectedBk.nome,
+                                            parceiro_nome: selectedBk.parceiro_nome,
+                                            moeda: selectedBk.moeda,
+                                            saldo_operavel: selectedBk.saldo_operavel,
+                                            logo_url: selectedBk.logo_url,
+                                          };
+                                        }
+                                        return null;
+                                      })() : null}
+                                      placeholder="Selecione"
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent className="max-w-[400px]">
+                                    {bookmakers.map((bk) => (
+                                      <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
+                                        <BookmakerSelectOption
+                                          bookmaker={{
+                                            id: bk.id,
+                                            nome: bk.nome,
+                                            parceiro_nome: bk.parceiro_nome,
+                                            moeda: bk.moeda,
+                                            saldo_operavel: bk.saldo_operavel,
+                                            saldo_disponivel: bk.saldo_disponivel,
+                                            saldo_freebet: bk.saldo_freebet,
+                                            saldo_bonus: bk.saldo_bonus,
+                                            logo_url: bk.logo_url,
+                                            bonus_rollover_started: bk.bonus_rollover_started,
+                                          }}
+                                        />
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                {coberturaLayBookmakerId && (() => {
+                                  const selectedBk = bookmakers.find(b => b.id === coberturaLayBookmakerId);
+                                  if (!selectedBk) return null;
+                                  const parceiroShort = selectedBk.parceiro_nome?.split(' ')[0] || '';
+                                  return (
+                                    <div className="text-[10px] text-muted-foreground text-center truncate px-1">
+                                      {parceiroShort && <span>{parceiroShort}</span>}
+                                      {parceiroShort && <span className="mx-1">•</span>}
+                                      <span className={getCurrencyTextColor(selectedBk.moeda)}>
+                                        {formatCurrencyCanonical(selectedBk.saldo_operavel, selectedBk.moeda)}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Painel LAY */}
-                      <div className="p-4 rounded-lg border border-rose-500/30 bg-rose-500/5">
-                        <Label className="text-sm font-medium text-rose-400 flex items-center gap-2 mb-3">
-                          <BookX className="h-4 w-4" />
-                          LAY (Aposta Contra)
-                        </Label>
-                        <div className="space-y-3">
-                          <div className="space-y-1">
-                            <Label className="block text-center uppercase text-[10px] tracking-wider">Casa (Exchange) *</Label>
-                            <Select 
-                              value={coberturaLayBookmakerId} 
-                              onValueChange={(val) => {
-                                setCoberturaLayBookmakerId(val);
-                                const bk = bookmakers.find(b => b.id === val);
-                                if (bk) {
-                                  setCoberturaLaySaldo({ 
-                                    saldo: bk.saldo_total, 
-                                    saldoDisponivel: bk.saldo_disponivel, 
-                                    saldoFreebet: bk.saldo_freebet, 
-                                    saldoBonus: bk.saldo_bonus,
-                                    saldoOperavel: bk.saldo_operavel,
-                                    moeda: bk.moeda,
-                                    bonusRolloverStarted: bk.bonus_rollover_started || false
-                                  });
-                                } else {
-                                  setCoberturaLaySaldo(null);
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="w-full h-9 text-sm">
-                                <span className="truncate">
-                                  {coberturaLayBookmakerId ? (() => {
-                                    const selectedBk = bookmakers.find(b => b.id === coberturaLayBookmakerId);
-                                    return selectedBk ? selectedBk.nome : "Selecione";
-                                  })() : "Selecione"}
-                                </span>
-                              </SelectTrigger>
-                              <SelectContent className="max-w-[320px]">
-                                {bookmakers.map((bk) => (
-                                  <SelectItem key={bk.id} value={bk.id}>
-                                    <span className="truncate">{bk.nome} • {bk.parceiro_nome || ""}</span>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {coberturaLaySaldo && (
-                              <div className="text-center text-xs text-muted-foreground space-y-0.5">
-                                <div>
-                                  Saldo Total: <span className="font-medium text-rose-400">
-                                    {coberturaLaySaldo.moeda} {(coberturaLaySaldo.saldo + coberturaLaySaldo.saldoFreebet).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                                <div className="text-muted-foreground/70 text-[10px]">
-                                  ({coberturaLaySaldo.moeda} {coberturaLaySaldo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} real
-                                  {coberturaLaySaldo.saldoFreebet > 0 && (
-                                    <> + <Gift className="h-2.5 w-2.5 inline mx-0.5 text-amber-400" />{coberturaLaySaldo.moeda} {coberturaLaySaldo.saldoFreebet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} freebet</>
-                                  )})
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-2">
-                              <Label className="block text-center uppercase text-[10px] tracking-wider">Odd Lay *</Label>
+                            </td>
+                            <td className="px-1 py-3">
                               <Input
                                 type="number"
                                 step="0.01"
                                 min="1.01"
                                 value={coberturaLayOdd}
                                 onChange={(e) => setCoberturaLayOdd(e.target.value)}
-                                placeholder="2.08"
-                                className="text-center h-9"
+                                placeholder="0.00"
+                                className="h-8 text-xs text-center px-1 w-[68px] tabular-nums"
                               />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="block text-center uppercase text-[10px] tracking-wider">Comissão %</Label>
+                            </td>
+                            <td className="px-1 py-3 text-center">
+                              <span className={`text-xs font-medium tabular-nums text-muted-foreground`}>
+                                {coberturaLayStake !== null ? formatCurrencyCanonical(coberturaLayStake, coberturaLaySaldo?.moeda || "BRL") : "-"}
+                              </span>
+                            </td>
+                            <td className="px-1 py-3">
                               <Input
                                 type="number"
                                 step="0.1"
                                 value={coberturaLayComissao}
                                 onChange={(e) => setCoberturaLayComissao(e.target.value)}
                                 placeholder="5"
-                                className="text-center h-9"
+                                className="h-8 text-xs text-center px-1 w-[60px] tabular-nums"
                               />
-                            </div>
-                          </div>
-                          <div className="pt-2 border-t border-rose-500/20 space-y-1">
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground">Stake Lay (calculado):</span>
-                              <span className="font-medium text-rose-400">
-                                {coberturaLayStake !== null ? formatCurrency(coberturaLayStake) : "-"}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground">Responsabilidade:</span>
-                              <span className={`font-medium ${
+                            </td>
+                            <td className="px-1 py-3 text-center">
+                              <span className={`text-xs font-medium tabular-nums ${
                                 coberturaResponsabilidade !== null && coberturaLaySaldo && coberturaResponsabilidade > coberturaLaySaldo.saldoDisponivel
-                                  ? 'text-red-400'
-                                  : 'text-amber-400'
+                                  ? "text-destructive"
+                                  : "text-muted-foreground"
                               }`}>
-                                {coberturaResponsabilidade !== null ? formatCurrency(coberturaResponsabilidade) : "-"}
+                                {coberturaResponsabilidade !== null ? formatCurrencyCanonical(coberturaResponsabilidade, coberturaLaySaldo?.moeda || "BRL") : "-"}
                               </span>
-                            </div>
-                            {coberturaResponsabilidade !== null && coberturaLaySaldo && coberturaResponsabilidade > coberturaLaySaldo.saldoDisponivel && (
-                              <div className="flex items-center gap-1 text-red-400 text-[10px] mt-1">
-                                <AlertTriangle className="h-3 w-3" />
-                                <span>Responsabilidade excede o saldo disponível!</span>
-                              </div>
-                            )}
-                            {/* Gerou Freebet Lay */}
-                            <div className={`mt-2 pt-2 border-t border-rose-500/20 flex items-center justify-between ${
-                              gerouFreebetLay ? "bg-rose-500/10 -mx-2 px-2 py-1.5 rounded" : ""
-                            }`}>
-                              <button
-                                type="button"
-                                onClick={() => setGerouFreebetLay(!gerouFreebetLay)}
-                                className="flex items-center gap-2 group"
-                              >
-                                <div className={`relative w-8 h-[18px] rounded-full transition-all duration-200 ${
-                                  gerouFreebetLay 
-                                    ? "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.4)]" 
-                                    : "bg-muted-foreground/30"
-                                }`}>
-                                  <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all duration-200 ${
-                                    gerouFreebetLay 
-                                      ? "left-[16px]" 
-                                      : "left-[2px]"
-                                  }`} />
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Gift className={`h-3 w-3 transition-colors ${
-                                    gerouFreebetLay ? "text-rose-400" : "text-muted-foreground"
-                                  }`} />
-                                  <span className={`text-[10px] font-medium transition-colors ${
-                                    gerouFreebetLay ? "text-rose-400" : "text-muted-foreground"
-                                  }`}>
-                                    Gerou FB
-                                  </span>
-                                </div>
-                              </button>
-                              {gerouFreebetLay && (
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0.01"
-                                  value={valorFreebetGeradaLay}
-                                  onChange={(e) => setValorFreebetGeradaLay(e.target.value)}
-                                  placeholder="Valor"
-                                  className="w-20 h-6 text-xs text-center border-rose-500/30"
-                                />
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
-
-                    {/* Resultado da Cobertura */}
-                    <div className="p-4 rounded-lg border border-purple-500/30 bg-purple-500/5">
-                      <Label className="text-sm font-medium text-purple-400 flex items-center gap-2 mb-3">
-                        <BarChart3 className="h-4 w-4" />
-                        RESULTADO DA COBERTURA
-                      </Label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground flex items-center gap-1.5">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                              Se BACK vencer:
-                            </span>
-                            <span className={`font-medium ${(coberturaLucroBack ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {coberturaLucroBack !== null ? formatCurrency(coberturaLucroBack) : "-"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground flex items-center gap-1.5">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                              Se LAY vencer:
-                            </span>
-                            <span className={`font-medium ${(coberturaLucroLay ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {coberturaLucroLay !== null ? formatCurrency(coberturaLucroLay) : "-"}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="space-y-2 pl-4 border-l border-purple-500/20">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground flex items-center gap-1.5">
-                              <Coins className="h-3.5 w-3.5 text-purple-400" />
-                              Lucro Garantido:
-                            </span>
-                            <span className={`font-semibold text-lg ${(coberturaLucroGarantido ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {coberturaLucroGarantido !== null ? formatCurrency(coberturaLucroGarantido) : "-"}
-                            </span>
-                          </div>
-                          {/* Taxa de Extração - apenas para Freebet SNR ou SR, não para Normal */}
-                          {tipoApostaBack !== "normal" && (
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center text-sm">
-                                <span className="text-muted-foreground flex items-center gap-1.5">
-                                  <Percent className="h-3.5 w-3.5 text-purple-400" />
-                                  Taxa de Extração:
-                                </span>
-                                <span className={`font-medium ${
-                                  (coberturaTaxaExtracao ?? 0) >= 70 ? 'text-emerald-400' : 
-                                  (coberturaTaxaExtracao ?? 0) >= 60 ? 'text-amber-400' : 
-                                  'text-red-400'
-                                }`}>
-                                  {coberturaTaxaExtracao !== null ? `${coberturaTaxaExtracao.toFixed(2)}%` : "-"}
-                                </span>
-                              </div>
-                              {/* Barra de progresso visual para taxa de extração */}
-                              {coberturaTaxaExtracao !== null && (
-                                <div className="space-y-1">
-                                  <Progress 
-                                    value={Math.min(Math.max(coberturaTaxaExtracao, 0), 100)} 
-                                    className={`h-2 ${
-                                      coberturaTaxaExtracao >= 80 ? '[&>div]:bg-emerald-500' :
-                                      coberturaTaxaExtracao >= 70 ? '[&>div]:bg-emerald-400' :
-                                      coberturaTaxaExtracao >= 60 ? '[&>div]:bg-amber-400' :
-                                      '[&>div]:bg-red-400'
-                                    }`}
-                                  />
-                                  <div className="flex justify-between text-[9px] text-muted-foreground/60">
-                                    <span>Ruim</span>
-                                    <span>60%</span>
-                                    <span>70%</span>
-                                    <span>Ótimo</span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                    
+                    {/* Resultados inline - discreto */}
+                    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                      <span>
+                        Se BACK vencer: <span className={`font-medium ${(coberturaLucroBack ?? 0) >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                          {coberturaLucroBack !== null ? formatCurrencyCanonical(coberturaLucroBack, coberturaBackSaldo?.moeda || "BRL") : "-"}
+                        </span>
+                      </span>
+                      <span>
+                        Se LAY vencer: <span className={`font-medium ${(coberturaLucroLay ?? 0) >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                          {coberturaLucroLay !== null ? formatCurrencyCanonical(coberturaLucroLay, coberturaLaySaldo?.moeda || "BRL") : "-"}
+                        </span>
+                      </span>
+                      <span>
+                        Lucro garantido: <span className={`font-semibold ${(coberturaLucroGarantido ?? 0) >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                          {coberturaLucroGarantido !== null ? formatCurrencyCanonical(coberturaLucroGarantido, coberturaBackSaldo?.moeda || "BRL") : "-"}
+                        </span>
+                      </span>
+                      {tipoApostaBack !== "normal" && coberturaTaxaExtracao !== null && (
+                        <span>
+                          Taxa extração: <span className={`font-medium ${
+                            coberturaTaxaExtracao >= 70 ? 'text-primary' : 
+                            coberturaTaxaExtracao >= 60 ? 'text-warning' : 
+                            'text-destructive'
+                          }`}>
+                            {coberturaTaxaExtracao.toFixed(1)}%
+                          </span>
+                        </span>
+                      )}
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             )}
