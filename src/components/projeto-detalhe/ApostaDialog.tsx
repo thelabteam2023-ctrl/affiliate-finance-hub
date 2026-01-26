@@ -2728,81 +2728,68 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </div>
             </div>
 
-            {/* Linha: Campo "Linha" (antes era "Seleção") - igual à Arbitragem */}
-            <div className="space-y-1.5">
-              <Label className={`text-xs ${printFieldsNeedingReview.selecao ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                Linha {printFieldsNeedingReview.selecao && <span className="text-[9px]">⚠</span>}
-              </Label>
-              <Input
-                value={selecao}
-                onChange={(e) => {
-                  setSelecao(e.target.value);
-                  if (selecaoFromPrint) setSelecaoFromPrint(false);
-                }}
-                placeholder="Ex: Over 2.5, Casa, Jogador 1"
-                className={`h-8 text-xs ${printFieldsNeedingReview.selecao ? 'border-amber-500/50' : ''}`}
-              />
-            </div>
-
-            {/* Abas: Bookmaker vs Exchange */}
-            <Tabs value={tipoAposta} onValueChange={(v) => setTipoAposta(v as "bookmaker" | "exchange")} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="bookmaker">Bookmaker</TabsTrigger>
-                <TabsTrigger value="exchange">Exchange</TabsTrigger>
-              </TabsList>
-
-              {/* Aba Bookmaker */}
-              <TabsContent value="bookmaker" className="space-y-4 mt-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <div className="space-y-2">
-                    <Label className="block text-center uppercase text-xs tracking-wider">Bookmaker *</Label>
-                    <Select 
-                      value={bookmakerId} 
-                      onValueChange={(val) => {
-                        setBookmakerId(val);
-                        const selectedBk = bookmakers.find(b => b.id === val);
-                        if (selectedBk) {
-                          setBookmakerSaldo({ 
-                            saldo: selectedBk.saldo_total, 
-                            saldoDisponivel: selectedBk.saldo_disponivel, 
-                            saldoFreebet: selectedBk.saldo_freebet, 
-                            saldoBonus: selectedBk.saldo_bonus,
-                            saldoOperavel: selectedBk.saldo_operavel,
-                            moeda: selectedBk.moeda,
-                            bonusRolloverStarted: selectedBk.bonus_rollover_started || false
-                          });
-                        } else {
-                          setBookmakerSaldo(null);
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-full h-10">
-                        <BookmakerSelectTrigger
-                          bookmaker={bookmakerId ? (() => {
-                            const selectedBk = bookmakers.find(b => b.id === bookmakerId);
-                            if (selectedBk) {
-                              // Usar saldo com reservas (em tempo real) se disponível
-                              const saldoDisplay = saldoComReservas?.disponivel ?? selectedBk.saldo_operavel;
-                              return {
-                                nome: selectedBk.nome,
-                                parceiro_nome: selectedBk.parceiro_nome,
-                                moeda: selectedBk.moeda,
-                                saldo_operavel: saldoDisplay,
-                                logo_url: selectedBk.logo_url,
-                              };
-                            }
-                            return null;
-                          })() : null}
-                          placeholder="Selecione"
-                        />
-                      </SelectTrigger>
-                      <SelectContent className="max-w-[400px]">
-                        {bookmakers.length === 0 ? (
-                          <div className="p-3 text-center text-sm text-muted-foreground">
-                            Nenhuma bookmaker com saldo disponível
-                          </div>
-                        ) : (
-                          bookmakers.map((bk) => (
+            {/* Linha de entrada principal: Bookmaker | Odd | Stake | Linha | Retorno (estilo Arbitragem) */}
+            <div className="border border-border/50 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border/30 bg-muted/30">
+                    <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-left w-[180px]">Casa</th>
+                    <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[80px]">Odd</th>
+                    <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[100px]">Stake</th>
+                    <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center flex-1">Linha</th>
+                    <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[100px]">Retorno</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-border/30">
+                    {/* Casa */}
+                    <td className="px-2 py-3">
+                      <Select 
+                        value={bookmakerId} 
+                        onValueChange={(val) => {
+                          setBookmakerId(val);
+                          const selectedBk = bookmakers.find(b => b.id === val);
+                          if (selectedBk) {
+                            setBookmakerSaldo({ 
+                              saldo: selectedBk.saldo_total, 
+                              saldoDisponivel: selectedBk.saldo_disponivel, 
+                              saldoFreebet: selectedBk.saldo_freebet, 
+                              saldoBonus: selectedBk.saldo_bonus,
+                              saldoOperavel: selectedBk.saldo_operavel,
+                              moeda: selectedBk.moeda,
+                              bonusRolloverStarted: selectedBk.bonus_rollover_started || false
+                            });
+                          } else {
+                            setBookmakerSaldo(null);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-9 text-xs w-full border-dashed">
+                          <BookmakerSelectTrigger
+                            bookmaker={bookmakerId ? (() => {
+                              const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+                              if (selectedBk) {
+                                const saldoDisplay = saldoComReservas?.disponivel ?? selectedBk.saldo_operavel;
+                                return {
+                                  nome: selectedBk.nome,
+                                  parceiro_nome: selectedBk.parceiro_nome,
+                                  moeda: selectedBk.moeda,
+                                  saldo_operavel: saldoDisplay,
+                                  logo_url: selectedBk.logo_url,
+                                };
+                              }
+                              return null;
+                            })() : null}
+                            placeholder="Selecione"
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="max-w-[400px]">
+                          {bookmakers.length === 0 ? (
+                            <div className="p-3 text-center text-sm text-muted-foreground">
+                              Nenhuma bookmaker com saldo disponível
+                            </div>
+                          ) : (
+                            bookmakers.map((bk) => (
                               <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
                                 <BookmakerSelectOption 
                                   bookmaker={{
@@ -2820,134 +2807,128 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 />
                               </SelectItem>
                             ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {/* Saldo com reservas em tempo real */}
-                    {bookmakerId && saldoComReservas && saldoComReservas.reservado > 0 ? (
-                      <SaldoReservaCompact
-                        saldoContabil={saldoComReservas.contabil}
-                        saldoReservado={saldoComReservas.reservado}
-                        saldoDisponivel={saldoComReservas.disponivel}
-                        moeda={bookmakerSaldo?.moeda || 'BRL'}
-                        stakeAtual={parseFloat(stake) || 0}
-                        loading={saldoReservasLoading}
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    {/* Odd */}
+                    <td className="px-1 py-3">
+                      <Input
+                        type="number"
+                        step="0.001"
+                        min="1.01"
+                        value={odd}
+                        onChange={(e) => setOdd(e.target.value)}
+                        onBlur={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val < 1.01) {
+                            setOdd("1.01");
+                          }
+                        }}
+                        placeholder="0.00"
+                        className="h-8 text-xs text-center px-1 w-[72px] tabular-nums"
                       />
-                    ) : bookmakerSaldo && (
-                      <SaldoBreakdownDisplay
-                        saldoReal={bookmakerSaldo.saldoDisponivel}
-                        saldoFreebet={bookmakerSaldo.saldoFreebet}
-                        saldoBonus={bookmakerSaldo.saldoBonus}
-                        saldoOperavel={bookmakerSaldo.saldoOperavel}
-                        moeda={bookmakerSaldo.moeda}
-                        bonusRolloverStarted={bookmakerSaldo.bonusRolloverStarted}
+                    </td>
+                    {/* Stake */}
+                    <td className="px-1 py-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={stake}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (parseFloat(val) < 0) return;
+                          setStake(val);
+                        }}
+                        placeholder="0.00"
+                        className={`h-8 text-xs text-center px-1 w-[90px] tabular-nums ${(() => {
+                          const saldoDisponivelReal = saldoComReservas?.disponivel ?? bookmakers.find(b => b.id === bookmakerId)?.saldo_operavel ?? 0;
+                          const stakeNum = parseFloat(stake);
+                          if (!isNaN(stakeNum) && stakeNum > saldoDisponivelReal && bookmakerId) {
+                            return "border-destructive";
+                          }
+                          return "";
+                        })()}`}
                       />
-                    )}
-                    {/* Alerta contextual de impacto em bônus */}
-                    {bookmakerId && hasActiveBonus && registroValues.estrategia !== "EXTRACAO_BONUS" && (
-                      <BonusImpactAlert
-                        bookmakerId={bookmakerId}
-                        bookmakerNome={bookmakers.find(b => b.id === bookmakerId)?.nome || ""}
-                        estrategia={registroValues.estrategia || ""}
-                        hasActiveBonus={hasActiveBonus}
-                        rolloverProgress={bonusInfo?.rollover_progress}
-                        rolloverTarget={bonusInfo?.rollover_target_amount || undefined}
-                        minOdds={bonusInfo?.min_odds || undefined}
-                        currentOdd={parseFloat(odd) || undefined}
+                    </td>
+                    {/* Linha */}
+                    <td className="px-2 py-3">
+                      <Input
+                        value={selecao}
+                        onChange={(e) => {
+                          setSelecao(e.target.value);
+                          if (selecaoFromPrint) setSelecaoFromPrint(false);
+                        }}
+                        placeholder="Ex: Over 2.5, Casa, Jogador 1"
+                        className={`h-8 text-xs text-center px-2 border-dashed ${printFieldsNeedingReview.selecao ? 'border-amber-500/50' : ''}`}
                       />
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="block text-center uppercase text-xs tracking-wider">Odd *</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="1.01"
-                      value={odd}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        // Allow typing but validate on blur
-                        setOdd(val);
-                      }}
-                      onBlur={(e) => {
-                        const val = parseFloat(e.target.value);
-                        if (!isNaN(val) && val < 1.01) {
-                          setOdd("1.01");
-                        }
-                      }}
-                      placeholder="1.85"
-                      className={`text-center ${parseFloat(odd) <= 1 && odd !== "" ? "border-destructive" : ""}`}
+                    </td>
+                    {/* Retorno */}
+                    <td className="px-2 py-3 text-center">
+                      <div className="h-8 flex items-center justify-center rounded-md bg-muted/30 px-2 text-sm font-medium text-emerald-500 tabular-nums">
+                        {(() => {
+                          const oddNum = parseFloat(odd);
+                          const stakeNum = parseFloat(stake);
+                          const moeda = getSelectedBookmakerMoeda();
+                          if (!isNaN(oddNum) && !isNaN(stakeNum) && oddNum > 0 && stakeNum > 0) {
+                            const retorno = oddNum * stakeNum;
+                            return formatCurrencyWithSymbol(retorno, moeda);
+                          }
+                          return "—";
+                        })()}
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              {/* Linha de saldo/alertas abaixo da tabela */}
+              {bookmakerId && (
+                <div className="px-3 py-2 bg-muted/10 border-t border-border/30 flex items-center justify-between gap-4">
+                  {saldoComReservas && saldoComReservas.reservado > 0 ? (
+                    <SaldoReservaCompact
+                      saldoContabil={saldoComReservas.contabil}
+                      saldoReservado={saldoComReservas.reservado}
+                      saldoDisponivel={saldoComReservas.disponivel}
+                      moeda={bookmakerSaldo?.moeda || 'BRL'}
+                      stakeAtual={parseFloat(stake) || 0}
+                      loading={saldoReservasLoading}
                     />
-                    {parseFloat(odd) <= 1 && odd !== "" && (
-                      <p className="text-xs text-destructive mt-1">Odd deve ser &gt; 1.00</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="block text-center uppercase text-xs tracking-wider">Stake ({getSelectedBookmakerMoeda()}) *</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={stake}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        // Block negative values
-                        if (parseFloat(val) < 0) return;
-                        setStake(val);
-                      }}
-                      placeholder="100.00"
-                      className={`text-center ${(() => {
-                        // Usar saldo disponível COM reservas para validação
-                        const saldoDisponivelReal = saldoComReservas?.disponivel ?? bookmakers.find(b => b.id === bookmakerId)?.saldo_operavel ?? 0;
-                        const stakeNum = parseFloat(stake);
-                        if (!isNaN(stakeNum) && stakeNum > saldoDisponivelReal) {
-                          return "border-destructive focus-visible:ring-destructive";
-                        }
-                        return "";
-                      })()}`}
+                  ) : bookmakerSaldo && (
+                    <SaldoBreakdownDisplay
+                      saldoReal={bookmakerSaldo.saldoDisponivel}
+                      saldoFreebet={bookmakerSaldo.saldoFreebet}
+                      saldoBonus={bookmakerSaldo.saldoBonus}
+                      saldoOperavel={bookmakerSaldo.saldoOperavel}
+                      moeda={bookmakerSaldo.moeda}
+                      bonusRolloverStarted={bookmakerSaldo.bonusRolloverStarted}
                     />
-                    {/* Exibir saldo com reservas em tempo real */}
-                    {bookmakerId && saldoComReservas && (
-                      <SaldoReservaCompact
-                        saldoContabil={saldoComReservas.contabil}
-                        saldoReservado={saldoComReservas.reservado}
-                        saldoDisponivel={saldoComReservas.disponivel}
-                        moeda={bookmakers.find(b => b.id === bookmakerId)?.moeda || 'BRL'}
-                        stakeAtual={parseFloat(stake) || 0}
-                        loading={saldoReservasLoading}
-                      />
-                    )}
-                    {/* Fallback: mostrar operável se não tiver reservas carregadas */}
-                    {bookmakerId && !saldoComReservas && (() => {
-                      const selectedBk = bookmakers.find(b => b.id === bookmakerId);
-                      const stakeNum = parseFloat(stake);
-                      if (selectedBk && !isNaN(stakeNum) && stakeNum > selectedBk.saldo_operavel) {
-                        return (
-                          <p className="text-xs text-destructive mt-1">
-                            Operável: {formatCurrencyWithSymbol(selectedBk.saldo_operavel, selectedBk.moeda)}
-                          </p>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="block text-center uppercase text-xs tracking-wider">Retorno</Label>
-                    <div className="h-9 flex items-center justify-center rounded-md border border-input bg-muted/50 px-3 text-sm font-medium text-emerald-500">
-                      {(() => {
-                        const oddNum = parseFloat(odd);
-                        const stakeNum = parseFloat(stake);
-                        const moeda = getSelectedBookmakerMoeda();
-                        if (!isNaN(oddNum) && !isNaN(stakeNum) && oddNum > 0 && stakeNum > 0) {
-                          const retorno = oddNum * stakeNum;
-                          return formatCurrencyWithSymbol(retorno, moeda);
-                        }
-                        return formatCurrencyWithSymbol(0, moeda);
-                      })()}
-                    </div>
-                  </div>
+                  )}
+                  {hasActiveBonus && registroValues.estrategia !== "EXTRACAO_BONUS" && (
+                    <BonusImpactAlert
+                      bookmakerId={bookmakerId}
+                      bookmakerNome={bookmakers.find(b => b.id === bookmakerId)?.nome || ""}
+                      estrategia={registroValues.estrategia || ""}
+                      hasActiveBonus={hasActiveBonus}
+                      rolloverProgress={bonusInfo?.rollover_progress}
+                      rolloverTarget={bonusInfo?.rollover_target_amount || undefined}
+                      minOdds={bonusInfo?.min_odds || undefined}
+                      currentOdd={parseFloat(odd) || undefined}
+                    />
+                  )}
                 </div>
-                
+              )}
+            </div>
+
+            {/* Abas: Bookmaker vs Exchange */}
+            <Tabs value={tipoAposta} onValueChange={(v) => setTipoAposta(v as "bookmaker" | "exchange")} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="bookmaker">Bookmaker</TabsTrigger>
+                <TabsTrigger value="exchange">Exchange</TabsTrigger>
+              </TabsList>
+
+              {/* Aba Bookmaker - campos já estão na tabela acima, aqui só opções adicionais */}
+              <TabsContent value="bookmaker" className="space-y-4 mt-3">
                 {/* Toggle "Usar Freebet nesta aposta?" - compacto e discreto */}
                 {bookmakerSaldo && bookmakerSaldo.saldoFreebet > 0 && !aposta?.gerou_freebet && (
                   <div className="flex items-center justify-between py-2 px-3 rounded-md border border-border/30 bg-muted/10">
@@ -2991,8 +2972,6 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     )}
                   </div>
                 )}
-
-
               </TabsContent>
 
               {/* Aba Exchange - 3 tipos de operação */}
