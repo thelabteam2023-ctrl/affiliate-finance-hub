@@ -224,6 +224,7 @@ export type Database = {
           cotacao_snapshot: number | null
           cotacao_snapshot_at: string | null
           created_at: string | null
+          fonte_saldo: string | null
           gerou_freebet: boolean | null
           id: string
           lucro_prejuizo: number | null
@@ -245,6 +246,7 @@ export type Database = {
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string | null
+          fonte_saldo?: string | null
           gerou_freebet?: boolean | null
           id?: string
           lucro_prejuizo?: number | null
@@ -266,6 +268,7 @@ export type Database = {
           cotacao_snapshot?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string | null
+          fonte_saldo?: string | null
           gerou_freebet?: boolean | null
           id?: string
           lucro_prejuizo?: number | null
@@ -354,6 +357,7 @@ export type Database = {
           esporte: string | null
           estrategia: string
           evento: string | null
+          fonte_saldo: string | null
           forma_registro: string
           gerou_freebet: boolean | null
           id: string
@@ -424,6 +428,7 @@ export type Database = {
           esporte?: string | null
           estrategia?: string
           evento?: string | null
+          fonte_saldo?: string | null
           forma_registro?: string
           gerou_freebet?: boolean | null
           id?: string
@@ -494,6 +499,7 @@ export type Database = {
           esporte?: string | null
           estrategia?: string
           evento?: string | null
+          fonte_saldo?: string | null
           forma_registro?: string
           gerou_freebet?: boolean | null
           id?: string
@@ -9972,6 +9978,21 @@ export type Database = {
       reset_projeto_operacional_seguro: {
         Args: { p_dry_run?: boolean; p_projeto_id: string; p_user_id: string }
         Returns: Json
+      }
+      resolver_impacto_saldo: {
+        Args: { p_fonte_saldo: string; p_resultado: string; p_valor: number }
+        Returns: {
+          delta_bonus: number
+          delta_freebet: number
+          delta_real: number
+          impacta_saldo_bonus: boolean
+          impacta_saldo_freebet: boolean
+          impacta_saldo_real: boolean
+        }[]
+      }
+      resolver_tipo_ledger: {
+        Args: { p_estrategia: string; p_resultado: string }
+        Returns: string
       }
       schedule_downgrade: {
         Args: {
