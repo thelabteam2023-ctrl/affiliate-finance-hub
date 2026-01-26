@@ -10273,6 +10273,10 @@ export type Database = {
         Args: { p_estrategia: string; p_resultado: string }
         Returns: string
       }
+      reverter_liquidacao_para_pendente: {
+        Args: { p_aposta_id: string }
+        Returns: Json
+      }
       schedule_downgrade: {
         Args: {
           p_reason?: string
