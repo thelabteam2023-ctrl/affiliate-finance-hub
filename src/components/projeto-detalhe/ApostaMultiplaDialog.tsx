@@ -46,7 +46,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Card, CardContent } from "@/components/ui/card";
 import { RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
-import { isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo } from "@/lib/apostaConstants";
+import { isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
 import { BetFormHeader } from "@/components/apostas/BetFormHeader";
 import { getFirstLastName } from "@/lib/utils";
 import { toLocalTimestamp } from "@/utils/dateUtils";
@@ -277,12 +277,20 @@ export function ApostaMultiplaDialog({
 
   // Registro explícito - estratégia NUNCA é inferida automaticamente
   // Se a aba não define estratégia (ex: Apostas Livres), fica null e o usuário DEVE escolher
+  // NOVO: fonte_saldo é a VERDADE FINANCEIRA - qual pool de capital é usado
   const [registroValues, setRegistroValues] = useState<RegistroApostaValues>(() => {
     const suggestions = getSuggestionsForTab(activeTab);
+    // Inferir fonte_saldo baseado na aba
+    const inferredFonteSaldo = (() => {
+      if (activeTab === 'freebets') return 'FREEBET' as FonteSaldo;
+      if (activeTab === 'bonus' || activeTab === 'bonus-operacoes') return 'BONUS' as FonteSaldo;
+      return 'REAL' as FonteSaldo;
+    })();
     return {
       forma_registro: 'MULTIPLA',
       estrategia: suggestions.estrategia ?? null, // CRÍTICO: null se não definido, NUNCA fallback
       contexto_operacional: suggestions.contexto_operacional ?? 'NORMAL',
+      fonte_saldo: inferredFonteSaldo,
     };
   });
 
@@ -327,12 +335,13 @@ export function ApostaMultiplaDialog({
       setDataAposta(aposta.data_aposta.slice(0, 16));
       setObservacoes(aposta.observacoes || "");
 
-      // Restaurar campos de registro
+      // Restaurar campos de registro (incluindo fonte_saldo)
       const suggestions = getSuggestionsForTab(activeTab);
       setRegistroValues({
-        forma_registro: (aposta.forma_registro as any) || "MULTIPLA",
-        estrategia: (aposta.estrategia as any) || (suggestions.estrategia || (defaultEstrategia as any)),
-        contexto_operacional: (aposta.contexto_operacional as any) || (suggestions.contexto_operacional || "NORMAL"),
+        forma_registro: (aposta.forma_registro as FormaRegistro) || "MULTIPLA",
+        estrategia: (aposta.estrategia as ApostaEstrategia) || (suggestions.estrategia || (defaultEstrategia as ApostaEstrategia)),
+        contexto_operacional: (aposta.contexto_operacional as ContextoOperacional) || (suggestions.contexto_operacional || "NORMAL"),
+        fonte_saldo: ((aposta as any).fonte_saldo as FonteSaldo) || 'REAL', // Legado: default REAL
       });
 
       // Parse selecoes from JSONB
@@ -449,25 +458,38 @@ export function ApostaMultiplaDialog({
     setGerouFreebet(false);
     setValorFreebetGerada("");
     setBookmakerSaldo(null);
-    // Reset registro values
+    // Reset registro values (incluindo fonte_saldo)
     const suggestions = getSuggestionsForTab(activeTab);
+    const inferredFonteSaldo = (() => {
+      if (activeTab === 'freebets') return 'FREEBET' as FonteSaldo;
+      if (activeTab === 'bonus' || activeTab === 'bonus-operacoes') return 'BONUS' as FonteSaldo;
+      return 'REAL' as FonteSaldo;
+    })();
     setRegistroValues({
       forma_registro: 'MULTIPLA',
-      estrategia: suggestions.estrategia || defaultEstrategia as any,
+      estrategia: suggestions.estrategia || defaultEstrategia as ApostaEstrategia,
       contexto_operacional: suggestions.contexto_operacional || 'NORMAL',
+      fonte_saldo: inferredFonteSaldo,
     });
   };
 
-  // Sincronizar estratégia quando está "travada" pela aba
-  // CRÍTICO: Quando a aba define uma estratégia fixa (ex: bonus, freebets),
-  // precisamos atualizar o registroValues.estrategia automaticamente
-  // Sincronizar estratégia E contexto quando estão "travados" pela aba
+  // Sincronizar estratégia, contexto E fonte_saldo quando estão "travados" pela aba
   // CRÍTICO: Quando a aba define estratégia/contexto fixos (ex: bonus, freebets),
   // precisamos atualizar o registroValues automaticamente
   useEffect(() => {
     if (!aposta && open) {
       const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
       const lockedContexto = isAbaContextoFixo(activeTab) ? getContextoFromTab(activeTab) : null;
+      
+      // Inferir fonte_saldo baseado na aba ativa ou estratégia
+      const inferredFonteSaldo = (() => {
+        if (activeTab === 'freebets') return 'FREEBET' as FonteSaldo;
+        if (activeTab === 'bonus' || activeTab === 'bonus-operacoes') return 'BONUS' as FonteSaldo;
+        const estrategiaAtual = lockedEstrategia || registroValues.estrategia;
+        if (estrategiaAtual === 'EXTRACAO_FREEBET') return 'FREEBET' as FonteSaldo;
+        if (estrategiaAtual === 'EXTRACAO_BONUS') return 'BONUS' as FonteSaldo;
+        return 'REAL' as FonteSaldo;
+      })();
       
       setRegistroValues(prev => {
         const updates: Partial<typeof prev> = {};
@@ -482,6 +504,13 @@ export function ApostaMultiplaDialog({
           updates.contexto_operacional = lockedContexto;
         }
         
+        // Sincronizar fonte_saldo se não definido ou se aba tem fonte fixa
+        if (!prev.fonte_saldo || (activeTab === 'freebets' || activeTab === 'bonus' || activeTab === 'bonus-operacoes')) {
+          if (prev.fonte_saldo !== inferredFonteSaldo) {
+            updates.fonte_saldo = inferredFonteSaldo;
+          }
+        }
+        
         // Se há updates, aplicar
         if (Object.keys(updates).length > 0) {
           return { ...prev, ...updates };
@@ -489,7 +518,7 @@ export function ApostaMultiplaDialog({
         return prev;
       });
     }
-  }, [open, aposta, activeTab]);
+  }, [open, aposta, activeTab, registroValues.estrategia]);
 
   const getLocalDateTimeString = () => {
     const now = new Date();
@@ -913,6 +942,8 @@ export function ApostaMultiplaDialog({
           forma_registro: 'MULTIPLA',
           estrategia: registroValues.estrategia as any,
           contexto_operacional: registroValues.contexto_operacional as any,
+          // NOVO: fonte_saldo é a VERDADE FINANCEIRA
+          fonte_saldo: registroValues.fonte_saldo || 'REAL',
           data_aposta: toLocalTimestamp(dataAposta),
           bookmaker_id: bookmakerId,
           stake: stakeNum,

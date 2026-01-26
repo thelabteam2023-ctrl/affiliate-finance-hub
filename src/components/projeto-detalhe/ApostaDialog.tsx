@@ -49,7 +49,8 @@ import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useImportBetPrint } from "@/hooks/useImportBetPrint";
 import { RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
-import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional } from "@/lib/apostaConstants";
+import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, FONTE_SALDO, isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
+import { useFonteSaldoDefault } from "@/components/apostas/FonteSaldoSelector";
 import { toLocalTimestamp } from "@/utils/dateUtils";
 import { 
   BookmakerSelectOption,
@@ -656,10 +657,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
   // Registro de Aposta - Campos EXPLÍCITOS (Prompt Oficial)
   // CRÍTICO: forma_registro é SEMPRE 'SIMPLES' para este formulário
+  // NOVO: fonte_saldo é a VERDADE FINANCEIRA - qual pool de capital é usado
   const [registroValues, setRegistroValues] = useState<RegistroApostaValues>({
     forma_registro: 'SIMPLES',
     estrategia: null,
     contexto_operacional: null,
+    fonte_saldo: null, // Será sincronizado pelo useEffect abaixo
   });
 
   // Hook para verificar bônus ativo na bookmaker selecionada (alerta contextual)
@@ -874,12 +877,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           setUsarFreebetBookmaker(true);
         }
         
-        // Restaurar campos de registro (estrategia, forma_registro, contexto_operacional)
+        // Restaurar campos de registro (estrategia, forma_registro, contexto_operacional, fonte_saldo)
         // CRÍTICO: forma_registro NUNCA pode ser null - usar 'SIMPLES' como fallback robusto
+        // NOVO: fonte_saldo também precisa ser restaurado (default 'REAL' para dados legados)
         setRegistroValues({
           forma_registro: (aposta.forma_registro as FormaRegistro) || 'SIMPLES',
           estrategia: (aposta.estrategia as ApostaEstrategia) || null,
           contexto_operacional: (aposta.contexto_operacional as ContextoOperacional) || null,
+          fonte_saldo: ((aposta as any).fonte_saldo as FonteSaldo) || 'REAL', // Legado: default REAL
         });
       } else {
         resetForm();
@@ -887,14 +892,26 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     }
   }, [open, aposta]);
 
-  // Sincronizar estratégia E contexto quando estão "travados" pela aba
+  // Sincronizar estratégia, contexto E fonte_saldo quando estão "travados" pela aba
   // CRÍTICO: Quando a aba define estratégia/contexto fixos (ex: bonus, freebets),
   // precisamos atualizar o registroValues automaticamente,
   // pois o Select no header é substituído por um Badge estático
+  // NOVO: fonte_saldo também é sincronizado baseado na aba/estratégia
   useEffect(() => {
     if (!aposta && open) {
       const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
       const lockedContexto = isAbaContextoFixo(activeTab) ? getContextoFromTab(activeTab) : null;
+      
+      // Inferir fonte_saldo baseado na aba ativa ou estratégia
+      const inferredFonteSaldo = (() => {
+        if (activeTab === 'freebets') return 'FREEBET' as FonteSaldo;
+        if (activeTab === 'bonus' || activeTab === 'bonus-operacoes') return 'BONUS' as FonteSaldo;
+        // Para outras abas, inferir da estratégia
+        const estrategiaAtual = lockedEstrategia || registroValues.estrategia;
+        if (estrategiaAtual === 'EXTRACAO_FREEBET') return 'FREEBET' as FonteSaldo;
+        if (estrategiaAtual === 'EXTRACAO_BONUS') return 'BONUS' as FonteSaldo;
+        return 'REAL' as FonteSaldo;
+      })();
       
       setRegistroValues(prev => {
         const updates: Partial<typeof prev> = {};
@@ -909,6 +926,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           updates.contexto_operacional = lockedContexto;
         }
         
+        // Sincronizar fonte_saldo se não definido ou se aba tem fonte fixa
+        if (!prev.fonte_saldo || (activeTab === 'freebets' || activeTab === 'bonus' || activeTab === 'bonus-operacoes')) {
+          if (prev.fonte_saldo !== inferredFonteSaldo) {
+            updates.fonte_saldo = inferredFonteSaldo;
+          }
+        }
+        
         // Se há updates, aplicar
         if (Object.keys(updates).length > 0) {
           return { ...prev, ...updates };
@@ -916,7 +940,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         return prev;
       });
     }
-  }, [open, aposta, activeTab]);
+  }, [open, aposta, activeTab, registroValues.estrategia]);
 
   // Atualizar saldo quando bookmakerId mudar ou bookmakers forem carregados
   useEffect(() => {
@@ -1244,10 +1268,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     setGerouFreebetLay(false);
     setValorFreebetGeradaLay("");
     // Reset registro values - forma_registro sempre SIMPLES neste form
+    // NOVO: fonte_saldo também é resetado (será sincronizado pelo useEffect)
     setRegistroValues({
       forma_registro: 'SIMPLES',
       estrategia: null,
       contexto_operacional: null,
+      fonte_saldo: null, // Será inferido automaticamente baseado na aba/estratégia
     });
     // Clear print import data
     clearPrintData();
@@ -1527,6 +1553,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         estrategia: registroValues.estrategia,
         forma_registro: registroValues.forma_registro,
         contexto_operacional: registroValues.contexto_operacional,
+        // NOVO: fonte_saldo é a VERDADE FINANCEIRA - qual pool de capital é usado
+        fonte_saldo: registroValues.fonte_saldo || 'REAL',
         // CRÍTICO: Moeda da operação = moeda nativa da bookmaker
         moeda_operacao: moedaOperacao,
       };
