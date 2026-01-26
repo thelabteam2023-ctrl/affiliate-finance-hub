@@ -2597,8 +2597,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             embedded={embedded}
           />
 
-          <div className="grid gap-5 py-2 px-4">
-            {/* Estado: Processando print */}
+          {/* CONTENT - Mesmo layout do Surebet: flex-1 overflow-y-auto p-4 space-y-4 */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Estado: Processando print - compacto */}
             {isPrintProcessing && !aposta && (
               <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg ${
                 printProcessingPhase === "backup" 
@@ -2664,18 +2665,18 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             )}
 
             {/* ========== SELETOR DE MODO: BOOKMAKER vs EXCHANGE ========== */}
-            {/* Estilo de abas com underline verde no item ativo */}
+            {/* Estilo compacto de abas com underline - altura fixa */}
             <div className="flex items-center justify-center border-b border-border/30">
               <button
                 type="button"
                 onClick={() => setTipoAposta("bookmaker")}
-                className={`relative px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
+                className={`relative px-4 py-2 text-xs font-medium transition-colors flex items-center gap-1.5 ${
                   tipoAposta === "bookmaker"
                     ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <BookOpen className="h-4 w-4" />
+                <BookOpen className="h-3.5 w-3.5" />
                 <span>Bookmaker</span>
                 {tipoAposta === "bookmaker" && (
                   <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
@@ -2684,13 +2685,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               <button
                 type="button"
                 onClick={() => setTipoAposta("exchange")}
-                className={`relative px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
+                className={`relative px-4 py-2 text-xs font-medium transition-colors flex items-center gap-1.5 ${
                   tipoAposta === "exchange"
                     ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <BarChart3 className="h-4 w-4" />
+                <BarChart3 className="h-3.5 w-3.5" />
                 <span>Exchange</span>
                 {tipoAposta === "exchange" && (
                   <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
@@ -2698,98 +2699,65 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </button>
             </div>
 
-            {/* Layout padronizado com Arbitragem: Esporte | Evento | Mercado | Data em linha */}
-            <div className="grid grid-cols-4 gap-3 pb-3 border-b border-border/50">
+            {/* Layout padronizado com Arbitragem: Esporte | Evento | Mercado em grid-cols-3 */}
+            <div className="grid grid-cols-3 gap-3 pb-3 border-b border-border/50">
               {/* Esporte */}
-              <div className="text-center">
+              <div>
                 <Label className={`text-xs ${printFieldsNeedingReview.esporte ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Esporte {printFieldsNeedingReview.esporte && <span className="text-[9px]">⚠</span>}
                 </Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Select value={esporte} onValueChange={(val) => {
-                          setEsporte(val);
-                          incrementSportUsage(val);
-                        }}>
-                          <SelectTrigger className={`h-8 text-xs ${printFieldsNeedingReview.esporte ? 'border-amber-500/50' : ''}`}>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getSortedEsportes().map((esp) => (
-                              <SelectItem key={esp} value={esp}>{esp}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </TooltipTrigger>
-                    {esporte && (
-                      <TooltipContent side="bottom" className="text-xs">
-                        {esporte}
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
+                <Select value={esporte} onValueChange={(val) => {
+                  setEsporte(val);
+                  incrementSportUsage(val);
+                }}>
+                  <SelectTrigger className={`h-8 text-xs ${printFieldsNeedingReview.esporte ? 'border-amber-500/50' : ''}`}>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getSortedEsportes().map((esp) => (
+                      <SelectItem key={esp} value={esp}>{esp}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               {/* Evento */}
-              <div className="text-center">
+              <div>
                 <Label className={`text-xs ${printFieldsNeedingReview.evento ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Evento {printFieldsNeedingReview.evento && <span className="text-[9px]">⚠</span>}
                 </Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Input
-                        value={evento}
-                        onChange={(e) => setEvento(e.target.value.toUpperCase())}
-                        placeholder="TIME 1 X TIME 2"
-                        className={`h-8 text-xs uppercase ${printFieldsNeedingReview.evento ? 'border-amber-500/50' : ''}`}
-                      />
-                    </TooltipTrigger>
-                    {evento && (
-                      <TooltipContent side="bottom" className="text-xs max-w-[300px]">
-                        {evento}
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
+                <Input
+                  value={evento}
+                  onChange={(e) => setEvento(e.target.value.toUpperCase())}
+                  placeholder="TIME 1 X TIME 2"
+                  className={`h-8 text-xs uppercase ${printFieldsNeedingReview.evento ? 'border-amber-500/50' : ''}`}
+                />
               </div>
               
               {/* Mercado - Campo livre */}
-              <div className="text-center">
+              <div>
                 <Label className={`text-xs ${printFieldsNeedingReview.mercado ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Mercado {printFieldsNeedingReview.mercado && <span className="text-[9px]">⚠</span>}
                 </Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Input
-                        value={mercado}
-                        onChange={(e) => {
-                          setMercado(e.target.value);
-                          setSelecao("");
-                          if (mercadoFromPrint) setMercadoFromPrint(false);
-                        }}
-                        placeholder="Ex: Resultado Final"
-                        className={`h-8 text-xs ${printFieldsNeedingReview.mercado ? 'border-amber-500/50' : ''}`}
-                      />
-                    </TooltipTrigger>
-                    {mercado && (
-                      <TooltipContent side="bottom" className="text-xs max-w-[300px]">
-                        {mercado}
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
+                <Input
+                  value={mercado}
+                  onChange={(e) => {
+                    setMercado(e.target.value);
+                    setSelecao("");
+                    if (mercadoFromPrint) setMercadoFromPrint(false);
+                  }}
+                  placeholder="Ex: Resultado Final"
+                  className={`h-8 text-xs ${printFieldsNeedingReview.mercado ? 'border-amber-500/50' : ''}`}
+                />
               </div>
-              
-              {/* Data/Hora */}
-              <div className={`text-center ${printFieldsNeedingReview.dataHora ? '[&_button]:border-amber-500/50' : ''}`}>
-                <Label className={`text-xs ${printFieldsNeedingReview.dataHora ? 'text-amber-500' : 'text-muted-foreground'}`}>
-                  Data/Hora {printFieldsNeedingReview.dataHora && <span className="text-[9px]">⚠</span>}
-                </Label>
+            </div>
+
+            {/* Data/Hora - Linha separada para manter layout consistente */}
+            <div className="flex items-center gap-2 pb-3 border-b border-border/50">
+              <Label className={`text-xs ${printFieldsNeedingReview.dataHora ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                Data/Hora {printFieldsNeedingReview.dataHora && <span className="text-[9px]">⚠</span>}
+              </Label>
+              <div className={printFieldsNeedingReview.dataHora ? '[&_button]:border-amber-500/50' : ''}>
                 <DateTimePicker
                   value={dataAposta}
                   onChange={setDataAposta}
