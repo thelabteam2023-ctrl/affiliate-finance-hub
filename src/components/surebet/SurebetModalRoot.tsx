@@ -463,10 +463,29 @@ export function SurebetModalRoot({
     if (sharedContext.mercado && !mercado) setMercado(sharedContext.mercado);
   }, [legPrints]);
 
+  // Encontrar a próxima perna vazia para importação incremental
+  const getNextEmptyLegIndex = useCallback((): number | null => {
+    for (let i = 0; i < odds.length; i++) {
+      const leg = odds[i];
+      // Considera vazia se não tem odd E não tem stake (campos obrigatórios)
+      const isEmpty = !leg.odd || parseFloat(leg.odd) === 0;
+      if (isEmpty) {
+        return i;
+      }
+    }
+    return null; // Todas as pernas estão preenchidas
+  }, [odds]);
+
   const handleImportButtonClick = useCallback(() => {
-    setSelectedLegForPrint(focusedLeg ?? 0);
+    const nextEmptyLeg = getNextEmptyLegIndex();
+    if (nextEmptyLeg === null) {
+      toast.info(`Todas as ${numPernas} pernas já estão preenchidas`);
+      return;
+    }
+    setSelectedLegForPrint(nextEmptyLeg);
+    setFocusedLeg(nextEmptyLeg);
     fileInputRef.current?.click();
-  }, [focusedLeg]);
+  }, [getNextEmptyLegIndex, numPernas]);
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1010,7 +1029,6 @@ export function SurebetModalRoot({
             showCloseButton={!embedded}
             onClose={() => onOpenChange(false)}
             embedded={embedded}
-            extraBadge={<Badge variant="outline" className="text-[10px]">{numPernas} pernas</Badge>}
           />
 
           {/* CONTENT */}
@@ -1055,7 +1073,7 @@ export function SurebetModalRoot({
               <div>
                 <Label className="text-xs text-muted-foreground">Evento</Label>
                 <Input 
-                  placeholder="Ex: Brasil x Argentina" 
+                  placeholder="TIME 1 X TIME 2" 
                   value={evento}
                   onChange={(e) => setEvento(e.target.value)}
                   className="h-8 text-xs uppercase"

@@ -1356,7 +1356,7 @@ export function SurebetDialogTable({
         <div className="col-span-2">
           <Label className="text-xs text-muted-foreground">Evento</Label>
           <Input 
-            placeholder="Ex: Brasil x Argentina" 
+            placeholder="TIME 1 X TIME 2" 
             value={evento}
             onChange={(e) => setEvento(e.target.value)}
             className="h-8 text-xs uppercase"

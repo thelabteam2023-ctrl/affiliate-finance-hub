@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Target, ImagePlus } from 'lucide-react';
+import { Plus, Trash2, Target } from 'lucide-react';
 import type { SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { cn } from '@/lib/utils';
 
@@ -53,7 +53,6 @@ interface SurebetExecutionTableProps {
   setArredondarValor: (value: string) => void;
   formatCurrency: (valor: number, moeda?: string) => string;
   getBookmakerMoeda: (id: string) => SupportedCurrency;
-  onImportPrint?: () => void;
 }
 
 // Gera ID único
@@ -81,7 +80,6 @@ export function SurebetExecutionTable({
   setArredondarValor,
   formatCurrency,
   getBookmakerMoeda,
-  onImportPrint,
 }: SurebetExecutionTableProps) {
   
   // Calcular stake total de todas as entradas
@@ -408,18 +406,6 @@ export function SurebetExecutionTable({
             )}
           </div>
           
-          {onImportPrint && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-6 text-[11px] gap-1 px-2"
-              onClick={onImportPrint}
-            >
-              <ImagePlus className="h-3 w-3" />
-              Importar print
-            </Button>
-          )}
         </div>
         
         {/* Lado direito: Totais */}

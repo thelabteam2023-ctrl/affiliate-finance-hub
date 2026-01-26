@@ -205,7 +205,6 @@ export function SurebetCompactForm({
           setArredondarValor={setArredondarValor}
           formatCurrency={formatCurrency}
           getBookmakerMoeda={getBookmakerMoeda}
-          onImportPrint={onImportPrint}
         />
       </div>
 
