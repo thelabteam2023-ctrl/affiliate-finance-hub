@@ -359,8 +359,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
         esporteDetectado: sportDetected
       });
       
-      // PRESERVAR O TEXTO ORIGINAL DO OCR (não substituir pelo displayName normalizado)
-      // rawData.mercado.value = ocrResult.displayName; // <- REMOVIDO: manter texto exato do OCR
+      rawData.mercado.value = ocrResult.displayName;
       
       if (ocrResult.confidence === "low") {
         rawData.mercado.confidence = "low";

@@ -1014,7 +1014,7 @@ export function SurebetModalRoot({
             className="hidden"
           />
           
-          {/* HEADER UNIFICADO - Com campos de jogo */}
+          {/* HEADER UNIFICADO */}
           <BetFormHeader
             formType="arbitragem"
             estrategia={estrategia}
@@ -1029,13 +1029,6 @@ export function SurebetModalRoot({
             showCloseButton={!embedded}
             onClose={() => onOpenChange(false)}
             embedded={embedded}
-            // Campos de jogo no header
-            esporte={esporte}
-            onEsporteChange={setEsporte}
-            evento={evento}
-            onEventoChange={setEvento}
-            mercado={mercado}
-            onMercadoChange={setMercado}
           />
 
           {/* CONTENT */}
@@ -1061,7 +1054,42 @@ export function SurebetModalRoot({
               </div>
             )}
 
-            {/* Campos de jogo agora estão no BetFormHeader acima */}
+            {/* Campos do Evento - SEMPRE editáveis */}
+            <div className="grid grid-cols-3 gap-3 pb-3 border-b border-border/50">
+              <div>
+                <Label className="text-xs text-muted-foreground">Esporte</Label>
+                <Select value={esporte} onValueChange={setEsporte}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ESPORTES.map(e => (
+                      <SelectItem key={e} value={e}>{e}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label className="text-xs text-muted-foreground">Evento</Label>
+                <Input 
+                  placeholder="TIME 1 X TIME 2" 
+                  value={evento}
+                  onChange={(e) => setEvento(e.target.value)}
+                  className="h-8 text-xs uppercase"
+                />
+              </div>
+              
+              <div>
+                <Label className="text-xs text-muted-foreground">Mercado</Label>
+                <Input
+                  placeholder="Mercado"
+                  value={mercado}
+                  onChange={(e) => setMercado(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
 
             {/* Modelo de Pernas */}
             <div className="flex flex-wrap items-center gap-4 pb-3 border-b border-border/50">
