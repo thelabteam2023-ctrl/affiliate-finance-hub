@@ -79,3 +79,42 @@ export const extractLocalDateKey = (dateString: string | null | undefined): stri
   
   return `${y}-${m}-${d}`;
 };
+
+/**
+ * Converte uma string de data/hora para timestamp local literal
+ * SEM conversão de timezone - preserva exatamente o que o usuário escolheu.
+ * 
+ * Esta função garante que não haja shift de dia causado por conversão UTC.
+ * Se o usuário escolhe "25/01/2026 23:59", o banco deve salvar "2026-01-25 23:59:00".
+ * 
+ * @param dateTimeString - String no formato "YYYY-MM-DDTHH:mm" (datetime-local)
+ * @returns String no formato "YYYY-MM-DDTHH:mm:ss" (sem Z, sem offset)
+ */
+export const toLocalTimestamp = (dateTimeString: string): string => {
+  if (!dateTimeString) {
+    // Se vazio, retornar timestamp atual no formato local
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
+  
+  // Se já tem timezone info, remover
+  const cleanDate = dateTimeString
+    .replace(/\+00:00$/, '')
+    .replace(/Z$/, '')
+    .replace(/\+\d{2}:\d{2}$/, '')
+    .replace(/-\d{2}:\d{2}$/, '');
+  
+  // Garantir formato completo com segundos
+  if (cleanDate.length === 16) {
+    // Formato: YYYY-MM-DDTHH:mm
+    return `${cleanDate}:00`;
+  }
+  
+  return cleanDate;
+};

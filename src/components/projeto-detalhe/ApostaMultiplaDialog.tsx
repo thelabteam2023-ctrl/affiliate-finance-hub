@@ -49,6 +49,7 @@ import { RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFiel
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
 import { BetFormHeader } from "@/components/apostas/BetFormHeader";
 import { getFirstLastName } from "@/lib/utils";
+import { toLocalTimestamp } from "@/utils/dateUtils";
 import { 
   BookmakerSelectOption, 
   SaldoBreakdownDisplay, 
@@ -463,25 +464,6 @@ export function ApostaMultiplaDialog({
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  /**
-   * Converte uma data local (sem timezone) para timestamp com timezone correto
-   * Resolve o problema de datas sendo salvas com offset incorreto
-   */
-  const toLocalISOString = (localDateTime: string): string => {
-    if (!localDateTime) return new Date().toISOString();
-    
-    // Se já tem timezone info, retornar como está
-    if (localDateTime.includes('+') || localDateTime.includes('Z')) {
-      return localDateTime;
-    }
-    
-    // Criar Date a partir do valor local (browser interpreta como local)
-    const date = new Date(localDateTime);
-    
-    // Usar toISOString que converte para UTC corretamente
-    return date.toISOString();
-  };
-
   // fetchBookmakers REMOVIDO - agora usa useBookmakerSaldosQuery como fonte canônica
 
   // Calcular odd final (produto das odds) - considerando VOIDs como odd 1.00
@@ -805,7 +787,7 @@ export function ApostaMultiplaDialog({
         valor_freebet_gerada: gerouFreebet
           ? parseFloat(valorFreebetGerada) || 0
           : 0,
-        data_aposta: toLocalISOString(dataAposta),
+        data_aposta: toLocalTimestamp(dataAposta),
         observacoes: observacoes || null,
         estrategia: registroValues.estrategia,
         forma_registro: registroValues.forma_registro,
@@ -896,7 +878,7 @@ export function ApostaMultiplaDialog({
           forma_registro: 'MULTIPLA',
           estrategia: registroValues.estrategia as any,
           contexto_operacional: registroValues.contexto_operacional as any,
-          data_aposta: toLocalISOString(dataAposta),
+          data_aposta: toLocalTimestamp(dataAposta),
           bookmaker_id: bookmakerId,
           stake: stakeNum,
           tipo_multipla: tipoMultipla,
