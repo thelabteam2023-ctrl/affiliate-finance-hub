@@ -68,6 +68,29 @@ function formatValue(value: number, showSign: boolean = false): string {
   return formatted;
 }
 
+// Formata valores monetários de forma compacta para alta densidade
+// Valores >= 100.000 são exibidos como "110,50K"
+function formatCompactValue(value: number, showSign: boolean = false): string {
+  const absValue = Math.abs(value);
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+  
+  if (absValue >= 100000) {
+    const thousands = absValue / 1000;
+    const formatted = thousands.toLocaleString('pt-BR', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    });
+    return `${sign}${formatted}K`;
+  }
+  
+  const formatted = absValue.toLocaleString('pt-BR', { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  });
+  if (showSign) return `${sign}${formatted}`;
+  return formatted;
+}
+
 export function SurebetExecutionTable({
   legs,
   setLegs,
@@ -226,12 +249,12 @@ export function SurebetExecutionTable({
             <tr className="border-b border-border/50">
               <th className="text-center py-2 px-1.5 text-xs font-medium text-muted-foreground w-8">Perna</th>
               <th className="text-left py-2 px-1.5 text-xs font-medium text-muted-foreground min-w-[120px]">Casa</th>
-              <th className="text-right py-2 px-1.5 text-xs font-medium text-muted-foreground w-16">Odd</th>
-              <th className="text-right py-2 px-1.5 text-xs font-medium text-muted-foreground w-20">Stake</th>
-              <th className="text-center py-2 px-1.5 text-xs font-medium text-muted-foreground w-8" title="Direcionar lucro">🎯</th>
-              <th className="text-right py-2 px-1.5 text-xs font-medium text-muted-foreground w-20">Lucro</th>
-              <th className="text-right py-2 px-1.5 text-xs font-medium text-muted-foreground w-16">ROI</th>
-              <th className="w-16"></th>
+              <th className="text-right py-2 px-1 text-xs font-medium text-muted-foreground w-[68px]">Odd</th>
+              <th className="text-right py-2 px-1 text-xs font-medium text-muted-foreground w-[90px]">Stake</th>
+              <th className="text-center py-2 px-1 text-xs font-medium text-muted-foreground w-6" title="Direcionar lucro">🎯</th>
+              <th className="text-right py-2 px-1 text-xs font-medium text-muted-foreground w-[80px]">Lucro</th>
+              <th className="text-right py-2 px-1 text-xs font-medium text-muted-foreground w-14">ROI</th>
+              <th className="w-10"></th>
             </tr>
           </thead>
           <tbody>
@@ -295,64 +318,65 @@ export function SurebetExecutionTable({
                     </Select>
                   </td>
                   
-                  {/* Odd */}
-                  <td className="py-1 px-1.5">
+                  {/* Odd - compacto */}
+                  <td className="py-1 px-1">
                     <Input
                       type="text"
                       inputMode="decimal"
                       value={entry.odd}
                       onChange={(e) => updateEntry(legIndex, entryIndex, 'odd', e.target.value)}
                       placeholder="0.00"
-                      className="h-7 text-right text-xs font-mono border-0 bg-muted/20 hover:bg-muted/40 focus:ring-1 tabular-nums"
+                      className="h-7 text-right text-xs font-mono border-0 bg-muted/20 hover:bg-muted/40 focus:ring-1 tabular-nums w-[68px] px-1"
                     />
                   </td>
                   
-                  {/* Stake */}
-                  <td className="py-1 px-1.5">
+                  {/* Stake - compacto */}
+                  <td className="py-1 px-1">
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[9px] text-muted-foreground">{entry.moeda}</span>
+                      <span className="text-[8px] text-muted-foreground">{entry.moeda}</span>
                       <Input
                         type="text"
                         inputMode="decimal"
                         value={entry.stake}
                         onChange={(e) => updateEntry(legIndex, entryIndex, 'stake', e.target.value)}
                         placeholder="0"
-                        className="h-7 text-right text-xs font-mono border-0 bg-muted/20 hover:bg-muted/40 focus:ring-1 tabular-nums flex-1"
+                        className="h-7 text-right text-xs font-mono border-0 bg-muted/20 hover:bg-muted/40 focus:ring-1 tabular-nums flex-1 w-[70px] px-1"
                       />
                     </div>
                   </td>
                   
                   {/* Target (direcionar lucro) */}
-                  <td className="py-1 px-1.5 text-center">
+                  <td className="py-1 px-1 text-center">
                     <button
                       type="button"
                       onClick={() => setTargetedEntry(legIndex, entryIndex)}
                       className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                        "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all",
                         entry.isTargeted 
                           ? "border-primary bg-primary text-primary-foreground" 
                           : "border-muted-foreground/30 hover:border-muted-foreground/60"
                       )}
                       title="Direcionar lucro para esta entrada"
                     >
-                      {entry.isTargeted && <Target className="h-3 w-3" />}
+                      {entry.isTargeted && <Target className="h-2 w-2" />}
                     </button>
                   </td>
                   
-                  {/* Lucro */}
-                  <td className="py-1 px-1.5 text-right">
+                  {/* Lucro - formatação compacta para valores >= 100.000 */}
+                  <td className="py-1 px-1 text-right">
                     <span className={cn(
-                      "text-xs font-medium tabular-nums",
-                      hasData ? (isPositive ? "text-emerald-500" : "text-red-500") : "text-muted-foreground"
+                      "font-medium tabular-nums",
+                      hasData ? (isPositive ? "text-emerald-500" : "text-red-500") : "text-muted-foreground",
+                      hasData && Math.abs(lucro) >= 100000 ? "text-[10px]" : "text-xs"
                     )}>
-                      {hasData ? formatValue(lucro, true) : "—"}
+                      {hasData ? formatCompactValue(lucro, true) : "—"}
                     </span>
                   </td>
                   
                   {/* ROI */}
-                  <td className="py-1 px-1.5 text-right">
+                  <td className="py-1 px-1 text-right">
                     <span className={cn(
-                      "text-xs tabular-nums",
+                      "text-[10px] tabular-nums",
                       hasData ? (isPositive ? "text-emerald-400" : "text-red-400") : "text-muted-foreground"
                     )}>
                       {hasData ? `${formatValue(roi, true)}%` : "—"}
@@ -360,13 +384,13 @@ export function SurebetExecutionTable({
                   </td>
                   
                   {/* Ações */}
-                  <td className="py-1 px-1.5">
+                  <td className="py-1 px-1">
                     {leg.entries.length > 1 && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
                         onClick={() => removeEntry(legIndex, entryIndex)}
                       >
                         <Trash2 className="h-3 w-3" />

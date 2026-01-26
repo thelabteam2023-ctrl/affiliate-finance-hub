@@ -19,6 +19,28 @@ import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { getFirstLastName } from '@/lib/utils';
 
+/**
+ * Formata valores monetários de forma compacta para alta densidade
+ * Valores >= 100.000 são exibidos como "110,05K"
+ */
+function formatCompactCurrency(value: number, currency: string): string {
+  const absValue = Math.abs(value);
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+  
+  if (absValue >= 100000) {
+    // Formato compacto: 110500 → 110,50K
+    const thousands = absValue / 1000;
+    const formatted = thousands.toLocaleString('pt-BR', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    });
+    return `${sign}${formatted}K`;
+  }
+  
+  // Formato normal para valores menores
+  return sign + formatCurrency(absValue, currency);
+}
+
 interface BookmakerOption {
   id: string;
   nome: string;
@@ -177,18 +199,18 @@ export function SurebetTableRow({
         )}
       </td>
       
-      {/* Odd */}
-      <td className="px-2" style={{ height: '78px' }}>
+      {/* Odd - compacto para até 20,650 (2 dígitos + 3 decimais) */}
+      <td className="px-1" style={{ height: '78px' }}>
         {isEditing ? (
-          <div className="text-sm font-medium text-center">{entry.odd || "—"}</div>
+          <div className="text-sm font-medium text-center tabular-nums">{entry.odd || "—"}</div>
         ) : (
           <Input 
             type="number"
-            step="0.01"
+            step="0.001"
             placeholder="0.00"
             value={entry.odd}
             onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
-            className="h-8 text-sm text-center px-1 w-16"
+            className="h-8 text-xs text-center px-0.5 w-[68px] tabular-nums"
             onWheel={(e) => e.currentTarget.blur()}
             data-field-type="odd"
             onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
@@ -196,10 +218,10 @@ export function SurebetTableRow({
         )}
       </td>
       
-      {/* Stake */}
-      <td className="px-2" style={{ height: '78px' }}>
+      {/* Stake - compacto para até 150999 (6-7 dígitos) */}
+      <td className="px-1" style={{ height: '78px' }}>
         {isEditing ? (
-          <div className="text-sm font-medium text-center">
+          <div className="text-xs font-medium text-center tabular-nums">
             {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
           </div>
         ) : (
@@ -207,8 +229,8 @@ export function SurebetTableRow({
             value={entry.stake}
             onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
             currency={entry.moeda}
-            minDigits={5}
-            className="h-8 text-sm text-center"
+            minDigits={6}
+            className="h-8 text-xs text-center w-[90px] tabular-nums"
             data-field-type="stake"
             onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
           />
@@ -266,12 +288,12 @@ export function SurebetTableRow({
         </td>
       )}
       
-      {/* Lucro */}
-      <td className="px-2 text-center" style={{ height: '78px' }}>
-        <span className={`text-sm font-medium ${
+      {/* Lucro - formatação compacta para valores > 100.000 */}
+      <td className="px-1 text-center" style={{ height: '78px' }}>
+        <span className={`font-medium tabular-nums ${
           lucro >= 0 ? "text-emerald-500" : "text-red-500"
-        }`}>
-          {lucro !== 0 ? (lucro > 0 ? "+" : "") + formatCurrency(lucro, moedaDominante) : "—"}
+        } ${Math.abs(lucro) >= 100000 ? "text-[11px]" : "text-sm"}`}>
+          {lucro !== 0 ? formatCompactCurrency(lucro, moedaDominante) : "—"}
         </span>
       </td>
       
