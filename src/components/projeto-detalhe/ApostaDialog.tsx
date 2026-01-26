@@ -711,6 +711,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   }, [printParsedData, aposta, applyPrintData, printPendingData]);
 
   // Resolve pending market when sport changes or options become available
+  // IMPORTANTE: Só substituir se a resolução for melhor que o valor original
   useEffect(() => {
     if (pendingMercadoIntencao && esporte && mercadoFromPrint) {
       // Get the available markets for this sport
@@ -718,6 +719,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       
       // Try to resolve the market to an available option
       const resolved = resolvePrintMarket(esporte, sportMarkets);
+      
+      // Se a resolução retornar "Outro" ou valor genérico, MANTER o texto original do OCR
+      // Isso preserva textos como "Resultado da partida" ao invés de converter para "Outro"
+      if (resolved === "Outro" || resolved === "Other" || !resolved) {
+        // Não substituir - manter o valor que já está no campo (mercado)
+        return;
+      }
       
       if (resolved && sportMarkets.includes(resolved)) {
         setMercado(resolved);
