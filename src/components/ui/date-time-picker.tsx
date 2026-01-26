@@ -150,12 +150,12 @@ export function DateTimePicker({
           variant="outline"
           data-datetime-trigger="true"
           className={cn(
-            "w-full justify-center text-center font-normal h-10 border border-input bg-background hover:bg-accent/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all",
+            "w-full justify-center text-center font-normal h-9 text-sm border border-input bg-background hover:bg-accent/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all",
             !date && "text-muted-foreground"
           )}
           disabled={disabled}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
+          <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
           {displayValue || <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
