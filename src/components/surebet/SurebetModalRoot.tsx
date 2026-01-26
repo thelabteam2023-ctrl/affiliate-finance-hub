@@ -811,8 +811,6 @@ export function SurebetModalRoot({
           .insert(pernasInsert);
 
         if (insertPernasError) throw insertPernasError;
-        
-        toast.success("Arbitragem atualizada!");
       } else {
         // Criar nova
         const { data: newAposta, error: insertError } = await supabase
@@ -846,8 +844,6 @@ export function SurebetModalRoot({
           .insert(pernasInsert);
 
         if (insertPernasError) throw insertPernasError;
-
-        toast.success("Arbitragem registrada!");
       }
 
       onSuccess();
