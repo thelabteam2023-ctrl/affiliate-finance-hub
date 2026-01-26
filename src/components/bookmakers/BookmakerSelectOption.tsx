@@ -112,6 +112,84 @@ export function BookmakerSelectOption({
 }
 
 /**
+ * COMPONENTE DE TRIGGER para exibir bookmaker selecionado no botão do Select
+ * Formato visual igual ao dropdown (logo, nome, badge de moeda, parceiro, saldo)
+ */
+export interface BookmakerSelectTriggerData {
+  nome: string;
+  parceiro_nome: string | null;
+  moeda: string;
+  saldo_operavel: number;
+  logo_url?: string | null;
+}
+
+interface BookmakerSelectTriggerProps {
+  bookmaker: BookmakerSelectTriggerData | null;
+  placeholder?: string;
+  className?: string;
+}
+
+export function BookmakerSelectTrigger({
+  bookmaker,
+  placeholder = "Selecione",
+  className,
+}: BookmakerSelectTriggerProps) {
+  if (!bookmaker) {
+    return (
+      <span className={cn("text-muted-foreground text-center w-full", className)}>
+        {placeholder}
+      </span>
+    );
+  }
+  
+  const { nome, parceiro_nome, moeda, saldo_operavel, logo_url } = bookmaker;
+  const parceiroShortName = getFirstLastName(parceiro_nome || "");
+  
+  return (
+    <div className={cn(
+      "grid grid-cols-[auto_1fr_auto] items-center w-full gap-2 min-w-0",
+      className
+    )}>
+      {/* Logo */}
+      <div className="flex-shrink-0">
+        {logo_url ? (
+          <img
+            src={logo_url}
+            alt=""
+            className="h-5 w-5 rounded object-contain"
+          />
+        ) : (
+          <div className="h-5 w-5" aria-hidden="true" />
+        )}
+      </div>
+
+      {/* Nome + Badge + Parceiro */}
+      <div className="flex flex-col items-center justify-center min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className="uppercase text-xs font-medium truncate">{nome}</span>
+          <CurrencyBadge moeda={moeda} />
+        </div>
+        {parceiroShortName && (
+          <span className="text-[10px] text-muted-foreground truncate">
+            {parceiroShortName}
+          </span>
+        )}
+      </div>
+      
+      {/* Saldo */}
+      <div className="flex flex-col items-end flex-shrink-0">
+        <span className={cn(
+          "text-xs font-medium",
+          getCurrencyTextColor(moeda)
+        )}>
+          {formatCurrency(saldo_operavel, moeda)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Badge de moeda com cores distintas por tipo
  */
 export function CurrencyBadge({ moeda, size = "sm" }: { moeda: string; size?: "sm" | "xs" }) {
