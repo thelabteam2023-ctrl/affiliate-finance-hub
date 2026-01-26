@@ -225,79 +225,49 @@ export function BetFormHeader({
         </div>
       </div>
       
-      {/* Linha 2: Estratégia e Contexto */}
+      {/* Linha 2: Estratégia (Contexto é auto-inferido internamente) */}
       <div className="px-4 pb-3">
-        <div className="grid grid-cols-2 gap-3">
-          {/* Estratégia */}
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">
-              Estratégia <span className="text-red-400">*</span>
-              {isEstrategiaFixed && (
-                <span className="ml-1 text-[10px] text-primary">(fixo)</span>
-              )}
-            </Label>
-            
-            {isEstrategiaFixed && lockedEstrategia ? (
-              <div className="h-8 flex items-center">
-                <Badge 
-                  variant="secondary" 
-                  className="text-xs font-medium bg-primary/10 text-primary border-primary/20"
-                >
-                  {ESTRATEGIA_LABELS[lockedEstrategia]}
-                </Badge>
-              </div>
-            ) : (
-              <Select 
-                value={displayEstrategia || ""} 
-                onValueChange={(v) => onEstrategiaChange(v as ApostaEstrategia)}
-                disabled={isEstrategiaFixed}
-              >
-                <SelectTrigger className={cn(
-                  "h-8 text-xs", 
-                  !displayEstrategia && "border-red-500/50",
-                  isEstrategiaFixed && "opacity-70 cursor-not-allowed"
-                )}>
-                  <SelectValue placeholder="Selecione uma estratégia" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ESTRATEGIAS_LIST.map(e => (
-                    <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">
+            Estratégia <span className="text-red-400">*</span>
+            {isEstrategiaFixed && (
+              <span className="ml-1 text-[10px] text-primary">(fixo)</span>
             )}
-            
-            {!displayEstrategia && !isEstrategiaFixed && (
-              <p className="text-[10px] text-red-400 mt-0.5">Obrigatório</p>
-            )}
-          </div>
+          </Label>
           
-          {/* Contexto */}
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">
-              Contexto
-              {isEstrategiaFixed && (
-                <span className="ml-1 text-[10px] text-primary">(fixo)</span>
-              )}
-            </Label>
+          {isEstrategiaFixed && lockedEstrategia ? (
+            <div className="h-8 flex items-center">
+              <Badge 
+                variant="secondary" 
+                className="text-xs font-medium bg-primary/10 text-primary border-primary/20"
+              >
+                {ESTRATEGIA_LABELS[lockedEstrategia]}
+              </Badge>
+            </div>
+          ) : (
             <Select 
-              value={contexto} 
-              onValueChange={(v) => onContextoChange(v as ContextoOperacional)}
+              value={displayEstrategia || ""} 
+              onValueChange={(v) => onEstrategiaChange(v as ApostaEstrategia)}
               disabled={isEstrategiaFixed}
             >
               <SelectTrigger className={cn(
-                "h-8 text-xs",
+                "h-8 text-xs max-w-[280px]", 
+                !displayEstrategia && "border-red-500/50",
                 isEstrategiaFixed && "opacity-70 cursor-not-allowed"
               )}>
-                <SelectValue />
+                <SelectValue placeholder="Selecione uma estratégia" />
               </SelectTrigger>
               <SelectContent>
-                {CONTEXTOS_LIST.map(c => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                {ESTRATEGIAS_LIST.map(e => (
+                  <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          )}
+          
+          {!displayEstrategia && !isEstrategiaFixed && (
+            <p className="text-[10px] text-red-400 mt-0.5">Obrigatório</p>
+          )}
         </div>
       </div>
     </div>
