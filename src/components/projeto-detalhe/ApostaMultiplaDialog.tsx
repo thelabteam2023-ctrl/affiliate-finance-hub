@@ -46,7 +46,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Card, CardContent } from "@/components/ui/card";
 import { RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
-import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
+import { isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo } from "@/lib/apostaConstants";
 import { BetFormHeader } from "@/components/apostas/BetFormHeader";
 import { getFirstLastName } from "@/lib/utils";
 import { toLocalTimestamp } from "@/utils/dateUtils";
@@ -457,15 +457,35 @@ export function ApostaMultiplaDialog({
   // Sincronizar estratégia quando está "travada" pela aba
   // CRÍTICO: Quando a aba define uma estratégia fixa (ex: bonus, freebets),
   // precisamos atualizar o registroValues.estrategia automaticamente
+  // Sincronizar estratégia E contexto quando estão "travados" pela aba
+  // CRÍTICO: Quando a aba define estratégia/contexto fixos (ex: bonus, freebets),
+  // precisamos atualizar o registroValues automaticamente
   useEffect(() => {
     if (!aposta && open) {
       const lockedEstrategia = isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null;
+      const lockedContexto = isAbaContextoFixo(activeTab) ? getContextoFromTab(activeTab) : null;
       
-      if (lockedEstrategia && registroValues.estrategia !== lockedEstrategia) {
-        setRegistroValues(prev => ({ ...prev, estrategia: lockedEstrategia }));
-      }
+      setRegistroValues(prev => {
+        const updates: Partial<typeof prev> = {};
+        
+        // Sincronizar estratégia se locked
+        if (lockedEstrategia && prev.estrategia !== lockedEstrategia) {
+          updates.estrategia = lockedEstrategia;
+        }
+        
+        // Sincronizar contexto se locked (abas bonus/freebets)
+        if (lockedContexto && prev.contexto_operacional !== lockedContexto) {
+          updates.contexto_operacional = lockedContexto;
+        }
+        
+        // Se há updates, aplicar
+        if (Object.keys(updates).length > 0) {
+          return { ...prev, ...updates };
+        }
+        return prev;
+      });
     }
-  }, [open, aposta, activeTab, registroValues.estrategia]);
+  }, [open, aposta, activeTab]);
 
   const getLocalDateTimeString = () => {
     const now = new Date();
