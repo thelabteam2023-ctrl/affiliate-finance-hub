@@ -945,6 +945,42 @@ export function SurebetModalRoot({
   };
 
   // ============================================
+  // VALIDAÇÃO DE SALDO POR PERNA
+  // ============================================
+
+  /**
+   * Verifica se alguma perna possui stake maior que o saldo disponível da casa.
+   * Retorna um objeto com:
+   * - hasInsufficientBalance: true se alguma perna excede o saldo
+   * - insufficientLegs: índices das pernas com saldo insuficiente
+   */
+  const balanceValidation = useMemo(() => {
+    const insufficientLegs: number[] = [];
+    
+    odds.forEach((entry, index) => {
+      if (!entry.bookmaker_id) return;
+      
+      const stake = parseFloat(entry.stake) || 0;
+      if (stake <= 0) return;
+      
+      const bookmaker = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
+      if (!bookmaker) return;
+      
+      // Usar saldo_operavel como limite (Real + Freebet + Bonus)
+      const saldoDisponivel = bookmaker.saldo_operavel ?? 0;
+      
+      if (stake > saldoDisponivel) {
+        insufficientLegs.push(index);
+      }
+    });
+    
+    return {
+      hasInsufficientBalance: insufficientLegs.length > 0,
+      insufficientLegs
+    };
+  }, [odds, bookmakerSaldos]);
+
+  // ============================================
   // RASCUNHO
   // ============================================
 
@@ -1152,6 +1188,7 @@ export function SurebetModalRoot({
                       directedProfitLegs={directedProfitLegs}
                       numPernas={numPernas}
                       moedaDominante={analysis.moedaDominante}
+                      hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
                       onUpdateOdd={updateOdd}
                       onSetReference={setReferenceIndex}
                       onToggleDirected={toggleDirectedLeg}
@@ -1228,13 +1265,27 @@ export function SurebetModalRoot({
               )}
               <Button 
                 onClick={handleSave} 
-                disabled={saving || analysis.stakeTotal <= 0 || analysis.pernasCompletasCount < numPernas}
+                disabled={saving || analysis.stakeTotal <= 0 || analysis.pernasCompletasCount < numPernas || (!isEditing && balanceValidation.hasInsufficientBalance)}
+                title={balanceValidation.hasInsufficientBalance ? "Saldo insuficiente em uma ou mais casas" : undefined}
               >
                 <Save className="h-4 w-4 mr-1" />
                 {isEditing ? "Salvar" : "Registrar"}
               </Button>
             </div>
           </div>
+
+          {/* Aviso de saldo insuficiente */}
+          {!isEditing && balanceValidation.hasInsufficientBalance && (
+            <div className="px-4 pb-3 -mt-2">
+              <div className="flex items-center gap-2 p-2 bg-destructive/10 border border-destructive/30 rounded text-xs text-destructive">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>
+                  Saldo insuficiente na(s) perna(s) {balanceValidation.insufficientLegs.map(i => i + 1).join(", ")}. 
+                  Reduza o stake ou selecione outra casa.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
