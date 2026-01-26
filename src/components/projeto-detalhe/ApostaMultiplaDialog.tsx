@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
-import { criarAposta, type SelecaoMultipla } from "@/services/aposta";
+import { criarAposta, deletarAposta, type SelecaoMultipla } from "@/services/aposta";
 import {
   Dialog,
   DialogContent,
@@ -1235,48 +1235,9 @@ export function ApostaMultiplaDialog({
     try {
       setLoading(true);
 
-      // Reverter saldo baseado no resultado da aposta
-      // Modelo contábil: saldo só foi alterado se teve resultado (não PENDENTE)
-      const resultado = aposta.resultado;
-      const usavaFreebet = aposta.tipo_freebet && aposta.tipo_freebet !== "normal";
-      
-      if (resultado && resultado !== "PENDENTE") {
-        if (resultado === "RED" || resultado === "MEIO_RED") {
-          // RED/MEIO_RED: stake foi debitada, reverter (creditar)
-          if (usavaFreebet) {
-            const { data: bk } = await supabase
-              .from("bookmakers")
-              .select("saldo_freebet")
-              .eq("id", aposta.bookmaker_id)
-              .single();
-            if (bk) {
-              await supabase
-                .from("bookmakers")
-                .update({ saldo_freebet: bk.saldo_freebet + aposta.stake })
-                .eq("id", aposta.bookmaker_id);
-            }
-          } else {
-            // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
-            await updateBookmakerBalance(aposta.bookmaker_id, aposta.stake);
-          }
-        } else if ((resultado === "GREEN" || resultado === "MEIO_GREEN") && aposta.valor_retorno) {
-          // GREEN/MEIO_GREEN: lucro foi creditado, reverter (debitar lucro)
-          const lucro = aposta.valor_retorno - aposta.stake;
-          if (lucro !== 0) {
-            // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
-            await updateBookmakerBalance(aposta.bookmaker_id, -lucro);
-          }
-        }
-        // VOID: não alterou saldo, não precisa reverter
-      }
-      // PENDENTE: não alterou saldo, não precisa reverter
-
-      const { error } = await supabase
-        .from("apostas_unificada")
-        .delete()
-        .eq("id", aposta.id);
-
-      if (error) throw error;
+      // Exclusão centralizada (reversão → VOID → delete) para recompor saldo corretamente
+      const result = await deletarAposta(aposta.id);
+      if (!result.success) throw new Error(result.error?.message || 'Falha ao excluir');
 
       // CRÍTICO: Invalidar saldos imediatamente após exclusão
       // Garante que o "Saldo Operável" no formulário reflita o valor atualizado

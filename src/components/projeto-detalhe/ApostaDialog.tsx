@@ -61,7 +61,7 @@ import {
   getCurrencyTextColor,
   getCurrencySymbol 
 } from "@/components/bookmakers/BookmakerSelectOption";
-import { reliquidarAposta } from "@/services/aposta";
+import { reliquidarAposta, deletarAposta } from "@/services/aposta";
 import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { GerouFreebetInput } from "./GerouFreebetInput";
@@ -2595,77 +2595,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     
     try {
       setLoading(true);
-      
-      // ================================================================
-      // CORREÇÃO CRÍTICA: Exclusão de apostas via ledger
-      // 
-      // - Aposta PENDENTE: apenas deleta (não havia impacto no saldo real)
-      // - Aposta LIQUIDADA: buscar dados completos e reverter via ledger
-      // ================================================================
-      
-      const estaLiquidada = aposta.status === 'LIQUIDADA';
-      const temResultadoFinal = aposta.resultado && aposta.resultado !== 'PENDENTE';
-      
-      // Se a aposta estava liquidada, precisamos reverter via ledger
-      if (estaLiquidada && temResultadoFinal) {
-        console.log("[ApostaDialog] Excluindo aposta LIQUIDADA - buscando dados para reversão");
-        
-        // Buscar dados completos da aposta incluindo workspace_id e user_id
-        const { data: apostaCompleta } = await supabase
-          .from('apostas_unificada')
-          .select('id, workspace_id, user_id, bookmaker_id, stake, lucro_prejuizo, resultado, moeda_operacao')
-          .eq('id', aposta.id)
-          .single();
-        
-        if (apostaCompleta && apostaCompleta.bookmaker_id) {
-          const moeda = apostaCompleta.moeda_operacao || 'BRL';
-          
-          if (apostaCompleta.resultado === 'GREEN') {
-            // Reverter GREEN: debitar o que foi creditado (stake + lucro)
-            const valorReverter = (apostaCompleta.stake || 0) + (apostaCompleta.lucro_prejuizo || 0);
-            await supabase.from('cash_ledger').insert({
-              workspace_id: apostaCompleta.workspace_id,
-              user_id: apostaCompleta.user_id,
-              tipo_transacao: 'APOSTA_REVERSAO',
-              origem_bookmaker_id: apostaCompleta.bookmaker_id,
-              origem_tipo: 'BOOKMAKER',
-              valor: valorReverter,
-              valor_origem: valorReverter,
-              moeda: moeda,
-              tipo_moeda: ['USD', 'USDT'].includes(moeda) ? 'CRYPTO' : 'FIAT',
-              status: 'CONFIRMADO',
-              descricao: `Reversão aposta excluída (GREEN) #${aposta.id.slice(0,8)}`,
-              impacta_caixa_operacional: true,
-            });
-          } else if (apostaCompleta.resultado === 'VOID' || apostaCompleta.resultado === 'REEMBOLSO') {
-            // Reverter VOID: debitar stake devolvido
-            await supabase.from('cash_ledger').insert({
-              workspace_id: apostaCompleta.workspace_id,
-              user_id: apostaCompleta.user_id,
-              tipo_transacao: 'APOSTA_REVERSAO',
-              origem_bookmaker_id: apostaCompleta.bookmaker_id,
-              origem_tipo: 'BOOKMAKER',
-              valor: apostaCompleta.stake || 0,
-              valor_origem: apostaCompleta.stake || 0,
-              moeda: moeda,
-              tipo_moeda: ['USD', 'USDT'].includes(moeda) ? 'CRYPTO' : 'FIAT',
-              status: 'CONFIRMADO',
-              descricao: `Reversão aposta excluída (VOID) #${aposta.id.slice(0,8)}`,
-              impacta_caixa_operacional: true,
-            });
-          }
-          // RED não precisa de reversão (stake já foi perdido)
-        }
-      }
-      // Se era PENDENTE, não precisa reverter nada
-      
-      // Deletar a aposta
-      const { error } = await supabase
-        .from("apostas_unificada")
-        .delete()
-        .eq("id", aposta.id);
 
-      if (error) throw error;
+      // Exclusão centralizada (reversão → VOID → delete) para garantir recomposição de saldo
+      const result = await deletarAposta(aposta.id);
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Falha ao excluir aposta');
+      }
       
       invalidateSaldos(projetoId);
       toast.success("Aposta excluída com sucesso!");
