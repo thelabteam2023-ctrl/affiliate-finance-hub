@@ -2709,6 +2709,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     showCloseButton: !embedded,
     onClose: () => onOpenChange(false),
     embedded,
+    fonteSaldo: registroValues.fonte_saldo || null,
   };
 
   // ============================================
