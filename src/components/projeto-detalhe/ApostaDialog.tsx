@@ -2662,19 +2662,32 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 <Label className={`text-xs ${printFieldsNeedingReview.esporte ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Esporte {printFieldsNeedingReview.esporte && <span className="text-[9px]">⚠</span>}
                 </Label>
-                <Select value={esporte} onValueChange={(val) => {
-                  setEsporte(val);
-                  incrementSportUsage(val);
-                }}>
-                  <SelectTrigger className={`h-8 text-xs ${printFieldsNeedingReview.esporte ? 'border-amber-500/50' : ''}`}>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getSortedEsportes().map((esp) => (
-                      <SelectItem key={esp} value={esp}>{esp}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Select value={esporte} onValueChange={(val) => {
+                          setEsporte(val);
+                          incrementSportUsage(val);
+                        }}>
+                          <SelectTrigger className={`h-8 text-xs ${printFieldsNeedingReview.esporte ? 'border-amber-500/50' : ''}`}>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getSortedEsportes().map((esp) => (
+                              <SelectItem key={esp} value={esp}>{esp}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TooltipTrigger>
+                    {esporte && (
+                      <TooltipContent side="bottom" className="text-xs">
+                        {esporte}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               
               {/* Evento */}
@@ -2682,37 +2695,51 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 <Label className={`text-xs ${printFieldsNeedingReview.evento ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Evento {printFieldsNeedingReview.evento && <span className="text-[9px]">⚠</span>}
                 </Label>
-                <Input
-                  value={evento}
-                  onChange={(e) => setEvento(e.target.value.toUpperCase())}
-                  placeholder="TIME 1 X TIME 2"
-                  className={`h-8 text-xs uppercase ${printFieldsNeedingReview.evento ? 'border-amber-500/50' : ''}`}
-                />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Input
+                        value={evento}
+                        onChange={(e) => setEvento(e.target.value.toUpperCase())}
+                        placeholder="TIME 1 X TIME 2"
+                        className={`h-8 text-xs uppercase ${printFieldsNeedingReview.evento ? 'border-amber-500/50' : ''}`}
+                      />
+                    </TooltipTrigger>
+                    {evento && (
+                      <TooltipContent side="bottom" className="text-xs max-w-[300px]">
+                        {evento}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               
-              {/* Mercado */}
+              {/* Mercado - Campo livre */}
               <div className="text-center">
                 <Label className={`text-xs ${printFieldsNeedingReview.mercado ? 'text-amber-500' : 'text-muted-foreground'}`}>
                   Mercado {printFieldsNeedingReview.mercado && <span className="text-[9px]">⚠</span>}
                 </Label>
-                <Select value={mercado} onValueChange={(val) => {
-                  setMercado(val);
-                  setSelecao("");
-                  if (mercadoFromPrint) setMercadoFromPrint(false);
-                }} disabled={!esporte && !mercadoFromPrint}>
-                  <SelectTrigger className={`h-8 text-xs ${printFieldsNeedingReview.mercado ? 'border-amber-500/50' : ''}`}>
-                    <SelectValue placeholder={esporte || mercadoFromPrint ? "Selecione" : "Esporte primeiro"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mercadosDisponiveis.length > 0 ? (
-                      mercadosDisponiveis.map((m) => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
-                      ))
-                    ) : mercado ? (
-                      <SelectItem value={mercado}>{mercado}</SelectItem>
-                    ) : null}
-                  </SelectContent>
-                </Select>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Input
+                        value={mercado}
+                        onChange={(e) => {
+                          setMercado(e.target.value);
+                          setSelecao("");
+                          if (mercadoFromPrint) setMercadoFromPrint(false);
+                        }}
+                        placeholder="Ex: Resultado Final"
+                        className={`h-8 text-xs ${printFieldsNeedingReview.mercado ? 'border-amber-500/50' : ''}`}
+                      />
+                    </TooltipTrigger>
+                    {mercado && (
+                      <TooltipContent side="bottom" className="text-xs max-w-[300px]">
+                        {mercado}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               
               {/* Data/Hora */}
