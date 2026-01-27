@@ -119,8 +119,9 @@ export function useBookmakerSaldosQuery({
 export function useInvalidateBookmakerSaldos() {
   const queryClient = useQueryClient();
   
-  return (projetoId?: string) => {
-    // Importação dinâmica das constantes para evitar dependência circular
+  // CRITICAL FIX: Retorna uma Promise para permitir await no caller
+  // Isso garante que o cache seja invalidado ANTES de fechar dialogs
+  return async (projetoId?: string): Promise<void> => {
     const KEYS = {
       BOOKMAKER_SALDOS: "bookmaker-saldos",
       PROJETO_VINCULOS: "projeto-vinculos",
@@ -136,47 +137,67 @@ export function useInvalidateBookmakerSaldos() {
       BOOKMAKERS: "bookmakers",
     };
 
+    const invalidations: Promise<void>[] = [];
+
     if (projetoId) {
       // GRUPO FINANCIAL_STATE - Invalidação completa por projeto
       
       // 1. Saldos
-      queryClient.invalidateQueries({ queryKey: [KEYS.BOOKMAKER_SALDOS, projetoId] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.BOOKMAKER_SALDOS] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.SALDO_OPERAVEL_RPC, projetoId] });
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: [KEYS.BOOKMAKER_SALDOS, projetoId] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.BOOKMAKER_SALDOS] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.SALDO_OPERAVEL_RPC, projetoId] })
+      );
       
       // 2. Vínculos
-      queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_VINCULOS, projetoId] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_VINCULOS, "historico", projetoId] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.BOOKMAKERS_DISPONIVEIS] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.BOOKMAKERS] });
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_VINCULOS, projetoId] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_VINCULOS, "historico", projetoId] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.BOOKMAKERS_DISPONIVEIS] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.BOOKMAKERS] })
+      );
       
       // 3. KPIs
-      queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_RESULTADO, projetoId] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_BREAKDOWNS, projetoId] });
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_RESULTADO, projetoId] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_BREAKDOWNS, projetoId] })
+      );
       
       // 4. Apostas
-      queryClient.invalidateQueries({ queryKey: [KEYS.APOSTAS, projetoId] });
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: [KEYS.APOSTAS, projetoId] })
+      );
       
       // 5. Exposição
-      queryClient.invalidateQueries({ queryKey: [KEYS.EXPOSICAO_PROJETO, projetoId] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.CAPACIDADE_APOSTA, projetoId] });
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: [KEYS.EXPOSICAO_PROJETO, projetoId] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.CAPACIDADE_APOSTA, projetoId] })
+      );
       
       // 6. Parceiros (saldos agregados)
-      queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_FINANCEIRO] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_CONSOLIDADO] });
-      
-      console.log(`[useInvalidateBookmakerSaldos] Invalidated FINANCIAL_STATE for project ${projetoId}`);
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_FINANCEIRO] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_CONSOLIDADO] })
+      );
     } else {
       // Invalidação global
-      queryClient.invalidateQueries({ queryKey: [KEYS.BOOKMAKER_SALDOS] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_VINCULOS] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_RESULTADO] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_BREAKDOWNS] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_FINANCEIRO] });
-      queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_CONSOLIDADO] });
-      
-      console.log(`[useInvalidateBookmakerSaldos] Invalidated FINANCIAL_STATE globally`);
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: [KEYS.BOOKMAKER_SALDOS] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_VINCULOS] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_RESULTADO] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.PROJETO_BREAKDOWNS] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_FINANCEIRO] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_CONSOLIDADO] })
+      );
     }
+
+    // Aguardar todas as invalidações em paralelo
+    await Promise.all(invalidations);
+    
+    console.log(
+      `[useInvalidateBookmakerSaldos] Invalidated FINANCIAL_STATE`,
+      { projetoId: projetoId || 'global', queriesInvalidated: invalidations.length }
+    );
   };
 }
 

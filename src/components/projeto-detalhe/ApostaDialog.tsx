@@ -2096,8 +2096,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
         toast.success("Aposta atualizada com sucesso!");
         
-        // Invalidar cache de saldos após update
-        invalidateSaldos(projetoId);
+        // CRITICAL FIX: Aguardar invalidação completar ANTES de fechar o dialog
+        // Isso garante que os novos saldos sejam buscados do servidor
+        await invalidateSaldos(projetoId);
       } else {
         // ========== VALIDAÇÃO PRÉ-COMMIT (ANTI-CONCORRÊNCIA) ==========
         // Antes de inserir, validar server-side com lock para prevenir:
@@ -2207,8 +2208,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // não na criação. Isso garante que apenas apostas finalizadas (GREEN/RED) contem para o rollover.
       }
 
-      // Invalidar cache de saldos para atualizar todas as UIs
-      invalidateSaldos(projetoId);
+      // CRITICAL FIX: Aguardar invalidação completar ANTES de fechar o dialog
+      // Isso garante que os novos saldos sejam buscados do servidor
+      await invalidateSaldos(projetoId);
 
       onSuccess('save');
       if (!embedded) onOpenChange(false);
