@@ -68,13 +68,15 @@ interface Projeto {
   saldo_bookmakers?: number;
   saldo_bookmakers_by_moeda?: SaldoByMoeda;
   saldo_irrecuperavel?: number;
-  saldo_irrecuperavel_by_moeda?: SaldoByMoeda; // NOVO: dados brutos por moeda
+  saldo_irrecuperavel_by_moeda?: SaldoByMoeda;
   total_depositado?: number;
   total_sacado?: number;
   total_bookmakers?: number;
   perdas_confirmadas?: number;
   lucro_operacional?: number;
   lucro_by_moeda?: SaldoByMoeda;
+  // Multi-moeda
+  moeda_consolidacao?: 'BRL' | 'USD';
 }
 
 export default function GestaoProjetos() {
@@ -614,38 +616,43 @@ export default function GestaoProjetos() {
                       const saldoData = saldosUnificados?.get(projeto.id);
                       const totalConsolidado = saldoData?.saldoConsolidadoBRL || 0;
                       const breakdown = saldoData?.saldosPorMoeda || {};
-                      
-                      // Converter breakdown para formato legado BRL/USD
-                      const brl = breakdown["BRL"] || 0;
-                      const usd = (breakdown["USD"] || 0) + (breakdown["USDT"] || 0) + (breakdown["USDC"] || 0);
-                      const hasMultiCurrency = Object.keys(breakdown).length > 1 || usd > 0;
+                      const moedaConsolidacao = projeto.moeda_consolidacao || 'BRL';
                       
                       return (
                         <ProjectFinancialDisplay
                           type="saldo"
-                          breakdown={{ BRL: brl, USD: usd }}
+                          breakdown={breakdown}
                           totalConsolidado={totalConsolidado}
+                          moedaConsolidacao={moedaConsolidacao}
                           cotacaoPTAX={USD_TO_BRL_DISPLAY}
-                          isMultiCurrency={hasMultiCurrency}
                         />
                       );
                     })()}
                     
                     {/* Lucro - Cálculo de consolidação no RENDER */}
                     {(() => {
-                      const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
-                      const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
+                      const lucroBreakdown = projeto.lucro_by_moeda || {};
                       const perdas = projeto.perdas_confirmadas || 0;
-                      // CONVERSÃO NO RENDER - usando cotação atual
-                      const lucroConsolidado = lucroBRL + (lucroUSD * USD_TO_BRL_DISPLAY) - perdas;
+                      const moedaConsolidacao = projeto.moeda_consolidacao || 'BRL';
+                      
+                      // Calcular total consolidado somando todas as moedas convertidas
+                      let lucroConsolidado = -(perdas);
+                      Object.entries(lucroBreakdown).forEach(([moeda, valor]) => {
+                        if (moeda === 'BRL') {
+                          lucroConsolidado += valor as number;
+                        } else {
+                          // Converter para BRL usando cotação
+                          lucroConsolidado += (valor as number) * USD_TO_BRL_DISPLAY;
+                        }
+                      });
                       
                       return (
                         <ProjectFinancialDisplay
                           type="lucro"
-                          breakdown={{ BRL: lucroBRL, USD: lucroUSD }}
+                          breakdown={lucroBreakdown}
                           totalConsolidado={lucroConsolidado}
+                          moedaConsolidacao={moedaConsolidacao}
                           cotacaoPTAX={USD_TO_BRL_DISPLAY}
-                          isMultiCurrency={lucroUSD !== 0}
                         />
                       );
                     })()}
