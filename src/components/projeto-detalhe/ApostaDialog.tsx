@@ -673,6 +673,26 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [layStake, setLayStake] = useState<number | null>(null);
   const [layLiability, setLayLiability] = useState<number | null>(null);
 
+  // ============= SALDO AJUSTADO PARA EDIÇÃO =============
+  // Para re-liquidação: o stake anterior está "virtualmente disponível" porque
+  // a reversão irá restaurá-lo antes de aplicar o novo resultado.
+  // Isso permite editar apostas GREEN→RED sem erro de saldo insuficiente.
+  const saldoAjustadoParaEdicao = useMemo(() => {
+    const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+    if (!selectedBk) return null;
+    
+    // Se é edição e a bookmaker não mudou, considerar stake anterior como disponível
+    const mesmaBookmaker = aposta?.bookmaker_id === bookmakerId;
+    const stakeAnterior = aposta && mesmaBookmaker ? (aposta.stake || 0) : 0;
+    
+    return {
+      saldoOperavel: selectedBk.saldo_operavel + stakeAnterior,
+      saldoDisponivel: selectedBk.saldo_disponivel + stakeAnterior,
+      moeda: selectedBk.moeda,
+      stakeAnterior,
+    };
+  }, [bookmakers, bookmakerId, aposta]);
+
   // Get available markets - include print/edit market if not in list
   const baseMercados = esporte ? MERCADOS_POR_ESPORTE[esporte] || MERCADOS_POR_ESPORTE["Outro"] : [];
   const mercadosDisponiveis = (mercadoFromPrint || mercadoFromEdit) && mercado && !baseMercados.includes(mercado)
@@ -1397,9 +1417,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       }
 
       // Validar stake vs saldo operável da bookmaker (real + freebet + bonus)
+      // CORREÇÃO CRÍTICA: Para edição de apostas (PENDENTE ou LIQUIDADA),
+      // considerar o stake anterior como "disponível" pois a reversão irá restaurá-lo.
+      // Isso permite re-liquidação (ex: mudar GREEN para RED).
       const selectedBookmaker = bookmakers.find(b => b.id === bookmakerId);
       if (selectedBookmaker) {
-        const stakeAnterior = aposta?.status === "PENDENTE" ? aposta.stake : 0;
+        // Para edição: stake anterior é "livre" apenas se a bookmaker não mudou
+        const mesmaBookmaker = aposta?.bookmaker_id === bookmakerId;
+        const stakeAnterior = aposta && mesmaBookmaker ? (aposta.stake || 0) : 0;
         const saldoOperavelParaValidar = selectedBookmaker.saldo_operavel + stakeAnterior;
         
         if (stakeNum > saldoOperavelParaValidar) {
@@ -1441,8 +1466,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Validação para Lay: responsabilidade não pode ser maior que saldo disponível
         if (tipoOperacaoExchange === "lay" && exchangeLiability !== null) {
           const selectedBk = bookmakers.find(b => b.id === exchangeBookmakerId);
-          if (selectedBk) {
-            const liabilityAnterior = aposta?.status === "PENDENTE" && aposta?.lay_liability ? aposta.lay_liability : 0;
+        if (selectedBk) {
+            // CORREÇÃO: Para edição, liability anterior está "livre" se mesma exchange
+            const mesmaExchange = aposta?.bookmaker_id === exchangeBookmakerId;
+            const liabilityAnterior = aposta && mesmaExchange && aposta?.lay_liability ? aposta.lay_liability : 0;
             const saldoDisponivel = selectedBk.saldo_disponivel + liabilityAnterior;
             
             if (exchangeLiability > saldoDisponivel) {
@@ -1482,8 +1509,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Validação para Cobertura Lay: responsabilidade não pode ser maior que saldo disponível
         if (coberturaResponsabilidade !== null && coberturaLayBookmakerId) {
           const selectedBk = bookmakers.find(b => b.id === coberturaLayBookmakerId);
-          if (selectedBk) {
-            const liabilityAnterior = aposta?.status === "PENDENTE" && aposta?.lay_liability ? aposta.lay_liability : 0;
+        if (selectedBk) {
+            // CORREÇÃO: Para edição, liability anterior está "livre" se mesma exchange
+            const mesmaExchange = aposta?.bookmaker_id === coberturaLayBookmakerId;
+            const liabilityAnterior = aposta && mesmaExchange && aposta?.lay_liability ? aposta.lay_liability : 0;
             const saldoDisponivel = selectedBk.saldo_disponivel + liabilityAnterior;
             
             if (coberturaResponsabilidade > saldoDisponivel) {
@@ -2869,10 +2898,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                           bookmaker={bookmakerId ? (() => {
                             const selectedBk = bookmakers.find(b => b.id === bookmakerId);
                             if (!selectedBk) return null;
+                            // CORREÇÃO: Usar saldo ajustado para edição (considera stake anterior como disponível)
+                            const saldoExibicao = saldoAjustadoParaEdicao?.saldoOperavel 
+                              ?? saldoComReservas?.disponivel 
+                              ?? selectedBk.saldo_operavel;
                             return {
                               parceiro_nome: selectedBk.parceiro_nome,
                               moeda: selectedBk.moeda,
-                              saldo_operavel: saldoComReservas?.disponivel ?? selectedBk.saldo_operavel
+                              saldo_operavel: saldoExibicao
                             };
                           })() : null}
                         />
@@ -2910,7 +2943,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         }}
                         placeholder="0.00"
                         className={`h-8 text-xs text-center px-1 w-[90px] tabular-nums ${(() => {
-                          const saldoDisponivelReal = saldoComReservas?.disponivel ?? bookmakers.find(b => b.id === bookmakerId)?.saldo_operavel ?? 0;
+                          // CORREÇÃO: Usar saldo ajustado para edição (considera stake anterior como disponível)
+                          const saldoDisponivelReal = saldoAjustadoParaEdicao?.saldoOperavel 
+                            ?? saldoComReservas?.disponivel 
+                            ?? bookmakers.find(b => b.id === bookmakerId)?.saldo_operavel 
+                            ?? 0;
                           const stakeNum = parseFloat(stake);
                           if (!isNaN(stakeNum) && stakeNum > saldoDisponivelReal && bookmakerId) {
                             return "border-destructive";
@@ -2963,10 +3000,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     />
                   ) : bookmakerSaldo && (
                     <SaldoBreakdownDisplay
-                      saldoReal={bookmakerSaldo.saldoDisponivel}
+                      saldoReal={bookmakerSaldo.saldoDisponivel + (saldoAjustadoParaEdicao?.stakeAnterior || 0)}
                       saldoFreebet={bookmakerSaldo.saldoFreebet}
                       saldoBonus={bookmakerSaldo.saldoBonus}
-                      saldoOperavel={bookmakerSaldo.saldoOperavel}
+                      saldoOperavel={saldoAjustadoParaEdicao?.saldoOperavel ?? bookmakerSaldo.saldoOperavel}
                       moeda={bookmakerSaldo.moeda}
                       bonusRolloverStarted={bookmakerSaldo.bonusRolloverStarted}
                     />
