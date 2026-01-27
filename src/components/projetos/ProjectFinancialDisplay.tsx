@@ -1,8 +1,5 @@
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Wallet, TrendingUp, TrendingDown, Info } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, ChevronDown } from "lucide-react";
 import { getFinancialDisplay } from "@/lib/financial-display";
-import { cn } from "@/lib/utils";
 import type { MoedaConsolidacao } from "@/types/projeto";
 
 interface ProjectFinancialDisplayProps {
@@ -15,34 +12,6 @@ interface ProjectFinancialDisplayProps {
   moedaConsolidacao: MoedaConsolidacao;
   /** Cotação USD/BRL para exibição */
   cotacaoPTAX: number;
-}
-
-/**
- * Cores do badge por moeda - seguindo padrão do SaldoOperavelCard
- */
-function getCurrencyBadgeColors(moeda: string): string {
-  switch (moeda) {
-    case "BRL":
-      return "bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
-    case "USD":
-    case "USDT":
-    case "USDC":
-      return "bg-blue-500/10 border-blue-500/30 text-blue-400";
-    case "EUR":
-      return "bg-purple-500/10 border-purple-500/30 text-purple-400";
-    case "GBP":
-      return "bg-amber-500/10 border-amber-500/30 text-amber-400";
-    case "MXN":
-      return "bg-rose-500/10 border-rose-500/30 text-rose-400";
-    case "MYR":
-      return "bg-cyan-500/10 border-cyan-500/30 text-cyan-400";
-    case "COP":
-      return "bg-orange-500/10 border-orange-500/30 text-orange-400";
-    case "ARS":
-      return "bg-sky-500/10 border-sky-500/30 text-sky-400";
-    default:
-      return "bg-muted border-border text-muted-foreground";
-  }
 }
 
 /**
@@ -67,21 +36,18 @@ function getCurrencySymbol(moeda: string): string {
 /**
  * Formata valor por moeda
  */
-function formatCurrencyValue(value: number, moeda: string, showSign: boolean = false): string {
+function formatCurrencyValue(value: number, moeda: string): string {
   const symbol = getCurrencySymbol(moeda);
-  const absValue = Math.abs(value);
-  const formatted = absValue.toLocaleString('pt-BR', { 
+  const formatted = Math.abs(value).toLocaleString('pt-BR', { 
     minimumFractionDigits: 2, 
     maximumFractionDigits: 2 
   });
-  const prefix = showSign && value > 0 ? '+' : (value < 0 ? '-' : '');
-  return `${prefix}${symbol} ${formatted}`;
+  return `${symbol} ${formatted}`;
 }
 
 /**
- * Componente de exibição financeira com badges por moeda.
- * Exibe todas as moedas presentes no breakdown com badges coloridos,
- * seguindo o padrão visual do Saldo Operável.
+ * Componente de exibição financeira seguindo o padrão visual do Saldo Operável.
+ * Mostra valor principal na moeda de consolidação e valor secundário na outra moeda.
  */
 export function ProjectFinancialDisplay({
   type,
@@ -99,20 +65,6 @@ export function ProjectFinancialDisplay({
     ? "Saldo Bookmakers" 
     : (lucroDisplay?.isNegative ? "Prejuízo" : "Lucro");
   
-  // Filtrar moedas com valores não-zero e ordenar (moeda de consolidação primeiro)
-  const activeCurrencies = Object.entries(breakdown)
-    .filter(([_, value]) => value !== 0)
-    .sort(([moedaA], [moedaB]) => {
-      // Moeda de consolidação sempre primeiro
-      if (moedaA === moedaConsolidacao) return -1;
-      if (moedaB === moedaConsolidacao) return 1;
-      return moedaA.localeCompare(moedaB);
-    });
-  
-  const hasMultipleCurrencies = activeCurrencies.length > 1;
-  const hasDifferentCurrency = activeCurrencies.some(([moeda]) => moeda !== moedaConsolidacao);
-  const showBreakdown = hasMultipleCurrencies || hasDifferentCurrency;
-
   const Icon = isSaldo 
     ? Wallet 
     : (isPositive ? TrendingUp : TrendingDown);
@@ -121,80 +73,87 @@ export function ProjectFinancialDisplay({
     ? "text-muted-foreground" 
     : (isPositive ? "text-emerald-500" : "text-red-500");
 
-  // Badge styling baseado no tipo e valor
-  const getBadgeClass = (value: number, moeda: string): string => {
-    const baseColors = getCurrencyBadgeColors(moeda);
-    
-    if (!isSaldo) {
-      // Para lucro/prejuízo, usar cores semânticas
-      if (value < 0) {
-        return "bg-red-500/10 border-red-500/30 text-red-400";
-      } else if (value > 0) {
-        return "bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+  // Calcular valores para exibição
+  // Valor principal: na moeda de consolidação
+  // Valor secundário: na outra moeda (BRL se consolidação é USD, USD se consolidação é BRL)
+  
+  const moedaSecundaria = moedaConsolidacao === 'USD' ? 'BRL' : 'USD';
+  
+  // Valor na moeda de consolidação (somar valores nativos dessa moeda + converter outras)
+  let valorPrincipal = 0;
+  let valorSecundario = 0;
+  
+  Object.entries(breakdown).forEach(([moeda, valor]) => {
+    if (moeda === moedaConsolidacao || 
+        (moedaConsolidacao === 'USD' && ['USD', 'USDT', 'USDC'].includes(moeda))) {
+      valorPrincipal += valor;
+    } else if (moeda === 'BRL') {
+      // Converter BRL para USD se consolidação é USD
+      if (moedaConsolidacao === 'USD') {
+        valorPrincipal += valor / cotacaoPTAX;
+        valorSecundario += valor; // Manter BRL original para referência
+      } else {
+        valorPrincipal += valor;
       }
+    } else if (['USD', 'USDT', 'USDC'].includes(moeda)) {
+      // Converter USD para BRL se consolidação é BRL
+      if (moedaConsolidacao === 'BRL') {
+        valorPrincipal += valor * cotacaoPTAX;
+        valorSecundario += valor; // Manter USD original para referência
+      }
+    } else {
+      // Outras moedas - assumir conversão via USD
+      valorPrincipal += moedaConsolidacao === 'USD' ? valor : valor * cotacaoPTAX;
     }
-    
-    return baseColors;
-  };
+  });
+
+  // Se consolidação é USD, mostrar equivalente em BRL como secundário
+  // Se consolidação é BRL, mostrar equivalente em USD como secundário
+  if (moedaConsolidacao === 'USD') {
+    valorSecundario = valorPrincipal * cotacaoPTAX;
+  } else {
+    valorSecundario = valorPrincipal / cotacaoPTAX;
+  }
+
+  // Determinar cor do texto principal
+  const textColor = isSaldo 
+    ? "text-emerald-400" 
+    : (lucroDisplay?.isNegative ? "text-red-400" : "text-emerald-400");
+
+  // Formatar valores
+  const valorPrincipalFormatado = formatCurrencyValue(
+    isSaldo ? valorPrincipal : (lucroDisplay?.isNegative ? -Math.abs(valorPrincipal) : valorPrincipal),
+    moedaConsolidacao
+  );
+  
+  const valorSecundarioFormatado = formatCurrencyValue(valorSecundario, moedaSecundaria);
+
+  // Verificar se há múltiplas moedas para mostrar o valor secundário
+  const hasMultipleCurrencies = Object.keys(breakdown).length > 1 || 
+    Object.keys(breakdown).some(m => m !== moedaConsolidacao);
 
   return (
-    <div className="flex flex-col items-center gap-1.5 py-2">
+    <div className="flex flex-col items-center gap-1 py-2">
       {/* Header */}
       <div className="flex items-center gap-2 text-muted-foreground text-sm">
         <Icon className={`h-4 w-4 ${iconColor}`} />
         <span>{label}</span>
       </div>
       
-      {/* Badges por moeda */}
-      <div className="flex flex-wrap items-center justify-center gap-1.5">
-        {activeCurrencies.length === 0 ? (
-          // Nenhum valor - mostrar zero na moeda de consolidação
-          <Badge 
-            variant="outline" 
-            className="text-sm px-2.5 py-0.5 font-medium border-border"
-          >
-            {formatCurrencyValue(0, moedaConsolidacao)}
-          </Badge>
-        ) : (
-          activeCurrencies.map(([moeda, value]) => (
-            <Badge 
-              key={moeda}
-              variant="outline" 
-              className={cn(
-                "text-sm px-2.5 py-0.5 font-medium",
-                getBadgeClass(value, moeda)
-              )}
-            >
-              <span className="text-[10px] opacity-70 mr-1">{moeda}</span>
-              {formatCurrencyValue(value, moeda, !isSaldo)}
-            </Badge>
-          ))
-        )}
+      {/* Valor Principal */}
+      <div className="flex flex-col items-center">
+        <div className="flex items-center gap-1">
+          <span className={`text-lg font-semibold ${textColor}`}>
+            {valorPrincipalFormatado}
+          </span>
+          <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50" />
+        </div>
         
-        {/* Ícone de info com tooltip quando há conversão */}
-        {showBreakdown && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-3.5 w-3.5 text-muted-foreground opacity-50 cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent side="top" align="center" sideOffset={8} className="max-w-[280px] z-[100]">
-              <div className="space-y-2 text-xs">
-                <div className="font-medium">Consolidação em {moedaConsolidacao}</div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Total:</span>
-                  <span className="font-mono font-medium">
-                    ≈ {formatCurrencyValue(totalConsolidado, moedaConsolidacao, !isSaldo)}
-                  </span>
-                </div>
-                <div className="pt-1.5 border-t border-border/50 text-muted-foreground/70">
-                  <div className="flex justify-between gap-4">
-                    <span>Cotação USD/BRL:</span>
-                    <span className="font-mono">R$ {cotacaoPTAX.toFixed(4)}</span>
-                  </div>
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
+        {/* Valor Secundário (aproximado na outra moeda) */}
+        {hasMultipleCurrencies && valorSecundario > 0 && (
+          <span className="text-xs text-muted-foreground">
+            ≈ {valorSecundarioFormatado}
+          </span>
         )}
       </div>
     </div>
