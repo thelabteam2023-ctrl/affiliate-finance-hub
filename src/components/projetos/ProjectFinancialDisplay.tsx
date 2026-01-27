@@ -1,5 +1,6 @@
 import { Wallet, TrendingUp, TrendingDown, ChevronDown } from "lucide-react";
 import { getFinancialDisplay } from "@/lib/financial-display";
+import { useCotacoes } from "@/hooks/useCotacoes";
 import type { MoedaConsolidacao } from "@/types/projeto";
 
 interface ProjectFinancialDisplayProps {
@@ -10,7 +11,7 @@ interface ProjectFinancialDisplayProps {
   totalConsolidado: number;
   /** Moeda de consolidação do projeto (determina a exibição) */
   moedaConsolidacao: MoedaConsolidacao;
-  /** Cotação USD/BRL para exibição */
+  /** Cotação USD/BRL para exibição (fallback se context não disponível) */
   cotacaoPTAX: number;
 }
 
@@ -48,6 +49,9 @@ function formatCurrencyValue(value: number, moeda: string): string {
 /**
  * Componente de exibição financeira seguindo o padrão visual do Saldo Operável.
  * Mostra valor principal na moeda de consolidação e valor secundário na outra moeda.
+ * 
+ * Usa o hook useCotacoes centralizado para conversão de TODAS as moedas suportadas:
+ * BRL, USD, EUR, GBP, MXN, MYR, COP, ARS, USDT, USDC
  */
 export function ProjectFinancialDisplay({
   type,
@@ -56,6 +60,12 @@ export function ProjectFinancialDisplay({
   moedaConsolidacao,
   cotacaoPTAX,
 }: ProjectFinancialDisplayProps) {
+  // Usar hook centralizado de cotações
+  const { getRate, cotacaoUSD } = useCotacoes();
+  
+  // Usar cotação do context ou fallback da prop
+  const taxaUSD = cotacaoUSD || cotacaoPTAX;
+  
   const isSaldo = type === "saldo";
   
   const lucroDisplay = !isSaldo ? getFinancialDisplay(totalConsolidado) : null;
@@ -79,51 +89,44 @@ export function ProjectFinancialDisplay({
   
   const moedaSecundaria = moedaConsolidacao === 'USD' ? 'BRL' : 'USD';
   
-  // Agrupa moedas USD-like
+  // Agrupa moedas USD-like (stablecoins com paridade 1:1)
   const isUsdLike = (m: string) => ['USD', 'USDT', 'USDC'].includes(m);
   
-  // Taxa EUR/USD aproximada (EUR vale mais que USD)
-  const EUR_TO_USD = 1.08;
-  
-  // Calcular valor principal na moeda de consolidação
-  let valorPrincipal = 0;
-  let valorBRL = 0;
-  let valorUSD = 0;
+  // Calcular valor total em BRL usando cotações centralizadas
+  // O getRate(moeda) retorna a cotação da moeda para BRL
+  let totalEmBRL = 0;
   
   Object.entries(breakdown).forEach(([moeda, valor]) => {
     if (moeda === 'BRL') {
-      valorBRL += valor;
+      totalEmBRL += valor;
     } else if (isUsdLike(moeda)) {
-      valorUSD += valor;
-    } else if (moeda === 'EUR') {
-      // Converter EUR para USD
-      valorUSD += valor * EUR_TO_USD;
-    } else if (moeda === 'GBP') {
-      // Converter GBP para USD (aproximado)
-      valorUSD += valor * 1.27;
+      // USD, USDT, USDC - usar cotação USD
+      totalEmBRL += valor * taxaUSD;
     } else {
-      // Outras moedas - assumir paridade 1:1 com USD
-      valorUSD += valor;
+      // EUR, GBP, MXN, MYR, COP, ARS, etc - usar cotação específica
+      const taxaMoeda = getRate(moeda);
+      totalEmBRL += valor * taxaMoeda;
     }
   });
   
   // Calcular valor principal baseado na moeda de consolidação
+  let valorPrincipal = 0;
   if (moedaConsolidacao === 'USD') {
-    // Projeto consolida em USD: converter BRL para USD e somar
-    valorPrincipal = valorUSD + (valorBRL / cotacaoPTAX);
+    // Projeto consolida em USD: converter total BRL para USD
+    valorPrincipal = taxaUSD > 0 ? totalEmBRL / taxaUSD : 0;
   } else {
-    // Projeto consolida em BRL: converter USD para BRL e somar
-    valorPrincipal = valorBRL + (valorUSD * cotacaoPTAX);
+    // Projeto consolida em BRL: usar total em BRL diretamente
+    valorPrincipal = totalEmBRL;
   }
   
   // Calcular valor secundário (aproximado na outra moeda)
   let valorSecundario = 0;
   if (moedaConsolidacao === 'USD') {
-    // Principal é USD, secundário é BRL
-    valorSecundario = valorPrincipal * cotacaoPTAX;
+    // Principal é USD, secundário é BRL (= total já calculado em BRL)
+    valorSecundario = totalEmBRL;
   } else {
     // Principal é BRL, secundário é USD
-    valorSecundario = valorPrincipal / cotacaoPTAX;
+    valorSecundario = taxaUSD > 0 ? totalEmBRL / taxaUSD : 0;
   }
 
   // Determinar cor do texto principal
