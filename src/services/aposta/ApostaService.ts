@@ -455,15 +455,15 @@ export async function liquidarAposta(
 
 /**
  * Reliquida uma aposta (muda resultado de uma aposta já liquidada).
- * Usa reverter_liquidacao_v4 + liquidar_aposta_v4 para garantir
- * que eventos de reversão sejam criados corretamente.
+ * Usa reliquidar_aposta_v5 que reverte apenas PAYOUT (sem reverter STAKE)
+ * e aplica novo payout. Isso evita "dupla contagem" do stake.
  */
 export async function reliquidarAposta(
   apostaId: string,
   novoResultado: string,
   lucroPrejuizo?: number
 ): Promise<ApostaServiceResult<{ resultado_anterior?: string; impacto_total?: number }>> {
-  console.log("[ApostaService] Iniciando reliquidação v7:", apostaId, novoResultado);
+  console.log("[ApostaService] Iniciando reliquidação v5:", apostaId, novoResultado);
 
   try {
     // Buscar resultado anterior
@@ -491,68 +491,40 @@ export async function reliquidarAposta(
       };
     }
 
-    // 1. Reverter liquidação anterior
-    const { data: revertData, error: revertError } = await supabase.rpc('reverter_liquidacao_v4', {
+    // Usar reliquidar_aposta_v5 (reverte apenas PAYOUT, não STAKE)
+    const { data: reliqData, error: reliqError } = await supabase.rpc('reliquidar_aposta_v5', {
       p_aposta_id: apostaId,
-    });
-
-    if (revertError) {
-      console.error("[ApostaService] Erro ao reverter:", revertError);
-      return {
-        success: false,
-        error: {
-          code: 'REVERT_RPC_ERROR',
-          message: `Falha ao reverter liquidação: ${revertError.message}`,
-          details: { error: revertError },
-        },
-      };
-    }
-
-    const revertResult = revertData?.[0];
-    if (!revertResult?.success) {
-      return {
-        success: false,
-        error: {
-          code: 'REVERT_FAILED',
-          message: revertResult?.message || 'Falha ao reverter liquidação',
-        },
-      };
-    }
-
-    // 2. Aplicar novo resultado
-    const { data: liquidData, error: liquidError } = await supabase.rpc('liquidar_aposta_v4', {
-      p_aposta_id: apostaId,
-      p_resultado: novoResultado,
+      p_novo_resultado: novoResultado,
       p_lucro_prejuizo: lucroPrejuizo ?? null,
     });
 
-    if (liquidError) {
-      console.error("[ApostaService] Erro ao reliquidar:", liquidError);
+    if (reliqError) {
+      console.error("[ApostaService] Erro ao reliquidar:", reliqError);
       return {
         success: false,
         error: {
           code: 'RELIQUIDATION_RPC_ERROR',
-          message: `Falha ao reliquidar aposta: ${liquidError.message}`,
-          details: { error: liquidError },
+          message: `Falha ao reliquidar aposta: ${reliqError.message}`,
+          details: { error: reliqError },
         },
       };
     }
 
-    const liquidResult = liquidData?.[0];
-    if (!liquidResult?.success) {
+    const reliqResult = reliqData?.[0];
+    if (!reliqResult?.success) {
       return {
         success: false,
         error: {
           code: 'RELIQUIDATION_FAILED',
-          message: liquidResult?.message || 'Falha ao reliquidar aposta',
+          message: reliqResult?.message || 'Falha ao reliquidar aposta',
         },
       };
     }
 
-    console.log("[ApostaService] ✅ Aposta reliquidada:", apostaId, {
+    console.log("[ApostaService] ✅ Aposta reliquidada v5:", apostaId, {
       resultado_anterior: resultadoAnterior,
       resultado_novo: novoResultado,
-      events_created: liquidResult.events_created,
+      events_created: reliqResult.events_created,
     });
     
     return {
