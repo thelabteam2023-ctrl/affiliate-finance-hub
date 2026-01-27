@@ -2102,14 +2102,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
             }
             // VOID = 0, não afeta saldo
             
+            // NOTA v7: Edição de pernas com resultado liquidado NÃO é suportada
+            // A mudança de bookmaker em aposta já liquidada requer:
+            // 1. Excluir a aposta original (que reverte via ledger)
+            // 2. Criar nova aposta com o novo bookmaker
+            // Por segurança, apenas logamos o delta esperado sem modificar saldos manualmente
             if (deltaResultado !== 0) {
-              // REVERTER do bookmaker original (tirar o que foi creditado/debitado)
-              await updateBookmakerBalance(pernaOriginal.bookmaker_id, -deltaResultado, projetoId);
-              console.log(`[SurebetEdit] Revertido ${-deltaResultado} de ${pernaOriginal.bookmaker_id}`);
-              
-              // APLICAR no novo bookmaker
-              await updateBookmakerBalance(pernaNova.bookmaker_id, deltaResultado, projetoId);
-              console.log(`[SurebetEdit] Aplicado ${deltaResultado} em ${pernaNova.bookmaker_id}`);
+              console.warn(`[SurebetEdit] Mudança de bookmaker em perna liquidada detectada. Delta esperado: ${deltaResultado}. Recomenda-se excluir e recriar.`);
             }
           }
         }
@@ -2401,39 +2400,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     if (!surebet) return;
     
     try {
-      // Antes de deletar, reverter saldos das apostas vinculadas que têm resultado
-      for (const aposta of linkedApostas) {
-        const resultado = aposta.resultado;
-        const stake = parseFloat(aposta.stake) || 0;
-        const odd = parseFloat(aposta.odd) || 0;
-        const bookmakerId = aposta.bookmaker_id;
-        
-        // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
-        if (resultado && resultado !== "PENDENTE") {
-          let delta = 0;
-          
-          if (resultado === "GREEN") {
-            // GREEN: lucro foi creditado, reverter (debitar lucro)
-            delta = -(stake * (odd - 1));
-          } else if (resultado === "RED") {
-            // RED: stake foi debitada, reverter (creditar)
-            delta = stake;
-          }
-          // VOID: não alterou saldo, não precisa reverter
-          
-          if (delta !== 0) {
-            await updateBookmakerBalance(bookmakerId, delta);
-          }
-        }
+      // ========== MIGRADO PARA MOTOR v7 ==========
+      // Usar deletarAposta do ApostaService que cuida de:
+      // 1. Reverter liquidações via financial_events
+      // 2. Deletar pernas
+      // 3. Deletar aposta
+      const { deletarAposta } = await import("@/services/aposta");
+      const result = await deletarAposta(surebet.id);
+      
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Falha ao excluir operação');
       }
       
-      // Deletar da tabela unificada
-      const { error } = await supabase
-        .from("apostas_unificada")
-        .delete()
-        .eq("id", surebet.id);
-
-      if (error) throw error;
+      // Invalidar cache de saldos
+      invalidateSaldos(projetoId);
       
       toast.success("Operação excluída!");
       onSuccess();
