@@ -67,14 +67,21 @@ Toda wallet crypto possui 3 valores:
 
 - `useWalletTransitBalance`: Hook para gerenciar operações de trânsito
 - `WalletBalanceDisplay`: Componente para exibir os 3 saldos
-- `TransacoesEmTransito`: Dashboard para confirmar/reverter transações pendentes
+- `ConciliacaoSaldos`: Fluxo unificado para confirmar transações (inclui destrave de saldo crypto)
 
-### Integração no CaixaTransacaoDialog
+### Integração Unificada na Conciliação
 
 Quando uma transação CRYPTO é criada a partir de uma wallet:
 1. O `lockBalance()` é chamado automaticamente antes do insert
 2. O campo `transit_status` é setado como 'PENDING'
-3. O usuário deve confirmar na aba "Transações em Trânsito"
+3. Na **Conciliação**, ao confirmar o valor recebido:
+   - `transit_status` é atualizado para 'CONFIRMED'
+   - `confirm_wallet_transit()` é chamado para liberar o saldo travado
+   - O saldo disponível volta ao normal
+
+**Fluxo Unificado** (sem aba separada):
+- Transações CRYPTO pendentes aparecem na Conciliação com badge "Em Trânsito"
+- Confirmar a conciliação automaticamente destrava o saldo da wallet
 
 ### View Atualizada
 
