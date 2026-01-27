@@ -102,14 +102,13 @@ export function SaldoWaterfallPreview({
 }: SaldoWaterfallPreviewProps) {
   /**
    * Lógica de ajuste de saldo em modo de edição:
-   * - RED/MEIO_RED: stake foi perdido, NÃO está no saldo atual → adicionar originalStake
-   * - PENDENTE: stake está "travado" (debitado mas não creditado) → já contabilizado, não adicionar
-   * - GREEN/VOID/MEIO_GREEN: stake retornou ao saldo → já contabilizado, não adicionar
-   * 
-   * Isso evita falsos positivos de "saldo insuficiente" ao editar apostas RED
+   * - PENDENTE: stake foi "travado" (debitado mas pendente) → será devolvido na reversão → adicionar
+   * - RED/MEIO_RED: stake foi perdido definitivamente → precisa ser considerado → adicionar
+   * - GREEN/VOID/MEIO_GREEN: stake JÁ retornou via payout → saldo atual está correto → NÃO adicionar
    */
   const stakeJaFoiPerdido = currentResultado === 'RED' || currentResultado === 'MEIO_RED';
-  const ajusteSaldo = isEditMode && stakeJaFoiPerdido ? originalStake : 0;
+  const apostaPendente = currentResultado === null || currentResultado === 'PENDENTE' || currentResultado === '';
+  const ajusteSaldo = isEditMode && (stakeJaFoiPerdido || apostaPendente) ? originalStake : 0;
   const saldoRealEfetivo = saldoReal + ajusteSaldo;
   
   const breakdown = useMemo(
