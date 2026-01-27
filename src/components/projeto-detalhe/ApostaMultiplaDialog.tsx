@@ -1068,9 +1068,7 @@ export function ApostaMultiplaDialog({
       // MIGRADO PARA LEDGER: Só creditar saldo_freebet se a freebet for liberada
       if (status === "LIBERADA") {
         const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
-        await creditarFreebetViaLedger(bkId, valor, 'APOSTA_MULTIPLA_QUALIFICADORA', {
-          descricao: 'Freebet de aposta múltipla qualificadora',
-        });
+        await creditarFreebetViaLedger(bkId, valor, 'APOSTA_MULTIPLA_QUALIFICADORA', { descricao: 'Freebet de aposta múltipla qualificadora' });
       }
 
       // Registrar na tabela freebets_recebidas com status e MOEDA da bookmaker
@@ -1114,9 +1112,7 @@ export function ApostaMultiplaDialog({
 
         // MIGRADO PARA LEDGER: Creditar via RPC atômica
         const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
-        await creditarFreebetViaLedger(freebetPendente.bookmaker_id, freebetPendente.valor, 'LIBERACAO_PENDENTE', {
-          descricao: 'Freebet liberada após liquidação de aposta múltipla',
-        });
+        await creditarFreebetViaLedger(freebetPendente.bookmaker_id, freebetPendente.valor, 'LIBERACAO_PENDENTE', { descricao: 'Freebet liberada após liquidação de aposta múltipla' });
       }
     } catch (error) {
       console.error("Erro ao liberar freebet pendente:", error);
