@@ -1559,9 +1559,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Campos explícitos do Prompt Oficial - NUNCA inferidos
         estrategia: registroValues.estrategia,
         forma_registro: registroValues.forma_registro,
-        contexto_operacional: registroValues.contexto_operacional,
-        // NOVO: fonte_saldo é a VERDADE FINANCEIRA - qual pool de capital é usado
-        fonte_saldo: registroValues.fonte_saldo || 'REAL',
+        // NOVA ARQUITETURA: contexto_operacional é DEPRECATED, sempre NORMAL
+        contexto_operacional: 'NORMAL',
+        // VERDADE FINANCEIRA: usar_freebet toggle determina fonte de saldo
+        fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
+        usar_freebet: usarFreebetBookmaker,
         // CRÍTICO: Moeda da operação = moeda nativa da bookmaker
         moeda_operacao: moedaOperacao,
       };

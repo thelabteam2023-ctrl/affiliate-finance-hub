@@ -138,10 +138,12 @@ export async function criarAposta(
     user_id: input.user_id,
     forma_registro: input.forma_registro,
     estrategia: input.estrategia,
-    contexto_operacional: input.contexto_operacional,
-    // NOVO: fonte_saldo é a VERDADE FINANCEIRA
-    // Se não fornecido, inferir do contexto_operacional para retrocompatibilidade
-    fonte_saldo: input.fonte_saldo || inferFonteSaldo(input.contexto_operacional, input.estrategia),
+    // DEPRECATED: contexto_operacional é opcional e interno
+    contexto_operacional: input.contexto_operacional || 'NORMAL',
+    // NOVA ARQUITETURA: fonte_saldo determinado por usar_freebet toggle
+    // Bônus é dinheiro normal, não requer contexto especial
+    fonte_saldo: input.fonte_saldo || inferFonteSaldo(input.contexto_operacional, input.estrategia, input.usar_freebet),
+    usar_freebet: input.usar_freebet || false,
     data_aposta: input.data_aposta,
     evento: input.evento,
     esporte: input.esporte,
@@ -765,28 +767,36 @@ export async function healthCheck(
 // ============================================================================
 
 /**
- * Infere fonte_saldo para retrocompatibilidade
+ * Determina a fonte de saldo (VERDADE FINANCEIRA)
  * 
- * REGRAS:
- * 1. Estratégias de extração usam o pool correspondente
- * 2. Contexto FREEBET/BONUS sugere o pool (mas estratégia tem prioridade)
- * 3. Fallback para REAL
+ * NOVA ARQUITETURA:
+ * - usar_freebet = true  → FREEBET (debita saldo_freebet)
+ * - usar_freebet = false → NORMAL/REAL (debita saldo_real, que inclui bônus)
  * 
- * NOTA: Este é um fallback - o ideal é sempre receber fonte_saldo explícito
+ * Estratégia é apenas classificação analítica, NÃO afeta débito.
+ * Contexto operacional é DEPRECATED para decisões financeiras.
  */
 function inferFonteSaldo(
   contexto: string | null | undefined,
-  estrategia: string | null | undefined
+  estrategia: string | null | undefined,
+  usarFreebet?: boolean
 ): string {
-  // Estratégia tem prioridade máxima
+  // NOVA REGRA: usar_freebet toggle é a verdade absoluta
+  if (usarFreebet === true) return 'FREEBET';
+  if (usarFreebet === false) return 'REAL';
+  
+  // FALLBACK para retrocompatibilidade (quando usar_freebet não fornecido)
+  // Estratégias de extração sugerem o pool correspondente
   if (estrategia === 'EXTRACAO_FREEBET') return 'FREEBET';
-  if (estrategia === 'EXTRACAO_BONUS') return 'BONUS';
   
-  // Fallback para contexto (retrocompatibilidade)
+  // IMPORTANTE: EXTRACAO_BONUS agora usa REAL (bônus = dinheiro normal)
+  // if (estrategia === 'EXTRACAO_BONUS') return 'BONUS'; // DEPRECATED
+  
+  // Contexto é apenas fallback histórico
   if (contexto === 'FREEBET') return 'FREEBET';
-  if (contexto === 'BONUS') return 'BONUS';
+  // if (contexto === 'BONUS') return 'BONUS'; // DEPRECATED
   
-  // Default
+  // Default: REAL (inclui bônus unificado)
   return 'REAL';
 }
 

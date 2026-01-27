@@ -83,8 +83,23 @@ export interface CriarApostaInput {
   // Classificação (obrigatória e explícita)
   forma_registro: FormaRegistro;
   estrategia: ApostaEstrategia;
-  contexto_operacional: ContextoOperacional; // Apenas informativo (UI)
-  fonte_saldo?: FonteSaldo; // VERDADE FINANCEIRA - qual pool de capital (default: REAL)
+  
+  /**
+   * DEPRECATED: contexto_operacional é agora opcional e interno.
+   * NÃO usar para decisões financeiras!
+   * A verdade é determinada por usar_freebet toggle.
+   */
+  contexto_operacional?: ContextoOperacional | null;
+  
+  /**
+   * VERDADE FINANCEIRA: determina qual pool de capital é usado.
+   * - 'NORMAL' = saldo_real + saldo_bonus (unificados)
+   * - 'FREEBET' = saldo_freebet (quando usar_freebet = true)
+   */
+  fonte_saldo?: FonteSaldo;
+  
+  /** Toggle explícito: se true, debita de saldo_freebet */
+  usar_freebet?: boolean;
   
   // Dados do evento
   data_aposta: string;
