@@ -118,6 +118,7 @@ export function ConciliacaoSaldos({
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   const [failingId, setFailingId] = useState<string | null>(null);
+  const [openingId, setOpeningId] = useState<string | null>(null); // Proteção contra duplo clique
   
   // Paginação server-side para o histórico
   const pagination = useServerPagination({ initialPageSize: PAGE_SIZE });
@@ -244,6 +245,10 @@ export function ConciliacaoSaldos({
   };
 
   const handleOpenConfirm = (transaction: any) => {
+    // Proteção contra duplo clique no botão da lista
+    if (openingId) return;
+    setOpeningId(transaction.id);
+    
     setSelectedTransaction(transaction);
     // Prioridade: valor_destino (estimado na moeda da casa) > valor_usd > valor
     // Se houver conversão de moeda, valor_destino contém a estimativa correta
@@ -251,6 +256,9 @@ export function ConciliacaoSaldos({
     setValorConfirmado(valorInicial > 0 ? valorInicial.toFixed(2) : "");
     setObservacoes("");
     setConfirmDialog(true);
+    
+    // Liberar lock após dialog abrir
+    setTimeout(() => setOpeningId(null), 300);
   };
 
   const handleConfirm = async () => {
@@ -740,8 +748,13 @@ export function ConciliacaoSaldos({
                           size="sm"
                           className="gap-2"
                           onClick={() => handleOpenConfirm(t)}
+                          disabled={openingId === t.id}
                         >
-                          <CheckCircle2 className="h-4 w-4" />
+                          {openingId === t.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4" />
+                          )}
                           Conciliar
                         </Button>
                       </div>
