@@ -12,12 +12,23 @@ import { processFinancialEvent } from "./financialEngine";
 // CREDITAR FREEBET
 // ============================================================================
 
+/**
+ * Credita freebet.
+ * @param bookmakerId ID da bookmaker
+ * @param valor Valor a creditar
+ * @param tipoOrigem Tipo de origem (MANUAL, QUALIFICADORA, etc) - LEGADO, ignorado
+ * @param options Opções adicionais
+ */
 export async function creditarFreebetViaLedger(
   bookmakerId: string,
   valor: number,
+  tipoOrigemLegado?: string,
   options?: {
     descricao?: string;
     apostaId?: string;
+    projetoId?: string;
+    userId?: string;
+    workspaceId?: string;
   }
 ): Promise<{ success: boolean; error?: string; eventId?: string }> {
   try {
@@ -32,7 +43,7 @@ export async function creditarFreebetViaLedger(
       tipoUso: 'FREEBET',
       origem: 'FREEBET',
       valor: valor, // Positivo = crédito
-      descricao: options?.descricao || 'Crédito de freebet',
+      descricao: options?.descricao || tipoOrigemLegado || 'Crédito de freebet',
       idempotencyKey: `fb_credit_${bookmakerId}_${Date.now()}`,
     });
 
@@ -92,12 +103,20 @@ export async function consumirFreebetViaLedger(
 // ESTORNAR FREEBET
 // ============================================================================
 
+/**
+ * Estorna freebet.
+ * @param bookmakerId ID da bookmaker
+ * @param valor Valor a estornar
+ * @param descricaoLegada Descrição (suporte legado como string direta)
+ * @param options Opções adicionais
+ */
 export async function estornarFreebetViaLedger(
   bookmakerId: string,
   valor: number,
+  descricaoLegada?: string | { descricao?: string; eventoOriginalId?: string },
   options?: {
-    descricao?: string;
-    eventoOriginalId?: string;
+    userId?: string;
+    workspaceId?: string;
   }
 ): Promise<{ success: boolean; error?: string; eventId?: string }> {
   try {
@@ -105,14 +124,22 @@ export async function estornarFreebetViaLedger(
       return { success: false, error: 'Valor deve ser positivo' };
     }
 
+    // Suportar chamadas legadas com string direta ou objeto
+    const descricao = typeof descricaoLegada === 'string' 
+      ? descricaoLegada 
+      : descricaoLegada?.descricao || 'Estorno de freebet';
+    const eventoOriginalId = typeof descricaoLegada === 'object' 
+      ? descricaoLegada?.eventoOriginalId 
+      : undefined;
+
     const result = await processFinancialEvent({
       bookmakerId,
       tipoEvento: 'REVERSAL',
       tipoUso: 'FREEBET',
       origem: 'FREEBET',
       valor: valor, // Positivo = crédito (estorno)
-      descricao: options?.descricao || 'Estorno de freebet',
-      reversedEventId: options?.eventoOriginalId,
+      descricao,
+      reversedEventId: eventoOriginalId,
       idempotencyKey: `fb_estorno_${bookmakerId}_${Date.now()}`,
     });
 

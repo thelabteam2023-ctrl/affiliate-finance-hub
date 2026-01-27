@@ -287,9 +287,12 @@ export async function atualizarAposta(
   }
 
   try {
+    // Remover pernas do input antes de atualizar (pernas são atualizadas separadamente)
+    const { pernas, ...updateData } = input as any;
+    
     const { error } = await supabase
       .from('apostas_unificada')
-      .update(input)
+      .update(updateData)
       .eq('id', apostaId);
 
     if (error) {

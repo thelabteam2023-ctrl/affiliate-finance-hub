@@ -119,21 +119,22 @@ export async function processFinancialEvent(
         success: false, 
         errorMessage: result.error_message,
         newBalance: result.new_balance,
-        newFreebetBalance: result.new_freebet_balance,
+        // Campo pode não existir dependendo da versão da RPC
+        newFreebetBalance: (result as any).new_freebet_balance,
       };
     }
 
     console.log('[FinancialEngine] ✅ Evento processado:', {
       eventId: result.event_id,
       newBalance: result.new_balance,
-      newFreebetBalance: result.new_freebet_balance,
     });
 
     return {
       success: true,
       eventId: result.event_id,
       newBalance: result.new_balance,
-      newFreebetBalance: result.new_freebet_balance,
+      // Campo pode não existir dependendo da versão da RPC
+      newFreebetBalance: (result as any).new_freebet_balance,
     };
   } catch (err: any) {
     console.error('[FinancialEngine] Exceção:', err);

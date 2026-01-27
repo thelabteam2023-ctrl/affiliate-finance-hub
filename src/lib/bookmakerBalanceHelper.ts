@@ -7,10 +7,44 @@
  * Este helper só deve ser usado para:
  * - Operações de bônus legadas
  * - Migração gradual de código antigo
+ * - Funções utilitárias de cálculo (sem efeito colateral)
  */
 
 import { supabase } from "@/integrations/supabase/client";
 import { processFinancialEvent } from "./financialEngine";
+
+// ============================================================================
+// FUNÇÕES UTILITÁRIAS (sem efeito colateral)
+// ============================================================================
+
+/**
+ * Calcula o impacto financeiro de um resultado de aposta.
+ * Função pura - NÃO modifica saldo, apenas calcula.
+ */
+export function calcularImpactoResultado(
+  stake: number,
+  odd: number,
+  resultado: string | null
+): number {
+  if (!resultado || resultado === 'PENDENTE') return 0;
+  
+  const retornoPotencial = stake * odd;
+  
+  switch (resultado) {
+    case 'GREEN':
+      return retornoPotencial - stake; // Lucro líquido
+    case 'RED':
+      return -stake; // Perda do stake
+    case 'VOID':
+      return 0; // Stake devolvido
+    case 'MEIO_GREEN':
+      return (retornoPotencial - stake) / 2; // Metade do lucro
+    case 'MEIO_RED':
+      return -stake / 2; // Metade da perda
+    default:
+      return 0;
+  }
+}
 
 // ============================================================================
 // BÔNUS (mantido para compatibilidade)
@@ -21,18 +55,15 @@ export async function getActiveBonus(
   projetoId?: string
 ): Promise<{ id: string; saldo: number } | null> {
   try {
-    let query = supabase
+    // Query simplificada para evitar type instantiation error
+    const { data, error } = await supabase
       .from('project_bookmaker_link_bonuses')
       .select('id, saldo_atual')
       .eq('bookmaker_id', bookmakerId)
       .eq('status', 'ativo')
-      .gt('saldo_atual', 0);
-
-    if (projetoId) {
-      query = query.eq('projeto_id', projetoId);
-    }
-
-    const { data, error } = await query.limit(1).maybeSingle();
+      .gt('saldo_atual', 0)
+      .limit(1)
+      .maybeSingle();
 
     if (error || !data) return null;
 
