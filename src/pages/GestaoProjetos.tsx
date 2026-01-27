@@ -47,7 +47,6 @@ import { ptBR } from "date-fns/locale";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { ProjectFinancialDisplay } from "@/components/projetos/ProjectFinancialDisplay";
-import { useProjetosSaldos } from "@/hooks/useProjetosSaldos";
 
 interface SaldoByMoeda {
   BRL: number;
@@ -68,15 +67,13 @@ interface Projeto {
   saldo_bookmakers?: number;
   saldo_bookmakers_by_moeda?: SaldoByMoeda;
   saldo_irrecuperavel?: number;
-  saldo_irrecuperavel_by_moeda?: SaldoByMoeda;
+  saldo_irrecuperavel_by_moeda?: SaldoByMoeda; // NOVO: dados brutos por moeda
   total_depositado?: number;
   total_sacado?: number;
   total_bookmakers?: number;
   perdas_confirmadas?: number;
   lucro_operacional?: number;
   lucro_by_moeda?: SaldoByMoeda;
-  // Multi-moeda
-  moeda_consolidacao?: 'BRL' | 'USD';
 }
 
 export default function GestaoProjetos() {
@@ -103,7 +100,7 @@ export default function GestaoProjetos() {
   const { canCreate, canEdit, canDelete } = useActionAccess();
   
   // COTAÇÃO CENTRALIZADA - Usado APENAS para DISPLAY, não para fetch
-  const { cotacaoUSD, getRate, loading: loadingCotacao } = useCotacoes();
+  const { cotacaoUSD, loading: loadingCotacao } = useCotacoes();
   
   // Check if user is operator (should only see linked projects)
   const isOperator = role === 'operator';
@@ -111,13 +108,6 @@ export default function GestaoProjetos() {
   // CRITICAL: Cotação usada APENAS no render, não no fetch
   // Isso evita o loop de dependência cotação → fetch → cotação
   const USD_TO_BRL_DISPLAY = cotacaoUSD || 5.37;
-
-  // UNIFICAÇÃO: Buscar saldos usando fonte canônica (mesma da aba Apostas)
-  const projetoIds = projetos.map(p => p.id);
-  const { data: saldosUnificados, isLoading: loadingSaldos } = useProjetosSaldos({
-    projetoIds,
-    enabled: projetoIds.length > 0,
-  });
 
   const fetchProjetos = useCallback(async () => {
     if (!user) return;
@@ -177,8 +167,10 @@ export default function GestaoProjetos() {
       const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
-      // NOTA: Saldos são buscados via hook useProjetosSaldos (fonte única canônica)
-      const [apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackManualResult, bookmakersCountResult] = await Promise.all([
+      const [saldosRpcResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackManualResult, bookmakersCountResult] = await Promise.all([
+        // USAR RPC CANÔNICA para saldo operável (inclui real + freebet + bonus - em_aposta)
+        supabase.rpc("get_saldo_operavel_por_projeto", { p_projeto_ids: finalProjetoIds }),
+        
         // Apostas liquidadas por projeto (incluindo referência BRL para multi-moeda)
         supabase
           .from("apostas_unificada")
@@ -214,19 +206,68 @@ export default function GestaoProjetos() {
           .select("projeto_id, valor, moeda_operacao, valor_brl_referencia")
           .in("projeto_id", finalProjetoIds),
         
-        // Contagem de bookmakers por projeto (apenas para contagem e moeda)
+        // Contagem de bookmakers e saldo irrecuperável por projeto
         supabase
           .from("bookmakers")
-          .select("id, projeto_id, moeda")
+          .select("id, projeto_id, saldo_irrecuperavel, moeda")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "ativo")
       ]);
       
-      // Contar bookmakers por projeto
-      const bookmakerCountByProjeto: Record<string, number> = {};
+      // ARQUITETURA DAG: Fetch armazena dados BRUTOS por moeda
+      // Conversão acontece APENAS no render usando cotação atual
+      // Isso quebra o ciclo cotação → fetch → cotação
+      
+      // Mapear saldos da RPC canônica por projeto - DADOS BRUTOS POR MOEDA
+      const bookmakersByProjeto: Record<string, { 
+        saldo: number; 
+        saldoBRL: number;
+        saldoUSD: number;
+        count: number; 
+        irrecuperavel: number;
+        irrecuperavelBRL: number;
+        irrecuperavelUSD: number;
+      }> = {};
+      
+      // Processar resultado da RPC canônica - ARMAZENAR APENAS DADOS BRUTOS
+      (saldosRpcResult.data || []).forEach((row: any) => {
+        const projetoId = row.projeto_id;
+        const saldoBRL = Number(row.saldo_operavel_brl) || 0;
+        const saldoUSD = Number(row.saldo_operavel_usd) || 0;
+        // NÃO converter aqui - deixar para o render
+        // saldo será calculado no mapping final usando cotação do render
+        
+        bookmakersByProjeto[projetoId] = {
+          saldo: 0, // Será calculado no mapping final
+          saldoBRL: saldoBRL,
+          saldoUSD: saldoUSD,
+          count: Number(row.total_bookmakers) || 0,
+          irrecuperavel: 0, // Será calculado no mapping final
+          irrecuperavelBRL: 0,
+          irrecuperavelUSD: 0,
+        };
+      });
+      
+      // Agregar saldo irrecuperável separadamente - DADOS BRUTOS POR MOEDA
       (bookmakersCountResult.data || []).forEach((bk: any) => {
         if (!bk.projeto_id) return;
-        bookmakerCountByProjeto[bk.projeto_id] = (bookmakerCountByProjeto[bk.projeto_id] || 0) + 1;
+        const irrecuperavel = Number(bk.saldo_irrecuperavel) || 0;
+        const moeda = bk.moeda || 'BRL';
+        
+        if (!bookmakersByProjeto[bk.projeto_id]) {
+          bookmakersByProjeto[bk.projeto_id] = { 
+            saldo: 0, saldoBRL: 0, saldoUSD: 0, 
+            count: 0, irrecuperavel: 0, 
+            irrecuperavelBRL: 0, irrecuperavelUSD: 0 
+          };
+        }
+        
+        // Armazenar por moeda - conversão no render
+        if (moeda === 'USD') {
+          bookmakersByProjeto[bk.projeto_id].irrecuperavelUSD += irrecuperavel;
+        } else {
+          bookmakersByProjeto[bk.projeto_id].irrecuperavelBRL += irrecuperavel;
+        }
       });
       
       // Criar mapa de moeda por bookmaker_id para conversão dos giros grátis
@@ -305,9 +346,10 @@ export default function GestaoProjetos() {
         perdasByProjeto[pd.projeto_id] = (perdasByProjeto[pd.projeto_id] || 0) + (pd.valor || 0);
       });
       
-      // Map to Projeto interface com dados agregados
-      // NOTA: Saldos de bookmakers são gerenciados pelo hook useProjetosSaldos (fonte única)
+      // Map to Projeto interface com dados agregados - APENAS DADOS BRUTOS
+      // Campos consolidados (saldo_bookmakers, lucro_operacional) serão calculados no render
       const mapped = projetosData.map((proj: any) => {
+        const bkData = bookmakersByProjeto[proj.id];
         const lucroData = lucroByProjeto[proj.id];
         
         return {
@@ -318,14 +360,21 @@ export default function GestaoProjetos() {
           data_inicio: proj.data_inicio,
           data_fim_prevista: proj.data_fim_prevista,
           orcamento_inicial: proj.orcamento_inicial || 0,
-          // Saldo vem do hook useProjetosSaldos - não precisa mais aqui
-          saldo_bookmakers: 0,
-          saldo_bookmakers_by_moeda: { BRL: 0, USD: 0 },
-          saldo_irrecuperavel: 0,
-          saldo_irrecuperavel_by_moeda: { BRL: 0, USD: 0 },
-          total_bookmakers: bookmakerCountByProjeto[proj.id] || 0,
-          // Lucro permanece aqui (não faz parte do hook de saldos)
-          lucro_operacional: 0,
+          // Saldo será calculado no render
+          saldo_bookmakers: 0, // Placeholder - calculado no render
+          saldo_bookmakers_by_moeda: {
+            BRL: bkData?.saldoBRL || 0,
+            USD: bkData?.saldoUSD || 0,
+          },
+          // Irrecuperável também por moeda
+          saldo_irrecuperavel: 0, // Placeholder - calculado no render
+          saldo_irrecuperavel_by_moeda: {
+            BRL: bkData?.irrecuperavelBRL || 0,
+            USD: bkData?.irrecuperavelUSD || 0,
+          },
+          total_bookmakers: bkData?.count || 0,
+          // Lucro será calculado no render
+          lucro_operacional: 0, // Placeholder - calculado no render
           lucro_by_moeda: {
             BRL: lucroData?.BRL || 0,
             USD: lucroData?.USD || 0,
@@ -610,49 +659,39 @@ export default function GestaoProjetos() {
                     </div>
                   
                   <div className="pt-2 border-t space-y-3">
-                    {/* Saldo Bookmakers - FONTE ÚNICA: hook useProjetosSaldos (mesma da aba Apostas) */}
+                    {/* Saldo Bookmakers - Cálculo de consolidação no RENDER */}
                     {(() => {
-                      // Usar dados do hook unificado (fonte canônica)
-                      const saldoData = saldosUnificados?.get(projeto.id);
-                      const totalConsolidado = saldoData?.saldoConsolidadoBRL || 0;
-                      const breakdown = saldoData?.saldosPorMoeda || {};
-                      const moedaConsolidacao = projeto.moeda_consolidacao || 'BRL';
+                      const saldoBRL = projeto.saldo_bookmakers_by_moeda?.BRL || 0;
+                      const saldoUSD = projeto.saldo_bookmakers_by_moeda?.USD || 0;
+                      // CONVERSÃO NO RENDER - usando cotação atual
+                      const totalConsolidado = saldoBRL + (saldoUSD * USD_TO_BRL_DISPLAY);
                       
                       return (
                         <ProjectFinancialDisplay
                           type="saldo"
-                          breakdown={breakdown}
+                          breakdown={{ BRL: saldoBRL, USD: saldoUSD }}
                           totalConsolidado={totalConsolidado}
-                          moedaConsolidacao={moedaConsolidacao}
                           cotacaoPTAX={USD_TO_BRL_DISPLAY}
+                          isMultiCurrency={saldoUSD > 0}
                         />
                       );
                     })()}
                     
                     {/* Lucro - Cálculo de consolidação no RENDER */}
                     {(() => {
-                      const lucroBreakdown = projeto.lucro_by_moeda || {};
+                      const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
+                      const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
                       const perdas = projeto.perdas_confirmadas || 0;
-                      const moedaConsolidacao = projeto.moeda_consolidacao || 'BRL';
-                      
-                      // Calcular total consolidado somando todas as moedas convertidas
-                      let lucroConsolidado = -(perdas);
-                      Object.entries(lucroBreakdown).forEach(([moeda, valor]) => {
-                        if (moeda === 'BRL') {
-                          lucroConsolidado += valor as number;
-                        } else {
-                          // Converter para BRL usando cotação
-                          lucroConsolidado += (valor as number) * USD_TO_BRL_DISPLAY;
-                        }
-                      });
+                      // CONVERSÃO NO RENDER - usando cotação atual
+                      const lucroConsolidado = lucroBRL + (lucroUSD * USD_TO_BRL_DISPLAY) - perdas;
                       
                       return (
                         <ProjectFinancialDisplay
                           type="lucro"
-                          breakdown={lucroBreakdown}
+                          breakdown={{ BRL: lucroBRL, USD: lucroUSD }}
                           totalConsolidado={lucroConsolidado}
-                          moedaConsolidacao={moedaConsolidacao}
                           cotacaoPTAX={USD_TO_BRL_DISPLAY}
+                          isMultiCurrency={lucroUSD !== 0}
                         />
                       );
                     })()}
@@ -727,9 +766,12 @@ export default function GestaoProjetos() {
                   <div className="flex items-center gap-6">
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Saldo Bookmakers</p>
-                      {/* FONTE ÚNICA: hook useProjetosSaldos (mesma da aba Apostas) */}
+                      {/* CONVERSÃO NO RENDER - usando cotação atual */}
                       <p className="text-sm font-medium">
-                        {formatCurrency(saldosUnificados?.get(projeto.id)?.saldoConsolidadoBRL || 0)}
+                        {formatCurrency(
+                          (projeto.saldo_bookmakers_by_moeda?.BRL || 0) + 
+                          ((projeto.saldo_bookmakers_by_moeda?.USD || 0) * USD_TO_BRL_DISPLAY)
+                        )}
                       </p>
                     </div>
                     <div className="text-right">
