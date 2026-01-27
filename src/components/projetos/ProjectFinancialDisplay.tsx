@@ -74,44 +74,46 @@ export function ProjectFinancialDisplay({
     : (isPositive ? "text-emerald-500" : "text-red-500");
 
   // Calcular valores para exibição
-  // Valor principal: na moeda de consolidação
+  // Valor principal: SEMPRE na moeda de consolidação do projeto
   // Valor secundário: na outra moeda (BRL se consolidação é USD, USD se consolidação é BRL)
   
   const moedaSecundaria = moedaConsolidacao === 'USD' ? 'BRL' : 'USD';
   
-  // Valor na moeda de consolidação (somar valores nativos dessa moeda + converter outras)
+  // Agrupa moedas USD-like
+  const isUsdLike = (m: string) => ['USD', 'USDT', 'USDC'].includes(m);
+  
+  // Calcular valor principal na moeda de consolidação
   let valorPrincipal = 0;
-  let valorSecundario = 0;
+  let valorBRL = 0;
+  let valorUSD = 0;
   
   Object.entries(breakdown).forEach(([moeda, valor]) => {
-    if (moeda === moedaConsolidacao || 
-        (moedaConsolidacao === 'USD' && ['USD', 'USDT', 'USDC'].includes(moeda))) {
-      valorPrincipal += valor;
-    } else if (moeda === 'BRL') {
-      // Converter BRL para USD se consolidação é USD
-      if (moedaConsolidacao === 'USD') {
-        valorPrincipal += valor / cotacaoPTAX;
-        valorSecundario += valor; // Manter BRL original para referência
-      } else {
-        valorPrincipal += valor;
-      }
-    } else if (['USD', 'USDT', 'USDC'].includes(moeda)) {
-      // Converter USD para BRL se consolidação é BRL
-      if (moedaConsolidacao === 'BRL') {
-        valorPrincipal += valor * cotacaoPTAX;
-        valorSecundario += valor; // Manter USD original para referência
-      }
+    if (moeda === 'BRL') {
+      valorBRL += valor;
+    } else if (isUsdLike(moeda)) {
+      valorUSD += valor;
     } else {
-      // Outras moedas - assumir conversão via USD
-      valorPrincipal += moedaConsolidacao === 'USD' ? valor : valor * cotacaoPTAX;
+      // Outras moedas (EUR, GBP, etc) - assumir como USD para simplificação
+      valorUSD += valor;
     }
   });
-
-  // Se consolidação é USD, mostrar equivalente em BRL como secundário
-  // Se consolidação é BRL, mostrar equivalente em USD como secundário
+  
+  // Calcular valor principal baseado na moeda de consolidação
   if (moedaConsolidacao === 'USD') {
+    // Projeto consolida em USD: converter BRL para USD e somar
+    valorPrincipal = valorUSD + (valorBRL / cotacaoPTAX);
+  } else {
+    // Projeto consolida em BRL: converter USD para BRL e somar
+    valorPrincipal = valorBRL + (valorUSD * cotacaoPTAX);
+  }
+  
+  // Calcular valor secundário (aproximado na outra moeda)
+  let valorSecundario = 0;
+  if (moedaConsolidacao === 'USD') {
+    // Principal é USD, secundário é BRL
     valorSecundario = valorPrincipal * cotacaoPTAX;
   } else {
+    // Principal é BRL, secundário é USD
     valorSecundario = valorPrincipal / cotacaoPTAX;
   }
 
@@ -120,17 +122,16 @@ export function ProjectFinancialDisplay({
     ? "text-emerald-400" 
     : (lucroDisplay?.isNegative ? "text-red-400" : "text-emerald-400");
 
-  // Formatar valores
-  const valorPrincipalFormatado = formatCurrencyValue(
-    isSaldo ? valorPrincipal : (lucroDisplay?.isNegative ? -Math.abs(valorPrincipal) : valorPrincipal),
-    moedaConsolidacao
-  );
+  // Formatar valores - usar valor absoluto para lucro/prejuízo se negativo
+  const valorParaExibir = isSaldo 
+    ? valorPrincipal 
+    : (lucroDisplay?.isNegative ? Math.abs(valorPrincipal) : valorPrincipal);
   
-  const valorSecundarioFormatado = formatCurrencyValue(valorSecundario, moedaSecundaria);
+  const valorPrincipalFormatado = formatCurrencyValue(valorParaExibir, moedaConsolidacao);
+  const valorSecundarioFormatado = formatCurrencyValue(Math.abs(valorSecundario), moedaSecundaria);
 
-  // Verificar se há múltiplas moedas para mostrar o valor secundário
-  const hasMultipleCurrencies = Object.keys(breakdown).length > 1 || 
-    Object.keys(breakdown).some(m => m !== moedaConsolidacao);
+  // Sempre mostrar secundário se há valores
+  const hasValues = Object.keys(breakdown).length > 0 || valorPrincipal !== 0;
 
   return (
     <div className="flex flex-col items-center gap-1 py-2">
@@ -150,7 +151,7 @@ export function ProjectFinancialDisplay({
         </div>
         
         {/* Valor Secundário (aproximado na outra moeda) */}
-        {hasMultipleCurrencies && valorSecundario > 0 && (
+        {hasValues && (
           <span className="text-xs text-muted-foreground">
             ≈ {valorSecundarioFormatado}
           </span>
