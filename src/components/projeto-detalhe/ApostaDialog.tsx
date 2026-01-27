@@ -674,22 +674,29 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [layLiability, setLayLiability] = useState<number | null>(null);
 
   // ============= SALDO AJUSTADO PARA EDIÇÃO =============
-  // Para re-liquidação de apostas LIQUIDADAS: o stake anterior está "virtualmente disponível"
-  // porque a reversão irá restaurá-lo antes de aplicar o novo resultado.
-  // IMPORTANTE: Só aplica para apostas LIQUIDADAS, não PENDENTES.
-  // - PENDENTE: stake já está "livre" (não foi debitado), saldo atual já reflete isso
-  // - LIQUIDADA: stake foi consumido no payout, mas reversão irá devolvê-lo
+  // LÓGICA CORRETA:
+  // - PENDENTE: stake foi debitado mas não há payout. O saldo atual JÁ reflete isso.
+  //   Se editarmos, precisamos "devolver" o stake virtualmente (ele será restaurado na reversão).
+  // - GREEN/VOID: stake foi debitado E payout foi creditado. O saldo atual JÁ inclui o resultado.
+  //   NÃO adicionar stake - o saldo atual é o correto para operação.
+  // - RED: stake foi debitado, sem payout. O saldo atual JÁ perdeu o stake.
+  //   Para editar (ex: RED→GREEN), precisamos adicionar stake virtualmente.
   const saldoAjustadoParaEdicao = useMemo(() => {
     const selectedBk = bookmakers.find(b => b.id === bookmakerId);
     if (!selectedBk) return null;
     
-    // Só adicionar stake anterior se:
-    // 1. É modo edição
-    // 2. A bookmaker não mudou
-    // 3. A aposta está LIQUIDADA (GREEN/RED/VOID/etc.) - NÃO PENDENTE
     const mesmaBookmaker = aposta?.bookmaker_id === bookmakerId;
-    const apostaEstaLiquidada = aposta?.status === 'LIQUIDADA';
-    const stakeAnterior = aposta && mesmaBookmaker && apostaEstaLiquidada ? (aposta.stake || 0) : 0;
+    
+    // Só adicionar stake anterior em casos específicos:
+    // 1. PENDENTE: stake foi "travado" (debitado), será devolvido na reversão
+    // 2. RED/MEIO_RED: stake foi perdido definitivamente, precisa ser considerado para validação
+    // 3. GREEN/VOID/MEIO_GREEN: stake JÁ retornou via payout, NÃO adicionar
+    const resultadoAnterior = aposta?.resultado;
+    const deveAdicionarStake = 
+      (aposta?.status === 'PENDENTE') || 
+      (aposta?.status === 'LIQUIDADA' && (resultadoAnterior === 'RED' || resultadoAnterior === 'MEIO_RED'));
+    
+    const stakeAnterior = aposta && mesmaBookmaker && deveAdicionarStake ? (aposta.stake || 0) : 0;
     
     return {
       saldoOperavel: selectedBk.saldo_operavel + stakeAnterior,
