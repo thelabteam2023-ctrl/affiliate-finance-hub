@@ -1991,20 +1991,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               .maybeSingle();
 
             if (freebetLiberada) {
-              // Decrementar saldo_freebet
-              const { data: bookmaker } = await supabase
-                .from("bookmakers")
-                .select("saldo_freebet")
-                .eq("id", freebetLiberada.bookmaker_id)
-                .maybeSingle();
-
-              if (bookmaker) {
-                const novoSaldoFreebet = Math.max(0, (bookmaker.saldo_freebet || 0) - freebetLiberada.valor);
-                await supabase
-                  .from("bookmakers")
-                  .update({ saldo_freebet: novoSaldoFreebet })
-                  .eq("id", freebetLiberada.bookmaker_id);
-              }
+              // MIGRADO PARA LEDGER: Estornar via RPC atômica
+              const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+              await estornarFreebetViaLedger(
+                freebetLiberada.bookmaker_id, 
+                freebetLiberada.valor, 
+                'Freebet revogada por resultado VOID'
+              );
 
               // Mudar status para NAO_LIBERADA
               await supabase
@@ -2032,18 +2025,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   .maybeSingle();
                 
                 if (freebetExistente?.status === "LIBERADA") {
-                  // Reverter valor anterior
-                  const { data: bk } = await supabase
-                    .from("bookmakers")
-                    .select("saldo_freebet")
-                    .eq("id", bookmakerParaFreebet)
-                    .maybeSingle();
-                  if (bk) {
-                    await supabase
-                      .from("bookmakers")
-                      .update({ saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - valorFreebetAnterior + novoValorFreebet) })
-                      .eq("id", bookmakerParaFreebet);
-                  }
+                  // MIGRADO PARA LEDGER: Estornar antigo e creditar novo valor
+                  const { estornarFreebetViaLedger, creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+                  await estornarFreebetViaLedger(bookmakerParaFreebet, valorFreebetAnterior, 'Ajuste de valor de freebet');
+                  await creditarFreebetViaLedger(bookmakerParaFreebet, novoValorFreebet, 'AJUSTE_VALOR', { descricao: 'Novo valor de freebet' });
                 }
                 // Atualizar registro existente
                 await supabase
@@ -2057,7 +2042,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             }
           }
         } else if (!gerouFreebet && gerouFreebetAnterior && valorFreebetAnterior > 0) {
-          // Foi removido: reverter saldo e marcar como não utilizada
+          // Foi removido: reverter saldo e deletar registro
           const bookmakerParaFreebet = tipoAposta === "bookmaker" ? bookmakerId : (aposta.bookmaker_id || coberturaBackBookmakerId);
           if (bookmakerParaFreebet) {
             // Só reverter saldo se a freebet estava LIBERADA
@@ -2068,17 +2053,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               .maybeSingle();
             
             if (freebetExistente?.status === "LIBERADA") {
-              const { data: bk } = await supabase
-                .from("bookmakers")
-                .select("saldo_freebet")
-                .eq("id", bookmakerParaFreebet)
-                .maybeSingle();
-              if (bk) {
-                await supabase
-                  .from("bookmakers")
-                  .update({ saldo_freebet: Math.max(0, (bk.saldo_freebet || 0) - valorFreebetAnterior) })
-                  .eq("id", bookmakerParaFreebet);
-              }
+              // MIGRADO PARA LEDGER: Estornar via RPC atômica
+              const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+              await estornarFreebetViaLedger(bookmakerParaFreebet, valorFreebetAnterior, 'Freebet removida da aposta');
             }
             // Remover registro de freebet_recebida
             await supabase
@@ -2244,13 +2221,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
       const moedaOperacao = bookmaker?.moeda || "BRL";
 
-      // Só incrementar saldo_freebet se a freebet for liberada
-      if (status === "LIBERADA" && bookmaker) {
-        const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + valor;
-        await supabase
-          .from("bookmakers")
-          .update({ saldo_freebet: novoSaldoFreebet })
-          .eq("id", bookmakerIdFreebet);
+      // MIGRADO PARA LEDGER: Creditar freebet via RPC atômica
+      if (status === "LIBERADA") {
+        const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+        await creditarFreebetViaLedger(bookmakerIdFreebet, valor, 'QUALIFICADORA', { 
+          descricao: 'Freebet de aposta qualificadora',
+          apostaId,
+        });
       }
 
       // Registrar na tabela freebets_recebidas com status e MOEDA da bookmaker
@@ -2294,20 +2271,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           .update({ status: "LIBERADA" })
           .eq("id", freebetPendente.id);
 
-        // Incrementar saldo_freebet do bookmaker
-        const { data: bookmaker } = await supabase
-          .from("bookmakers")
-          .select("saldo_freebet")
-          .eq("id", freebetPendente.bookmaker_id)
-          .maybeSingle();
-
-        if (bookmaker) {
-          const novoSaldoFreebet = (bookmaker.saldo_freebet || 0) + freebetPendente.valor;
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_freebet: novoSaldoFreebet })
-            .eq("id", freebetPendente.bookmaker_id);
-        }
+        // MIGRADO PARA LEDGER: Creditar via RPC atômica
+        const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+        await creditarFreebetViaLedger(
+          freebetPendente.bookmaker_id, 
+          freebetPendente.valor, 
+          'LIBERACAO_PENDENTE', 
+          { descricao: 'Freebet liberada após liquidação de aposta' }
+        );
       }
     } catch (error) {
       console.error("Erro ao liberar freebet pendente:", error);
@@ -2339,20 +2310,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         .maybeSingle();
 
       if (freebetLiberada) {
-        // Decrementar saldo_freebet do bookmaker (reverter o crédito)
-        const { data: bookmaker } = await supabase
-          .from("bookmakers")
-          .select("saldo_freebet")
-          .eq("id", freebetLiberada.bookmaker_id)
-          .maybeSingle();
-
-        if (bookmaker) {
-          const novoSaldoFreebet = Math.max(0, (bookmaker.saldo_freebet || 0) - freebetLiberada.valor);
-          await supabase
-            .from("bookmakers")
-            .update({ saldo_freebet: novoSaldoFreebet })
-            .eq("id", freebetLiberada.bookmaker_id);
-        }
+        // MIGRADO PARA LEDGER: Estornar via RPC atômica
+        const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+        await estornarFreebetViaLedger(
+          freebetLiberada.bookmaker_id, 
+          freebetLiberada.valor, 
+          'Reversão para PENDENTE (aposta reaberta)'
+        );
 
         // Voltar status para PENDENTE
         await supabase

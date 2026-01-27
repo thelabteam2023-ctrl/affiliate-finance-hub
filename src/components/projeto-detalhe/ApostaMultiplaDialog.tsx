@@ -57,7 +57,7 @@ import {
   getCurrencyTextColor 
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { reliquidarAposta } from "@/services/aposta";
-import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
+// updateBookmakerBalance REMOVIDO - Motor v7 usa exclusivamente RPCs de liquidação
 import { useImportMultiplaBetPrint } from "@/hooks/useImportMultiplaBetPrint";
 import { GerouFreebetInput } from "./GerouFreebetInput";
 
@@ -861,16 +861,43 @@ export function ApostaMultiplaDialog({
       };
 
       if (aposta) {
-        // Update
+        // ========== EDIÇÃO VIA MOTOR v7 ==========
+        // Para edição de apostas já existentes:
+        // 1. Se resultado mudou: usar reliquidarAposta do ApostaService
+        // 2. Se apenas dados mudaram: update direto (sem impacto financeiro)
+        const resultadoAnterior = aposta.resultado;
+        const resultadoMudou = resultadoAnterior !== resultadoFinal;
+        
+        // Atualizar dados não-financeiros
         const { error } = await supabase
           .from("apostas_unificada")
-          .update(apostaData)
+          .update({
+            ...apostaData,
+            // Não atualizar resultado aqui - será feito via RPC se necessário
+            resultado: resultadoMudou ? resultadoAnterior : resultadoFinal,
+          })
           .eq("id", aposta.id);
 
         if (error) throw error;
 
-        // Atualizar saldos se necessário (simplificado - ajustar diferença)
-        await atualizarSaldosBookmaker(aposta, apostaData, stakeNum);
+        // Se resultado mudou, usar motor v7 para reliquidar
+        if (resultadoMudou && resultadoFinal && resultadoFinal !== "PENDENTE") {
+          const { reliquidarAposta } = await import("@/services/aposta");
+          const reliquidResult = await reliquidarAposta(
+            aposta.id,
+            resultadoFinal,
+            apostaData.lucro_prejuizo || undefined
+          );
+          
+          if (!reliquidResult.success) {
+            console.error("[ApostaMultiplaDialog] Erro ao reliquidar:", reliquidResult.error);
+            // Não lançar exceção - dados já foram atualizados
+          }
+        } else if (resultadoMudou && resultadoAnterior !== "PENDENTE" && resultadoFinal === "PENDENTE") {
+          // Reversão para PENDENTE
+          const { supabase } = await import("@/integrations/supabase/client");
+          await supabase.rpc('reverter_liquidacao_v4', { p_aposta_id: aposta.id });
+        }
 
         // Registrar freebet gerada (se mudou de não-gerou para gerou)
         if (gerouFreebet && valorFreebetGerada && !aposta.gerou_freebet) {
@@ -884,7 +911,6 @@ export function ApostaMultiplaDialog({
         }
 
         // Verificar se resultado mudou e atualizar status da freebet
-        const resultadoAnterior = aposta.resultado;
         if (aposta.gerou_freebet) {
           // Caso 1: PENDENTE → resultado final
           if (resultadoAnterior === "PENDENTE" && resultadoFinal !== "PENDENTE") {
@@ -910,20 +936,13 @@ export function ApostaMultiplaDialog({
               .maybeSingle();
 
             if (freebetLiberada) {
-              // Decrementar saldo_freebet
-              const { data: bookmaker } = await supabase
-                .from("bookmakers")
-                .select("saldo_freebet")
-                .eq("id", freebetLiberada.bookmaker_id)
-                .maybeSingle();
-
-              if (bookmaker) {
-                const novoSaldoFreebet = Math.max(0, (bookmaker.saldo_freebet || 0) - freebetLiberada.valor);
-                await supabase
-                  .from("bookmakers")
-                  .update({ saldo_freebet: novoSaldoFreebet })
-                  .eq("id", freebetLiberada.bookmaker_id);
-              }
+              // Usar ledger para estornar
+              const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+              await estornarFreebetViaLedger(
+                freebetLiberada.bookmaker_id,
+                freebetLiberada.valor,
+                'Freebet revogada por resultado VOID (múltipla)'
+              );
 
               // Mudar status para NAO_LIBERADA
               await supabase
@@ -961,29 +980,25 @@ export function ApostaMultiplaDialog({
           throw new Error(result.error?.message || "Erro ao criar aposta múltipla");
         }
 
+        // ========== CRIAÇÃO VIA MOTOR v7 ==========
+        // NOTA: O ApostaService.criarAposta já cria a aposta com status PENDENTE.
+        // Se o usuário selecionou um resultado final (GREEN/RED), precisamos liquidar após criar.
+        
         const novaApostaId = result.data?.id;
 
-        // NOTA: Não debitar saldo_atual na criação de apostas PENDENTES!
-        // O modelo contábil correto é:
-        // - saldo_atual = saldo total real (só muda na liquidação)
-        // - "Em Aposta" = soma das stakes pendentes (calculado dinamicamente)
-        // - "Livre" = saldo_atual - Em Aposta
-        
-        // Só aplicar efeito no saldo se resultado NÃO for pendente
-        if (resultadoFinal !== "PENDENTE" && resultadoFinal !== null) {
-          if (resultadoFinal === "RED" || resultadoFinal === "MEIO_RED") {
-            // RED: debitar stake (perda confirmada)
-            await debitarSaldo(bookmakerId, stakeNum, usarFreebet);
-          } else if ((resultadoFinal === "GREEN" || resultadoFinal === "MEIO_GREEN") && valorRetorno && valorRetorno > 0) {
-            // GREEN: creditar lucro (retorno - stake)
-            const lucro = valorRetorno - stakeNum;
-            if (lucro > 0) {
-              await creditarRetorno(bookmakerId, lucro);
-            } else if (lucro < 0) {
-              await debitarSaldo(bookmakerId, Math.abs(lucro), usarFreebet);
-            }
+        // Se resultado não é PENDENTE, liquidar via motor v7
+        if (novaApostaId && resultadoFinal && resultadoFinal !== "PENDENTE") {
+          const { liquidarAposta } = await import("@/services/aposta");
+          const liquidResult = await liquidarAposta({
+            id: novaApostaId,
+            resultado: resultadoFinal as any,
+            lucro_prejuizo: valorRetorno ? valorRetorno - stakeNum : undefined,
+          });
+          
+          if (!liquidResult.success) {
+            console.error("[ApostaMultiplaDialog] Erro ao liquidar nova aposta:", liquidResult.error);
+            // Não lançar exceção - a aposta já foi criada
           }
-          // VOID: não altera saldo
         }
 
         // Registrar freebet gerada com ID da aposta e resultado
@@ -1007,33 +1022,15 @@ export function ApostaMultiplaDialog({
     }
   };
 
-  // MIGRADO PARA LEDGER: Usar RPCs atômicas para freebet
-  const debitarSaldo = async (
-    bkId: string,
-    valor: number,
-    isFreebet: boolean
-  ) => {
-    if (isFreebet) {
-      // MIGRADO PARA LEDGER: Consumir freebet via RPC atômica
-      const { consumirFreebetViaLedger } = await import("@/lib/freebetLedgerService");
-      const result = await consumirFreebetViaLedger(bkId, valor, {
-        descricao: 'Freebet consumida em aposta múltipla',
-      });
-      
-      if (!result.success) {
-        console.error("Erro ao consumir freebet via ledger:", result.error);
-        throw new Error(result.error);
-      }
-    } else {
-      // Usar helper que respeita moeda do bookmaker
-      await updateBookmakerBalance(bkId, -valor);
-    }
-  };
-
-  // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
-  const creditarRetorno = async (bkId: string, valor: number) => {
-    await updateBookmakerBalance(bkId, valor);
-  };
+  // ========== FUNÇÕES DE SALDO REMOVIDAS - MOTOR v7 ==========
+  // debitarSaldo e creditarRetorno foram removidas.
+  // Toda movimentação financeira agora passa exclusivamente por:
+  // - liquidarAposta() para liquidar apostas pendentes
+  // - reliquidarAposta() para mudar resultado de apostas já liquidadas
+  // - deletarAposta() para excluir apostas (reverte automaticamente)
+  //
+  // Isso garante que TODOS os movimentos são registrados no ledger (financial_events)
+  // e o saldo é atualizado de forma atômica via RPCs v4.
 
   // REGRA CRÍTICA: Freebet NÃO tem moeda própria - herda da bookmaker onde foi gerada
   const registrarFreebetGerada = async (
@@ -1163,67 +1160,11 @@ export function ApostaMultiplaDialog({
     }
   };
 
-  const atualizarSaldosBookmaker = async (
-    apostaAntiga: ApostaMultipla,
-    apostaNovaData: any,
-    novaStake: number
-  ) => {
-    const antigaStake = apostaAntiga.stake;
-    const antigaUsavaFreebet = apostaAntiga.tipo_freebet && apostaAntiga.tipo_freebet !== "normal";
-    const novaUsaFreebet = usarFreebet;
-    const antigoBkId = apostaAntiga.bookmaker_id;
-    const novoBkId = apostaNovaData.bookmaker_id;
-    const resultadoAntigo = apostaAntiga.resultado;
-    const resultadoNovo = apostaNovaData.resultado;
-    
-    // REVERTER efeito do resultado ANTIGO (se existia e não era PENDENTE)
-    if (resultadoAntigo && resultadoAntigo !== "PENDENTE") {
-      if (resultadoAntigo === "RED" || resultadoAntigo === "MEIO_RED") {
-        // RED antiga: stake foi debitada, reverter (creditar)
-        if (antigaUsavaFreebet) {
-          const { data: bk } = await supabase
-            .from("bookmakers")
-            .select("saldo_freebet")
-            .eq("id", antigoBkId)
-            .single();
-          if (bk) {
-            await supabase
-              .from("bookmakers")
-              .update({ saldo_freebet: bk.saldo_freebet + antigaStake })
-              .eq("id", antigoBkId);
-          }
-        } else {
-          // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
-          await updateBookmakerBalance(antigoBkId, antigaStake);
-        }
-      } else if ((resultadoAntigo === "GREEN" || resultadoAntigo === "MEIO_GREEN") && apostaAntiga.valor_retorno) {
-        // GREEN antiga: lucro foi creditado, reverter (debitar lucro)
-        const lucroAntigo = apostaAntiga.valor_retorno - antigaStake;
-        if (lucroAntigo !== 0) {
-          // CORREÇÃO MULTI-MOEDA: Usar helper centralizado
-          await updateBookmakerBalance(antigoBkId, -lucroAntigo);
-        }
-      }
-      // VOID antiga: não alterou saldo, não precisa reverter
-    }
-    
-    // APLICAR efeito do resultado NOVO (se não for PENDENTE)
-    if (resultadoNovo && resultadoNovo !== "PENDENTE") {
-      if (resultadoNovo === "RED" || resultadoNovo === "MEIO_RED") {
-        // RED: debitar stake
-        await debitarSaldo(novoBkId, novaStake, novaUsaFreebet);
-      } else if ((resultadoNovo === "GREEN" || resultadoNovo === "MEIO_GREEN") && apostaNovaData.valor_retorno) {
-        // GREEN: creditar lucro
-        const lucroNovo = apostaNovaData.valor_retorno - novaStake;
-        if (lucroNovo > 0) {
-          await creditarRetorno(novoBkId, lucroNovo);
-        } else if (lucroNovo < 0) {
-          await debitarSaldo(novoBkId, Math.abs(lucroNovo), novaUsaFreebet);
-        }
-      }
-      // VOID: não altera saldo
-    }
-  };
+  // ========== atualizarSaldosBookmaker REMOVIDA - MOTOR v7 ==========
+  // Esta função foi removida pois toda atualização de saldo agora passa
+  // exclusivamente pelo motor de eventos v7 (reliquidarAposta/liquidarAposta).
+  // O fluxo correto para edição de aposta com mudança de resultado é:
+  // 1. Atualizar dados não-financeiros via update direto
 
   const handleDelete = async () => {
     if (!aposta) return;
