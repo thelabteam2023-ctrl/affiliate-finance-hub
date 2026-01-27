@@ -35,6 +35,7 @@ import {
   HelpCircle,
   History,
   Lock,
+  XCircle,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
@@ -106,7 +107,7 @@ export function ConciliacaoSaldos({
   const { user } = useAuth();
   const { workspace } = useWorkspace();
   const { getLogoUrl } = useBookmakerLogoMap();
-  const { confirmTransit } = useWalletTransitBalance();
+  const { confirmTransit, revertTransit } = useWalletTransitBalance();
   
   // Sub-tab state
   const [subTab, setSubTab] = useState<"abertas" | "historico">("abertas");
@@ -116,6 +117,7 @@ export function ConciliacaoSaldos({
   const [valorConfirmado, setValorConfirmado] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [failingId, setFailingId] = useState<string | null>(null);
   
   // Paginação server-side para o histórico
   const pagination = useServerPagination({ initialPageSize: PAGE_SIZE });
@@ -674,14 +676,75 @@ export function ConciliacaoSaldos({
                         </div>
                       </div>
 
-                      <Button
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => handleOpenConfirm(t)}
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        Conciliar
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {/* Botão Falhar - apenas para crypto em trânsito */}
+                        {isCrypto && t.transit_status === "PENDING" && t.origem_wallet_id && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+                                  onClick={async () => {
+                                    if (failingId) return;
+                                    setFailingId(t.id);
+                                    try {
+                                      // Reverter o trânsito (liberar saldo)
+                                      const result = await revertTransit(t.id, 'FAILED', 'Falhou na blockchain');
+                                      if (!result.success) {
+                                        toast.error("Erro ao reverter: " + result.error);
+                                        return;
+                                      }
+                                      // Cancelar a transação no ledger
+                                      const { error } = await supabase
+                                        .from("cash_ledger")
+                                        .update({
+                                          status: "CANCELADO",
+                                          transit_status: "FAILED",
+                                          descricao: `${t.descricao || ""} | FALHOU: Transação não confirmada na blockchain`,
+                                        })
+                                        .eq("id", t.id)
+                                        .eq("status", "PENDENTE");
+                                      
+                                      if (error) throw error;
+                                      
+                                      toast.success("Transação marcada como falha. Saldo liberado.");
+                                      dispatchCaixaDataChanged();
+                                      onRefresh();
+                                    } catch (err: any) {
+                                      console.error("Erro ao falhar transação:", err);
+                                      toast.error("Erro: " + err.message);
+                                    } finally {
+                                      setFailingId(null);
+                                    }
+                                  }}
+                                  disabled={failingId === t.id}
+                                >
+                                  {failingId === t.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <XCircle className="h-4 w-4" />
+                                  )}
+                                  Falhar
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">Marca como falha e libera o saldo travado na wallet</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+
+                        <Button
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => handleOpenConfirm(t)}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Conciliar
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
