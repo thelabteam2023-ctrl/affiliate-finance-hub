@@ -41,6 +41,9 @@ interface SaldoWalletParceiro {
   coin: string;
   saldo_coin: number;
   saldo_usd: number;
+  saldo_locked: number;
+  saldo_disponivel: number;
+  wallet_id: string;
 }
 
 interface SaldoBookmakerParceiro {
@@ -57,21 +60,45 @@ interface BonusCreditado {
   total_bonus: number;
 }
 
+// Transação pendente (em trânsito wallet → bookmaker)
+interface TransacaoPendente {
+  parceiro_id: string;
+  bookmaker_id: string;
+  bookmaker_nome: string;
+  valor_origem: number;
+  moeda_origem: string;
+  moeda_destino: string;
+}
+
 interface ParceiroSaldoAgrupado {
   parceiro_id: string;
   parceiro_nome: string;
   saldos_fiat: Array<{ moeda: string; saldo: number; banco: string }>;
-  saldos_crypto: Array<{ coin: string; saldo_coin: number; saldo_usd: number; exchange: string }>;
+  saldos_crypto: Array<{ 
+    coin: string; 
+    saldo_coin: number; 
+    saldo_usd: number; 
+    saldo_locked_usd: number;
+    exchange: string;
+  }>;
   saldos_bookmakers: Array<{ 
     nome: string; 
     saldo_operavel: number;  // saldo_real + bonus + freebet (in native currency)
     moeda: string;
     has_bonus: boolean;
   }>;
+  // Transações pendentes (em trânsito para bookmakers)
+  pendentes_bookmakers: Array<{
+    bookmaker_nome: string;
+    valor: number;
+    moeda: string;
+  }>;
   // Multi-currency totals
   total_fiat_por_moeda: SaldosPorMoeda;
   total_crypto_usd: number;
+  total_crypto_locked_usd: number;
   total_bookmakers_por_moeda: SaldosPorMoeda;
+  total_pendente_por_moeda: SaldosPorMoeda;
 }
 
 export function SaldosParceirosSheet() {
@@ -138,6 +165,28 @@ export function SaldosParceirosSheet() {
 
       if (bonusError) throw bonusError;
 
+      // Buscar transações pendentes (em trânsito wallet → bookmaker)
+      const { data: transacoesPendentes, error: pendentesError } = await supabase
+        .from("cash_ledger")
+        .select(`
+          id,
+          valor_origem,
+          moeda_origem,
+          origem_wallet_id,
+          destino_bookmaker_id,
+          bookmakers!cash_ledger_destino_bookmaker_id_fkey (
+            id,
+            nome,
+            moeda,
+            parceiro_id
+          )
+        `)
+        .eq("status", "PENDENTE")
+        .not("origem_wallet_id", "is", null)
+        .not("destino_bookmaker_id", "is", null);
+
+      if (pendentesError) throw pendentesError;
+
       // Criar mapa de bônus por bookmaker
       const bonusMap = new Map<string, number>();
       (bonusCreditados || []).forEach((bonus) => {
@@ -167,9 +216,12 @@ export function SaldosParceirosSheet() {
             saldos_fiat: [],
             saldos_crypto: [],
             saldos_bookmakers: [],
+            pendentes_bookmakers: [],
             total_fiat_por_moeda: createEmptySaldos(),
             total_crypto_usd: 0,
+            total_crypto_locked_usd: 0,
             total_bookmakers_por_moeda: createEmptySaldos(),
+            total_pendente_por_moeda: createEmptySaldos(),
           });
         }
         return parceirosMap.get(parceiroId)!;
@@ -192,7 +244,7 @@ export function SaldosParceirosSheet() {
         parceiro.total_fiat_por_moeda[moeda] = (parceiro.total_fiat_por_moeda[moeda] || 0) + conta.saldo;
       });
 
-      // Process crypto wallets
+      // Process crypto wallets (com saldo travado)
       (saldosWallets as SaldoWalletParceiro[] || []).forEach((wallet) => {
         if (!wallet.parceiro_id || wallet.saldo_coin === 0) return;
 
@@ -201,14 +253,36 @@ export function SaldosParceirosSheet() {
         // Calcular USD com preço atual da Binance
         const currentPrice = prices[wallet.coin] || 0;
         const saldoUsdAtualizado = wallet.saldo_coin * currentPrice;
+        const saldoLockedUsd = (wallet.saldo_locked || 0);
 
         parceiro.saldos_crypto.push({
           coin: wallet.coin,
           saldo_coin: wallet.saldo_coin,
           saldo_usd: saldoUsdAtualizado,
+          saldo_locked_usd: saldoLockedUsd,
           exchange: wallet.exchange || "Wallet",
         });
         parceiro.total_crypto_usd += saldoUsdAtualizado;
+        parceiro.total_crypto_locked_usd += saldoLockedUsd;
+      });
+
+      // Process transações pendentes (em trânsito)
+      (transacoesPendentes || []).forEach((tx: any) => {
+        const bm = tx.bookmakers;
+        if (!bm?.parceiro_id) return;
+
+        const parceiro = getOrCreateParceiro(bm.parceiro_id, "Parceiro");
+        const moedaDestino = bm.moeda || "USD";
+        
+        parceiro.pendentes_bookmakers.push({
+          bookmaker_nome: bm.nome,
+          valor: tx.valor_origem || 0,
+          moeda: moedaDestino,
+        });
+        
+        // Aggregate pendentes by currency
+        parceiro.total_pendente_por_moeda[moedaDestino] = 
+          (parceiro.total_pendente_por_moeda[moedaDestino] || 0) + (tx.valor_origem || 0);
       });
 
       // Process bookmakers (multi-currency)
@@ -301,13 +375,13 @@ export function SaldosParceirosSheet() {
       {saldos.map((s, idx) => (
         <div key={idx} className="flex justify-between items-center gap-3 text-sm">
           <span className="text-foreground truncate max-w-[150px]">{s.banco}</span>
-          <span className="font-mono text-emerald-400 whitespace-nowrap">{formatCurrency(s.saldo, s.moeda)}</span>
+          <span className="font-mono text-chart-1 whitespace-nowrap">{formatCurrency(s.saldo, s.moeda)}</span>
         </div>
       ))}
     </div>
   );
 
-  const CryptoHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"] }) => (
+  const CryptoHoverContent = ({ saldos, totalLocked }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number }) => (
     <div className="space-y-2">
       <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">Saldo por Moeda</p>
       {saldos.map((s, idx) => (
@@ -321,13 +395,32 @@ export function SaldosParceirosSheet() {
               {s.saldo_coin.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {s.coin}
             </span>
           </div>
-          <span className="font-mono text-blue-400 whitespace-nowrap">{formatCurrency(s.saldo_usd, "USD")}</span>
+          <div className="flex flex-col items-end">
+            <span className="font-mono text-chart-2 whitespace-nowrap">{formatCurrency(s.saldo_usd, "USD")}</span>
+            {s.saldo_locked_usd > 0 && (
+              <span className="text-xs font-mono text-chart-3 whitespace-nowrap">
+                -{formatCurrency(s.saldo_locked_usd, "USD")} em trânsito
+              </span>
+            )}
+          </div>
         </div>
       ))}
+      {totalLocked > 0 && (
+        <div className="pt-2 mt-2 border-t border-border/50 flex justify-between text-sm">
+          <span className="text-chart-3 font-medium">⏳ Total em Trânsito</span>
+          <span className="font-mono text-chart-3">{formatCurrency(totalLocked, "USD")}</span>
+        </div>
+      )}
     </div>
   );
 
-  const BookmakerHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_bookmakers"] }) => {
+  const BookmakerHoverContent = ({ 
+    saldos, 
+    pendentes 
+  }: { 
+    saldos: ParceiroSaldoAgrupado["saldos_bookmakers"]; 
+    pendentes: ParceiroSaldoAgrupado["pendentes_bookmakers"];
+  }) => {
     const saldosFiltrados = saldos.filter(s => s.saldo_operavel > 0.50);
     return (
       <div className="space-y-2">
@@ -337,16 +430,32 @@ export function SaldosParceirosSheet() {
             <div className="flex items-center gap-1.5 truncate max-w-[150px]">
               <span className="text-foreground truncate">{s.nome}</span>
               {s.has_bonus && (
-                <span className="text-[10px] text-purple-400" title="Inclui bônus/freebet">🎁</span>
+                <span className="text-[10px] text-primary" title="Inclui bônus/freebet">🎁</span>
               )}
             </div>
             <div className="flex flex-col items-end">
-              <span className="font-mono text-amber-400 whitespace-nowrap">
+              <span className="font-mono text-chart-4 whitespace-nowrap">
                 {CURRENCY_SYMBOLS[s.moeda] || s.moeda} {s.saldo_operavel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>
           </div>
         ))}
+        {/* Transações pendentes (em trânsito) */}
+        {pendentes.length > 0 && (
+          <>
+            <div className="pt-2 mt-2 border-t border-border/50">
+              <p className="text-xs font-semibold text-chart-3 mb-1.5">⏳ Em Trânsito (Pendentes)</p>
+              {pendentes.map((p, idx) => (
+                <div key={idx} className="flex justify-between items-center gap-3 text-sm">
+                  <span className="text-muted-foreground truncate max-w-[150px]">{p.bookmaker_nome}</span>
+                  <span className="font-mono text-chart-3 whitespace-nowrap">
+                    +{CURRENCY_SYMBOLS[p.moeda] || p.moeda} {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     );
   };
@@ -445,7 +554,7 @@ export function SaldosParceirosSheet() {
                             {primaryFiat ? (
                               <HoverCard openDelay={100} closeDelay={50}>
                                 <HoverCardTrigger asChild>
-                                  <button className="inline-flex items-center gap-1 text-emerald-400 font-mono text-sm hover:text-emerald-300 transition-colors cursor-pointer">
+                                  <button className="inline-flex items-center gap-1 text-chart-1 font-mono text-sm hover:opacity-80 transition-colors cursor-pointer">
                                     {formatCurrency(primaryFiat[1], primaryFiat[0])}
                                     {fiatEntries.length > 1 && (
                                       <span className="text-xs text-muted-foreground">+{fiatEntries.length - 1}</span>
@@ -461,17 +570,29 @@ export function SaldosParceirosSheet() {
                             )}
                           </TableCell>
 
-                          {/* Crypto Cell */}
+                          {/* Crypto Cell - mostra disponível e locked */}
                           <TableCell className="py-2.5 text-right">
                             {parceiro.saldos_crypto.length > 0 ? (
                               <HoverCard openDelay={100} closeDelay={50}>
                                 <HoverCardTrigger asChild>
-                                  <button className="inline-flex items-center gap-1 text-blue-400 font-mono text-sm hover:text-blue-300 transition-colors cursor-pointer">
-                                    {formatCurrency(parceiro.total_crypto_usd, "USD")}
+                                  <button className="inline-flex flex-col items-end gap-0.5 hover:opacity-80 transition-opacity cursor-pointer">
+                                    {/* Saldo disponível (total - locked) */}
+                                    <span className="text-chart-2 font-mono text-sm">
+                                      {formatCurrency(parceiro.total_crypto_usd - parceiro.total_crypto_locked_usd, "USD")}
+                                    </span>
+                                    {/* Saldo em trânsito */}
+                                    {parceiro.total_crypto_locked_usd > 0 && (
+                                      <span className="text-xs text-chart-3 font-mono">
+                                        ⏳ {formatCurrency(parceiro.total_crypto_locked_usd, "USD")}
+                                      </span>
+                                    )}
                                   </button>
                                 </HoverCardTrigger>
-                                <HoverCardContent align="end" className="w-72">
-                                  <CryptoHoverContent saldos={parceiro.saldos_crypto} />
+                                <HoverCardContent align="end" className="w-80">
+                                  <CryptoHoverContent 
+                                    saldos={parceiro.saldos_crypto} 
+                                    totalLocked={parceiro.total_crypto_locked_usd} 
+                                  />
                                 </HoverCardContent>
                               </HoverCard>
                             ) : (
@@ -479,24 +600,37 @@ export function SaldosParceirosSheet() {
                             )}
                           </TableCell>
 
-                          {/* Bookmaker Cell - Multi-currency */}
+                          {/* Bookmaker Cell - Multi-currency + Pendentes */}
                           <TableCell className="py-2.5 text-right">
-                            {hasBookmakerBalance ? (
+                            {hasBookmakerBalance || parceiro.pendentes_bookmakers.length > 0 ? (
                               <HoverCard openDelay={100} closeDelay={50}>
                                 <HoverCardTrigger asChild>
                                   <button className="inline-flex flex-col items-end gap-0.5 hover:opacity-80 transition-opacity cursor-pointer">
+                                    {/* Saldos confirmados */}
                                     {bookmakerEntries.slice(0, 2).map(([moeda, valor]) => (
-                                      <span key={moeda} className="text-amber-400 font-mono text-sm">
+                                      <span key={moeda} className="text-chart-4 font-mono text-sm">
                                         {CURRENCY_SYMBOLS[moeda] || moeda} {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                       </span>
                                     ))}
                                     {bookmakerEntries.length > 2 && (
                                       <span className="text-xs text-muted-foreground">+{bookmakerEntries.length - 2} moedas</span>
                                     )}
+                                    {/* Pendentes em amarelo */}
+                                    {parceiro.pendentes_bookmakers.length > 0 && (
+                                      <span className="text-xs text-chart-3 font-mono">
+                                        ⏳ +{formatCurrency(
+                                          Object.values(parceiro.total_pendente_por_moeda).reduce((a, b) => a + b, 0), 
+                                          "USD"
+                                        )}
+                                      </span>
+                                    )}
                                   </button>
                                 </HoverCardTrigger>
-                                <HoverCardContent align="end" className="w-72">
-                                  <BookmakerHoverContent saldos={parceiro.saldos_bookmakers} />
+                                <HoverCardContent align="end" className="w-80">
+                                  <BookmakerHoverContent 
+                                    saldos={parceiro.saldos_bookmakers} 
+                                    pendentes={parceiro.pendentes_bookmakers}
+                                  />
                                 </HoverCardContent>
                               </HoverCard>
                             ) : (
