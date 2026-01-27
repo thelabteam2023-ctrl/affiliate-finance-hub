@@ -129,6 +129,9 @@ interface SaldoParceiroWallets {
   coin: string;
   saldo_usd: number;
   saldo_coin: number;
+  // Novos campos para dinheiro em trânsito
+  saldo_locked: number;
+  saldo_disponivel: number;
 }
 
 export function CaixaTransacaoDialog({
@@ -1205,7 +1208,7 @@ export function CaixaTransacaoDialog({
 
       const { data: wallets } = await supabase
         .from("v_saldo_parceiro_wallets")
-        .select("wallet_id, parceiro_id, coin, saldo_usd, saldo_coin");
+        .select("wallet_id, parceiro_id, coin, saldo_usd, saldo_coin, saldo_locked, saldo_disponivel");
 
       setSaldosParceirosContas(contas || []);
       setSaldosParceirosWallets(wallets || []);
@@ -1362,7 +1365,8 @@ export function CaixaTransacaoDialog({
     
     if (tipo === "PARCEIRO_WALLET" && id) {
       const saldo = saldosParceirosWallets.find(s => s.wallet_id === id && s.coin === coin);
-      return saldo?.saldo_usd || 0;
+      // Usar saldo_disponivel (total - locked) em vez de saldo_usd (total)
+      return saldo?.saldo_disponivel ?? saldo?.saldo_usd ?? 0;
     }
     
     return 0;
@@ -2258,12 +2262,12 @@ export function CaixaTransacaoDialog({
                       // Filtrar apenas wallets do parceiro selecionado
                       if (w.parceiro_id !== origemParceiroId) return false;
                       
-                      // Filtrar apenas wallets com saldo disponível para a moeda selecionada
-                      // A existência do saldo na view indica que a wallet suporta a moeda
+                      // Filtrar apenas wallets com saldo DISPONÍVEL para a moeda selecionada
+                      // Usa saldo_disponivel que já desconta locked (dinheiro em trânsito)
                       const saldo = saldosParceirosWallets.find(
                         s => s.wallet_id === w.id && s.coin === coin
                       );
-                      return saldo && saldo.saldo_usd > 0;
+                      return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
                     })
                     .map((wallet) => {
                       const saldo = saldosParceirosWallets.find(
@@ -2273,9 +2277,14 @@ export function CaixaTransacaoDialog({
                       const shortenedAddress = wallet.endereco 
                         ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
                         : '';
+                      const saldoDisponivel = saldo?.saldo_disponivel ?? saldo?.saldo_usd ?? 0;
+                      const temLocked = (saldo?.saldo_locked ?? 0) > 0;
                       return (
                         <SelectItem key={wallet.id} value={wallet.id}>
-                          <span className="font-mono">{walletName} - {shortenedAddress} - Saldo: {formatCurrency(saldo?.saldo_usd || 0)}</span>
+                          <span className="font-mono">
+                            {walletName} - {shortenedAddress} - Disp: {formatCurrency(saldoDisponivel)}
+                            {temLocked && <span className="text-warning ml-1">(🔒)</span>}
+                          </span>
                         </SelectItem>
                       );
                     })}
@@ -2298,12 +2307,12 @@ export function CaixaTransacaoDialog({
             );
             const temWalletComMoeda = walletsDoParceiroComMoeda.length > 0;
             
-            // Verificar se alguma wallet tem saldo
+            // Verificar se alguma wallet tem saldo DISPONÍVEL (não em trânsito)
             const walletsComSaldo = walletsDoParceiroComMoeda.filter((w) => {
               const saldo = saldosParceirosWallets.find(
                 s => s.wallet_id === w.id && s.coin === coin
               );
-              return saldo && saldo.saldo_usd > 0;
+              return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
             });
             const temSaldo = walletsComSaldo.length > 0;
 
@@ -2510,9 +2519,9 @@ export function CaixaTransacaoDialog({
             </>
           );
         } else {
-          // CRYPTO - Filtrar parceiros com saldo no coin selecionado
+          // CRYPTO - Filtrar parceiros com saldo DISPONÍVEL no coin selecionado
           const parceirosComSaldo = saldosParceirosWallets
-            .filter(s => s.coin === coin && s.saldo_usd > 0)
+            .filter(s => s.coin === coin && (s.saldo_disponivel ?? s.saldo_usd) > 0)
             .map(s => s.parceiro_id)
             .filter((value, index, self) => self.indexOf(value) === index);
 
@@ -2552,7 +2561,7 @@ export function CaixaTransacaoDialog({
                           const saldo = saldosParceirosWallets.find(
                             s => s.wallet_id === w.id && s.coin === coin
                           );
-                          return saldo && saldo.saldo_usd > 0;
+                          return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
                         })
                         .map((wallet) => {
                           const saldo = saldosParceirosWallets.find(
@@ -2562,9 +2571,14 @@ export function CaixaTransacaoDialog({
                           const shortenedAddress = wallet.endereco 
                             ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
                             : '';
+                          const saldoDisponivel = saldo?.saldo_disponivel ?? saldo?.saldo_usd ?? 0;
+                          const temLocked = (saldo?.saldo_locked ?? 0) > 0;
                           return (
                             <SelectItem key={wallet.id} value={wallet.id}>
-                              <span className="font-mono">{walletName} - {shortenedAddress} - Saldo: {formatCurrency(saldo?.saldo_usd || 0)}</span>
+                              <span className="font-mono">
+                                {walletName} - {shortenedAddress} - Disp: {formatCurrency(saldoDisponivel)}
+                                {temLocked && <span className="text-warning ml-1">(🔒)</span>}
+                              </span>
                             </SelectItem>
                           );
                         })}
@@ -2581,7 +2595,7 @@ export function CaixaTransacaoDialog({
                   const saldo = saldosParceirosWallets.find(
                     s => s.wallet_id === w.id && s.coin === coin
                   );
-                  return saldo && saldo.saldo_usd > 0;
+                  return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
                 });
                 const temSaldo = walletsComSaldo.length > 0;
 
@@ -2710,9 +2724,9 @@ export function CaixaTransacaoDialog({
           </>
         );
       } else {
-        // CRYPTO - Filtrar parceiros com saldo no coin selecionado
+        // CRYPTO - Filtrar parceiros com saldo DISPONÍVEL no coin selecionado
         const parceirosComSaldo = saldosParceirosWallets
-          .filter(s => s.coin === coin && s.saldo_usd > 0)
+          .filter(s => s.coin === coin && (s.saldo_disponivel ?? s.saldo_usd) > 0)
           .map(s => s.parceiro_id)
           .filter((value, index, self) => self.indexOf(value) === index); // unique
 
@@ -2749,11 +2763,11 @@ export function CaixaTransacaoDialog({
                     {walletsCrypto
                       .filter((w) => {
                         if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
-                        // Filtrar apenas wallets com saldo
+                        // Filtrar apenas wallets com saldo DISPONÍVEL
                         const saldo = saldosParceirosWallets.find(
                           s => s.wallet_id === w.id && s.coin === coin
                         );
-                        return saldo && saldo.saldo_usd > 0;
+                        return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
                       })
                       .map((wallet) => {
                         const saldo = saldosParceirosWallets.find(
@@ -2763,9 +2777,14 @@ export function CaixaTransacaoDialog({
                         const shortenedAddress = wallet.endereco 
                           ? `${wallet.endereco.slice(0, 5)}....${wallet.endereco.slice(-5)}`
                           : '';
+                        const saldoDisponivel = saldo?.saldo_disponivel ?? saldo?.saldo_usd ?? 0;
+                        const temLocked = (saldo?.saldo_locked ?? 0) > 0;
                         return (
                           <SelectItem key={wallet.id} value={wallet.id}>
-                            <span className="font-mono">{walletName} - {shortenedAddress} - Saldo: {formatCurrency(saldo?.saldo_usd || 0)}</span>
+                            <span className="font-mono">
+                              {walletName} - {shortenedAddress} - Disp: {formatCurrency(saldoDisponivel)}
+                              {temLocked && <span className="text-warning ml-1">(🔒)</span>}
+                            </span>
                           </SelectItem>
                         );
                       })}
@@ -2780,12 +2799,12 @@ export function CaixaTransacaoDialog({
               );
               const temWalletComMoeda = walletsDoParceiroComMoeda.length > 0;
               
-              // Verificar se alguma wallet tem saldo
+              // Verificar se alguma wallet tem saldo DISPONÍVEL
               const walletsComSaldo = walletsDoParceiroComMoeda.filter((w) => {
                 const saldo = saldosParceirosWallets.find(
                   s => s.wallet_id === w.id && s.coin === coin
                 );
-                return saldo && saldo.saldo_usd > 0;
+                return saldo && (saldo.saldo_disponivel ?? saldo.saldo_usd) > 0;
               });
               const temSaldo = walletsComSaldo.length > 0;
 

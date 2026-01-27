@@ -22,6 +22,9 @@ interface SaldoParceiroWallets {
   coin: string;
   saldo_usd: number;
   saldo_coin: number;
+  // Campos para dinheiro em trânsito
+  saldo_locked?: number;
+  saldo_disponivel?: number;
 }
 
 interface ParceiroSelectProps {
@@ -204,8 +207,11 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
         return { saldo: 0, disponivel: false }; // "Saldo indisponível"
       }
       
-      const saldoUsdTotal = walletsDoParceiro.reduce((acc, w) => acc + (w.saldo_usd || 0), 0);
-      return { saldo: saldoUsdTotal, disponivel: true };
+      // Usar saldo_disponivel se disponível, senão fallback para saldo_usd
+      const saldoDisponivelTotal = walletsDoParceiro.reduce((acc, w) => 
+        acc + (w.saldo_disponivel ?? w.saldo_usd ?? 0), 0
+      );
+      return { saldo: saldoDisponivelTotal, disponivel: true };
     }
     
     return { saldo: 0, disponivel: true };

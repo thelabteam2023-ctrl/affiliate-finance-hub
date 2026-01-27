@@ -1294,6 +1294,13 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
           {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "bookmakers_projeto_id_fkey"
             columns: ["projeto_id"]
             isOneToOne: false
@@ -1448,6 +1455,7 @@ export type Database = {
           status_valor: string | null
           tipo_moeda: string
           tipo_transacao: string
+          transit_status: string | null
           updated_at: string
           usar_freebet: boolean | null
           user_id: string
@@ -1506,6 +1514,7 @@ export type Database = {
           status_valor?: string | null
           tipo_moeda: string
           tipo_transacao: string
+          transit_status?: string | null
           updated_at?: string
           usar_freebet?: boolean | null
           user_id: string
@@ -1564,6 +1573,7 @@ export type Database = {
           status_valor?: string | null
           tipo_moeda?: string
           tipo_transacao?: string
+          transit_status?: string | null
           updated_at?: string
           usar_freebet?: boolean | null
           user_id?: string
@@ -1696,10 +1706,24 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
           {
+            foreignKeyName: "cash_ledger_destino_parceiro_id_fkey"
+            columns: ["destino_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "cash_ledger_destino_wallet_id_fkey"
             columns: ["destino_wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_wallet_id_fkey"
+            columns: ["destino_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -1857,10 +1881,24 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
           {
+            foreignKeyName: "cash_ledger_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "cash_ledger_origem_wallet_id_fkey"
             columns: ["origem_wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -2434,6 +2472,13 @@ export type Database = {
             referencedRelation: "v_saldo_parceiro_wallets"
             referencedColumns: ["parceiro_id"]
           },
+          {
+            foreignKeyName: "contas_bancarias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
         ]
       }
       despesas_administrativas: {
@@ -2553,10 +2598,24 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
           {
+            foreignKeyName: "despesas_administrativas_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "despesas_administrativas_origem_wallet_id_fkey"
             columns: ["origem_wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "despesas_administrativas_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -2838,6 +2897,13 @@ export type Database = {
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -3758,6 +3824,13 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
           {
+            foreignKeyName: "indicacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "indicacoes_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -4260,10 +4333,24 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
           {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "movimentacoes_indicacao_origem_wallet_id_fkey"
             columns: ["origem_wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -4936,6 +5023,13 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
           {
+            foreignKeyName: "parceiro_lucro_alertas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "parceiro_lucro_alertas_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -5151,6 +5245,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -6038,6 +6139,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -7287,8 +7395,92 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_transit_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          balance_locked_after: number | null
+          balance_locked_before: number | null
+          created_at: string | null
+          id: string
+          ledger_id: string | null
+          metadata: Json | null
+          valor_usd: number
+          wallet_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          balance_locked_after?: number | null
+          balance_locked_before?: number | null
+          created_at?: string | null
+          id?: string
+          ledger_id?: string | null
+          metadata?: Json | null
+          valor_usd: number
+          wallet_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          balance_locked_after?: number | null
+          balance_locked_before?: number | null
+          created_at?: string | null
+          id?: string
+          ledger_id?: string | null
+          metadata?: Json | null
+          valor_usd?: number
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transit_log_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "cash_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transit_log_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_ajustes_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transit_log_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_eventos_promocionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transit_log_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "wallet_transit_log_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "wallet_transit_log_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets_crypto"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallets_crypto: {
         Row: {
+          balance_locked: number
+          balance_locked_updated_at: string | null
           created_at: string
           endereco: string
           exchange: string | null
@@ -7301,6 +7493,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          balance_locked?: number
+          balance_locked_updated_at?: string | null
           created_at?: string
           endereco: string
           exchange?: string | null
@@ -7313,6 +7507,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          balance_locked?: number
+          balance_locked_updated_at?: string | null
           created_at?: string
           endereco?: string
           exchange?: string | null
@@ -7351,6 +7547,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "wallets_crypto_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -7862,6 +8065,13 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
           {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "bookmakers_projeto_id_fkey"
             columns: ["projeto_id"]
             isOneToOne: false
@@ -7967,6 +8177,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -8100,6 +8317,13 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
           {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "bookmakers_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -8153,6 +8377,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -8227,6 +8458,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -8420,6 +8658,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
         ]
@@ -8730,6 +8975,13 @@ export type Database = {
             referencedRelation: "v_saldo_parceiro_wallets"
             referencedColumns: ["parceiro_id"]
           },
+          {
+            foreignKeyName: "indicacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
         ]
       }
       v_indicador_performance: {
@@ -8858,10 +9110,24 @@ export type Database = {
             referencedColumns: ["parceiro_id"]
           },
           {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
             foreignKeyName: "movimentacoes_indicacao_origem_wallet_id_fkey"
             columns: ["origem_wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -9209,6 +9475,13 @@ export type Database = {
             referencedRelation: "v_saldo_parceiro_wallets"
             referencedColumns: ["parceiro_id"]
           },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
         ]
       }
       v_projeto_lucro_operador: {
@@ -9397,6 +9670,8 @@ export type Database = {
           parceiro_id: string | null
           parceiro_nome: string | null
           saldo_coin: number | null
+          saldo_disponivel: number | null
+          saldo_locked: number | null
           saldo_usd: number | null
           user_id: string | null
           wallet_id: string | null
@@ -9441,6 +9716,46 @@ export type Database = {
           user_id: string | null
         }
         Relationships: []
+      }
+      v_wallet_crypto_balances: {
+        Row: {
+          balance_available: number | null
+          balance_locked: number | null
+          balance_total: number | null
+          balance_total_coin: number | null
+          endereco: string | null
+          exchange: string | null
+          moeda: string[] | null
+          network: string | null
+          parceiro_id: string | null
+          parceiro_nome: string | null
+          primary_coin: string | null
+          user_id: string | null
+          wallet_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "parceiros_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_last_login"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -9936,6 +10251,10 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["subscription_status"]
       }
+      confirm_wallet_transit: {
+        Args: { p_ledger_id: string; p_valor_confirmado?: number }
+        Returns: Json
+      }
       confirmar_saque_concluido: {
         Args: { p_bookmaker_id: string }
         Returns: undefined
@@ -10349,6 +10668,7 @@ export type Database = {
           workspace_slug: string
         }[]
       }
+      get_wallet_balances: { Args: { p_wallet_id: string }; Returns: Json }
       get_workspace_auth_version: {
         Args: { p_user_id: string; p_workspace_id: string }
         Returns: number
@@ -10425,6 +10745,10 @@ export type Database = {
           message: string
           success: boolean
         }[]
+      }
+      lock_wallet_balance: {
+        Args: { p_ledger_id?: string; p_valor_usd: number; p_wallet_id: string }
+        Returns: Json
       }
       marcar_para_saque: {
         Args: { p_bookmaker_id: string }
@@ -10624,6 +10948,10 @@ export type Database = {
         Args: { p_estrategia: string; p_resultado: string }
         Returns: string
       }
+      revert_wallet_transit: {
+        Args: { p_ledger_id: string; p_motivo?: string; p_status?: string }
+        Returns: Json
+      }
       reverter_liquidacao_v4: {
         Args: { p_aposta_id: string }
         Returns: {
@@ -10799,6 +11127,7 @@ export type Database = {
         | "GLOBAL_REGULATED"
         | "GLOBAL_RESTRICTED"
         | "WORKSPACE_PRIVATE"
+      crypto_transit_status: "PENDING" | "CONFIRMED" | "FAILED" | "REVERSED"
       indicador_status: "ATIVO" | "TOP_VIP" | "EM_OBSERVACAO" | "INATIVO"
       parceria_status: "ATIVA" | "EM_ENCERRAMENTO" | "ENCERRADA" | "RENOVADA"
       subscription_status:
@@ -10976,6 +11305,7 @@ export const Constants = {
         "GLOBAL_RESTRICTED",
         "WORKSPACE_PRIVATE",
       ],
+      crypto_transit_status: ["PENDING", "CONFIRMED", "FAILED", "REVERSED"],
       indicador_status: ["ATIVO", "TOP_VIP", "EM_OBSERVACAO", "INATIVO"],
       parceria_status: ["ATIVA", "EM_ENCERRAMENTO", "ENCERRADA", "RENOVADA"],
       subscription_status: [
