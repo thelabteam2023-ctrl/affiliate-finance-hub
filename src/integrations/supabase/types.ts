@@ -10169,23 +10169,40 @@ export type Database = {
         }
         Returns: boolean
       }
-      processar_debito_waterfall: {
-        Args: {
-          p_aposta_id?: string
-          p_bookmaker_id: string
-          p_stake: number
-          p_usar_freebet: boolean
-          p_user_id: string
-          p_workspace_id: string
-        }
-        Returns: {
-          debito_bonus: number
-          debito_freebet: number
-          debito_real: number
-          error_message: string
-          success: boolean
-        }[]
-      }
+      processar_debito_waterfall:
+        | {
+            Args: {
+              p_bookmaker_id: string
+              p_stake: number
+              p_usar_freebet?: boolean
+              p_user_id?: string
+              p_workspace_id?: string
+            }
+            Returns: {
+              debito_bonus: number
+              debito_freebet: number
+              debito_real: number
+              erro: string
+              sucesso: boolean
+            }[]
+          }
+        | {
+            Args: {
+              p_aposta_id?: string
+              p_bookmaker_id: string
+              p_stake: number
+              p_usar_freebet: boolean
+              p_user_id: string
+              p_workspace_id: string
+            }
+            Returns: {
+              debito_bonus: number
+              debito_freebet: number
+              debito_real: number
+              error_message: string
+              success: boolean
+            }[]
+          }
       recalcular_saldo_bookmaker: {
         Args: { p_bookmaker_id: string }
         Returns: number
