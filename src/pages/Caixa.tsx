@@ -28,6 +28,7 @@ import { SaldosParceirosSheet } from "@/components/caixa/SaldosParceirosSheet";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
+import { TransacoesEmTransito } from "@/components/caixa/TransacoesEmTransito";
 import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -820,6 +821,9 @@ export default function Caixa() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Transações em Trânsito (Crypto) */}
+          <TransacoesEmTransito />
 
           {/* Posição de Capital */}
           <PosicaoCapital
