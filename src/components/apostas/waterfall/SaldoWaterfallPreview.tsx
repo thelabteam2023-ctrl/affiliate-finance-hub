@@ -33,6 +33,10 @@ interface SaldoWaterfallPreviewProps {
   moeda: string;
   showBreakdown?: boolean;
   className?: string;
+  /** Quando true, indica que esta é uma edição - o stake já está alocado na aposta */
+  isEditMode?: boolean;
+  /** Stake original da aposta (para edição) - usado para calcular saldo efetivo */
+  originalStake?: number;
 }
 
 /**
@@ -86,10 +90,15 @@ export function SaldoWaterfallPreview({
   moeda,
   showBreakdown = true,
   className,
+  isEditMode = false,
+  originalStake = 0,
 }: SaldoWaterfallPreviewProps) {
+  // Em modo de edição, o stake original já está "alocado" - adiciona de volta ao saldo disponível
+  const saldoRealEfetivo = isEditMode ? saldoReal + originalStake : saldoReal;
+  
   const breakdown = useMemo(
-    () => calcularWaterfall(stake, saldoBonus, saldoFreebet, saldoReal, usarFreebet),
-    [stake, saldoBonus, saldoFreebet, saldoReal, usarFreebet]
+    () => calcularWaterfall(stake, saldoBonus, saldoFreebet, saldoRealEfetivo, usarFreebet),
+    [stake, saldoBonus, saldoFreebet, saldoRealEfetivo, usarFreebet]
   );
 
   const formatCurrency = (valor: number) => {
@@ -101,7 +110,7 @@ export function SaldoWaterfallPreview({
     }).format(valor);
   };
 
-  const saldoOperavel = saldoReal + saldoBonus + (usarFreebet ? saldoFreebet : 0);
+  const saldoOperavel = saldoRealEfetivo + saldoBonus + (usarFreebet ? saldoFreebet : 0);
 
   if (stake <= 0) {
     return null;
