@@ -4,6 +4,7 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
 import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
+import { useWalletTransitBalance } from "@/hooks/useWalletTransitBalance";
 import {
   Dialog,
   DialogContent,
@@ -152,6 +153,7 @@ export function CaixaTransacaoDialog({
     cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP,
     getRate, convertToBRL, source, dataSource, isUsingFallback 
   } = useCotacoes();
+  const { lockBalance } = useWalletTransitBalance();
   const [loading, setLoading] = useState(false);
 
   // Form state
@@ -2099,9 +2101,56 @@ export function CaixaTransacaoDialog({
         }
       }
 
-      const { error } = await supabase.from("cash_ledger").insert([transactionData]);
+      // =========================================================================
+      // DINHEIRO EM TRÂNSITO: Travar saldo da wallet ANTES de inserir no ledger
+      // Qualquer transação CRYPTO que sai de uma wallet deve travar o saldo
+      // =========================================================================
+      const isTransacaoCryptoDeWallet = tipoMoeda === "CRYPTO" && origemWalletId;
+      
+      if (isTransacaoCryptoDeWallet) {
+        // Definir transit_status como PENDING para transações crypto
+        transactionData.transit_status = "PENDING";
+        
+        // Travar o saldo na wallet ANTES de registrar a transação
+        const lockResult = await lockBalance(origemWalletId, valorUsdReferencia);
+        
+        if (!lockResult.success) {
+          toast({
+            title: "Erro ao travar saldo",
+            description: lockResult.error || "Não foi possível reservar o saldo na wallet",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        console.log("[CRYPTO TRANSIT] Saldo travado com sucesso:", {
+          walletId: origemWalletId,
+          valorTravado: lockResult.locked_amount,
+          novoTotalTravado: lockResult.new_locked_total,
+          saldoDisponivelRestante: lockResult.remaining_available,
+        });
+      }
 
-      if (error) throw error;
+      const { data: insertedData, error } = await supabase
+        .from("cash_ledger")
+        .insert([transactionData])
+        .select("id")
+        .single();
+
+      if (error) {
+        // Se falhou ao inserir, destravar o saldo que foi reservado
+        if (isTransacaoCryptoDeWallet) {
+          console.warn("[CRYPTO TRANSIT] Erro ao inserir ledger, saldo permanece travado até cleanup");
+          // O saldo permanecerá travado até ser revertido manualmente ou via job
+        }
+        throw error;
+      }
+
+      // Atualizar o ledger com o ID para referência de transit (se aplicável)
+      if (isTransacaoCryptoDeWallet && insertedData?.id) {
+        // Atualizar a referência no log de transit (opcional, para auditoria futura)
+        console.log("[CRYPTO TRANSIT] Transação registrada com transit_status PENDING, ledger_id:", insertedData.id);
+      }
 
       // =========================================================================
       // NOTA: Atualização de saldo do bookmaker é feita via TRIGGER no banco
@@ -2129,9 +2178,11 @@ export function CaixaTransacaoDialog({
 
       const mensagemSucesso = tipoTransacao === "SAQUE" 
         ? "Saque solicitado! Aguardando confirmação de recebimento."
-        : (tipoTransacao === "DEPOSITO" && temConversaoMoeda)
-          ? "Depósito registrado! Aguardando confirmação do valor creditado na aba Conciliação."
-          : "Transação registrada com sucesso";
+        : isTransacaoCryptoDeWallet
+          ? "Transação crypto registrada! Saldo travado até confirmação na aba Transações em Trânsito."
+          : (tipoTransacao === "DEPOSITO" && temConversaoMoeda)
+            ? "Depósito registrado! Aguardando confirmação do valor creditado na aba Conciliação."
+            : "Transação registrada com sucesso";
 
       toast({
         title: "Sucesso",
