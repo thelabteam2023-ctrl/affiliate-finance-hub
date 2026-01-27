@@ -108,17 +108,35 @@ export const bonusQueryKeys = {
   ] as const,
 };
 
-// Function to invalidate all bonus-related queries
+// Function to invalidate all bonus-related queries + FINANCIAL_STATE
 export function useInvalidateBonusQueries() {
   const queryClient = useQueryClient();
   
   return useCallback((projectId: string) => {
-    // Invalidate all bonus queries for this project
+    // Bonus queries
     queryClient.invalidateQueries({ queryKey: ["bonus", "project", projectId] });
-    // Also invalidate related queries
+    
+    // FINANCIAL_STATE - Bônus afetam saldos e KPIs
     queryClient.invalidateQueries({ queryKey: ["apostas", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projectId] });
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
     queryClient.invalidateQueries({ queryKey: ["bookmakers"] });
+    
+    // Vínculos (saldos aparecem na aba vínculos)
+    queryClient.invalidateQueries({ queryKey: ["projeto-vinculos", projectId] });
+    
+    // KPIs
+    queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projectId] });
+    
+    // Exposição
+    queryClient.invalidateQueries({ queryKey: ["exposicao-projeto", projectId] });
+    
+    // Parceiros
+    queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+    queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
+    
+    console.log(`[useInvalidateBonusQueries] Invalidated FINANCIAL_STATE for project ${projectId}`);
   }, [queryClient]);
 }
 

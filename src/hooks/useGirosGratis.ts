@@ -42,12 +42,28 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
   const [cotacaoTrabalho, setCotacaoTrabalho] = useState<number | null>(null);
   const { workspaceId } = useWorkspace();
 
-  // Função para invalidar KPIs globais após mutação
+  // Invalidar grupo FINANCIAL_STATE completo após mutação
   const invalidateProjectKPIs = useCallback(() => {
+    // KPIs
     queryClient.invalidateQueries({ queryKey: [PROJETO_RESULTADO_QUERY_KEY, projetoId] });
     queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projetoId] });
+    
+    // Saldos
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projetoId] });
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+    queryClient.invalidateQueries({ queryKey: ["saldo-operavel-rpc", projetoId] });
+    
+    // Vínculos (giros afetam saldos que aparecem na aba vínculos)
+    queryClient.invalidateQueries({ queryKey: ["projeto-vinculos", projetoId] });
+    
+    // Exposição
+    queryClient.invalidateQueries({ queryKey: ["exposicao-projeto", projetoId] });
+    
+    // Parceiros
+    queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+    queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
+    
+    console.log(`[useGirosGratis] Invalidated FINANCIAL_STATE for project ${projetoId}`);
   }, [queryClient, projetoId]);
 
   // Buscar configuração de moeda do projeto PRIMEIRO

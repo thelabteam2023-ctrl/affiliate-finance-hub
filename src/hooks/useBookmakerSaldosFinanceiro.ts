@@ -119,16 +119,23 @@ export function useBookmakerSaldosFinanceiro({
 }
 
 /**
- * Hook para invalidar cache de saldos financeiros
+ * Hook para invalidar cache de saldos financeiros + FINANCIAL_STATE
  */
 export function useInvalidateBookmakerSaldosFinanceiro() {
   const queryClient = useQueryClient();
   
   return () => {
     queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
-    // Também invalidar cache do hook de projeto para consistência
+    
+    // FINANCIAL_STATE - Saldos financeiros afetam todas as telas
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
-    console.log("[useInvalidateBookmakerSaldosFinanceiro] Cache invalidated");
+    queryClient.invalidateQueries({ queryKey: ["projeto-vinculos"] });
+    queryClient.invalidateQueries({ queryKey: ["projeto-resultado"] });
+    queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns"] });
+    queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+    queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
+    
+    console.log("[useInvalidateBookmakerSaldosFinanceiro] Invalidated FINANCIAL_STATE");
   };
 }
 

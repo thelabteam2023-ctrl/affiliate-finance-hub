@@ -75,18 +75,40 @@ export function useInvalidateCaixaData() {
         );
       }
 
-      // Saldos de Bookmakers (afeta Posição de Capital)
+      // Saldos de Bookmakers (afeta Posição de Capital + FINANCIAL_STATE)
       if (shouldInvalidate("saldosBookmakers")) {
         invalidations.push(
           queryClient.invalidateQueries({
             queryKey: [CAIXA_QUERY_KEYS.saldosBookmakers],
           }),
-          // Também invalida queries globais de saldos de bookmakers
+          // FINANCIAL_STATE - Transações de caixa afetam saldos em todas as telas
           queryClient.invalidateQueries({
             queryKey: ["bookmaker-saldos"],
           }),
           queryClient.invalidateQueries({
             queryKey: ["bookmaker-saldos-financeiro"],
+          }),
+          // Vínculos (saldos aparecem na aba vínculos)
+          queryClient.invalidateQueries({
+            queryKey: ["projeto-vinculos"],
+          }),
+          // KPIs (podem ser afetados por ajustes de saldo)
+          queryClient.invalidateQueries({
+            queryKey: ["projeto-resultado"],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["projeto-breakdowns"],
+          }),
+          // Exposição
+          queryClient.invalidateQueries({
+            queryKey: ["exposicao-projeto"],
+          }),
+          // Parceiros
+          queryClient.invalidateQueries({
+            queryKey: ["parceiro-financeiro"],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["parceiro-consolidado"],
           })
         );
       }
