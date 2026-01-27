@@ -108,25 +108,47 @@ export function useBookmakerSaldosQuery({
 /**
  * Hook para invalidar cache de saldos e KPIs (usar após criar/editar apostas)
  * 
- * ATUALIZADO: Agora também invalida KPIs centrais do projeto para
- * garantir atualização automática sem reload.
+ * ATUALIZADO: Agora também invalida vínculos do projeto para garantir
+ * que a aba Vínculos reflita os saldos corretos em tempo real.
+ * 
+ * CRÍTICO: Esta é a única função que deve ser chamada após mutations
+ * financeiras (apostas, liquidação, exclusão) para garantir consistência
+ * de estado entre todas as abas.
  */
 export function useInvalidateBookmakerSaldos() {
   const queryClient = useQueryClient();
   
   return (projetoId?: string) => {
     if (projetoId) {
-      // Invalidar saldos de bookmakers
+      // 1. Saldos de bookmakers (fonte canônica)
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY, projetoId] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
       
-      // CRÍTICO: Invalidar KPIs centrais para atualização automática
+      // 2. CRÍTICO: Vínculos do projeto - a aba Vínculos consome dados de saldo
+      queryClient.invalidateQueries({ queryKey: ["projeto-vinculos", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-vinculos", "historico", projetoId] });
+      
+      // 3. KPIs centrais do projeto
       queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
       queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projetoId] });
+      
+      // 4. Lista de apostas
       queryClient.invalidateQueries({ queryKey: ["apostas", projetoId] });
       
-      console.log(`[useInvalidateBookmakerSaldos] Invalidated saldos + KPIs for project ${projetoId}`);
+      // 5. Saldo operável via RPC (usado em alguns componentes)
+      queryClient.invalidateQueries({ queryKey: ["saldo-operavel-rpc", projetoId] });
+      
+      // 6. Parceiro consolidado (saldos agregados)
+      queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
+      
+      console.log(`[useInvalidateBookmakerSaldos] Invalidated saldos + vínculos + KPIs for project ${projetoId}`);
     } else {
+      // Invalidação global (quando não temos projetoId)
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-vinculos"] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-resultado"] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns"] });
     }
   };
 }

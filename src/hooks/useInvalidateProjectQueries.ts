@@ -67,7 +67,7 @@ export function useInvalidateProjectQueries() {
         );
       }
 
-      // Saldos de Bookmakers (afeta KPIs de Saldo Operável)
+      // Saldos de Bookmakers (afeta KPIs de Saldo Operável E aba Vínculos)
       if (shouldInvalidate("saldos")) {
         invalidations.push(
           queryClient.invalidateQueries({ 
@@ -79,6 +79,10 @@ export function useInvalidateProjectQueries() {
           // CRITICAL: Also invalidate the saldo-operavel-rpc query
           queryClient.invalidateQueries({ 
             queryKey: ["saldo-operavel-rpc", projetoId] 
+          }),
+          // CRÍTICO: Saldos alimentam a aba Vínculos - SEMPRE invalidar juntos
+          queryClient.invalidateQueries({ 
+            queryKey: ["projeto-vinculos", projetoId] 
           })
         );
       }
