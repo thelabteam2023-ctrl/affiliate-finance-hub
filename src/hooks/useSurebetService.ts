@@ -12,7 +12,25 @@ import { toast } from "sonner";
 import { criarAposta, deletarAposta, liquidarAposta, reliquidarAposta } from "@/services/aposta";
 import type { PernaInput } from "@/services/aposta/types";
 
-interface SurebetData {
+// ============================================================================
+// TIPOS EXPORTADOS
+// ============================================================================
+
+export interface SurebetPerna {
+  bookmakerId: string;
+  bookmakerNome?: string;
+  stake: number;
+  odd: number;
+  selecao: string;
+  selecaoLivre?: string;
+  moeda?: string;
+  fonteSaldo?: 'REAL' | 'FREEBET';
+  stakeBrlReferencia?: number;
+  cotacaoSnapshot?: number;
+  cotacaoSnapshotAt?: string;
+}
+
+export interface SurebetData {
   projetoId: string;
   workspaceId: string;
   userId: string;
@@ -22,26 +40,20 @@ interface SurebetData {
   esporte?: string;
   mercado?: string;
   modelo?: string;
-  pernas: Array<{
-    bookmakerId: string;
-    stake: number;
-    odd: number;
-    selecao: string;
-    selecaoLivre?: string;
-    moeda?: string;
-    fonteSaldo?: string;
-    stakeBrlReferencia?: number;
-    cotacaoSnapshot?: number;
-    cotacaoSnapshotAt?: string;
-  }>;
+  pernas: SurebetPerna[];
 }
 
-interface UseSurebetServiceReturn {
+export interface UseSurebetServiceReturn {
   criarSurebet: (data: SurebetData) => Promise<{ success: boolean; id?: string; error?: string }>;
+  atualizarSurebet: (id: string, data: Partial<SurebetData>) => Promise<{ success: boolean; error?: string }>;
   liquidarPerna: (pernaId: string, resultado: string, lucroPrejuizo?: number) => Promise<{ success: boolean; error?: string }>;
   deletarSurebet: (id: string, projetoId: string) => Promise<{ success: boolean; error?: string }>;
   reliquidarPerna: (pernaId: string, novoResultado: string, lucroPrejuizo?: number) => Promise<{ success: boolean; error?: string }>;
 }
+
+// ============================================================================
+// HOOK PRINCIPAL
+// ============================================================================
 
 export function useSurebetService(): UseSurebetServiceReturn {
   const queryClient = useQueryClient();
@@ -60,6 +72,7 @@ export function useSurebetService(): UseSurebetServiceReturn {
       // Transformar pernas para o formato do ApostaService
       const pernas: PernaInput[] = data.pernas.map((p, index) => ({
         bookmaker_id: p.bookmakerId,
+        bookmaker_nome: p.bookmakerNome,
         stake: p.stake,
         odd: p.odd,
         selecao: p.selecao,
@@ -78,7 +91,8 @@ export function useSurebetService(): UseSurebetServiceReturn {
         user_id: data.userId,
         forma_registro: 'ARBITRAGEM',
         estrategia: data.estrategia as any,
-        contexto_operacional: data.contexto || 'NORMAL',
+        contexto_operacional: (data.contexto || 'NORMAL') as any,
+        data_aposta: new Date().toISOString(),
         evento: data.evento,
         esporte: data.esporte,
         mercado: data.mercado,
@@ -105,6 +119,70 @@ export function useSurebetService(): UseSurebetServiceReturn {
         success: false,
         error: error.message || 'Erro desconhecido',
       };
+    }
+  }, [invalidateSaldos]);
+
+  /**
+   * Atualiza uma surebet existente.
+   */
+  const atualizarSurebet = useCallback(async (
+    id: string,
+    data: Partial<SurebetData>
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const updateData: Record<string, any> = {};
+      
+      if (data.evento !== undefined) updateData.evento = data.evento;
+      if (data.esporte !== undefined) updateData.esporte = data.esporte;
+      if (data.mercado !== undefined) updateData.mercado = data.mercado;
+      if (data.modelo !== undefined) updateData.modelo = data.modelo;
+      
+      const { error } = await supabase
+        .from('apostas_unificada')
+        .update({
+          ...updateData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      // Se há pernas para atualizar, fazer update individual
+      if (data.pernas && data.pernas.length > 0) {
+        for (const perna of data.pernas) {
+          // Buscar perna existente por bookmaker
+          const { data: pernaExistente } = await supabase
+            .from('apostas_pernas')
+            .select('id')
+            .eq('aposta_id', id)
+            .eq('bookmaker_id', perna.bookmakerId)
+            .maybeSingle();
+
+          if (pernaExistente) {
+            await supabase
+              .from('apostas_pernas')
+              .update({
+                stake: perna.stake,
+                odd: perna.odd,
+                selecao: perna.selecao,
+                selecao_livre: perna.selecaoLivre,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', pernaExistente.id);
+          }
+        }
+      }
+
+      if (data.projetoId) {
+        invalidateSaldos(data.projetoId);
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('[useSurebetService] Erro ao atualizar surebet:', error);
+      return { success: false, error: error.message };
     }
   }, [invalidateSaldos]);
 
@@ -217,6 +295,7 @@ export function useSurebetService(): UseSurebetServiceReturn {
 
   return {
     criarSurebet,
+    atualizarSurebet,
     liquidarPerna,
     deletarSurebet,
     reliquidarPerna,

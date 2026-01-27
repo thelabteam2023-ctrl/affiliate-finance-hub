@@ -1917,52 +1917,48 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           // - Edição de PENDENTE→LIQUIDADO: usar RPC de liquidação
           // ================================================================
           if (bookmakerAtualId && !apostaEstaLiquidada) {
-            // Se mudou de PENDENTE para resultado final, usar RPC de liquidação
+            // Importar motor financeiro v7
+            const { liquidarAposta, reverterLiquidacao } = await import("@/lib/financialEngine");
+            
+            // Se mudou de PENDENTE para resultado final, usar liquidação v7
             if (eraPendente && !agoraPendente) {
-              console.log("[ApostaDialog] Liquidando aposta via RPC (PENDENTE → " + statusResultado + ")");
-              const { error: liquidError } = await supabase.rpc('liquidar_aposta_atomica', {
-                p_aposta_id: aposta.id,
-                p_resultado: statusResultado,
-                p_lucro_prejuizo: apostaData.lucro_prejuizo || null,
-                p_resultados_pernas: null,
-              });
+              console.log("[ApostaDialog] Liquidando aposta via FinancialEngine v7 (PENDENTE → " + statusResultado + ")");
+              const liquidResult = await liquidarAposta(
+                aposta.id,
+                statusResultado as 'GREEN' | 'RED' | 'VOID' | 'MEIO_GREEN' | 'MEIO_RED',
+                apostaData.lucro_prejuizo || undefined
+              );
               
-              if (liquidError) {
-                console.error("[ApostaDialog] Erro ao liquidar via RPC:", liquidError);
-                // Não lançar exceção - a atualização de dados já foi feita
+              if (!liquidResult.success) {
+                console.error("[ApostaDialog] Erro ao liquidar:", liquidResult.message);
               }
             }
-            // Se mudou de resultado final para PENDENTE, usar RPC de reversão
+            // Se mudou de resultado final para PENDENTE, usar reversão v7
             else if (!eraPendente && agoraPendente && resultadoAnterior) {
-              console.log("[ApostaDialog] Revertendo aposta para PENDENTE via RPC - resultado anterior:", resultadoAnterior);
-              const { data: revertResult, error: revertError } = await supabase.rpc('reverter_liquidacao_para_pendente', {
-                p_aposta_id: aposta.id,
-              });
+              console.log("[ApostaDialog] Revertendo aposta para PENDENTE via FinancialEngine v7 - resultado anterior:", resultadoAnterior);
+              const revertResult = await reverterLiquidacao(aposta.id);
               
-              if (revertError) {
-                console.error("[ApostaDialog] Erro ao reverter para PENDENTE:", revertError);
-                toast.error("Erro ao reverter aposta: " + revertError.message);
+              if (!revertResult.success) {
+                console.error("[ApostaDialog] Falha na reversão:", revertResult.message);
+                toast.error("Falha na reversão: " + revertResult.message);
               } else {
-                const result = revertResult as unknown as { success: boolean; error?: string };
-                if (!result.success) {
-                  console.error("[ApostaDialog] Falha na reversão:", result.error);
-                  toast.error("Falha na reversão: " + result.error);
-                } else {
-                  console.log("[ApostaDialog] Reversão concluída:", result);
-                }
+                console.log("[ApostaDialog] Reversão concluída");
               }
             }
-            // Outros casos (mudança entre resultados finais): usar reliquidação
+            // Outros casos (mudança entre resultados finais): reverter e liquidar novamente
             else if (!eraPendente && !agoraPendente && houveMudancaResultado) {
-              console.log("[ApostaDialog] Re-liquidando aposta via RPC (" + resultadoAnterior + " → " + statusResultado + ")");
-              const { error: reliqError } = await supabase.rpc('reliquidar_aposta_atomica', {
-                p_aposta_id: aposta.id,
-                p_resultado_novo: statusResultado,
-                p_lucro_prejuizo: apostaData.lucro_prejuizo || null,
-              });
+              console.log("[ApostaDialog] Re-liquidando aposta via FinancialEngine v7 (" + resultadoAnterior + " → " + statusResultado + ")");
+              // Primeiro reverter
+              await reverterLiquidacao(aposta.id);
+              // Depois liquidar com novo resultado
+              const reliqResult = await liquidarAposta(
+                aposta.id,
+                statusResultado as 'GREEN' | 'RED' | 'VOID' | 'MEIO_GREEN' | 'MEIO_RED',
+                apostaData.lucro_prejuizo || undefined
+              );
               
-              if (reliqError) {
-                console.error("[ApostaDialog] Erro ao re-liquidar via RPC:", reliqError);
+              if (!reliqResult.success) {
+                console.error("[ApostaDialog] Erro ao re-liquidar:", reliqResult.message);
               }
             }
             // Se está e continua PENDENTE: não fazer nada com saldo
@@ -2148,16 +2144,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // NÃO usar atualizarSaldoBookmaker que bypassa o ledger!
         // ================================================================
         if (novaApostaId && statusResultado !== "PENDENTE") {
-          console.log("[ApostaDialog] Nova aposta criada já liquidada - usando RPC liquidar_aposta_atomica");
-          const { error: liquidError } = await supabase.rpc('liquidar_aposta_atomica', {
-            p_aposta_id: novaApostaId,
-            p_resultado: statusResultado,
-            p_lucro_prejuizo: apostaData.lucro_prejuizo || null,
-            p_resultados_pernas: null,
-          });
+          console.log("[ApostaDialog] Nova aposta criada já liquidada - usando FinancialEngine v7");
+          const { liquidarAposta } = await import("@/lib/financialEngine");
+          const liquidResult = await liquidarAposta(
+            novaApostaId,
+            statusResultado as 'GREEN' | 'RED' | 'VOID' | 'MEIO_GREEN' | 'MEIO_RED',
+            apostaData.lucro_prejuizo || undefined
+          );
           
-          if (liquidError) {
-            console.error("[ApostaDialog] Erro ao liquidar nova aposta via RPC:", liquidError);
+          if (!liquidResult.success) {
+            console.error("[ApostaDialog] Erro ao liquidar nova aposta:", liquidResult.message);
             // Não lançar exceção - a aposta já foi criada
           }
         }
