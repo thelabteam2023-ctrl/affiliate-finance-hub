@@ -1,13 +1,8 @@
 /**
- * Hook para verificar e corrigir discrepâncias de saldo em bookmakers
+ * Hook para verificar discrepâncias de saldo em bookmakers
+ * usando a view v_financial_audit do motor financeiro v7.
  * 
- * O saldo é DERIVADO e RECALCULÁVEL:
- * saldo_atual = depósitos - saques + transferências_entrada - transferências_saída 
- *             + lucro_apostas + cashback + giros_gratis
- * 
- * Este hook:
- * 1. Verifica se há discrepâncias entre o saldo registrado e o calculado
- * 2. Permite corrigir automaticamente usando a RPC do banco
+ * O saldo é a soma dos eventos em financial_events.
  */
 
 import { useState, useCallback } from "react";
@@ -17,7 +12,7 @@ import { toast } from "sonner";
 export interface BookmakerDiscrepancy {
   bookmaker_id: string;
   nome: string;
-  moeda: string; // Moeda nativa do bookmaker (BRL, USD, etc.)
+  moeda: string;
   saldo_anterior: number;
   saldo_calculado: number;
   diferenca: number;
@@ -28,7 +23,7 @@ export interface BookmakerDiscrepancy {
   lucro_apostas: number;
   cashback: number;
   giros_gratis: number;
-  bonus_creditado: number; // Bônus com status 'credited' - fonte legítima de saldo
+  bonus_creditado: number;
 }
 
 interface UseBookmakerBalanceVerificationProps {
@@ -45,45 +40,33 @@ export function useBookmakerBalanceVerification({
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
 
   /**
-   * Verifica discrepâncias para um bookmaker específico
-   * NOTE: recalcular_saldo_bookmaker now returns a single numeric (the recalculated balance)
-   * This function now queries the bookmaker directly to get the current balance and compare
+   * Verifica discrepâncias usando a view v_financial_audit
    */
   const checkBookmaker = useCallback(async (bookmakerId: string): Promise<BookmakerDiscrepancy | null> => {
     try {
-      // Get current bookmaker data
-      const { data: bookmaker, error: bkError } = await supabase
-        .from('bookmakers')
-        .select('id, nome, moeda, saldo_atual')
-        .eq('id', bookmakerId)
+      // Usar a view de auditoria financeira
+      const { data, error } = await supabase
+        .from('v_financial_audit')
+        .select('*')
+        .eq('bookmaker_id', bookmakerId)
         .single();
 
-      if (bkError || !bookmaker) {
-        console.error('[useBookmakerBalanceVerification] Erro ao buscar bookmaker:', bkError);
+      if (error || !data) {
+        console.error('[useBookmakerBalanceVerification] Erro ao buscar auditoria:', error);
         return null;
       }
 
-      // Get the recalculated balance (returns numeric)
-      const { data: saldoCalculado, error } = await supabase.rpc('recalcular_saldo_bookmaker', {
-        p_bookmaker_id: bookmakerId
-      });
-
-      if (error) {
-        console.error('[useBookmakerBalanceVerification] Erro RPC:', error);
-        return null;
-      }
-
-      const diferenca = (saldoCalculado as number || 0) - (bookmaker.saldo_atual || 0);
+      const diferenca = data.diferenca_normal;
       
       if (Math.abs(diferenca) > 0.01) {
         return {
-          bookmaker_id: bookmaker.id,
-          nome: bookmaker.nome,
-          moeda: bookmaker.moeda || 'BRL',
-          saldo_anterior: bookmaker.saldo_atual || 0,
-          saldo_calculado: saldoCalculado as number || 0,
+          bookmaker_id: data.bookmaker_id,
+          nome: data.bookmaker_nome,
+          moeda: data.moeda || 'BRL',
+          saldo_anterior: data.saldo_registrado || 0,
+          saldo_calculado: data.soma_eventos_normal || 0,
           diferenca,
-          depositos: 0, // These details not available from simple recalc
+          depositos: 0,
           saques: 0,
           transferencias_entrada: 0,
           transferencias_saida: 0,
@@ -101,17 +84,17 @@ export function useBookmakerBalanceVerification({
   }, []);
 
   /**
-   * Verifica discrepâncias para todos os bookmakers de um projeto
+   * Verifica discrepâncias para todos os bookmakers de um workspace
    */
   const checkProject = useCallback(async (): Promise<BookmakerDiscrepancy[]> => {
-    if (!projetoId) return [];
+    if (!workspaceId) return [];
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('recalcular_saldos_projeto', {
-        p_projeto_id: projetoId,
-        p_aplicar: false // Apenas verificar, não corrigir
-      });
+      const { data, error } = await supabase
+        .from('v_financial_audit')
+        .select('*')
+        .eq('workspace_id', workspaceId);
 
       if (error) {
         console.error('[useBookmakerBalanceVerification] Erro RPC projeto:', error);
@@ -119,22 +102,22 @@ export function useBookmakerBalanceVerification({
       }
 
       const discrepanciasEncontradas = (data || [])
-        .filter((item: any) => Math.abs(item.diferenca) > 0.01)
+        .filter((item: any) => item.status_auditoria === 'DIVERGENTE')
         .map((item: any) => ({
           bookmaker_id: item.bookmaker_id,
-          nome: item.nome,
+          nome: item.bookmaker_nome,
           moeda: item.moeda || 'BRL',
-          saldo_anterior: item.saldo_anterior,
-          saldo_calculado: item.saldo_calculado,
-          diferenca: item.diferenca,
-          depositos: item.depositos,
-          saques: item.saques,
-          transferencias_entrada: item.transferencias_entrada || 0,
-          transferencias_saida: item.transferencias_saida || 0,
-          lucro_apostas: item.lucro_apostas,
-          cashback: item.cashback || 0,
-          giros_gratis: item.giros_gratis || 0,
-          bonus_creditado: item.bonus_creditado || 0,
+          saldo_anterior: item.saldo_registrado,
+          saldo_calculado: item.soma_eventos_normal,
+          diferenca: item.diferenca_normal,
+          depositos: 0,
+          saques: 0,
+          transferencias_entrada: 0,
+          transferencias_saida: 0,
+          lucro_apostas: 0,
+          cashback: 0,
+          giros_gratis: 0,
+          bonus_creditado: 0,
         }));
 
       setDiscrepancies(discrepanciasEncontradas);
@@ -146,37 +129,32 @@ export function useBookmakerBalanceVerification({
     } finally {
       setLoading(false);
     }
-  }, [projetoId]);
+  }, [workspaceId]);
 
   /**
    * Corrige o saldo de um bookmaker específico
-   * NOTE: recalcular_saldo_bookmaker now returns a single numeric (the new calculated balance)
+   * No motor v7, isso significa ajustar o saldo para a soma dos eventos
    */
   const fixBookmaker = useCallback(async (bookmakerId: string): Promise<boolean> => {
     try {
-      // Get bookmaker name for toast
-      const { data: bookmaker } = await supabase
-        .from('bookmakers')
-        .select('nome')
-        .eq('id', bookmakerId)
+      // Buscar soma dos eventos
+      const { data: audit } = await supabase
+        .from('v_financial_audit')
+        .select('soma_eventos_normal, soma_eventos_freebet, bookmaker_nome')
+        .eq('bookmaker_id', bookmakerId)
         .single();
 
-      // Get the recalculated balance (returns numeric directly)
-      const { data: saldoCorreto, error: calcError } = await supabase.rpc('recalcular_saldo_bookmaker', {
-        p_bookmaker_id: bookmakerId
-      });
-
-      if (calcError || saldoCorreto === null || saldoCorreto === undefined) {
-        console.error('[useBookmakerBalanceVerification] Erro ao calcular saldo:', calcError);
-        toast.error('Não foi possível calcular o saldo correto');
+      if (!audit) {
+        toast.error('Bookmaker não encontrado na auditoria');
         return false;
       }
 
-      // Atualizar o saldo (the RPC already updates it, but we can confirm)
+      // Atualizar saldo para refletir a soma dos eventos
       const { error: updateError } = await supabase
         .from('bookmakers')
         .update({ 
-          saldo_atual: saldoCorreto as number,
+          saldo_atual: audit.soma_eventos_normal || 0,
+          saldo_freebet: audit.soma_eventos_freebet || 0,
           updated_at: new Date().toISOString()
         })
         .eq('id', bookmakerId);
@@ -187,9 +165,8 @@ export function useBookmakerBalanceVerification({
         return false;
       }
 
-      // Remover da lista de discrepâncias
       setDiscrepancies(prev => prev.filter(d => d.bookmaker_id !== bookmakerId));
-      toast.success(`Saldo corrigido para ${bookmaker?.nome || 'bookmaker'}`);
+      toast.success(`Saldo corrigido para ${audit.bookmaker_nome || 'bookmaker'}`);
       return true;
     } catch (error) {
       console.error('[useBookmakerBalanceVerification] Exceção fix:', error);
@@ -202,7 +179,7 @@ export function useBookmakerBalanceVerification({
    * Corrige todos os saldos do projeto
    */
   const fixAllProject = useCallback(async (): Promise<boolean> => {
-    if (!projetoId || discrepancies.length === 0) return false;
+    if (!workspaceId || discrepancies.length === 0) return false;
 
     setLoading(true);
     try {
@@ -223,11 +200,8 @@ export function useBookmakerBalanceVerification({
     } finally {
       setLoading(false);
     }
-  }, [projetoId, discrepancies, fixBookmaker]);
+  }, [workspaceId, discrepancies, fixBookmaker]);
 
-  /**
-   * Verifica se há discrepâncias significativas
-   */
   const hasDiscrepancies = discrepancies.length > 0;
   const totalDiscrepancy = discrepancies.reduce((sum, d) => sum + Math.abs(d.diferenca), 0);
 

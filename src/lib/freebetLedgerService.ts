@@ -1,288 +1,213 @@
 /**
- * Serviço de Ledger para Freebets
+ * Freebet Ledger Service - Motor Financeiro v7
  * 
- * ESTE SERVIÇO ENCAPSULA AS RPCs DE FREEBET DO BANCO DE DADOS.
- * 
- * Todas as operações de freebet passam pelo cash_ledger via RPCs atômicas,
- * garantindo auditoria completa e reconstrução de saldo via recalcular_saldo_bookmaker_v2.
- * 
- * TIPOS DE TRANSAÇÃO:
- * - FREEBET_CREDITADA: Freebet recebida/liberada → incrementa saldo_freebet
- * - FREEBET_CONSUMIDA: Freebet usada em aposta → decrementa saldo_freebet
- * - FREEBET_ESTORNO: Reversão de consumo → devolve saldo_freebet
- * - FREEBET_EXPIRADA: Freebet expirou sem uso → decrementa saldo_freebet
- * - FREEBET_CONVERTIDA: Extração bem-sucedida → debita freebet E credita real
+ * Serviço para operações de Freebet usando o motor de eventos.
+ * Todas as operações geram eventos em financial_events.
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { processFinancialEvent } from "./financialEngine";
 
 // ============================================================================
-// TIPOS
+// CREDITAR FREEBET
 // ============================================================================
 
-export type FreebetLedgerType = 
-  | 'FREEBET_CREDITADA'
-  | 'FREEBET_CONSUMIDA'
-  | 'FREEBET_ESTORNO'
-  | 'FREEBET_EXPIRADA'
-  | 'FREEBET_CONVERTIDA';
-
-export interface FreebetOperationResult {
-  success: boolean;
-  ledgerId?: string;
-  error?: string;
-}
-
-// ============================================================================
-// RPCs ATÔMICAS
-// ============================================================================
-
-/**
- * Credita freebet via ledger.
- * Usar quando:
- * - Freebet é liberada (status PENDENTE → LIBERADA)
- * - Freebet manual é criada
- * - Qualquer crédito de freebet
- */
 export async function creditarFreebetViaLedger(
   bookmakerId: string,
   valor: number,
-  origem: string = 'MANUAL',
   options?: {
-    projetoId?: string;
-    userId?: string;
-    workspaceId?: string;
     descricao?: string;
-    freebetId?: string;
+    apostaId?: string;
   }
-): Promise<FreebetOperationResult> {
+): Promise<{ success: boolean; error?: string; eventId?: string }> {
   try {
     if (valor <= 0) {
-      return { success: false, error: 'Valor deve ser maior que zero' };
+      return { success: false, error: 'Valor deve ser positivo' };
     }
 
-    const { data, error } = await supabase.rpc('creditar_freebet', {
-      p_bookmaker_id: bookmakerId,
-      p_valor: valor,
-      p_origem: origem,
-      p_projeto_id: options?.projetoId || null,
-      p_user_id: options?.userId || null,
-      p_workspace_id: options?.workspaceId || null,
-      p_descricao: options?.descricao || null,
-      p_freebet_id: options?.freebetId || null,
+    const result = await processFinancialEvent({
+      bookmakerId,
+      apostaId: options?.apostaId,
+      tipoEvento: 'FREEBET_CREDIT',
+      tipoUso: 'FREEBET',
+      origem: 'FREEBET',
+      valor: valor, // Positivo = crédito
+      descricao: options?.descricao || 'Crédito de freebet',
+      idempotencyKey: `fb_credit_${bookmakerId}_${Date.now()}`,
     });
 
-    if (error) {
-      console.error('[FreebetLedger] Erro ao creditar freebet:', error);
-      return { success: false, error: error.message };
+    if (!result.success) {
+      return { success: false, error: result.errorMessage };
     }
 
     console.log(`[FreebetLedger] Freebet creditada: ${valor} para bookmaker ${bookmakerId}`);
-    return { success: true, ledgerId: data };
+    return { success: true, eventId: result.eventId };
   } catch (err: any) {
-    console.error('[FreebetLedger] Exceção ao creditar freebet:', err);
-    return { success: false, error: err.message || 'Erro desconhecido' };
+    console.error('[FreebetLedger] Erro ao creditar freebet:', err);
+    return { success: false, error: err.message };
   }
 }
 
-/**
- * Consome freebet via ledger.
- * Usar quando:
- * - Aposta é registrada usando saldo de freebet
- * - Débito de freebet por uso
- */
+// ============================================================================
+// CONSUMIR FREEBET
+// ============================================================================
+
 export async function consumirFreebetViaLedger(
   bookmakerId: string,
   valor: number,
   options?: {
-    apostaId?: string;
-    userId?: string;
-    workspaceId?: string;
     descricao?: string;
+    apostaId?: string;
   }
-): Promise<FreebetOperationResult> {
+): Promise<{ success: boolean; error?: string; eventId?: string }> {
   try {
     if (valor <= 0) {
-      return { success: false, error: 'Valor deve ser maior que zero' };
+      return { success: false, error: 'Valor deve ser positivo' };
     }
 
-    const { data, error } = await supabase.rpc('consumir_freebet', {
-      p_bookmaker_id: bookmakerId,
-      p_valor: valor,
-      p_aposta_id: options?.apostaId || null,
-      p_user_id: options?.userId || null,
-      p_workspace_id: options?.workspaceId || null,
-      p_descricao: options?.descricao || null,
+    const result = await processFinancialEvent({
+      bookmakerId,
+      apostaId: options?.apostaId,
+      tipoEvento: 'FREEBET_STAKE',
+      tipoUso: 'FREEBET',
+      origem: 'FREEBET',
+      valor: -valor, // Negativo = débito
+      descricao: options?.descricao || 'Consumo de freebet',
+      idempotencyKey: `fb_stake_${bookmakerId}_${options?.apostaId || Date.now()}`,
     });
 
-    if (error) {
-      console.error('[FreebetLedger] Erro ao consumir freebet:', error);
-      return { success: false, error: error.message };
+    if (!result.success) {
+      return { success: false, error: result.errorMessage };
     }
 
     console.log(`[FreebetLedger] Freebet consumida: ${valor} de bookmaker ${bookmakerId}`);
-    return { success: true, ledgerId: data };
+    return { success: true, eventId: result.eventId };
   } catch (err: any) {
-    console.error('[FreebetLedger] Exceção ao consumir freebet:', err);
-    return { success: false, error: err.message || 'Erro desconhecido' };
+    console.error('[FreebetLedger] Erro ao consumir freebet:', err);
+    return { success: false, error: err.message };
   }
 }
 
-/**
- * Estorna freebet via ledger.
- * Usar quando:
- * - Aposta que usou freebet é editada/deletada
- * - Reversão de consumo de freebet
- */
+// ============================================================================
+// ESTORNAR FREEBET
+// ============================================================================
+
 export async function estornarFreebetViaLedger(
   bookmakerId: string,
   valor: number,
-  motivo: string = 'Reversão de aposta',
   options?: {
-    userId?: string;
-    workspaceId?: string;
+    descricao?: string;
+    eventoOriginalId?: string;
   }
-): Promise<FreebetOperationResult> {
+): Promise<{ success: boolean; error?: string; eventId?: string }> {
   try {
     if (valor <= 0) {
-      return { success: false, error: 'Valor deve ser maior que zero' };
+      return { success: false, error: 'Valor deve ser positivo' };
     }
 
-    const { data, error } = await supabase.rpc('estornar_freebet', {
-      p_bookmaker_id: bookmakerId,
-      p_valor: valor,
-      p_motivo: motivo,
-      p_user_id: options?.userId || null,
-      p_workspace_id: options?.workspaceId || null,
+    const result = await processFinancialEvent({
+      bookmakerId,
+      tipoEvento: 'REVERSAL',
+      tipoUso: 'FREEBET',
+      origem: 'FREEBET',
+      valor: valor, // Positivo = crédito (estorno)
+      descricao: options?.descricao || 'Estorno de freebet',
+      reversedEventId: options?.eventoOriginalId,
+      idempotencyKey: `fb_estorno_${bookmakerId}_${Date.now()}`,
     });
 
-    if (error) {
-      console.error('[FreebetLedger] Erro ao estornar freebet:', error);
-      return { success: false, error: error.message };
+    if (!result.success) {
+      return { success: false, error: result.errorMessage };
     }
 
     console.log(`[FreebetLedger] Freebet estornada: ${valor} para bookmaker ${bookmakerId}`);
-    return { success: true, ledgerId: data };
+    return { success: true, eventId: result.eventId };
   } catch (err: any) {
-    console.error('[FreebetLedger] Exceção ao estornar freebet:', err);
-    return { success: false, error: err.message || 'Erro desconhecido' };
+    console.error('[FreebetLedger] Erro ao estornar freebet:', err);
+    return { success: false, error: err.message };
   }
 }
 
-/**
- * Expira freebet via ledger.
- * Usar quando:
- * - Freebet passa do prazo de validade
- * - Expiração manual/automática
- */
+// ============================================================================
+// EXPIRAR FREEBET
+// ============================================================================
+
 export async function expirarFreebetViaLedger(
   bookmakerId: string,
   valor: number,
-  motivo: string = 'Expiração por prazo',
   options?: {
-    userId?: string;
-    workspaceId?: string;
+    descricao?: string;
   }
-): Promise<FreebetOperationResult> {
+): Promise<{ success: boolean; error?: string; eventId?: string }> {
   try {
     if (valor <= 0) {
-      return { success: false, error: 'Valor deve ser maior que zero' };
+      return { success: false, error: 'Valor deve ser positivo' };
     }
 
-    const { data, error } = await supabase.rpc('expirar_freebet', {
-      p_bookmaker_id: bookmakerId,
-      p_valor: valor,
-      p_motivo: motivo,
-      p_user_id: options?.userId || null,
-      p_workspace_id: options?.workspaceId || null,
+    const result = await processFinancialEvent({
+      bookmakerId,
+      tipoEvento: 'FREEBET_EXPIRE',
+      tipoUso: 'FREEBET',
+      origem: 'FREEBET',
+      valor: -valor, // Negativo = expiração
+      descricao: options?.descricao || 'Expiração de freebet',
+      idempotencyKey: `fb_expire_${bookmakerId}_${Date.now()}`,
     });
 
-    if (error) {
-      console.error('[FreebetLedger] Erro ao expirar freebet:', error);
-      return { success: false, error: error.message };
+    if (!result.success) {
+      return { success: false, error: result.errorMessage };
     }
 
     console.log(`[FreebetLedger] Freebet expirada: ${valor} de bookmaker ${bookmakerId}`);
-    return { success: true, ledgerId: data };
+    return { success: true, eventId: result.eventId };
   } catch (err: any) {
-    console.error('[FreebetLedger] Exceção ao expirar freebet:', err);
-    return { success: false, error: err.message || 'Erro desconhecido' };
-  }
-}
-
-/**
- * Converte freebet em saldo real via ledger.
- * Usar quando:
- * - Extração de freebet é bem-sucedida
- * - Freebet vira saldo operável
- * 
- * NOTA: Esta operação debita saldo_freebet E credita saldo_atual atomicamente.
- */
-export async function converterFreebetViaLedger(
-  bookmakerId: string,
-  valor: number,
-  options?: {
-    apostaId?: string;
-    descricao?: string;
-    userId?: string;
-    workspaceId?: string;
-  }
-): Promise<FreebetOperationResult> {
-  try {
-    if (valor <= 0) {
-      return { success: false, error: 'Valor deve ser maior que zero' };
-    }
-
-    const { data, error } = await supabase.rpc('converter_freebet', {
-      p_bookmaker_id: bookmakerId,
-      p_valor: valor,
-      p_aposta_id: options?.apostaId || null,
-      p_descricao: options?.descricao || 'Extração de freebet',
-      p_user_id: options?.userId || null,
-      p_workspace_id: options?.workspaceId || null,
-    });
-
-    if (error) {
-      console.error('[FreebetLedger] Erro ao converter freebet:', error);
-      return { success: false, error: error.message };
-    }
-
-    console.log(`[FreebetLedger] Freebet convertida: ${valor} para bookmaker ${bookmakerId}`);
-    return { success: true, ledgerId: data };
-  } catch (err: any) {
-    console.error('[FreebetLedger] Exceção ao converter freebet:', err);
-    return { success: false, error: err.message || 'Erro desconhecido' };
+    console.error('[FreebetLedger] Erro ao expirar freebet:', err);
+    return { success: false, error: err.message };
   }
 }
 
 // ============================================================================
-// UTILITÁRIOS
+// RECALCULAR SALDO (v7 - leitura da view de auditoria)
 // ============================================================================
 
-/**
- * Recalcula saldo_atual E saldo_freebet de uma bookmaker baseado no ledger.
- * Útil para correção de inconsistências.
- */
 export async function recalcularSaldoBookmakerV2(
   bookmakerId: string
 ): Promise<{ success: boolean; saldoReal?: number; saldoFreebet?: number; error?: string }> {
   try {
-    const { data, error } = await supabase.rpc('recalcular_saldo_bookmaker_v2', {
-      p_bookmaker_id: bookmakerId,
-    });
+    // Usar a view de auditoria para obter a soma dos eventos
+    const { data, error } = await supabase
+      .from('v_financial_audit')
+      .select('soma_eventos_normal, soma_eventos_freebet')
+      .eq('bookmaker_id', bookmakerId)
+      .single();
 
     if (error) {
-      console.error('[FreebetLedger] Erro ao recalcular saldo:', error);
+      console.error('[FreebetLedger] Erro ao buscar auditoria:', error);
       return { success: false, error: error.message };
     }
 
-    if (data && data.length > 0) {
-      const result = data[0];
-      console.log(`[FreebetLedger] Saldo recalculado: real=${result.saldo_real_calculado}, freebet=${result.saldo_freebet_calculado}`);
+    if (data) {
+      console.log(`[FreebetLedger] Saldo calculado: real=${data.soma_eventos_normal}, freebet=${data.soma_eventos_freebet}`);
+      
+      // Atualizar saldo para refletir a soma dos eventos
+      const { error: updateError } = await supabase
+        .from('bookmakers')
+        .update({
+          saldo_atual: data.soma_eventos_normal || 0,
+          saldo_freebet: data.soma_eventos_freebet || 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', bookmakerId);
+
+      if (updateError) {
+        console.error('[FreebetLedger] Erro ao atualizar saldo:', updateError);
+        return { success: false, error: updateError.message };
+      }
+
       return {
         success: true,
-        saldoReal: result.saldo_real_calculado,
-        saldoFreebet: result.saldo_freebet_calculado,
+        saldoReal: data.soma_eventos_normal || 0,
+        saldoFreebet: data.soma_eventos_freebet || 0,
       };
     }
 
@@ -293,16 +218,14 @@ export async function recalcularSaldoBookmakerV2(
   }
 }
 
-/**
- * Exporta um objeto com todas as funções para uso via destructuring.
- */
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
 export const freebetLedgerService = {
   creditar: creditarFreebetViaLedger,
   consumir: consumirFreebetViaLedger,
   estornar: estornarFreebetViaLedger,
   expirar: expirarFreebetViaLedger,
-  converter: converterFreebetViaLedger,
   recalcular: recalcularSaldoBookmakerV2,
 };
-
-export default freebetLedgerService;
