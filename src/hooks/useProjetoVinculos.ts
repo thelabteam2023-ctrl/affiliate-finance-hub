@@ -48,6 +48,48 @@ export interface BookmakerDisponivel {
 const QUERY_KEY = "projeto-vinculos";
 
 /**
+ * Função auxiliar para invalidar TODAS as queries afetadas por mudanças em vínculos.
+ * Garante reatividade completa: KPIs, saldos, disponibilidade e exposição
+ * são atualizados automaticamente sem necessidade de F5.
+ * 
+ * DEVE ser chamada após qualquer mutation que afete vínculos.
+ */
+function invalidateAllVinculoRelatedQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  projetoId: string
+) {
+  // 1. Vínculos e histórico do projeto
+  queryClient.invalidateQueries({ queryKey: [QUERY_KEY, projetoId] });
+  queryClient.invalidateQueries({ queryKey: [QUERY_KEY, "historico", projetoId] });
+
+  // 2. Bookmakers disponíveis (lista muda quando vincula/desvincula)
+  queryClient.invalidateQueries({ queryKey: ["bookmakers-disponiveis"] });
+
+  // 3. Saldos das bookmakers (saldo operável, disponível, etc.)
+  queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projetoId] });
+  queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+  queryClient.invalidateQueries({ queryKey: ["saldo-operavel-rpc", projetoId] });
+
+  // 4. KPIs centrais do projeto (lucro, ROI, volume)
+  queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+  queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projetoId] });
+
+  // 5. Lista de bookmakers (para outros componentes)
+  queryClient.invalidateQueries({ queryKey: ["bookmakers", projetoId] });
+  queryClient.invalidateQueries({ queryKey: ["bookmakers"] });
+
+  // 6. Exposição financeira e capacidade de aposta
+  queryClient.invalidateQueries({ queryKey: ["exposicao-projeto", projetoId] });
+  queryClient.invalidateQueries({ queryKey: ["capacidade-aposta", projetoId] });
+
+  // 7. Saldos do parceiro (quando vínculo muda, saldo consolidado muda)
+  queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+  queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
+
+  console.log(`[useProjetoVinculos] Invalidated ALL vinculo-related queries for project ${projetoId}`);
+}
+
+/**
  * Hook principal para vínculos do projeto
  * Usa React Query para lifecycle management automático
  */
@@ -175,13 +217,10 @@ export function useProjetoVinculos(projetoId: string | undefined) {
     staleTime: 60 * 1000, // 1 minuto
   });
 
-  // Função para invalidar cache
+  // Função para invalidar cache - usa a função centralizada para garantir reatividade completa
   const invalidate = () => {
     if (projetoId) {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, projetoId] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, "historico", projetoId] });
-      // Também invalidar saldos de bookmaker para sincronização
-      queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projetoId] });
+      invalidateAllVinculoRelatedQueries(queryClient, projetoId);
     }
   };
 
@@ -308,11 +347,8 @@ export function useAddVinculos(projetoId: string, workspaceId: string | undefine
     },
     onSuccess: (count) => {
       toast.success(`${count} vínculo(s) adicionado(s) ao projeto`);
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, projetoId] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, "historico", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["bookmakers-disponiveis"] });
-      queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projetoId] });
+      // CRÍTICO: Invalidar TODAS as queries afetadas para reatividade completa
+      invalidateAllVinculoRelatedQueries(queryClient, projetoId);
     },
     onError: (error: any) => {
       toast.error("Erro ao adicionar vínculos: " + error.message);
@@ -340,10 +376,60 @@ export function useChangeBookmakerStatus(projetoId: string) {
     },
     onSuccess: ({ newStatus }) => {
       toast.success(`Status alterado para ${newStatus}`);
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, projetoId] });
+      // CRÍTICO: Invalidar TODAS as queries afetadas para reatividade completa
+      // Mudança de status afeta disponibilidade operacional
+      invalidateAllVinculoRelatedQueries(queryClient, projetoId);
     },
     onError: (error: any) => {
       toast.error("Erro ao alterar status: " + error.message);
+    },
+  });
+}
+
+/**
+ * Hook para remover vínculo (desvincular bookmaker do projeto)
+ */
+export function useRemoveVinculo(projetoId: string, workspaceId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ bookmakerId, statusFinal }: { bookmakerId: string; statusFinal: string }) => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Usuário não autenticado");
+
+      // 1. Desvincular bookmaker do projeto
+      const { error: updateError } = await supabase
+        .from("bookmakers")
+        .update({ 
+          projeto_id: null, 
+          status: statusFinal 
+        })
+        .eq("id", bookmakerId);
+
+      if (updateError) throw updateError;
+
+      // 2. Atualizar histórico com data de desvinculação
+      if (workspaceId) {
+        await supabase
+          .from("projeto_bookmaker_historico")
+          .update({
+            data_desvinculacao: new Date().toISOString(),
+            status_final: statusFinal,
+          })
+          .eq("projeto_id", projetoId)
+          .eq("bookmaker_id", bookmakerId)
+          .is("data_desvinculacao", null);
+      }
+
+      return { bookmakerId, statusFinal };
+    },
+    onSuccess: ({ statusFinal }) => {
+      toast.success(`Bookmaker desvinculada com status: ${statusFinal}`);
+      // CRÍTICO: Invalidar TODAS as queries afetadas para reatividade completa
+      invalidateAllVinculoRelatedQueries(queryClient, projetoId);
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao desvincular: " + error.message);
     },
   });
 }
