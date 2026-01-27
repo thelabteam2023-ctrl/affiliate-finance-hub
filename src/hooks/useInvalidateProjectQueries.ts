@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
  * - projeto-breakdowns: Breakdown por módulo (apostas, giros, cashback)
  * - bookmaker-saldos: Saldos das casas vinculadas
  * - bookmakers: Lista de bookmakers (após vincular/desvincular)
+ * - vinculos: Vínculos do projeto com bookmakers
  * - apostas: Lista de apostas do projeto
  * - bonus: Bônus do projeto
  * - giros-gratis: Giros grátis (resultados)
@@ -33,6 +34,7 @@ export function useInvalidateProjectQueries() {
         | "breakdowns" 
         | "saldos" 
         | "bookmakers" 
+        | "vinculos"
         | "apostas" 
         | "bonus" 
         | "giros" 
@@ -89,6 +91,28 @@ export function useInvalidateProjectQueries() {
           }),
           queryClient.invalidateQueries({ 
             queryKey: ["bookmakers"] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["bookmakers-disponiveis"] 
+          })
+        );
+      }
+
+      // Vínculos do projeto
+      if (shouldInvalidate("vinculos")) {
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: ["projeto-vinculos", projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["projeto-vinculos", "historico", projetoId] 
+          }),
+          // Também invalidar parceiros consolidados (exposição muda)
+          queryClient.invalidateQueries({ 
+            queryKey: ["parceiro-financeiro"] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["parceiro-consolidado"] 
           })
         );
       }
