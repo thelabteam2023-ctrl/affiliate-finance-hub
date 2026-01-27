@@ -82,6 +82,9 @@ export function ProjectFinancialDisplay({
   // Agrupa moedas USD-like
   const isUsdLike = (m: string) => ['USD', 'USDT', 'USDC'].includes(m);
   
+  // Taxa EUR/USD aproximada (EUR vale mais que USD)
+  const EUR_TO_USD = 1.08;
+  
   // Calcular valor principal na moeda de consolidação
   let valorPrincipal = 0;
   let valorBRL = 0;
@@ -92,8 +95,14 @@ export function ProjectFinancialDisplay({
       valorBRL += valor;
     } else if (isUsdLike(moeda)) {
       valorUSD += valor;
+    } else if (moeda === 'EUR') {
+      // Converter EUR para USD
+      valorUSD += valor * EUR_TO_USD;
+    } else if (moeda === 'GBP') {
+      // Converter GBP para USD (aproximado)
+      valorUSD += valor * 1.27;
     } else {
-      // Outras moedas (EUR, GBP, etc) - assumir como USD para simplificação
+      // Outras moedas - assumir paridade 1:1 com USD
       valorUSD += valor;
     }
   });
