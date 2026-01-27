@@ -1947,13 +1947,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         ) {
           // ================================================================
           // CASO: LIQUIDADA → OUTRO RESULTADO (APENAS RESULTADO)
-          // Fluxo correto e determinístico:
-          // 1) reverter_liquidacao_v4 (reversão total)
-          // 2) liquidar_aposta_v4 (nova liquidação)
-          // Isso garante criação de REVERSAL + atualização correta do saldo.
+          // Usa reliquidar_aposta_v5 que reverte apenas PAYOUT (sem reverter STAKE)
+          // e aplica novo payout. Isso evita "dupla contagem" do stake.
           // ================================================================
           console.log(
-            "[ApostaDialog] LIQUIDADA → outro resultado (somente resultado): usando reverter_liquidacao_v4 + liquidar_aposta_v4",
+            "[ApostaDialog] LIQUIDADA → outro resultado (somente resultado): usando reliquidar_aposta_v5",
             {
               apostaId: aposta.id,
               resultadoAnterior,
@@ -1961,30 +1959,31 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             }
           );
 
-          const { reverterLiquidacao, liquidarAposta } = await import(
-            "@/lib/financialEngine"
+          const { data: reliqData, error: reliqError } = await supabase.rpc(
+            "reliquidar_aposta_v5",
+            {
+              p_aposta_id: aposta.id,
+              p_novo_resultado: statusResultado,
+              p_lucro_prejuizo: lucroPrejuizo ?? null,
+            }
           );
 
-          const revertResult = await reverterLiquidacao(aposta.id);
-          if (!revertResult.success) {
-            throw new Error(revertResult.message || "Erro ao reverter liquidação");
+          if (reliqError) {
+            console.error("[ApostaDialog] Erro RPC reliquidar_aposta_v5:", reliqError);
+            throw new Error(reliqError.message || "Erro ao reliquidar aposta");
           }
 
-          const reliqResult = await liquidarAposta(
-            aposta.id,
-            statusResultado as "GREEN" | "RED" | "VOID" | "MEIO_GREEN" | "MEIO_RED",
-            lucroPrejuizo
-          );
-
-          if (!reliqResult.success) {
-            throw new Error(reliqResult.message || "Erro ao reliquidar aposta");
+          const reliqResult = reliqData?.[0];
+          if (!reliqResult?.success) {
+            throw new Error(reliqResult?.message || "Erro ao reliquidar aposta");
           }
 
-          // Atualizar campos que o RPC não atualiza (e.g. valor_retorno + campos descritivos)
+          console.log("[ApostaDialog] ✅ reliquidar_aposta_v5 sucesso:", reliqResult);
+
+          // Atualizar campos que o RPC não atualiza (campos descritivos)
           const { error: updateError } = await supabase
             .from("apostas_unificada")
             .update({
-              valor_retorno: apostaData.valor_retorno,
               evento: apostaData.evento,
               mercado: apostaData.mercado,
               esporte: apostaData.esporte,
