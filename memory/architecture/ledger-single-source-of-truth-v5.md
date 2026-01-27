@@ -107,6 +107,20 @@ SELECT * FROM recalcular_saldo_bookmaker_v2(bookmaker_id);
 3. **Reversões** = novos registros de débito/crédito (não UPDATE)
 4. **Saldo verificável** = SUM(ledger) sempre bate com saldo_atual
 
+## Unificação de Fontes de Saldo (v5.1)
+
+A partir desta versão, existe uma **fonte única de verdade** para saldos de bookmaker:
+
+| Local | Fonte | Hook |
+|-------|-------|------|
+| Aba Apostas | `get_bookmaker_saldos` | `useBookmakerSaldosQuery` |
+| Dashboard Projeto | `get_bookmaker_saldos` | `useSaldoOperavel` |
+| Listagem Projetos | `get_bookmaker_saldos` | `useProjetosSaldos` |
+| Operações Financeiras | `get_bookmaker_saldos_financeiro` | `useBookmakerSaldosFinanceiro` |
+
+### RPC Depreciada
+- `get_saldo_operavel_por_projeto`: **NÃO USAR** - ignora EUR e outras moedas
+
 ## Triggers Removidos
 
 - `tr_cash_ledger_update_bookmaker_balance` (v1)
