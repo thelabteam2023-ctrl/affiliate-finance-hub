@@ -421,11 +421,10 @@ export async function deletarAposta(
     const resultadoAtual = (aposta.resultado || 'PENDENTE') as string;
     const jaRefundado = resultadoAtual === 'VOID' || resultadoAtual === 'REEMBOLSO';
 
-    // 1) Se estava liquidada (ou em qualquer status != PENDENTE), desfazer para PENDENTE de forma atômica
-    // Isso remove qualquer impacto de GREEN/RED/MEIO_* e retorna a aposta ao estado pré-liquidação.
-    if (statusAtual !== 'PENDENTE') {
+    // 1) Se estava liquidada, reverter usando o motor de eventos v3
+    if (statusAtual === 'LIQUIDADA') {
       const { data: revertData, error: revertError } = await supabase.rpc(
-        'reverter_liquidacao_para_pendente',
+        'reverter_liquidacao_v3',
         { p_aposta_id: apostaId }
       );
 
@@ -434,18 +433,18 @@ export async function deletarAposta(
           success: false,
           error: {
             code: 'REVERT_TO_PENDING_FAILED',
-            message: `Falha ao reverter aposta para PENDENTE: ${revertError.message}`,
+            message: `Falha ao reverter aposta: ${revertError.message}`,
             details: { error: revertError },
           },
         };
       }
 
-      const revertResult = revertData as { success?: boolean; error?: string; message?: string } | null;
-      if (revertResult && revertResult.success === false && revertResult.error !== 'APOSTA_JA_PENDENTE') {
+      const revertResult = (revertData as Array<{ success: boolean; message?: string }>)?.[0];
+      if (revertResult && !revertResult.success) {
         return {
           success: false,
           error: {
-            code: revertResult.error || 'REVERT_TO_PENDING_FAILED',
+            code: 'REVERT_TO_PENDING_FAILED',
             message: revertResult.message || 'Falha ao reverter aposta para PENDENTE',
             details: { revertResult },
           },
@@ -514,53 +513,30 @@ export async function deletarAposta(
 // ============================================================================
 
 /**
- * Liquida uma aposta usando RPC atômica
+ * Liquida uma aposta usando o motor de eventos v6
  * 
- * FASE 1: Usa liquidar_aposta_atomica que:
- * 1. Atualiza aposta para LIQUIDADA
- * 2. Atualiza resultado de cada perna
- * 3. Insere registros no cash_ledger (GREEN/RED/VOID)
- * 4. Trigger atualiza saldo automaticamente
+ * NOVA ARQUITETURA (financial_events):
+ * 1. Usa liquidar_aposta_v3 que emite eventos PAYOUT_*
+ * 2. Trigger tr_financial_event_sync recalcula saldo automaticamente
+ * 3. Saldo = SUM(financial_events.valor)
  * 
  * O impacto financeiro REAL só acontece aqui, não na criação!
  */
 export async function liquidarAposta(
   input: LiquidarApostaInput
 ): Promise<ApostaServiceResult> {
-  console.log("[ApostaService] Iniciando liquidação atômica:", input.id, input.resultado);
+  console.log("[ApostaService] Iniciando liquidação v3:", input.id, input.resultado);
 
   try {
-    // Preparar resultados por perna se fornecidos
-    let resultadosPernasMap: Record<string, string> | null = null;
-    
-    if (input.resultados_pernas && input.resultados_pernas.length > 0) {
-      // Buscar IDs das pernas pela ordem
-      const { data: pernas } = await supabase
-        .from('apostas_pernas')
-        .select('id, ordem')
-        .eq('aposta_id', input.id);
-      
-      if (pernas) {
-        resultadosPernasMap = {};
-        for (const perna of pernas) {
-          const resultadoPerna = input.resultados_pernas.find(r => r.ordem === perna.ordem);
-          if (resultadoPerna) {
-            resultadosPernasMap[perna.id] = resultadoPerna.resultado;
-          }
-        }
-      }
-    }
-
-    // Chamar RPC atômica
-    const { data, error } = await supabase.rpc('liquidar_aposta_atomica', {
+    // Chamar RPC v3 (motor de eventos)
+    const { data, error } = await supabase.rpc('liquidar_aposta_v3', {
       p_aposta_id: input.id,
       p_resultado: input.resultado,
       p_lucro_prejuizo: input.lucro_prejuizo ?? null,
-      p_resultados_pernas: resultadosPernasMap,
     });
 
     if (error) {
-      console.error("[ApostaService] Erro RPC liquidar_aposta_atomica:", error);
+      console.error("[ApostaService] Erro RPC liquidar_aposta_v3:", error);
       return {
         success: false,
         error: {
@@ -571,27 +547,27 @@ export async function liquidarAposta(
       };
     }
 
-    const result = data as {
+    const result = data as Array<{
       success: boolean;
-      error?: string;
       message?: string;
-      impacto_total?: number;
-    };
+      events_created?: number;
+    }>;
 
-    if (!result.success) {
-      console.error("[ApostaService] RPC retornou erro:", result);
+    const firstResult = result?.[0];
+    if (!firstResult?.success) {
+      console.error("[ApostaService] RPC retornou erro:", firstResult);
       return {
         success: false,
         error: {
-          code: result.error || 'LIQUIDATION_FAILED',
-          message: result.message || 'Falha ao liquidar aposta',
+          code: 'LIQUIDATION_FAILED',
+          message: firstResult?.message || 'Falha ao liquidar aposta',
         },
       };
     }
 
     console.log("[ApostaService] Aposta liquidada com sucesso:", input.id, {
       resultado: input.resultado,
-      impacto_total: result.impacto_total,
+      events_created: firstResult.events_created,
     });
     
     return { success: true };
@@ -616,10 +592,10 @@ export async function liquidarAposta(
 /**
  * Reliquida uma aposta (muda resultado de uma aposta já liquidada)
  * 
- * Usa reliquidar_aposta_atomica que:
- * 1. Reverte o resultado anterior via cash_ledger
- * 2. Aplica o novo resultado via cash_ledger
- * 3. Trigger atualiza saldos automaticamente
+ * NOVA ARQUITETURA (financial_events v3):
+ * 1. Usa reverter_liquidacao_v3 para reverter eventos anteriores
+ * 2. Usa liquidar_aposta_v3 para aplicar novo resultado
+ * 3. Trigger tr_financial_event_sync recalcula saldos
  * 
  * @param apostaId - ID da aposta
  * @param novoResultado - Novo resultado a aplicar
@@ -630,58 +606,102 @@ export async function reliquidarAposta(
   novoResultado: string,
   lucroPrejuizo?: number
 ): Promise<ApostaServiceResult<{ resultado_anterior?: string; impacto_total?: number }>> {
-  console.log("[ApostaService] Iniciando reliquidação:", apostaId, novoResultado);
+  console.log("[ApostaService] Iniciando reliquidação v3:", apostaId, novoResultado);
 
   try {
-    const { data, error } = await supabase.rpc('reliquidar_aposta_atomica', {
+    // Buscar resultado anterior
+    const { data: apostaAtual } = await supabase
+      .from('apostas_unificada')
+      .select('resultado, status')
+      .eq('id', apostaId)
+      .single();
+    
+    const resultadoAnterior = apostaAtual?.resultado;
+    
+    // Se não estava liquidada, apenas liquidar
+    if (apostaAtual?.status !== 'LIQUIDADA') {
+      const liquidResult = await liquidarAposta({
+        id: apostaId,
+        resultado: novoResultado as any,
+        lucro_prejuizo: lucroPrejuizo,
+      });
+      
+      if (!liquidResult.success) return liquidResult as any;
+      
+      return {
+        success: true,
+        data: { resultado_anterior: resultadoAnterior || undefined },
+      };
+    }
+
+    // 1. Reverter liquidação anterior
+    const { data: revertData, error: revertError } = await supabase.rpc('reverter_liquidacao_v3', {
       p_aposta_id: apostaId,
-      p_resultado_novo: novoResultado,
-      p_lucro_prejuizo: lucroPrejuizo ?? null,
     });
 
-    if (error) {
-      console.error("[ApostaService] Erro RPC reliquidar_aposta_atomica:", error);
+    if (revertError) {
+      console.error("[ApostaService] Erro ao reverter:", revertError);
       return {
         success: false,
         error: {
-          code: 'RELIQUIDATION_RPC_ERROR',
-          message: `Falha ao reliquidar aposta: ${error.message}`,
-          details: { error },
+          code: 'REVERT_RPC_ERROR',
+          message: `Falha ao reverter liquidação: ${revertError.message}`,
+          details: { error: revertError },
         },
       };
     }
 
-    const result = data as {
-      success: boolean;
-      error?: string;
-      message?: string;
-      resultado_anterior?: string;
-      resultado_novo?: string;
-      impacto_total?: number;
-    };
-
-    if (!result.success) {
-      console.error("[ApostaService] RPC retornou erro:", result);
+    const revertResult = revertData as Array<{ success: boolean; message?: string }>;
+    if (!revertResult?.[0]?.success) {
       return {
         success: false,
         error: {
-          code: result.error || 'RELIQUIDATION_FAILED',
-          message: result.message || 'Falha ao reliquidar aposta',
+          code: 'REVERT_FAILED',
+          message: revertResult?.[0]?.message || 'Falha ao reverter liquidação',
+        },
+      };
+    }
+
+    // 2. Aplicar novo resultado
+    const { data: liquidData, error: liquidError } = await supabase.rpc('liquidar_aposta_v3', {
+      p_aposta_id: apostaId,
+      p_resultado: novoResultado,
+      p_lucro_prejuizo: lucroPrejuizo ?? null,
+    });
+
+    if (liquidError) {
+      console.error("[ApostaService] Erro ao reliquidar:", liquidError);
+      return {
+        success: false,
+        error: {
+          code: 'RELIQUIDATION_RPC_ERROR',
+          message: `Falha ao reliquidar aposta: ${liquidError.message}`,
+          details: { error: liquidError },
+        },
+      };
+    }
+
+    const liquidResult = liquidData as Array<{ success: boolean; message?: string; events_created?: number }>;
+    if (!liquidResult?.[0]?.success) {
+      return {
+        success: false,
+        error: {
+          code: 'RELIQUIDATION_FAILED',
+          message: liquidResult?.[0]?.message || 'Falha ao reliquidar aposta',
         },
       };
     }
 
     console.log("[ApostaService] Aposta reliquidada com sucesso:", apostaId, {
-      resultado_anterior: result.resultado_anterior,
-      resultado_novo: result.resultado_novo,
-      impacto_total: result.impacto_total,
+      resultado_anterior: resultadoAnterior,
+      resultado_novo: novoResultado,
+      events_created: liquidResult[0].events_created,
     });
     
     return { 
       success: true,
       data: {
-        resultado_anterior: result.resultado_anterior,
-        impacto_total: result.impacto_total,
+        resultado_anterior: resultadoAnterior || undefined,
       }
     };
 
