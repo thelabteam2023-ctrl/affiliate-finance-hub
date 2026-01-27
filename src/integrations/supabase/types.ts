@@ -317,6 +317,13 @@ export type Database = {
             foreignKeyName: "apostas_pernas_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_pernas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -614,6 +621,13 @@ export type Database = {
             foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "apostas_unificada_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -879,6 +893,13 @@ export type Database = {
             foreignKeyName: "bookmaker_balance_audit_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_balance_audit_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -988,6 +1009,13 @@ export type Database = {
             foreignKeyName: "bookmaker_stake_reservations_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_stake_reservations_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -1073,6 +1101,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_unlinked_acks_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
             referencedColumns: ["bookmaker_id"]
           },
           {
@@ -1283,6 +1318,13 @@ export type Database = {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -1291,6 +1333,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -1433,6 +1482,7 @@ export type Database = {
           destino_tipo: string | null
           destino_wallet_id: string | null
           evento_promocional_tipo: string | null
+          financial_events_generated: boolean | null
           id: string
           impacta_caixa_operacional: boolean
           investidor_id: string | null
@@ -1492,6 +1542,7 @@ export type Database = {
           destino_tipo?: string | null
           destino_wallet_id?: string | null
           evento_promocional_tipo?: string | null
+          financial_events_generated?: boolean | null
           id?: string
           impacta_caixa_operacional?: boolean
           investidor_id?: string | null
@@ -1551,6 +1602,7 @@ export type Database = {
           destino_tipo?: string | null
           destino_wallet_id?: string | null
           evento_promocional_tipo?: string | null
+          financial_events_generated?: boolean | null
           id?: string
           impacta_caixa_operacional?: boolean
           investidor_id?: string | null
@@ -1632,6 +1684,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
             columns: ["destino_bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
+            columns: ["destino_bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -1674,6 +1733,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_destino_conta_bancaria_id_fkey"
             columns: ["destino_conta_bancaria_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["conta_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_conta_bancaria_id_fkey"
+            columns: ["destino_conta_bancaria_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["conta_id"]
           },
@@ -1695,6 +1761,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_destino_parceiro_id_fkey"
             columns: ["destino_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_parceiro_id_fkey"
+            columns: ["destino_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -1709,6 +1782,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_destino_parceiro_id_fkey"
             columns: ["destino_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_parceiro_id_fkey"
+            columns: ["destino_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
@@ -1717,6 +1797,13 @@ export type Database = {
             columns: ["destino_wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_wallet_id_fkey"
+            columns: ["destino_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -1807,6 +1894,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
             columns: ["origem_bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
+            columns: ["origem_bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -1849,6 +1943,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_origem_conta_bancaria_id_fkey"
             columns: ["origem_conta_bancaria_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["conta_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_conta_bancaria_id_fkey"
+            columns: ["origem_conta_bancaria_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["conta_id"]
           },
@@ -1870,6 +1971,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_origem_parceiro_id_fkey"
             columns: ["origem_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -1884,6 +1992,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_origem_parceiro_id_fkey"
             columns: ["origem_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
@@ -1892,6 +2007,13 @@ export type Database = {
             columns: ["origem_wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -2020,6 +2142,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
             referencedColumns: ["bookmaker_id"]
           },
           {
@@ -2462,6 +2591,13 @@ export type Database = {
             foreignKeyName: "contas_bancarias_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "contas_bancarias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -2470,6 +2606,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "contas_bancarias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -2566,6 +2709,13 @@ export type Database = {
             foreignKeyName: "despesas_administrativas_origem_conta_bancaria_id_fkey"
             columns: ["origem_conta_bancaria_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["conta_id"]
+          },
+          {
+            foreignKeyName: "despesas_administrativas_origem_conta_bancaria_id_fkey"
+            columns: ["origem_conta_bancaria_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["conta_id"]
           },
@@ -2587,6 +2737,13 @@ export type Database = {
             foreignKeyName: "despesas_administrativas_origem_parceiro_id_fkey"
             columns: ["origem_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "despesas_administrativas_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -2601,6 +2758,13 @@ export type Database = {
             foreignKeyName: "despesas_administrativas_origem_parceiro_id_fkey"
             columns: ["origem_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "despesas_administrativas_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
@@ -2609,6 +2773,13 @@ export type Database = {
             columns: ["origem_wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "despesas_administrativas_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -2840,6 +3011,13 @@ export type Database = {
             foreignKeyName: "exchange_adjustments_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -2897,6 +3075,13 @@ export type Database = {
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "exchange_adjustments_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -3037,6 +3222,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "financial_events_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
             referencedColumns: ["bookmaker_id"]
           },
           {
@@ -3395,6 +3587,13 @@ export type Database = {
             foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -3527,6 +3726,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
             referencedColumns: ["bookmaker_id"]
           },
           {
@@ -3692,6 +3898,13 @@ export type Database = {
             foreignKeyName: "giros_gratis_disponiveis_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_disponiveis_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -3813,6 +4026,13 @@ export type Database = {
             foreignKeyName: "indicacoes_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "indicacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -3821,6 +4041,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "indicacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -4301,6 +4528,13 @@ export type Database = {
             foreignKeyName: "movimentacoes_indicacao_origem_conta_bancaria_id_fkey"
             columns: ["origem_conta_bancaria_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["conta_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_conta_bancaria_id_fkey"
+            columns: ["origem_conta_bancaria_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["conta_id"]
           },
@@ -4322,6 +4556,13 @@ export type Database = {
             foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
             columns: ["origem_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -4336,6 +4577,13 @@ export type Database = {
             foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
             columns: ["origem_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
@@ -4344,6 +4592,13 @@ export type Database = {
             columns: ["origem_wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -5012,6 +5267,13 @@ export type Database = {
             foreignKeyName: "parceiro_lucro_alertas_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parceiro_lucro_alertas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -5020,6 +5282,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parceiro_lucro_alertas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -5237,6 +5506,13 @@ export type Database = {
             foreignKeyName: "parcerias_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -5245,6 +5521,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -5782,6 +6065,13 @@ export type Database = {
             foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -6082,6 +6372,13 @@ export type Database = {
             foreignKeyName: "projeto_bookmaker_historico_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -6131,6 +6428,13 @@ export type Database = {
             foreignKeyName: "projeto_bookmaker_historico_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -6139,6 +6443,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "projeto_bookmaker_historico_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -6449,6 +6760,13 @@ export type Database = {
             columns: ["bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "projeto_perdas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
             referencedColumns: ["bookmaker_id"]
           },
           {
@@ -7096,6 +7414,13 @@ export type Database = {
             foreignKeyName: "transacoes_bookmakers_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "transacoes_bookmakers_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -7465,6 +7790,13 @@ export type Database = {
             foreignKeyName: "wallet_transit_log_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "wallet_transit_log_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
             referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["wallet_id"]
           },
@@ -7539,6 +7871,13 @@ export type Database = {
             foreignKeyName: "wallets_crypto_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "wallets_crypto_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -7547,6 +7886,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "wallets_crypto_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -7974,6 +8320,13 @@ export type Database = {
             foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "project_bookmaker_link_bonuses_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -8054,6 +8407,13 @@ export type Database = {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -8062,6 +8422,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -8169,6 +8536,13 @@ export type Database = {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -8177,6 +8551,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -8193,6 +8574,26 @@ export type Database = {
             referencedRelation: "projetos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bookmakers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_bookmaker_saldo_audit: {
+        Row: {
+          bookmaker_id: string | null
+          divergencia: number | null
+          moeda: string | null
+          nome: string | null
+          saldo_calculado_eventos: number | null
+          saldo_materializado: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
           {
             foreignKeyName: "bookmakers_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -8306,6 +8707,13 @@ export type Database = {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -8314,6 +8722,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -8369,6 +8784,13 @@ export type Database = {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -8377,6 +8799,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -8450,6 +8879,13 @@ export type Database = {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -8458,6 +8894,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -8650,6 +9093,13 @@ export type Database = {
             foreignKeyName: "parcerias_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -8658,6 +9108,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -8800,6 +9257,13 @@ export type Database = {
             foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
             columns: ["destino_bookmaker_id"]
             isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
+            columns: ["destino_bookmaker_id"]
+            isOneToOne: false
             referencedRelation: "v_bookmaker_saldo_operavel"
             referencedColumns: ["id"]
           },
@@ -8850,6 +9314,13 @@ export type Database = {
             columns: ["origem_bookmaker_id"]
             isOneToOne: false
             referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_origem_bookmaker_id_fkey"
+            columns: ["origem_bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
             referencedColumns: ["bookmaker_id"]
           },
           {
@@ -8965,6 +9436,13 @@ export type Database = {
             foreignKeyName: "indicacoes_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "indicacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -8973,6 +9451,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "indicacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -9078,6 +9563,13 @@ export type Database = {
             foreignKeyName: "movimentacoes_indicacao_origem_conta_bancaria_id_fkey"
             columns: ["origem_conta_bancaria_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["conta_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_conta_bancaria_id_fkey"
+            columns: ["origem_conta_bancaria_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["conta_id"]
           },
@@ -9099,6 +9591,13 @@ export type Database = {
             foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
             columns: ["origem_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -9113,6 +9612,13 @@ export type Database = {
             foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
             columns: ["origem_parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_parceiro_id_fkey"
+            columns: ["origem_parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
           },
@@ -9121,6 +9627,13 @@ export type Database = {
             columns: ["origem_wallet_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["wallet_id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_indicacao_origem_wallet_id_fkey"
+            columns: ["origem_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["wallet_id"]
           },
           {
@@ -9465,6 +9978,13 @@ export type Database = {
             foreignKeyName: "parcerias_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
             referencedRelation: "v_saldo_parceiro_contas"
             referencedColumns: ["parceiro_id"]
           },
@@ -9473,6 +9993,13 @@ export type Database = {
             columns: ["parceiro_id"]
             isOneToOne: false
             referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "parcerias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
             referencedColumns: ["parceiro_id"]
           },
           {
@@ -9627,6 +10154,31 @@ export type Database = {
         }
         Relationships: []
       }
+      v_saldo_contas_bancarias: {
+        Row: {
+          banco: string | null
+          conta_id: string | null
+          moeda: string | null
+          parceiro_id: string | null
+          parceiro_nome: string | null
+          saldo_disponivel: number | null
+          saldo_total: number | null
+          saldo_travado: number | null
+          titular: string | null
+          total_creditos: number | null
+          total_debitos: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parceiros_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_saldo_parceiro_contas: {
         Row: {
           banco: string | null
@@ -9697,6 +10249,31 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_user_last_login"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      v_saldo_wallets_crypto: {
+        Row: {
+          endereco: string | null
+          exchange: string | null
+          network: string | null
+          parceiro_id: string | null
+          parceiro_nome: string | null
+          saldo_disponivel: number | null
+          saldo_total: number | null
+          saldo_travado: number | null
+          total_creditos: number | null
+          total_debitos: number | null
+          wallet_id: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parceiros_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -10927,6 +11504,10 @@ export type Database = {
       renew_subscription: {
         Args: { p_new_price_id?: string; p_workspace_id: string }
         Returns: string
+      }
+      reprocessar_ledger_workspace: {
+        Args: { p_workspace_id: string }
+        Returns: Json
       }
       resend_workspace_invite: { Args: { _invite_id: string }; Returns: Json }
       reset_projeto_operacional_seguro: {
