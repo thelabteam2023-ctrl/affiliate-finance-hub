@@ -21,10 +21,12 @@ export type Estrategia =
   | "EXTRACAO_BONUS"
   | "DUPLO_GREEN";
 
-// Contextos operacionais (APENAS UI - não usar para decisões financeiras)
+// Contextos operacionais (DEPRECATED - apenas para retrocompatibilidade)
+// NÃO usar para decisões financeiras! Ver fonte_saldo.
 export type ContextoOperacional = "NORMAL" | "FREEBET" | "BONUS";
 
-// Fonte de Saldo (VERDADE FINANCEIRA - determina qual wallet é usada)
+// Fonte de Saldo (VERDADE FINANCEIRA - binário: REAL ou FREEBET)
+// BONUS é deprecated e tratado como REAL (bônus = dinheiro normal)
 export type FonteSaldo = "REAL" | "FREEBET" | "BONUS";
 
 // Status da aposta

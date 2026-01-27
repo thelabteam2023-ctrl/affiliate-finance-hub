@@ -72,13 +72,18 @@ export type FormaRegistro = typeof FORMA_REGISTRO[keyof typeof FORMA_REGISTRO];
  * 
  * REGRAS:
  * - Fonte de saldo determina qual wallet é debitada/creditada
- * - É a VERDADE FINANCEIRA junto com a estratégia
- * - NUNCA deve ser confundido com Contexto Operacional (UI-only)
+ * - É a VERDADE FINANCEIRA
+ * - Determinado por usar_freebet toggle (binário)
+ * 
+ * NOVA ARQUITETURA:
+ * - REAL = saldo_real + saldo_bonus (bônus é dinheiro normal)
+ * - FREEBET = saldo_freebet (único pool especial)
+ * - BONUS = DEPRECATED (agora unificado em REAL)
  */
 export const FONTE_SALDO = {
-  REAL: 'REAL',       // Debita/credita bookmakers.saldo_atual
+  REAL: 'REAL',       // Debita/credita bookmakers.saldo_atual (inclui bônus)
   FREEBET: 'FREEBET', // Debita/credita bookmakers.saldo_freebet
-  BONUS: 'BONUS',     // Debita/credita bookmakers.saldo_bonus (quando implementado)
+  BONUS: 'BONUS',     // DEPRECATED - mantido para retrocompatibilidade, tratado como REAL
 } as const;
 
 export type FonteSaldo = typeof FONTE_SALDO[keyof typeof FONTE_SALDO];
@@ -87,9 +92,9 @@ export type FonteSaldo = typeof FONTE_SALDO[keyof typeof FONTE_SALDO];
  * Labels para exibição de Fonte de Saldo
  */
 export const FONTE_SALDO_LABELS: Record<FonteSaldo, string> = {
-  REAL: 'Saldo Real',
+  REAL: 'Saldo Normal',  // Inclui bônus
   FREEBET: 'Freebet',
-  BONUS: 'Bônus',
+  BONUS: 'Bônus (Normal)', // DEPRECATED - mostra que é tratado como normal
 };
 
 /**

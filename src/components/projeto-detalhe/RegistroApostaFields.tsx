@@ -43,9 +43,26 @@ import { HelpCircle, Coins, Gift, Sparkles } from "lucide-react";
 export interface RegistroApostaValues {
   forma_registro: FormaRegistro | null;
   estrategia: ApostaEstrategia | null;
-  contexto_operacional: ContextoOperacional | null;
-  /** NOVO: Fonte de saldo é a VERDADE FINANCEIRA - qual pool de capital é usado */
+  
+  /**
+   * DEPRECATED: contexto_operacional é opcional e interno.
+   * Mantido apenas para retrocompatibilidade com dados existentes.
+   * NÃO usar para decisões financeiras!
+   */
+  contexto_operacional?: ContextoOperacional | null;
+  
+  /**
+   * VERDADE FINANCEIRA: fonte de saldo determinada por usar_freebet.
+   * - REAL = saldo normal (inclui bônus)
+   * - FREEBET = saldo freebet
+   */
   fonte_saldo?: FonteSaldo | null;
+  
+  /**
+   * Toggle explícito: se true, debita de saldo_freebet.
+   * Este é o campo que controla a decisão financeira.
+   */
+  usar_freebet?: boolean;
 }
 
 export interface RegistroApostaFieldsProps {
@@ -377,9 +394,11 @@ export function validateRegistroAposta(values: RegistroApostaValues): {
   if (!values.estrategia) {
     errors.push("Estratégia obrigatória");
   }
-  if (!values.contexto_operacional) {
-    errors.push("Contexto operacional obrigatório");
-  }
+  // REMOVIDO: contexto_operacional agora é opcional/interno
+  // A verdade financeira é determinada por usar_freebet toggle
+  // if (!values.contexto_operacional) {
+  //   errors.push("Contexto operacional obrigatório");
+  // }
   
   return {
     valid: errors.length === 0,
@@ -390,51 +409,54 @@ export function validateRegistroAposta(values: RegistroApostaValues): {
 /**
  * Sugestões baseadas na aba ativa
  * IMPORTANTE: São apenas SUGESTÕES, o usuário pode alterar
- */
-/**
- * Sugestões baseadas na aba ativa
- * IMPORTANTE: São apenas SUGESTÕES, o usuário pode alterar
  * 
- * REGRA: O formulário (Simples/Múltipla/Arbitragem) é apenas meio de entrada,
- * portanto SEMPRE sugerimos 'SIMPLES' como default.
- * Estratégia e Contexto são os campos conceituais.
+ * NOVA ARQUITETURA:
+ * - contexto_operacional é DEPRECATED e sempre 'NORMAL' internamente
+ * - usar_freebet é a verdade financeira (toggle explícito na UI)
+ * - estrategia é classificação analítica para KPIs
  */
 export function getSuggestionsForTab(activeTab: string): Partial<RegistroApostaValues> {
   const tabSuggestions: Record<string, Partial<RegistroApostaValues>> = {
-    // Aba Freebet
+    // Aba Freebet - sugere usar_freebet=true
     freebets: {
       forma_registro: 'SIMPLES',
       estrategia: 'EXTRACAO_FREEBET',
-      contexto_operacional: 'FREEBET',
+      usar_freebet: true, // NOVA ARQUITETURA: toggle é a verdade
+      contexto_operacional: 'NORMAL', // DEPRECATED: sempre NORMAL
     },
-    // Aba Bônus
+    // Aba Bônus - bônus é dinheiro normal, não requer toggle especial
     bonus: {
       forma_registro: 'SIMPLES',
       estrategia: 'EXTRACAO_BONUS',
-      contexto_operacional: 'BONUS',
+      usar_freebet: false, // Bônus = saldo normal
+      contexto_operacional: 'NORMAL', // DEPRECATED
     },
     // Aba Surebet
     surebet: {
       forma_registro: 'SIMPLES',
       estrategia: 'SUREBET',
+      usar_freebet: false,
       contexto_operacional: 'NORMAL',
     },
     // Aba ValueBet
     valuebet: {
       forma_registro: 'SIMPLES',
       estrategia: 'VALUEBET',
+      usar_freebet: false,
       contexto_operacional: 'NORMAL',
     },
     // Aba Duplo Green
     duplogreen: {
       forma_registro: 'SIMPLES',
       estrategia: 'DUPLO_GREEN',
+      usar_freebet: false,
       contexto_operacional: 'NORMAL',
     },
     // Aba Apostas Livres - estratégia NÃO definida (usuário escolhe)
     apostas: {
       forma_registro: 'SIMPLES',
       estrategia: undefined,
+      usar_freebet: false,
       contexto_operacional: 'NORMAL',
     },
   };
@@ -443,6 +465,7 @@ export function getSuggestionsForTab(activeTab: string): Partial<RegistroApostaV
   return tabSuggestions[activeTab] || {
     forma_registro: 'SIMPLES',
     estrategia: undefined,
+    usar_freebet: false,
     contexto_operacional: 'NORMAL',
   };
 }

@@ -55,25 +55,30 @@ export const CASH_REAL_TYPES = [
 /**
  * Tipos de transação de DINHEIRO OPERACIONAL
  * (Movimentos internos dentro de bookmakers - NÃO impactam caixa real)
+ * 
+ * NOVA ARQUITETURA:
+ * - BONUS_CREDITADO agora é tratado como dinheiro NORMAL
+ * - Apenas FREEBET tem pool separado
+ * - Cashback e Giros Grátis são lucro operacional interno
  */
 export const OPERATIONAL_MONEY_TYPES = [
-  // Bônus e Promoções
-  'BONUS_CREDITADO',
-  'BONUS_ESTORNO',
+  // Bônus e Promoções (BÔNUS = DINHEIRO NORMAL com tag de origem)
+  'BONUS_CREDITADO',      // Crédito de bônus → vai para saldo_atual (normal)
+  'BONUS_ESTORNO',        // Estorno de bônus
   'GIRO_GRATIS',
   'GIRO_GRATIS_GANHO',
   'GIRO_GRATIS_ESTORNO',
   'CREDITO_PROMOCIONAL',
   'EVENTO_PROMOCIONAL',
   
-  // Freebet (movimentam apenas saldo_freebet, não saldo_atual)
+  // Freebet (ÚNICO pool separado - saldo_freebet)
   'FREEBET_CREDITADA',    // Freebet recebida/liberada
   'FREEBET_CONSUMIDA',    // Freebet usada em aposta
   'FREEBET_ESTORNO',      // Reversão de consumo
   'FREEBET_EXPIRADA',     // Freebet expirou sem uso
   'FREEBET_CONVERTIDA',   // Extração: debita freebet, credita real
   
-  // Cashback (é lucro operacional, não entrada de caixa)
+  // Cashback (é lucro operacional interno, não entrada de caixa)
   'CASHBACK_MANUAL',
   'CASHBACK_ESTORNO',
   
@@ -89,7 +94,7 @@ export const OPERATIONAL_MONEY_TYPES = [
   'PERDA_OPERACIONAL',
   'PERDA_REVERSAO',
   
-  // NOTA: GANHO_CAMBIAL e PERDA_CAMBIAL foram movidos para CASH_REAL_TYPES
+  // NOTA: GANHO_CAMBIAL e PERDA_CAMBIAL estão em CASH_REAL_TYPES
   // pois creditam/debitam wallets e precisam aparecer na trilha de auditoria.
 ] as const;
 

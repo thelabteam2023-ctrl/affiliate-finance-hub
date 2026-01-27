@@ -6,6 +6,16 @@
  * Em vez de atualizar saldo_atual diretamente, insere registros em cash_ledger.
  * O trigger atualizar_saldo_bookmaker_v2 processa automaticamente os impactos.
  * 
+ * NOVA ARQUITETURA DE SALDO:
+ * - saldo_atual = saldo "normal" (inclui bônus convertido)
+ * - saldo_freebet = único pool separado (freebets)
+ * - saldo_bonus = DEPRECATED (mantido para retrocompatibilidade, mas tratado como saldo_atual)
+ * 
+ * REGRA DE OURO:
+ * - Bônus é dinheiro NORMAL com tag de origem no ledger
+ * - Apenas Freebet tem pool separado
+ * - usar_freebet toggle é a verdade financeira
+ * 
  * FLUXO:
  * 1. Frontend chama insertLedgerEntry()
  * 2. Insere em cash_ledger com tipo_transacao apropriado
@@ -13,14 +23,11 @@
  * 4. Trigger registra auditoria em bookmaker_balance_audit
  * 
  * TIPOS DE TRANSAÇÃO SUPORTADOS:
- * - CASHBACK_MANUAL: Cashback creditado manualmente
- * - CASHBACK_ESTORNO: Reversão de cashback
+ * - CASHBACK_MANUAL: Cashback creditado manualmente (lucro operacional)
+ * - BONUS_CREDITADO: Bônus creditado (vai para saldo_atual, é dinheiro normal)
  * - PERDA_OPERACIONAL: Perda confirmada (limitação, bloqueio, etc)
- * - PERDA_REVERSAO: Reversão de perda operacional
- * - AJUSTE_POSITIVO: Ajuste manual de saldo (crédito)
- * - AJUSTE_NEGATIVO: Ajuste manual de saldo (débito)
- * - EVENTO_PROMOCIONAL: Crédito promocional
  * - APOSTA_GREEN/RED/VOID/MEIO_GREEN/MEIO_RED: Resultados de apostas
+ * - FREEBET_*: Operações de freebet (único pool separado)
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -325,8 +332,12 @@ export async function registrarAjusteViaLedger(params: {
 
 /**
  * Registra crédito de bônus via ledger.
- * ARQUITETURA: Bônus é evento promocional interno, NÃO impacta caixa operacional.
- * Origem = Bookmaker, Destino = Bookmaker (movimento interno)
+ * 
+ * NOVA ARQUITETURA:
+ * - Bônus é DINHEIRO NORMAL com tag de origem 'BONUS_CREDITADO'
+ * - Credita em saldo_atual (não em pool separado)
+ * - Mantém metadados para auditoria e KPIs de bônus
+ * - NÃO impacta caixa operacional (não é entrada de capital externo)
  */
 export async function registrarBonusCreditadoViaLedger(params: {
   bookmakerId: string;
@@ -336,6 +347,7 @@ export async function registrarBonusCreditadoViaLedger(params: {
   userId: string;
   descricao?: string;
   bonusId?: string;
+  restricaoRollover?: number;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'BONUS_CREDITADO',
@@ -344,10 +356,14 @@ export async function registrarBonusCreditadoViaLedger(params: {
     workspaceId: params.workspaceId,
     userId: params.userId,
     destinoBookmakerId: params.bookmakerId,
-    origemBookmakerId: params.bookmakerId, // Movimento interno: Bookmaker → Bookmaker
-    descricao: params.descricao || 'Crédito de bônus',
+    // NOVA ARQUITETURA: Bônus credita saldo_atual (normal), não pool separado
+    descricao: params.descricao || 'Crédito de bônus (saldo normal)',
     impactaCaixaOperacional: false, // Evento promocional - NÃO impacta caixa real
-    auditoriaMetadata: params.bonusId ? { bonus_id: params.bonusId } : undefined,
+    auditoriaMetadata: {
+      bonus_id: params.bonusId,
+      origem: 'BONUS', // Tag para filtrar em KPIs
+      restricao_rollover: params.restricaoRollover,
+    },
   });
 }
 
