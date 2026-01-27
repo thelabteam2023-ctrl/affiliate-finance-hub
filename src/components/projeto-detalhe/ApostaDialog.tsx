@@ -1861,8 +1861,60 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         const houveMudancaResultado = resultadoAnterior !== novoResultado;
         const houveMudancaFinanceira = houveMudancaBookmaker || houveMudancaStake || houveMudancaOdd || houveMudancaResultado;
         
-        if (apostaEstaLiquidada && houveMudancaFinanceira) {
+        // ================================================================
+        // CASO ESPECIAL: LIQUIDADA → PENDENTE (reversão pura)
+        // Usar reverter_liquidacao_v4 que faz apenas reversão, sem re-liquidação
+        // ================================================================
+        if (apostaEstaLiquidada && agoraPendente && houveMudancaResultado) {
+          console.log("[ApostaDialog] LIQUIDADA → PENDENTE: usando reverter_liquidacao_v4");
+          
+          const { reverterLiquidacao } = await import("@/lib/financialEngine");
+          const revertResult = await reverterLiquidacao(aposta.id);
+          
+          if (!revertResult.success) {
+            console.error("[ApostaDialog] Falha na reversão:", revertResult.message);
+            toast.error("Falha na reversão: " + revertResult.message);
+            throw new Error(revertResult.message || 'Erro ao reverter liquidação');
+          }
+          
+          console.log("[ApostaDialog] ✅ Reversão concluída:", revertResult);
+          
+          // Atualizar campos não-financeiros
+          const { error: updateError } = await supabase
+            .from("apostas_unificada")
+            .update({
+              evento: apostaData.evento,
+              mercado: apostaData.mercado,
+              esporte: apostaData.esporte,
+              selecao: apostaData.selecao,
+              observacoes: apostaData.observacoes,
+              data_aposta: apostaData.data_aposta,
+              modo_entrada: apostaData.modo_entrada,
+              lay_exchange: apostaData.lay_exchange,
+              lay_odd: apostaData.lay_odd,
+              lay_stake: apostaData.lay_stake,
+              lay_liability: apostaData.lay_liability,
+              lay_comissao: apostaData.lay_comissao,
+              back_em_exchange: apostaData.back_em_exchange,
+              back_comissao: apostaData.back_comissao,
+              gerou_freebet: apostaData.gerou_freebet,
+              valor_freebet_gerada: apostaData.valor_freebet_gerada,
+              tipo_freebet: apostaData.tipo_freebet,
+            })
+            .eq("id", aposta.id);
+          
+          if (updateError) {
+            console.warn("[ApostaDialog] Erro ao atualizar campos complementares:", updateError);
+          }
+          
+          // Invalidar caches de saldo
+          await invalidateSaldos(projetoId);
+          
+        } else if (apostaEstaLiquidada && houveMudancaFinanceira && !agoraPendente) {
+          // ================================================================
+          // CASO: LIQUIDADA → OUTRO RESULTADO (re-liquidação)
           // Usar RPC atômico que faz reversão + re-liquidação via ledger
+          // ================================================================
           console.log("[ApostaDialog] Aposta LIQUIDADA com mudança financeira - usando RPC atômico");
           console.log("[ApostaDialog] Mudanças detectadas:", {
             bookmaker: houveMudancaBookmaker ? `${bookmakerAnteriorId} -> ${bookmakerAtualId}` : 'sem mudança',
@@ -1926,7 +1978,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           }
           
           // Invalidar caches de saldo
-          await invalidateSaldos();
+          await invalidateSaldos(projetoId);
           
         } else {
           // Aposta NÃO liquidada OU sem mudança financeira: update direto
