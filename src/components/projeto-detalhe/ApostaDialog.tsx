@@ -393,6 +393,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const { 
     data: bookmakerSaldos = [], 
     isLoading: saldosLoading,
+    isFetching: saldosFetching,
     refetch: refetchSaldos 
   } = useBookmakerSaldosQuery({
     projetoId,
@@ -795,7 +796,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
   useEffect(() => {
     if (open) {
-      // Bookmakers são carregados via useBookmakerSaldosQuery automaticamente
+      // CRÍTICO: Forçar refetch dos saldos ao abrir o modal
+      // Isso garante dados frescos, especialmente após liquidações recentes
+      refetchSaldos();
+      
       if (aposta) {
         setDataAposta(aposta.data_aposta.slice(0, 16));
         setEsporte(aposta.esporte);
@@ -3118,6 +3122,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                       saldoReal={bookmakerSaldo.saldoDisponivel}
                       usarFreebet={usarFreebetBookmaker}
                       moeda={bookmakerSaldo.moeda}
+                      isEditMode={!!aposta && aposta.bookmaker_id === bookmakerId}
+                      originalStake={aposta?.stake || 0}
+                      currentResultado={aposta?.resultado}
                     />
                   )}
                 </div>
@@ -4081,7 +4088,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     saldoReal={bookmakerSaldo.saldoDisponivel}
                     usarFreebet={usarFreebetBookmaker}
                     moeda={bookmakerSaldo.moeda}
-                    isEditMode={!!aposta}
+                    isEditMode={!!aposta && aposta.bookmaker_id === bookmakerId}
                     originalStake={aposta?.stake || 0}
                     currentResultado={aposta?.resultado}
                   />
