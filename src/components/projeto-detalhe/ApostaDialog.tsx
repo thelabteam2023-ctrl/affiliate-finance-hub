@@ -3979,6 +3979,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     moeda={bookmakerSaldo.moeda}
                     isEditMode={!!aposta}
                     originalStake={aposta?.stake || 0}
+                    currentResultado={aposta?.resultado}
                   />
                 )}
               </div>
