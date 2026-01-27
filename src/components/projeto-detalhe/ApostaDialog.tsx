@@ -1397,15 +1397,35 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       }
 
       // Validar stake vs saldo operável da bookmaker (real + freebet + bonus)
+      // IMPORTANTE (modo edição): não devemos bloquear a edição apenas porque o saldo atual está baixo,
+      // já que o stake da aposta já existe e (na maioria dos casos) a operação é uma reversão + re-liquidação.
+      // Regra prática:
+      // - Nova aposta: validar stake inteiro
+      // - Editando a MESMA bookmaker: validar apenas o AUMENTO de stake (delta)
+      // - Editando e MUDOU a bookmaker: validar stake inteiro (nova alocação de capital)
       const selectedBookmaker = bookmakers.find(b => b.id === bookmakerId);
       if (selectedBookmaker) {
-        const stakeAnterior = aposta?.status === "PENDENTE" ? aposta.stake : 0;
-        const saldoOperavelParaValidar = selectedBookmaker.saldo_operavel + stakeAnterior;
-        
-        if (stakeNum > saldoOperavelParaValidar) {
-          const moeda = selectedBookmaker.moeda;
-          toast.error(`Stake (${formatCurrencyWithSymbol(stakeNum, moeda)}) maior que o saldo operável (${formatCurrencyWithSymbol(saldoOperavelParaValidar, moeda)})`);
-          return;
+        const moeda = selectedBookmaker.moeda;
+
+        if (aposta) {
+          const originalStake = aposta.stake ?? 0;
+          const mudouBookmaker = !!aposta.bookmaker_id && aposta.bookmaker_id !== bookmakerId;
+          const valorParaValidar = mudouBookmaker ? stakeNum : Math.max(0, stakeNum - originalStake);
+
+          if (valorParaValidar > 0 && valorParaValidar > selectedBookmaker.saldo_operavel) {
+            const label = mudouBookmaker ? "Stake" : "Aumento de stake";
+            toast.error(
+              `${label} (${formatCurrencyWithSymbol(valorParaValidar, moeda)}) maior que o saldo operável (${formatCurrencyWithSymbol(selectedBookmaker.saldo_operavel, moeda)})`
+            );
+            return;
+          }
+        } else {
+          if (stakeNum > selectedBookmaker.saldo_operavel) {
+            toast.error(
+              `Stake (${formatCurrencyWithSymbol(stakeNum, moeda)}) maior que o saldo operável (${formatCurrencyWithSymbol(selectedBookmaker.saldo_operavel, moeda)})`
+            );
+            return;
+          }
         }
       }
     } else if (tipoAposta === "exchange") {
