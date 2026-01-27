@@ -157,8 +157,9 @@ export function useStakeReservation({
       setCurrentReservation(null);
       currentBookmakerIdRef.current = null;
       
-      // Invalidar cache de saldos
+      // FINANCIAL_STATE - Reservas afetam saldos em todas as telas
       queryClient.invalidateQueries({ queryKey: ['bookmaker-saldos'] });
+      queryClient.invalidateQueries({ queryKey: ['projeto-vinculos'] });
       
       return true;
     } catch (err) {
@@ -245,8 +246,9 @@ export function useStakeReservation({
           
           console.log('[useStakeReservation] Realtime update:', payload.eventType, record);
           
-          // Invalidar cache de saldos quando qualquer reserva muda
+          // FINANCIAL_STATE - Reservas afetam saldos em todas as telas
           queryClient.invalidateQueries({ queryKey: ['bookmaker-saldos'] });
+          queryClient.invalidateQueries({ queryKey: ['projeto-vinculos'] });
           
           // Atualizar mapa de reservas ativas
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {

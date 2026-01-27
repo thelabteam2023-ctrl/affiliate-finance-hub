@@ -58,9 +58,31 @@ export interface UseSurebetServiceReturn {
 export function useSurebetService(): UseSurebetServiceReturn {
   const queryClient = useQueryClient();
 
+  // Invalidar grupo FINANCIAL_STATE completo
   const invalidateSaldos = useCallback((projetoId: string) => {
+    // Saldos
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+    queryClient.invalidateQueries({ queryKey: ["saldo-operavel-rpc", projetoId] });
+    
+    // Apostas
     queryClient.invalidateQueries({ queryKey: ["apostas", projetoId] });
+    
+    // Vínculos
+    queryClient.invalidateQueries({ queryKey: ["projeto-vinculos", projetoId] });
+    
+    // KPIs
+    queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projetoId] });
+    
+    // Exposição
+    queryClient.invalidateQueries({ queryKey: ["exposicao-projeto", projetoId] });
+    
+    // Parceiros
+    queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+    queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
+    
+    console.log(`[useSurebetService] Invalidated FINANCIAL_STATE for project ${projetoId}`);
   }, [queryClient]);
 
   /**
