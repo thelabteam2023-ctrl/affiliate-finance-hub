@@ -163,6 +163,46 @@ export function useWalletTransitBalance() {
   }, [toast]);
 
   /**
+   * Destrava saldo diretamente (sem ledger_id)
+   * Usado quando o insert no ledger falha APÓS o lock ter sido feito
+   */
+  const unlockBalance = useCallback(async (
+    walletId: string,
+    valorUsd: number
+  ): Promise<TransitOperation> => {
+    try {
+      const { data, error } = await supabase.rpc('unlock_wallet_balance', {
+        p_wallet_id: walletId,
+        p_valor_usd: valorUsd
+      });
+
+      if (error) {
+        console.error('[unlockBalance] Error:', error);
+        return { success: false, error: error.message };
+      }
+
+      const result = data as unknown as RpcResponse;
+
+      if (!result?.success) {
+        return { success: false, error: result?.error };
+      }
+
+      console.log('[unlockBalance] Saldo liberado:', {
+        unlocked: (result as any).unlocked_amount,
+        newLocked: (result as any).new_locked_total
+      });
+
+      return {
+        success: true,
+        funds_released: (result as any).unlocked_amount
+      };
+    } catch (err) {
+      console.error('[unlockBalance] Exception:', err);
+      return { success: false, error: 'Erro ao destravar saldo' };
+    }
+  }, []);
+
+  /**
    * Confirma uma transação em trânsito (destravar e efetivar débito)
    * Deve ser chamado na CONCILIAÇÃO quando o valor chegar no destino
    */
@@ -296,6 +336,7 @@ export function useWalletTransitBalance() {
   return {
     getWalletBalances,
     lockBalance,
+    unlockBalance,
     confirmTransit,
     revertTransit,
     getPendingTransactions,

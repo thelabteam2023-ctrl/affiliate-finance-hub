@@ -153,7 +153,7 @@ export function CaixaTransacaoDialog({
     cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP,
     getRate, convertToBRL, source, dataSource, isUsingFallback 
   } = useCotacoes();
-  const { lockBalance } = useWalletTransitBalance();
+  const { lockBalance, unlockBalance } = useWalletTransitBalance();
   const [loading, setLoading] = useState(false);
 
   // Form state
@@ -2138,10 +2138,15 @@ export function CaixaTransacaoDialog({
         .single();
 
       if (error) {
-        // Se falhou ao inserir, destravar o saldo que foi reservado
+        // Se falhou ao inserir, DESTRAVAR o saldo que foi reservado imediatamente
         if (isTransacaoCryptoDeWallet) {
-          console.warn("[CRYPTO TRANSIT] Erro ao inserir ledger, saldo permanece travado até cleanup");
-          // O saldo permanecerá travado até ser revertido manualmente ou via job
+          console.warn("[CRYPTO TRANSIT] Erro ao inserir ledger, destravando saldo...");
+          const unlockResult = await unlockBalance(origemWalletId, valorUsdReferencia);
+          if (unlockResult.success) {
+            console.log("[CRYPTO TRANSIT] Saldo destravado com sucesso após falha no insert");
+          } else {
+            console.error("[CRYPTO TRANSIT] CRÍTICO: Falha ao destravar saldo:", unlockResult.error);
+          }
         }
         throw error;
       }
