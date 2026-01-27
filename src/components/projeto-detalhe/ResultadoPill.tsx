@@ -578,9 +578,7 @@ export function ResultadoPill({
               
               // MIGRADO PARA LEDGER: Creditar via RPC atômica
               const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
-              await creditarFreebetViaLedger(freebetPendente.bookmaker_id, freebetPendente.valor, 'LIBERACAO_PENDENTE', {
-                descricao: 'Freebet liberada após liquidação de aposta qualificadora',
-              });
+              await creditarFreebetViaLedger(freebetPendente.bookmaker_id, freebetPendente.valor, 'LIBERACAO_PENDENTE', { descricao: 'Freebet liberada após liquidação de aposta qualificadora' });
             } else if (valorFreebetGerada && valorFreebetGerada > 0) {
               // FALLBACK: Registro não existe, criar agora e liberar
               // Buscar dados da aposta para obter user_id e projeto_id
@@ -609,12 +607,7 @@ export function ResultadoPill({
                 
                 // MIGRADO PARA LEDGER: Creditar via RPC atômica
                 const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
-                await creditarFreebetViaLedger(bookmarkerId, valorFreebetGerada, 'FALLBACK_QUALIFICADORA', {
-                  projetoId: apostaData.projeto_id,
-                  userId: apostaData.user_id,
-                  workspaceId: apostaData.workspace_id,
-                  descricao: `Freebet criada via fallback para aposta ${apostaId.slice(0, 8)}`,
-                });
+                await creditarFreebetViaLedger(bookmarkerId, valorFreebetGerada, 'FALLBACK_QUALIFICADORA', { descricao: `Freebet criada via fallback para aposta ${apostaId.slice(0, 8)}` });
                 
                 console.log(`[ResultadoPill] Fallback: Criado freebet de ${valorFreebetGerada} para bookmaker ${bookmarkerId}`);
               }

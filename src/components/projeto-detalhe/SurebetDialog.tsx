@@ -2468,11 +2468,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       // MIGRADO PARA LEDGER: Só creditar saldo_freebet se a freebet for liberada
       if (status === "LIBERADA") {
         const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
-        await creditarFreebetViaLedger(bookmakerIdFreebet, valor, 'APOSTA_QUALIFICADORA', {
-          projetoId: projetoIdFreebet,
-          userId,
-          descricao: 'Freebet de aposta qualificadora (Arbitragem)',
-        });
+        await creditarFreebetViaLedger(bookmakerIdFreebet, valor, 'APOSTA_QUALIFICADORA', { descricao: 'Freebet de aposta qualificadora (Arbitragem)' });
       }
 
       // Registrar na tabela freebets_recebidas
@@ -2512,9 +2508,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
 
         // MIGRADO PARA LEDGER: Creditar via RPC atômica
         const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
-        await creditarFreebetViaLedger(freebetPendente.bookmaker_id, freebetPendente.valor, 'LIBERACAO_PENDENTE', {
-          descricao: 'Freebet liberada após liquidação de aposta',
-        });
+        await creditarFreebetViaLedger(freebetPendente.bookmaker_id, freebetPendente.valor, 'LIBERACAO_PENDENTE', { descricao: 'Freebet liberada após liquidação de aposta' });
       }
     } catch (error) {
       console.error("Erro ao liberar freebet pendente:", error);

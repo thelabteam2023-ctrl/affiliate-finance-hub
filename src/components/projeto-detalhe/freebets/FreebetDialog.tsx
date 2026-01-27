@@ -189,33 +189,19 @@ export function FreebetDialog({
           const delta = newContribution - oldContribution;
           if (delta > 0) {
             // Crédito adicional
-            await creditarFreebetViaLedger(newBookmakerId, delta, 'EDICAO_MANUAL', {
-              userId: user.id,
-              workspaceId,
-              descricao: `Ajuste de valor de freebet (edição): +${delta}`,
-            });
+            await creditarFreebetViaLedger(newBookmakerId, delta, 'EDICAO_MANUAL', { descricao: `Ajuste de valor de freebet (edição): +${delta}` });
           } else if (delta < 0) {
             // Débito (estorno parcial)
-            await estornarFreebetViaLedger(newBookmakerId, Math.abs(delta), 'Redução de valor (edição)', {
-              userId: user.id,
-              workspaceId,
-            });
+            await estornarFreebetViaLedger(newBookmakerId, Math.abs(delta), 'Redução de valor (edição)');
           }
         } else {
           // Different bookmaker - estornar da antiga, creditar na nova
           if (oldContribution > 0) {
-            await estornarFreebetViaLedger(oldBookmakerId, oldContribution, 'Transferência para outra casa (edição)', {
-              userId: user.id,
-              workspaceId,
-            });
+            await estornarFreebetViaLedger(oldBookmakerId, oldContribution, 'Transferência para outra casa (edição)');
           }
           
           if (newContribution > 0) {
-            await creditarFreebetViaLedger(newBookmakerId, newContribution, 'EDICAO_MANUAL', {
-              userId: user.id,
-              workspaceId,
-              descricao: `Freebet transferida de outra casa (edição)`,
-            });
+            await creditarFreebetViaLedger(newBookmakerId, newContribution, 'EDICAO_MANUAL', { descricao: `Freebet transferida de outra casa (edição)` });
           }
         }
       } else {
@@ -240,12 +226,7 @@ export function FreebetDialog({
         if (error) throw error;
 
         // MIGRADO PARA LEDGER: Creditar saldo_freebet via RPC atômica
-        await creditarFreebetViaLedger(data.bookmaker_id, data.valor, 'MANUAL', {
-          projetoId,
-          userId: user.id,
-          workspaceId,
-          descricao: 'Freebet adicionada manualmente',
-        });
+        await creditarFreebetViaLedger(data.bookmaker_id, data.valor, 'MANUAL', { descricao: 'Freebet adicionada manualmente' });
       }
 
       onSuccess();
