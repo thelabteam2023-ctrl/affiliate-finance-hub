@@ -4,7 +4,7 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
 import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
-import { useWalletTransitBalance } from "@/hooks/useWalletTransitBalance";
+
 import {
   Dialog,
   DialogContent,
@@ -153,7 +153,8 @@ export function CaixaTransacaoDialog({
     cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP,
     getRate, convertToBRL, source, dataSource, isUsingFallback 
   } = useCotacoes();
-  const { lockBalance, unlockBalance } = useWalletTransitBalance();
+  // NOTA: O lock de saldo é feito automaticamente pelo trigger do banco
+  // O hook useWalletTransitBalance não é mais necessário aqui
   const [loading, setLoading] = useState(false);
 
   // Form state
@@ -2102,32 +2103,23 @@ export function CaixaTransacaoDialog({
       }
 
       // =========================================================================
-      // DINHEIRO EM TRÂNSITO: Travar saldo da wallet ANTES de inserir no ledger
-      // Qualquer transação CRYPTO que sai de uma wallet deve travar o saldo
+      // DINHEIRO EM TRÂNSITO: O lock de saldo é feito AUTOMATICAMENTE pelo
+      // trigger tr_cash_ledger_lock_pending (AFTER INSERT) no banco de dados.
+      // 
+      // IMPORTANTE: NÃO fazer lock manual aqui para evitar duplicação!
+      // O trigger fn_cash_ledger_lock_pending_on_insert() já incrementa
+      // balance_locked quando status = 'PENDENTE' e origem_wallet_id existe.
       // =========================================================================
       const isTransacaoCryptoDeWallet = tipoMoeda === "CRYPTO" && origemWalletId;
       
       if (isTransacaoCryptoDeWallet) {
         // Definir transit_status como PENDING para transações crypto
+        // O lock será feito automaticamente pelo trigger do banco
         transactionData.transit_status = "PENDING";
         
-        // Travar o saldo na wallet ANTES de registrar a transação
-        const lockResult = await lockBalance(origemWalletId, valorUsdReferencia);
-        
-        if (!lockResult.success) {
-          toast({
-            title: "Erro ao travar saldo",
-            description: lockResult.error || "Não foi possível reservar o saldo na wallet",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        console.log("[CRYPTO TRANSIT] Saldo travado com sucesso:", {
+        console.log("[CRYPTO TRANSIT] Preparando transação com lock automático via trigger:", {
           walletId: origemWalletId,
-          valorTravado: lockResult.locked_amount,
-          novoTotalTravado: lockResult.new_locked_total,
-          saldoDisponivelRestante: lockResult.remaining_available,
+          valorQueSeraTravado: valorUsdReferencia,
         });
       }
 
@@ -2138,23 +2130,18 @@ export function CaixaTransacaoDialog({
         .single();
 
       if (error) {
-        // Se falhou ao inserir, DESTRAVAR o saldo que foi reservado imediatamente
-        if (isTransacaoCryptoDeWallet) {
-          console.warn("[CRYPTO TRANSIT] Erro ao inserir ledger, destravando saldo...");
-          const unlockResult = await unlockBalance(origemWalletId, valorUsdReferencia);
-          if (unlockResult.success) {
-            console.log("[CRYPTO TRANSIT] Saldo destravado com sucesso após falha no insert");
-          } else {
-            console.error("[CRYPTO TRANSIT] CRÍTICO: Falha ao destravar saldo:", unlockResult.error);
-          }
-        }
+        // NOTA: Se o INSERT falhou, o trigger NÃO executou, então não há lock para reverter
+        console.error("[CRYPTO TRANSIT] Erro ao inserir ledger:", error);
         throw error;
       }
 
-      // Atualizar o ledger com o ID para referência de transit (se aplicável)
+      // Log de sucesso - o trigger já travou o saldo automaticamente
       if (isTransacaoCryptoDeWallet && insertedData?.id) {
-        // Atualizar a referência no log de transit (opcional, para auditoria futura)
-        console.log("[CRYPTO TRANSIT] Transação registrada com transit_status PENDING, ledger_id:", insertedData.id);
+        console.log("[CRYPTO TRANSIT] Transação registrada com sucesso, lock aplicado via trigger:", {
+          ledger_id: insertedData.id,
+          wallet_id: origemWalletId,
+          valor_travado: valorUsdReferencia,
+        });
       }
 
       // =========================================================================
