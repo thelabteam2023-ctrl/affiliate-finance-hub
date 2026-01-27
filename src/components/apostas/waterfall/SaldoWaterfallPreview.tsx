@@ -33,10 +33,16 @@ interface SaldoWaterfallPreviewProps {
   moeda: string;
   showBreakdown?: boolean;
   className?: string;
-  /** Quando true, indica que esta é uma edição - o stake já está alocado na aposta */
+  /** Quando true, indica que esta é uma edição */
   isEditMode?: boolean;
-  /** Stake original da aposta (para edição) - usado para calcular saldo efetivo */
+  /** Stake original da aposta (para edição) */
   originalStake?: number;
+  /** 
+   * Resultado atual da aposta sendo editada.
+   * Se RED/MEIO_RED: stake já foi perdido (não está no saldo) → adiciona ao cálculo
+   * Se GREEN/VOID/PENDENTE: stake retornou ou está travado → não adiciona
+   */
+  currentResultado?: string | null;
 }
 
 /**
@@ -92,9 +98,19 @@ export function SaldoWaterfallPreview({
   className,
   isEditMode = false,
   originalStake = 0,
+  currentResultado = null,
 }: SaldoWaterfallPreviewProps) {
-  // Em modo de edição, o stake original já está "alocado" - adiciona de volta ao saldo disponível
-  const saldoRealEfetivo = isEditMode ? saldoReal + originalStake : saldoReal;
+  /**
+   * Lógica de ajuste de saldo em modo de edição:
+   * - RED/MEIO_RED: stake foi perdido, NÃO está no saldo atual → adicionar originalStake
+   * - PENDENTE: stake está "travado" (debitado mas não creditado) → já contabilizado, não adicionar
+   * - GREEN/VOID/MEIO_GREEN: stake retornou ao saldo → já contabilizado, não adicionar
+   * 
+   * Isso evita falsos positivos de "saldo insuficiente" ao editar apostas RED
+   */
+  const stakeJaFoiPerdido = currentResultado === 'RED' || currentResultado === 'MEIO_RED';
+  const ajusteSaldo = isEditMode && stakeJaFoiPerdido ? originalStake : 0;
+  const saldoRealEfetivo = saldoReal + ajusteSaldo;
   
   const breakdown = useMemo(
     () => calcularWaterfall(stake, saldoBonus, saldoFreebet, saldoRealEfetivo, usarFreebet),
