@@ -2894,9 +2894,10 @@ export type Database = {
           aposta_id: string | null
           bookmaker_id: string
           created_at: string
+          created_by: string | null
           descricao: string | null
           id: string
-          idempotency_key: string
+          idempotency_key: string | null
           metadata: Json | null
           moeda: string
           origem: string | null
@@ -2904,7 +2905,6 @@ export type Database = {
           reversed_event_id: string | null
           tipo_evento: string
           tipo_uso: string
-          user_id: string
           valor: number
           workspace_id: string
         }
@@ -2912,9 +2912,10 @@ export type Database = {
           aposta_id?: string | null
           bookmaker_id: string
           created_at?: string
+          created_by?: string | null
           descricao?: string | null
           id?: string
-          idempotency_key: string
+          idempotency_key?: string | null
           metadata?: Json | null
           moeda?: string
           origem?: string | null
@@ -2922,7 +2923,6 @@ export type Database = {
           reversed_event_id?: string | null
           tipo_evento: string
           tipo_uso?: string
-          user_id: string
           valor: number
           workspace_id: string
         }
@@ -2930,9 +2930,10 @@ export type Database = {
           aposta_id?: string | null
           bookmaker_id?: string
           created_at?: string
+          created_by?: string | null
           descricao?: string | null
           id?: string
-          idempotency_key?: string
+          idempotency_key?: string | null
           metadata?: Json | null
           moeda?: string
           origem?: string | null
@@ -2940,7 +2941,6 @@ export type Database = {
           reversed_event_id?: string | null
           tipo_evento?: string
           tipo_uso?: string
-          user_id?: string
           valor?: number
           workspace_id?: string
         }
@@ -8658,10 +8658,12 @@ export type Database = {
           diferenca_freebet: number | null
           diferenca_normal: number | null
           freebet_registrado: number | null
+          moeda: string | null
           saldo_registrado: number | null
           soma_eventos_freebet: number | null
           soma_eventos_normal: number | null
           status_auditoria: string | null
+          total_eventos: number | null
           workspace_id: string | null
         }
         Relationships: [
@@ -9443,17 +9445,6 @@ export type Database = {
     }
     Functions: {
       accept_workspace_invite: { Args: { _token: string }; Returns: Json }
-      adjust_bookmaker_balance_with_audit: {
-        Args: {
-          p_bookmaker_id: string
-          p_delta: number
-          p_observacoes?: string
-          p_origem: string
-          p_referencia_id?: string
-          p_referencia_tipo?: string
-        }
-        Returns: number
-      }
       admin_add_user_to_workspace: {
         Args: {
           _role?: Database["public"]["Enums"]["app_role"]
@@ -10058,10 +10049,27 @@ export type Database = {
         }
         Returns: Json
       }
-      criar_aposta_com_debito_v3: {
-        Args: { p_aposta_data: Json; p_pernas: Json }
+      criar_aposta_atomica_v3: {
+        Args: {
+          p_bookmaker_id: string
+          p_data_aposta?: string
+          p_esporte?: string
+          p_estrategia?: string
+          p_evento?: string
+          p_fonte_saldo?: string
+          p_forma_registro?: string
+          p_mercado?: string
+          p_observacoes?: string
+          p_odd: number
+          p_projeto_id: string
+          p_selecao: string
+          p_stake: number
+          p_user_id: string
+          p_workspace_id: string
+        }
         Returns: {
           aposta_id: string
+          event_id: string
           message: string
           success: boolean
         }[]
@@ -10080,6 +10088,13 @@ export type Database = {
       debit_multiple_bookmakers: {
         Args: { p_debits: Json; p_origem?: string }
         Returns: Json
+      }
+      deletar_aposta_v4: {
+        Args: { p_aposta_id: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
       }
       encerrar_ciclo_e_criar_proximo: {
         Args: { p_ciclo_id: string; p_excedente?: number; p_gatilho: string }
@@ -10399,24 +10414,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
-      liquidar_aposta_atomica: {
-        Args: {
-          p_aposta_id: string
-          p_lucro_prejuizo?: number
-          p_resultado: string
-          p_resultados_pernas?: Json
-        }
-        Returns: Json
-      }
-      liquidar_aposta_atomica_v2: {
-        Args: {
-          p_aposta_id: string
-          p_lucro_prejuizo?: number
-          p_resultado: string
-        }
-        Returns: Json
-      }
-      liquidar_aposta_v3: {
+      liquidar_aposta_v4: {
         Args: {
           p_aposta_id: string
           p_lucro_prejuizo?: number
@@ -10456,27 +10454,50 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
-      process_financial_event: {
-        Args: {
-          p_aposta_id?: string
-          p_bookmaker_id: string
-          p_descricao?: string
-          p_idempotency_key?: string
-          p_metadata?: Json
-          p_moeda?: string
-          p_origem?: string
-          p_reversed_event_id?: string
-          p_tipo_evento?: string
-          p_tipo_uso?: string
-          p_valor?: number
-        }
-        Returns: {
-          error_message: string
-          event_id: string
-          new_balance: number
-          success: boolean
-        }[]
-      }
+      process_financial_event:
+        | {
+            Args: {
+              p_aposta_id?: string
+              p_bookmaker_id: string
+              p_descricao?: string
+              p_idempotency_key?: string
+              p_metadata?: string
+              p_moeda?: string
+              p_origem?: string
+              p_reversed_event_id?: string
+              p_tipo_evento?: string
+              p_tipo_uso?: string
+              p_valor?: number
+            }
+            Returns: {
+              error_message: string
+              event_id: string
+              new_balance: number
+              new_freebet_balance: number
+              success: boolean
+            }[]
+          }
+        | {
+            Args: {
+              p_aposta_id?: string
+              p_bookmaker_id: string
+              p_descricao?: string
+              p_idempotency_key?: string
+              p_metadata?: Json
+              p_moeda?: string
+              p_origem?: string
+              p_reversed_event_id?: string
+              p_tipo_evento?: string
+              p_tipo_uso?: string
+              p_valor?: number
+            }
+            Returns: {
+              error_message: string
+              event_id: string
+              new_balance: number
+              success: boolean
+            }[]
+          }
       processar_bonus_aposta: {
         Args: {
           p_aposta_id: string
@@ -10535,17 +10556,6 @@ export type Database = {
               success: boolean
             }[]
           }
-      recalcular_saldo_bookmaker: {
-        Args: { p_bookmaker_id: string }
-        Returns: number
-      }
-      recalcular_saldo_bookmaker_v2: {
-        Args: { p_bookmaker_id: string }
-        Returns: {
-          saldo_freebet_calculado: number
-          saldo_real_calculado: number
-        }[]
-      }
       recalcular_saldos_apos_correcao_stablecoins: {
         Args: { p_workspace_id?: string }
         Returns: {
@@ -10590,14 +10600,6 @@ export type Database = {
         Args: { p_email: string; p_ip_address?: string; p_success: boolean }
         Returns: undefined
       }
-      reliquidar_aposta_atomica: {
-        Args: {
-          p_aposta_id: string
-          p_lucro_prejuizo?: number
-          p_resultado_novo: string
-        }
-        Returns: Json
-      }
       renew_subscription: {
         Args: { p_new_price_id?: string; p_workspace_id: string }
         Returns: string
@@ -10622,11 +10624,7 @@ export type Database = {
         Args: { p_estrategia: string; p_resultado: string }
         Returns: string
       }
-      reverter_liquidacao_para_pendente: {
-        Args: { p_aposta_id: string }
-        Returns: Json
-      }
-      reverter_liquidacao_v3: {
+      reverter_liquidacao_v4: {
         Args: { p_aposta_id: string }
         Returns: {
           message: string

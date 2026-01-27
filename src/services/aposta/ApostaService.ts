@@ -10,6 +10,11 @@
  * 2. Dual-write atômico (apostas_unificada + apostas_pernas)
  * 3. Fail fast - erros explícitos, nunca silenciosos
  * 4. Auditoria completa de operações
+ * 
+ * ARQUITETURA FINANCEIRA v7:
+ * - Usa RPCs v4 (criar_aposta_atomica_v3, liquidar_aposta_v4, reverter_liquidacao_v4)
+ * - Toda movimentação financeira gera eventos em financial_events
+ * - NENHUM trigger atualiza saldo - tudo via RPC
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -24,30 +29,24 @@ import type {
 } from "./types";
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+function inferFonteSaldo(contexto?: string, estrategia?: string, usarFreebet?: boolean): string {
+  if (usarFreebet) return 'FREEBET';
+  return 'REAL';
+}
+
+function detectarMoeda(pernas: PernaInput[]): string {
+  if (pernas.length === 0) return 'BRL';
+  const moedas = new Set(pernas.map(p => p.moeda || 'BRL'));
+  return moedas.size === 1 ? [...moedas][0] : 'MULTI';
+}
+
+// ============================================================================
 // CRIAR APOSTA
 // ============================================================================
 
-/**
- * Cria uma nova aposta com garantia de integridade
- * 
- * @param input - Dados da aposta a criar
- * @returns Resultado com ID da aposta ou erro detalhado
- * 
- * @example
- * const result = await criarAposta({
- *   projeto_id: "xxx",
- *   forma_registro: "ARBITRAGEM",
- *   estrategia: "SUREBET",
- *   pernas: [...],
- * });
- * 
- * if (!result.success) {
- *   console.error(result.error);
- *   return;
- * }
- * 
- * console.log("Aposta criada:", result.data.id);
- */
 export async function criarAposta(
   input: CriarApostaInput
 ): Promise<ApostaServiceResult<{ id: string }>> {
@@ -93,23 +92,20 @@ export async function criarAposta(
   let valorBrlReferencia: number | null = null;
 
   if (isArbitragem && pernas.length > 0) {
-    // Detectar multi-currency
     const moedas = new Set(pernas.map(p => p.moeda));
     const isMulticurrency = moedas.size > 1;
 
     if (isMulticurrency) {
-      // Para multi-currency, usar valores BRL de referência
       valorBrlReferencia = pernas.reduce(
         (sum, p) => sum + (p.stake_brl_referencia || p.stake),
         0
       );
-      stakeTotal = null; // Não faz sentido somar moedas diferentes
+      stakeTotal = null;
     } else {
       stakeTotal = pernas.reduce((sum, p) => sum + p.stake, 0);
       valorBrlReferencia = null;
     }
 
-    // Calcular ROI esperado
     const inverseSumOdds = pernas.reduce((sum, p) => sum + (1 / p.odd), 0);
     roiEsperado = (1 - inverseSumOdds) * 100;
     lucroEsperado = (stakeTotal || valorBrlReferencia || 0) * (roiEsperado / 100);
@@ -138,10 +134,7 @@ export async function criarAposta(
     user_id: input.user_id,
     forma_registro: input.forma_registro,
     estrategia: input.estrategia,
-    // DEPRECATED: contexto_operacional é opcional e interno
     contexto_operacional: input.contexto_operacional || 'NORMAL',
-    // NOVA ARQUITETURA: fonte_saldo determinado por usar_freebet toggle
-    // Bônus é dinheiro normal, não requer contexto especial
     fonte_saldo: input.fonte_saldo || inferFonteSaldo(input.contexto_operacional, input.estrategia, input.usar_freebet),
     usar_freebet: input.usar_freebet || false,
     data_aposta: input.data_aposta,
@@ -226,7 +219,6 @@ export async function criarAposta(
         .insert(pernasInsert);
 
       if (pernasError) {
-        // ROLLBACK: Deletar aposta inserida
         console.error("[ApostaService] Erro ao inserir apostas_pernas, fazendo rollback:", pernasError);
         
         await supabase
@@ -251,18 +243,14 @@ export async function criarAposta(
       });
     }
 
-    // ================================================================
-    // SUCESSO
-    // ================================================================
-    console.log("[ApostaService] Aposta criada com sucesso:", apostaId);
-    
+    console.log("[ApostaService] ✅ Aposta criada:", apostaId);
     return {
       success: true,
       data: { id: apostaId },
     };
 
   } catch (err: any) {
-    console.error("[ApostaService] Exceção não tratada:", err);
+    console.error("[ApostaService] Exceção na criação:", err);
     return {
       success: false,
       error: {
@@ -278,108 +266,52 @@ export async function criarAposta(
 // ATUALIZAR APOSTA
 // ============================================================================
 
-/**
- * Atualiza uma aposta existente
- * 
- * IMPORTANTE: Estratégia, forma_registro e contexto_operacional
- * são IMUTÁVEIS após a criação.
- */
 export async function atualizarAposta(
+  apostaId: string,
   input: AtualizarApostaInput
-): Promise<ApostaServiceResult<{ id: string }>> {
-  console.log("[ApostaService] Iniciando atualização de aposta:", input.id);
+): Promise<ApostaServiceResult> {
+  console.log("[ApostaService] Iniciando atualização:", apostaId, input);
 
-  // ================================================================
-  // ETAPA 1: VALIDAR INVARIANTES
-  // ================================================================
-  const validation = await validateUpdateInvariants(input.id, {
-    pernas: input.pernas,
-  });
-
+  // Validar invariantes de atualização
+  const validation = await validateUpdateInvariants(apostaId, input);
+  
   if (!validation.valid) {
-    console.error("[ApostaService] Invariantes violadas na atualização:", validation.violations);
     return {
       success: false,
       error: {
         code: 'INVARIANT_VIOLATION',
         message: formatViolations(validation.violations),
-        invariant: validation.violations[0]?.invariant,
         details: { violations: validation.violations },
       },
     };
   }
 
-  // ================================================================
-  // ETAPA 2: ATUALIZAR
-  // ================================================================
   try {
-    const updateData: Record<string, any> = {};
-    
-    if (input.evento !== undefined) updateData.evento = input.evento;
-    if (input.esporte !== undefined) updateData.esporte = input.esporte;
-    if (input.mercado !== undefined) updateData.mercado = input.mercado;
-    if (input.observacoes !== undefined) updateData.observacoes = input.observacoes;
-    
-    if (input.pernas !== undefined) {
-      updateData.pernas = JSON.stringify(input.pernas);
-    }
-
-    // 2a. Atualizar aposta principal
-    const { error: updateError } = await supabase
+    const { error } = await supabase
       .from('apostas_unificada')
-      .update(updateData)
-      .eq('id', input.id);
+      .update(input)
+      .eq('id', apostaId);
 
-    if (updateError) {
+    if (error) {
       return {
         success: false,
         error: {
           code: 'UPDATE_FAILED',
-          message: `Falha ao atualizar aposta: ${updateError.message}`,
-          details: { error: updateError },
+          message: `Falha ao atualizar: ${error.message}`,
+          details: { error },
         },
       };
     }
 
-    // 2b. Sincronizar pernas (se fornecidas)
-    if (input.pernas && input.pernas.length > 0) {
-      // Deletar pernas antigas
-      const { error: deleteError } = await supabase
-        .from('apostas_pernas')
-        .delete()
-        .eq('aposta_id', input.id);
-
-      if (deleteError) {
-        console.warn("[ApostaService] Erro ao deletar pernas antigas:", deleteError);
-      }
-
-      // Inserir novas pernas
-      const pernasInsert = pernasToInserts(input.id, input.pernas);
-      const { error: insertError } = await supabase
-        .from('apostas_pernas')
-        .insert(pernasInsert);
-
-      if (insertError) {
-        console.error("[ApostaService] Erro ao inserir novas pernas:", insertError);
-        // Não fazemos rollback aqui pois a aposta já foi atualizada
-        // mas logamos o erro para investigação
-      }
-    }
-
-    console.log("[ApostaService] Aposta atualizada com sucesso:", input.id);
-    
-    return {
-      success: true,
-      data: { id: input.id },
-    };
+    console.log("[ApostaService] ✅ Aposta atualizada:", apostaId);
+    return { success: true };
 
   } catch (err: any) {
-    console.error("[ApostaService] Exceção na atualização:", err);
     return {
       success: false,
       error: {
         code: 'UNEXPECTED_ERROR',
-        message: err.message || 'Erro inesperado ao atualizar aposta',
+        message: err.message,
         details: { error: err },
       },
     };
@@ -391,108 +323,46 @@ export async function atualizarAposta(
 // ============================================================================
 
 /**
- * Deleta uma aposta e suas pernas
+ * Deleta uma aposta usando o motor de eventos v7.
+ * O RPC deletar_aposta_v4 cuida de:
+ * 1. Reverter liquidação se necessário
+ * 2. Reverter stake via eventos REVERSAL
+ * 3. Deletar pernas e aposta
  */
 export async function deletarAposta(
   apostaId: string
 ): Promise<ApostaServiceResult> {
-  console.log("[ApostaService] Iniciando deleção de aposta:", apostaId);
+  console.log("[ApostaService] Iniciando deleção v7:", apostaId);
 
   try {
-    // 0) Carregar estado atual para decidir reversão
-    const { data: aposta, error: fetchError } = await supabase
-      .from('apostas_unificada')
-      .select('id, status, resultado')
-      .eq('id', apostaId)
-      .single();
+    const { data, error } = await supabase.rpc('deletar_aposta_v4', {
+      p_aposta_id: apostaId,
+    });
 
-    if (fetchError || !aposta) {
+    if (error) {
+      console.error("[ApostaService] Erro RPC deletar_aposta_v4:", error);
       return {
         success: false,
         error: {
-          code: 'BET_NOT_FOUND',
-          message: fetchError?.message || 'Aposta não encontrada',
-          details: { error: fetchError },
+          code: 'DELETE_RPC_ERROR',
+          message: `Falha ao deletar aposta: ${error.message}`,
+          details: { error },
         },
       };
     }
 
-    const statusAtual = (aposta.status || 'PENDENTE') as string;
-    const resultadoAtual = (aposta.resultado || 'PENDENTE') as string;
-    const jaRefundado = resultadoAtual === 'VOID' || resultadoAtual === 'REEMBOLSO';
-
-    // 1) Se estava liquidada, reverter usando o motor de eventos v3
-    if (statusAtual === 'LIQUIDADA') {
-      const { data: revertData, error: revertError } = await supabase.rpc(
-        'reverter_liquidacao_v3',
-        { p_aposta_id: apostaId }
-      );
-
-      if (revertError) {
-        return {
-          success: false,
-          error: {
-            code: 'REVERT_TO_PENDING_FAILED',
-            message: `Falha ao reverter aposta: ${revertError.message}`,
-            details: { error: revertError },
-          },
-        };
-      }
-
-      const revertResult = (revertData as Array<{ success: boolean; message?: string }>)?.[0];
-      if (revertResult && !revertResult.success) {
-        return {
-          success: false,
-          error: {
-            code: 'REVERT_TO_PENDING_FAILED',
-            message: revertResult.message || 'Falha ao reverter aposta para PENDENTE',
-            details: { revertResult },
-          },
-        };
-      }
-    }
-
-    // 2) Garantir que o stake seja devolvido (Waterfall) antes de excluir.
-    // Estratégia: liquidar como VOID (crédito de devolução) e depois apagar o registro.
-    if (!jaRefundado) {
-      const voidResult = await liquidarAposta({
-        id: apostaId,
-        resultado: 'VOID',
-        lucro_prejuizo: 0,
-      });
-
-      if (!voidResult.success) return voidResult;
-    }
-
-    // 3) Deletar pernas primeiro (FK constraint)
-    const { error: pernasError } = await supabase
-      .from('apostas_pernas')
-      .delete()
-      .eq('aposta_id', apostaId);
-
-    if (pernasError) {
-      console.warn("[ApostaService] Erro ao deletar pernas:", pernasError);
-    }
-
-    // 4) Deletar aposta
-    const { error: apostaError } = await supabase
-      .from('apostas_unificada')
-      .delete()
-      .eq('id', apostaId);
-
-    if (apostaError) {
+    const result = data?.[0];
+    if (!result?.success) {
       return {
         success: false,
         error: {
           code: 'DELETE_FAILED',
-          message: `Falha ao deletar aposta: ${apostaError.message}`,
-          details: { error: apostaError },
+          message: result?.message || 'Falha ao deletar aposta',
         },
       };
     }
 
-    console.log("[ApostaService] Aposta deletada com sucesso:", apostaId);
-
+    console.log("[ApostaService] ✅ Aposta deletada:", apostaId);
     return { success: true };
 
   } catch (err: any) {
@@ -513,30 +383,27 @@ export async function deletarAposta(
 // ============================================================================
 
 /**
- * Liquida uma aposta usando o motor de eventos v6
- * 
- * NOVA ARQUITETURA (financial_events):
- * 1. Usa liquidar_aposta_v3 que emite eventos PAYOUT_*
- * 2. Trigger tr_financial_event_sync recalcula saldo automaticamente
- * 3. Saldo = SUM(financial_events.valor)
- * 
- * O impacto financeiro REAL só acontece aqui, não na criação!
+ * Liquida uma aposta usando o motor de eventos v7.
+ * O RPC liquidar_aposta_v4 cuida de:
+ * 1. Calcular payout baseado no resultado
+ * 2. Criar eventos em financial_events
+ * 3. Atualizar saldo da bookmaker
+ * 4. Atualizar status da aposta
  */
 export async function liquidarAposta(
   input: LiquidarApostaInput
 ): Promise<ApostaServiceResult> {
-  console.log("[ApostaService] Iniciando liquidação v3:", input.id, input.resultado);
+  console.log("[ApostaService] Iniciando liquidação v7:", input.id, input.resultado);
 
   try {
-    // Chamar RPC v3 (motor de eventos)
-    const { data, error } = await supabase.rpc('liquidar_aposta_v3', {
+    const { data, error } = await supabase.rpc('liquidar_aposta_v4', {
       p_aposta_id: input.id,
       p_resultado: input.resultado,
       p_lucro_prejuizo: input.lucro_prejuizo ?? null,
     });
 
     if (error) {
-      console.error("[ApostaService] Erro RPC liquidar_aposta_v3:", error);
+      console.error("[ApostaService] Erro RPC liquidar_aposta_v4:", error);
       return {
         success: false,
         error: {
@@ -547,27 +414,21 @@ export async function liquidarAposta(
       };
     }
 
-    const result = data as Array<{
-      success: boolean;
-      message?: string;
-      events_created?: number;
-    }>;
-
-    const firstResult = result?.[0];
-    if (!firstResult?.success) {
-      console.error("[ApostaService] RPC retornou erro:", firstResult);
+    const result = data?.[0];
+    if (!result?.success) {
+      console.error("[ApostaService] RPC retornou erro:", result);
       return {
         success: false,
         error: {
           code: 'LIQUIDATION_FAILED',
-          message: firstResult?.message || 'Falha ao liquidar aposta',
+          message: result?.message || 'Falha ao liquidar aposta',
         },
       };
     }
 
-    console.log("[ApostaService] Aposta liquidada com sucesso:", input.id, {
+    console.log("[ApostaService] ✅ Aposta liquidada:", input.id, {
       resultado: input.resultado,
-      events_created: firstResult.events_created,
+      events_created: result.events_created,
     });
     
     return { success: true };
@@ -590,23 +451,16 @@ export async function liquidarAposta(
 // ============================================================================
 
 /**
- * Reliquida uma aposta (muda resultado de uma aposta já liquidada)
- * 
- * NOVA ARQUITETURA (financial_events v3):
- * 1. Usa reverter_liquidacao_v3 para reverter eventos anteriores
- * 2. Usa liquidar_aposta_v3 para aplicar novo resultado
- * 3. Trigger tr_financial_event_sync recalcula saldos
- * 
- * @param apostaId - ID da aposta
- * @param novoResultado - Novo resultado a aplicar
- * @param lucroPrejuizo - Lucro/prejuízo calculado (opcional)
+ * Reliquida uma aposta (muda resultado de uma aposta já liquidada).
+ * Usa reverter_liquidacao_v4 + liquidar_aposta_v4 para garantir
+ * que eventos de reversão sejam criados corretamente.
  */
 export async function reliquidarAposta(
   apostaId: string,
   novoResultado: string,
   lucroPrejuizo?: number
 ): Promise<ApostaServiceResult<{ resultado_anterior?: string; impacto_total?: number }>> {
-  console.log("[ApostaService] Iniciando reliquidação v3:", apostaId, novoResultado);
+  console.log("[ApostaService] Iniciando reliquidação v7:", apostaId, novoResultado);
 
   try {
     // Buscar resultado anterior
@@ -635,7 +489,7 @@ export async function reliquidarAposta(
     }
 
     // 1. Reverter liquidação anterior
-    const { data: revertData, error: revertError } = await supabase.rpc('reverter_liquidacao_v3', {
+    const { data: revertData, error: revertError } = await supabase.rpc('reverter_liquidacao_v4', {
       p_aposta_id: apostaId,
     });
 
@@ -651,19 +505,19 @@ export async function reliquidarAposta(
       };
     }
 
-    const revertResult = revertData as Array<{ success: boolean; message?: string }>;
-    if (!revertResult?.[0]?.success) {
+    const revertResult = revertData?.[0];
+    if (!revertResult?.success) {
       return {
         success: false,
         error: {
           code: 'REVERT_FAILED',
-          message: revertResult?.[0]?.message || 'Falha ao reverter liquidação',
+          message: revertResult?.message || 'Falha ao reverter liquidação',
         },
       };
     }
 
     // 2. Aplicar novo resultado
-    const { data: liquidData, error: liquidError } = await supabase.rpc('liquidar_aposta_v3', {
+    const { data: liquidData, error: liquidError } = await supabase.rpc('liquidar_aposta_v4', {
       p_aposta_id: apostaId,
       p_resultado: novoResultado,
       p_lucro_prejuizo: lucroPrejuizo ?? null,
@@ -681,28 +535,26 @@ export async function reliquidarAposta(
       };
     }
 
-    const liquidResult = liquidData as Array<{ success: boolean; message?: string; events_created?: number }>;
-    if (!liquidResult?.[0]?.success) {
+    const liquidResult = liquidData?.[0];
+    if (!liquidResult?.success) {
       return {
         success: false,
         error: {
           code: 'RELIQUIDATION_FAILED',
-          message: liquidResult?.[0]?.message || 'Falha ao reliquidar aposta',
+          message: liquidResult?.message || 'Falha ao reliquidar aposta',
         },
       };
     }
 
-    console.log("[ApostaService] Aposta reliquidada com sucesso:", apostaId, {
+    console.log("[ApostaService] ✅ Aposta reliquidada:", apostaId, {
       resultado_anterior: resultadoAnterior,
       resultado_novo: novoResultado,
-      events_created: liquidResult[0].events_created,
+      events_created: liquidResult.events_created,
     });
     
-    return { 
+    return {
       success: true,
-      data: {
-        resultado_anterior: resultadoAnterior || undefined,
-      }
+      data: { resultado_anterior: resultadoAnterior || undefined },
     };
 
   } catch (err: any) {
@@ -722,110 +574,19 @@ export async function reliquidarAposta(
 // HEALTH CHECK
 // ============================================================================
 
-/**
- * Verifica integridade do sistema de apostas
- * Identifica apostas órfãs, pernas sem aposta, etc.
- */
-export async function healthCheck(
-  projetoId: string
-): Promise<{
-  healthy: boolean;
-  issues: Array<{
-    type: string;
-    message: string;
-    count: number;
-    sample_ids?: string[];
-  }>;
-}> {
-  const issues: Array<{
-    type: string;
-    message: string;
-    count: number;
-    sample_ids?: string[];
-  }> = [];
-
-  // 1. Apostas ARBITRAGEM sem pernas em apostas_pernas
-  const { data: apostasOrfas } = await supabase
-    .from('apostas_unificada')
-    .select('id')
-    .eq('projeto_id', projetoId)
-    .eq('forma_registro', 'ARBITRAGEM')
-    .not('pernas', 'is', null);
-
-  if (apostasOrfas && apostasOrfas.length > 0) {
-    const apostasIds = apostasOrfas.map(a => a.id);
+export async function healthCheck(): Promise<{ ok: boolean; message: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('apostas_unificada')
+      .select('id')
+      .limit(1);
     
-    const { data: pernasExistentes } = await supabase
-      .from('apostas_pernas')
-      .select('aposta_id')
-      .in('aposta_id', apostasIds);
-
-    const comPernas = new Set(pernasExistentes?.map(p => p.aposta_id) || []);
-    const semPernas = apostasIds.filter(id => !comPernas.has(id));
-
-    if (semPernas.length > 0) {
-      issues.push({
-        type: 'ORPHAN_ARBITRAGEM',
-        message: 'Apostas ARBITRAGEM sem registros em apostas_pernas',
-        count: semPernas.length,
-        sample_ids: semPernas.slice(0, 5),
-      });
+    if (error) {
+      return { ok: false, message: `Database error: ${error.message}` };
     }
+    
+    return { ok: true, message: 'ApostaService v7 operational' };
+  } catch (err: any) {
+    return { ok: false, message: `Exception: ${err.message}` };
   }
-
-  // 2. Verificação de consistência pode ser expandida futuramente
-  // com RPCs dedicadas para auditoria de integridade
-
-  return {
-    healthy: issues.length === 0,
-    issues,
-  };
-}
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Determina a fonte de saldo (VERDADE FINANCEIRA)
- * 
- * NOVA ARQUITETURA:
- * - usar_freebet = true  → FREEBET (debita saldo_freebet)
- * - usar_freebet = false → NORMAL/REAL (debita saldo_real, que inclui bônus)
- * 
- * Estratégia é apenas classificação analítica, NÃO afeta débito.
- * Contexto operacional é DEPRECATED para decisões financeiras.
- */
-function inferFonteSaldo(
-  contexto: string | null | undefined,
-  estrategia: string | null | undefined,
-  usarFreebet?: boolean
-): string {
-  // NOVA REGRA: usar_freebet toggle é a verdade absoluta
-  if (usarFreebet === true) return 'FREEBET';
-  if (usarFreebet === false) return 'REAL';
-  
-  // FALLBACK para retrocompatibilidade (quando usar_freebet não fornecido)
-  // Estratégias de extração sugerem o pool correspondente
-  if (estrategia === 'EXTRACAO_FREEBET') return 'FREEBET';
-  
-  // IMPORTANTE: EXTRACAO_BONUS agora usa REAL (bônus = dinheiro normal)
-  // if (estrategia === 'EXTRACAO_BONUS') return 'BONUS'; // DEPRECATED
-  
-  // Contexto é apenas fallback histórico
-  if (contexto === 'FREEBET') return 'FREEBET';
-  // if (contexto === 'BONUS') return 'BONUS'; // DEPRECATED
-  
-  // Default: REAL (inclui bônus unificado)
-  return 'REAL';
-}
-
-function detectarMoeda(pernas: PernaInput[]): string {
-  if (pernas.length === 0) return 'BRL';
-  
-  const moedas = new Set(pernas.map(p => p.moeda));
-  
-  if (moedas.size > 1) return 'MULTI';
-  
-  return pernas[0].moeda || 'BRL';
 }
