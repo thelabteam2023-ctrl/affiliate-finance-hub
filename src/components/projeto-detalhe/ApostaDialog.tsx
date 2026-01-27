@@ -1877,6 +1877,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         const houveMudancaOdd = oddAnterior !== apostaData.odd;
         const houveMudancaResultado = resultadoAnterior !== novoResultado;
         const houveMudancaFinanceira = houveMudancaBookmaker || houveMudancaStake || houveMudancaOdd || houveMudancaResultado;
+
+        // Helper: somente resultados suportados pelo RPC liquidar_aposta_v4
+        const isResultadoV4 = [
+          "GREEN",
+          "RED",
+          "VOID",
+          "MEIO_GREEN",
+          "MEIO_RED",
+        ].includes(statusResultado);
         
         // ================================================================
         // CASO ESPECIAL: LIQUIDADA → PENDENTE (reversão pura)
@@ -1927,6 +1936,86 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           // Invalidar caches de saldo
           await invalidateSaldos(projetoId);
           
+        } else if (
+          apostaEstaLiquidada &&
+          houveMudancaResultado &&
+          !houveMudancaBookmaker &&
+          !houveMudancaStake &&
+          !houveMudancaOdd &&
+          !agoraPendente &&
+          isResultadoV4
+        ) {
+          // ================================================================
+          // CASO: LIQUIDADA → OUTRO RESULTADO (APENAS RESULTADO)
+          // Fluxo correto e determinístico:
+          // 1) reverter_liquidacao_v4 (reversão total)
+          // 2) liquidar_aposta_v4 (nova liquidação)
+          // Isso garante criação de REVERSAL + atualização correta do saldo.
+          // ================================================================
+          console.log(
+            "[ApostaDialog] LIQUIDADA → outro resultado (somente resultado): usando reverter_liquidacao_v4 + liquidar_aposta_v4",
+            {
+              apostaId: aposta.id,
+              resultadoAnterior,
+              novoResultado: statusResultado,
+            }
+          );
+
+          const { reverterLiquidacao, liquidarAposta } = await import(
+            "@/lib/financialEngine"
+          );
+
+          const revertResult = await reverterLiquidacao(aposta.id);
+          if (!revertResult.success) {
+            throw new Error(revertResult.message || "Erro ao reverter liquidação");
+          }
+
+          const reliqResult = await liquidarAposta(
+            aposta.id,
+            statusResultado as "GREEN" | "RED" | "VOID" | "MEIO_GREEN" | "MEIO_RED",
+            lucroPrejuizo
+          );
+
+          if (!reliqResult.success) {
+            throw new Error(reliqResult.message || "Erro ao reliquidar aposta");
+          }
+
+          // Atualizar campos que o RPC não atualiza (e.g. valor_retorno + campos descritivos)
+          const { error: updateError } = await supabase
+            .from("apostas_unificada")
+            .update({
+              valor_retorno: apostaData.valor_retorno,
+              evento: apostaData.evento,
+              mercado: apostaData.mercado,
+              esporte: apostaData.esporte,
+              selecao: apostaData.selecao,
+              observacoes: apostaData.observacoes,
+              data_aposta: apostaData.data_aposta,
+              // Campos de exchange/cobertura
+              modo_entrada: apostaData.modo_entrada,
+              lay_exchange: apostaData.lay_exchange,
+              lay_odd: apostaData.lay_odd,
+              lay_stake: apostaData.lay_stake,
+              lay_liability: apostaData.lay_liability,
+              lay_comissao: apostaData.lay_comissao,
+              back_em_exchange: apostaData.back_em_exchange,
+              back_comissao: apostaData.back_comissao,
+              // Campos de freebet
+              gerou_freebet: apostaData.gerou_freebet,
+              valor_freebet_gerada: apostaData.valor_freebet_gerada,
+              tipo_freebet: apostaData.tipo_freebet,
+            })
+            .eq("id", aposta.id);
+
+          if (updateError) {
+            console.warn(
+              "[ApostaDialog] Erro ao atualizar campos complementares pós-reliquidação:",
+              updateError
+            );
+          }
+
+          await invalidateSaldos(projetoId);
+
         } else if (apostaEstaLiquidada && houveMudancaFinanceira && !agoraPendente) {
           // ================================================================
           // CASO: LIQUIDADA → OUTRO RESULTADO (re-liquidação)
