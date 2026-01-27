@@ -73,10 +73,10 @@ export function useSaldoOperavel(projetoId: string) {
       return (data || []) as BookmakerSaldoCompleto[];
     },
     enabled: !!projetoId,
-    staleTime: 60000, // 60 segundos - prevents refetch cascade from rate changes
-    gcTime: 5 * 60 * 1000, // 5 minutes cache
-    retry: 2, // Retry até 2 vezes em caso de erro
-    refetchOnWindowFocus: false, // Prevent refetch on tab switch that could cascade
+    staleTime: 5000, // 5 segundos - permite reatividade após invalidação
+    gcTime: 60 * 1000, // 1 minuto cache
+    retry: 2,
+    refetchOnWindowFocus: false,
   });
 
   // Query separada para rollover por casa (individual)
