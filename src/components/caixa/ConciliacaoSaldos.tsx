@@ -34,6 +34,7 @@ import {
   Loader2,
   HelpCircle,
   History,
+  Lock,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
@@ -47,6 +48,7 @@ import {
   registrarPerdaCambialViaLedger,
   getBookmakerMoeda 
 } from "@/lib/ledgerService";
+import { useWalletTransitBalance } from "@/hooks/useWalletTransitBalance";
 import { OperationsSubTabHeader } from "@/components/projeto-detalhe/operations/OperationsSubTabHeader";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { getFirstLastName } from "@/lib/utils";
@@ -104,6 +106,7 @@ export function ConciliacaoSaldos({
   const { user } = useAuth();
   const { workspace } = useWorkspace();
   const { getLogoUrl } = useBookmakerLogoMap();
+  const { confirmTransit } = useWalletTransitBalance();
   
   // Sub-tab state
   const [subTab, setSubTab] = useState<"abertas" | "historico">("abertas");
@@ -274,6 +277,7 @@ export function ConciliacaoSaldos({
 
       // 1. Atualizar transação com STATUS GUARD atômico para evitar concorrência
       // CRÍTICO: .eq("status", "PENDENTE") garante que apenas UMA request pode conciliar
+      // Para transações CRYPTO: também confirma o transit_status
       const { data: updateResult, error: updateError } = await supabase
         .from("cash_ledger")
         .update({
@@ -282,6 +286,8 @@ export function ConciliacaoSaldos({
           valor_confirmado: valorReal, // Novo campo: valor REAL para fins operacionais
           valor_destino: valorReal, // Atualizar valor_destino para trigger de saldo
           valor: valorReal, // Atualizar valor canônico
+          // Se é transação crypto com origem wallet, confirma o trânsito
+          transit_status: isCrypto && selectedTransaction.origem_wallet_id ? "CONFIRMED" : selectedTransaction.transit_status,
           cotacao_implicita: isCrypto && hasDiferenca && selectedTransaction.qtd_coin 
             ? (selectedTransaction.qtd_coin / valorReal) 
             : null,
@@ -302,6 +308,17 @@ export function ConciliacaoSaldos({
         setConfirmDialog(false);
         setSelectedTransaction(null);
         return;
+      }
+
+      // 2. Se é transação CRYPTO com origem wallet, liberar o saldo travado
+      if (isCrypto && selectedTransaction.origem_wallet_id && selectedTransaction.transit_status === "PENDING") {
+        const transitResult = await confirmTransit(selectedTransaction.id, valorReal);
+        if (!transitResult.success) {
+          console.warn("[Conciliação] Aviso ao confirmar trânsito:", transitResult.error);
+          // Não falhar a conciliação, apenas logar - o status já foi atualizado
+        } else {
+          console.log(`[Conciliação] Trânsito confirmado - saldo liberado da wallet`);
+        }
       }
 
       // 2. Se houve diferença, registrar ajuste cambial E atualizar saldo do bookmaker
@@ -506,6 +523,25 @@ export function ConciliacaoSaldos({
                         <Badge variant="outline" className="text-xs">
                           {isCrypto ? "CRYPTO" : "FIAT"}
                         </Badge>
+
+                        {/* Indicador de saldo em trânsito (crypto) */}
+                        {isCrypto && t.transit_status === "PENDING" && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="secondary" className="gap-1 text-xs bg-warning/20 text-warning border-warning/30">
+                                  <Lock className="h-3 w-3" />
+                                  Em Trânsito
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">
+                                  Saldo travado na wallet de origem até confirmação
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
 
                         {/* Fluxo visual corrigido */}
                         <div className="flex items-center gap-3 text-sm">
