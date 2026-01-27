@@ -674,16 +674,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [layLiability, setLayLiability] = useState<number | null>(null);
 
   // ============= SALDO AJUSTADO PARA EDIÇÃO =============
-  // Para re-liquidação: o stake anterior está "virtualmente disponível" porque
-  // a reversão irá restaurá-lo antes de aplicar o novo resultado.
-  // Isso permite editar apostas GREEN→RED sem erro de saldo insuficiente.
+  // Para re-liquidação de apostas LIQUIDADAS: o stake anterior está "virtualmente disponível"
+  // porque a reversão irá restaurá-lo antes de aplicar o novo resultado.
+  // IMPORTANTE: Só aplica para apostas LIQUIDADAS, não PENDENTES.
+  // - PENDENTE: stake já está "livre" (não foi debitado), saldo atual já reflete isso
+  // - LIQUIDADA: stake foi consumido no payout, mas reversão irá devolvê-lo
   const saldoAjustadoParaEdicao = useMemo(() => {
     const selectedBk = bookmakers.find(b => b.id === bookmakerId);
     if (!selectedBk) return null;
     
-    // Se é edição e a bookmaker não mudou, considerar stake anterior como disponível
+    // Só adicionar stake anterior se:
+    // 1. É modo edição
+    // 2. A bookmaker não mudou
+    // 3. A aposta está LIQUIDADA (GREEN/RED/VOID/etc.) - NÃO PENDENTE
     const mesmaBookmaker = aposta?.bookmaker_id === bookmakerId;
-    const stakeAnterior = aposta && mesmaBookmaker ? (aposta.stake || 0) : 0;
+    const apostaEstaLiquidada = aposta?.status === 'LIQUIDADA';
+    const stakeAnterior = aposta && mesmaBookmaker && apostaEstaLiquidada ? (aposta.stake || 0) : 0;
     
     return {
       saldoOperavel: selectedBk.saldo_operavel + stakeAnterior,
