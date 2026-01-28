@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +11,7 @@ import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfD
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
 import { BonusContaminationAlert } from "./BonusContaminationAlert";
 import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BonusResultadoLiquidoChart } from "./BonusResultadoLiquidoChart";
 
 interface DateRangeResult {
@@ -44,6 +44,7 @@ interface BonusResultEntry {
 }
 
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false }: BonusVisaoGeralTabProps) {
+  const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
@@ -55,6 +56,73 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const bookmakersInBonusMode = useMemo(() => getBookmakersWithActiveBonus(), [bonuses]);
 
   // O hook useSaldoOperavel já calcula tudo corretamente via RPC canônica
+
+  // CRÍTICO: Listener para BroadcastChannel - invalida queries quando apostas são salvas/excluídas
+  const handleBetUpdate = useCallback(() => {
+    console.log("[BonusVisaoGeralTab] Aposta atualizada via BroadcastChannel, invalidando queries...");
+    // Invalidar query de apostas de bônus (gráfico de juice)
+    queryClient.invalidateQueries({ queryKey: ["bonus-bets-juice", projetoId] });
+    // Invalidar queries de bônus gerais
+    queryClient.invalidateQueries({ queryKey: ["bonus", "project", projetoId] });
+    // Invalidar KPIs financeiros
+    queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+  }, [queryClient, projetoId]);
+
+  useEffect(() => {
+    // Canais para cada tipo de operação de aposta
+    const surebetChannel = new BroadcastChannel("surebet_channel");
+    const apostaChannel = new BroadcastChannel("aposta_channel");
+    const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
+    
+    const handleSurebetMessage = (event: MessageEvent) => {
+      if (event.data?.projetoId === projetoId) {
+        handleBetUpdate();
+      }
+    };
+    
+    const handleApostaMessage = (event: MessageEvent) => {
+      if (event.data?.projetoId === projetoId) {
+        handleBetUpdate();
+      }
+    };
+    
+    const handleMultiplaMessage = (event: MessageEvent) => {
+      if (event.data?.projetoId === projetoId) {
+        handleBetUpdate();
+      }
+    };
+    
+    surebetChannel.addEventListener("message", handleSurebetMessage);
+    apostaChannel.addEventListener("message", handleApostaMessage);
+    multiplaChannel.addEventListener("message", handleMultiplaMessage);
+    
+    // Fallback: listener para localStorage
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "surebet_saved" || event.key === "aposta_saved" || event.key === "aposta_multipla_saved") {
+        try {
+          const data = JSON.parse(event.newValue || "{}");
+          if (data.projetoId === projetoId) {
+            handleBetUpdate();
+          }
+        } catch {
+          // Ignorar erros de parse
+        }
+      }
+    };
+    
+    window.addEventListener("storage", handleStorage);
+    
+    return () => {
+      surebetChannel.removeEventListener("message", handleSurebetMessage);
+      surebetChannel.close();
+      apostaChannel.removeEventListener("message", handleApostaMessage);
+      apostaChannel.close();
+      multiplaChannel.removeEventListener("message", handleMultiplaMessage);
+      multiplaChannel.close();
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [projetoId, handleBetUpdate]);
 
   // Check for cross-strategy contamination
   const { isContaminated, contaminatedBookmakers, totalNonBonusBets, loading: contaminationLoading } = 
