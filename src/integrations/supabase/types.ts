@@ -10970,6 +10970,27 @@ export type Database = {
           success: boolean
         }[]
       }
+      criar_surebet_atomica: {
+        Args: {
+          p_contexto_operacional?: string
+          p_data_aposta?: string
+          p_esporte?: string
+          p_estrategia?: string
+          p_evento: string
+          p_mercado?: string
+          p_modelo?: string
+          p_pernas?: Json
+          p_projeto_id: string
+          p_user_id: string
+          p_workspace_id: string
+        }
+        Returns: {
+          aposta_id: string
+          events_created: number
+          message: string
+          success: boolean
+        }[]
+      }
       debit_bookmaker_with_lock: {
         Args: {
           p_bookmaker_id: string

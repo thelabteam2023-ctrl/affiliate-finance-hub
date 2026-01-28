@@ -796,6 +796,18 @@ export function SurebetModalRoot({
   // SAVE E DELETE
   // ============================================
 
+  /**
+   * handleSave - Criação/Edição de Surebet usando RPC atômica
+   * 
+   * ARQUITETURA v7:
+   * - Para CRIAÇÃO: usa RPC `criar_surebet_atomica` que:
+   *   1. Valida saldos de TODAS as pernas antes de inserir
+   *   2. Insere apostas_unificada + apostas_pernas em transação única
+   *   3. Gera eventos STAKE em financial_events para cada perna
+   *   4. Debita saldos das bookmakers atomicamente
+   * 
+   * - Para EDIÇÃO: mantém fluxo de update direto (sem impacto financeiro novo)
+   */
   const handleSave = async () => {
     if (!estrategia) { toast.error("Selecione uma estratégia"); return; }
     if (!contexto) { toast.error("Selecione um contexto"); return; }
@@ -819,86 +831,80 @@ export function SurebetModalRoot({
         return entry.bookmaker_id && parseFloat(entry.odd) > 1 && parseFloat(entry.stake) > 0;
       });
 
-      const pernasToSave: SurebetPerna[] = pernasPreenchidas.map((entry) => {
-        const stake = parseFloat(entry.stake) || 0;
-        const moeda = getBookmakerMoeda(entry.bookmaker_id);
-        const snapshotFields = getSnapshotFields(stake, moeda);
-        const odd = parseFloat(entry.odd) || 0;
-        
-        // Calcular lucro/prejuízo baseado no resultado
-        const resultado = (entry as any).resultado as ('GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID' | null);
-        let lucro_prejuizo: number | null = null;
-        
-        if (resultado === 'GREEN') {
-          // Ganhou: retorno = stake * odd, lucro = retorno - stake
-          lucro_prejuizo = (stake * odd) - stake;
-        } else if (resultado === 'MEIO_GREEN') {
-          // Meio Green: metade do lucro
-          lucro_prejuizo = ((stake * odd) - stake) / 2;
-        } else if (resultado === 'MEIO_RED') {
-          // Meio Red: perde metade do stake
-          lucro_prejuizo = -stake / 2;
-        } else if (resultado === 'RED') {
-          // Perdeu: perde o stake
-          lucro_prejuizo = -stake;
-        } else if (resultado === 'VOID') {
-          // Void: devolve stake, lucro = 0
-          lucro_prejuizo = 0;
-        }
-        
-        return {
-          selecao: entry.selecao,
-          selecao_livre: entry.selecaoLivre || "",
-          bookmaker_id: entry.bookmaker_id,
-          bookmaker_nome: bookmakerSaldos.find(b => b.id === entry.bookmaker_id)?.nome || "",
-          moeda,
-          odd,
-          stake,
-          stake_brl_referencia: snapshotFields.valor_brl_referencia,
-          cotacao_snapshot: snapshotFields.cotacao_snapshot,
-          cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
-          resultado: resultado,
-          lucro_prejuizo,
-          lucro_prejuizo_brl_referencia: lucro_prejuizo ? snapshotFields.valor_brl_referencia : null,
-          gerou_freebet: (entry as any).gerouFreebet || false,
-          valor_freebet_gerada: (entry as any).valorFreebetGerada ? parseFloat((entry as any).valorFreebetGerada) : null
-        };
-      });
-      
-      // Determinar status/resultado baseado nos resultados das pernas
-      const resultados = pernasToSave.map(p => p.resultado);
-      const todasComResultado = resultados.every(r => r !== null);
-      const temGreen = resultados.includes('GREEN') || resultados.includes('MEIO_GREEN');
-      const todasVoid = resultados.every(r => r === 'VOID');
-      
-      let statusAposta = 'PENDENTE';
-      let resultadoAposta: string | null = null;
-      let lucroRealTotal: number | null = null;
-      let roiReal: number | null = null;
-      
-      if (todasComResultado) {
-        statusAposta = 'LIQUIDADA';
-        // Calcular lucro total das pernas
-        lucroRealTotal = pernasToSave.reduce((acc, p) => acc + (p.lucro_prejuizo || 0), 0);
-        roiReal = analysis.stakeTotal > 0 ? (lucroRealTotal / analysis.stakeTotal) * 100 : 0;
-        
-        if (todasVoid) {
-          resultadoAposta = 'VOID';
-        } else if (temGreen && lucroRealTotal >= 0) {
-          resultadoAposta = 'GREEN';
-        } else if (lucroRealTotal > 0) {
-          resultadoAposta = 'GREEN';
-        } else if (lucroRealTotal < 0) {
-          resultadoAposta = 'RED';
-        } else {
-          resultadoAposta = 'VOID';
-        }
-      }
-
       const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
 
       if (isEditing && surebet) {
-        // Update existente
+        // ================================================================
+        // MODO EDIÇÃO: Update direto (sem novo impacto financeiro)
+        // ================================================================
+        const pernasToSave: SurebetPerna[] = pernasPreenchidas.map((entry) => {
+          const stake = parseFloat(entry.stake) || 0;
+          const moeda = getBookmakerMoeda(entry.bookmaker_id);
+          const snapshotFields = getSnapshotFields(stake, moeda);
+          const odd = parseFloat(entry.odd) || 0;
+          
+          const resultado = (entry as any).resultado as ('GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID' | null);
+          let lucro_prejuizo: number | null = null;
+          
+          if (resultado === 'GREEN') {
+            lucro_prejuizo = (stake * odd) - stake;
+          } else if (resultado === 'MEIO_GREEN') {
+            lucro_prejuizo = ((stake * odd) - stake) / 2;
+          } else if (resultado === 'MEIO_RED') {
+            lucro_prejuizo = -stake / 2;
+          } else if (resultado === 'RED') {
+            lucro_prejuizo = -stake;
+          } else if (resultado === 'VOID') {
+            lucro_prejuizo = 0;
+          }
+          
+          return {
+            selecao: entry.selecao,
+            selecao_livre: entry.selecaoLivre || "",
+            bookmaker_id: entry.bookmaker_id,
+            bookmaker_nome: bookmakerSaldos.find(b => b.id === entry.bookmaker_id)?.nome || "",
+            moeda,
+            odd,
+            stake,
+            stake_brl_referencia: snapshotFields.valor_brl_referencia,
+            cotacao_snapshot: snapshotFields.cotacao_snapshot,
+            cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
+            resultado: resultado,
+            lucro_prejuizo,
+            lucro_prejuizo_brl_referencia: lucro_prejuizo ? snapshotFields.valor_brl_referencia : null,
+            gerou_freebet: (entry as any).gerouFreebet || false,
+            valor_freebet_gerada: (entry as any).valorFreebetGerada ? parseFloat((entry as any).valorFreebetGerada) : null
+          };
+        });
+        
+        const resultados = pernasToSave.map(p => p.resultado);
+        const todasComResultado = resultados.every(r => r !== null);
+        const temGreen = resultados.includes('GREEN') || resultados.includes('MEIO_GREEN');
+        const todasVoid = resultados.every(r => r === 'VOID');
+        
+        let statusAposta = 'PENDENTE';
+        let resultadoAposta: string | null = null;
+        let lucroRealTotal: number | null = null;
+        let roiReal: number | null = null;
+        
+        if (todasComResultado) {
+          statusAposta = 'LIQUIDADA';
+          lucroRealTotal = pernasToSave.reduce((acc, p) => acc + (p.lucro_prejuizo || 0), 0);
+          roiReal = analysis.stakeTotal > 0 ? (lucroRealTotal / analysis.stakeTotal) * 100 : 0;
+          
+          if (todasVoid) {
+            resultadoAposta = 'VOID';
+          } else if (temGreen && lucroRealTotal >= 0) {
+            resultadoAposta = 'GREEN';
+          } else if (lucroRealTotal > 0) {
+            resultadoAposta = 'GREEN';
+          } else if (lucroRealTotal < 0) {
+            resultadoAposta = 'RED';
+          } else {
+            resultadoAposta = 'VOID';
+          }
+        }
+
         const { error: updateError } = await supabase
           .from("apostas_unificada")
           .update({
@@ -921,53 +927,71 @@ export function SurebetModalRoot({
 
         if (updateError) throw updateError;
 
-        // Deletar pernas antigas
+        // Deletar pernas antigas e inserir novas
         await supabase.from("apostas_pernas").delete().eq("aposta_id", surebet.id);
-
-        // Inserir novas pernas
         const pernasInsert = pernasToInserts(surebet.id, pernasToSave);
         const { error: insertPernasError } = await supabase
           .from("apostas_pernas")
           .insert(pernasInsert);
 
         if (insertPernasError) throw insertPernasError;
+        
       } else {
-        // Criar nova
-        const { data: newAposta, error: insertError } = await supabase
-          .from("apostas_unificada")
-          .insert({
-            user_id: user.id,
-            workspace_id: workspaceId,
-            projeto_id: projetoId,
-            evento,
-            esporte,
-            mercado,
-            modelo,
-            estrategia,
-            contexto_operacional: contexto,
-            forma_registro: "SUREBET",
-            stake_total: analysis.stakeTotal,
-            lucro_esperado: analysis.minLucro,
-            roi_esperado: analysis.minRoi,
-            status: "PENDENTE",
-            resultado: "PENDENTE",
-          data_aposta: toLocalTimestamp(dataAposta)
-          })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-
-        const pernasInsert = pernasToInserts(newAposta.id, pernasToSave);
-        const { error: insertPernasError } = await supabase
-          .from("apostas_pernas")
-          .insert(pernasInsert);
-
-        if (insertPernasError) throw insertPernasError;
+        // ================================================================
+        // MODO CRIAÇÃO: Usar RPC atômica (Motor Financeiro v7)
+        // ================================================================
+        
+        // Preparar pernas no formato esperado pela RPC
+        const pernasParaRPC = pernasPreenchidas.map((entry) => {
+          const stake = parseFloat(entry.stake) || 0;
+          const moeda = getBookmakerMoeda(entry.bookmaker_id);
+          const snapshotFields = getSnapshotFields(stake, moeda);
+          
+          return {
+            bookmaker_id: entry.bookmaker_id,
+            stake,
+            odd: parseFloat(entry.odd) || 0,
+            moeda,
+            selecao: entry.selecao,
+            selecao_livre: entry.selecaoLivre || null,
+            cotacao_snapshot: snapshotFields.cotacao_snapshot,
+            stake_brl_referencia: snapshotFields.valor_brl_referencia,
+          };
+        });
+        
+        // Chamar RPC atômica
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('criar_surebet_atomica', {
+          p_workspace_id: workspaceId,
+          p_user_id: user.id,
+          p_projeto_id: projetoId,
+          p_evento: evento,
+          p_esporte: esporte,
+          p_mercado: mercado || null,
+          p_modelo: modelo,
+          p_estrategia: estrategia,
+          p_contexto_operacional: contexto,
+          p_data_aposta: toLocalTimestamp(dataAposta),
+          p_pernas: pernasParaRPC,
+        });
+        
+        if (rpcError) {
+          console.error("[SurebetModalRoot] Erro RPC criar_surebet_atomica:", rpcError);
+          throw new Error(rpcError.message);
+        }
+        
+        // Verificar resultado da RPC
+        const result = rpcResult?.[0];
+        if (!result?.success) {
+          throw new Error(result?.message || 'Falha ao criar surebet');
+        }
+        
+        console.log("[SurebetModalRoot] ✅ Surebet criada via RPC:", {
+          aposta_id: result.aposta_id,
+          events_created: result.events_created,
+        });
       }
 
-      // CRÍTICO: Invalidar cache de saldos após inserção direta no banco
-      // Isso garante que o saldo operável seja atualizado imediatamente
+      // Invalidar cache de saldos (agora os saldos já foram debitados pela RPC)
       invalidateSaldos(projetoId);
       
       onSuccess('save');
