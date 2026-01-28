@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,6 +78,58 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   useEffect(() => {
     fetchAllData();
   }, [projetoId, dateRange]);
+
+  // CRÍTICO: Listener para BroadcastChannel - sincroniza quando apostas são atualizadas em outras janelas
+  const queryClient = useQueryClient();
+  
+  const handleBetUpdate = useCallback(() => {
+    console.log("[ProjetoDashboardTab] Aposta atualizada via BroadcastChannel, refetching...");
+    fetchAllData();
+    queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+  }, [queryClient, projetoId]);
+
+  useEffect(() => {
+    const channels: BroadcastChannel[] = [];
+    
+    try {
+      const surebetChannel = new BroadcastChannel("surebet_channel");
+      surebetChannel.onmessage = (event) => {
+        if (event.data?.projetoId === projetoId) handleBetUpdate();
+      };
+      channels.push(surebetChannel);
+
+      const apostaChannel = new BroadcastChannel("aposta_channel");
+      apostaChannel.onmessage = (event) => {
+        if (event.data?.projetoId === projetoId) handleBetUpdate();
+      };
+      channels.push(apostaChannel);
+
+      const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
+      multiplaChannel.onmessage = (event) => {
+        if (event.data?.projetoId === projetoId) handleBetUpdate();
+      };
+      channels.push(multiplaChannel);
+    } catch (e) {
+      console.warn("[ProjetoDashboardTab] BroadcastChannel não suportado");
+    }
+    
+    // Fallback: listener para localStorage
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "surebet_saved" || event.key === "aposta_saved" || event.key === "aposta_multipla_saved") {
+        try {
+          const data = JSON.parse(event.newValue || "{}");
+          if (data.projetoId === projetoId) handleBetUpdate();
+        } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    
+    return () => {
+      channels.forEach(ch => ch.close());
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [projetoId, handleBetUpdate]);
 
   // Busca todos os dados: apostas + cashback + giros grátis + eventos promocionais
   const fetchAllData = async () => {

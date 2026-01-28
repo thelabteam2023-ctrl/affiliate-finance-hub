@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -235,6 +236,68 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   useEffect(() => {
     localStorage.setItem(NAV_STORAGE_KEY, navMode);
   }, [navMode]);
+
+  // CRÍTICO: Listener para BroadcastChannel - sincroniza quando apostas são atualizadas em outras janelas
+  const queryClient = useQueryClient();
+  
+  useEffect(() => {
+    const channels: BroadcastChannel[] = [];
+    
+    try {
+      const surebetChannel = new BroadcastChannel("surebet_channel");
+      surebetChannel.onmessage = (event) => {
+        if (event.data?.projetoId === projetoId) {
+          console.log("[ProjetoSurebetTab] Surebet atualizada via BroadcastChannel, refetching...");
+          fetchSurebets();
+          queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+          queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+        }
+      };
+      channels.push(surebetChannel);
+
+      const apostaChannel = new BroadcastChannel("aposta_channel");
+      apostaChannel.onmessage = (event) => {
+        if (event.data?.projetoId === projetoId) {
+          console.log("[ProjetoSurebetTab] Aposta atualizada via BroadcastChannel, refetching...");
+          fetchSurebets();
+          queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+          queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+        }
+      };
+      channels.push(apostaChannel);
+
+      const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
+      multiplaChannel.onmessage = (event) => {
+        if (event.data?.projetoId === projetoId) {
+          console.log("[ProjetoSurebetTab] Múltipla atualizada via BroadcastChannel, refetching...");
+          fetchSurebets();
+          queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+          queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+        }
+      };
+      channels.push(multiplaChannel);
+    } catch (e) {
+      console.warn("[ProjetoSurebetTab] BroadcastChannel não suportado");
+    }
+    
+    // Fallback: listener para localStorage
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "surebet_saved" || event.key === "aposta_saved" || event.key === "aposta_multipla_saved") {
+        try {
+          const data = JSON.parse(event.newValue || "{}");
+          if (data.projetoId === projetoId) {
+            fetchSurebets();
+          }
+        } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    
+    return () => {
+      channels.forEach(ch => ch.close());
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [projetoId, queryClient]);
 
   // Refetch quando filtros locais mudarem (apenas surebets, bookmakers são gerenciados pelo hook)
   useEffect(() => {

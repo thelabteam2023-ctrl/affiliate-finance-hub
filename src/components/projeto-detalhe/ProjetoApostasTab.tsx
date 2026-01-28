@@ -333,8 +333,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     };
     
     const handleApostaMessage = (event: MessageEvent) => {
-      if (event.data?.type === "APOSTA_SAVED" && event.data?.projetoId === projetoId) {
-        console.log("[ProjetoApostasTab] Aposta salva em janela externa, atualizando lista...");
+      // Aceitar tanto APOSTA_SAVED (nova aposta) quanto resultado_updated (mudança de resultado)
+      if ((event.data?.type === "APOSTA_SAVED" || event.data?.type === "resultado_updated") && event.data?.projetoId === projetoId) {
+        console.log("[ProjetoApostasTab] Aposta atualizada em janela externa, atualizando lista...");
         fetchAllApostas();
         onDataChange?.();
       }

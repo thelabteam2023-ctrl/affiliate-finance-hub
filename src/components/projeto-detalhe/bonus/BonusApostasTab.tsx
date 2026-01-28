@@ -534,8 +534,9 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     };
     
     const handleApostaMessage = (event: MessageEvent) => {
-      if (event.data?.type === "APOSTA_SAVED" && event.data?.projetoId === projetoId) {
-        console.log("[BonusApostasTab] Aposta salva em janela externa, atualizando lista...");
+      // Aceitar tanto APOSTA_SAVED (nova aposta) quanto resultado_updated (mudança de resultado)
+      if ((event.data?.type === "APOSTA_SAVED" || event.data?.type === "resultado_updated") && event.data?.projetoId === projetoId) {
+        console.log("[BonusApostasTab] Aposta atualizada em janela externa, atualizando lista...");
         handleApostaUpdated();
       }
     };

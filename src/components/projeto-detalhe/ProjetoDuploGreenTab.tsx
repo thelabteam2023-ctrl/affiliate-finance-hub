@@ -615,7 +615,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     try {
       const apostaChannel = new BroadcastChannel("aposta_channel");
       apostaChannel.onmessage = (event) => {
-        if (event.data?.type === "APOSTA_SAVED" && event.data?.projetoId === projetoId) {
+        // Aceitar tanto APOSTA_SAVED quanto resultado_updated
+        if ((event.data?.type === "APOSTA_SAVED" || event.data?.type === "resultado_updated") && event.data?.projetoId === projetoId) {
           fetchData();
           onDataChange?.();
         }
