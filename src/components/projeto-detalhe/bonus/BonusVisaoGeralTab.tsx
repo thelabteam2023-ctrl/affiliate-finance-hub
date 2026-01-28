@@ -8,6 +8,7 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt } from "lucide-react";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay } from "date-fns";
+import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
 import { BonusContaminationAlert } from "./BonusContaminationAlert";
 import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -69,60 +70,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
   }, [queryClient, projetoId]);
 
-  useEffect(() => {
-    // Canais para cada tipo de operação de aposta
-    const surebetChannel = new BroadcastChannel("surebet_channel");
-    const apostaChannel = new BroadcastChannel("aposta_channel");
-    const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
-    
-    const handleSurebetMessage = (event: MessageEvent) => {
-      if (event.data?.projetoId === projetoId) {
-        handleBetUpdate();
-      }
-    };
-    
-    const handleApostaMessage = (event: MessageEvent) => {
-      if (event.data?.projetoId === projetoId) {
-        handleBetUpdate();
-      }
-    };
-    
-    const handleMultiplaMessage = (event: MessageEvent) => {
-      if (event.data?.projetoId === projetoId) {
-        handleBetUpdate();
-      }
-    };
-    
-    surebetChannel.addEventListener("message", handleSurebetMessage);
-    apostaChannel.addEventListener("message", handleApostaMessage);
-    multiplaChannel.addEventListener("message", handleMultiplaMessage);
-    
-    // Fallback: listener para localStorage
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === "surebet_saved" || event.key === "aposta_saved" || event.key === "aposta_multipla_saved") {
-        try {
-          const data = JSON.parse(event.newValue || "{}");
-          if (data.projetoId === projetoId) {
-            handleBetUpdate();
-          }
-        } catch {
-          // Ignorar erros de parse
-        }
-      }
-    };
-    
-    window.addEventListener("storage", handleStorage);
-    
-    return () => {
-      surebetChannel.removeEventListener("message", handleSurebetMessage);
-      surebetChannel.close();
-      apostaChannel.removeEventListener("message", handleApostaMessage);
-      apostaChannel.close();
-      multiplaChannel.removeEventListener("message", handleMultiplaMessage);
-      multiplaChannel.close();
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, [projetoId, handleBetUpdate]);
+  // Hook centralizado para sincronização cross-window
+  useCrossWindowSync({
+    projetoId,
+    onSync: handleBetUpdate,
+  });
 
   // Check for cross-strategy contamination
   const { isContaminated, contaminatedBookmakers, totalNonBonusBets, loading: contaminationLoading } = 
