@@ -607,6 +607,15 @@ export function SurebetModalRoot({
       return newOdds;
     });
   }, []);
+  
+  // Handler para alterar resultado de uma perna específica
+  const handlePernaResultadoChange = useCallback((index: number, resultado: 'GREEN' | 'RED' | 'VOID' | null) => {
+    setOdds(prev => {
+      const newOdds = [...prev];
+      (newOdds[index] as any).resultado = resultado;
+      return newOdds;
+    });
+  }, []);
 
   const handleFieldKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
     const key = e.key.toLowerCase();
@@ -789,6 +798,22 @@ export function SurebetModalRoot({
         const stake = parseFloat(entry.stake) || 0;
         const moeda = getBookmakerMoeda(entry.bookmaker_id);
         const snapshotFields = getSnapshotFields(stake, moeda);
+        const odd = parseFloat(entry.odd) || 0;
+        
+        // Calcular lucro/prejuízo baseado no resultado
+        const resultado = (entry as any).resultado as ('GREEN' | 'RED' | 'VOID' | null);
+        let lucro_prejuizo: number | null = null;
+        
+        if (resultado === 'GREEN') {
+          // Ganhou: retorno = stake * odd, lucro = retorno - stake
+          lucro_prejuizo = (stake * odd) - stake;
+        } else if (resultado === 'RED') {
+          // Perdeu: perde o stake
+          lucro_prejuizo = -stake;
+        } else if (resultado === 'VOID') {
+          // Void: devolve stake, lucro = 0
+          lucro_prejuizo = 0;
+        }
         
         return {
           selecao: entry.selecao,
@@ -796,18 +821,48 @@ export function SurebetModalRoot({
           bookmaker_id: entry.bookmaker_id,
           bookmaker_nome: bookmakerSaldos.find(b => b.id === entry.bookmaker_id)?.nome || "",
           moeda,
-          odd: parseFloat(entry.odd),
+          odd,
           stake,
           stake_brl_referencia: snapshotFields.valor_brl_referencia,
           cotacao_snapshot: snapshotFields.cotacao_snapshot,
           cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
-          resultado: null,
-          lucro_prejuizo: null,
-          lucro_prejuizo_brl_referencia: null,
-          gerou_freebet: false,
-          valor_freebet_gerada: null
+          resultado: resultado,
+          lucro_prejuizo,
+          lucro_prejuizo_brl_referencia: lucro_prejuizo ? snapshotFields.valor_brl_referencia : null,
+          gerou_freebet: (entry as any).gerouFreebet || false,
+          valor_freebet_gerada: (entry as any).valorFreebetGerada ? parseFloat((entry as any).valorFreebetGerada) : null
         };
       });
+      
+      // Determinar status/resultado baseado nos resultados das pernas
+      const resultados = pernasToSave.map(p => p.resultado);
+      const todasComResultado = resultados.every(r => r !== null);
+      const temGreen = resultados.includes('GREEN');
+      const todasVoid = resultados.every(r => r === 'VOID');
+      
+      let statusAposta = 'PENDENTE';
+      let resultadoAposta: string | null = null;
+      let lucroRealTotal: number | null = null;
+      let roiReal: number | null = null;
+      
+      if (todasComResultado) {
+        statusAposta = 'LIQUIDADA';
+        // Calcular lucro total das pernas
+        lucroRealTotal = pernasToSave.reduce((acc, p) => acc + (p.lucro_prejuizo || 0), 0);
+        roiReal = analysis.stakeTotal > 0 ? (lucroRealTotal / analysis.stakeTotal) * 100 : 0;
+        
+        if (todasVoid) {
+          resultadoAposta = 'VOID';
+        } else if (temGreen && lucroRealTotal >= 0) {
+          resultadoAposta = 'GREEN';
+        } else if (lucroRealTotal > 0) {
+          resultadoAposta = 'GREEN';
+        } else if (lucroRealTotal < 0) {
+          resultadoAposta = 'RED';
+        } else {
+          resultadoAposta = 'VOID';
+        }
+      }
 
       const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
 
@@ -825,6 +880,10 @@ export function SurebetModalRoot({
             stake_total: analysis.stakeTotal,
             lucro_esperado: analysis.minLucro,
             roi_esperado: analysis.minRoi,
+            status: statusAposta,
+            resultado: resultadoAposta,
+            lucro_prejuizo: lucroRealTotal,
+            roi_real: roiReal,
             updated_at: new Date().toISOString()
           })
           .eq("id", surebet.id);
@@ -1185,9 +1244,14 @@ export function SurebetModalRoot({
                     <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
                     <th className="py-2 px-2 text-center font-medium text-muted-foreground w-24">Stake</th>
                     <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Linha</th>
-                    <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Referência">
-                      <Target className="h-3.5 w-3.5 mx-auto" />
-                    </th>
+                    {!isEditing && (
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Referência">
+                        <Target className="h-3.5 w-3.5 mx-auto" />
+                      </th>
+                    )}
+                    {isEditing && (
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-28">Resultado</th>
+                    )}
                     {!isEditing && (
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Distribuição de lucro">
                         D
@@ -1215,6 +1279,7 @@ export function SurebetModalRoot({
                       numPernas={numPernas}
                       moedaDominante={analysis.moedaDominante}
                       hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
+                      onResultadoChange={handlePernaResultadoChange}
                       onUpdateOdd={updateOdd}
                       onSetReference={setReferenceIndex}
                       onToggleDirected={toggleDirectedLeg}
