@@ -806,7 +806,10 @@ export function ProjetoValueBetTab({
                 selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
               }}
               estrategia="VALUEBET"
-              onClick={() => openEditDialog(aposta)}
+              onEdit={(apostaId) => {
+                const a = apostasFiltradas.find(ap => ap.id === apostaId);
+                if (a) openEditDialog(a);
+              }}
               onQuickResolve={handleQuickResolve}
               variant="card"
               formatCurrency={formatCurrency}
@@ -826,7 +829,10 @@ export function ProjetoValueBetTab({
                 selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
               }}
               estrategia="VALUEBET"
-              onClick={() => openEditDialog(aposta)}
+              onEdit={(apostaId) => {
+                const a = apostasFiltradas.find(ap => ap.id === apostaId);
+                if (a) openEditDialog(a);
+              }}
               onQuickResolve={handleQuickResolve}
               variant="list"
               formatCurrency={formatCurrency}

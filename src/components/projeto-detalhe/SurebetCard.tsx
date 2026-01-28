@@ -391,8 +391,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onDelete, onDupli
 
   return (
     <Card 
-      className={cn("cursor-pointer transition-colors hover:border-primary/30 overflow-hidden", className)}
-      onClick={() => onEdit?.(surebet)}
+      className={cn("transition-colors overflow-hidden", className)}
     >
       <CardContent className="p-3 sm:p-4">
         {/* LINHA 1: Evento + Esporte + Badges - Responsivo */}

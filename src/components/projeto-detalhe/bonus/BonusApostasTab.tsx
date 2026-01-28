@@ -782,7 +782,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
               aposta={apostaCardData}
               estrategia="BONUS"
               variant={viewMode === "cards" ? "card" : "list"}
-              onClick={() => handleOpenDialog(aposta)}
+              onEdit={() => handleOpenDialog(aposta)}
               formatCurrency={(val) => formatCurrencyWithMoeda(val, aposta.bookmaker?.moeda || 'BRL')}
             />
           );
@@ -820,7 +820,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
             aposta={multiplaCardData}
             estrategia="BONUS"
             variant={viewMode === "cards" ? "card" : "list"}
-            onClick={() => handleOpenMultiplaDialog(multipla)}
+            onEdit={() => handleOpenMultiplaDialog(multipla)}
             formatCurrency={(val) => formatCurrencyWithMoeda(val, multipla.bookmaker?.moeda || 'BRL')}
           />
         );
