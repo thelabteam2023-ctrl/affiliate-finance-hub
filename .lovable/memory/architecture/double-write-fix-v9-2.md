@@ -4,58 +4,64 @@ Updated: 2026-01-28
 ## Correção Crítica: Double Write em Saldos de Bookmakers
 
 ### Problema Identificado
-O sistema estava duplicando saldos (2×) devido a **dois triggers** atualizando `bookmakers.saldo_*` para o mesmo evento.
+O sistema estava duplicando saldos (2×) devido a **múltiplos pontos** atualizando `bookmakers.saldo_*` para o mesmo evento.
 
-### Causa Raiz
-1. **`fn_cash_ledger_generate_financial_events`** (BEFORE INSERT no cash_ledger)
-   - Inseria em `financial_events`
-   - ❌ Também fazia `UPDATE bookmakers SET saldo_atual += valor`
+### Causa Raiz - 3 Fontes de Double Write
 
-2. **`fn_financial_events_sync_balance`** (AFTER INSERT em financial_events)
-   - ❌ Também fazia `UPDATE bookmakers SET saldo_atual += valor`
+#### 1. Trigger `fn_cash_ledger_generate_financial_events` (CORRIGIDO)
+- Inseria em `financial_events`
+- ❌ Também fazia `UPDATE bookmakers SET saldo_atual += valor`
+
+#### 2. RPC `liquidar_aposta_v4` (CORRIGIDO)
+- Inseria STAKE/PAYOUT em `financial_events`
+- ❌ Também fazia `UPDATE bookmakers SET saldo_atual += valor`
+
+#### 3. RPC `criar_aposta_atomica_v3` (CORRIGIDO)
+- Inseria STAKE em `financial_events`
+- ❌ Também fazia `UPDATE bookmakers SET saldo_atual -= stake`
 
 ### Fluxo Errado (Duplicação)
 ```
-INSERT cash_ledger (DEPÓSITO R$ 5.000)
+RPC criar/liquidar aposta
     ↓
-tr_cash_ledger_generate_financial_events
-    → INSERT financial_events
-    → UPDATE bookmakers.saldo_atual += 5000 [1º CRÉDITO]
-    ↓
-INSERT financial_events executa
+INSERT financial_events
+    + UPDATE bookmakers.saldo_atual [1º UPDATE]
     ↓
 tr_financial_events_sync_balance
-    → UPDATE bookmakers.saldo_atual += 5000 [2º CRÉDITO DUPLICADO]
+    → UPDATE bookmakers.saldo_atual [2º UPDATE DUPLICADO]
     ↓
-Saldo final: R$ 10.000 (errado!)
+Saldo final: 2× valor!
 ```
 
-### Correção Aplicada
-Removido **todos** os `UPDATE bookmakers` de `fn_cash_ledger_generate_financial_events`.
+### Correção Aplicada (v9.2)
+Removido **todos** os `UPDATE bookmakers` de:
+- `fn_cash_ledger_generate_financial_events`
+- `liquidar_aposta_v4`
+- `criar_aposta_atomica_v3`
+- `reliquidar_aposta_v5`
 
 ### Fluxo Correto (v9.2)
 ```
-cash_ledger (INSERT)
+RPC ou Ledger
     ↓
-fn_cash_ledger_generate_financial_events
-    → APENAS INSERT em financial_events
-    → Marca financial_events_generated = TRUE
+APENAS INSERT em financial_events
     ↓
-financial_events (INSERT executa)
-    ↓
-fn_financial_events_sync_balance (ÚNICO ponto de UPDATE)
+tr_financial_events_sync_balance (ÚNICO ponto de UPDATE)
     → UPDATE bookmakers.saldo_atual/saldo_freebet
     ↓
 Saldo correto!
 ```
 
 ### Arquitetura Final
-| Trigger | Responsabilidade |
-|---------|------------------|
+| Componente | Responsabilidade |
+|------------|------------------|
 | `fn_cash_ledger_generate_financial_events` | Gerar eventos financeiros a partir do ledger |
+| `criar_aposta_atomica_v3` | Criar aposta + INSERT evento STAKE |
+| `liquidar_aposta_v4` | Liquidar aposta + INSERT evento PAYOUT |
+| `reliquidar_aposta_v5` | Re-liquidar aposta + INSERT eventos REVERSAL/PAYOUT |
 | `fn_financial_events_sync_balance` | **ÚNICO** ponto de atualização de saldos |
 
 ### Regra de Ouro
 **NUNCA** fazer `UPDATE bookmakers.saldo_*` fora de `fn_financial_events_sync_balance`.
 
-Toda movimentação financeira deve passar por: `cash_ledger → financial_events → trigger → saldo`.
+Toda movimentação financeira deve passar por: `financial_events → trigger → saldo`.
