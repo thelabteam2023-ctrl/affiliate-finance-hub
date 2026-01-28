@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
+import { useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
 import { FinalizeBonusDialog } from "../FinalizeBonusDialog";
 import { BonusDialog } from "../BonusDialog";
@@ -194,11 +195,12 @@ interface BookmakerInBonusMode {
   logo_url: string | null;
   bookmaker_catalogo_id: string | null;
   parceiro_nome: string | null;
-  saldo_real: number;
+  // UNIFICADO: saldo_operavel vem direto da RPC canônica (já inclui bônus creditados)
+  saldo_operavel: number;
   moeda: string;
-  bonus_ativo: number;
   bonuses: ProjectBonus[];
   nearest_expiry: Date | null;
+  hasActiveBonus: boolean;
 }
 
 export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
@@ -229,6 +231,13 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
     fetchBookmakers();
   }, [projetoId, bonuses]);
 
+  // Usar hook canônico para saldos (fonte única de verdade)
+  const { data: saldosData } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: true,
+    includeZeroBalance: true
+  });
+
   const fetchBookmakers = async () => {
     if (bookmakersInBonusMode.length === 0) {
       setBookmakers([]);
@@ -245,8 +254,6 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           nome,
           login_username,
           login_password_encrypted,
-          saldo_atual,
-          saldo_usd,
           moeda,
           bookmaker_catalogo_id,
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
@@ -255,6 +262,10 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
         .in("id", bookmakersInBonusMode);
 
       if (error) throw error;
+
+      // Criar mapa de saldos canônicos
+      const saldosMap = new Map<string, BookmakerSaldo>();
+      (saldosData || []).forEach(s => saldosMap.set(s.id, s));
 
       // Group bonuses by bookmaker
       const bonusesByBookmaker: Record<string, ProjectBonus[]> = {};
@@ -269,11 +280,6 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
         const bkBonuses = bonusesByBookmaker[bk.id] || [];
         const activeBonuses = bkBonuses.filter(b => b.status === 'credited');
         
-        // UNIFICAÇÃO DE SALDOS:
-        // Quando há bônus ativo, o saldo operável é o bonus.saldo_atual
-        // O saldo_real da bookmaker fica "congelado" durante o período de bônus
-        const bonusTotal = activeBonuses.reduce((acc, b) => acc + (b.saldo_atual ?? b.bonus_amount), 0);
-        
         // Find nearest expiry
         let nearestExpiry: Date | null = null;
         activeBonuses.forEach(b => {
@@ -285,9 +291,9 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           }
         });
 
-        // Saldo da bookmaker (não muda durante o período de bônus)
-        const isUsdCurrency = bk.moeda === 'USD' || bk.moeda === 'USDT';
-        const saldoReal = isUsdCurrency ? (bk.saldo_usd ?? 0) : (bk.saldo_atual ?? 0);
+        // SALDO OPERÁVEL: usar valor canônico da RPC (já inclui bônus)
+        const saldoCanonicoData = saldosMap.get(bk.id);
+        const saldoOperavel = saldoCanonicoData?.saldo_operavel ?? 0;
 
         return {
           id: bk.id,
@@ -297,18 +303,17 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
           logo_url: bk.bookmakers_catalogo?.logo_url || null,
           bookmaker_catalogo_id: bk.bookmaker_catalogo_id || null,
           parceiro_nome: bk.parceiros?.nome || null,
-          // SALDO REAL: saldo da bookmaker (congelado durante bônus)
-          saldo_real: saldoReal,
+          // UNIFICADO: saldo_operavel já inclui tudo (real + bônus + freebet)
+          saldo_operavel: saldoOperavel,
           moeda: bk.moeda || 'BRL',
-          // BÔNUS ATIVO: Agora representa o saldo unificado (tudo junto)
-          bonus_ativo: bonusTotal,
           bonuses: bkBonuses,
           nearest_expiry: nearestExpiry,
+          hasActiveBonus: activeBonuses.length > 0,
         };
       });
 
-      // Sort by bonus amount descending
-      mapped.sort((a, b) => b.bonus_ativo - a.bonus_ativo);
+      // Sort by saldo_operavel descending
+      mapped.sort((a, b) => b.saldo_operavel - a.saldo_operavel);
       
       setBookmakers(mapped);
     } catch (error) {
@@ -624,22 +629,11 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="font-semibold text-primary flex items-center justify-end gap-1">
-                                    <Gift className="h-3.5 w-3.5 text-amber-400" />
-                                    {formatCurrency(bk.saldo_real + bk.bonus_ativo, bk.moeda)}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="text-xs space-y-1">
-                                    <p>Saldo Real: {formatCurrency(bk.saldo_real, bk.moeda)}</p>
-                                    <p>Bônus Ativo: {formatCurrency(bk.bonus_ativo, bk.moeda)}</p>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            {/* SALDO UNIFICADO: saldo_operavel já inclui tudo */}
+                            <span className="font-semibold text-primary flex items-center justify-end gap-1">
+                              {bk.hasActiveBonus && <Gift className="h-3.5 w-3.5 text-amber-400" />}
+                              {formatCurrency(bk.saldo_operavel, bk.moeda)}
+                            </span>
                           </TableCell>
                           <TableCell className="text-center">
                             {getExpiryBadge(bk.nearest_expiry)}
@@ -756,39 +750,16 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                     {/* Balances */}
                     <div className="pt-2 border-t space-y-2">
                       {/* Operational Balance - Highlight */}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center justify-between p-2 rounded bg-primary/10 border border-primary/20">
-                              <span className="text-xs font-medium text-primary flex items-center gap-1">
-                                <TrendingUp className="h-3 w-3" />
-                                Saldo Operável
-                              </span>
-                              <span className="text-sm font-bold text-primary">
-                                {formatCurrency(bk.saldo_real + bk.bonus_ativo, bk.moeda)}
-                              </span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Real + Bônus Ativo</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Wallet className="h-3 w-3" />
-                          Saldo Real
+                      {/* SALDO UNIFICADO: exibir apenas saldo_operavel com ícone se há bônus */}
+                      <div className="flex items-center justify-between p-2 rounded bg-primary/10 border border-primary/20">
+                        <span className="text-xs font-medium text-primary flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" />
+                          Saldo Operável
                         </span>
-                        <span className="text-sm font-semibold">{formatCurrency(bk.saldo_real, bk.moeda)}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Gift className="h-3 w-3 text-amber-400" />
-                          Bônus Ativo
+                        <span className="text-sm font-bold text-primary flex items-center gap-1">
+                          {bk.hasActiveBonus && <Gift className="h-3 w-3 text-amber-400" />}
+                          {formatCurrency(bk.saldo_operavel, bk.moeda)}
                         </span>
-                        <span className="text-sm font-semibold text-amber-400">{formatCurrency(bk.bonus_ativo, bk.moeda)}</span>
                       </div>
                     </div>
 
