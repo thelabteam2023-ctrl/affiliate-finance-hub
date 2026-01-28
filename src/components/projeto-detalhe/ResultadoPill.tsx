@@ -672,6 +672,25 @@ export function ResultadoPill({
       // Invalidar cache de saldos para atualizar todas as UIs
       invalidateSaldos(projetoId);
       
+      // CRÍTICO: Broadcast para sincronizar outras janelas/abas (Bônus, Freebet, etc.)
+      try {
+        const channel = new BroadcastChannel("aposta_channel");
+        channel.postMessage({ 
+          type: "resultado_updated", 
+          projetoId, 
+          apostaId,
+          resultado: novoResultado 
+        });
+        channel.close();
+      } catch (e) {
+        // Fallback para localStorage em browsers sem suporte
+        localStorage.setItem("aposta_saved", JSON.stringify({ 
+          projetoId, 
+          apostaId, 
+          timestamp: Date.now() 
+        }));
+      }
+      
       // Notificar o parent para refetch dos dados
       onResultadoUpdated();
     } catch (error: any) {
