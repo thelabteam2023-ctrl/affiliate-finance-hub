@@ -223,10 +223,35 @@ export function SurebetModalRoot({
     sharedContext,
   } = useSurebetPrintImport();
 
-  // Bookmakers disponíveis
+  // Bookmakers disponíveis (base - sem ajuste intra-form)
   const bookmakersDisponiveis = useMemo(() => {
     return bookmakerSaldos.filter((bk) => bk.saldo_operavel >= 0.50);
   }, [bookmakerSaldos]);
+
+  /**
+   * Retorna bookmakers com saldos ajustados para uma perna específica.
+   * Desconta stakes já alocadas em pernas ANTERIORES que usam a mesma bookmaker.
+   * 
+   * CRÍTICO para evitar overbetting na mesma casa em múltiplas pernas.
+   */
+  const getAdjustedBookmakersForLeg = useCallback((legIndex: number) => {
+    return bookmakersDisponiveis.map(bk => {
+      // Calcular quanto já foi alocado em pernas ANTERIORES para esta bookmaker
+      let alocadoEmPernasAnteriores = 0;
+      for (let i = 0; i < legIndex; i++) {
+        if (odds[i].bookmaker_id === bk.id) {
+          alocadoEmPernasAnteriores += parseFloat(odds[i].stake) || 0;
+        }
+      }
+      
+      // Retornar bookmaker com saldo ajustado
+      return {
+        ...bk,
+        saldo_operavel: Math.max(0, bk.saldo_operavel - alocadoEmPernasAnteriores),
+        saldo_disponivel: Math.max(0, bk.saldo_disponivel - alocadoEmPernasAnteriores),
+      };
+    });
+  }, [bookmakersDisponiveis, odds]);
 
   // ============================================
   // CALCULATOR HOOK
@@ -1041,13 +1066,24 @@ export function SurebetModalRoot({
 
   /**
    * Verifica se alguma perna possui stake maior que o saldo disponível da casa.
+   * 
+   * CRÍTICO: Desconta stakes já alocadas em OUTRAS pernas usando a mesma bookmaker.
+   * Isso evita overbetting quando a mesma casa é usada em múltiplas pernas.
+   * 
+   * Exemplo: Bankonbet tem $100
+   * - Perna 1: Bankonbet $60 → Saldo disponível para perna 1 = $100
+   * - Perna 2: Bankonbet $50 → Saldo disponível para perna 2 = $100 - $60 = $40 → INSUFICIENTE
+   * 
    * Retorna um objeto com:
    * - hasInsufficientBalance: true se alguma perna excede o saldo
    * - insufficientLegs: índices das pernas com saldo insuficiente
+   * - adjustedBalances: Map de bookmaker_id → saldo ajustado (para exibição)
    */
   const balanceValidation = useMemo(() => {
     const insufficientLegs: number[] = [];
+    const adjustedBalances = new Map<string, number>();
     
+    // Primeiro, calcular quanto foi alocado para cada bookmaker considerando TODAS as pernas anteriores
     odds.forEach((entry, index) => {
       if (!entry.bookmaker_id) return;
       
@@ -1057,17 +1093,31 @@ export function SurebetModalRoot({
       const bookmaker = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
       if (!bookmaker) return;
       
-      // Usar saldo_operavel como limite (Real + Freebet + Bonus)
-      const saldoDisponivel = bookmaker.saldo_operavel ?? 0;
+      const saldoBase = bookmaker.saldo_operavel ?? 0;
       
-      if (stake > saldoDisponivel) {
+      // Calcular quanto já foi alocado em pernas ANTERIORES (índice < atual) para esta mesma bookmaker
+      let alocadoEmOutrasPernas = 0;
+      for (let i = 0; i < index; i++) {
+        if (odds[i].bookmaker_id === entry.bookmaker_id) {
+          alocadoEmOutrasPernas += parseFloat(odds[i].stake) || 0;
+        }
+      }
+      
+      // Saldo disponível para ESTA perna = saldo base - já alocado em pernas anteriores
+      const saldoDisponivelParaEstaPerna = saldoBase - alocadoEmOutrasPernas;
+      
+      // Guardar para exibição (opcional)
+      adjustedBalances.set(`${entry.bookmaker_id}-${index}`, saldoDisponivelParaEstaPerna);
+      
+      if (stake > saldoDisponivelParaEstaPerna + 0.01) { // Tolerância de 1 centavo
         insufficientLegs.push(index);
       }
     });
     
     return {
       hasInsufficientBalance: insufficientLegs.length > 0,
-      insufficientLegs
+      insufficientLegs,
+      adjustedBalances
     };
   }, [odds, bookmakerSaldos]);
 
@@ -1280,7 +1330,7 @@ export function SurebetModalRoot({
                       isEditing={isEditing}
                       isFocused={focusedLeg === pernaIndex}
                       isProcessing={legPrints[pernaIndex]?.isProcessing || false}
-                      bookmakers={bookmakersDisponiveis}
+                      bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
                       directedProfitLegs={directedProfitLegs}
                       numPernas={numPernas}
                       moedaDominante={analysis.moedaDominante}
