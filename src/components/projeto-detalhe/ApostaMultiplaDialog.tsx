@@ -1179,6 +1179,20 @@ export function ApostaMultiplaDialog({
       // CRÍTICO: Invalidar saldos imediatamente após exclusão
       // Garante que o "Saldo Operável" no formulário reflita o valor atualizado
       invalidateSaldos(projetoId);
+      
+      // Broadcast para sincronização cross-window
+      try {
+        const channel = new BroadcastChannel("aposta_channel");
+        channel.postMessage({ 
+          type: "APOSTA_DELETED", 
+          projetoId,
+          apostaId: aposta.id,
+          timestamp: Date.now()
+        });
+        channel.close();
+      } catch (e) {
+        console.warn("[ApostaMultiplaDialog] BroadcastChannel não disponível:", e);
+      }
 
       toast.success("Aposta múltipla excluída!");
       setDeleteDialogOpen(false);

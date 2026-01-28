@@ -2415,6 +2415,20 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       // Invalidar cache de saldos
       invalidateSaldos(projetoId);
       
+      // Broadcast para sincronização cross-window
+      try {
+        const channel = new BroadcastChannel("aposta_channel");
+        channel.postMessage({ 
+          type: "APOSTA_DELETED", 
+          projetoId,
+          apostaId: surebet.id,
+          timestamp: Date.now()
+        });
+        channel.close();
+      } catch (e) {
+        console.warn("[SurebetDialog] BroadcastChannel não disponível:", e);
+      }
+      
       toast.success("Operação excluída!");
       onSuccess();
       onOpenChange(false);

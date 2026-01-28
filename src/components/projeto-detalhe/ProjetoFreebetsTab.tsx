@@ -351,8 +351,9 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
     try {
       const apostaChannel = new BroadcastChannel("aposta_channel");
       apostaChannel.onmessage = (event) => {
-        // Aceitar tanto APOSTA_SAVED quanto resultado_updated
-        if ((event.data?.type === "APOSTA_SAVED" || event.data?.type === "resultado_updated") && event.data?.projetoId === projetoId) {
+        // Aceitar APOSTA_SAVED, resultado_updated e APOSTA_DELETED
+        const validTypes = ["APOSTA_SAVED", "resultado_updated", "APOSTA_DELETED"];
+        if (validTypes.includes(event.data?.type) && event.data?.projetoId === projetoId) {
           fetchData();
           onDataChange?.();
         }

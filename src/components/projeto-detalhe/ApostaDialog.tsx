@@ -2753,6 +2753,21 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       }
       
       invalidateSaldos(projetoId);
+      
+      // Broadcast para sincronização cross-window
+      try {
+        const channel = new BroadcastChannel("aposta_channel");
+        channel.postMessage({ 
+          type: "APOSTA_DELETED", 
+          projetoId,
+          apostaId: aposta.id,
+          timestamp: Date.now()
+        });
+        channel.close();
+      } catch (e) {
+        console.warn("[ApostaDialog] BroadcastChannel não disponível:", e);
+      }
+      
       toast.success("Aposta excluída com sucesso!");
       onSuccess('delete');
       if (!embedded) onOpenChange(false);
