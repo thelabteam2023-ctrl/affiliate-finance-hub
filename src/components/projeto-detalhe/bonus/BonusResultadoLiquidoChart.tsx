@@ -69,7 +69,7 @@ interface BookmakerBonusStats {
   count: number;
 }
 
-type ChartMode = "resultado" | "bonus" | "juice";
+type ChartMode = "resultado" | "bonus_juice";
 
 export function BonusResultadoLiquidoChart({
   bonuses,
@@ -231,14 +231,9 @@ export function BonusResultadoLiquidoChart({
       subtitle: "Acumulado diário (Bônus + Juice)",
       icon: <AreaChartIcon className="h-4 w-4 text-warning" />,
     },
-    bonus: {
-      title: "Bônus Recebidos por Período",
-      subtitle: "Volume bruto de bônus creditados por dia",
-      icon: <Receipt className="h-4 w-4 text-warning" />,
-    },
-    juice: {
-      title: "Juice por Período",
-      subtitle: "Custo ou ganho operacional diário",
+    bonus_juice: {
+      title: "Bônus vs Juice por Período",
+      subtitle: "Comparativo diário de créditos e custos operacionais",
       icon: <Activity className="h-4 w-4 text-warning" />,
     },
   };
@@ -300,7 +295,7 @@ export function BonusResultadoLiquidoChart({
             </Badge>
           </>
         );
-      case "bonus":
+      case "bonus_juice":
         const selectedBookmakerName = selectedBookmaker 
           ? bookmakerStats.find(b => b.bookmaker_id === selectedBookmaker)?.bookmaker_nome 
           : null;
@@ -361,25 +356,13 @@ export function BonusResultadoLiquidoChart({
             )}
             
             <Badge variant="outline" className="text-xs border-warning/30 text-warning">
-              Total: {formatCurrency(kpis.totalBonus)}
+              Bônus: {formatCurrency(kpis.totalBonus)}
             </Badge>
-            <Badge variant="outline" className="text-xs border-muted-foreground/30 text-muted-foreground">
-              {bookmakerStats.length} {bookmakerStats.length === 1 ? "casa" : "casas"}
-            </Badge>
-          </>
-        );
-      case "juice":
-        return (
-          <>
             <Badge 
               variant="outline" 
               className={`text-xs ${kpis.totalJuice >= 0 ? "border-primary/30 text-primary" : "border-destructive/30 text-destructive"}`}
             >
-              {kpis.totalJuice >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-              Juice Total: {formatCurrency(kpis.totalJuice)}
-            </Badge>
-            <Badge variant="outline" className="text-xs border-muted-foreground/30 text-muted-foreground">
-              {kpis.diasOperados} {kpis.diasOperados === 1 ? "dia" : "dias"} operados
+              Juice: {formatCurrency(kpis.totalJuice)}
             </Badge>
           </>
         );
@@ -429,64 +412,20 @@ export function BonusResultadoLiquidoChart({
           </AreaChart>
         );
       
-      case "bonus":
+      case "bonus_juice":
+        // Gráfico de barras agrupadas: Bônus e Juice lado a lado
         return (
           <BarChart 
             data={chartData} 
             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-            barCategoryGap="35%"
+            barCategoryGap="20%"
+            barGap={2}
           >
             <defs>
               <linearGradient id="bonusBarGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="hsl(45, 93%, 58%)" stopOpacity={0.95} />
                 <stop offset="100%" stopColor="hsl(38, 92%, 45%)" stopOpacity={0.75} />
               </linearGradient>
-            </defs>
-            <CartesianGrid 
-              strokeDasharray="3 3" 
-              stroke="hsl(var(--border))" 
-              strokeOpacity={0.4}
-              vertical={false} 
-            />
-            <XAxis
-              dataKey="label"
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={10}
-              tickLine={false}
-              axisLine={false}
-              interval="preserveStartEnd"
-              tickMargin={8}
-            />
-            <YAxis
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={10}
-              tickLine={false}
-              axisLine={false}
-              width={55}
-              tickCount={5}
-              tickFormatter={(value) => {
-                if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(1)}k`;
-                return value.toFixed(0);
-              }}
-            />
-            <Tooltip content={<BonusTooltip formatCurrency={formatCurrency} />} cursor={{ fill: 'hsl(var(--muted)/0.1)' }} />
-            <Bar 
-              dataKey="bonus_creditado" 
-              fill="url(#bonusBarGradient)" 
-              radius={[6, 6, 0, 0]}
-              maxBarSize={40}
-            />
-          </BarChart>
-        );
-      
-      case "juice":
-        return (
-          <BarChart 
-            data={chartData} 
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-            barCategoryGap="35%"
-          >
-            <defs>
               <linearGradient id="juicePositiveGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.9} />
                 <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.6} />
@@ -523,12 +462,26 @@ export function BonusResultadoLiquidoChart({
                 return value.toFixed(0);
               }}
             />
-            <Tooltip content={<JuiceTooltip formatCurrency={formatCurrency} />} cursor={{ fill: 'hsl(var(--muted)/0.1)' }} />
+            <Tooltip content={<BonusJuiceTooltip formatCurrency={formatCurrency} />} cursor={{ fill: 'hsl(var(--muted)/0.1)' }} />
             <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" strokeOpacity={0.3} />
-            <Bar dataKey="juice" radius={[6, 6, 0, 0]} maxBarSize={40}>
+            {/* Barra de Bônus (amarelo/dourado) */}
+            <Bar 
+              dataKey="bonus_creditado" 
+              name="Bônus"
+              fill="url(#bonusBarGradient)" 
+              radius={[4, 4, 0, 0]}
+              maxBarSize={24}
+            />
+            {/* Barra de Juice (verde/vermelho) */}
+            <Bar 
+              dataKey="juice" 
+              name="Juice"
+              radius={[4, 4, 0, 0]} 
+              maxBarSize={24}
+            >
               {chartData.map((entry, index) => (
                 <Cell 
-                  key={`cell-${index}`} 
+                  key={`cell-juice-${index}`} 
                   fill={entry.juice >= 0 ? "url(#juicePositiveGradient)" : "url(#juiceNegativeGradient)"} 
                 />
               ))}
@@ -563,13 +516,9 @@ export function BonusResultadoLiquidoChart({
               <AreaChartIcon className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Resultado</span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="bonus" aria-label="Bônus Recebidos" className="h-8 px-2.5 text-xs gap-1">
-              <Receipt className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Bônus</span>
-            </ToggleGroupItem>
-            <ToggleGroupItem value="juice" aria-label="Juice por Período" className="h-8 px-2.5 text-xs gap-1">
+            <ToggleGroupItem value="bonus_juice" aria-label="Bônus vs Juice" className="h-8 px-2.5 text-xs gap-1">
               <Activity className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Juice</span>
+              <span className="hidden sm:inline">Bônus vs Juice</span>
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
@@ -635,55 +584,49 @@ function ResultadoTooltip({ active, payload, label, formatCurrency }: any) {
   );
 }
 
-// Tooltip para modo Bônus
-function BonusTooltip({ active, payload, label, formatCurrency }: any) {
+// Tooltip para modo Bônus vs Juice (grouped bar chart)
+function BonusJuiceTooltip({ active, payload, label, formatCurrency }: any) {
   if (!active || !payload || payload.length === 0) return null;
   const data = payload[0]?.payload as ChartDataPoint;
   if (!data) return null;
 
+  const isJuiceGanho = data.juice >= 0;
+  const resultadoDia = data.bonus_creditado + data.juice;
+
   return (
-    <div className="bg-popover/95 backdrop-blur-sm border border-border/50 rounded-lg p-3 shadow-xl">
+    <div className="bg-popover/95 backdrop-blur-sm border border-border/50 rounded-lg p-3 shadow-xl min-w-[180px]">
       <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wide mb-2">
         {label}
       </p>
-      <div className="flex items-baseline gap-2">
-        <span className="text-xl font-semibold text-warning">
-          {formatCurrency(data.bonus_creditado)}
-        </span>
+      <div className="space-y-2">
+        {/* Bônus */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-sm bg-warning" />
+            <span className="text-xs text-muted-foreground">Bônus</span>
+          </div>
+          <span className="text-sm font-semibold text-warning">
+            {formatCurrency(data.bonus_creditado)}
+          </span>
+        </div>
+        {/* Juice */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className={`w-2.5 h-2.5 rounded-sm ${isJuiceGanho ? "bg-primary" : "bg-destructive"}`} />
+            <span className="text-xs text-muted-foreground">Juice</span>
+          </div>
+          <span className={`text-sm font-semibold ${isJuiceGanho ? "text-primary" : "text-destructive"}`}>
+            {formatCurrency(data.juice)}
+          </span>
+        </div>
+        {/* Resultado do dia */}
+        <div className="border-t border-border/30 pt-2 flex items-center justify-between gap-4">
+          <span className="text-xs text-muted-foreground">Resultado</span>
+          <span className={`text-sm font-bold ${resultadoDia >= 0 ? "text-primary" : "text-destructive"}`}>
+            {formatCurrency(resultadoDia)}
+          </span>
+        </div>
       </div>
-      <p className="text-[10px] text-muted-foreground/60 mt-2 border-t border-border/30 pt-2">
-        Valor bruto creditado (não considera juice)
-      </p>
-    </div>
-  );
-}
-
-// Tooltip para modo Juice
-function JuiceTooltip({ active, payload, label, formatCurrency }: any) {
-  if (!active || !payload || payload.length === 0) return null;
-  const data = payload[0]?.payload as ChartDataPoint;
-  if (!data) return null;
-
-  const isGanho = data.juice >= 0;
-
-  return (
-    <div className="bg-popover/95 backdrop-blur-sm border border-border/50 rounded-lg p-3 shadow-xl">
-      <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wide mb-2">
-        {label}
-      </p>
-      <div className="flex items-baseline gap-2">
-        <span className={`text-xl font-semibold ${isGanho ? "text-primary" : "text-destructive"}`}>
-          {formatCurrency(Math.abs(data.juice))}
-        </span>
-        <span className={`text-xs ${isGanho ? "text-primary/70" : "text-destructive/70"}`}>
-          {isGanho ? "ganho" : "custo"}
-        </span>
-      </div>
-      <p className="text-[10px] text-muted-foreground/60 mt-2 border-t border-border/30 pt-2">
-        {isGanho 
-          ? "Resultado positivo das apostas com bônus" 
-          : "Custo operacional das apostas com bônus"}
-      </p>
     </div>
   );
 }
