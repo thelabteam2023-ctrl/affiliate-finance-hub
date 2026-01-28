@@ -61,7 +61,7 @@ import {
   getCurrencySymbol 
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { reliquidarAposta, deletarAposta } from "@/services/aposta";
-import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
+// MOTOR FINANCEIRO v9.5: updateBookmakerBalance REMOVIDO - saldos são atualizados exclusivamente via trigger
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { GerouFreebetInput } from "./GerouFreebetInput";
 import { useActiveBonusInfo } from "@/hooks/useActiveBonusInfo";
@@ -2563,181 +2563,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     }
   };
 
-  const atualizarSaldoBookmaker = async (
-    bookmakerIdToUpdate: string,
-    resultadoAnterior: string | null,
-    resultadoNovo: string,
-    stakeAnterior: number,
-    oddAnterior: number,
-    stakeNovo: number,
-    oddNovo: number,
-    tipoOperacao: "bookmaker" | "back" | "lay" | "cobertura" = "bookmaker",
-    layLiability: number | null = null,
-    layComissao: number | null = null,
-    layExchangeId: string | null = null,
-    layStakeValue: number | null = null
-  ) => {
-    try {
-      // Sistema de dois saldos:
-      // - saldo_total (saldo_atual no banco) = dinheiro real na conta
-      // - saldo_disponivel = saldo_total - stakes bloqueadas (apostas pendentes)
-      //
-      // Tipos de resultado e seus cálculos variam por tipo de operação
-
-      const calcularAjusteSaldo = (
-        resultado: string, 
-        stakeVal: number, 
-        oddVal: number,
-        opType: string,
-        liability: number | null,
-        comissaoPercent: number
-      ): number => {
-        const comissao = comissaoPercent / 100;
-        
-        // Para operações Lay
-        if (opType === "lay") {
-          const liabilityVal = liability || stakeVal * (oddVal - 1);
-          switch (resultado) {
-            case "GREEN": // Lay ganhou
-              return stakeVal * (1 - comissao);
-            case "RED": // Lay perdeu
-              return -liabilityVal;
-            case "VOID":
-              return 0;
-            default:
-              return 0;
-          }
-        }
-        
-        // Para Cobertura
-        if (opType === "cobertura") {
-          switch (resultado) {
-            case "GREEN_BOOKMAKER": // Back ganhou
-              return stakeVal * (oddVal - 1);
-            case "RED_BOOKMAKER": // Back perdeu
-              return -stakeVal;
-            case "VOID":
-              return 0;
-            default:
-              return 0;
-          }
-        }
-        
-        // Para Exchange Back
-        if (opType === "back") {
-          const lucroBruto = stakeVal * (oddVal - 1);
-          switch (resultado) {
-            case "GREEN":
-              return lucroBruto * (1 - comissao);
-            case "RED":
-              return -stakeVal;
-            case "VOID":
-              return 0;
-            default:
-              return 0;
-          }
-        }
-        
-        // Para Bookmaker (com meio resultados)
-        switch (resultado) {
-          case "GREEN":
-            return stakeVal * (oddVal - 1);
-          case "RED":
-            return -stakeVal;
-          case "MEIO_GREEN":
-          case "HALF":
-            return stakeVal * ((oddVal - 1) / 2);
-          case "MEIO_RED":
-            return -stakeVal / 2;
-          case "VOID":
-            return 0;
-          default:
-            return 0;
-        }
-      };
-
-      // Função para calcular ajuste do lado LAY em cobertura
-      const calcularAjusteSaldoLay = (
-        resultado: string,
-        layStake: number,
-        liability: number,
-        comissaoPercent: number
-      ): number => {
-        const comissao = comissaoPercent / 100;
-        switch (resultado) {
-          case "GREEN_BOOKMAKER": // Back ganhou = LAY perdeu
-            return -liability;
-          case "RED_BOOKMAKER": // Back perdeu = LAY ganhou
-            return layStake * (1 - comissao);
-          case "VOID":
-            return 0;
-          default:
-            return 0;
-        }
-      };
-
-      let saldoAjuste = 0;
-      let saldoAjusteLay = 0;
-      const comissaoVal = layComissao ?? 5;
-
-      // Reverter efeito do resultado anterior (BACK side)
-      if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
-        saldoAjuste -= calcularAjusteSaldo(
-          resultadoAnterior, 
-          stakeAnterior, 
-          oddAnterior, 
-          tipoOperacao,
-          layLiability,
-          comissaoVal
-        );
-        
-        // Reverter efeito anterior do LAY side em cobertura
-        if (tipoOperacao === "cobertura" && layExchangeId && layStakeValue !== null && layLiability !== null) {
-          saldoAjusteLay -= calcularAjusteSaldoLay(
-            resultadoAnterior,
-            layStakeValue,
-            layLiability,
-            comissaoVal
-          );
-        }
-      }
-
-      // Aplicar efeito do novo resultado (BACK side)
-      if (resultadoNovo && resultadoNovo !== "PENDENTE") {
-        saldoAjuste += calcularAjusteSaldo(
-          resultadoNovo, 
-          stakeNovo, 
-          oddNovo, 
-          tipoOperacao,
-          layLiability,
-          comissaoVal
-        );
-        
-        // Aplicar efeito do LAY side em cobertura
-        if (tipoOperacao === "cobertura" && layExchangeId && layStakeValue !== null && layLiability !== null) {
-          saldoAjusteLay += calcularAjusteSaldoLay(
-            resultadoNovo,
-            layStakeValue,
-            layLiability,
-            comissaoVal
-          );
-        }
-      }
-
-      // CORREÇÃO MULTI-MOEDA E BÔNUS ATIVO: Usar helper centralizado que respeita moeda do bookmaker e bônus ativo
-      if (saldoAjuste !== 0) {
-        await updateBookmakerBalance(bookmakerIdToUpdate, saldoAjuste, projetoId);
-      }
-
-      // Atualizar saldo do LAY bookmaker (para cobertura)
-      // CORREÇÃO MULTI-MOEDA E BÔNUS ATIVO: Usar helper centralizado
-      if (tipoOperacao === "cobertura" && layExchangeId && saldoAjusteLay !== 0) {
-        await updateBookmakerBalance(layExchangeId, saldoAjusteLay, projetoId);
-      }
-    } catch (error) {
-      console.error("Erro ao atualizar saldo do bookmaker:", error);
-    }
-  };
+  // ============================================================
+  // MOTOR FINANCEIRO v9.5: Função atualizarSaldoBookmaker REMOVIDA
+  // ============================================================
+  // A atualização de saldo é feita EXCLUSIVAMENTE pelo trigger
+  // tr_financial_events_sync_balance após INSERT em financial_events.
+  // 
+  // Fluxo correto:
+  // - Liquidação: reliquidarAposta() → RPC liquidar_aposta_v4 → financial_events → trigger
+  // - Exclusão: deletarAposta() → RPC deletar_aposta_v4 → REVERSAL events → trigger
+  // ============================================================
 
   const handleDelete = async () => {
     if (!aposta) return;
