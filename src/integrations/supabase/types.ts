@@ -10882,6 +10882,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_reversal_event: {
+        Args: { p_original_event_id: string; p_reason?: string }
+        Returns: string
+      }
       create_subscription: {
         Args: {
           p_created_by?: string
