@@ -481,7 +481,7 @@ export function SaldosParceirosSheet() {
         </TooltipContent>
       </Tooltip>
 
-      <SheetContent className="w-full sm:max-w-xl">
+      <SheetContent className="w-full sm:max-w-2xl">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
