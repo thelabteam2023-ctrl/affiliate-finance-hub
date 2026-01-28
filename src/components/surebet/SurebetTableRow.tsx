@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus, Check, CheckCircle2, X, CircleSlash } from 'lucide-react';
+import { Plus, Check } from 'lucide-react';
 import { BookmakerSelectOption, BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
@@ -124,22 +124,35 @@ export function SurebetTableRow({
     return "bg-purple-500/20 text-purple-400";
   };
   
-  // Componente de botão de resultado
-  const ResultadoButton = ({ tipo, icon: Icon, activeClass }: { tipo: PernaResultado; icon: any; activeClass: string }) => {
+  // Componente de botão de resultado - estilo padronizado igual ao Aposta Simples
+  const ResultadoButton = ({ 
+    tipo, 
+    label,
+    selectedClass, 
+    hoverClass,
+    hidden = false 
+  }: { 
+    tipo: PernaResultado; 
+    label: string;
+    selectedClass: string;
+    hoverClass: string;
+    hidden?: boolean;
+  }) => {
     const isActive = resultado === tipo;
     return (
       <button
         type="button"
         onClick={() => onResultadoChange?.(pernaIndex, isActive ? null : tipo)}
         className={cn(
-          "w-7 h-7 rounded-md flex items-center justify-center transition-all",
+          "px-2.5 py-1 rounded text-[11px] font-medium transition-colors",
+          hidden && !isActive ? "hidden group-hover:inline-block" : "",
           isActive 
-            ? activeClass 
-            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            ? selectedClass
+            : `text-muted-foreground/60 ${hoverClass}`
         )}
         title={tipo || "Limpar"}
       >
-        <Icon className="h-3.5 w-3.5" />
+        {label}
       </button>
     );
   };
@@ -317,34 +330,41 @@ export function SurebetTableRow({
         </td>
       )}
       
-      {/* Resultado - só no modo edição */}
+      {/* Resultado - só no modo edição - layout igual Aposta Simples */}
       {isEditing && (
         <td className="px-1 text-center" style={{ height: '78px' }}>
-          <div className="flex flex-wrap items-center justify-center gap-1 max-w-[150px]">
+          <div className="group inline-flex rounded-md border border-border/40 bg-muted/20 p-0.5 gap-0.5">
             <ResultadoButton 
               tipo="GREEN" 
-              icon={CheckCircle2} 
-              activeClass="bg-emerald-500 text-white"
-            />
-            <ResultadoButton 
-              tipo="MEIO_GREEN" 
-              icon={CheckCircle2} 
-              activeClass="bg-teal-500 text-white"
-            />
-            <ResultadoButton 
-              tipo="MEIO_RED" 
-              icon={X} 
-              activeClass="bg-orange-500 text-white"
+              label="Green"
+              selectedClass="bg-emerald-500/20 text-emerald-500"
+              hoverClass="hover:bg-emerald-500/20 hover:text-emerald-500"
             />
             <ResultadoButton 
               tipo="RED" 
-              icon={X} 
-              activeClass="bg-red-500 text-white"
+              label="Red"
+              selectedClass="bg-red-500/20 text-red-500"
+              hoverClass="hover:bg-red-500/20 hover:text-red-500"
+            />
+            <ResultadoButton 
+              tipo="MEIO_GREEN" 
+              label="½G"
+              selectedClass="bg-teal-500/20 text-teal-500"
+              hoverClass="hover:bg-teal-500/20 hover:text-teal-500"
+              hidden
+            />
+            <ResultadoButton 
+              tipo="MEIO_RED" 
+              label="½R"
+              selectedClass="bg-orange-500/20 text-orange-500"
+              hoverClass="hover:bg-orange-500/20 hover:text-orange-500"
+              hidden
             />
             <ResultadoButton 
               tipo="VOID" 
-              icon={CircleSlash} 
-              activeClass="bg-gray-500 text-white"
+              label="Void"
+              selectedClass="bg-slate-500/20 text-slate-400"
+              hoverClass="hover:bg-slate-500/20 hover:text-slate-400"
             />
           </div>
         </td>
