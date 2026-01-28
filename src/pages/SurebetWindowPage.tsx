@@ -134,8 +134,7 @@ export default function SurebetWindowPage() {
     fetchSurebet();
   }, [id, isEditing]);
   
-  // MODO OPERACIONAL CONTÍNUO: Nunca fecha automaticamente
-  // O formulário permanece aberto após salvar, seja novo ou edição
+  // FLUXO DISTINTO: Criação mantém aberto, Edição fecha automaticamente
   const handleSuccess = useCallback((action?: SurebetActionType) => {
     // Notificar janela principal para atualizar listas/KPIs/saldos
     try {
@@ -148,7 +147,6 @@ export default function SurebetWindowPage() {
       });
       channel.close();
     } catch (err) {
-      // Fallback: localStorage event
       localStorage.setItem("surebet_saved", JSON.stringify({ 
         projetoId, 
         surebetId: id || "novo",
@@ -163,29 +161,38 @@ export default function SurebetWindowPage() {
       setRascunhoCarregado(null);
     }
     
-    // Se foi exclusão, fechar a janela (não faz sentido continuar editando algo que não existe)
+    // Se foi exclusão, fechar a janela
     if (action === 'delete') {
       toast.success("Arbitragem excluída!", {
         description: "A operação foi removida com sucesso.",
         icon: <Trash2 className="h-5 w-5 text-destructive" />,
         duration: 2000,
       });
-      // Pequeno delay para o toast ser visto antes de fechar
       setTimeout(() => window.close(), 1500);
       return;
     }
     
-    // Para salvamento: Incrementar contador e resetar formulário
-    setSaveCount(prev => prev + 1);
-    setSurebet(null);
-    setFormKey(prev => prev + 1);
-    
-    // Toast de confirmação visual
-    toast.success(isEditing ? "Arbitragem atualizada!" : "Arbitragem registrada!", {
-      description: `${saveCount + 1}ª operação salva. Formulário pronto para nova entrada.`,
-      icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-      duration: 3000,
-    });
+    // FLUXO DISTINTO POR MODO
+    if (isEditing) {
+      // EDIÇÃO: Fechar e retornar à lista
+      toast.success("Arbitragem atualizada!", {
+        description: "Alterações salvas com sucesso.",
+        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        duration: 2000,
+      });
+      setTimeout(() => window.close(), 1000);
+    } else {
+      // CRIAÇÃO: Resetar formulário e manter aberto
+      setSaveCount(prev => prev + 1);
+      setSurebet(null);
+      setFormKey(prev => prev + 1);
+      
+      toast.success("Arbitragem registrada!", {
+        description: `${saveCount + 1}ª operação salva. Formulário pronto para nova entrada.`,
+        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        duration: 3000,
+      });
+    }
   }, [isEditing, projetoId, id, saveCount, isFromRascunho, rascunhoCarregado, deletarRascunho]);
   
   // Handler de fechamento com confirmação
