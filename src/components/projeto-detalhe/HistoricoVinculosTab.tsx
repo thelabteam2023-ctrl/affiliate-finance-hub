@@ -87,23 +87,24 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
 
       const bookmakerIds = historicoData.map((h) => h.bookmaker_id);
 
-      // Depósitos - SEM conversão, valor original
-      // INCLUI CONFIRMADO e PENDENTE para refletir capital comprometido/em trânsito
+      // CORREÇÃO: Filtrar depósitos/saques pelo projeto usando projeto_id_snapshot
+      // Depósitos - valor original, filtrado pelo projeto
       const { data: depositos } = await supabase
         .from("cash_ledger")
-        .select("destino_bookmaker_id, valor, status")
+        .select("destino_bookmaker_id, valor, status, projeto_id_snapshot")
         .eq("tipo_transacao", "DEPOSITO")
         .in("status", ["CONFIRMADO", "PENDENTE"])
-        .in("destino_bookmaker_id", bookmakerIds);
+        .in("destino_bookmaker_id", bookmakerIds)
+        .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
 
-      // Saques - SEM conversão, valor original
-      // INCLUI CONFIRMADO e PENDENTE para refletir capital em movimento
+      // Saques - valor original, filtrado pelo projeto
       const { data: saques } = await supabase
         .from("cash_ledger")
-        .select("origem_bookmaker_id, valor, status")
+        .select("origem_bookmaker_id, valor, status, projeto_id_snapshot")
         .eq("tipo_transacao", "SAQUE")
         .in("status", ["CONFIRMADO", "PENDENTE"])
-        .in("origem_bookmaker_id", bookmakerIds);
+        .in("origem_bookmaker_id", bookmakerIds)
+        .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
 
       // Lucro de apostas - valor original (lucro_prejuizo)
       const { data: apostasData } = await supabase
