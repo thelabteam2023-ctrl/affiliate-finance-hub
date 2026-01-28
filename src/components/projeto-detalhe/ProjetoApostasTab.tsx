@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
-import { reliquidarAposta } from "@/services/aposta/ApostaService";
+import { reliquidarAposta, deletarAposta } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 // useBookmakerLogoMap movido para ProjetoDashboardTab
@@ -53,6 +53,7 @@ import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
+import { DeleteBetConfirmDialog, type DeleteBetInfo } from "@/components/apostas/DeleteBetConfirmDialog";
 
 // Contextos de aposta para filtro unificado
 type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
@@ -289,6 +290,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const [selectedApostaMultipla, setSelectedApostaMultipla] = useState<ApostaMultipla | null>(null);
   const [selectedSurebet, setSelectedSurebet] = useState<SurebetData | null>(null);
   const [bookmakers, setBookmakers] = useState<any[]>([]);
+  
+  // Estados para modal de exclusão
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [betToDelete, setBetToDelete] = useState<DeleteBetInfo | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
@@ -605,6 +611,133 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       toast.error("Erro ao atualizar resultado");
     }
   }, [apostas, onDataChange, projetoId, invalidateSaldos]);
+
+  // Handler para excluir aposta
+  const handleDeleteBet = useCallback(async () => {
+    if (!betToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const result = await deletarAposta(betToDelete.id);
+      
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao excluir aposta");
+        return;
+      }
+
+      // Atualizar listas locais
+      if (betToDelete.tipo === "simples") {
+        setApostas(prev => prev.filter(a => a.id !== betToDelete.id));
+      } else if (betToDelete.tipo === "multipla") {
+        setApostasMultiplas(prev => prev.filter(am => am.id !== betToDelete.id));
+      } else {
+        setSurebets(prev => prev.filter(sb => sb.id !== betToDelete.id));
+      }
+
+      // Invalidar cache de saldos
+      invalidateSaldos(projetoId);
+
+      toast.success("Aposta excluída com sucesso");
+      setDeleteDialogOpen(false);
+      setBetToDelete(null);
+      onDataChange?.();
+    } catch (error: any) {
+      console.error("Erro ao excluir aposta:", error);
+      toast.error("Erro ao excluir aposta");
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [betToDelete, onDataChange, projetoId, invalidateSaldos]);
+
+  // Preparar info para exclusão de aposta simples
+  const prepareDeleteSimples = useCallback((apostaId: string) => {
+    const aposta = apostas.find(a => a.id === apostaId);
+    if (!aposta) return;
+    
+    setBetToDelete({
+      id: aposta.id,
+      evento: aposta.evento,
+      stake: aposta.stake,
+      bookmaker: aposta.bookmaker?.nome || "—",
+      tipo: "simples",
+    });
+    setDeleteDialogOpen(true);
+  }, [apostas]);
+
+  // Preparar info para exclusão de aposta múltipla
+  const prepareDeleteMultipla = useCallback((apostaId: string) => {
+    const multipla = apostasMultiplas.find(am => am.id === apostaId);
+    if (!multipla) return;
+    
+    setBetToDelete({
+      id: multipla.id,
+      evento: `Múltipla ${multipla.tipo_multipla}`,
+      stake: multipla.stake,
+      bookmaker: multipla.bookmaker?.nome || "—",
+      tipo: "multipla",
+    });
+    setDeleteDialogOpen(true);
+  }, [apostasMultiplas]);
+
+  // Preparar info para exclusão de surebet
+  const prepareDeleteSurebet = useCallback((surebetId: string) => {
+    const surebet = surebets.find(sb => sb.id === surebetId);
+    if (!surebet) return;
+    
+    const casas = surebet.pernas?.map(p => p.bookmaker?.nome).filter(Boolean).join(", ") || "—";
+    
+    setBetToDelete({
+      id: surebet.id,
+      evento: surebet.evento,
+      stake: surebet.stake_total,
+      bookmaker: casas,
+      tipo: "surebet",
+    });
+    setDeleteDialogOpen(true);
+  }, [surebets]);
+
+  // Handler para quick resolve de surebet
+  const handleQuickResolveSurebet = useCallback(async (surebetId: string, resultado: string) => {
+    try {
+      const surebet = surebets.find(sb => sb.id === surebetId);
+      if (!surebet) return;
+
+      // Para surebets, calculamos o lucro baseado no pior cenário
+      const stakeTotal = surebet.stake_total || 0;
+      const lucro = resultado === "VOID" ? 0 : (resultado === "GREEN" ? (surebet.lucro_esperado || 0) : -(stakeTotal * 0.02));
+
+      const result = await reliquidarAposta(surebetId, resultado, lucro);
+      
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao liquidar surebet");
+        return;
+      }
+
+      // Atualizar estado local
+      setSurebets(prev => prev.map(sb => 
+        sb.id === surebetId 
+          ? { ...sb, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
+          : sb
+      ));
+
+      // Invalidar cache de saldos
+      invalidateSaldos(projetoId);
+
+      const resultLabel = {
+        GREEN: "Green",
+        RED: "Red",
+        MEIO_GREEN: "½ Green",
+        MEIO_RED: "½ Red",
+        VOID: "Void"
+      }[resultado] || resultado;
+
+      toast.success(`Surebet marcada como ${resultLabel}`);
+      onDataChange?.();
+    } catch (error: any) {
+      console.error("Erro ao atualizar surebet:", error);
+      toast.error("Erro ao atualizar resultado");
+    }
+  }, [surebets, onDataChange, projetoId, invalidateSaldos]);
 
   // Filtrar e unificar apostas com contexto - usando filtros LOCAIS da aba
   const apostasUnificadasBase: ApostaUnificada[] = useMemo(() => {
@@ -1078,6 +1211,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     const url = `/janela/surebet/${surebet.id}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas`;
                     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
                   }}
+                  onQuickResolve={handleQuickResolveSurebet}
+                  onDelete={prepareDeleteSurebet}
                   formatCurrency={formatCurrency}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
@@ -1127,6 +1262,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   variant={viewMode === "cards" ? "card" : "list"}
                   onClick={() => handleOpenDialog(aposta)}
                   onQuickResolve={handleQuickResolve}
+                  onDelete={prepareDeleteSimples}
                   formatCurrency={formatCurrency}
                 />
               );
@@ -1176,6 +1312,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 estrategia={estrategiaMultipla}
                 variant={viewMode === "cards" ? "card" : "list"}
                 onClick={() => handleOpenMultiplaDialog(multipla)}
+                onQuickResolve={handleQuickResolve}
+                onDelete={prepareDeleteMultipla}
                 formatCurrency={formatCurrency}
               />
             );
@@ -1183,6 +1321,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         </div>
       )}
 
+      {/* Modal de Confirmação de Exclusão */}
+      <DeleteBetConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        betInfo={betToDelete}
+        onConfirm={handleDeleteBet}
+        isDeleting={isDeleting}
+        formatCurrency={formatCurrency}
+      />
 
       {/* Dialogs removidos - todos os formulários abrem em janela externa */}
     </div>
