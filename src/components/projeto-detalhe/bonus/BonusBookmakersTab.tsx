@@ -227,16 +227,19 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
 
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
 
-  useEffect(() => {
-    fetchBookmakers();
-  }, [projetoId, bonuses]);
-
-  // Usar hook canônico para saldos (fonte única de verdade)
-  const { data: saldosData } = useBookmakerSaldosQuery({
+  // Usar hook canônico para saldos (fonte única de verdade) - ANTES do useEffect
+  const { data: saldosData, isLoading: saldosLoading } = useBookmakerSaldosQuery({
     projetoId,
     enabled: true,
     includeZeroBalance: true
   });
+
+  useEffect(() => {
+    // Aguardar saldosData estar disponível
+    if (!saldosLoading) {
+      fetchBookmakers();
+    }
+  }, [projetoId, bonuses, saldosData, saldosLoading]);
 
   const fetchBookmakers = async () => {
     if (bookmakersInBonusMode.length === 0) {
