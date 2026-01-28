@@ -6,6 +6,7 @@
  * - Inputs de odd/stake
  * - Checkbox de referência e D (distribuição)
  * - Lucro/ROI calculados
+ * - Seletor de resultado por perna (modo edição)
  */
 
 import { KeyboardEvent } from 'react';
@@ -13,11 +14,12 @@ import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus, Check } from 'lucide-react';
+import { Plus, Minus, Check, Trophy, X, Ban } from 'lucide-react';
 import { BookmakerSelectOption, BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { getFirstLastName } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 /**
  * Formata valores monetários de forma compacta para alta densidade
@@ -40,6 +42,9 @@ function formatCompactCurrency(value: number, currency: string): string {
   // Formato normal para valores menores
   return sign + formatCurrency(absValue, currency);
 }
+
+/** Tipos de resultado possíveis para uma perna */
+export type PernaResultado = 'GREEN' | 'RED' | 'VOID' | null;
 
 interface BookmakerOption {
   id: string;
@@ -69,6 +74,8 @@ interface SurebetTableRowProps {
   moedaDominante: SupportedCurrency;
   /** Indica se esta perna tem saldo insuficiente */
   hasInsufficientBalance?: boolean;
+  /** Callback para alterar resultado da perna (modo edição) */
+  onResultadoChange?: (index: number, resultado: PernaResultado) => void;
   onUpdateOdd: (index: number, field: keyof OddEntry, value: string | boolean) => void;
   onSetReference: (index: number) => void;
   onToggleDirected: (index: number) => void;
@@ -92,6 +99,7 @@ export function SurebetTableRow({
   numPernas,
   moedaDominante,
   hasInsufficientBalance = false,
+  onResultadoChange,
   onUpdateOdd,
   onSetReference,
   onToggleDirected,
@@ -104,6 +112,9 @@ export function SurebetTableRow({
   const lucro = scenario?.lucro || 0;
   const roi = scenario?.roi || 0;
   const isDirected = directedProfitLegs.includes(pernaIndex);
+  
+  // Resultado atual da perna (armazenado no entry)
+  const resultado = (entry as any).resultado as PernaResultado;
 
   // Cores por posição da perna
   const getPernaColor = () => {
@@ -111,6 +122,26 @@ export function SurebetTableRow({
     if (pernaIndex === numPernas - 1) return "bg-emerald-500/20 text-emerald-400";
     if (numPernas === 3 && pernaIndex === 1) return "bg-amber-500/20 text-amber-400";
     return "bg-purple-500/20 text-purple-400";
+  };
+  
+  // Componente de botão de resultado
+  const ResultadoButton = ({ tipo, icon: Icon, activeClass }: { tipo: PernaResultado; icon: any; activeClass: string }) => {
+    const isActive = resultado === tipo;
+    return (
+      <button
+        type="button"
+        onClick={() => onResultadoChange?.(pernaIndex, isActive ? null : tipo)}
+        className={cn(
+          "w-7 h-7 rounded-md flex items-center justify-center transition-all",
+          isActive 
+            ? activeClass 
+            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+        )}
+        title={tipo || "Limpar"}
+      >
+        <Icon className="h-3.5 w-3.5" />
+      </button>
+    );
   };
 
   return (
@@ -269,9 +300,9 @@ export function SurebetTableRow({
         )}
       </td>
       
-      {/* Referência (Target) */}
-      <td className="px-2 text-center" style={{ height: '78px' }}>
-        {!isEditing && (
+      {/* Referência (Target) - só no modo criação */}
+      {!isEditing && (
+        <td className="px-2 text-center" style={{ height: '78px' }}>
           <button
             type="button"
             onClick={() => onSetReference(pernaIndex)}
@@ -283,8 +314,31 @@ export function SurebetTableRow({
           >
             {entry.isReference && <div className="w-2 h-2 rounded-full bg-white" />}
           </button>
-        )}
-      </td>
+        </td>
+      )}
+      
+      {/* Resultado - só no modo edição */}
+      {isEditing && (
+        <td className="px-1 text-center" style={{ height: '78px' }}>
+          <div className="flex items-center justify-center gap-1">
+            <ResultadoButton 
+              tipo="GREEN" 
+              icon={Trophy} 
+              activeClass="bg-emerald-500 text-white"
+            />
+            <ResultadoButton 
+              tipo="RED" 
+              icon={X} 
+              activeClass="bg-red-500 text-white"
+            />
+            <ResultadoButton 
+              tipo="VOID" 
+              icon={Ban} 
+              activeClass="bg-gray-500 text-white"
+            />
+          </div>
+        </td>
+      )}
       
       {/* Checkbox D — Distribuição de lucro */}
       {!isEditing && (
