@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { FIAT_CURRENCIES, CURRENCY_SYMBOLS } from "@/types/currency";
+import { getFirstLastName } from "@/lib/utils";
 
 // Multi-currency type
 type SaldosPorMoeda = Record<string, number>;
@@ -545,8 +546,10 @@ export function SaldosParceirosSheet() {
                           key={parceiro.parceiro_id} 
                           className={`border-border/30 ${index % 2 === 0 ? 'bg-transparent' : 'bg-muted/20'}`}
                         >
-                          <TableCell className="py-2.5 font-medium text-sm max-w-[120px] truncate">
-                            {parceiro.parceiro_nome}
+                          <TableCell className="py-2.5 font-medium text-sm min-w-[100px]">
+                            <span className="block leading-tight">
+                              {getFirstLastName(parceiro.parceiro_nome)}
+                            </span>
                           </TableCell>
                           
                           {/* FIAT Cell - Multi-currency */}
