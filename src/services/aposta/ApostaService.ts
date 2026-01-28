@@ -450,30 +450,296 @@ export async function liquidarAposta(
 }
 
 // ============================================================================
+// LIQUIDAR SUREBET (apostas multi-perna / arbitragem)
+// ============================================================================
+
+/**
+ * Interface para resultado de perna em liquidação de Surebet
+ */
+export interface LiquidarSurebetPernaInput {
+  perna_id: string;
+  bookmaker_id: string;
+  resultado: 'GREEN' | 'RED' | 'VOID' | 'MEIO_GREEN' | 'MEIO_RED';
+  stake: number;
+  odd: number;
+  lucro_prejuizo: number;
+  moeda?: string;
+}
+
+/**
+ * Liquida uma Surebet (aposta multi-perna / arbitragem).
+ * 
+ * DIFERENÇA DO liquidarAposta:
+ * - Surebets têm bookmaker_id NULL no registro pai
+ * - Cada perna tem seu próprio bookmaker_id
+ * - Precisamos processar eventos financeiros POR PERNA
+ * 
+ * O fluxo:
+ * 1. Atualiza resultado de cada perna
+ * 2. Cria eventos financeiros para cada perna (PAYOUT para winners)
+ * 3. Atualiza registro pai com status LIQUIDADA e lucro total
+ */
+export async function liquidarSurebet(
+  surebetId: string,
+  pernasResultados: LiquidarSurebetPernaInput[],
+  resultadoFinal: 'GREEN' | 'RED' | 'VOID',
+  lucroTotal: number,
+  workspaceId: string
+): Promise<ApostaServiceResult<{ events_created: number }>> {
+  console.log("[ApostaService] Iniciando liquidação de Surebet:", surebetId, resultadoFinal);
+
+  try {
+    // Verificar se a surebet existe e está pendente
+    const { data: surebet, error: fetchError } = await supabase
+      .from('apostas_unificada')
+      .select('id, status, forma_registro')
+      .eq('id', surebetId)
+      .single();
+
+    if (fetchError || !surebet) {
+      return {
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Surebet não encontrada',
+        },
+      };
+    }
+
+    if (surebet.status === 'LIQUIDADA') {
+      return {
+        success: false,
+        error: {
+          code: 'ALREADY_LIQUIDATED',
+          message: 'Surebet já foi liquidada',
+        },
+      };
+    }
+
+    let eventsCreated = 0;
+
+    // Processar cada perna
+    for (const perna of pernasResultados) {
+      // 1. Atualizar resultado da perna
+      const { error: updatePernaError } = await supabase
+        .from('apostas_pernas')
+        .update({
+          resultado: perna.resultado,
+          lucro_prejuizo: perna.lucro_prejuizo,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', perna.perna_id);
+
+      if (updatePernaError) {
+        console.error("[ApostaService] Erro ao atualizar perna:", updatePernaError);
+        // Continue para não travar - log o erro
+      }
+
+      // 2. Criar evento financeiro para pernas vencedoras (GREEN, VOID, MEIO_GREEN)
+      if (['GREEN', 'VOID', 'MEIO_GREEN', 'MEIO_RED'].includes(perna.resultado) && perna.lucro_prejuizo !== undefined) {
+        let payout = 0;
+        let tipoEvento = 'PAYOUT';
+
+        if (perna.resultado === 'GREEN') {
+          payout = perna.stake * perna.odd; // stake + lucro
+        } else if (perna.resultado === 'VOID') {
+          payout = perna.stake; // devolve stake
+          tipoEvento = 'VOID_REFUND';
+        } else if (perna.resultado === 'MEIO_GREEN') {
+          payout = perna.stake + (perna.stake * (perna.odd - 1) / 2);
+        } else if (perna.resultado === 'MEIO_RED') {
+          payout = perna.stake / 2;
+          tipoEvento = 'VOID_REFUND';
+        }
+
+        if (payout > 0) {
+          const idempotencyKey = `surebet_payout_${surebetId}_${perna.perna_id}`;
+          
+          const { error: eventError } = await supabase
+            .from('financial_events')
+            .insert({
+              bookmaker_id: perna.bookmaker_id,
+              aposta_id: surebetId,
+              workspace_id: workspaceId,
+              tipo_evento: tipoEvento,
+              tipo_uso: 'NORMAL',
+              origem: 'LUCRO',
+              valor: payout,
+              moeda: perna.moeda || 'BRL',
+              idempotency_key: idempotencyKey,
+              descricao: `Payout Surebet - ${perna.resultado}`,
+              processed_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+          if (!eventError) {
+            eventsCreated++;
+            
+            // Nota: O trigger tr_financial_event_sync atualiza automaticamente 
+            // bookmakers.saldo_atual quando um evento é inserido em financial_events
+          }
+        }
+      }
+    }
+
+    // 3. Atualizar registro pai da surebet
+    const { error: updateError } = await supabase
+      .from('apostas_unificada')
+      .update({
+        status: 'LIQUIDADA',
+        resultado: resultadoFinal,
+        lucro_prejuizo: lucroTotal,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', surebetId);
+
+    if (updateError) {
+      console.error("[ApostaService] Erro ao atualizar surebet pai:", updateError);
+      return {
+        success: false,
+        error: {
+          code: 'UPDATE_FAILED',
+          message: `Falha ao atualizar surebet: ${updateError.message}`,
+        },
+      };
+    }
+
+    console.log("[ApostaService] ✅ Surebet liquidada:", surebetId, {
+      resultado: resultadoFinal,
+      lucro: lucroTotal,
+      events_created: eventsCreated,
+    });
+
+    return {
+      success: true,
+      data: { events_created: eventsCreated },
+    };
+
+  } catch (err: any) {
+    console.error("[ApostaService] Exceção na liquidação de Surebet:", err);
+    return {
+      success: false,
+      error: {
+        code: 'UNEXPECTED_ERROR',
+        message: err.message || 'Erro inesperado ao liquidar surebet',
+        details: { error: err },
+      },
+    };
+  }
+}
+
+// ============================================================================
+// LIQUIDAR SUREBET SIMPLES (apenas atualiza registro pai, sem eventos)
+// ============================================================================
+
+/**
+ * Liquida uma Surebet de forma simples, apenas atualizando o registro pai.
+ * 
+ * Usado para casos onde:
+ * - As pernas vêm de dados JSONB legados (sem ID individual)
+ * - Não é necessário criar eventos financeiros por perna
+ * 
+ * Esta função apenas:
+ * 1. Atualiza status para LIQUIDADA
+ * 2. Define o resultado
+ * 3. Grava o lucro/prejuízo
+ */
+export async function liquidarSurebetSimples(
+  surebetId: string,
+  resultadoFinal: 'GREEN' | 'RED' | 'VOID',
+  lucroTotal: number
+): Promise<ApostaServiceResult> {
+  console.log("[ApostaService] Liquidando Surebet (simples):", surebetId, resultadoFinal);
+
+  try {
+    const { error } = await supabase
+      .from('apostas_unificada')
+      .update({
+        status: 'LIQUIDADA',
+        resultado: resultadoFinal,
+        lucro_prejuizo: lucroTotal,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', surebetId);
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          code: 'UPDATE_FAILED',
+          message: `Falha ao liquidar surebet: ${error.message}`,
+        },
+      };
+    }
+
+    console.log("[ApostaService] ✅ Surebet liquidada (simples):", surebetId);
+    return { success: true };
+
+  } catch (err: any) {
+    return {
+      success: false,
+      error: {
+        code: 'UNEXPECTED_ERROR',
+        message: err.message || 'Erro inesperado ao liquidar surebet',
+      },
+    };
+  }
+}
+
+// ============================================================================
 // RELIQUIDAR APOSTA (mudar resultado de aposta já liquidada)
 // ============================================================================
 
 /**
  * Reliquida uma aposta (muda resultado de uma aposta já liquidada).
- * Usa reliquidar_aposta_v5 que reverte apenas PAYOUT (sem reverter STAKE)
- * e aplica novo payout. Isso evita "dupla contagem" do stake.
+ * 
+ * Para apostas simples/múltiplas: Usa reliquidar_aposta_v5 que reverte apenas PAYOUT
+ * Para surebets/arbitragem: Apenas atualiza o registro pai (sem eventos)
  */
 export async function reliquidarAposta(
   apostaId: string,
   novoResultado: string,
   lucroPrejuizo?: number
 ): Promise<ApostaServiceResult<{ resultado_anterior?: string; impacto_total?: number }>> {
-  console.log("[ApostaService] Iniciando reliquidação v5:", apostaId, novoResultado);
+  console.log("[ApostaService] Iniciando reliquidação:", apostaId, novoResultado);
 
   try {
-    // Buscar resultado anterior
+    // Buscar aposta para detectar tipo
     const { data: apostaAtual } = await supabase
       .from('apostas_unificada')
-      .select('resultado, status')
+      .select('resultado, status, forma_registro, bookmaker_id')
       .eq('id', apostaId)
       .single();
     
     const resultadoAnterior = apostaAtual?.resultado;
+    const isArbitragem = apostaAtual?.forma_registro === 'ARBITRAGEM' || apostaAtual?.forma_registro === 'SUREBET';
+    const hasNullBookmaker = !apostaAtual?.bookmaker_id;
+    
+    // ============================================================
+    // CASO ESPECIAL: Surebet/Arbitragem (bookmaker_id NULL)
+    // Não pode usar RPC liquidar_aposta_v4 que requer bookmaker_id
+    // ============================================================
+    if (isArbitragem || hasNullBookmaker) {
+      console.log("[ApostaService] Detectada Surebet/Arbitragem - usando liquidação simples");
+      
+      const result = await liquidarSurebetSimples(
+        apostaId,
+        novoResultado as 'GREEN' | 'RED' | 'VOID',
+        lucroPrejuizo ?? 0
+      );
+      
+      if (!result.success) return result as any;
+      
+      return {
+        success: true,
+        data: { resultado_anterior: resultadoAnterior || undefined },
+      };
+    }
+    
+    // ============================================================
+    // CASO NORMAL: Aposta simples/múltipla
+    // ============================================================
     
     // Se não estava liquidada, apenas liquidar
     if (apostaAtual?.status !== 'LIQUIDADA') {
