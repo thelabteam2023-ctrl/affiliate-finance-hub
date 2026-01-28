@@ -56,7 +56,6 @@ import {
   BookmakerSelectOption,
   BookmakerSelectTrigger,
   BookmakerMetaRow,
-  SaldoBreakdownDisplay, 
   formatCurrency as formatCurrencyCanonical,
   getCurrencyTextColor,
   getCurrencySymbol 
@@ -3160,61 +3159,40 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   </tr>
                 </tbody>
               </table>
-              {/* Linha de saldo/alertas abaixo da tabela */}
-              {bookmakerId && (
+              {/* Linha de reservas abaixo da tabela - REMOVIDO SaldoBreakdownDisplay (duplicado com WaterfallPreview) */}
+              {bookmakerId && saldoComReservas && saldoComReservas.reservado > 0 && (
                 <div className="px-3 py-2 bg-muted/10 border-t border-border/30 flex items-center justify-between gap-4">
-                  {saldoComReservas && saldoComReservas.reservado > 0 ? (
-                    <SaldoReservaCompact
-                      saldoContabil={saldoComReservas.contabil}
-                      saldoReservado={saldoComReservas.reservado}
-                      saldoDisponivel={saldoComReservas.disponivel}
-                      moeda={bookmakerSaldo?.moeda || 'BRL'}
-                      stakeAtual={parseFloat(stake) || 0}
-                      loading={saldoReservasLoading}
-                    />
-                  ) : bookmakerSaldo && (
-                    <SaldoBreakdownDisplay
-                      saldoReal={bookmakerSaldo.saldoDisponivel + (saldoAjustadoParaEdicao?.stakeAnterior || 0)}
-                      saldoFreebet={bookmakerSaldo.saldoFreebet}
-                      saldoBonus={bookmakerSaldo.saldoBonus}
-                      saldoOperavel={saldoAjustadoParaEdicao?.saldoOperavel ?? bookmakerSaldo.saldoOperavel}
-                      moeda={bookmakerSaldo.moeda}
-                      bonusRolloverStarted={bookmakerSaldo.bonusRolloverStarted}
-                    />
-                  )}
-                  {hasActiveBonus && registroValues.estrategia !== "EXTRACAO_BONUS" && (
-                    <BonusImpactAlert
-                      bookmakerId={bookmakerId}
-                      bookmakerNome={bookmakers.find(b => b.id === bookmakerId)?.nome || ""}
-                      estrategia={registroValues.estrategia || ""}
-                      hasActiveBonus={hasActiveBonus}
-                      rolloverProgress={bonusInfo?.rollover_progress}
-                      rolloverTarget={bonusInfo?.rollover_target_amount || undefined}
-                      minOdds={bonusInfo?.min_odds || undefined}
-                      currentOdd={parseFloat(odd) || undefined}
-                    />
-                  )}
+                  <SaldoReservaCompact
+                    saldoContabil={saldoComReservas.contabil}
+                    saldoReservado={saldoComReservas.reservado}
+                    saldoDisponivel={saldoComReservas.disponivel}
+                    moeda={bookmakerSaldo?.moeda || 'BRL'}
+                    stakeAtual={parseFloat(stake) || 0}
+                    loading={saldoReservasLoading}
+                  />
                 </div>
               )}
             </div>
 
-              {/* WATERFALL: Toggle Freebet + Preview de distribuição */}
+              {/* WATERFALL: Toggle Freebet (só se tiver saldo) + Preview de distribuição */}
               {bookmakerSaldo && !aposta?.gerou_freebet && (
                 <div className="space-y-3 mt-3">
-                  {/* FreebetToggle - novo componente waterfall */}
-                  <FreebetToggle
-                    checked={usarFreebetBookmaker}
-                    onCheckedChange={(checked) => {
-                      setUsarFreebetBookmaker(checked);
-                      if (checked) {
-                        setGerouFreebet(false);
-                        setValorFreebetGerada("");
-                      }
-                    }}
-                    saldoFreebet={bookmakerSaldo.saldoFreebet}
-                    moeda={bookmakerSaldo.moeda}
-                    disabled={!!aposta?.tipo_freebet}
-                  />
+                  {/* FreebetToggle - só aparece se bookmaker tem saldo de freebet */}
+                  {bookmakerSaldo.saldoFreebet > 0 && (
+                    <FreebetToggle
+                      checked={usarFreebetBookmaker}
+                      onCheckedChange={(checked) => {
+                        setUsarFreebetBookmaker(checked);
+                        if (checked) {
+                          setGerouFreebet(false);
+                          setValorFreebetGerada("");
+                        }
+                      }}
+                      saldoFreebet={bookmakerSaldo.saldoFreebet}
+                      moeda={bookmakerSaldo.moeda}
+                      disabled={!!aposta?.tipo_freebet}
+                    />
+                  )}
                   
                   {/* SaldoWaterfallPreview - mostra como stake será distribuído */}
                   {bookmakerId && parseFloat(stake) > 0 && (
@@ -4169,19 +4147,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             {/* WATERFALL: Toggle Freebet + Preview de distribuição (Dialog Mode) */}
             {tipoAposta === "bookmaker" && bookmakerSaldo && !aposta?.gerou_freebet && (
               <div className="space-y-3 mt-3 p-3 rounded-lg border border-border/30 bg-muted/5">
-                <FreebetToggle
-                  checked={usarFreebetBookmaker}
-                  onCheckedChange={(checked) => {
-                    setUsarFreebetBookmaker(checked);
-                    if (checked) {
-                      setGerouFreebet(false);
-                      setValorFreebetGerada("");
-                    }
-                  }}
-                  saldoFreebet={bookmakerSaldo.saldoFreebet}
-                  moeda={bookmakerSaldo.moeda}
-                  disabled={!!aposta?.tipo_freebet}
-                />
+                {/* FreebetToggle - só aparece se bookmaker tem saldo de freebet */}
+                {bookmakerSaldo.saldoFreebet > 0 && (
+                  <FreebetToggle
+                    checked={usarFreebetBookmaker}
+                    onCheckedChange={(checked) => {
+                      setUsarFreebetBookmaker(checked);
+                      if (checked) {
+                        setGerouFreebet(false);
+                        setValorFreebetGerada("");
+                      }
+                    }}
+                    saldoFreebet={bookmakerSaldo.saldoFreebet}
+                    moeda={bookmakerSaldo.moeda}
+                    disabled={!!aposta?.tipo_freebet}
+                  />
+                )}
                 
                 {bookmakerId && parseFloat(stake) > 0 && (
                   <SaldoWaterfallPreview
