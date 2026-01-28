@@ -11529,7 +11529,7 @@ export type Database = {
       reliquidar_aposta_v5: {
         Args: {
           p_aposta_id: string
-          p_lucro_prejuizo?: number
+          p_novo_lucro_prejuizo?: number
           p_novo_resultado: string
         }
         Returns: {
