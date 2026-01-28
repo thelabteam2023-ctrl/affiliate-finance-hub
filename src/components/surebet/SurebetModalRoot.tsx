@@ -801,12 +801,18 @@ export function SurebetModalRoot({
         const odd = parseFloat(entry.odd) || 0;
         
         // Calcular lucro/prejuízo baseado no resultado
-        const resultado = (entry as any).resultado as ('GREEN' | 'RED' | 'VOID' | null);
+        const resultado = (entry as any).resultado as ('GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID' | null);
         let lucro_prejuizo: number | null = null;
         
         if (resultado === 'GREEN') {
           // Ganhou: retorno = stake * odd, lucro = retorno - stake
           lucro_prejuizo = (stake * odd) - stake;
+        } else if (resultado === 'MEIO_GREEN') {
+          // Meio Green: metade do lucro
+          lucro_prejuizo = ((stake * odd) - stake) / 2;
+        } else if (resultado === 'MEIO_RED') {
+          // Meio Red: perde metade do stake
+          lucro_prejuizo = -stake / 2;
         } else if (resultado === 'RED') {
           // Perdeu: perde o stake
           lucro_prejuizo = -stake;
@@ -837,7 +843,7 @@ export function SurebetModalRoot({
       // Determinar status/resultado baseado nos resultados das pernas
       const resultados = pernasToSave.map(p => p.resultado);
       const todasComResultado = resultados.every(r => r !== null);
-      const temGreen = resultados.includes('GREEN');
+      const temGreen = resultados.includes('GREEN') || resultados.includes('MEIO_GREEN');
       const todasVoid = resultados.every(r => r === 'VOID');
       
       let statusAposta = 'PENDENTE';

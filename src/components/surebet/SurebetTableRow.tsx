@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus, Check, Trophy, X, Ban } from 'lucide-react';
+import { Plus, Minus, Check, Trophy, X, Ban, Divide } from 'lucide-react';
 import { BookmakerSelectOption, BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
@@ -44,7 +44,7 @@ function formatCompactCurrency(value: number, currency: string): string {
 }
 
 /** Tipos de resultado possíveis para uma perna */
-export type PernaResultado = 'GREEN' | 'RED' | 'VOID' | null;
+export type PernaResultado = 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID' | null;
 
 interface BookmakerOption {
   id: string;
@@ -320,11 +320,21 @@ export function SurebetTableRow({
       {/* Resultado - só no modo edição */}
       {isEditing && (
         <td className="px-1 text-center" style={{ height: '78px' }}>
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex flex-wrap items-center justify-center gap-1 max-w-[150px]">
             <ResultadoButton 
               tipo="GREEN" 
               icon={Trophy} 
               activeClass="bg-emerald-500 text-white"
+            />
+            <ResultadoButton 
+              tipo="MEIO_GREEN" 
+              icon={Divide} 
+              activeClass="bg-emerald-400 text-white"
+            />
+            <ResultadoButton 
+              tipo="MEIO_RED" 
+              icon={Divide} 
+              activeClass="bg-red-400 text-white"
             />
             <ResultadoButton 
               tipo="RED" 

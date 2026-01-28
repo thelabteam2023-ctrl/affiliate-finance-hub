@@ -33,6 +33,7 @@ import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultipl
 import { SurebetCard, SurebetData } from "@/components/projeto-detalhe/SurebetCard";
 import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
 import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
+import { ApostaCard } from "@/components/projeto-detalhe/ApostaCard";
 import { useProjectBonuses, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { 
@@ -116,6 +117,7 @@ interface ApostaMultipla {
   data_aposta: string;
   observacoes: string | null;
   is_bonus_bet?: boolean;
+  estrategia?: string | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -748,220 +750,79 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
           );
         }
         
+        // ===== APOSTA SIMPLES - Usando ApostaCard padronizado =====
         if (item.tipo === "simples") {
           const aposta = item.data as Aposta;
+          const bookmakerBase = aposta.bookmaker?.nome?.split(" - ")[0] || aposta.bookmaker?.nome;
           const parceiroNome = aposta.bookmaker?.parceiro?.nome ? getFirstLastName(aposta.bookmaker.parceiro.nome) : null;
+          const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
+          
+          // Preparar dados para ApostaCard
+          const apostaCardData = {
+            id: aposta.id,
+            evento: aposta.evento,
+            esporte: aposta.esporte,
+            selecao: aposta.selecao,
+            odd: aposta.odd,
+            stake: aposta.stake,
+            data_aposta: aposta.data_aposta,
+            resultado: aposta.resultado,
+            status: aposta.status,
+            lucro_prejuizo: aposta.lucro_prejuizo,
+            estrategia: aposta.estrategia,
+            bookmaker_nome: bookmakerBase,
+            parceiro_nome: parceiroNome,
+            moeda: aposta.bookmaker?.moeda || 'BRL',
+            logo_url: logoUrl,
+          };
           
           return (
-            <div 
-              key={aposta.id} 
-              className="rounded-lg border cursor-pointer transition-colors p-3 hover:border-amber-500/50 border-amber-500/20"
+            <ApostaCard
+              key={aposta.id}
+              aposta={apostaCardData}
+              estrategia="BONUS"
+              variant={viewMode === "cards" ? "card" : "list"}
               onClick={() => handleOpenDialog(aposta)}
-            >
-              {/* Layout Padronizado: 3 linhas igual ApostaCard */}
-              <div className="flex flex-col gap-2">
-                
-                {/* LINHA 1: Evento + Esporte + Badges */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate uppercase">{aposta.evento}</p>
-                    {aposta.esporte && (
-                      <span className="text-xs text-muted-foreground shrink-0">• {aposta.esporte}</span>
-                    )}
-                  </div>
-                  
-                  {/* Badges alinhadas à direita */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
-                      <Coins className="h-2.5 w-2.5 mr-0.5" />
-                      Bônus
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-400 bg-blue-500/20">
-                      SIMPLES
-                    </Badge>
-                    <ResultadoPill
-                      apostaId={aposta.id}
-                      bookmarkerId={aposta.bookmaker_id}
-                      projetoId={projetoId}
-                      layExchangeBookmakerId={aposta.lay_exchange && aposta.lay_odd ? aposta.lay_exchange : undefined}
-                      resultado={aposta.resultado}
-                      status={aposta.status}
-                      stake={aposta.stake}
-                      odd={aposta.odd}
-                      operationType={
-                        aposta.lay_exchange && aposta.lay_odd ? "cobertura" :
-                        aposta.modo_entrada?.toUpperCase() === "BACK" && aposta.back_em_exchange ? "back" :
-                        aposta.modo_entrada?.toUpperCase() === "LAY" ? "lay" : "bookmaker"
-                      }
-                      layLiability={aposta.lay_liability || undefined}
-                      layOdd={aposta.lay_odd || undefined}
-                      layStake={aposta.lay_stake || undefined}
-                      layComissao={aposta.lay_comissao || undefined}
-                      gerouFreebet={aposta.gerou_freebet || false}
-                      valorFreebetGerada={aposta.valor_freebet_gerada || undefined}
-                      contextoOperacional={aposta.contexto_operacional}
-                      estrategia={aposta.estrategia}
-                      onResultadoUpdated={handleApostaUpdated}
-                      onEditClick={() => handleOpenDialog(aposta)}
-                    />
-                  </div>
-                </div>
-                
-                {/* LINHA 2: Badge Seleção + Logo + Casa/Vínculo + Odd + Stake */}
-                <div className="flex items-center gap-3">
-                  {/* Badge de seleção */}
-                  {aposta.selecao && (
-                    <div className="shrink-0">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[80px]">
-                        {aposta.selecao.length > 8 ? aposta.selecao.substring(0, 8) + '...' : aposta.selecao}
-                      </Badge>
-                    </div>
-                  )}
-                  
-                  {/* Logo */}
-                  {aposta.bookmaker?.bookmakers_catalogo?.logo_url ? (
-                    <img 
-                      src={aposta.bookmaker.bookmakers_catalogo.logo_url} 
-                      alt={aposta.bookmaker?.nome || ''} 
-                      className="h-10 w-10 rounded-lg object-contain bg-white/10 p-1 shrink-0"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                      <Building2 className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  )}
-                  
-                  {/* Nome da casa + Vínculo abreviado */}
-                  <span className="text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
-                    {aposta.bookmaker?.nome}
-                    {parceiroNome && ` - ${parceiroNome}`}
-                  </span>
-                  
-                  {/* Odd + Stake à direita */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-medium">@{aposta.odd.toFixed(2)}</span>
-                    <span className="text-xs text-muted-foreground">{formatCurrencyWithMoeda(aposta.stake, aposta.bookmaker?.moeda || 'BRL')}</span>
-                  </div>
-                </div>
-                
-                {/* LINHA 3: Data/Hora + Lucro/ROI */}
-                <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                  <span className="text-xs text-muted-foreground">
-                    {format(parseLocalDateTime(aposta.data_aposta), "dd/MM/yy HH:mm", { locale: ptBR })}
-                  </span>
-                  
-                  {aposta.lucro_prejuizo !== null && aposta.status === "LIQUIDADA" && (
-                    <div className="flex items-center gap-1">
-                      <span className={cn("text-sm font-semibold", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                        {formatCurrencyWithMoeda(aposta.lucro_prejuizo, aposta.bookmaker?.moeda || 'BRL')}
-                      </span>
-                      {aposta.stake > 0 && (
-                        <span className={cn("text-[10px]", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                          ({aposta.lucro_prejuizo >= 0 ? '+' : ''}{((aposta.lucro_prejuizo / aposta.stake) * 100).toFixed(1)}%)
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+              formatCurrency={(val) => formatCurrencyWithMoeda(val, aposta.bookmaker?.moeda || 'BRL')}
+            />
           );
         }
         
-        // Múltipla card - layout padronizado
+        // ===== APOSTA MÚLTIPLA - Usando ApostaCard padronizado =====
         const multipla = item.data as ApostaMultipla;
-        const multiplaParceiroNome = multipla.bookmaker?.parceiro?.nome ? getFirstLastName(multipla.bookmaker.parceiro.nome) : null;
+        const bookmakerBaseMultipla = multipla.bookmaker?.nome?.split(" - ")[0] || multipla.bookmaker?.nome;
+        const parceiroNomeMultipla = multipla.bookmaker?.parceiro?.nome ? getFirstLastName(multipla.bookmaker.parceiro.nome) : null;
+        const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
+        
+        // Preparar dados para ApostaCard
+        const multiplaCardData = {
+          id: multipla.id,
+          evento: `MÚLTIPLA ${multipla.tipo_multipla || ''}`,
+          esporte: `${multipla.selecoes.length} seleções`,
+          odd_final: multipla.odd_final,
+          stake: multipla.stake,
+          data_aposta: multipla.data_aposta,
+          resultado: multipla.resultado,
+          status: multipla.status,
+          lucro_prejuizo: multipla.lucro_prejuizo,
+          estrategia: multipla.estrategia,
+          tipo_multipla: multipla.tipo_multipla,
+          selecoes: multipla.selecoes,
+          bookmaker_nome: bookmakerBaseMultipla,
+          parceiro_nome: parceiroNomeMultipla,
+          moeda: multipla.bookmaker?.moeda || 'BRL',
+          logo_url: logoUrlMultipla,
+        };
         
         return (
-          <div 
-            key={multipla.id} 
-            className="rounded-lg border cursor-pointer transition-colors p-3 hover:border-amber-500/50 border-amber-500/20"
+          <ApostaCard
+            key={multipla.id}
+            aposta={multiplaCardData}
+            estrategia="BONUS"
+            variant={viewMode === "cards" ? "card" : "list"}
             onClick={() => handleOpenMultiplaDialog(multipla)}
-          >
-            {/* Layout Padronizado: 3 linhas igual ApostaCard */}
-            <div className="flex flex-col gap-2">
-              
-              {/* LINHA 1: Evento + Badges */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate uppercase">MÚLTIPLA</p>
-                  <span className="text-xs text-muted-foreground shrink-0">• {multipla.selecoes.length} seleções</span>
-                </div>
-                
-                {/* Badges alinhadas à direita */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
-                    <Coins className="h-2.5 w-2.5 mr-0.5" />
-                    Bônus
-                  </Badge>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
-                    <Layers className="h-2.5 w-2.5" />
-                    {multipla.tipo_multipla || 'MULT'}
-                  </Badge>
-                  <Badge 
-                    variant="outline"
-                    className={cn("text-[10px] px-1.5 py-0",
-                      multipla.resultado === 'GREEN' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                      multipla.resultado === 'RED' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                      'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                    )}
-                  >
-                    {multipla.resultado || 'Pendente'}
-                  </Badge>
-                </div>
-              </div>
-              
-              {/* LINHA 2: Logo + Casa/Vínculo + Seleções inline + Odd + Stake */}
-              <div className="flex items-center gap-3">
-                {/* Logo */}
-                {multipla.bookmaker?.bookmakers_catalogo?.logo_url ? (
-                  <img 
-                    src={multipla.bookmaker.bookmakers_catalogo.logo_url} 
-                    alt={multipla.bookmaker?.nome || ''} 
-                    className="h-10 w-10 rounded-lg object-contain bg-white/10 p-1 shrink-0"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
-                ) : (
-                  <div className="h-10 w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                )}
-                
-                {/* Nome da casa + Vínculo abreviado */}
-                <span className="text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
-                  {multipla.bookmaker?.nome}
-                  {multiplaParceiroNome && ` - ${multiplaParceiroNome}`}
-                </span>
-                
-                {/* Odd + Stake à direita */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-medium">@{multipla.odd_final.toFixed(2)}</span>
-                  <span className="text-xs text-muted-foreground">{formatCurrencyWithMoeda(multipla.stake, multipla.bookmaker?.moeda || 'BRL')}</span>
-                </div>
-              </div>
-              
-              {/* LINHA 3: Data/Hora + Lucro/ROI */}
-              <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                <span className="text-xs text-muted-foreground">
-                  {format(parseLocalDateTime(multipla.data_aposta), "dd/MM/yy HH:mm", { locale: ptBR })}
-                </span>
-                
-                {multipla.lucro_prejuizo !== null && multipla.status === "LIQUIDADA" && (
-                  <div className="flex items-center gap-1">
-                    <span className={cn("text-sm font-semibold", multipla.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                      {formatCurrencyWithMoeda(multipla.lucro_prejuizo, multipla.bookmaker?.moeda || 'BRL')}
-                    </span>
-                    {multipla.stake > 0 && (
-                      <span className={cn("text-[10px]", multipla.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                        ({multipla.lucro_prejuizo >= 0 ? '+' : ''}{((multipla.lucro_prejuizo / multipla.stake) * 100).toFixed(1)}%)
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+            formatCurrency={(val) => formatCurrencyWithMoeda(val, multipla.bookmaker?.moeda || 'BRL')}
+          />
         );
       })}
     </div>
