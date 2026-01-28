@@ -155,22 +155,22 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
             <span className="text-muted-foreground">Fiat (Real)</span>
             <p className="font-semibold">{formatCurrency(saldoReal)}</p>
           </div>
-          {hasFreebet && (
-            <div className="p-2 rounded bg-muted/30">
-              <span className="text-muted-foreground">Freebet</span>
-              <p className="font-semibold text-amber-500">{formatCurrency(saldoFreebet)}</p>
-            </div>
-          )}
           {hasBonus && (
             <div className="p-2 rounded bg-muted/30">
               <span className="text-muted-foreground">Outros Créditos</span>
-              <p className="font-semibold text-purple-500">{formatCurrency(saldoBonus)}</p>
+              <p className="font-semibold text-primary">{formatCurrency(saldoBonus)}</p>
+            </div>
+          )}
+          {hasFreebet && (
+            <div className="p-2 rounded bg-muted/30">
+              <span className="text-muted-foreground">Freebet</span>
+              <p className="font-semibold text-warning">{formatCurrency(saldoFreebet)}</p>
             </div>
           )}
           {saldoEmAposta > 0 && (
             <div className="p-2 rounded bg-muted/30">
               <span className="text-muted-foreground">Em Apostas</span>
-              <p className="font-semibold text-orange-500">-{formatCurrency(saldoEmAposta)}</p>
+              <p className="font-semibold text-destructive">-{formatCurrency(saldoEmAposta)}</p>
             </div>
           )}
         </div>

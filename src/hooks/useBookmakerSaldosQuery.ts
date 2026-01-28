@@ -2,15 +2,16 @@
  * Hook centralizado para saldos de bookmaker usando TanStack Query
  * 
  * CONTRATO CANÔNICO DE SALDO (via RPC get_bookmaker_saldos):
- * - saldo_real = bookmakers.saldo_atual
+ * - saldo_real = bookmakers.saldo_atual (JÁ INCLUI valor do bônus creditado via financial_events)
  * - saldo_freebet = bookmakers.saldo_freebet
- * - saldo_bonus = SUM(project_bookmaker_link_bonuses.saldo_atual) WHERE status='credited'
+ * - saldo_bonus = APENAS PARA DISPLAY (retornado pela RPC para breakdown, NÃO somado no operavel)
  * - saldo_em_aposta = SUM de stakes pendentes (SIMPLES/MULTIPLA: direto, ARBITRAGEM: pernas JSON)
  * - saldo_disponivel = saldo_real - saldo_em_aposta (capital livre)
- * - saldo_operavel = saldo_disponivel + saldo_freebet + saldo_bonus (total para apostar)
+ * - saldo_operavel = saldo_disponivel + saldo_freebet (bônus JÁ está em saldo_real)
  * 
  * REGRA FUNDAMENTAL:
- * - NÃO existe separação operacional entre saldo real e bônus
+ * - O bônus creditado já está incluído em saldo_real (via financial_events/trigger)
+ * - saldo_bonus é retornado APENAS para informação/breakdown na UI
  * - Apostas pendentes BLOQUEIAM capital (refletido em saldo_em_aposta)
  * - Este hook é a ÚNICA fonte de saldos de bookmaker para TODOS os componentes
  */
