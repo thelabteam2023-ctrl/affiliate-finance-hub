@@ -35,6 +35,7 @@ interface BonusBetData {
   data_aposta: string;
   lucro_prejuizo: number | null;
   pl_consolidado: number | null;
+  moeda_operacao?: string | null;
   bonus_id: string | null;
   stake_bonus?: number | null;
   estrategia?: string | null;
@@ -44,6 +45,8 @@ interface BonusResultadoLiquidoChartProps {
   bonuses: ProjectBonus[];
   bonusBets: BonusBetData[];
   formatCurrency: (value: number) => string;
+  /** Função para converter valores para moeda de consolidação do projeto */
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
   isSingleDayPeriod?: boolean;
   dateRange?: { start: Date; end: Date } | null;
 }
@@ -72,6 +75,7 @@ export function BonusResultadoLiquidoChart({
   bonuses,
   bonusBets,
   formatCurrency,
+  convertToConsolidation,
   isSingleDayPeriod = false,
   dateRange,
 }: BonusResultadoLiquidoChartProps) {
@@ -133,6 +137,7 @@ export function BonusResultadoLiquidoChart({
 
     // Agrupa juice (P&L das apostas com bônus) por data
     // Inclui apostas com bonus_id OU estratégia EXTRACAO_BONUS
+    // CRÍTICO: Converter valores para moeda de consolidação do projeto
     const juiceByDate: Record<string, number> = {};
     bonusBets.forEach(bet => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
@@ -145,7 +150,20 @@ export function BonusResultadoLiquidoChart({
       }
       
       const date = bet.data_aposta.split("T")[0];
-      const pl = bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0;
+      
+      // Priorizar pl_consolidado se disponível (já está na moeda do projeto)
+      let pl: number;
+      if (bet.pl_consolidado != null) {
+        pl = bet.pl_consolidado;
+      } else if (convertToConsolidation) {
+        // Se não tiver pl_consolidado, converter lucro_prejuizo da moeda de operação
+        const moedaOperacao = bet.moeda_operacao || "BRL";
+        pl = convertToConsolidation(bet.lucro_prejuizo ?? 0, moedaOperacao);
+      } else {
+        // Fallback: usar valor bruto (comportamento anterior)
+        pl = bet.lucro_prejuizo ?? 0;
+      }
+      
       juiceByDate[date] = (juiceByDate[date] || 0) + pl;
     });
 
@@ -176,7 +194,7 @@ export function BonusResultadoLiquidoChart({
     });
 
     return data;
-  }, [filteredBonuses, bonusBets, bonuses, dateRange, selectedBookmaker]);
+  }, [filteredBonuses, bonusBets, bonuses, dateRange, selectedBookmaker, convertToConsolidation]);
 
   // KPIs
   const kpis = useMemo(() => {

@@ -75,16 +75,17 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const expiring15Days = getExpiringSoon(15);
 
   // Fetch apostas com bônus (juice/custo operacional) - inclui apostas com bonus_id OU estratégia EXTRACAO_BONUS
+  // IMPORTANTE: Buscar moeda_operacao para converter corretamente para moeda de consolidação
   const { data: bonusBetsData = [], isLoading: betsLoading } = useQuery({
     queryKey: ["bonus-bets-juice", projetoId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()],
     queryFn: async () => {
       const startDate = dateRange?.start?.toISOString() || subDays(new Date(), 365).toISOString();
       
       // Query para apostas vinculadas a bônus (via bonus_id)
-      // is_bonus_bet removido - usar estrategia="EXTRACAO_BONUS"
+      // CRÍTICO: Incluir moeda_operacao para conversão multi-moeda
       let queryBonusId = supabase
         .from("apostas_unificada")
-        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, bookmaker_id, bonus_id, stake_bonus, estrategia")
+        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDate.split('T')[0])
         .not("bonus_id", "is", null);
@@ -92,7 +93,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       // Query para apostas de estratégia EXTRACAO_BONUS (mesmo sem bonus_id)
       let queryEstrategia = supabase
         .from("apostas_unificada")
-        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, bookmaker_id, bonus_id, stake_bonus, estrategia")
+        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDate.split('T')[0])
         .eq("estrategia", "EXTRACAO_BONUS");
@@ -201,17 +202,30 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   }, [bonuses, convertToConsolidation]);
 
   // Performance de Bônus = Total de bônus creditados + Juice das operações
+  // CRÍTICO: Converter TODOS os valores para moeda de consolidação do projeto
   const bonusPerformance = useMemo(() => {
-    // Total de bônus creditados (histórico)
+    // Total de bônus creditados (histórico) - já convertidos
     const totalBonusCreditado = bonuses
       .filter(b => b.status === "credited" || b.status === "finalized")
       .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
     
     // Total de juice (P&L das apostas com bônus)
+    // CORREÇÃO: Aplicar conversão de moeda para cada aposta individual
     const totalJuice = bonusBetsData.reduce((acc, bet) => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
       if (!isBonusBet) return acc;
-      return acc + (bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0);
+      
+      // Priorizar pl_consolidado se disponível (já está na moeda do projeto)
+      if (bet.pl_consolidado != null) {
+        return acc + bet.pl_consolidado;
+      }
+      
+      // Se não tiver pl_consolidado, converter lucro_prejuizo da moeda de operação
+      const moedaOperacao = bet.moeda_operacao || "BRL";
+      const lucroPrejuizo = bet.lucro_prejuizo ?? 0;
+      const valorConvertido = convertToConsolidation(lucroPrejuizo, moedaOperacao);
+      
+      return acc + valorConvertido;
     }, 0);
     
     const total = totalBonusCreditado + totalJuice;
@@ -322,6 +336,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         bonuses={bonuses}
         bonusBets={bonusBetsData}
         formatCurrency={formatCurrency}
+        convertToConsolidation={convertToConsolidation}
         isSingleDayPeriod={isSingleDayPeriod}
         dateRange={dateRange}
       />
