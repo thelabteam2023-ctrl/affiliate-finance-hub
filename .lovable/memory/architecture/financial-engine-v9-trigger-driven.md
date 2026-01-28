@@ -1,4 +1,4 @@
-# Memory: architecture/financial-engine-v9-trigger-driven
+# Memory: architecture/financial-engine-v9.1-trigger-driven-validated
 Updated: 2026-01-28
 
 ## Financial Engine v9 - Arquitetura Event-Driven com Trigger Universal
