@@ -1290,7 +1290,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   aposta={apostaCardData}
                   estrategia={estrategia}
                   variant={viewMode === "cards" ? "card" : "list"}
-                  onClick={() => handleOpenDialog(aposta)}
+                  onEdit={(apostaId) => {
+                    const a = apostas.find(ap => ap.id === apostaId);
+                    if (a) handleOpenDialog(a);
+                  }}
                   onQuickResolve={handleQuickResolve}
                   onDelete={prepareDeleteSimples}
                   formatCurrency={formatCurrency}
@@ -1341,7 +1344,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 aposta={multiplaCardData}
                 estrategia={estrategiaMultipla}
                 variant={viewMode === "cards" ? "card" : "list"}
-                onClick={() => handleOpenMultiplaDialog(multipla)}
+                onEdit={() => handleOpenMultiplaDialog(multipla)}
                 onQuickResolve={handleQuickResolve}
                 onDelete={prepareDeleteMultipla}
                 formatCurrency={formatCurrency}

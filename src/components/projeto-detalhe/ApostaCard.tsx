@@ -65,7 +65,8 @@ export interface ApostaCardData {
 interface ApostaCardProps {
   aposta: ApostaCardData;
   estrategia: EstrategiaType;
-  onClick?: () => void;
+  /** Callback para abrir o formulário de edição (via menu híbrido) */
+  onEdit?: (apostaId: string) => void;
   onQuickResolve?: (apostaId: string, resultado: string) => void;
   /** Callback para excluir aposta (abre modal de confirmação) */
   onDelete?: (apostaId: string) => void;
@@ -235,7 +236,7 @@ function defaultFormatCurrency(value: number, moeda: string = "BRL"): string {
 export function ApostaCard({
   aposta, 
   estrategia, 
-  onClick,
+  onEdit,
   onQuickResolve,
   onDelete,
   onDuplicate,
@@ -276,8 +277,6 @@ export function ApostaCard({
     ? (aposta.lucro_prejuizo / stake) * 100 
     : null;
   
-  const hoverBorderColor = accentColor ? `hover:border-[${accentColor}]/30` : "hover:border-primary/30";
-
   if (variant === "list") {
     // Extrair nome base da casa (antes do " - ") para exibição limpa
     const bookmakerBase = aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome;
@@ -297,11 +296,9 @@ export function ApostaCard({
     return (
       <div 
         className={cn(
-          "rounded-lg border cursor-pointer transition-colors p-3 overflow-hidden",
-          hoverBorderColor,
+          "rounded-lg border transition-colors p-3 overflow-hidden",
           className
         )}
-        onClick={onClick}
       >
         {/* Layout Padronizado: Evento/Esporte em cima, Casa e detalhes embaixo */}
         <div className="flex flex-col gap-2">
@@ -345,13 +342,13 @@ export function ApostaCard({
               <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
               
               {/* Menu de Ações Rápidas */}
-              {(onDelete || onDuplicate || onQuickResolve) && (
+              {(onDelete || onDuplicate || onQuickResolve || onEdit) && (
                 <BetRowActionsMenu
                   apostaId={aposta.id}
                   apostaType={isMultipla ? "multipla" : "simples"}
                   status={aposta.status || "PENDENTE"}
                   resultado={aposta.resultado || null}
-                  onEdit={() => onClick?.()}
+                  onEdit={() => onEdit?.(aposta.id)}
                   onDuplicate={onDuplicate ? () => onDuplicate(aposta.id) : undefined}
                   onQuickResolve={(resultado) => onQuickResolve?.(aposta.id, resultado)}
                   onDelete={() => onDelete?.(aposta.id)}
@@ -480,8 +477,7 @@ export function ApostaCard({
 
   return (
     <Card 
-      className={cn("cursor-pointer transition-colors overflow-hidden", hoverBorderColor, className)}
-      onClick={onClick}
+      className={cn("transition-colors overflow-hidden", className)}
     >
       <CardContent className="p-3">
         {/* LINHA 1: Evento + Esporte + Badges - Responsivo */}
@@ -522,14 +518,13 @@ export function ApostaCard({
             )}
             <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
             
-            {/* Menu de Ações Rápidas */}
-            {(onDelete || onDuplicate || onQuickResolve) && (
+            {(onDelete || onDuplicate || onQuickResolve || onEdit) && (
               <BetRowActionsMenu
                 apostaId={aposta.id}
                 apostaType={isMultipla ? "multipla" : "simples"}
                 status={aposta.status || "PENDENTE"}
                 resultado={aposta.resultado || null}
-                onEdit={() => onClick?.()}
+                onEdit={() => onEdit?.(aposta.id)}
                 onDuplicate={onDuplicate ? () => onDuplicate(aposta.id) : undefined}
                 onQuickResolve={(resultado) => onQuickResolve?.(aposta.id, resultado)}
                 onDelete={() => onDelete?.(aposta.id)}

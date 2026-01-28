@@ -1044,7 +1044,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                     aposta={apostaData}
                     estrategia="SUREBET"
                     variant={viewMode === "cards" ? "card" : "list"}
-                    onClick={() => {
+                    onEdit={() => {
                       // Converter para formato esperado pelo ApostaDialog
                       const apostaParaDialog = {
                         ...operacao,

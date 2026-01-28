@@ -798,7 +798,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
                 pernas: aposta.pernas as Perna[],
               }}
               estrategia="DUPLO_GREEN"
-              onClick={() => handleOpenAposta(aposta)}
+              onEdit={(apostaId) => {
+                const a = apostasFiltradas.find(ap => ap.id === apostaId);
+                if (a) handleOpenAposta(a);
+              }}
               onQuickResolve={handleQuickResolve}
               variant="card"
               formatCurrency={formatCurrency}
@@ -815,7 +818,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
                 pernas: aposta.pernas as Perna[],
               }}
               estrategia="DUPLO_GREEN"
-              onClick={() => handleOpenAposta(aposta)}
+              onEdit={(apostaId) => {
+                const a = apostasFiltradas.find(ap => ap.id === apostaId);
+                if (a) handleOpenAposta(a);
+              }}
               onQuickResolve={handleQuickResolve}
               variant="list"
               formatCurrency={formatCurrency}
