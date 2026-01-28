@@ -19,12 +19,13 @@ export {
   liquidarAposta,
   liquidarSurebet,
   liquidarSurebetSimples,
+  liquidarPernaSurebet,
   reliquidarAposta,
   healthCheck,
 } from './ApostaService';
 
-// Re-exportar tipo de input para liquidação de surebet
-export type { LiquidarSurebetPernaInput } from './ApostaService';
+// Re-exportar tipos de input para liquidação de surebet
+export type { LiquidarSurebetPernaInput, LiquidarPernaSurebetInput } from './ApostaService';
 
 // Exportar tipos
 export type {

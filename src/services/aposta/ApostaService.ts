@@ -630,6 +630,212 @@ export async function liquidarSurebet(
 }
 
 // ============================================================================
+// LIQUIDAR PERNA DE SUREBET (pernas JSONB - Motor Financeiro v9.5)
+// ============================================================================
+
+/**
+ * Input para liquidação de perna individual de Surebet
+ */
+export interface LiquidarPernaSurebetInput {
+  surebet_id: string;
+  perna_index: number;
+  bookmaker_id: string;
+  resultado: 'GREEN' | 'RED' | 'VOID' | 'MEIO_GREEN' | 'MEIO_RED' | null;
+  resultado_anterior: string | null;
+  stake: number;
+  odd: number;
+  moeda: string;
+  workspace_id: string;
+  stake_bonus?: number;
+  fonte_saldo?: string;
+}
+
+/**
+ * Liquida uma perna individual de Surebet usando motor financeiro.
+ * 
+ * MOTOR v9.5: Esta função substitui o updateBookmakerBalance() legado.
+ * Todo impacto financeiro passa por financial_events -> trigger SST.
+ * 
+ * Fluxo:
+ * 1. Calcula delta (reversão anterior + aplicação novo resultado)
+ * 2. Cria evento financeiro (PAYOUT/VOID_REFUND/ADJUSTMENT)
+ * 3. Atualiza JSONB da perna
+ * 4. Atualiza status do registro pai se todas pernas liquidadas
+ */
+export async function liquidarPernaSurebet(
+  input: LiquidarPernaSurebetInput
+): Promise<ApostaServiceResult<{ lucro_prejuizo: number; delta: number }>> {
+  const { 
+    surebet_id, perna_index, bookmaker_id, resultado, resultado_anterior,
+    stake, odd, moeda, workspace_id, stake_bonus = 0, fonte_saldo = 'REAL'
+  } = input;
+  
+  console.log("[ApostaService] Liquidando perna surebet:", { surebet_id, perna_index, resultado, resultado_anterior });
+
+  // Se resultado não mudou, não fazer nada
+  if (resultado_anterior === resultado) {
+    return { success: true, data: { lucro_prejuizo: 0, delta: 0 } };
+  }
+
+  try {
+    // 1. BUSCAR PERNAS ATUAIS
+    const { data: operacaoData, error: fetchError } = await supabase
+      .from('apostas_unificada')
+      .select('pernas, stake_total')
+      .eq('id', surebet_id)
+      .single();
+
+    if (fetchError || !operacaoData?.pernas) {
+      return {
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Surebet não encontrada' },
+      };
+    }
+
+    const pernas = operacaoData.pernas as any[];
+    const perna = pernas[perna_index];
+    if (!perna) {
+      return {
+        success: false,
+        error: { code: 'PERNA_NOT_FOUND', message: `Perna ${perna_index} não encontrada` },
+      };
+    }
+
+    // 2. CALCULAR LUCRO/PREJUÍZO
+    let lucro: number | null = 0;
+    if (resultado === null) {
+      lucro = null;
+    } else if (resultado === 'GREEN') {
+      lucro = stake * (odd - 1);
+    } else if (resultado === 'MEIO_GREEN') {
+      lucro = (stake * (odd - 1)) / 2;
+    } else if (resultado === 'RED') {
+      lucro = -stake;
+    } else if (resultado === 'MEIO_RED') {
+      lucro = -stake / 2;
+    } else if (resultado === 'VOID') {
+      lucro = 0;
+    }
+
+    // 3. CALCULAR DELTA FINANCEIRO (reversão + aplicação)
+    let delta = 0;
+    
+    // 3a. REVERTER resultado anterior
+    if (resultado_anterior && resultado_anterior !== 'PENDENTE') {
+      if (resultado_anterior === 'GREEN') {
+        delta -= stake * (odd - 1);
+      } else if (resultado_anterior === 'MEIO_GREEN') {
+        delta -= (stake * (odd - 1)) / 2;
+      } else if (resultado_anterior === 'RED') {
+        delta += stake;
+      } else if (resultado_anterior === 'MEIO_RED') {
+        delta += stake / 2;
+      }
+    }
+    
+    // 3b. APLICAR novo resultado
+    if (resultado === 'GREEN') {
+      delta += stake * (odd - 1);
+    } else if (resultado === 'MEIO_GREEN') {
+      delta += (stake * (odd - 1)) / 2;
+    } else if (resultado === 'RED') {
+      delta -= stake;
+    } else if (resultado === 'MEIO_RED') {
+      delta -= stake / 2;
+    }
+
+    // 4. CRIAR EVENTO FINANCEIRO (se delta != 0)
+    if (delta !== 0) {
+      const tipoEvento = delta > 0 ? 'PAYOUT' : 'ADJUSTMENT';
+      const idempotencyKey = `surebet_perna_${surebet_id}_${perna_index}_${Date.now()}`;
+      
+      // Determinar tipo_uso baseado em fonte_saldo
+      const tipoUso = fonte_saldo === 'FREEBET' ? 'FREEBET' 
+        : (stake_bonus > 0 ? 'BONUS' : 'NORMAL');
+
+      const { error: eventError } = await supabase
+        .from('financial_events')
+        .insert({
+          bookmaker_id,
+          aposta_id: surebet_id,
+          workspace_id,
+          tipo_evento: tipoEvento,
+          tipo_uso: tipoUso,
+          origem: delta > 0 ? 'LUCRO' : 'PERDA',
+          valor: delta, // positivo = crédito, negativo = débito
+          moeda,
+          idempotency_key: idempotencyKey,
+          descricao: `Perna ${perna_index + 1} Surebet: ${resultado_anterior || 'PENDENTE'} → ${resultado}`,
+          processed_at: new Date().toISOString(),
+        });
+
+      if (eventError) {
+        console.error("[ApostaService] Erro ao criar evento financeiro:", eventError);
+        return {
+          success: false,
+          error: { code: 'EVENT_CREATION_FAILED', message: eventError.message },
+        };
+      }
+      
+      console.log("[ApostaService] ✅ Evento financeiro criado:", { delta, tipoEvento });
+    }
+
+    // 5. ATUALIZAR PERNA NO JSONB
+    const novasPernas = [...pernas];
+    novasPernas[perna_index] = {
+      ...perna,
+      resultado,
+      lucro_prejuizo: lucro,
+    };
+
+    // 6. CALCULAR STATUS E RESULTADO FINAL
+    const todasLiquidadas = novasPernas.every(
+      p => p.resultado && p.resultado !== 'PENDENTE' && p.resultado !== null
+    );
+    const lucroTotal = novasPernas.reduce((acc, p) => acc + (p.lucro_prejuizo || 0), 0);
+    const resultadoFinal = todasLiquidadas 
+      ? (lucroTotal > 0 ? 'GREEN' : lucroTotal < 0 ? 'RED' : 'EMPATE')
+      : null;
+
+    // 7. ATUALIZAR REGISTRO PAI
+    const stakeTotal = operacaoData.stake_total || 0;
+    const { error: updateError } = await supabase
+      .from('apostas_unificada')
+      .update({
+        pernas: novasPernas as any,
+        status: todasLiquidadas ? 'LIQUIDADA' : 'PENDENTE',
+        resultado: resultadoFinal,
+        lucro_prejuizo: todasLiquidadas ? lucroTotal : null,
+        roi_real: todasLiquidadas && stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', surebet_id);
+
+    if (updateError) {
+      console.error("[ApostaService] Erro ao atualizar surebet:", updateError);
+      return {
+        success: false,
+        error: { code: 'UPDATE_FAILED', message: updateError.message },
+      };
+    }
+
+    console.log("[ApostaService] ✅ Perna surebet liquidada:", { perna_index, resultado, delta, lucro });
+    
+    return {
+      success: true,
+      data: { lucro_prejuizo: lucro ?? 0, delta },
+    };
+
+  } catch (err: any) {
+    console.error("[ApostaService] Exceção ao liquidar perna:", err);
+    return {
+      success: false,
+      error: { code: 'UNEXPECTED_ERROR', message: err.message },
+    };
+  }
+}
+
+// ============================================================================
 // LIQUIDAR SUREBET SIMPLES (apenas atualiza registro pai, sem eventos)
 // ============================================================================
 
