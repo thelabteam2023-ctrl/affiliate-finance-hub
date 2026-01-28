@@ -333,9 +333,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     };
     
     const handleApostaMessage = (event: MessageEvent) => {
-      // Aceitar tanto APOSTA_SAVED (nova aposta) quanto resultado_updated (mudança de resultado)
-      if ((event.data?.type === "APOSTA_SAVED" || event.data?.type === "resultado_updated") && event.data?.projetoId === projetoId) {
-        console.log("[ProjetoApostasTab] Aposta atualizada em janela externa, atualizando lista...");
+      // Aceitar APOSTA_SAVED, resultado_updated e APOSTA_DELETED
+      const validTypes = ["APOSTA_SAVED", "resultado_updated", "APOSTA_DELETED"];
+      if (validTypes.includes(event.data?.type) && event.data?.projetoId === projetoId) {
+        console.log(`[ProjetoApostasTab] ${event.data.type} em janela externa, atualizando lista...`);
         fetchAllApostas();
         onDataChange?.();
       }
