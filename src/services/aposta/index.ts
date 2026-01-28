@@ -17,9 +17,14 @@ export {
   atualizarAposta,
   deletarAposta,
   liquidarAposta,
+  liquidarSurebet,
+  liquidarSurebetSimples,
   reliquidarAposta,
   healthCheck,
 } from './ApostaService';
+
+// Re-exportar tipo de input para liquidação de surebet
+export type { LiquidarSurebetPernaInput } from './ApostaService';
 
 // Exportar tipos
 export type {
