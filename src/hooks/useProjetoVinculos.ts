@@ -86,6 +86,12 @@ function invalidateAllVinculoRelatedQueries(
   queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
   queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
 
+  // 8. CRÍTICO: Painel de Relacionamentos (contagem de contas/parceiros)
+  queryClient.invalidateQueries({ queryKey: ["projeto-painel-contas", projetoId] });
+
+  // 9. Rollover por casa (para SaldoOperavelCard)
+  queryClient.invalidateQueries({ queryKey: ["rollover-por-casa", projetoId] });
+
   console.log(`[useProjetoVinculos] Invalidated ALL vinculo-related queries for project ${projetoId}`);
 }
 
