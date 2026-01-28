@@ -134,7 +134,17 @@ export function ConciliacaoVinculoDialog({
     }
   };
 
-  const handleConciliar = async () => {
+  // Liberar vínculo COM saque (comportamento atual para casas com saldo)
+  const handleConciliarComSaque = async () => {
+    await executarConciliacao(true);
+  };
+
+  // Liberar vínculo SEM saque (casa fica disponível para reutilização)
+  const handleConciliarSemSaque = async () => {
+    await executarConciliacao(false);
+  };
+
+  const executarConciliacao = async (marcarParaSaque: boolean) => {
     if (!vinculo || !workspaceId) return;
 
     if (saldoReal === "") {
@@ -176,7 +186,7 @@ export function ConciliacaoVinculoDialog({
         );
       }
 
-      // 3. Registrar data de desvinculação no histórico
+      // 2. Registrar data de desvinculação no histórico
       await supabase
         .from("projeto_bookmaker_historico")
         .update({
@@ -186,18 +196,17 @@ export function ConciliacaoVinculoDialog({
         .eq("projeto_id", projetoId)
         .eq("bookmaker_id", vinculo.id);
 
-      // 4. Liberar o vínculo (com novo saldo já ajustado)
+      // 3. Liberar o vínculo
       const saldoFinalReal = temDiferenca ? saldoRealNum : saldoSistema;
       
       // Verificar se a casa está limitada
       const isLimitada = vinculo.bookmaker_status.toUpperCase() === "LIMITADA";
       
-      // Determinar se precisa marcar para saque
-      // - Casa LIMITADA OU casa com saldo > 0: precisa sacar
-      // - Casa ATIVA sem saldo: disponível para novo vínculo
-      const precisaSaque = isLimitada || saldoFinalReal > 0;
+      // Casa LIMITADA sempre vai para saque (obrigatório)
+      // Casa ATIVA: depende da escolha do usuário
+      const deveMarcarParaSaque = isLimitada || marcarParaSaque;
       
-      if (precisaSaque) {
+      if (deveMarcarParaSaque && saldoFinalReal > 0) {
         // Usar RPC que preserva estado_conta
         const { error } = await supabase.rpc('marcar_para_saque', {
           p_bookmaker_id: vinculo.id
@@ -210,7 +219,7 @@ export function ConciliacaoVinculoDialog({
           .update({ projeto_id: null })
           .eq("id", vinculo.id);
       } else {
-        // Apenas desvincular
+        // Apenas desvincular - casa fica disponível para novo vínculo
         const { error } = await supabase
           .from("bookmakers")
           .update({
@@ -227,9 +236,14 @@ export function ConciliacaoVinculoDialog({
           `Casa limitada liberada. Saque obrigatório de ${formatCurrency(saldoFinalReal, vinculo.moeda)}.`,
           { duration: 5000 }
         );
-      } else if (saldoFinalReal > 0) {
+      } else if (deveMarcarParaSaque && saldoFinalReal > 0) {
         toast.success(
           `Vínculo liberado. Casa com saldo de ${formatCurrency(saldoFinalReal, vinculo.moeda)} aguardando saque.`,
+          { duration: 5000 }
+        );
+      } else if (saldoFinalReal > 0) {
+        toast.success(
+          `Vínculo liberado. Casa mantém saldo de ${formatCurrency(saldoFinalReal, vinculo.moeda)} e está disponível para novo vínculo.`,
           { duration: 5000 }
         );
       } else {
@@ -390,50 +404,80 @@ export function ConciliacaoVinculoDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-4">
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)} 
-            disabled={saving || savingAjuste}
-            className="w-full sm:w-auto"
-          >
-            Cancelar
-          </Button>
-          <Button 
-            variant="secondary" 
-            onClick={handleApenasAjustar} 
-            disabled={saving || savingAjuste || saldoReal === "" || !temDiferenca || !observacoes.trim()}
-            className="w-full sm:w-auto"
-          >
-            {savingAjuste ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Ajustando...
-              </>
-            ) : (
-              <>
-                <Scale className="mr-2 h-4 w-4" />
-                Ajustar
-              </>
+        <DialogFooter className="flex flex-col gap-2 pt-4">
+          {/* Linha 1: Cancelar e Ajustar */}
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)} 
+              disabled={saving || savingAjuste}
+              className="w-full sm:w-auto"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={handleApenasAjustar} 
+              disabled={saving || savingAjuste || saldoReal === "" || !temDiferenca || !observacoes.trim()}
+              className="w-full sm:w-auto"
+            >
+              {savingAjuste ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Ajustando...
+                </>
+              ) : (
+                <>
+                  <Scale className="mr-2 h-4 w-4" />
+                  Ajustar Saldo
+                </>
+              )}
+            </Button>
+          </div>
+          
+          {/* Linha 2: Opções de liberação */}
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
+            {/* Liberar SEM saque - só aparece se casa não está limitada e tem saldo */}
+            {vinculo.bookmaker_status.toUpperCase() !== "LIMITADA" && saldoRealNum > 0 && (
+              <Button 
+                variant="outline"
+                onClick={handleConciliarSemSaque} 
+                disabled={saving || savingAjuste || saldoReal === "" || (temDiferenca && !observacoes.trim())}
+                className="w-full sm:w-auto border-primary/50 hover:bg-primary/10"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                    Liberar (Manter Saldo)
+                  </>
+                )}
+              </Button>
             )}
-          </Button>
-          <Button 
-            onClick={handleConciliar} 
-            disabled={saving || savingAjuste || saldoReal === "" || (temDiferenca && !observacoes.trim())}
-            className="w-full sm:w-auto"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processando...
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Conciliar e Liberar
-              </>
-            )}
-          </Button>
+            
+            {/* Liberar COM saque - sempre disponível */}
+            <Button 
+              onClick={handleConciliarComSaque} 
+              disabled={saving || savingAjuste || saldoReal === "" || (temDiferenca && !observacoes.trim())}
+              className="w-full sm:w-auto"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  {saldoRealNum > 0 ? "Liberar e Sacar" : "Conciliar e Liberar"}
+                </>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
