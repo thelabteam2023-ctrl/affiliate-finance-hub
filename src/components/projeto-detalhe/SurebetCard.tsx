@@ -8,6 +8,7 @@ import { cn, getFirstLastName } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { parseLocalDateTime } from "@/utils/dateUtils";
+import { BetRowActionsMenu, type BetResultado } from "@/components/apostas/BetRowActionsMenu";
 
 // Estrutura de entrada individual (para múltiplas entradas)
 export interface SurebetPernaEntry {
@@ -58,6 +59,12 @@ export interface SurebetData {
 interface SurebetCardProps {
   surebet: SurebetData;
   onEdit?: (surebet: SurebetData) => void;
+  /** Callback para liquidação rápida */
+  onQuickResolve?: (surebetId: string, resultado: string) => void;
+  /** Callback para excluir surebet */
+  onDelete?: (surebetId: string) => void;
+  /** Callback para duplicar surebet */
+  onDuplicate?: (surebetId: string) => void;
   className?: string;
   formatCurrency?: (value: number) => string;
   /** Quando true, exibe badge "Bônus" no lugar de "SUREBET" */
@@ -328,7 +335,7 @@ function PernaItem({
   );
 }
 
-export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
+export function SurebetCard({ surebet, onEdit, onQuickResolve, onDelete, onDuplicate, className, formatCurrency, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
   // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
   
@@ -400,7 +407,7 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
             )}
           </div>
           
-          {/* Badges - wrap on mobile */}
+          {/* Badges + Menu de Ações - wrap on mobile */}
           <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
             <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", estrategiaConfig.bgColor, estrategiaConfig.color, estrategiaConfig.borderColor)}>
               <Icon className="h-2.5 w-2.5" />
@@ -410,6 +417,20 @@ export function SurebetCard({ surebet, onEdit, className, formatCurrency, isBonu
               {surebet.modelo}
             </Badge>
             <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
+            
+            {/* Menu de Ações Rápidas */}
+            {(onDelete || onDuplicate || onQuickResolve) && (
+              <BetRowActionsMenu
+                apostaId={surebet.id}
+                apostaType="surebet"
+                status={surebet.status || "PENDENTE"}
+                resultado={surebet.resultado || null}
+                onEdit={() => onEdit?.(surebet)}
+                onDuplicate={onDuplicate ? () => onDuplicate(surebet.id) : undefined}
+                onQuickResolve={(resultado) => onQuickResolve?.(surebet.id, resultado)}
+                onDelete={() => onDelete?.(surebet.id)}
+              />
+            )}
           </div>
         </div>
         

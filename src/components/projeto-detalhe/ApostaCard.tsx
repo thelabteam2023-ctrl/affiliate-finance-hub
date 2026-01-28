@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+import { BetRowActionsMenu, type BetResultado } from "@/components/apostas/BetRowActionsMenu";
 
 // Tipos de estratégia para badge
 export type EstrategiaType = 
@@ -66,6 +67,10 @@ interface ApostaCardProps {
   estrategia: EstrategiaType;
   onClick?: () => void;
   onQuickResolve?: (apostaId: string, resultado: string) => void;
+  /** Callback para excluir aposta (abre modal de confirmação) */
+  onDelete?: (apostaId: string) => void;
+  /** Callback para duplicar aposta */
+  onDuplicate?: (apostaId: string) => void;
   variant?: "card" | "list";
   accentColor?: string;
   className?: string;
@@ -232,6 +237,8 @@ export function ApostaCard({
   estrategia, 
   onClick,
   onQuickResolve,
+  onDelete,
+  onDuplicate,
   variant = "card",
   accentColor,
   className,
@@ -308,7 +315,7 @@ export function ApostaCard({
               )}
             </div>
             
-            {/* Badges - wrap on mobile */}
+            {/* Badges + Menu de Ações - wrap on mobile */}
             <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
               <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
                 <Icon className="h-2.5 w-2.5" />
@@ -336,6 +343,20 @@ export function ApostaCard({
                 </Badge>
               )}
               <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+              
+              {/* Menu de Ações Rápidas */}
+              {(onDelete || onDuplicate || onQuickResolve) && (
+                <BetRowActionsMenu
+                  apostaId={aposta.id}
+                  apostaType={isMultipla ? "multipla" : "simples"}
+                  status={aposta.status || "PENDENTE"}
+                  resultado={aposta.resultado || null}
+                  onEdit={() => onClick?.()}
+                  onDuplicate={onDuplicate ? () => onDuplicate(aposta.id) : undefined}
+                  onQuickResolve={(resultado) => onQuickResolve?.(aposta.id, resultado)}
+                  onDelete={() => onDelete?.(aposta.id)}
+                />
+              )}
             </div>
           </div>
           
@@ -472,7 +493,7 @@ export function ApostaCard({
             )}
           </div>
           
-          {/* Badges - wrap on mobile */}
+          {/* Badges + Menu de Ações - wrap on mobile */}
           <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
             <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.bgColor, config.color, config.borderColor)}>
               <Icon className="h-2.5 w-2.5" />
@@ -500,6 +521,20 @@ export function ApostaCard({
               </Badge>
             )}
             <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
+            
+            {/* Menu de Ações Rápidas */}
+            {(onDelete || onDuplicate || onQuickResolve) && (
+              <BetRowActionsMenu
+                apostaId={aposta.id}
+                apostaType={isMultipla ? "multipla" : "simples"}
+                status={aposta.status || "PENDENTE"}
+                resultado={aposta.resultado || null}
+                onEdit={() => onClick?.()}
+                onDuplicate={onDuplicate ? () => onDuplicate(aposta.id) : undefined}
+                onQuickResolve={(resultado) => onQuickResolve?.(aposta.id, resultado)}
+                onDelete={() => onDelete?.(aposta.id)}
+              />
+            )}
           </div>
         </div>
 
