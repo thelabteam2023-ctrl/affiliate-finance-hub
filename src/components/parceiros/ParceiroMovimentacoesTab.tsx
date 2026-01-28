@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useEffect, useRef, useCallback, memo, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +19,7 @@ import {
 } from "@/hooks/useParceiroTabsCache";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { parseLocalDateTime } from "@/utils/dateUtils";
+import { CryptoTransactionCard, CryptoTransactionData, CryptoParty } from "./CryptoTransactionCard";
 
 interface ParceiroMovimentacoesTabProps {
   parceiroId: string;
@@ -565,6 +566,65 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
 
   const transacoes = data?.transacoes || [];
 
+  // =========================================================================
+  // TRANSFORMAÇÃO: Converter transação para formato de card crypto
+  // =========================================================================
+  const transformToCryptoCard = (transacao: Transacao): CryptoTransactionData | null => {
+    if (transacao.tipo_moeda !== "CRYPTO") return null;
+    
+    // Determinar se é enviada ou recebida do ponto de vista do parceiro atual
+    const isOrigem = transacao.origem_parceiro_id === parceiroId ||
+      data?.contasBancarias.some(c => c.id === transacao.origem_conta_bancaria_id && c.parceiro_id === parceiroId) ||
+      data?.walletsCrypto.some(w => w.id === transacao.origem_wallet_id && w.parceiro_id === parceiroId);
+    
+    // Buscar dados da wallet de origem
+    const origemWallet = transacao.origem_wallet_id 
+      ? data?.walletsCrypto.find(w => w.id === transacao.origem_wallet_id)
+      : null;
+    const origemParceiro = transacao.origem_parceiro_id
+      ? data?.parceiroNames.get(transacao.origem_parceiro_id)
+      : (origemWallet?.parceiro_id ? data?.parceiroNames.get(origemWallet.parceiro_id) : null);
+    
+    // Buscar dados da wallet de destino
+    const destinoWallet = transacao.destino_wallet_id
+      ? data?.walletsCrypto.find(w => w.id === transacao.destino_wallet_id)
+      : null;
+    const destinoParceiro = transacao.destino_parceiro_id
+      ? data?.parceiroNames.get(transacao.destino_parceiro_id)
+      : (destinoWallet?.parceiro_id ? data?.parceiroNames.get(destinoWallet.parceiro_id) : null);
+    
+    // Construir party de origem
+    const from: CryptoParty = {
+      owner_name: origemParceiro || (transacao.origem_tipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" : null),
+      wallet_name: origemWallet?.exchange || (transacao.origem_tipo === "CAIXA_OPERACIONAL" ? "Operacional" : null),
+      address: origemWallet?.endereco || null,
+    };
+    
+    // Construir party de destino
+    const to: CryptoParty = {
+      owner_name: destinoParceiro || (transacao.destino_tipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" : null),
+      wallet_name: destinoWallet?.exchange || (transacao.destino_tipo === "CAIXA_OPERACIONAL" ? "Operacional" : null),
+      address: destinoWallet?.endereco || null,
+    };
+    
+    // Determinar a rede (da wallet de origem ou destino)
+    const network = origemWallet?.network || destinoWallet?.network || null;
+    
+    return {
+      id: transacao.id,
+      type: isOrigem ? "sent" : "received",
+      asset: transacao.coin,
+      network,
+      amount: transacao.qtd_coin ?? transacao.valor,
+      amount_usd: transacao.valor_usd,
+      date: transacao.data_transacao,
+      description: transacao.descricao,
+      status: transacao.status,
+      from,
+      to,
+    };
+  };
+
   // EMPTY
   if (transacoes.length === 0) {
     return (
@@ -581,6 +641,24 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       <div className="h-full overflow-y-auto">
         <div className="space-y-2 pr-1">
           {transacoes.map((transacao) => {
+            // ===============================================================
+            // RENDERIZAÇÃO CONDICIONAL: Card Crypto vs Card Padrão
+            // ===============================================================
+            const cryptoData = transformToCryptoCard(transacao);
+            
+            if (cryptoData) {
+              // Renderizar card crypto institucional
+              return (
+                <CryptoTransactionCard
+                  key={transacao.id}
+                  transaction={cryptoData}
+                  showSensitiveData={showSensitiveData}
+                  formatDate={formatDate}
+                />
+              );
+            }
+            
+            // Renderizar card padrão para transações FIAT
             const origem = getOrigemLabel(transacao);
             const destino = getDestinoLabel(transacao);
 

@@ -26,6 +26,8 @@ export interface Transacao {
   moeda: string;
   tipo_moeda: string;
   valor_usd: number | null;
+  coin: string | null; // Ativo crypto (USDT, ETH, BTC, etc.)
+  qtd_coin: number | null; // Quantidade do ativo
   data_transacao: string;
   status: string;
   descricao: string | null;
