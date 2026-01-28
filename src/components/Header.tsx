@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Users, Wallet, Building2, Link2, Menu, Landmark } from "lucide-react";
+import favicon from "@/assets/favicon.png";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -21,9 +22,7 @@ const Header = () => {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-primary">
-            <Wallet className="h-5 w-5 text-white" />
-          </div>
+          <img src={favicon} alt="Labbet One" className="h-9 w-9" />
           <span className="text-lg font-bold tracking-tight">Labbet One</span>
         </Link>
 
