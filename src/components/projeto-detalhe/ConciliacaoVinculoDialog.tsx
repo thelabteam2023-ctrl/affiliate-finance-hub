@@ -26,6 +26,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { registrarAjusteViaLedger } from "@/lib/ledgerService";
+import { getCurrencySymbol, SupportedCurrency } from "@/types/currency";
 
 interface ConciliacaoVinculoDialogProps {
   open: boolean;
@@ -61,14 +62,17 @@ export function ConciliacaoVinculoDialog({
   const diferenca = saldoRealNum - saldoSistema;
   const temDiferenca = saldoReal !== "" && Math.abs(diferenca) > 0.01;
 
+  // Usar símbolo da moeda nativa da bookmaker
+  const moedaNativa = (vinculo?.moeda || "BRL") as SupportedCurrency;
+  const simboloMoeda = getCurrencySymbol(moedaNativa);
+
   const formatCurrency = (value: number, moeda: string = "BRL") => {
-    if (moeda === "USD" || moeda === "USDT") {
-      return `$ ${value.toFixed(2)}`;
-    }
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+    const symbol = getCurrencySymbol(moeda);
+    // Usar ponto decimal para moedas internacionais, vírgula para BRL
+    const formatted = moeda === "BRL" 
+      ? value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${symbol} ${formatted}`;
   };
 
   // Apenas ajustar saldo SEM liberar vínculo
@@ -294,7 +298,7 @@ export function ConciliacaoVinculoDialog({
               </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  {vinculo.moeda === "USD" || vinculo.moeda === "USDT" ? "$" : "R$"}
+                  {simboloMoeda}
                 </span>
                 <Input
                   id="saldo-real"
