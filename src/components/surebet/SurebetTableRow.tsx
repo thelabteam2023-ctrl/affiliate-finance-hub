@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus, Check, Trophy, X, Ban, Divide } from 'lucide-react';
+import { Plus, Minus, Check, CheckCircle2, X, CircleSlash } from 'lucide-react';
 import { BookmakerSelectOption, BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
@@ -323,18 +323,18 @@ export function SurebetTableRow({
           <div className="flex flex-wrap items-center justify-center gap-1 max-w-[150px]">
             <ResultadoButton 
               tipo="GREEN" 
-              icon={Trophy} 
+              icon={CheckCircle2} 
               activeClass="bg-emerald-500 text-white"
             />
             <ResultadoButton 
               tipo="MEIO_GREEN" 
-              icon={Divide} 
-              activeClass="bg-emerald-400 text-white"
+              icon={CheckCircle2} 
+              activeClass="bg-teal-500 text-white"
             />
             <ResultadoButton 
               tipo="MEIO_RED" 
-              icon={Divide} 
-              activeClass="bg-red-400 text-white"
+              icon={X} 
+              activeClass="bg-orange-500 text-white"
             />
             <ResultadoButton 
               tipo="RED" 
@@ -343,7 +343,7 @@ export function SurebetTableRow({
             />
             <ResultadoButton 
               tipo="VOID" 
-              icon={Ban} 
+              icon={CircleSlash} 
               activeClass="bg-gray-500 text-white"
             />
           </div>
