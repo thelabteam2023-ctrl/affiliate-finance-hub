@@ -26,6 +26,8 @@ import {
   List,
   Gift
 } from "lucide-react";
+import { reliquidarAposta, deletarAposta } from "@/services/aposta";
+import { type SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
@@ -684,6 +686,76 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   };
 
+  // Handler para liquidação rápida de Surebet (menu cascata)
+  const handleQuickResolveSurebet = async (surebetId: string, quickResult: SurebetQuickResult) => {
+    const surebet = surebets.find(sb => sb.id === surebetId);
+    if (!surebet || !surebet.pernas) {
+      toast.error("Surebet não encontrada ou sem pernas");
+      return;
+    }
+
+    try {
+      const stakeTotal = surebet.stake_total || 0;
+      let lucroTotal = 0;
+      let resultadoFinal: 'GREEN' | 'RED' | 'VOID' = 'GREEN';
+
+      if (quickResult.type === "single_win") {
+        // Uma perna venceu, outras perderam
+        const pernaIdx = quickResult.winners[0];
+        const pernaVencedora = surebet.pernas[pernaIdx];
+        const stakeVencedor = pernaVencedora?.stake || 0;
+        const oddVencedor = pernaVencedora?.odd || 1;
+        lucroTotal = (stakeVencedor * oddVencedor) - stakeTotal;
+        resultadoFinal = lucroTotal >= 0 ? "GREEN" : "RED";
+      } else if (quickResult.type === "double_green") {
+        // Duas pernas venceram (duplo green)
+        const indices = quickResult.winners;
+        let retornoTotal = 0;
+        for (const idx of indices) {
+          const perna = surebet.pernas[idx];
+          if (perna) {
+            retornoTotal += (perna.stake || 0) * (perna.odd || 1);
+          }
+        }
+        lucroTotal = retornoTotal - stakeTotal;
+        resultadoFinal = lucroTotal >= 0 ? "GREEN" : "RED";
+      } else if (quickResult.type === "all_void") {
+        // Todas as pernas void
+        lucroTotal = 0;
+        resultadoFinal = "VOID";
+      }
+
+      const result = await reliquidarAposta(surebetId, resultadoFinal, lucroTotal);
+      
+      if (result.success) {
+        toast.success(`Surebet liquidada: ${resultadoFinal}`);
+        handleApostaUpdated();
+      } else {
+        const errorMsg = typeof result.error === 'string' ? result.error : result.error?.message || "Erro ao liquidar surebet";
+        toast.error(errorMsg);
+      }
+    } catch (error: any) {
+      toast.error("Erro ao liquidar surebet: " + error.message);
+    }
+  };
+
+  // Handler para deletar Surebet
+  const handleDeleteSurebet = async (surebetId: string) => {
+    try {
+      const result = await deletarAposta(surebetId);
+      
+      if (result.success) {
+        toast.success("Surebet excluída com sucesso");
+        handleApostaUpdated();
+      } else {
+        const errorMsg = typeof result.error === 'string' ? result.error : result.error?.message || "Erro ao excluir surebet";
+        toast.error(errorMsg);
+      }
+    } catch (error: any) {
+      toast.error("Erro ao excluir surebet: " + error.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -746,6 +818,8 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                 const url = `/janela/surebet/${surebet.id}?projetoId=${encodeURIComponent(projetoId)}&tab=bonus`;
                 window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
               }}
+              onQuickResolve={(surebetId, result) => handleQuickResolveSurebet(surebetId, result)}
+              onDelete={handleDeleteSurebet}
             />
           );
         }
