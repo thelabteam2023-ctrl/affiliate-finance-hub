@@ -1,121 +1,250 @@
 
-# Plano: Separar Fluxos de Criação vs Edição de Apostas
 
-## Contexto do Problema
+# Plano: Hook Centralizado `useCrossWindowSync`
 
-Atualmente, tanto a criação de novas apostas quanto a edição de apostas existentes seguem o mesmo fluxo pós-salvamento:
-- Formulário é resetado
-- Contador incrementa
-- Janela permanece aberta
+## Resumo Executivo
 
-Isso é incorreto para edição: quando você edita uma aposta existente, o comportamento esperado é **fechar a janela e retornar à lista**, não preparar para "nova entrada".
+Criar um hook React reutilizável que **centraliza toda a lógica de sincronização cross-window** (comunicação entre abas/janelas do navegador). Isso eliminará **~650 linhas de código duplicado** espalhadas em 12+ arquivos, garantindo que novos módulos já venham sincronizados automaticamente.
 
-## Fluxo Proposto
+---
+
+## Problema Atual
+
+### Duplicação Identificada
+| Arquivo | Linhas Duplicadas | Status |
+|---------|-------------------|--------|
+| ProjetoApostasTab.tsx | ~60 linhas | Completo |
+| ProjetoValueBetTab.tsx | ~55 linhas | Completo |
+| ProjetoFreebetsTab.tsx | ~50 linhas | Completo |
+| ProjetoDuploGreenTab.tsx | ~50 linhas | Completo |
+| ProjetoSurebetTab.tsx | ~50 linhas | Completo |
+| BonusApostasTab.tsx | ~60 linhas | Completo |
+| BonusVisaoGeralTab.tsx | ~50 linhas | Completo |
+| ProjetoDashboardTab.tsx | ~40 linhas | Completo |
+| **+ 4 arquivos de emissão** | ~40 linhas cada | Completo |
+| **TOTAL** | **~650 linhas** | Repetidas |
+
+### Riscos do Modelo Atual
+- Novo evento (ex: `BONUS_UPDATED`) exige alteração manual em **12+ arquivos**
+- Alta chance de esquecer algum módulo, causando dessincronização
+- Manutenção cara e propensa a erros
+
+---
+
+## Solução Proposta
+
+### Novo Hook: `useCrossWindowSync`
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                     APÓS SALVAR COM SUCESSO                     │
+│                    useCrossWindowSync                           │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│   isEditing = false (Nova Aposta)                               │
-│   ├── Notificar janela principal (BroadcastChannel)             │
-│   ├── Resetar formulário (setAposta(null), setFormKey++)        │
-│   ├── Incrementar contador (saveCount++)                        │
-│   ├── Mostrar toast "Aposta registrada!"                        │
-│   └── MANTER janela aberta (modo operacional contínuo)          │
-│                                                                 │
-│   isEditing = true (Edição de Aposta)                           │
-│   ├── Notificar janela principal (BroadcastChannel)             │
-│   ├── Mostrar toast "Aposta atualizada!"                        │
-│   └── FECHAR janela automaticamente (window.close())            │
-│                                                                 │
+│  Parâmetros de Entrada:                                         │
+│  ├─ projetoId: string                                          │
+│  ├─ onSync: () => void (callback de refresh)                   │
+│  └─ channels?: ('aposta' | 'multipla' | 'surebet')[]           │
+│       (padrão: ['aposta', 'multipla', 'surebet'])              │
+├─────────────────────────────────────────────────────────────────┤
+│  Eventos Suportados (internamente):                            │
+│  ├─ APOSTA_SAVED                                               │
+│  ├─ APOSTA_DELETED                                             │
+│  ├─ APOSTA_MULTIPLA_SAVED                                      │
+│  ├─ SUREBET_SAVED                                              │
+│  └─ resultado_updated                                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Fallback automático: localStorage (navegadores sem suporte)   │
+│  Cleanup automático: fecha channels no unmount                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Arquivos a Modificar
+### API do Hook (Uso Simplificado)
 
-### 1. `src/pages/ApostaWindowPage.tsx`
-
-O `handleSuccess` será refatorado para separar os fluxos:
-
-**Antes:**
+**ANTES (50+ linhas por módulo):**
 ```typescript
-const handleSuccess = useCallback((action?: ApostaActionType) => {
-  // ... notifica
-  if (action === 'delete') { /* fecha */ }
+useEffect(() => {
+  const surebetChannel = new BroadcastChannel("surebet_channel");
+  const apostaChannel = new BroadcastChannel("aposta_channel");
+  const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
   
-  // SEMPRE reseta e mantém aberto
-  setSaveCount(prev => prev + 1);
-  setAposta(null);
-  setFormKey(prev => prev + 1);
-  toast.success(isEditing ? "Aposta atualizada!" : "Aposta registrada!");
-}, [...]);
+  surebetChannel.onmessage = (event) => {
+    if (event.data?.type === "SUREBET_SAVED" && event.data?.projetoId === projetoId) {
+      fetchData();
+      onDataChange?.();
+    }
+  };
+  
+  apostaChannel.onmessage = (event) => {
+    const validTypes = ["APOSTA_SAVED", "resultado_updated", "APOSTA_DELETED"];
+    if (validTypes.includes(event.data?.type) && event.data?.projetoId === projetoId) {
+      fetchData();
+      onDataChange?.();
+    }
+  };
+  
+  multiplaChannel.onmessage = (event) => {
+    if (event.data?.type === "APOSTA_MULTIPLA_SAVED" && event.data?.projetoId === projetoId) {
+      fetchData();
+      onDataChange?.();
+    }
+  };
+  
+  // Fallback localStorage...
+  const handleStorage = (event: StorageEvent) => { /* ... */ };
+  window.addEventListener("storage", handleStorage);
+  
+  return () => {
+    surebetChannel.close();
+    apostaChannel.close();
+    multiplaChannel.close();
+    window.removeEventListener("storage", handleStorage);
+  };
+}, [projetoId, onDataChange]);
 ```
 
-**Depois:**
+**DEPOIS (1 linha):**
 ```typescript
-const handleSuccess = useCallback((action?: ApostaActionType) => {
-  // ... notifica (BroadcastChannel)
-  
-  if (action === 'delete') {
-    toast.success("Aposta excluída!");
-    setTimeout(() => window.close(), 1500);
-    return;
+useCrossWindowSync({
+  projetoId,
+  onSync: () => {
+    fetchData();
+    onDataChange?.();
   }
-  
-  // FLUXO DISTINTO POR MODO
-  if (isEditing) {
-    // EDIÇÃO: Fechar e retornar
-    toast.success("Aposta atualizada!", {
-      description: "Alterações salvas com sucesso.",
-    });
-    setTimeout(() => window.close(), 1000);
-  } else {
-    // CRIAÇÃO: Resetar e continuar
-    setSaveCount(prev => prev + 1);
-    setAposta(null);
-    setFormKey(prev => prev + 1);
-    toast.success("Aposta registrada!", {
-      description: `${saveCount + 1}ª operação salva.`,
-    });
-    // Janela permanece aberta
-  }
-}, [...]);
+});
 ```
 
-### 2. `src/pages/MultiplaWindowPage.tsx` (se existir)
+---
 
-Aplicar a mesma lógica de separação de fluxos para o formulário de Apostas Múltiplas.
+## Etapas de Implementação
 
-### 3. `src/pages/SurebetWindowPage.tsx` (se existir)
+### Fase 1: Criar o Hook (Arquivo Novo)
+**Arquivo:** `src/hooks/useCrossWindowSync.ts`
 
-Aplicar a mesma lógica para o formulário de Surebets.
+O hook irá:
+1. Aceitar configuração flexível de channels
+2. Gerenciar todos os 5 tipos de eventos automaticamente
+3. Implementar fallback para localStorage
+4. Fazer cleanup automático no unmount
+5. Incluir logging opcional para debug
 
-### 4. Opcional: `ApostaPopupContext.tsx`
+### Fase 2: Refatorar Módulos Existentes (12 arquivos)
 
-Se os popups usarem o contexto centralizado, podemos adicionar um `mode` ('create' | 'edit') para que todos os componentes filhos saibam qual fluxo seguir.
+| Arquivo | Ação |
+|---------|------|
+| ProjetoApostasTab.tsx | Substituir useEffect por useCrossWindowSync |
+| ProjetoValueBetTab.tsx | Substituir useEffect por useCrossWindowSync |
+| ProjetoFreebetsTab.tsx | Substituir useEffect por useCrossWindowSync |
+| ProjetoDuploGreenTab.tsx | Substituir useEffect por useCrossWindowSync |
+| ProjetoSurebetTab.tsx | Substituir useEffect por useCrossWindowSync |
+| ProjetoDashboardTab.tsx | Substituir useEffect por useCrossWindowSync |
+| BonusApostasTab.tsx | Substituir useEffect por useCrossWindowSync |
+| BonusVisaoGeralTab.tsx | Substituir useEffect por useCrossWindowSync |
 
-## Garantias
+### Fase 3: Criar Helper de Emissão Centralizado
+**Arquivo:** Atualizar `src/lib/windowHelper.ts`
 
-| Cenário | Comportamento |
-|---------|---------------|
-| Nova aposta → Salvar | Formulário limpa, contador incrementa, janela aberta |
-| Editar aposta → Salvar | Janela fecha, volta à lista atualizada |
-| Qualquer → Excluir | Janela fecha após confirmação |
-| Qualquer → Cancelar | Janela fecha sem alterações |
+Adicionar funções utilitárias para emissão padronizada:
+- `broadcastAposta(type, projetoId, apostaId)`
+- `broadcastMultipla(type, projetoId, apostaId)`
+- `broadcastSurebet(type, projetoId, surebetId)`
+
+### Fase 4: Refatorar Emissores (4 arquivos)
+
+| Arquivo | Ação |
+|---------|------|
+| ApostaDialog.tsx | Usar helper de emissão |
+| ApostaMultiplaDialog.tsx | Usar helper de emissão |
+| SurebetDialog.tsx | Usar helper de emissão |
+| ResultadoPill.tsx | Usar helper de emissão |
+
+---
+
+## Benefícios
+
+| Métrica | Antes | Depois |
+|---------|-------|--------|
+| Linhas de código duplicadas | ~650 | 0 |
+| Arquivos que precisam de alteração para novo evento | 12+ | 1 |
+| Risco de esquecer módulo em novo evento | Alto | Zero |
+| Novos módulos já sincronizados | Manual | Automático |
+| Tempo para adicionar novo canal de sync | ~30 min | ~2 min |
+
+---
 
 ## Detalhes Técnicos
 
-1. **Variável `isEditing`**: Já existe no código (`id && id !== 'novo'`), será usada para bifurcar o fluxo
-2. **BroadcastChannel**: Continua funcionando para sincronizar a lista principal em ambos os casos
-3. **Toast diferenciado**: Mensagens claras para cada ação ("registrada" vs "atualizada")
-4. **Delay antes de fechar**: 1-1.5 segundos para o usuário ver o feedback visual
+### Estrutura do Hook
 
-## Resultado Esperado
+```typescript
+interface CrossWindowSyncOptions {
+  projetoId: string;
+  onSync: () => void;
+  channels?: ('aposta' | 'multipla' | 'surebet')[];
+  debug?: boolean;
+}
 
-1. Usuário abre edição de uma aposta existente
-2. Faz alterações e clica em "Salvar"
-3. Toast aparece: "Aposta atualizada!"
-4. Janela fecha automaticamente em ~1 segundo
-5. Lista principal já está atualizada (via BroadcastChannel)
-6. **Nenhuma aposta fantasma é criada**
+export function useCrossWindowSync(options: CrossWindowSyncOptions): void {
+  // 1. Mapear channels para nomes reais
+  // 2. Definir eventos válidos por channel
+  // 3. Criar listeners com validação de projetoId
+  // 4. Implementar fallback localStorage
+  // 5. Cleanup no unmount
+}
+```
+
+### Mapeamento de Eventos
+
+```text
+Channel "aposta_channel":
+  ├─ APOSTA_SAVED → onSync()
+  ├─ APOSTA_DELETED → onSync()
+  └─ resultado_updated → onSync()
+
+Channel "aposta_multipla_channel":
+  └─ APOSTA_MULTIPLA_SAVED → onSync()
+
+Channel "surebet_channel":
+  └─ SUREBET_SAVED → onSync()
+```
+
+---
+
+## Arquivos a Serem Modificados
+
+1. **Criar:** `src/hooks/useCrossWindowSync.ts`
+2. **Atualizar:** `src/lib/windowHelper.ts` (adicionar funções de broadcast)
+3. **Refatorar (8 listeners):**
+   - `src/components/projeto-detalhe/ProjetoApostasTab.tsx`
+   - `src/components/projeto-detalhe/ProjetoValueBetTab.tsx`
+   - `src/components/projeto-detalhe/ProjetoFreebetsTab.tsx`
+   - `src/components/projeto-detalhe/ProjetoDuploGreenTab.tsx`
+   - `src/components/projeto-detalhe/ProjetoSurebetTab.tsx`
+   - `src/components/projeto-detalhe/ProjetoDashboardTab.tsx`
+   - `src/components/projeto-detalhe/bonus/BonusApostasTab.tsx`
+   - `src/components/projeto-detalhe/bonus/BonusVisaoGeralTab.tsx`
+4. **Refatorar (4 emissores):**
+   - `src/components/projeto-detalhe/ApostaDialog.tsx`
+   - `src/components/projeto-detalhe/ApostaMultiplaDialog.tsx`
+   - `src/components/projeto-detalhe/SurebetDialog.tsx`
+   - `src/components/projeto-detalhe/ResultadoPill.tsx`
+
+**Total: 14 arquivos** (1 novo + 13 modificados)
+
+---
+
+## Resultado Final
+
+Após a implementação, qualquer novo módulo operacional poderá sincronizar-se automaticamente com apenas uma linha:
+
+```typescript
+useCrossWindowSync({
+  projetoId,
+  onSync: fetchData
+});
+```
+
+Isso garante que:
+- Novos desenvolvedores não precisam conhecer a infraestrutura de BroadcastChannel
+- Todos os eventos são tratados automaticamente
+- O fallback para localStorage é transparente
+- O cleanup de recursos é garantido
+
