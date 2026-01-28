@@ -379,9 +379,8 @@ export function BonusDialog({
                         ? "£"
                         : "R$";
 
-                  const saldo = usaUsd
-                    ? (bk.saldo_usd ?? bk.saldo_atual ?? 0)
-                    : (bk.saldo_atual ?? 0);
+                  // saldo_atual agora vem da RPC canônica (saldo_real)
+                  const saldo = bk.saldo_atual ?? 0;
 
                   return (
                     <SelectItem key={bk.id} value={bk.id} className="py-2">
