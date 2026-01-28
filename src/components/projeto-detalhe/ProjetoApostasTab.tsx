@@ -54,6 +54,7 @@ import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 import { DeleteBetConfirmDialog, type DeleteBetInfo } from "@/components/apostas/DeleteBetConfirmDialog";
+import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 
 // Contextos de aposta para filtro unificado
 type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
@@ -696,17 +697,54 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     setDeleteDialogOpen(true);
   }, [surebets]);
 
-  // Handler para quick resolve de surebet
-  const handleQuickResolveSurebet = useCallback(async (surebetId: string, resultado: string) => {
+  // Handler para quick resolve de surebet - agora com suporte a pernas específicas
+  const handleQuickResolveSurebet = useCallback(async (surebetId: string, quickResult: SurebetQuickResult) => {
     try {
       const surebet = surebets.find(sb => sb.id === surebetId);
-      if (!surebet) return;
+      if (!surebet || !surebet.pernas) return;
 
-      // Para surebets, calculamos o lucro baseado no pior cenário
       const stakeTotal = surebet.stake_total || 0;
-      const lucro = resultado === "VOID" ? 0 : (resultado === "GREEN" ? (surebet.lucro_esperado || 0) : -(stakeTotal * 0.02));
+      const pernas = surebet.pernas.filter(p => p.bookmaker_id && p.odd && p.odd > 0);
+      
+      let lucroTotal = 0;
+      let resultadoFinal: string;
+      
+      if (quickResult.type === "all_void") {
+        // Todas as pernas são VOID - retorno do stake
+        lucroTotal = 0;
+        resultadoFinal = "VOID";
+      } else if (quickResult.type === "single_win") {
+        // Uma perna ganha, outras perdem
+        const winnerIdx = quickResult.winners[0];
+        const pernaVencedora = pernas[winnerIdx];
+        if (!pernaVencedora) return;
+        
+        // Usar campos padrão (stake e odd) - campos agregados são opcionais
+        const stakeVencedor = (pernaVencedora as any).stake_total ?? pernaVencedora.stake ?? 0;
+        const oddVencedor = (pernaVencedora as any).odd_media ?? pernaVencedora.odd ?? 1;
+        const retorno = stakeVencedor * oddVencedor;
+        lucroTotal = retorno - stakeTotal;
+        resultadoFinal = "GREEN"; // Surebets em teoria sempre dão lucro no single win
+      } else if (quickResult.type === "double_green") {
+        // Duplo green - duas pernas ganham
+        const [idx1, idx2] = quickResult.winners;
+        const perna1 = pernas[idx1] as any;
+        const perna2 = pernas[idx2] as any;
+        if (!perna1 || !perna2) return;
+        
+        const stake1 = perna1.stake_total ?? perna1.stake ?? 0;
+        const stake2 = perna2.stake_total ?? perna2.stake ?? 0;
+        const odd1 = perna1.odd_media ?? perna1.odd ?? 1;
+        const odd2 = perna2.odd_media ?? perna2.odd ?? 1;
+        
+        const retorno = (stake1 * odd1) + (stake2 * odd2);
+        lucroTotal = retorno - stakeTotal;
+        resultadoFinal = lucroTotal >= 0 ? "GREEN" : "RED";
+      } else {
+        return;
+      }
 
-      const result = await reliquidarAposta(surebetId, resultado, lucro);
+      const result = await reliquidarAposta(surebetId, resultadoFinal, lucroTotal);
       
       if (!result.success) {
         toast.error(result.error?.message || "Erro ao liquidar surebet");
@@ -716,22 +754,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       // Atualizar estado local
       setSurebets(prev => prev.map(sb => 
         sb.id === surebetId 
-          ? { ...sb, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
+          ? { ...sb, resultado: resultadoFinal, lucro_real: lucroTotal, status: "LIQUIDADA" }
           : sb
       ));
 
       // Invalidar cache de saldos
       invalidateSaldos(projetoId);
 
-      const resultLabel = {
-        GREEN: "Green",
-        RED: "Red",
-        MEIO_GREEN: "½ Green",
-        MEIO_RED: "½ Red",
-        VOID: "Void"
-      }[resultado] || resultado;
-
-      toast.success(`Surebet marcada como ${resultLabel}`);
+      toast.success(`Surebet liquidada: ${quickResult.label} → ${resultadoFinal}`);
       onDataChange?.();
     } catch (error: any) {
       console.error("Erro ao atualizar surebet:", error);

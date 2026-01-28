@@ -8,7 +8,7 @@ import { cn, getFirstLastName } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { parseLocalDateTime } from "@/utils/dateUtils";
-import { BetRowActionsMenu, type BetResultado } from "@/components/apostas/BetRowActionsMenu";
+import { SurebetRowActionsMenu, type SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 
 // Estrutura de entrada individual (para múltiplas entradas)
 export interface SurebetPernaEntry {
@@ -59,8 +59,8 @@ export interface SurebetData {
 interface SurebetCardProps {
   surebet: SurebetData;
   onEdit?: (surebet: SurebetData) => void;
-  /** Callback para liquidação rápida */
-  onQuickResolve?: (surebetId: string, resultado: string) => void;
+  /** Callback para liquidação rápida com informação de quais pernas ganharam */
+  onQuickResolve?: (surebetId: string, result: SurebetQuickResult) => void;
   /** Callback para excluir surebet */
   onDelete?: (surebetId: string) => void;
   /** Callback para duplicar surebet */
@@ -418,16 +418,23 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onDelete, onDupli
             </Badge>
             <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
             
-            {/* Menu de Ações Rápidas */}
-            {(onDelete || onDuplicate || onQuickResolve) && (
-              <BetRowActionsMenu
-                apostaId={surebet.id}
-                apostaType="surebet"
+            {/* Menu de Ações Rápidas - Específico para Surebets com submenu cascata */}
+            {(onDelete || onDuplicate || onQuickResolve) && surebet.pernas && surebet.pernas.length >= 2 && (
+              <SurebetRowActionsMenu
+                surebetId={surebet.id}
                 status={surebet.status || "PENDENTE"}
                 resultado={surebet.resultado || null}
+                pernas={surebet.pernas
+                  .filter(p => p.bookmaker_id && p.odd && p.odd > 0)
+                  .map((p, idx) => ({
+                    id: p.id,
+                    ordem: idx,
+                    selecao: p.selecao_livre || p.selecao || `Perna ${idx + 1}`,
+                    bookmaker_nome: p.bookmaker_nome,
+                  }))}
                 onEdit={() => onEdit?.(surebet)}
                 onDuplicate={onDuplicate ? () => onDuplicate(surebet.id) : undefined}
-                onQuickResolve={(resultado) => onQuickResolve?.(surebet.id, resultado)}
+                onQuickResolve={(result) => onQuickResolve?.(surebet.id, result)}
                 onDelete={() => onDelete?.(surebet.id)}
               />
             )}
