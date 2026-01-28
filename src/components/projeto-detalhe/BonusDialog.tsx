@@ -170,15 +170,22 @@ export function BonusDialog({
     }
   }, [open, bonus, preselectedBookmakerId]);
 
-  // Reset template selection when bookmaker changes
+  // Reset template selection when bookmaker changes AND inherit currency from bookmaker
   useEffect(() => {
-    if (!isEditMode) {
+    if (!isEditMode && bookmakerId) {
       setSelectedTemplateId(null);
       setFilledFromTemplate(false);
       setTemplatePercent(null);
       setTemplateMaxValue(null);
+      
+      // CRÍTICO: Herdar moeda da bookmaker selecionada
+      // A moeda do bônus deve ser a mesma da casa para evitar inconsistências
+      const bk = bookmakers.find(b => b.id === bookmakerId);
+      if (bk?.moeda) {
+        setCurrency(bk.moeda);
+      }
     }
-  }, [bookmakerId, isEditMode]);
+  }, [bookmakerId, isEditMode, bookmakers]);
 
   // Auto-calculate bonus value when deposit changes and template has percentage
   useEffect(() => {
