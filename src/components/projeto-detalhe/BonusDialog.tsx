@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle, Clock } from "lucide-react";
+import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle, Clock, Lock } from "lucide-react";
 import { BonusFormData, BonusStatus, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
 import { format, addDays } from "date-fns";
@@ -41,6 +41,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { 
+  FIAT_CURRENCIES, 
+  CRYPTO_CURRENCIES, 
+  getCurrencySymbol,
+  type SupportedCurrency 
+} from "@/types/currency";
 
 interface BookmakerOption {
   id: string;
@@ -74,7 +80,11 @@ const STATUS_OPTIONS: { value: BonusStatus; label: string; color: string }[] = [
   { value: "reversed", label: "Estornado", color: "text-orange-400" },
 ];
 
-const CURRENCY_OPTIONS = ["BRL", "USD", "EUR", "GBP", "USDT"];
+// Todas as moedas suportadas pelo sistema (FIAT + CRYPTO mais comuns)
+const ALL_CURRENCY_OPTIONS: { value: string; label: string }[] = [
+  ...FIAT_CURRENCIES.map(c => ({ value: c.value, label: `${c.symbol} ${c.value}` })),
+  ...CRYPTO_CURRENCIES.filter(c => c.isStablecoin).map(c => ({ value: c.value, label: `${c.symbol} ${c.value}` })),
+];
 
 const ROLLOVER_BASE_OPTIONS: { value: string; label: string }[] = [
   { value: "DEPOSITO", label: "Depósito" },
@@ -553,19 +563,38 @@ export function BonusDialog({
               </div>
               <div className="h-4 mt-1" />
             </div>
-            {/* Moeda */}
+            {/* Moeda - Travada pela bookmaker selecionada */}
             <div className="flex flex-col">
-              <div className="h-5 flex items-center justify-center">
+              <div className="h-5 flex items-center justify-center gap-1">
                 <Label className="text-xs text-muted-foreground">Moeda</Label>
+                {bookmakerId && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Lock className="h-3 w-3 text-muted-foreground/60" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[200px] text-xs">
+                        <p>Moeda herdada da casa de apostas para garantir consistência financeira.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="h-10 mt-1.5 justify-center [&>span]:text-center">
+              <Select 
+                value={currency} 
+                onValueChange={setCurrency}
+                disabled={!!bookmakerId}
+              >
+                <SelectTrigger className={cn(
+                  "h-10 mt-1.5 justify-center [&>span]:text-center",
+                  bookmakerId && "bg-muted/50 cursor-not-allowed"
+                )}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CURRENCY_OPTIONS.map((c) => (
-                    <SelectItem key={c} value={c} className="justify-center">
-                      {c}
+                  {ALL_CURRENCY_OPTIONS.map((c) => (
+                    <SelectItem key={c.value} value={c.value} className="justify-center">
+                      {c.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
