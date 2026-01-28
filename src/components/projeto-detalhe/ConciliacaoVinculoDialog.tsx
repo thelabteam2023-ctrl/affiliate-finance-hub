@@ -4,7 +4,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -13,17 +12,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
-  AlertTriangle,
   CheckCircle2,
-  ArrowRight,
   Loader2,
   TrendingDown,
   TrendingUp,
   Scale,
   ShieldCheck,
+  Wallet,
+  ArrowDownToLine,
 } from "lucide-react";
 import { registrarAjusteViaLedger } from "@/lib/ledgerService";
 import { getCurrencySymbol, SupportedCurrency } from "@/types/currency";
@@ -62,20 +60,17 @@ export function ConciliacaoVinculoDialog({
   const diferenca = saldoRealNum - saldoSistema;
   const temDiferenca = saldoReal !== "" && Math.abs(diferenca) > 0.01;
 
-  // Usar símbolo da moeda nativa da bookmaker
   const moedaNativa = (vinculo?.moeda || "BRL") as SupportedCurrency;
   const simboloMoeda = getCurrencySymbol(moedaNativa);
 
   const formatCurrency = (value: number, moeda: string = "BRL") => {
     const symbol = getCurrencySymbol(moeda);
-    // Usar ponto decimal para moedas internacionais, vírgula para BRL
     const formatted = moeda === "BRL" 
       ? value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return `${symbol} ${formatted}`;
   };
 
-  // Apenas ajustar saldo SEM liberar vínculo
   const handleApenasAjustar = async () => {
     if (!vinculo || !workspaceId) return;
 
@@ -89,7 +84,6 @@ export function ConciliacaoVinculoDialog({
       return;
     }
 
-    // Observações obrigatórias quando há diferença
     if (!observacoes.trim()) {
       toast.error("Informe o motivo da diferença nas observações");
       return;
@@ -101,7 +95,6 @@ export function ConciliacaoVinculoDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Registrar ajuste via ledger
       const result = await registrarAjusteViaLedger({
         bookmakerId: vinculo.id,
         delta: diferenca,
@@ -121,7 +114,6 @@ export function ConciliacaoVinculoDialog({
         { duration: 4000 }
       );
 
-      // Limpar estado e fechar
       setSaldoReal("");
       setObservacoes("");
       onOpenChange(false);
@@ -134,12 +126,10 @@ export function ConciliacaoVinculoDialog({
     }
   };
 
-  // Liberar vínculo COM saque (comportamento atual para casas com saldo)
   const handleConciliarComSaque = async () => {
     await executarConciliacao(true);
   };
 
-  // Liberar vínculo SEM saque (casa fica disponível para reutilização)
   const handleConciliarSemSaque = async () => {
     await executarConciliacao(false);
   };
@@ -152,7 +142,6 @@ export function ConciliacaoVinculoDialog({
       return;
     }
 
-    // Observações obrigatórias quando há diferença
     if (temDiferenca && !observacoes.trim()) {
       toast.error("Informe o motivo da diferença nas observações");
       return;
@@ -164,11 +153,10 @@ export function ConciliacaoVinculoDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // 1. Se houver diferença, registrar ajuste via ledger (NÃO update direto)
       if (temDiferenca) {
         const result = await registrarAjusteViaLedger({
           bookmakerId: vinculo.id,
-          delta: diferenca, // positivo = crédito, negativo = débito
+          delta: diferenca,
           moeda: vinculo.moeda,
           workspaceId: workspaceId,
           userId: user.id,
@@ -186,7 +174,6 @@ export function ConciliacaoVinculoDialog({
         );
       }
 
-      // 2. Registrar data de desvinculação no histórico
       await supabase
         .from("projeto_bookmaker_historico")
         .update({
@@ -196,30 +183,21 @@ export function ConciliacaoVinculoDialog({
         .eq("projeto_id", projetoId)
         .eq("bookmaker_id", vinculo.id);
 
-      // 3. Liberar o vínculo
       const saldoFinalReal = temDiferenca ? saldoRealNum : saldoSistema;
-      
-      // Verificar se a casa está limitada
       const isLimitada = vinculo.bookmaker_status.toUpperCase() === "LIMITADA";
-      
-      // Casa LIMITADA sempre vai para saque (obrigatório)
-      // Casa ATIVA: depende da escolha do usuário
       const deveMarcarParaSaque = isLimitada || marcarParaSaque;
       
       if (deveMarcarParaSaque && saldoFinalReal > 0) {
-        // Usar RPC que preserva estado_conta
         const { error } = await supabase.rpc('marcar_para_saque', {
           p_bookmaker_id: vinculo.id
         });
         if (error) throw error;
         
-        // Desvincular do projeto
         await supabase
           .from("bookmakers")
           .update({ projeto_id: null })
           .eq("id", vinculo.id);
       } else {
-        // Apenas desvincular - casa fica disponível para novo vínculo
         const { error } = await supabase
           .from("bookmakers")
           .update({
@@ -230,7 +208,6 @@ export function ConciliacaoVinculoDialog({
         if (error) throw error;
       }
 
-      // Mensagem apropriada baseada no cenário
       if (isLimitada) {
         toast.success(
           `Casa limitada liberada. Saque obrigatório de ${formatCurrency(saldoFinalReal, vinculo.moeda)}.`,
@@ -238,19 +215,18 @@ export function ConciliacaoVinculoDialog({
         );
       } else if (deveMarcarParaSaque && saldoFinalReal > 0) {
         toast.success(
-          `Vínculo liberado. Casa com saldo de ${formatCurrency(saldoFinalReal, vinculo.moeda)} aguardando saque.`,
+          `Vínculo liberado. Saque de ${formatCurrency(saldoFinalReal, vinculo.moeda)} pendente.`,
           { duration: 5000 }
         );
       } else if (saldoFinalReal > 0) {
         toast.success(
-          `Vínculo liberado. Casa mantém saldo de ${formatCurrency(saldoFinalReal, vinculo.moeda)} e está disponível para novo vínculo.`,
+          `Vínculo liberado. Casa disponível com ${formatCurrency(saldoFinalReal, vinculo.moeda)}.`,
           { duration: 5000 }
         );
       } else {
         toast.success("Vínculo conciliado e liberado com sucesso");
       }
 
-      // Limpar estado e fechar
       setSaldoReal("");
       setObservacoes("");
       onOpenChange(false);
@@ -265,73 +241,75 @@ export function ConciliacaoVinculoDialog({
 
   if (!vinculo) return null;
 
+  const isLimitada = vinculo.bookmaker_status.toUpperCase() === "LIMITADA";
+  const canAdjust = saldoReal !== "" && temDiferenca && observacoes.trim();
+  const canRelease = saldoReal !== "" && (!temDiferenca || observacoes.trim());
+  const isProcessing = saving || savingAjuste;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Scale className="h-5 w-5 text-primary" />
+      <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+        {/* Header */}
+        <DialogHeader className="p-4 pb-3 border-b border-border/50">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Scale className="h-4 w-4 text-primary" />
             Conciliação Financeira
           </DialogTitle>
-          <DialogDescription>
-            Antes de liberar o vínculo, confirme o saldo real na bookmaker para garantir consistência financeira.
+          <DialogDescription className="text-xs">
+            Confirme o saldo real antes de liberar o vínculo
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Info do vínculo */}
-          <div className="p-3 rounded-lg bg-muted/50 border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{vinculo.nome}</p>
-                <p className="text-sm text-muted-foreground">{vinculo.parceiro_nome || "Sem parceiro"}</p>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {vinculo.moeda}
-              </Badge>
+        <div className="p-4 space-y-4">
+          {/* Bookmaker Info - Compact */}
+          <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/50 border border-border/50">
+            <div className="min-w-0">
+              <p className="font-medium text-sm truncate">{vinculo.nome}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {vinculo.parceiro_nome || "Sem parceiro"}
+              </p>
             </div>
+            <Badge variant="outline" className="text-xs shrink-0 ml-2">
+              {vinculo.moeda}
+            </Badge>
           </div>
 
-          {/* Comparativo de saldos */}
-          <div className="grid gap-4">
-            <div className="p-3 rounded-lg border bg-card">
-              <Label className="text-xs text-muted-foreground">Saldo no Sistema</Label>
-              <p className="text-xl font-bold mt-1">
+          {/* Balance Comparison - Compact Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-2.5 rounded-lg border bg-card">
+              <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                Sistema
+              </Label>
+              <p className="text-lg font-bold mt-0.5">
                 {formatCurrency(saldoSistema, vinculo.moeda)}
               </p>
             </div>
 
-            <div className="flex items-center justify-center">
-              <ArrowRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="saldo-real" className="flex items-center gap-2">
-                Saldo Real na Bookmaker
-                <span className="text-xs text-muted-foreground">(verificado agora)</span>
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                Saldo Real
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                   {simboloMoeda}
                 </span>
                 <Input
-                  id="saldo-real"
                   type="text"
                   inputMode="decimal"
                   placeholder="0,00"
                   value={saldoReal}
                   onChange={(e) => setSaldoReal(e.target.value)}
-                  className="pl-10 text-lg font-medium"
+                  className="pl-8 h-9 text-base font-medium"
                   autoFocus
                 />
               </div>
             </div>
           </div>
 
-          {/* Indicador de diferença */}
+          {/* Difference Indicator - Compact */}
           {saldoReal !== "" && (
             <div
-              className={`p-4 rounded-lg border ${
+              className={`p-2.5 rounded-lg border text-sm ${
                 !temDiferenca
                   ? "bg-emerald-500/10 border-emerald-500/30"
                   : diferenca > 0
@@ -341,144 +319,130 @@ export function ConciliacaoVinculoDialog({
             >
               {!temDiferenca ? (
                 <div className="flex items-center gap-2 text-emerald-400">
-                  <CheckCircle2 className="h-5 w-5" />
+                  <CheckCircle2 className="h-4 w-4" />
                   <span className="font-medium">Saldos conferem</span>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    {diferenca > 0 ? (
-                      <>
-                        <TrendingUp className="h-5 w-5 text-blue-400" />
-                        <span className="font-medium text-blue-400">
-                          Saldo real maior: +{formatCurrency(diferenca, vinculo.moeda)}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <TrendingDown className="h-5 w-5 text-amber-400" />
-                        <span className="font-medium text-amber-400">
-                          Saldo real menor: {formatCurrency(diferenca, vinculo.moeda)}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    O sistema aplicará este ajuste ao saldo da bookmaker antes de liberar o vínculo.
-                  </p>
+                <div className="flex items-center gap-2">
+                  {diferenca > 0 ? (
+                    <>
+                      <TrendingUp className="h-4 w-4 text-blue-400" />
+                      <span className="text-blue-400">
+                        Diferença: <strong>+{formatCurrency(diferenca, vinculo.moeda)}</strong>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <TrendingDown className="h-4 w-4 text-amber-400" />
+                      <span className="text-amber-400">
+                        Diferença: <strong>{formatCurrency(diferenca, vinculo.moeda)}</strong>
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          <Separator />
-
-          {/* Observações (obrigatório se houver diferença) */}
-          <div className="space-y-2">
-            <Label htmlFor="observacoes" className="flex items-center gap-1">
+          {/* Observations - Compact */}
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1">
               Observações
-              {temDiferenca && <span className="text-xs text-destructive">* obrigatório</span>}
+              {temDiferenca && <span className="text-destructive">*</span>}
             </Label>
             <Textarea
-              id="observacoes"
               placeholder={temDiferenca 
-                ? "Descreva o motivo da diferença (ex: taxa não contabilizada, bônus expirado...)"
-                : "Observações opcionais sobre a liberação..."
+                ? "Motivo da diferença (obrigatório)"
+                : "Observações opcionais..."
               }
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
               rows={2}
-              className={temDiferenca && !observacoes.trim() ? "border-destructive" : ""}
+              className={`text-sm resize-none ${temDiferenca && !observacoes.trim() ? "border-destructive/50" : ""}`}
             />
           </div>
 
-          {/* Aviso de segurança */}
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
-            <ShieldCheck className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-primary">Garantia de Consistência</p>
-              <p className="text-muted-foreground">
-                Esta conciliação garante que o saldo no sistema reflita o valor real antes de qualquer saque ou transferência.
-              </p>
-            </div>
+          {/* Security Note - Compact */}
+          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+            <ShieldCheck className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              A conciliação garante consistência financeira antes de liberar a bookmaker.
+            </p>
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col gap-2 pt-4">
-          {/* Linha 1: Cancelar e Ajustar */}
-          <div className="flex flex-col sm:flex-row gap-2 w-full">
+        {/* Footer Actions - Redesigned */}
+        <div className="p-4 pt-0 space-y-2">
+          {/* Primary Actions Row */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Manter Saldo - só aparece se não é limitada e tem saldo */}
+            {!isLimitada && saldoRealNum > 0 ? (
+              <Button 
+                variant="outline"
+                onClick={handleConciliarSemSaque} 
+                disabled={isProcessing || !canRelease}
+                className="h-10"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Wallet className="h-4 w-4 mr-1.5" />
+                    Manter Saldo
+                  </>
+                )}
+              </Button>
+            ) : (
+              <div /> 
+            )}
+            
+            {/* Liberar e Sacar */}
             <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)} 
-              disabled={saving || savingAjuste}
-              className="w-full sm:w-auto"
+              onClick={handleConciliarComSaque} 
+              disabled={isProcessing || !canRelease}
+              className="h-10"
             >
-              Cancelar
-            </Button>
-            <Button 
-              variant="secondary" 
-              onClick={handleApenasAjustar} 
-              disabled={saving || savingAjuste || saldoReal === "" || !temDiferenca || !observacoes.trim()}
-              className="w-full sm:w-auto"
-            >
-              {savingAjuste ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Ajustando...
-                </>
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <Scale className="mr-2 h-4 w-4" />
-                  Ajustar Saldo
+                  <ArrowDownToLine className="h-4 w-4 mr-1.5" />
+                  {saldoRealNum > 0 ? "Liberar + Saque" : "Liberar"}
                 </>
               )}
             </Button>
           </div>
-          
-          {/* Linha 2: Opções de liberação */}
-          <div className="flex flex-col sm:flex-row gap-2 w-full">
-            {/* Liberar SEM saque - só aparece se casa não está limitada e tem saldo */}
-            {vinculo.bookmaker_status.toUpperCase() !== "LIMITADA" && saldoRealNum > 0 && (
+
+          {/* Secondary Actions Row */}
+          <div className="flex gap-2">
+            <Button 
+              variant="ghost" 
+              onClick={() => onOpenChange(false)} 
+              disabled={isProcessing}
+              className="flex-1 h-9"
+            >
+              Cancelar
+            </Button>
+            
+            {temDiferenca && (
               <Button 
-                variant="outline"
-                onClick={handleConciliarSemSaque} 
-                disabled={saving || savingAjuste || saldoReal === "" || (temDiferenca && !observacoes.trim())}
-                className="w-full sm:w-auto border-primary/50 hover:bg-primary/10"
+                variant="secondary" 
+                onClick={handleApenasAjustar} 
+                disabled={isProcessing || !canAdjust}
+                className="flex-1 h-9"
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processando...
-                  </>
+                {savingAjuste ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                    Liberar (Manter Saldo)
+                    <Scale className="h-4 w-4 mr-1.5" />
+                    Só Ajustar
                   </>
                 )}
               </Button>
             )}
-            
-            {/* Liberar COM saque - sempre disponível */}
-            <Button 
-              onClick={handleConciliarComSaque} 
-              disabled={saving || savingAjuste || saldoReal === "" || (temDiferenca && !observacoes.trim())}
-              className="w-full sm:w-auto"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  {saldoRealNum > 0 ? "Liberar e Sacar" : "Conciliar e Liberar"}
-                </>
-              )}
-            </Button>
           </div>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
