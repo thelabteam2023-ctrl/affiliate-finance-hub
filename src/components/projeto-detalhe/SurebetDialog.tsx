@@ -70,8 +70,8 @@ import {
   MultiCurrencyIndicator, 
   MultiCurrencyWarning 
 } from "@/components/projeto-detalhe/MultiCurrencyIndicator";
-import { reliquidarAposta } from "@/services/aposta";
-import { updateBookmakerBalance } from "@/lib/bookmakerBalanceHelper";
+import { reliquidarAposta, liquidarPernaSurebet } from "@/services/aposta";
+// MOTOR v9.5: updateBookmakerBalance REMOVIDO - usa liquidarPernaSurebet via motor financeiro
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 import { SurebetLegPrintCompact } from "./SurebetLegPrintFields";
@@ -2551,13 +2551,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
 
   // Liquidar perna por índice - atualiza JSONB na tabela unificada
   const handleLiquidarPerna = useCallback(async (pernaIndex: number, resultado: "GREEN" | "RED" | "VOID" | "MEIO_GREEN" | "MEIO_RED" | null) => {
-    if (!surebet) return;
+    if (!surebet || !workspaceId) return;
     
     try {
       // Buscar pernas atuais E contexto_operacional da operação na tabela unificada
       const { data: operacaoData } = await supabase
         .from("apostas_unificada")
-        .select("pernas, contexto_operacional")
+        .select("pernas, fonte_saldo")
         .eq("id", surebet.id)
         .single();
       
@@ -2567,74 +2567,43 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       const perna = pernas[pernaIndex];
       if (!perna) return;
 
-      // REENGENHARIA: Usar fonte_saldo (VERDADE FINANCEIRA) em vez de contexto_operacional
-      // contexto_operacional é APENAS UI/UX - não usar para decisões financeiras
-      const fonteSaldo = (operacaoData as { fonte_saldo?: string }).fonte_saldo || 'REAL';
-      const isFonteFreebet = fonteSaldo === 'FREEBET';
-      const isFonteBonus = fonteSaldo === 'BONUS';
-
       const stake = perna.stake || 0;
       const odd = perna.odd || 0;
       const resultadoAnterior = perna.resultado;
       const bookmakerId = perna.bookmaker_id;
-      
-      // REENGENHARIA: Usar fonte_saldo para determinar se o delta vai para saldo especial
-      // stake_bonus explícito ainda funciona como override
+      const moeda = perna.moeda || 'BRL';
+      const fonteSaldo = operacaoData.fonte_saldo || 'REAL';
       const stakeBonus = (perna as { stake_bonus?: number }).stake_bonus || 0;
-      const temBonusComStake = stakeBonus > 0 || isFonteBonus;
 
       // Se o resultado não mudou, não fazer nada
       if (resultadoAnterior === resultado) return;
 
-      let lucro: number | null = 0;
-      
-      if (resultado === null) {
-        lucro = null;
-      } else if (resultado === "GREEN") {
-        lucro = stake * (odd - 1);
-      } else if (resultado === "MEIO_GREEN") {
-        lucro = (stake * (odd - 1)) / 2;
-      } else if (resultado === "RED") {
-        lucro = -stake;
-      } else if (resultado === "MEIO_RED") {
-        lucro = -stake / 2;
-      } else if (resultado === "VOID") {
-        lucro = 0;
+      // MOTOR FINANCEIRO v9.5: Usar liquidarPernaSurebet do ApostaService
+      // Esta função cuida de:
+      // 1. Calcular delta (reversão + aplicação)
+      // 2. Criar evento financeiro
+      // 3. Atualizar JSONB da perna
+      // 4. Atualizar status do registro pai
+      const liquidacaoResult = await liquidarPernaSurebet({
+        surebet_id: surebet.id,
+        perna_index: pernaIndex,
+        bookmaker_id: bookmakerId,
+        resultado,
+        resultado_anterior: resultadoAnterior || null,
+        stake,
+        odd,
+        moeda,
+        workspace_id: workspaceId,
+        stake_bonus: stakeBonus,
+        fonte_saldo: fonteSaldo,
+      });
+
+      if (!liquidacaoResult.success) {
+        toast.error(liquidacaoResult.error?.message || "Erro ao liquidar perna");
+        return;
       }
 
-      // ATUALIZAÇÃO DE SALDO DA CASA - CORREÇÃO MULTI-MOEDA
-      // Calcula delta para reversão + aplicação do novo resultado
-      let delta = 0;
-      
-      // 1. REVERTER efeito do resultado ANTERIOR
-      if (resultadoAnterior && resultadoAnterior !== "PENDENTE") {
-        if (resultadoAnterior === "GREEN") {
-          delta -= stake * (odd - 1);
-        } else if (resultadoAnterior === "MEIO_GREEN") {
-          delta -= (stake * (odd - 1)) / 2;
-        } else if (resultadoAnterior === "RED") {
-          delta += stake;
-        } else if (resultadoAnterior === "MEIO_RED") {
-          delta += stake / 2;
-        }
-      }
-
-      // 2. APLICAR efeito do resultado NOVO
-      if (resultado === "GREEN") {
-        delta += stake * (odd - 1);
-      } else if (resultado === "MEIO_GREEN") {
-        delta += (stake * (odd - 1)) / 2;
-      } else if (resultado === "RED") {
-        delta -= stake;
-      } else if (resultado === "MEIO_RED") {
-        delta -= stake / 2;
-      }
-
-      // CORREÇÃO: Usar helper centralizado que respeita moeda do bookmaker
-      // skipBonusCheck = true quando a perna NÃO usa stake_bonus (delta vai pro saldo real)
-      if (delta !== 0) {
-        await updateBookmakerBalance(bookmakerId, delta, projetoId, undefined, !temBonusComStake);
-      }
+      const lucro = liquidacaoResult.data?.lucro_prejuizo ?? 0;
 
       // ====== LÓGICA DE ROLLOVER ======
       // Regra: se a casa tem bônus ativo (rollover em andamento), qualquer aposta liquidada conta para o rollover,
@@ -2660,36 +2629,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           console.log(`Rollover revertido: perna ${pernaIndex}, bookmaker ${bookmakerId}, stake ${stakeTotalPerna}`);
         }
       }
+      
       // Invalidar cache de saldos para atualizar todas as UIs
       invalidateSaldos(projetoId);
-
-      // Atualizar perna no array
-      const novasPernas = [...pernas];
-      novasPernas[pernaIndex] = {
-        ...perna,
-        resultado,
-        lucro_prejuizo: lucro
-      };
-
-      // Calcular totais
-      const todasLiquidadas = novasPernas.every(p => p.resultado && p.resultado !== "PENDENTE" && p.resultado !== null);
-      const lucroTotal = novasPernas.reduce((acc, p) => acc + (p.lucro_prejuizo || 0), 0);
-      // EMPATE quando lucro = 0 (diferente de VOID que é aposta cancelada)
-      const resultadoFinal = todasLiquidadas 
-        ? (lucroTotal > 0 ? "GREEN" : lucroTotal < 0 ? "RED" : "EMPATE")
-        : null;
-
-      // Atualizar operação na tabela unificada com pernas e status
-      await supabase
-        .from("apostas_unificada")
-        .update({
-          pernas: novasPernas as any,
-          status: todasLiquidadas ? "LIQUIDADA" : "PENDENTE",
-          resultado: resultadoFinal,
-          lucro_prejuizo: todasLiquidadas ? lucroTotal : null,
-          roi_real: todasLiquidadas && surebet.stake_total > 0 ? (lucroTotal / surebet.stake_total) * 100 : null
-        })
-        .eq("id", surebet.id);
 
       // Atualizar estados locais
       setOdds(prev => prev.map((o, idx) => 
@@ -2706,6 +2648,16 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
 
       hasChangesRef.current = true;
 
+      // Verificar se todas as pernas foram liquidadas (buscar dados atualizados)
+      const { data: updatedData } = await supabase
+        .from("apostas_unificada")
+        .select("pernas")
+        .eq("id", surebet.id)
+        .single();
+      
+      const novasPernas = updatedData?.pernas as unknown as SurebetPerna[] || [];
+      const todasLiquidadas = novasPernas.every(p => p.resultado && p.resultado !== "PENDENTE" && p.resultado !== null);
+
       if (todasLiquidadas && !toastShownRef.current) {
         toastShownRef.current = true;
         toast.success("Operação liquidada com sucesso!");
@@ -2715,7 +2667,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     } catch (error: any) {
       toast.error("Erro: " + error.message);
     }
-  }, [surebet, projetoId, atualizarProgressoRollover, reverterProgressoRollover, hasActiveRolloverBonus, invalidateSaldos]);
+  }, [surebet, projetoId, workspaceId, atualizarProgressoRollover, reverterProgressoRollover, hasActiveRolloverBonus, invalidateSaldos]);
 
   // Handler para fechamento do modal - chama onSuccess apenas aqui
   const handleDialogClose = useCallback((newOpen: boolean) => {

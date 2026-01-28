@@ -44,17 +44,35 @@ A função `atualizarSaldoBookmaker()` (linhas 2566-2740) era código morto que 
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Pendências Identificadas
+### Migração Completa (v9.5.1)
 
-| Componente | Status | Problema |
+| Componente | Status | Correção |
 |------------|--------|----------|
-| `SurebetDialog` | ⚠️ LEGADO | Ainda usa `updateBookmakerBalance()` para liquidar pernas |
+| `criar_aposta_atomica_v3` | ✅ CORRIGIDO | Double-write eliminado |
+| `ApostaDialog` | ✅ CORRIGIDO | Código morto removido |
+| `SurebetDialog` | ✅ MIGRADO | Agora usa `liquidarPernaSurebet` via ApostaService |
 
-### Recomendação Futura
+### Arquitetura 100% Event-Driven
 
-O `SurebetDialog` deveria ser refatorado para usar o mesmo fluxo do `ApostaService`:
-- Liquidar via `liquidarSurebetSimples()` ou RPC `liquidar_aposta_v4`
-- Isso eliminaria o último ponto de manipulação de saldo fora do motor
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    FLUXO UNIFICADO                          │
+├─────────────────────────────────────────────────────────────┤
+│  COMPONENTE                 SERVIÇO                         │
+│  ├─ ApostaDialog         → ApostaService.criarAposta()      │
+│  ├─ ApostaMultiplaDialog → ApostaService.criarAposta()      │
+│  ├─ SurebetDialog        → ApostaService.liquidarPernaSurebet() │
+│  └─ CaixaTransacaoDialog → cash_ledger                      │
+├─────────────────────────────────────────────────────────────┤
+│  SERVIÇOS                                                   │
+│  ├─ ApostaService        → RPCs v3/v4 + financial_events    │
+│  └─ LedgerService        → cash_ledger                      │
+├─────────────────────────────────────────────────────────────┤
+│  TRIGGER ÚNICO (SST)                                        │
+│  └─ fn_financial_events_sync_balance                        │
+│      └─→ UPDATE bookmakers.saldo_atual / saldo_freebet      │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ### Regras Críticas
 
@@ -62,3 +80,4 @@ O `SurebetDialog` deveria ser refatorado para usar o mesmo fluxo do `ApostaServi
 2. **SEMPRE** criar evento em `financial_events`
 3. **O trigger** cuida da propagação para saldos
 4. **Frontend** só deve chamar serviços/RPCs, nunca manipular saldo
+5. **updateBookmakerBalance()** está DEPRECIADO - não usar em código novo
