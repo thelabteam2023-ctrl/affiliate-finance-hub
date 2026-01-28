@@ -285,7 +285,9 @@ export function useProjetoHistoricoContas(projetoId: string): HistoricoContasRes
       };
     },
     enabled: !!projetoId,
-    staleTime: 30000,
+    staleTime: 5000, // 5 segundos - permite reatividade após invalidação
+    gcTime: 60 * 1000, // 1 minuto cache
+    refetchOnWindowFocus: false,
   });
 
   return {

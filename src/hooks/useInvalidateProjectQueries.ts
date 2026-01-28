@@ -83,6 +83,14 @@ export function useInvalidateProjectQueries() {
           // CRÍTICO: Saldos alimentam a aba Vínculos - SEMPRE invalidar juntos
           queryClient.invalidateQueries({ 
             queryKey: ["projeto-vinculos", projetoId] 
+          }),
+          // CRÍTICO: Painel de Relacionamentos (contagem de contas/parceiros)
+          queryClient.invalidateQueries({ 
+            queryKey: ["projeto-painel-contas", projetoId] 
+          }),
+          // Rollover por casa
+          queryClient.invalidateQueries({ 
+            queryKey: ["rollover-por-casa", projetoId] 
           })
         );
       }
@@ -117,6 +125,22 @@ export function useInvalidateProjectQueries() {
           }),
           queryClient.invalidateQueries({ 
             queryKey: ["parceiro-consolidado"] 
+          }),
+          // CRÍTICO: Painel de Relacionamentos - atualizar contadores
+          queryClient.invalidateQueries({ 
+            queryKey: ["projeto-painel-contas", projetoId] 
+          }),
+          // Bookmakers disponíveis (lista muda quando vincula/desvincula)
+          queryClient.invalidateQueries({ 
+            queryKey: ["bookmakers-disponiveis"] 
+          }),
+          // Saldo operável - atualizar quando vínculos mudam
+          queryClient.invalidateQueries({ 
+            queryKey: ["saldo-operavel-rpc", projetoId] 
+          }),
+          // Rollover por casa
+          queryClient.invalidateQueries({ 
+            queryKey: ["rollover-por-casa", projetoId] 
           })
         );
       }
