@@ -966,6 +966,10 @@ export function SurebetModalRoot({
         if (insertPernasError) throw insertPernasError;
       }
 
+      // CRÍTICO: Invalidar cache de saldos após inserção direta no banco
+      // Isso garante que o saldo operável seja atualizado imediatamente
+      invalidateSaldos(projetoId);
+      
       onSuccess('save');
       if (!embedded) onOpenChange(false);
     } catch (error: any) {
@@ -1029,6 +1033,9 @@ export function SurebetModalRoot({
         .insert(apostasSimples);
 
       if (insertError) throw insertError;
+
+      // CRÍTICO: Invalidar cache de saldos após inserção direta
+      invalidateSaldos(projetoId);
 
       toast.success(`${apostasSimples.length} apostas simples registradas!`);
       setShowConversionDialog(false);
