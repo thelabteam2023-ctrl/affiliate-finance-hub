@@ -84,8 +84,7 @@ export default function ApostaMultiplaWindowPage() {
     fetchAposta();
   }, [id, isEditing]);
 
-  // MODO OPERACIONAL CONTÍNUO: Nunca fecha automaticamente
-  // O formulário permanece aberto após salvar, seja novo ou edição
+  // FLUXO DISTINTO: Criação mantém aberto, Edição fecha automaticamente
   const handleSuccess = useCallback((action?: ApostaMultiplaActionType) => {
     // Notificar janela principal para atualizar listas/KPIs/saldos
     try {
@@ -102,29 +101,38 @@ export default function ApostaMultiplaWindowPage() {
       setRascunhoCarregado(null);
     }
     
-    // Se foi exclusão, fechar a janela (não faz sentido continuar editando algo que não existe)
+    // Se foi exclusão, fechar a janela
     if (action === 'delete') {
       toast.success("Múltipla excluída!", {
         description: "A operação foi removida com sucesso.",
         icon: <Trash2 className="h-5 w-5 text-destructive" />,
         duration: 2000,
       });
-      // Pequeno delay para o toast ser visto antes de fechar
       setTimeout(() => window.close(), 1500);
       return;
     }
     
-    // Para salvamento: Incrementar contador e resetar formulário
-    setSaveCount(prev => prev + 1);
-    setAposta(null);
-    setFormKey(prev => prev + 1);
-    
-    // Toast de confirmação visual
-    toast.success(isEditing ? "Múltipla atualizada!" : "Múltipla registrada!", {
-      description: `${saveCount + 1}ª operação salva. Formulário pronto para nova entrada.`,
-      icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-      duration: 3000,
-    });
+    // FLUXO DISTINTO POR MODO
+    if (isEditing) {
+      // EDIÇÃO: Fechar e retornar à lista
+      toast.success("Múltipla atualizada!", {
+        description: "Alterações salvas com sucesso.",
+        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        duration: 2000,
+      });
+      setTimeout(() => window.close(), 1000);
+    } else {
+      // CRIAÇÃO: Resetar formulário e manter aberto
+      setSaveCount(prev => prev + 1);
+      setAposta(null);
+      setFormKey(prev => prev + 1);
+      
+      toast.success("Múltipla registrada!", {
+        description: `${saveCount + 1}ª operação salva. Formulário pronto para nova entrada.`,
+        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        duration: 3000,
+      });
+    }
   }, [isEditing, projetoId, saveCount, isFromRascunho, rascunhoCarregado, deletarRascunho]);
 
   const handleClose = useCallback(() => {
