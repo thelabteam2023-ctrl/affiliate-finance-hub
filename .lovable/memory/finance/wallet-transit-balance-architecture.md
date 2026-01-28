@@ -1,9 +1,20 @@
 # Memory: finance/wallet-transit-balance-architecture
-Updated: 2026-01-27
+Updated: 2026-01-28
 
 ## Arquitetura de Dinheiro em Trânsito para Wallets Crypto
 
 O sistema implementa o conceito de "Dinheiro em Trânsito" para wallets crypto, garantindo que valores enviados mas ainda não confirmados não sejam considerados como saldo disponível.
+
+### Regra de Transit Status por Tipo de Fluxo
+
+| Fluxo | transit_status | Motivo |
+|-------|----------------|--------|
+| WALLET → WALLET | `CONFIRMED` | Transferência interna, instantânea |
+| WALLET → BOOKMAKER | `PENDING` | Aguarda confirmação da blockchain |
+| WALLET → SAQUE EXTERNO | `PENDING` | Aguarda confirmação da blockchain |
+| CAIXA → WALLET | `CONFIRMED` | Aporte interno, instantâneo |
+
+**Importante**: A view `v_saldo_parceiro_wallets` só considera transações com `transit_status = 'CONFIRMED'` no cálculo do saldo.
 
 ### Modelo de 3 Camadas de Saldo
 
