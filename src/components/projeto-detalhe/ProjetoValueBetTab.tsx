@@ -6,6 +6,7 @@ import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { reliquidarAposta } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
+import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -587,61 +588,14 @@ export function ProjetoValueBetTab({
     }
   }, [projetoId]);
 
-  // Listener para sincronização com janelas externas via BroadcastChannel
-  useEffect(() => {
-    const channels: BroadcastChannel[] = [];
-    
-    try {
-      const apostaChannel = new BroadcastChannel("aposta_channel");
-      apostaChannel.onmessage = (event) => {
-        // Aceitar APOSTA_SAVED, resultado_updated e APOSTA_DELETED
-        const validTypes = ["APOSTA_SAVED", "resultado_updated", "APOSTA_DELETED"];
-        if (validTypes.includes(event.data?.type) && event.data?.projetoId === projetoId) {
-          fetchData();
-          onDataChange?.();
-        }
-      };
-      channels.push(apostaChannel);
-
-      const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
-      multiplaChannel.onmessage = (event) => {
-        if (event.data?.type === "APOSTA_MULTIPLA_SAVED" && event.data?.projetoId === projetoId) {
-          fetchData();
-          onDataChange?.();
-        }
-      };
-      channels.push(multiplaChannel);
-      
-      // Surebets com estratégia VALUEBET também devem atualizar esta aba
-      const surebetChannel = new BroadcastChannel("surebet_channel");
-      surebetChannel.onmessage = (event) => {
-        if (event.data?.type === "SUREBET_SAVED" && event.data?.projetoId === projetoId) {
-          fetchData();
-          onDataChange?.();
-        }
-      };
-      channels.push(surebetChannel);
-    } catch (err) {
-      // Fallback para localStorage
-      const handleStorage = (event: StorageEvent) => {
-        if ((event.key === "aposta_saved" || event.key === "aposta_multipla_saved" || event.key === "surebet_saved") && event.newValue) {
-          try {
-            const data = JSON.parse(event.newValue);
-            if (data.projetoId === projetoId) {
-              fetchData();
-              onDataChange?.();
-            }
-          } catch (e) { /* ignore */ }
-        }
-      };
-      window.addEventListener("storage", handleStorage);
-      return () => window.removeEventListener("storage", handleStorage);
-    }
-
-    return () => {
-      channels.forEach(ch => ch.close());
-    };
-  }, [projetoId, onDataChange]);
+  // Hook centralizado para sincronização cross-window
+  useCrossWindowSync({
+    projetoId,
+    onSync: useCallback(() => {
+      fetchData();
+      onDataChange?.();
+    }, [onDataChange]),
+  });
 
   const handleApostaUpdated = () => {
     fetchData();

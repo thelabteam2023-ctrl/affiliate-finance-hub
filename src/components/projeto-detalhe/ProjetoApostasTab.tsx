@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { reliquidarAposta } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 // useBookmakerLogoMap movido para ProjetoDashboardTab
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -317,71 +318,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     fetchAllApostas();
   }, [projetoId, tabFilters.period, tabFilters.customDateRange, refreshTrigger]);
 
-  // Listeners para BroadcastChannel - atualizam quando operações são salvas em janelas externas
-  useEffect(() => {
-    // Canais para cada tipo de operação
-    const surebetChannel = new BroadcastChannel("surebet_channel");
-    const apostaChannel = new BroadcastChannel("aposta_channel");
-    const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
-    
-    const handleSurebetMessage = (event: MessageEvent) => {
-      if (event.data?.type === "SUREBET_SAVED" && event.data?.projetoId === projetoId) {
-        console.log("[ProjetoApostasTab] Surebet salva em janela externa, atualizando lista...");
-        fetchAllApostas();
-        onDataChange?.();
-      }
-    };
-    
-    const handleApostaMessage = (event: MessageEvent) => {
-      // Aceitar APOSTA_SAVED, resultado_updated e APOSTA_DELETED
-      const validTypes = ["APOSTA_SAVED", "resultado_updated", "APOSTA_DELETED"];
-      if (validTypes.includes(event.data?.type) && event.data?.projetoId === projetoId) {
-        console.log(`[ProjetoApostasTab] ${event.data.type} em janela externa, atualizando lista...`);
-        fetchAllApostas();
-        onDataChange?.();
-      }
-    };
-    
-    const handleMultiplaMessage = (event: MessageEvent) => {
-      if (event.data?.type === "APOSTA_MULTIPLA_SAVED" && event.data?.projetoId === projetoId) {
-        console.log("[ProjetoApostasTab] Aposta Múltipla salva em janela externa, atualizando lista...");
-        fetchAllApostas();
-        onDataChange?.();
-      }
-    };
-    
-    surebetChannel.addEventListener("message", handleSurebetMessage);
-    apostaChannel.addEventListener("message", handleApostaMessage);
-    multiplaChannel.addEventListener("message", handleMultiplaMessage);
-    
-    // Fallback: listener para localStorage (browsers que não suportam BroadcastChannel)
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === "surebet_saved" || event.key === "aposta_saved" || event.key === "aposta_multipla_saved") {
-        try {
-          const data = JSON.parse(event.newValue || "{}");
-          if (data.projetoId === projetoId) {
-            console.log(`[ProjetoApostasTab] ${event.key} (localStorage fallback), atualizando lista...`);
-            fetchAllApostas();
-            onDataChange?.();
-          }
-        } catch (e) {
-          // Ignorar erros de parse
-        }
-      }
-    };
-    
-    window.addEventListener("storage", handleStorage);
-    
-    return () => {
-      surebetChannel.removeEventListener("message", handleSurebetMessage);
-      surebetChannel.close();
-      apostaChannel.removeEventListener("message", handleApostaMessage);
-      apostaChannel.close();
-      multiplaChannel.removeEventListener("message", handleMultiplaMessage);
-      multiplaChannel.close();
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, [projetoId, onDataChange]);
+  // Hook centralizado para sincronização cross-window
+  useCrossWindowSync({
+    projetoId,
+    onSync: useCallback(() => {
+      fetchAllApostas();
+      onDataChange?.();
+    }, [onDataChange]),
+  });
 
   const fetchAllApostas = async () => {
     try {

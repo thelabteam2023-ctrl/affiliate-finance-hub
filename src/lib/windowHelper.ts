@@ -42,9 +42,107 @@ export function openApostaMultiplaWindow(params: WindowOpenParams) {
   window.open(url, '_blank', DEFAULT_WINDOW_FEATURES);
 }
 
+// ============================================================================
+// BROADCAST HELPERS - Funções padronizadas para emissão de eventos cross-window
+// ============================================================================
+
+export type AppostaBroadcastType = 'APOSTA_SAVED' | 'APOSTA_DELETED' | 'resultado_updated';
+export type MultiplaBroadcastType = 'APOSTA_MULTIPLA_SAVED';
+export type SurebetBroadcastType = 'SUREBET_SAVED';
+
+interface BroadcastPayload {
+  type: string;
+  projetoId: string;
+  apostaId?: string;
+  timestamp: number;
+}
+
 /**
- * Hook para escutar eventos de salvamento vindos de janelas externas.
- * Usa BroadcastChannel para comunicação entre janelas.
+ * Emite evento de aposta simples via BroadcastChannel + localStorage fallback
+ */
+export function broadcastAposta(
+  type: AppostaBroadcastType,
+  projetoId: string,
+  apostaId?: string
+): void {
+  const payload: BroadcastPayload = {
+    type,
+    projetoId,
+    apostaId,
+    timestamp: Date.now(),
+  };
+  
+  try {
+    const channel = new BroadcastChannel('aposta_channel');
+    channel.postMessage(payload);
+    channel.close();
+  } catch {
+    // Fallback para localStorage
+    localStorage.setItem('aposta_saved', JSON.stringify(payload));
+  }
+}
+
+/**
+ * Emite evento de aposta múltipla via BroadcastChannel + localStorage fallback
+ */
+export function broadcastMultipla(
+  type: MultiplaBroadcastType,
+  projetoId: string,
+  apostaId?: string
+): void {
+  const payload: BroadcastPayload = {
+    type,
+    projetoId,
+    apostaId,
+    timestamp: Date.now(),
+  };
+  
+  try {
+    const channel = new BroadcastChannel('aposta_multipla_channel');
+    channel.postMessage(payload);
+    channel.close();
+  } catch {
+    localStorage.setItem('aposta_multipla_saved', JSON.stringify(payload));
+  }
+}
+
+/**
+ * Emite evento de surebet via BroadcastChannel + localStorage fallback
+ */
+export function broadcastSurebet(
+  type: SurebetBroadcastType,
+  projetoId: string,
+  surebetId?: string
+): void {
+  const payload: BroadcastPayload = {
+    type,
+    projetoId,
+    apostaId: surebetId,
+    timestamp: Date.now(),
+  };
+  
+  try {
+    const channel = new BroadcastChannel('surebet_channel');
+    channel.postMessage(payload);
+    channel.close();
+  } catch {
+    localStorage.setItem('surebet_saved', JSON.stringify(payload));
+  }
+}
+
+/**
+ * Emite evento de resultado atualizado (usa canal de aposta)
+ */
+export function broadcastResultadoUpdated(projetoId: string, apostaId?: string): void {
+  broadcastAposta('resultado_updated', projetoId, apostaId);
+}
+
+// ============================================================================
+// LEGACY LISTENERS - Mantidos para compatibilidade, mas preferir useCrossWindowSync
+// ============================================================================
+
+/**
+ * @deprecated Use `useCrossWindowSync` do hook centralizado
  */
 export function useWindowListener(
   channelName: string,
@@ -91,21 +189,21 @@ export function useWindowListener(
 }
 
 /**
- * Escuta eventos de Surebet salvos.
+ * @deprecated Use `useCrossWindowSync` do hook centralizado
  */
 export function useSurebetWindowListener(callback: (projetoId: string) => void) {
   return useWindowListener('surebet_channel', 'SUREBET_SAVED', callback);
 }
 
 /**
- * Escuta eventos de Aposta Simples salvos.
+ * @deprecated Use `useCrossWindowSync` do hook centralizado
  */
 export function useApostaWindowListener(callback: (projetoId: string) => void) {
   return useWindowListener('aposta_channel', 'APOSTA_SAVED', callback);
 }
 
 /**
- * Escuta eventos de Aposta Múltipla salvos.
+ * @deprecated Use `useCrossWindowSync` do hook centralizado
  */
 export function useApostaMultiplaWindowListener(callback: (projetoId: string) => void) {
   return useWindowListener('aposta_multipla_channel', 'APOSTA_MULTIPLA_SAVED', callback);

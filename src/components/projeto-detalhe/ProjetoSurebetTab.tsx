@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 import {
   Select,
   SelectContent,
@@ -159,6 +160,7 @@ const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null })
 };
 
 export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: ProjetoSurebetTabProps) {
+  const queryClient = useQueryClient();
   const [surebets, setSurebets] = useState<Surebet[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -237,67 +239,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     localStorage.setItem(NAV_STORAGE_KEY, navMode);
   }, [navMode]);
 
-  // CRÍTICO: Listener para BroadcastChannel - sincroniza quando apostas são atualizadas em outras janelas
-  const queryClient = useQueryClient();
-  
-  useEffect(() => {
-    const channels: BroadcastChannel[] = [];
-    
-    try {
-      const surebetChannel = new BroadcastChannel("surebet_channel");
-      surebetChannel.onmessage = (event) => {
-        if (event.data?.projetoId === projetoId) {
-          console.log("[ProjetoSurebetTab] Surebet atualizada via BroadcastChannel, refetching...");
-          fetchSurebets();
-          queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
-          queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
-        }
-      };
-      channels.push(surebetChannel);
-
-      const apostaChannel = new BroadcastChannel("aposta_channel");
-      apostaChannel.onmessage = (event) => {
-        if (event.data?.projetoId === projetoId) {
-          console.log("[ProjetoSurebetTab] Aposta atualizada via BroadcastChannel, refetching...");
-          fetchSurebets();
-          queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
-          queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
-        }
-      };
-      channels.push(apostaChannel);
-
-      const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
-      multiplaChannel.onmessage = (event) => {
-        if (event.data?.projetoId === projetoId) {
-          console.log("[ProjetoSurebetTab] Múltipla atualizada via BroadcastChannel, refetching...");
-          fetchSurebets();
-          queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
-          queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
-        }
-      };
-      channels.push(multiplaChannel);
-    } catch (e) {
-      console.warn("[ProjetoSurebetTab] BroadcastChannel não suportado");
-    }
-    
-    // Fallback: listener para localStorage
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === "surebet_saved" || event.key === "aposta_saved" || event.key === "aposta_multipla_saved") {
-        try {
-          const data = JSON.parse(event.newValue || "{}");
-          if (data.projetoId === projetoId) {
-            fetchSurebets();
-          }
-        } catch { /* ignore */ }
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    
-    return () => {
-      channels.forEach(ch => ch.close());
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, [projetoId, queryClient]);
+  // Hook centralizado para sincronização cross-window
+  useCrossWindowSync({
+    projetoId,
+    onSync: useCallback(() => {
+      fetchSurebets();
+      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+    }, [queryClient, projetoId]),
+  });
 
   // Refetch quando filtros locais mudarem (apenas surebets, bookmakers são gerenciados pelo hook)
   useEffect(() => {

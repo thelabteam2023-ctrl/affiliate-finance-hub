@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 import {
   Select,
   SelectContent,
@@ -344,61 +345,14 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
     }
   }, [projetoId]);
 
-  // Listener para sincronização com janelas externas via BroadcastChannel
-  useEffect(() => {
-    const channels: BroadcastChannel[] = [];
-    
-    try {
-      const apostaChannel = new BroadcastChannel("aposta_channel");
-      apostaChannel.onmessage = (event) => {
-        // Aceitar APOSTA_SAVED, resultado_updated e APOSTA_DELETED
-        const validTypes = ["APOSTA_SAVED", "resultado_updated", "APOSTA_DELETED"];
-        if (validTypes.includes(event.data?.type) && event.data?.projetoId === projetoId) {
-          fetchData();
-          onDataChange?.();
-        }
-      };
-      channels.push(apostaChannel);
-
-      const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
-      multiplaChannel.onmessage = (event) => {
-        if (event.data?.type === "APOSTA_MULTIPLA_SAVED" && event.data?.projetoId === projetoId) {
-          fetchData();
-          onDataChange?.();
-        }
-      };
-      channels.push(multiplaChannel);
-      
-      // Surebets usando freebet também devem atualizar esta aba
-      const surebetChannel = new BroadcastChannel("surebet_channel");
-      surebetChannel.onmessage = (event) => {
-        if (event.data?.type === "SUREBET_SAVED" && event.data?.projetoId === projetoId) {
-          fetchData();
-          onDataChange?.();
-        }
-      };
-      channels.push(surebetChannel);
-    } catch (err) {
-      // Fallback para localStorage
-      const handleStorage = (event: StorageEvent) => {
-        if ((event.key === "aposta_saved" || event.key === "aposta_multipla_saved" || event.key === "surebet_saved") && event.newValue) {
-          try {
-            const data = JSON.parse(event.newValue);
-            if (data.projetoId === projetoId) {
-              fetchData();
-              onDataChange?.();
-            }
-          } catch (e) { /* ignore */ }
-        }
-      };
-      window.addEventListener("storage", handleStorage);
-      return () => window.removeEventListener("storage", handleStorage);
-    }
-
-    return () => {
-      channels.forEach(ch => ch.close());
-    };
-  }, [projetoId, onDataChange]);
+  // Hook centralizado para sincronização cross-window
+  useCrossWindowSync({
+    projetoId,
+    onSync: useCallback(() => {
+      fetchData();
+      onDataChange?.();
+    }, [onDataChange]),
+  });
 
   // Navigation handlers
   const handleModeToggle = () => {
