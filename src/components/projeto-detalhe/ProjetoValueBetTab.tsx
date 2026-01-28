@@ -611,10 +611,20 @@ export function ProjetoValueBetTab({
         }
       };
       channels.push(multiplaChannel);
+      
+      // Surebets com estratégia VALUEBET também devem atualizar esta aba
+      const surebetChannel = new BroadcastChannel("surebet_channel");
+      surebetChannel.onmessage = (event) => {
+        if (event.data?.type === "SUREBET_SAVED" && event.data?.projetoId === projetoId) {
+          fetchData();
+          onDataChange?.();
+        }
+      };
+      channels.push(surebetChannel);
     } catch (err) {
       // Fallback para localStorage
       const handleStorage = (event: StorageEvent) => {
-        if ((event.key === "aposta_saved" || event.key === "aposta_multipla_saved") && event.newValue) {
+        if ((event.key === "aposta_saved" || event.key === "aposta_multipla_saved" || event.key === "surebet_saved") && event.newValue) {
           try {
             const data = JSON.parse(event.newValue);
             if (data.projetoId === projetoId) {

@@ -632,10 +632,20 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
         }
       };
       channels.push(surebetChannel);
+      
+      // Múltiplas com estratégia DUPLO_GREEN também devem atualizar esta aba
+      const multiplaChannel = new BroadcastChannel("aposta_multipla_channel");
+      multiplaChannel.onmessage = (event) => {
+        if (event.data?.type === "APOSTA_MULTIPLA_SAVED" && event.data?.projetoId === projetoId) {
+          fetchData();
+          onDataChange?.();
+        }
+      };
+      channels.push(multiplaChannel);
     } catch (err) {
       // Fallback para localStorage (navegadores sem BroadcastChannel)
       const handleStorage = (event: StorageEvent) => {
-        if ((event.key === "aposta_saved" || event.key === "surebet_saved") && event.newValue) {
+        if ((event.key === "aposta_saved" || event.key === "surebet_saved" || event.key === "aposta_multipla_saved") && event.newValue) {
           try {
             const data = JSON.parse(event.newValue);
             if (data.projetoId === projetoId) {
