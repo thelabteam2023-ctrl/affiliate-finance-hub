@@ -2109,18 +2109,31 @@ export function CaixaTransacaoDialog({
       // IMPORTANTE: NÃO fazer lock manual aqui para evitar duplicação!
       // O trigger fn_cash_ledger_lock_pending_on_insert() já incrementa
       // balance_locked quando status = 'PENDENTE' e origem_wallet_id existe.
+      //
+      // REGRA DE TRANSIT_STATUS:
+      // - PENDING: Transações que saem para blockchain externa (depósito em bookmaker, saque externo)
+      // - CONFIRMED: Transferências internas WALLET→WALLET (instantâneas, sem blockchain)
       // =========================================================================
       const isTransacaoCryptoDeWallet = tipoMoeda === "CRYPTO" && origemWalletId;
+      const isWalletToWalletTransfer = origemWalletId && destinoWalletId;
       
       if (isTransacaoCryptoDeWallet) {
-        // Definir transit_status como PENDING para transações crypto
-        // O lock será feito automaticamente pelo trigger do banco
-        transactionData.transit_status = "PENDING";
-        
-        console.log("[CRYPTO TRANSIT] Preparando transação com lock automático via trigger:", {
-          walletId: origemWalletId,
-          valorQueSeraTravado: valorUsdReferencia,
-        });
+        // Transferências WALLET→WALLET são instantâneas (confirmadas imediatamente)
+        // Transações para fora (bookmaker, saque) precisam de confirmação externa
+        if (isWalletToWalletTransfer) {
+          transactionData.transit_status = "CONFIRMED";
+          console.log("[CRYPTO TRANSIT] Transferência WALLET→WALLET: CONFIRMED imediatamente", {
+            origem: origemWalletId,
+            destino: destinoWalletId,
+          });
+        } else {
+          // Saída para blockchain externa - precisa de confirmação
+          transactionData.transit_status = "PENDING";
+          console.log("[CRYPTO TRANSIT] Transação para blockchain externa: PENDING", {
+            walletId: origemWalletId,
+            valorQueSeraTravado: valorUsdReferencia,
+          });
+        }
       }
 
       const { data: insertedData, error } = await supabase
