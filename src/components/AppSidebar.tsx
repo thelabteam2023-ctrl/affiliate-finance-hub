@@ -411,11 +411,11 @@ export function AppSidebar() {
     >
       <SidebarContent className="py-4">
         {/* Logo/Brand Section */}
-        <div className="flex items-center justify-center px-3 pb-4">
+        <div className="flex items-center justify-center px-3 pb-4 bg-transparent">
           {isCollapsed ? (
-            <img src="/favicon.png" alt="LABBET" className="h-10 w-10" />
+            <img src="/favicon.png" alt="LABBET" className="h-10 w-10 bg-transparent" />
           ) : (
-            <img src="/logo-horizontal.png" alt="LABBET" className="h-9" />
+            <img src="/logo-horizontal.png" alt="LABBET" className="h-9 bg-transparent" />
           )}
         </div>
 
