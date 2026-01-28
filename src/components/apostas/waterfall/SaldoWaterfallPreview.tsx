@@ -131,86 +131,40 @@ export function SaldoWaterfallPreview({
     return null;
   }
 
-  return (
-    <div className={cn("space-y-2", className)}>
-      {/* Status de cobertura */}
-      <div className="flex items-center gap-2">
-        {breakdown.stakeCoberto ? (
-          <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 gap-1">
-            <CheckCircle className="h-3 w-3" />
-            Stake coberto
-          </Badge>
-        ) : (
-          <Badge variant="destructive" className="gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            Faltam {formatCurrency(breakdown.saldoRestante)}
-          </Badge>
-        )}
-        
-        {showBreakdown && (
-          <span className="text-xs text-muted-foreground">
-            Saldo operável: {formatCurrency(saldoOperavel)}
-          </span>
-        )}
-      </div>
+  // Verifica se há bônus ou freebet ativo no breakdown
+  const hasActivePromo = saldoBonus > 0 || (usarFreebet && saldoFreebet > 0);
 
-      {/* Breakdown visual */}
-      {showBreakdown && stake > 0 && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-1.5 text-xs cursor-help">
-                {breakdown.debitoBonus > 0 && (
-                  <>
-                    <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
-                      <Sparkles className="h-3 w-3" />
-                      {formatCurrency(breakdown.debitoBonus)}
-                    </span>
-                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  </>
-                )}
-                {breakdown.debitoFreebet > 0 && (
-                  <>
-                    <span className="flex items-center gap-0.5 text-purple-600 dark:text-purple-400">
-                      <Gift className="h-3 w-3" />
-                      {formatCurrency(breakdown.debitoFreebet)}
-                    </span>
-                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                  </>
-                )}
-                {breakdown.debitoReal > 0 && (
-                  <span className="flex items-center gap-0.5 text-primary">
-                    <Coins className="h-3 w-3" />
-                    {formatCurrency(breakdown.debitoReal)}
-                  </span>
-                )}
-                {breakdown.debitoBonus === 0 && breakdown.debitoFreebet === 0 && breakdown.debitoReal === 0 && stake > 0 && (
-                  <span className="text-destructive">Sem saldo</span>
-                )}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-xs">
-              <div className="text-xs space-y-1">
-                <p className="font-medium">Distribuição do Stake</p>
-                <p>O sistema debita automaticamente nesta ordem:</p>
-                <ol className="list-decimal list-inside space-y-0.5 pl-1">
-                  <li className={cn(breakdown.debitoBonus > 0 && "text-amber-500")}>
-                    Bônus: {formatCurrency(breakdown.debitoBonus)} 
-                    <span className="text-muted-foreground"> (automático)</span>
-                  </li>
-                  <li className={cn(breakdown.debitoFreebet > 0 && "text-purple-500")}>
-                    Freebet: {formatCurrency(breakdown.debitoFreebet)}
-                    {!usarFreebet && <span className="text-muted-foreground"> (desativado)</span>}
-                  </li>
-                  <li className={cn(breakdown.debitoReal > 0 && "text-primary")}>
-                    Real: {formatCurrency(breakdown.debitoReal)}
-                  </li>
-                </ol>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+  return (
+    <div className={cn("flex items-center gap-2", className)}>
+      {/* Status de cobertura + Saldo Operável unificado */}
+      {breakdown.stakeCoberto ? (
+        <Badge variant="secondary" className="bg-primary/10 text-primary gap-1">
+          <CheckCircle className="h-3 w-3" />
+          Stake coberto
+        </Badge>
+      ) : (
+        <Badge variant="destructive" className="gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          Faltam {formatCurrency(breakdown.saldoRestante)}
+        </Badge>
       )}
+      
+      {/* Saldo Operável simplificado: valor único + ícone de presente se há promo */}
+      <span className="text-xs text-muted-foreground flex items-center gap-1">
+        Saldo Operável: {formatCurrency(saldoOperavel)}
+        {hasActivePromo && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Gift className="h-3 w-3 text-warning cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                Inclui bônus/freebet ativo
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </span>
     </div>
   );
 }
