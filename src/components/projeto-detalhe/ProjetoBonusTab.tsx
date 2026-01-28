@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,11 +45,13 @@ import { ptBR } from "date-fns/locale";
 import { useProjectBonuses, ProjectBonus, BonusStatus, BonusFormData } from "@/hooks/useProjectBonuses";
 import { BonusDialog } from "./BonusDialog";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
+import { useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 
 interface ProjetoBonusTabProps {
   projetoId: string;
 }
 
+// Interface adaptada para o BonusDialog (mantendo compatibilidade)
 interface BookmakerOption {
   id: string;
   nome: string;
@@ -143,8 +146,55 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     );
   }, [bonuses]);
 
-  const [bookmakers, setBookmakers] = useState<BookmakerOption[]>([]);
-  const [loadingBookmakers, setLoadingBookmakers] = useState(true);
+  // CORREÇÃO: Usar RPC canônica para saldos em vez de query direta
+  const { data: saldosData, isLoading: loadingSaldos } = useBookmakerSaldosQuery({
+    projetoId,
+    enabled: true,
+    includeZeroBalance: true // Incluir bookmakers com saldo zero no dialog de bonus
+  });
+
+  // Query adicional para buscar bookmaker_catalogo_id (necessário para templates de bônus)
+  const { data: catalogoIdsData } = useQuery({
+    queryKey: ["bookmaker-catalogo-ids", projetoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select("id, bookmaker_catalogo_id")
+        .eq("projeto_id", projetoId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!projetoId
+  });
+
+  // Criar mapa de bookmaker_id -> bookmaker_catalogo_id
+  const catalogoIdMap = useMemo(() => {
+    const map = new Map<string, string | null>();
+    (catalogoIdsData || []).forEach(item => {
+      map.set(item.id, item.bookmaker_catalogo_id);
+    });
+    return map;
+  }, [catalogoIdsData]);
+
+  const loadingBookmakers = loadingSaldos;
+
+  // Adaptar dados do hook para a interface BookmakerOption esperada pelo BonusDialog
+  const bookmakers: BookmakerOption[] = useMemo(() => {
+    if (!saldosData) return [];
+    return saldosData.map((bk: BookmakerSaldo) => ({
+      id: bk.id,
+      nome: bk.nome,
+      login_username: "", // Não disponível no RPC, mas não é usado no select
+      login_password_encrypted: null,
+      logo_url: bk.logo_url,
+      bookmaker_catalogo_id: catalogoIdMap.get(bk.id) || null,
+      saldo_atual: bk.saldo_real,
+      saldo_usd: bk.moeda === "USD" || bk.moeda === "USDT" ? bk.saldo_real : 0,
+      moeda: bk.moeda,
+      parceiro_nome: bk.parceiro_nome || undefined,
+    }));
+  }, [saldosData, catalogoIdMap]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<BonusStatus | "all">("all");
   const [bookmakerFilter, setBookmakerFilter] = useState<string>("all");
@@ -153,53 +203,6 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bonusToDelete, setBonusToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  // Re-fetch bookmakers when project changes OR when bonuses change (ensures newly linked bookmakers appear)
-  useEffect(() => {
-    fetchBookmakers();
-  }, [projetoId, bonuses.length]);
-
-  const fetchBookmakers = async () => {
-    try {
-      setLoadingBookmakers(true);
-      const { data, error } = await supabase
-        .from("bookmakers")
-        .select(`
-          id,
-          nome,
-          login_username,
-          login_password_encrypted,
-          bookmaker_catalogo_id,
-          saldo_atual,
-          saldo_usd,
-          moeda,
-          bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
-          parceiro:parceiros (nome)
-        `)
-        .eq("projeto_id", projetoId);
-
-      if (error) throw error;
-
-      const mapped: BookmakerOption[] = (data || []).map((b: any) => ({
-        id: b.id,
-        nome: b.nome,
-        login_username: b.login_username,
-        login_password_encrypted: b.login_password_encrypted || null,
-        logo_url: b.bookmakers_catalogo?.logo_url || null,
-        bookmaker_catalogo_id: b.bookmaker_catalogo_id || null,
-        saldo_atual: b.saldo_atual ?? 0,
-        saldo_usd: b.saldo_usd ?? 0,
-        moeda: b.moeda || "BRL",
-        parceiro_nome: b.parceiro?.nome || undefined,
-      }));
-
-      setBookmakers(mapped);
-    } catch (error: any) {
-      console.error("Erro ao carregar bookmakers:", error.message);
-    } finally {
-      setLoadingBookmakers(false);
-    }
-  };
 
   const handleSubmit = async (data: BonusFormData): Promise<boolean> => {
     if (editingBonus) {
