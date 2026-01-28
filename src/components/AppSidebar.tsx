@@ -406,14 +406,14 @@ export function AppSidebar() {
 
   return (
     <Sidebar
-      className={isCollapsed ? "w-14" : "w-56"}
+      className={isCollapsed ? "w-16" : "w-56"}
       collapsible="icon"
     >
       <SidebarContent className="py-4">
         {/* Logo/Brand Section */}
-        <div className="flex items-center justify-center px-4 pb-4">
+        <div className="flex items-center justify-center px-3 pb-4">
           {isCollapsed ? (
-            <img src="/favicon.png" alt="LABBET" className="h-9 w-9" />
+            <img src="/favicon.png" alt="LABBET" className="h-10 w-10" />
           ) : (
             <img src="/logo-horizontal.png" alt="LABBET" className="h-9" />
           )}
