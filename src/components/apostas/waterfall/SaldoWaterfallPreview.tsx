@@ -125,7 +125,8 @@ export function SaldoWaterfallPreview({
     }).format(valor);
   };
 
-  const saldoOperavel = saldoRealEfetivo + saldoBonus + (usarFreebet ? saldoFreebet : 0);
+  // saldoReal já inclui bônus creditados (via ledger). Não somar saldoBonus novamente.
+  const saldoOperavel = saldoRealEfetivo + (usarFreebet ? saldoFreebet : 0);
 
   if (stake <= 0) {
     return null;
