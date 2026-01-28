@@ -546,10 +546,8 @@ export function SaldosParceirosSheet() {
                           key={parceiro.parceiro_id} 
                           className={`border-border/30 ${index % 2 === 0 ? 'bg-transparent' : 'bg-muted/20'}`}
                         >
-                          <TableCell className="py-2.5 font-medium text-sm min-w-[100px]">
-                            <span className="block leading-tight">
-                              {getFirstLastName(parceiro.parceiro_nome)}
-                            </span>
+                          <TableCell className="py-2.5 font-medium text-sm whitespace-nowrap">
+                            {getFirstLastName(parceiro.parceiro_nome)}
                           </TableCell>
                           
                           {/* FIAT Cell - Multi-currency */}
