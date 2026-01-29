@@ -22,7 +22,6 @@ import {
   TrendingUp,
   TrendingDown,
   Receipt,
-  LayoutGrid,
   List,
   Edit,
   ExternalLink,
@@ -92,14 +91,15 @@ export default function GestaoProjetos() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   
   // Recuperar preferência de visualização do localStorage
-  const [viewMode, setViewMode] = useState<"cards" | "list" | "kanban">(() => {
-    if (typeof window === "undefined") return "cards";
+  const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
+    if (typeof window === "undefined") return "kanban";
     const saved = localStorage.getItem("projetos-view-mode");
-    return (saved === "cards" || saved === "list" || saved === "kanban") ? saved : "cards";
+    // Migrar "cards" para "kanban" automaticamente
+    return (saved === "list" || saved === "kanban") ? saved : "kanban";
   });
   
   // Persistir preferência de visualização
-  const handleSetViewMode = (mode: "cards" | "list" | "kanban") => {
+  const handleSetViewMode = (mode: "list" | "kanban") => {
     setViewMode(mode);
     localStorage.setItem("projetos-view-mode", mode);
   };
@@ -556,20 +556,18 @@ export default function GestaoProjetos() {
                   </TooltipTrigger>
                   <TooltipContent>Kanban (arrastar para reorganizar)</TooltipContent>
                 </Tooltip>
-                <Button
-                  variant={viewMode === "cards" ? "default" : "outline"}
-                  size="icon"
-                  onClick={() => handleSetViewMode("cards")}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "outline"}
-                  size="icon"
-                  onClick={() => handleSetViewMode("list")}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={viewMode === "list" ? "default" : "outline"}
+                      size="icon"
+                      onClick={() => handleSetViewMode("list")}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Visualização em lista</TooltipContent>
+                </Tooltip>
               </div>
             </div>
           </div>
@@ -629,174 +627,7 @@ export default function GestaoProjetos() {
               );
             }}
           />
-        ) : viewMode === "cards" ? (
-          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProjetos.map((projeto) => (
-              <Card 
-                key={projeto.id} 
-                className="cursor-pointer hover:border-primary/50 transition-colors overflow-hidden flex flex-col"
-                style={{ contain: "layout paint" }}
-                onClick={() => navigate(`/projeto/${projeto.id}`)}
-              >
-                <CardHeader className="pb-2 flex-shrink-0 space-y-2">
-                  {/* Linha 1: Ícone do projeto + Nome + Ações (estrela e olho) */}
-                  <div className="flex items-start gap-2 md:gap-3">
-                    <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <FolderKanban className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <CardTitle className="text-sm md:text-base flex-1">{projeto.nome}</CardTitle>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleFavorite(projeto.id);
-                              }}
-                              className="p-1 rounded hover:bg-muted transition-colors flex-shrink-0"
-                            >
-                              <Star
-                                className={`h-4 w-4 ${
-                                  isFavorite(projeto.id)
-                                    ? "fill-yellow-400 text-yellow-400"
-                                    : "text-muted-foreground hover:text-yellow-400"
-                                }`}
-                              />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="z-[100]">
-                            {isFavorite(projeto.id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setProjetoParaVisualizar(projeto);
-                                setVisualizarOperadoresOpen(true);
-                              }}
-                              className="p-1 rounded hover:bg-muted transition-colors flex-shrink-0"
-                            >
-                              <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="z-[100]">Ver detalhes</TooltipContent>
-                        </Tooltip>
-                      </div>
-                      {projeto.descricao && (
-                        <p className="text-xs md:text-sm text-muted-foreground line-clamp-1">
-                          {projeto.descricao}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {/* Linha 2: Badge de status alinhado à esquerda */}
-                  <div>
-                    <Badge className={`${getStatusColor(projeto.status)} text-xs`}>
-                      {getStatusLabel(projeto.status)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1 min-h-0">
-                  <div className="space-y-2 md:space-y-3">
-                    {projeto.data_inicio && (
-                      <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-                        <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                        <span className="truncate">
-                          Início: {format(new Date(projeto.data_inicio), "dd/MM/yyyy", { locale: ptBR })}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-                      <Users className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                      <span className="truncate">{projeto.operadores_ativos || 0} operador(es) • {projeto.total_bookmakers || 0} bookmaker(s)</span>
-                    </div>
-                  
-                  <div className="pt-2 border-t space-y-3">
-                    {/* Saldo Bookmakers - Cálculo de consolidação no RENDER */}
-                    {(() => {
-                      const saldoBRL = projeto.saldo_bookmakers_by_moeda?.BRL || 0;
-                      const saldoUSD = projeto.saldo_bookmakers_by_moeda?.USD || 0;
-                      // CONVERSÃO NO RENDER - usando cotação atual
-                      const totalConsolidado = saldoBRL + (saldoUSD * USD_TO_BRL_DISPLAY);
-                      
-                      return (
-                        <ProjectFinancialDisplay
-                          type="saldo"
-                          breakdown={{ BRL: saldoBRL, USD: saldoUSD }}
-                          totalConsolidado={totalConsolidado}
-                          cotacaoPTAX={USD_TO_BRL_DISPLAY}
-                          isMultiCurrency={saldoUSD > 0}
-                        />
-                      );
-                    })()}
-                    
-                    {/* Lucro - Cálculo de consolidação no RENDER */}
-                    {(() => {
-                      const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
-                      const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
-                      const perdas = projeto.perdas_confirmadas || 0;
-                      // CONVERSÃO NO RENDER - usando cotação atual
-                      const lucroConsolidado = lucroBRL + (lucroUSD * USD_TO_BRL_DISPLAY) - perdas;
-                      
-                      return (
-                        <ProjectFinancialDisplay
-                          type="lucro"
-                          breakdown={{ BRL: lucroBRL, USD: lucroUSD }}
-                          totalConsolidado={lucroConsolidado}
-                          cotacaoPTAX={USD_TO_BRL_DISPLAY}
-                          isMultiCurrency={lucroUSD !== 0}
-                        />
-                      );
-                    })()}
-                  </div>
-                </div>
-                  <div className="flex items-center justify-end gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t">
-                    {canEdit('projetos', 'projetos.edit') && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="icon"
-                            className="h-8 w-8 md:h-9 md:w-9"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenDialog(projeto, "edit");
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Editar Projeto</TooltipContent>
-                      </Tooltip>
-                    )}
-                    {canDelete('projetos', 'projetos.delete') && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="icon"
-                            className="h-8 w-8 md:h-9 md:w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setProjetoToDelete(projeto);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Excluir Projeto</TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-          ))}
-        </div>
-      ) : (
+        ) : (
         <Card>
           <ScrollArea className="h-[600px]">
             <div className="divide-y">
