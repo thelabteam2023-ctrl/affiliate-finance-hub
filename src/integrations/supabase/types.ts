@@ -6837,6 +6837,7 @@ export type Database = {
           data_fim_real: string | null
           data_inicio: string | null
           descricao: string | null
+          display_order: number | null
           first_operation_at: string | null
           fonte_cotacao: string | null
           id: string
@@ -6870,6 +6871,7 @@ export type Database = {
           data_fim_real?: string | null
           data_inicio?: string | null
           descricao?: string | null
+          display_order?: number | null
           first_operation_at?: string | null
           fonte_cotacao?: string | null
           id?: string
@@ -6903,6 +6905,7 @@ export type Database = {
           data_fim_real?: string | null
           data_inicio?: string | null
           descricao?: string | null
+          display_order?: number | null
           first_operation_at?: string | null
           fonte_cotacao?: string | null
           id?: string
