@@ -28,7 +28,8 @@ import {
   ExternalLink,
   Trash2,
   Eye,
-  Star
+  Star,
+  Kanban
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
@@ -46,6 +47,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { ProjetosKanbanView } from "@/components/projetos/kanban";
 import { ProjectFinancialDisplay } from "@/components/projetos/ProjectFinancialDisplay";
 
 interface SaldoByMoeda {
@@ -67,13 +69,14 @@ interface Projeto {
   saldo_bookmakers?: number;
   saldo_bookmakers_by_moeda?: SaldoByMoeda;
   saldo_irrecuperavel?: number;
-  saldo_irrecuperavel_by_moeda?: SaldoByMoeda; // NOVO: dados brutos por moeda
+  saldo_irrecuperavel_by_moeda?: SaldoByMoeda;
   total_depositado?: number;
   total_sacado?: number;
   total_bookmakers?: number;
   perdas_confirmadas?: number;
   lucro_operacional?: number;
   lucro_by_moeda?: SaldoByMoeda;
+  display_order?: number;
 }
 
 export default function GestaoProjetos() {
@@ -87,7 +90,20 @@ export default function GestaoProjetos() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  
+  // Recuperar preferência de visualização do localStorage
+  const [viewMode, setViewMode] = useState<"cards" | "list" | "kanban">(() => {
+    if (typeof window === "undefined") return "cards";
+    const saved = localStorage.getItem("projetos-view-mode");
+    return (saved === "cards" || saved === "list" || saved === "kanban") ? saved : "cards";
+  });
+  
+  // Persistir preferência de visualização
+  const handleSetViewMode = (mode: "cards" | "list" | "kanban") => {
+    setViewMode(mode);
+    localStorage.setItem("projetos-view-mode", mode);
+  };
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProjeto, setSelectedProjeto] = useState<Projeto | null>(null);
   const [dialogMode, setDialogMode] = useState<"view" | "edit" | "create">("create");
@@ -381,6 +397,7 @@ export default function GestaoProjetos() {
           },
           operadores_ativos: operadoresByProjeto[proj.id] || 0,
           perdas_confirmadas: perdasByProjeto[proj.id] || 0,
+          display_order: proj.display_order || 0,
         };
       });
       
@@ -527,17 +544,29 @@ export default function GestaoProjetos() {
                 </SelectContent>
               </Select>
               <div className="flex gap-1 flex-shrink-0">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={viewMode === "kanban" ? "default" : "outline"}
+                      size="icon"
+                      onClick={() => handleSetViewMode("kanban")}
+                    >
+                      <Kanban className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Kanban (arrastar para reorganizar)</TooltipContent>
+                </Tooltip>
                 <Button
                   variant={viewMode === "cards" ? "default" : "outline"}
                   size="icon"
-                  onClick={() => setViewMode("cards")}
+                  onClick={() => handleSetViewMode("cards")}
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </Button>
                 <Button
                   variant={viewMode === "list" ? "default" : "outline"}
                   size="icon"
-                  onClick={() => setViewMode("list")}
+                  onClick={() => handleSetViewMode("list")}
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -573,6 +602,33 @@ export default function GestaoProjetos() {
               </div>
             </CardContent>
           </Card>
+        ) : viewMode === "kanban" ? (
+          <ProjetosKanbanView
+            projetos={filteredProjetos}
+            cotacaoUSD={USD_TO_BRL_DISPLAY}
+            isFavorite={isFavorite}
+            toggleFavorite={toggleFavorite}
+            onVisualizarOperadores={(projeto) => {
+              setProjetoParaVisualizar(projeto);
+              setVisualizarOperadoresOpen(true);
+            }}
+            onEdit={(projeto) => handleOpenDialog(projeto, "edit")}
+            onDelete={(projeto) => {
+              setProjetoToDelete(projeto);
+              setDeleteDialogOpen(true);
+            }}
+            canEdit={canEdit('projetos', 'projetos.edit')}
+            canDelete={canDelete('projetos', 'projetos.delete')}
+            onReorder={(reorderedProjetos) => {
+              // Atualizar estado local com nova ordem
+              setProjetos(prev => 
+                prev.map(p => {
+                  const updated = reorderedProjetos.find(rp => rp.id === p.id);
+                  return updated ? { ...p, display_order: updated.display_order } : p;
+                })
+              );
+            }}
+          />
         ) : viewMode === "cards" ? (
           <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProjetos.map((projeto) => (
