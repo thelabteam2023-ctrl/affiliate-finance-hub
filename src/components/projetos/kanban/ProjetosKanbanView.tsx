@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from "react";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ProjetoKanbanCard } from "./ProjetoKanbanCard";
@@ -130,58 +129,52 @@ export function ProjetosKanbanView({
 
   return (
     <div ref={containerRef} className="w-full">
-      <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4 min-w-max">
-          {sortedProjetos.map((projeto, index) => (
-            <div
-              key={projeto.id}
-              className={cn(
-                "w-[320px] shrink-0 relative",
-                "transition-all duration-200"
-              )}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, index)}
-            >
-              {/* Drop indicator */}
-              {dragOverIndex === index && draggingId && draggingId !== projeto.id && (
-                <div className="absolute -left-1.5 top-0 bottom-0 w-1 bg-primary rounded-full z-10 animate-pulse" />
-              )}
-              
-              <ProjetoKanbanCard
-                projeto={projeto}
-                cotacaoUSD={cotacaoUSD}
-                isFavorite={isFavorite(projeto.id)}
-                onToggleFavorite={() => toggleFavorite(projeto.id)}
-                onVisualizarOperadores={() => onVisualizarOperadores(projeto)}
-                onEdit={() => onEdit(projeto)}
-                onDelete={() => onDelete(projeto)}
-                canEdit={canEdit}
-                canDelete={canDelete}
-                isDragging={draggingId === projeto.id}
-                onDragStart={() => handleDragStart(projeto.id)}
-                onDragEnd={handleDragEnd}
-              />
-            </div>
-          ))}
-          
-          {/* Drop zone at the end */}
-          {sortedProjetos.length > 0 && (
-            <div
-              className={cn(
-                "w-[80px] shrink-0 rounded-lg border-2 border-dashed transition-all duration-200",
-                dragOverIndex === sortedProjetos.length 
-                  ? "border-primary bg-primary/5" 
-                  : "border-transparent"
-              )}
-              onDragOver={(e) => handleDragOver(e, sortedProjetos.length)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, sortedProjetos.length)}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {sortedProjetos.map((projeto, index) => (
+          <div
+            key={projeto.id}
+            className={cn(
+              "relative transition-all duration-200",
+              dragOverIndex === index && draggingId && draggingId !== projeto.id && "ring-2 ring-primary ring-offset-2 rounded-lg"
+            )}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, index)}
+          >
+            <ProjetoKanbanCard
+              projeto={projeto}
+              cotacaoUSD={cotacaoUSD}
+              isFavorite={isFavorite(projeto.id)}
+              onToggleFavorite={() => toggleFavorite(projeto.id)}
+              onVisualizarOperadores={() => onVisualizarOperadores(projeto)}
+              onEdit={() => onEdit(projeto)}
+              onDelete={() => onDelete(projeto)}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              isDragging={draggingId === projeto.id}
+              onDragStart={() => handleDragStart(projeto.id)}
+              onDragEnd={handleDragEnd}
             />
-          )}
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+          </div>
+        ))}
+        
+        {/* Drop zone at the end */}
+        {sortedProjetos.length > 0 && draggingId && (
+          <div
+            className={cn(
+              "min-h-[200px] rounded-lg border-2 border-dashed transition-all duration-200 flex items-center justify-center",
+              dragOverIndex === sortedProjetos.length 
+                ? "border-primary bg-primary/5" 
+                : "border-muted-foreground/20"
+            )}
+            onDragOver={(e) => handleDragOver(e, sortedProjetos.length)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, sortedProjetos.length)}
+          >
+            <span className="text-sm text-muted-foreground">Soltar aqui</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
