@@ -188,8 +188,8 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
       login_password_encrypted: null,
       logo_url: bk.logo_url,
       bookmaker_catalogo_id: catalogoIdMap.get(bk.id) || null,
-      saldo_atual: bk.saldo_real,
-      saldo_usd: bk.moeda === "USD" || bk.moeda === "USDT" ? bk.saldo_real : 0,
+      saldo_atual: bk.saldo_operavel, // CORREÇÃO: usar saldo_operavel em vez de saldo_real
+      saldo_usd: bk.moeda === "USD" || bk.moeda === "USDT" ? bk.saldo_operavel : 0,
       moeda: bk.moeda,
       parceiro_nome: bk.parceiro_nome || undefined,
     }));
