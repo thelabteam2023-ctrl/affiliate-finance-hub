@@ -982,21 +982,30 @@ export async function reliquidarAposta(
       };
     }
 
-    const reliqResult = reliqData?.[0];
+    // RPC retorna JSONB direto (não array)
+    const reliqResult = reliqData as { 
+      success: boolean; 
+      error?: string; 
+      resultado_anterior?: string;
+      resultado_novo?: string;
+      valor_reversao?: number;
+      valor_payout?: number;
+    };
     if (!reliqResult?.success) {
       return {
         success: false,
         error: {
           code: 'RELIQUIDATION_FAILED',
-          message: reliqResult?.message || 'Falha ao reliquidar aposta',
+          message: reliqResult?.error || 'Falha ao reliquidar aposta',
         },
       };
     }
 
     console.log("[ApostaService] ✅ Aposta reliquidada v5:", apostaId, {
-      resultado_anterior: resultadoAnterior,
-      resultado_novo: novoResultado,
-      events_created: reliqResult.events_created,
+      resultado_anterior: reliqResult.resultado_anterior,
+      resultado_novo: reliqResult.resultado_novo,
+      valor_reversao: reliqResult.valor_reversao,
+      valor_payout: reliqResult.valor_payout,
     });
     
     return {

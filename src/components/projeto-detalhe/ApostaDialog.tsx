@@ -1972,9 +1972,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             throw new Error(reliqError.message || "Erro ao reliquidar aposta");
           }
 
-          const reliqResult = reliqData?.[0];
+          // RPC retorna JSONB direto (não array)
+          const reliqResult = reliqData as { success: boolean; error?: string };
           if (!reliqResult?.success) {
-            throw new Error(reliqResult?.message || "Erro ao reliquidar aposta");
+            throw new Error(reliqResult?.error || "Erro ao reliquidar aposta");
           }
 
           console.log("[ApostaDialog] ✅ reliquidar_aposta_v5 sucesso:", reliqResult);
