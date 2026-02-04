@@ -10701,6 +10701,17 @@ export type Database = {
         }
         Returns: Json
       }
+      atualizar_aposta_liquidada_atomica_v2: {
+        Args: {
+          p_aposta_id: string
+          p_nova_moeda?: string
+          p_nova_odd?: number
+          p_novo_bookmaker_id?: string
+          p_novo_resultado?: string
+          p_novo_stake?: number
+        }
+        Returns: Json
+      }
       bookmaker_pode_operar: {
         Args: { p_bookmaker_id: string }
         Returns: boolean
