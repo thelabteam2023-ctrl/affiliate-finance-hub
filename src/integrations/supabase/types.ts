@@ -11532,14 +11532,10 @@ export type Database = {
       reliquidar_aposta_v5: {
         Args: {
           p_aposta_id: string
-          p_novo_lucro_prejuizo?: number
+          p_lucro_prejuizo?: number
           p_novo_resultado: string
         }
-        Returns: {
-          events_created: number
-          message: string
-          success: boolean
-        }[]
+        Returns: Json
       }
       renew_subscription: {
         Args: { p_new_price_id?: string; p_workspace_id: string }
