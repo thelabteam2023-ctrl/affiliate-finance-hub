@@ -2029,7 +2029,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           });
           
           const { data: rpcResult, error: rpcError } = await supabase.rpc(
-            'atualizar_aposta_liquidada_atomica',
+            'atualizar_aposta_liquidada_atomica_v2',
             {
               p_aposta_id: aposta.id,
               p_novo_bookmaker_id: houveMudancaBookmaker ? bookmakerAtualId : null,
@@ -2041,7 +2041,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           );
           
           if (rpcError) {
-            console.error("[ApostaDialog] Erro no RPC atualizar_aposta_liquidada_atomica:", rpcError);
+            console.error("[ApostaDialog] Erro no RPC atualizar_aposta_liquidada_atomica_v2:", rpcError);
             throw new Error(`Erro ao atualizar aposta liquidada: ${rpcError.message}`);
           }
           
@@ -2050,7 +2050,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             throw new Error(result.error || 'Erro desconhecido ao atualizar aposta liquidada');
           }
           
-          console.log("[ApostaDialog] RPC atualizar_aposta_liquidada_atomica sucesso:", result);
+          console.log("[ApostaDialog] RPC atualizar_aposta_liquidada_atomica_v2 sucesso:", result);
           
           // Agora atualizar campos que o RPC não atualiza (evento, mercado, observações, etc.)
           const { error: updateError } = await supabase
