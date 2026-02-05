@@ -79,6 +79,7 @@ export function BetRowActionsMenu({
   };
 
   const handleQuickResolve = (novoResultado: BetResultado) => {
+   console.log('[BetRowActionsMenu] handleQuickResolve:', { apostaId, novoResultado, currentResultado: resultado });
     onQuickResolve(novoResultado);
     setIsOpen(false);
   };

@@ -570,23 +570,40 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   // Resolução rápida de apostas simples (sem pernas multi) - USA RPC ATÔMICA
   const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
     try {
+     console.log('[ProjetoApostasTab] handleQuickResolve iniciado:', { apostaId, resultado });
+     
       const aposta = apostas.find(a => a.id === apostaId);
-      if (!aposta) return;
+     if (!aposta) {
+       console.error('[ProjetoApostasTab] Aposta não encontrada no estado local:', apostaId);
+       toast.error("Aposta não encontrada. Tente recarregar a página.");
+       return;
+     }
 
       const stake = typeof aposta.stake === "number" ? aposta.stake : 0;
       const odd = aposta.odd || 1;
       
       // Calcular lucro usando função canônica
       const lucro = calcularImpactoResultado(stake, odd, resultado);
+     
+     console.log('[ProjetoApostasTab] Chamando reliquidarAposta:', { 
+       apostaId, 
+       resultado, 
+       lucro,
+       stake,
+       odd 
+     });
 
       // 1. Liquidar via RPC atômica (atualiza aposta + registra no ledger + trigger atualiza saldo)
       const result = await reliquidarAposta(apostaId, resultado, lucro);
       
       if (!result.success) {
+       console.error('[ProjetoApostasTab] reliquidarAposta falhou:', result.error);
         toast.error(result.error?.message || "Erro ao liquidar aposta");
         return;
       }
 
+     console.log('[ProjetoApostasTab] reliquidarAposta sucesso, atualizando estado local');
+     
       // 2. Atualizar estado local
       setApostas(prev => prev.map(a => 
         a.id === apostaId 
@@ -609,7 +626,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       onDataChange?.();
     } catch (error: any) {
       console.error("Erro ao atualizar aposta:", error);
-      toast.error("Erro ao atualizar resultado");
+     toast.error(`Erro ao atualizar resultado: ${error.message || 'Erro desconhecido'}`);
     }
   }, [apostas, onDataChange, projetoId, invalidateSaldos]);
 

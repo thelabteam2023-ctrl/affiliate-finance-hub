@@ -918,6 +918,19 @@ export async function reliquidarAposta(
       .eq('id', apostaId)
       .single();
     
+   console.log("[ApostaService] Dados da aposta atual:", apostaAtual);
+   
+   if (!apostaAtual) {
+     console.error("[ApostaService] Aposta não encontrada:", apostaId);
+     return {
+       success: false,
+       error: {
+         code: 'APOSTA_NOT_FOUND',
+         message: 'Aposta não encontrada no banco de dados',
+       },
+     };
+   }
+   
     const resultadoAnterior = apostaAtual?.resultado;
     const isArbitragem = apostaAtual?.forma_registro === 'ARBITRAGEM' || apostaAtual?.forma_registro === 'SUREBET';
     const hasNullBookmaker = !apostaAtual?.bookmaker_id;
@@ -970,6 +983,8 @@ export async function reliquidarAposta(
       p_lucro_prejuizo: lucroPrejuizo ?? null,
     });
 
+   console.log("[ApostaService] Resposta RPC reliquidar_aposta_v5:", { data: reliqData, error: reliqError });
+   
     if (reliqError) {
       console.error("[ApostaService] Erro ao reliquidar:", reliqError);
       return {
