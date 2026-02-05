@@ -4,6 +4,14 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
 import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Calendar, Info as InfoIcon } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import {
   Dialog,
@@ -169,6 +177,7 @@ export function CaixaTransacaoDialog({
   const [qtdCoin, setQtdCoin] = useState<string>("");
   const [cotacao, setCotacao] = useState<string>("");
   const [descricao, setDescricao] = useState<string>("");
+  const [dataTransacao, setDataTransacao] = useState<string>("");
   
   // REMOVIDO: valorCreditado e valorCreditadoDisplay
   // O valor creditado real agora é informado na tela de Conciliação, não aqui
@@ -1319,6 +1328,7 @@ export function CaixaTransacaoDialog({
     setQtdCoin("");
     setCotacao("");
     setDescricao("");
+    setDataTransacao("");
     // REMOVIDO: valorCreditado reset - agora é tratado na Conciliação
     setOrigemTipo("");
     setOrigemParceiroId("");
@@ -1934,6 +1944,8 @@ export function CaixaTransacaoDialog({
         status: statusInicial,
         investidor_id: tipoTransacao === "APORTE_FINANCEIRO" ? investidorId : null,
         nome_investidor: tipoTransacao === "APORTE_FINANCEIRO" && investidor ? investidor.nome : null,
+        // DATA RETROATIVA: Permite registrar transações em datas passadas
+        data_transacao: dataTransacao || new Date().toISOString().split('T')[0],
         
         // CAMADA ORIGEM (Transporte)
         moeda_origem: moedaOrigem,
@@ -4604,6 +4616,38 @@ export function CaixaTransacaoDialog({
                 </div>
               </div>
             </>
+          )}
+
+          {/* Data da Transação (retroativa) */}
+          {tipoTransacao && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                Data da Transação
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Permite registrar transações retroativas. Ex: saque solicitado em 18/01 mas registrado hoje.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Label>
+              <div className="max-w-[220px]">
+                <DatePicker
+                  value={dataTransacao}
+                  onChange={(date) => setDataTransacao(date)}
+                  placeholder="Hoje (padrão)"
+                  fromYear={2020}
+                  toYear={new Date().getFullYear() + 1}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Deixe em branco para usar a data de hoje
+              </p>
+            </div>
           )}
 
           {/* Descrição */}
