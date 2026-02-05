@@ -10,6 +10,7 @@ import {
 } from "@/lib/marketNormalizer";
 import { parseOcrMarket, resolveOcrResultToOption, formatSelectionFromOcrResult } from "@/lib/marketOcrParser";
 import { detectDateAnomaly, type DateAnomalyResult } from "@/lib/dateAnomalyDetection";
+import { calcularOddReal, formatOddDisplay, type OddCalculationResult } from "@/lib/oddRealCalculation";
 
 export interface ParsedField {
   value: string | null;
@@ -64,6 +65,8 @@ interface UseImportBetPrintReturn {
   dateAnomaly: DateAnomalyResult | null;
   /** Indica se o usuário já confirmou a anomalia de data */
   dateAnomalyConfirmed: boolean;
+  /** Metadados do cálculo da odd real (baseada no ganho) */
+  oddCalculation: OddCalculationResult | null;
   processImage: (file: File) => Promise<void>;
   processFromClipboard: (event: ClipboardEvent) => Promise<void>;
   clearParsedData: () => void;
@@ -106,6 +109,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     esporteDetectado: null
   });
   const [dateAnomalyConfirmed, setDateAnomalyConfirmed] = useState(false);
+  const [oddCalculation, setOddCalculation] = useState<OddCalculationResult | null>(null);
 
   // Refs for concurrency control
   const processingLockRef = useRef<boolean>(false);
@@ -407,6 +411,33 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       }
     }
     
+    // ★ INTELIGÊNCIA DE ODD REAL: Calcular odd baseada no ganho liquidado
+    const oddCalcResult = calcularOddReal(
+      rawData.retorno?.value,  // Ganho total (mais confiável)
+      rawData.stake?.value,    // Valor apostado
+      rawData.odd?.value       // Odd exibida (apenas referência)
+    );
+    
+    // Se a odd foi derivada do ganho, usar a odd real calculada
+    if (oddCalcResult.metodo === "ODD_DERIVADA_DO_GANHO" && oddCalcResult.oddReal > 0) {
+      const oddRealFormatted = formatOddDisplay(oddCalcResult.oddReal);
+      rawData.odd = {
+        value: oddRealFormatted,
+        confidence: oddCalcResult.confianca
+      };
+      
+      // Log informativo se há decimal oculta
+      if (oddCalcResult.temDecimalOculta) {
+        console.log("[useImportBetPrint] ★ Odd real derivada do ganho:", {
+          oddExibida: oddCalcResult.oddExibida,
+          oddReal: oddCalcResult.oddReal,
+          diferenca: oddCalcResult.diferenca,
+          metodo: oddCalcResult.metodo
+        });
+      }
+    }
+    
+    setOddCalculation(oddCalcResult);
     setParsedData(rawData);
     setProcessingPhase("idle");
     toast.success("Print analisado com sucesso!");
@@ -541,6 +572,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     setPendingData({ mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null });
     setProcessingPhase("idle");
     setDateAnomalyConfirmed(false);
+    setOddCalculation(null);
   }, []);
 
   const resolveMarketForSport = useCallback((sport: string, availableOptions: string[]): string => {
@@ -615,6 +647,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     pendingData,
     dateAnomaly,
     dateAnomalyConfirmed,
+    oddCalculation,
     processImage,
     processFromClipboard,
     clearParsedData,
