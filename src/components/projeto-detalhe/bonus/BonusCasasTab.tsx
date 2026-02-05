@@ -79,7 +79,7 @@ interface BookmakerInBonusMode {
 }
 
 export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
-  const { bonuses, finalizeBonus, saving, getBookmakersWithActiveBonus, getRolloverPercentage } = useProjectBonuses({ projectId: projetoId });
+  const { bonuses, finalizeBonus, saving, getBookmakersWithActiveBonus, getBookmakersWithAnyBonus, getRolloverPercentage } = useProjectBonuses({ projectId: projetoId });
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   
@@ -91,6 +91,9 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
   const [bonusToFinalize, setBonusToFinalize] = useState<ProjectBonus | null>(null);
 
+  // Para análise por casa: usar TODOS os bookmakers que já tiveram bônus (ativos OU finalizados)
+  const bookmakersWithAnyBonusHistory = getBookmakersWithAnyBonus();
+  // Para alertas de ação necessária: apenas os com bônus ativo
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
 
   // Query para buscar dados de apostas por bookmaker
@@ -130,9 +133,10 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
 
   // Use React Query for fetching bookmakers - automatically refreshes when bonuses change
   const { data: bookmakers = [], isLoading: loading } = useQuery({
-    queryKey: ["bonus-casas-bookmakers", projetoId, bookmakersInBonusMode.join(","), bonuses.length, Object.keys(apostasStats).length],
+    queryKey: ["bonus-casas-bookmakers", projetoId, bookmakersWithAnyBonusHistory.join(","), bonuses.length, Object.keys(apostasStats).length],
     queryFn: async () => {
-      if (bookmakersInBonusMode.length === 0) return [];
+      // Agora usa bookmakersWithAnyBonusHistory para incluir bônus finalizados
+      if (bookmakersWithAnyBonusHistory.length === 0) return [];
 
       const { data, error } = await supabase
         .from("bookmakers")
@@ -148,7 +152,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url),
           parceiros!bookmakers_parceiro_id_fkey (nome)
         `)
-        .in("id", bookmakersInBonusMode);
+        .in("id", bookmakersWithAnyBonusHistory);
 
       if (error) throw error;
 

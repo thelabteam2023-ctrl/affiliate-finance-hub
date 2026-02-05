@@ -299,6 +299,18 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     return Array.from(ids);
   }, [bonuses]);
 
+ const getBookmakersWithAnyBonus = useCallback((): string[] => {
+   // Retorna bookmakers que têm QUALQUER bônus (credited OU finalized)
+   // Usado para análise histórica por casa
+   const ids = new Set<string>();
+   bonuses.forEach((b) => {
+     if (b.status === "credited" || b.status === "finalized") {
+       ids.add(b.bookmaker_id);
+     }
+   });
+   return Array.from(ids);
+ }, [bonuses]);
+
   const getActiveBonusId = useCallback((bkId: string): string | null => {
     // Retorna o ID do primeiro bônus creditado para o bookmaker
     const bonus = bonuses.find((b) => b.bookmaker_id === bkId && b.status === "credited");
@@ -601,6 +613,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     getActiveBonusByBookmaker,
     getBookmakersWithActiveBonus,
     getActiveBonusId,
+   getBookmakersWithAnyBonus,
     updateRolloverProgress,
     getRolloverPercentage,
   };
