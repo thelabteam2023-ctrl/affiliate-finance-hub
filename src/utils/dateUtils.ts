@@ -1,27 +1,56 @@
 /**
  * Utilitários de data para o projeto
  * Centraliza funções de parsing e formatação de datas
+ * 
+ * REGRA-MÃE: O timezone operacional é America/Sao_Paulo
+ * Todo agrupamento diário DEVE ocorrer após conversão para este timezone
  */
 
+import { toZonedTime, format as formatTz } from 'date-fns-tz';
+
+// Timezone operacional do sistema (Brasil)
+export const TIMEZONE_OPERACIONAL = 'America/Sao_Paulo';
+
 /**
- * Converte string de data do banco para Date local sem conversão de timezone
- * Resolve o problema de datas sendo exibidas com offset incorreto
+ * Converte string de data do banco (UTC) para Date no timezone operacional
  * 
  * Use esta função sempre que precisar exibir uma data que veio do banco
- * para o usuário, garantindo que a hora mostrada seja a mesma que foi salva.
+ * para o usuário, garantindo que a hora mostrada seja a do timezone operacional.
  * 
- * @param dateString - String de data do banco (ISO 8601 ou similar)
- * @returns Date objeto interpretado como hora local
+ * @param dateString - String de data do banco (ISO 8601 ou similar, geralmente UTC)
+ * @returns Date objeto convertido para timezone operacional
  */
 export const parseLocalDateTime = (dateString: string | null | undefined): Date => {
   if (!dateString) return new Date();
   
-  // Remove timezone info para interpretar como hora local
+  // Garantir que a string seja parseable como ISO
+  // Se termina com +00 (sem :00), normalizar para +00:00
+  let normalizedDate = dateString;
+  if (/\+00$/.test(normalizedDate)) {
+    normalizedDate = normalizedDate.replace(/\+00$/, '+00:00');
+  }
+  
+  // Parse como UTC e converte para timezone operacional
+  const utcDate = new Date(normalizedDate);
+  if (isNaN(utcDate.getTime())) {
+    // Fallback para parsing manual se o formato não for reconhecido
+    return parseManualDateTime(dateString);
+  }
+  
+  // Converter para timezone operacional
+  return toZonedTime(utcDate, TIMEZONE_OPERACIONAL);
+};
+
+/**
+ * Fallback para parsing manual quando o formato não é ISO padrão
+ */
+const parseManualDateTime = (dateString: string): Date => {
   const cleanDate = dateString
     .replace(/\+00:00$/, '')
     .replace(/Z$/, '')
     .replace(/\+\d{2}:\d{2}$/, '')
-    .replace(/-\d{2}:\d{2}$/, '');
+    .replace(/-\d{2}:\d{2}$/, '')
+    .replace(/\+\d{2}$/, '');
   
   const [datePart, timePart] = cleanDate.split('T');
   const [year, month, day] = datePart.split('-').map(Number);
@@ -42,42 +71,48 @@ export const isSameDay = (date1: Date, date2: Date): boolean => {
 };
 
 /**
- * Extrai a "data civil" (YYYY-MM-DD) de uma string de data do banco
- * SEM conversão de timezone - usa a data exatamente como foi registrada.
+ * Extrai a "data operacional" (YYYY-MM-DD) de uma string de data do banco.
  * 
- * Use esta função para agrupar dados por dia civil (calendários, estatísticas).
- * Evita o problema de apostas registradas às 23:00 BRT aparecerem no dia seguinte
- * quando o banco armazena em UTC (02:00 UTC do dia seguinte).
+ * REGRA CRÍTICA: Converte UTC → America/Sao_Paulo ANTES de extrair a data.
  * 
- * @param dateString - String de data do banco (ISO 8601 ou similar)
- * @returns String no formato "YYYY-MM-DD" representando o dia civil local
+ * Use esta função para agrupar dados por dia civil (calendários, estatísticas, KPIs).
+ * Garante que apostas feitas às 23:00 BRT (02:00 UTC do dia seguinte) 
+ * sejam agrupadas no dia correto (dia operacional).
+ * 
+ * @param dateString - String de data do banco (ISO 8601, geralmente UTC)
+ * @returns String no formato "YYYY-MM-DD" representando o dia operacional (America/Sao_Paulo)
  */
 export const extractLocalDateKey = (dateString: string | null | undefined): string => {
   if (!dateString) return '';
   
-  // Remove timezone info para interpretar como hora local
-  const cleanDate = dateString
-    .replace(/\+00:00$/, '')
-    .replace(/Z$/, '')
-    .replace(/\+\d{2}:\d{2}$/, '')
-    .replace(/-\d{2}:\d{2}$/, '');
+  // Se é apenas data (sem hora), retornar diretamente
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
   
-  const [datePart, timePart] = cleanDate.split('T');
+  // Normalizar formato: "+00" → "+00:00" para parsing correto
+  let normalizedDate = dateString;
+  if (/\+00$/.test(normalizedDate)) {
+    normalizedDate = normalizedDate.replace(/\+00$/, '+00:00');
+  }
+  // Também tratar espaço em vez de 'T' (formato Postgres)
+  if (normalizedDate.includes(' ') && !normalizedDate.includes('T')) {
+    normalizedDate = normalizedDate.replace(' ', 'T');
+  }
   
-  // Se só tem a parte da data, retorna diretamente
-  if (!timePart) return datePart;
+  // Parse como UTC
+  const utcDate = new Date(normalizedDate);
+  if (isNaN(utcDate.getTime())) {
+    // Fallback: extrair data diretamente da string se parsing falhar
+    const match = normalizedDate.match(/^(\d{4}-\d{2}-\d{2})/);
+    return match ? match[1] : '';
+  }
   
-  // Converte para Date local e extrai a data formatada
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hours, minutes, seconds] = timePart.split(':').map(n => parseInt(n) || 0);
-  const localDate = new Date(year, month - 1, day, hours, minutes, seconds);
+  // Converter para timezone operacional e extrair data
+  const zonedDate = toZonedTime(utcDate, TIMEZONE_OPERACIONAL);
   
-  // Formata como YYYY-MM-DD
-  const y = localDate.getFullYear();
-  const m = String(localDate.getMonth() + 1).padStart(2, '0');
-  const d = String(localDate.getDate()).padStart(2, '0');
-  
-  return `${y}-${m}-${d}`;
+  // Formatar como YYYY-MM-DD usando date-fns-tz para garantir timezone correto
+  return formatTz(zonedDate, 'yyyy-MM-dd', { timeZone: TIMEZONE_OPERACIONAL });
 };
 
 // Ano mínimo permitido para apostas (proteção contra datas inválidas)
