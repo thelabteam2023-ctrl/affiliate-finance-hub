@@ -49,7 +49,7 @@ import { RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFiel
 import { isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
 import { BetFormHeader } from "@/components/apostas/BetFormHeader";
 import { getFirstLastName } from "@/lib/utils";
-import { toLocalTimestamp } from "@/utils/dateUtils";
+import { toLocalTimestamp, validarDataAposta } from "@/utils/dateUtils";
 import { 
   BookmakerSelectOption, 
   SaldoBreakdownDisplay, 
@@ -831,6 +831,13 @@ export function ApostaMultiplaDialog({
 
       if (!workspaceId) {
         toast.error("Workspace não identificado");
+        return;
+      }
+      
+      // TRAVA DEFINITIVA: Validar data antes de salvar
+      const dataValidation = validarDataAposta(dataAposta);
+      if (!dataValidation.valid) {
+        toast.error(dataValidation.error || "Data inválida");
         return;
       }
 
