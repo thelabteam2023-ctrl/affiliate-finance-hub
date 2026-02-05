@@ -2097,10 +2097,32 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           await invalidateSaldos(projetoId);
           
         } else {
-          // Aposta NÃO liquidada OU sem mudança financeira: update direto
+          // ================================================================
+          // CORREÇÃO CRÍTICA: Quando aposta está LIQUIDADA mas SÓ mudaram
+          // campos não-financeiros (data, observação, evento, etc.),
+          // NÃO podemos sobrescrever status/resultado com PENDENTE/null.
+          // 
+          // O commonData SEMPRE vem com status: "PENDENTE" e resultado: null
+          // (para criação de novas apostas), mas na EDIÇÃO sem mudança
+          // financeira precisamos PRESERVAR o estado atual.
+          // ================================================================
+          let updatePayload = { ...apostaData };
+          
+          if (apostaEstaLiquidada && !houveMudancaFinanceira) {
+            // PRESERVAR estado financeiro imutável
+            console.log("[ApostaDialog] Editando aposta LIQUIDADA sem mudança financeira - preservando status/resultado");
+            delete updatePayload.status;
+            delete updatePayload.resultado;
+            delete updatePayload.lucro_prejuizo;
+            delete updatePayload.valor_retorno;
+            delete updatePayload.odd;
+            delete updatePayload.stake;
+            delete updatePayload.bookmaker_id;
+          }
+          
           const { error } = await supabase
             .from("apostas_unificada")
-            .update(apostaData)
+            .update(updatePayload)
             .eq("id", aposta.id);
           if (error) throw error;
 
