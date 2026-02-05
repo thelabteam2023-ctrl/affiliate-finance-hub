@@ -79,8 +79,12 @@ export function BetRowActionsMenu({
   };
 
   const handleQuickResolve = (novoResultado: BetResultado) => {
-   console.log('[BetRowActionsMenu] handleQuickResolve:', { apostaId, novoResultado, currentResultado: resultado });
-    onQuickResolve(novoResultado);
+    console.log('[BetRowActionsMenu] handleQuickResolve chamado:', { apostaId, novoResultado, currentResultado: resultado });
+    try {
+      onQuickResolve(novoResultado);
+    } catch (err) {
+      console.error('[BetRowActionsMenu] Erro ao chamar onQuickResolve:', err);
+    }
     setIsOpen(false);
   };
 
@@ -136,6 +140,10 @@ export function BetRowActionsMenu({
                 <DropdownMenuItem
                   key={option.value}
                   onSelect={() => handleQuickResolve(option.value)}
+                  onClick={() => {
+                    console.log('[BetRowActionsMenu] onClick direto:', option.value);
+                    handleQuickResolve(option.value);
+                  }}
                   className={cn(option.className, isCurrentResult && "bg-muted/50")}
                   disabled={isCurrentResult}
                 >
