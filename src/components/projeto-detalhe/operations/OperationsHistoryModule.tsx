@@ -3,9 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Clock, History } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { OperationalFiltersBar } from "../OperationalFiltersBar";
-import { useOperationalFilters } from "@/contexts/OperationalFiltersContext";
-import type { EstrategiaFilter } from "@/contexts/OperationalFiltersContext";
+import { TabFiltersBar } from "../TabFiltersBar";
+import type { TabFiltersReturn } from "@/hooks/useTabFilters";
 import { OperationsSubTabHeader, type HistorySubTab } from "./OperationsSubTabHeader";
 
 export interface OperationsHistoryConfig {
@@ -15,11 +14,14 @@ export interface OperationsHistoryConfig {
   /** Título exibido no header (ex: "Histórico de Operações", "Apostas Bônus") */
   title: string;
   
-  /** Estratégia pré-selecionada (para tabs específicas como Surebet, ValueBet) */
-  preselectedEstrategia?: EstrategiaFilter;
+  /** Filtros da aba (retornados pelo useTabFilters) - ISOLADOS por aba */
+  tabFilters: TabFiltersReturn;
   
   /** Mostrar filtro de estratégia na barra de filtros */
   showEstrategiaFilter?: boolean;
+  
+  /** Mostrar barra de filtros (default: true no histórico) */
+  showFiltersBar?: boolean;
   
   /** Número de operações abertas (para badge) */
   openCount: number;
@@ -64,14 +66,14 @@ export interface OperationsHistoryConfig {
 /**
  * Módulo unificado para padrão Abertas/Histórico
  * 
- * Este componente centraliza toda a lógica visual e funcional do padrão
- * de navegação entre operações abertas e histórico, garantindo consistência
- * em todas as abas do sistema.
+ * IMPORTANTE: Este componente usa filtros LOCAIS via props.
+ * Os filtros NÃO vazam para outras abas - cada aba mantém
+ * seu próprio estado de filtros.
  * 
  * Responsabilidades:
  * - Toggle Abertas/Histórico com badges de contagem
  * - Header padronizado com título e ações
- * - Integração com OperationalFiltersBar (apenas no histórico)
+ * - Integração com TabFiltersBar (filtros LOCAIS, apenas no histórico)
  * - Toggle de visualização cards/list
  * - ScrollArea com altura configurável
  * - Empty states padronizados
@@ -79,8 +81,9 @@ export interface OperationsHistoryConfig {
 export function OperationsHistoryModule({
   projetoId,
   title,
-  preselectedEstrategia,
+  tabFilters,
   showEstrategiaFilter = false,
+  showFiltersBar = true,
   openCount,
   historyCount,
   viewMode,
@@ -95,8 +98,6 @@ export function OperationsHistoryModule({
   maxHeight = "calc(100vh - 400px)",
   headerActions,
 }: OperationsHistoryConfig) {
-  const globalFilters = useOperationalFilters();
-
   // Determinar se está no modo histórico (mostra filtros)
   const isHistoryMode = subTab === "historico";
 
@@ -105,7 +106,7 @@ export function OperationsHistoryModule({
   const hasHistoryContent = historyCount > 0;
 
   // Verificar se há filtros ativos (para mensagem de empty state)
-  const hasActiveFilters = globalFilters.activeFiltersCount > 0;
+  const hasActiveFilters = tabFilters.activeFiltersCount > 0;
 
   return (
     <Card className={cn("border-border/50", className)}>
@@ -136,13 +137,16 @@ export function OperationsHistoryModule({
           {headerActions}
         </div>
 
-        {/* Filtros - apenas no modo histórico */}
-        {isHistoryMode && (
+        {/* Filtros LOCAIS - apenas no modo histórico */}
+        {isHistoryMode && showFiltersBar && (
           <div className="mt-3">
-            <OperationalFiltersBar
+            <TabFiltersBar
               projetoId={projetoId}
+              filters={tabFilters}
               showEstrategiaFilter={showEstrategiaFilter}
-              preselectedEstrategia={preselectedEstrategia}
+              showPeriodFilter={true}
+              showBookmakerFilter={true}
+              showParceiroFilter={true}
             />
           </div>
         )}
