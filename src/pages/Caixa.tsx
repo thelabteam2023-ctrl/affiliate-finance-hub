@@ -175,10 +175,12 @@ export default function Caixa() {
       // ARQUITETURA: Caixa Operacional só exibe transações de CASH REAL
       // Eventos promocionais (GIRO_GRATIS, BONUS_CREDITADO, etc.) são filtrados
       // para manter a visão pura de "dinheiro que entra e sai do sistema"
+      // Motor Financeiro v11: Exclui status de duplicidade para evitar confusão visual
       const { data: transacoesData, error: transacoesError } = await supabase
         .from("cash_ledger")
         .select("*")
         .in("tipo_transacao", [...CASH_REAL_TYPES])
+        .not("status", "in", "(DUPLICADO_CORRIGIDO,DUPLICADO_BLOQUEADO)")
         .gte("data_transacao", queryStartDate)
         .lte("data_transacao", `${queryEndDate}T23:59:59`)
         .order("data_transacao", { ascending: false });
