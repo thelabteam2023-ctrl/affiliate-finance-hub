@@ -9,6 +9,7 @@ import {
   type NormalizedBetData
 } from "@/lib/ocrNormalization";
 import { detectDateAnomaly, type DateAnomalyResult } from "@/lib/dateAnomalyDetection";
+import { calcularOddReal, formatOddDisplay, type OddCalculationResult } from "@/lib/oddRealCalculation";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -57,6 +58,8 @@ export interface LegPrintData {
   isInferred: boolean;
   inferredFrom: number | null; // Index of the leg from which line was inferred
   pendingData: NormalizationPendingData;
+  /** Metadados do cálculo da odd real (baseada no ganho) */
+  oddCalculation: OddCalculationResult | null;
 }
 
 export interface UseSurebetPrintImportReturn {
@@ -88,6 +91,8 @@ export interface UseSurebetPrintImportReturn {
   isLegDateAnomalyConfirmed: (legIndex: number) => boolean;
   /** Confirma a anomalia de data de uma perna */
   confirmLegDateAnomaly: (legIndex: number) => void;
+  /** Retorna metadados do cálculo de odd para uma perna */
+  getLegOddCalculation: (legIndex: number) => OddCalculationResult | null;
 }
 
 const createEmptyLegPrint = (): LegPrintData => ({
@@ -97,6 +102,7 @@ const createEmptyLegPrint = (): LegPrintData => ({
   isInferred: false,
   inferredFrom: null,
   pendingData: { mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null },
+  oddCalculation: null,
 });
 
 export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
@@ -270,6 +276,30 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
         const normalizedData = normalizationResult.data as unknown as ParsedBetSlip;
         const pendingData = normalizationResult.pendingData;
         
+        // ★ INTELIGÊNCIA DE ODD REAL: Calcular odd baseada no ganho liquidado
+        const oddCalcResult = calcularOddReal(
+          normalizedData.retorno?.value,  // Ganho total (mais confiável)
+          normalizedData.stake?.value,    // Valor apostado
+          normalizedData.odd?.value       // Odd exibida (apenas referência)
+        );
+        
+        // Se a odd foi derivada do ganho, usar a odd real calculada
+        if (oddCalcResult.metodo === "ODD_DERIVADA_DO_GANHO" && oddCalcResult.oddReal > 0) {
+          const oddRealFormatted = formatOddDisplay(oddCalcResult.oddReal);
+          normalizedData.odd = {
+            value: oddRealFormatted,
+            confidence: oddCalcResult.confianca
+          };
+          
+          if (oddCalcResult.temDecimalOculta) {
+            console.log(`[useSurebetPrintImport] ★ Perna ${legIndex + 1}: Odd real derivada do ganho:`, {
+              oddExibida: oddCalcResult.oddExibida,
+              oddReal: oddCalcResult.oddReal,
+              diferenca: oddCalcResult.diferenca
+            });
+          }
+        }
+        
         // Update leg data with normalized data
         setLegPrints(prev => {
           const updated = [...prev];
@@ -281,6 +311,7 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
               isInferred: false,
               inferredFrom: null,
               pendingData,
+              oddCalculation: oddCalcResult,
             };
           }
           return updated;
@@ -447,6 +478,10 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     console.log(`[useSurebetPrintImport] Date anomaly confirmed for leg ${legIndex}`);
   }, []);
 
+  const getLegOddCalculation = useCallback((legIndex: number): OddCalculationResult | null => {
+    return legPrints[legIndex]?.oddCalculation ?? null;
+  }, [legPrints]);
+
   return {
     legPrints,
     isProcessingAny,
@@ -465,5 +500,6 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     getLegDateAnomaly,
     isLegDateAnomalyConfirmed,
     confirmLegDateAnomaly,
+    getLegOddCalculation,
   };
 }
