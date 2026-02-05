@@ -8,6 +8,7 @@ import {
   type NormalizationPendingData,
   type NormalizedBetData
 } from "@/lib/ocrNormalization";
+import { detectDateAnomaly, type DateAnomalyResult } from "@/lib/dateAnomalyDetection";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -81,6 +82,12 @@ export interface UseSurebetPrintImportReturn {
   acceptInference: (legIndex: number) => void;
   rejectInference: (legIndex: number) => void;
   resolveMarketForSport: (legIndex: number, sport: string, availableOptions: string[]) => string;
+  /** Retorna anomalia de data para uma perna específica */
+  getLegDateAnomaly: (legIndex: number) => DateAnomalyResult | null;
+  /** Verifica se anomalia de data de uma perna foi confirmada */
+  isLegDateAnomalyConfirmed: (legIndex: number) => boolean;
+  /** Confirma a anomalia de data de uma perna */
+  confirmLegDateAnomaly: (legIndex: number) => void;
 }
 
 const createEmptyLegPrint = (): LegPrintData => ({
@@ -103,10 +110,13 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     evento: null,
     mercado: null,
   });
+  // ★ DETECÇÃO DE ANOMALIA TEMPORAL - Estado de confirmação por perna
+  const [dateAnomalyConfirmed, setDateAnomalyConfirmed] = useState<Set<number>>(new Set());
 
   const initializeLegPrints = useCallback((numLegs: number) => {
     setLegPrints(Array.from({ length: numLegs }, createEmptyLegPrint));
     setSharedContext({ esporte: null, evento: null, mercado: null });
+    setDateAnomalyConfirmed(new Set());
   }, []);
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -420,6 +430,23 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
 
   const isProcessingAny = legPrints.some(leg => leg.isProcessing);
 
+  // ★ FUNÇÕES DE DETECÇÃO DE ANOMALIA TEMPORAL
+  const getLegDateAnomaly = useCallback((legIndex: number): DateAnomalyResult | null => {
+    const legPrint = legPrints[legIndex];
+    if (!legPrint?.parsedData?.dataHora?.value) return null;
+    const result = detectDateAnomaly(legPrint.parsedData.dataHora.value);
+    return result.isAnomalous ? result : null;
+  }, [legPrints]);
+
+  const isLegDateAnomalyConfirmed = useCallback((legIndex: number): boolean => {
+    return dateAnomalyConfirmed.has(legIndex);
+  }, [dateAnomalyConfirmed]);
+
+  const confirmLegDateAnomaly = useCallback((legIndex: number) => {
+    setDateAnomalyConfirmed(prev => new Set([...prev, legIndex]));
+    console.log(`[useSurebetPrintImport] Date anomaly confirmed for leg ${legIndex}`);
+  }, []);
+
   return {
     legPrints,
     isProcessingAny,
@@ -435,5 +462,8 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     acceptInference,
     rejectInference,
     resolveMarketForSport,
+    getLegDateAnomaly,
+    isLegDateAnomalyConfirmed,
+    confirmLegDateAnomaly,
   };
 }
