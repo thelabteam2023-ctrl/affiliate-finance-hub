@@ -53,7 +53,8 @@ import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
-import { OperationalFiltersBar } from "./OperationalFiltersBar";
+import { TabFiltersBar } from "./TabFiltersBar";
+import { useTabFilters } from "@/hooks/useTabFilters";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
@@ -195,11 +196,16 @@ export function ProjetoValueBetTab({
   const [activeNavTab, setActiveNavTab] = useState<NavTabValue>("visao-geral");
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Filtro de tempo interno
-  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
-  const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
-
-  const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
+  // Filtros LOCAIS da aba ValueBet (isolados de outras abas)
+  const tabFilters = useTabFilters({
+    tabId: "valuebet",
+    projetoId,
+    defaultPeriod: "30dias",
+    persist: true,
+  });
+  
+  // dateRange derivado dos filtros locais
+  const dateRange = tabFilters.dateRange;
 
   // Count of open operations for badge - uses the canonical hook
   const { count: openOperationsCount } = useOpenOperationsCount({
@@ -222,7 +228,7 @@ export function ProjetoValueBetTab({
 
   useEffect(() => {
     fetchData();
-  }, [projetoId, internalPeriod, internalDateRange, refreshTrigger]);
+  }, [projetoId, tabFilters.period, tabFilters.customDateRange, refreshTrigger]);
 
   const fetchData = async () => {
     try {
@@ -645,10 +651,10 @@ export function ProjetoValueBetTab({
   // Period filter component
   const periodFilterComponent = (
     <StandardTimeFilter
-      period={internalPeriod}
-      onPeriodChange={setInternalPeriod}
-      customDateRange={internalDateRange}
-      onCustomDateRangeChange={setInternalDateRange}
+      period={tabFilters.period}
+      onPeriodChange={tabFilters.setPeriod}
+      customDateRange={tabFilters.customDateRange}
+      onCustomDateRangeChange={tabFilters.setCustomDateRange}
     />
   );
 
@@ -714,7 +720,7 @@ export function ProjetoValueBetTab({
       {/* Gráficos e Estatísticas */}
       {metricas.total > 0 && (
         <>
-          <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} isSingleDayPeriod={internalPeriod === "1dia"} formatCurrency={formatCurrency} />
+          <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} isSingleDayPeriod={tabFilters.period === "1dia"} formatCurrency={formatCurrency} />
           <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
         </>
       )}
@@ -758,33 +764,33 @@ export function ProjetoValueBetTab({
                     estrategia: "VALUEBET",
                   }, "ValueBet"))}
                   abaOrigem="ValueBet"
-                  filename={`valuebets-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
-                  filtrosAplicados={{
-                    periodo: internalPeriod,
-                    dataInicio: dateRange?.start.toISOString(),
-                    dataFim: dateRange?.end.toISOString(),
-                  }}
-                />
-              }
-            />
-          </div>
-          <div className="flex items-center gap-4">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <Target className="h-4 w-4 text-purple-400" />
-              {apostasSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0 space-y-3">
-          {/* Filtros Transversais (Período, Casa, Parceiro) */}
-          <OperationalFiltersBar
-            projetoId={projetoId}
-            showEstrategiaFilter={false}
-            preselectedEstrategia="VALUEBET"
-            className="pb-3 border-b border-border/50"
+                filename={`valuebets-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
+                filtrosAplicados={{
+                  periodo: tabFilters.period,
+                  dataInicio: dateRange?.start.toISOString(),
+                  dataFim: dateRange?.end.toISOString(),
+                }}
+              />
+            }
           />
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex items-center gap-4">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <Target className="h-4 w-4 text-purple-400" />
+            {apostasSubTab === "abertas" ? "Operações Abertas" : "Histórico de Operações"}
+          </CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-3">
+        {/* Filtros LOCAIS da aba (isolados de outras abas) */}
+        <TabFiltersBar
+          projetoId={projetoId}
+          filters={tabFilters}
+          showEstrategiaFilter={false}
+          className="pb-3 border-b border-border/50"
+        />
+      </CardContent>
+    </Card>
 
       {apostasFiltradas.length === 0 ? (
         <Card>

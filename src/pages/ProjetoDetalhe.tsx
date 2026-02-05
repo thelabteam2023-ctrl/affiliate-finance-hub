@@ -66,7 +66,7 @@ import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar"
 import { ModuleActivationDialog } from "@/components/projeto-detalhe/ModuleActivationDialog";
 import { SetDefaultTabButton } from "@/components/projeto-detalhe/SetDefaultTabButton";
 import { useActionAccess } from "@/hooks/useModuleAccess";
-import { OperationalFiltersProvider } from "@/contexts/OperationalFiltersContext";
+// REMOVIDO: OperationalFiltersProvider - filtros agora são isolados por aba
 
 // Icon map for dynamic modules
 const MODULE_ICON_MAP: Record<string, React.ElementType> = {
@@ -538,9 +538,9 @@ export default function ProjetoDetalhe() {
   }
 
   return (
-    <OperationalFiltersProvider projetoId={id!}>
-      <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8 space-y-4">
-      {/* Header */}
+    // Filtros agora são isolados por aba - cada tab usa seu próprio useTabFilters
+    <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8 space-y-4">
+    {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-shrink-0">
         <div className="flex items-center gap-3 md:gap-4 min-w-0">
           <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={() => navigate("/projetos")}>
@@ -894,7 +894,6 @@ export default function ProjetoDetalhe() {
         }}
         onSkip={() => {}}
       />
-      </div>
-    </OperationalFiltersProvider>
+    </div>
   );
 }

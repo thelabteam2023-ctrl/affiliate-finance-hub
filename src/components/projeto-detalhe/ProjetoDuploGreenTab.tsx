@@ -56,7 +56,8 @@ import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
-import { OperationalFiltersBar } from "./OperationalFiltersBar";
+import { TabFiltersBar } from "./TabFiltersBar";
+import { useTabFilters } from "@/hooks/useTabFilters";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
@@ -197,10 +198,16 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const [activeNavTab, setActiveNavTab] = useState<NavTabValue>("visao-geral");
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
-  const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
-
-  const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);
+  // Filtros LOCAIS da aba Duplo Green (isolados de outras abas)
+  const tabFilters = useTabFilters({
+    tabId: "duplogreen",
+    projetoId,
+    defaultPeriod: "30dias",
+    persist: true,
+  });
+  
+  // dateRange derivado dos filtros locais
+  const dateRange = tabFilters.dateRange;
 
   // Count of open operations for badge - uses the canonical hook
   const { count: openOperationsCount } = useOpenOperationsCount({
@@ -218,7 +225,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
   useEffect(() => { localStorage.setItem(NAV_STORAGE_KEY, navMode); }, [navMode]);
 
-  useEffect(() => { fetchData(); }, [projetoId, internalPeriod, internalDateRange, refreshTrigger]);
+  useEffect(() => { fetchData(); }, [projetoId, tabFilters.period, tabFilters.customDateRange, refreshTrigger]);
 
   const fetchData = async () => {
     try {
@@ -623,7 +630,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const modeToggle = (
     <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="sm" onClick={handleModeToggle} className="h-8 w-8 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors">{navMode === "tabs" ? <PanelLeft className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}</Button></TooltipTrigger><TooltipContent side="bottom" className="text-xs">{navMode === "tabs" ? "Modo Gestão" : "Modo Compacto"}</TooltipContent></Tooltip>
   );
-  const periodFilterComponent = <StandardTimeFilter period={internalPeriod} onPeriodChange={setInternalPeriod} customDateRange={internalDateRange} onCustomDateRangeChange={setInternalDateRange} />;
+  const periodFilterComponent = <StandardTimeFilter period={tabFilters.period} onPeriodChange={tabFilters.setPeriod} customDateRange={tabFilters.customDateRange} onCustomDateRangeChange={tabFilters.setCustomDateRange} />;
 
   const renderVisaoGeral = () => (
     <div className="space-y-6">
@@ -683,7 +690,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       </div>
 
       {metricas.total > 0 && (
-        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} isSingleDayPeriod={internalPeriod === "1dia"} formatCurrency={formatCurrency} />
+        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} isSingleDayPeriod={tabFilters.period === "1dia"} formatCurrency={formatCurrency} />
       )}
 
       {/* Card de Estatísticas Detalhadas */}
@@ -755,7 +762,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
                   abaOrigem="Duplo Green"
                   filename={`duplogreen-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
                   filtrosAplicados={{
-                    periodo: internalPeriod,
+                    periodo: tabFilters.period,
                     dataInicio: dateRange?.start.toISOString(),
                     dataFim: dateRange?.end.toISOString(),
                   }}
@@ -771,11 +778,11 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           </div>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
-          {/* Filtros Transversais (Período, Casa, Parceiro) */}
-          <OperationalFiltersBar
+          {/* Filtros LOCAIS da aba (isolados de outras abas) */}
+          <TabFiltersBar
             projetoId={projetoId}
+            filters={tabFilters}
             showEstrategiaFilter={false}
-            preselectedEstrategia="DUPLO_GREEN"
             className="pb-3 border-b border-border/50"
           />
         </CardContent>
