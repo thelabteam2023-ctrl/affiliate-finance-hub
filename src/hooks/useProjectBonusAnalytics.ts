@@ -226,7 +226,8 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
         const creditedCount = bonuses.filter(b => b.status === 'credited' || b.status === 'finalized').length;
         const finalizedCount = bonuses.filter(b => b.status === 'finalized').length;
         const convertedCount = bonuses.filter(b => 
-          b.status === 'finalized' && b.finalize_reason === 'rollover_completed'
+          b.status === 'finalized' && 
+          ['rollover_completed', 'cycle_completed', 'early_withdrawal', 'extracted_early'].includes(b.finalize_reason || '')
         ).length;
         const problemCount = bonuses.filter(b => 
           b.status === 'failed' || 
