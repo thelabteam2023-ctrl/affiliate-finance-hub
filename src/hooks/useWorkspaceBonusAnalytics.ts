@@ -20,6 +20,7 @@ export interface BookmakerBonusStats {
   bets_won: number;
   bets_lost: number;
   bets_pending: number;
+  bets_void: number;
   // Métricas calculadas
   conversion_rate: number; // converted / credited
   efficiency_rate: number; // profit / bonus_value
@@ -187,6 +188,7 @@ export function useWorkspaceBonusAnalytics(): UseWorkspaceBonusAnalyticsReturn {
         const betsWon = bets.filter(b => b.resultado === 'GREEN' || b.resultado === 'MEIO_GREEN').length;
         const betsLost = bets.filter(b => b.resultado === 'RED' || b.resultado === 'MEIO_RED').length;
         const betsPending = bets.filter(b => b.status === 'PENDENTE').length;
+        const betsVoid = bets.filter(b => b.resultado === 'VOID' || b.resultado === 'REEMBOLSO').length;
 
         // Depósitos
         const totalDeposits = data.totalDeposits;
@@ -218,6 +220,7 @@ export function useWorkspaceBonusAnalytics(): UseWorkspaceBonusAnalyticsReturn {
           bets_won: betsWon,
           bets_lost: betsLost,
           bets_pending: betsPending,
+          bets_void: betsVoid,
           conversion_rate: conversionRate,
           efficiency_rate: efficiencyRate,
           roi,
