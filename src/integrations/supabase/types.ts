@@ -1663,6 +1663,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_ledger_conversao_referencia_id_fkey"
+            columns: ["conversao_referencia_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
+          },
+          {
             foreignKeyName: "cash_ledger_destino_bookmaker_id_fkey"
             columns: ["destino_bookmaker_id"]
             isOneToOne: false
@@ -2062,6 +2069,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
+          },
+          {
             foreignKeyName: "cash_ledger_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -2209,6 +2223,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashback_manual_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
           },
           {
             foreignKeyName: "cashback_manual_projeto_id_fkey"
@@ -3074,6 +3095,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "exchange_adjustments_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
+          },
+          {
             foreignKeyName: "exchange_adjustments_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
@@ -3793,6 +3821,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giros_gratis_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
           },
           {
             foreignKeyName: "giros_gratis_giro_disponivel_id_fkey"
@@ -4999,6 +5034,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pagamentos_operador_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
+          },
+          {
             foreignKeyName: "pagamentos_operador_operador_id_fkey"
             columns: ["operador_id"]
             isOneToOne: false
@@ -5669,6 +5711,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participacao_ciclos_pagamento_ledger_id_fkey"
+            columns: ["pagamento_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
           },
           {
             foreignKeyName: "participacao_ciclos_participacao_referencia_id_fkey"
@@ -7258,6 +7307,13 @@ export type Database = {
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "stablecoin_correction_log_cash_ledger_id_fkey"
+            columns: ["cash_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
+          },
         ]
       }
       subscription_changes: {
@@ -7786,6 +7842,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "wallet_transit_log_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
+          },
+          {
             foreignKeyName: "wallet_transit_log_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
@@ -8237,6 +8300,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_eventos_promocionais"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_ledger_referencia_transacao_id_fkey"
+            columns: ["referencia_transacao_id"]
+            isOneToOne: false
+            referencedRelation: "v_saques_duplicidade_audit"
+            referencedColumns: ["saque_id"]
           },
           {
             foreignKeyName: "cash_ledger_workspace_id_fkey"
@@ -10282,6 +10352,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      v_saques_duplicidade_audit: {
+        Row: {
+          auditoria_metadata: Json | null
+          bookmaker_nome: string | null
+          classificacao: string | null
+          created_at: string | null
+          data_transacao: string | null
+          descricao: string | null
+          moeda: string | null
+          parceiro_nome: string | null
+          saque_id: string | null
+          status: string | null
+          valor: number | null
+        }
+        Relationships: []
       }
       v_user_last_login: {
         Row: {
