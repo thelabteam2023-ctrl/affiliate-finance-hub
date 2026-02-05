@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -708,7 +709,7 @@ export function ConfirmarSaqueDialog({
 
             {/* Data de Confirmação (Recebimento Real) */}
             <div className="space-y-2">
-              <Label htmlFor="data-confirmacao" className="flex items-center gap-2">
+              <Label className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 Data de Recebimento
                 <TooltipProvider>
@@ -722,13 +723,15 @@ export function ConfirmarSaqueDialog({
                   </Tooltip>
                 </TooltipProvider>
               </Label>
-              <Input
-                id="data-confirmacao"
-                type="date"
-                value={dataConfirmacao}
-                onChange={(e) => setDataConfirmacao(e.target.value)}
-                className="max-w-[200px]"
-              />
+              <div className="max-w-[220px]">
+                <DatePicker
+                  value={dataConfirmacao}
+                  onChange={(date) => setDataConfirmacao(date)}
+                  placeholder="Selecione a data"
+                  fromYear={2020}
+                  toYear={new Date().getFullYear() + 1}
+                />
+              </div>
               <p className="text-xs text-muted-foreground">
                 Solicitado em: {saque?.data_transacao ? new Date(saque.data_transacao).toLocaleDateString("pt-BR") : "-"}
               </p>
