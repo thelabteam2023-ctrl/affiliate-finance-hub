@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CalendarIcon, LayoutDashboard, LayoutList } from "lucide-react";
-import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
@@ -22,9 +22,10 @@ export type { DateRange };
  * - 7dias: hoje - 6 dias até hoje (7 dias incluindo hoje)
  * - mes_atual: primeiro dia do mês atual até hoje
  * - mes_anterior: primeiro ao último dia do mês anterior
+ * - ano: primeiro dia do ano atual até hoje
  * - custom: período personalizado
  */
-export type StandardPeriodFilter = "1dia" | "7dias" | "mes_atual" | "mes_anterior" | "custom";
+export type StandardPeriodFilter = "1dia" | "7dias" | "mes_atual" | "mes_anterior" | "ano" | "custom";
 export type NavigationMode = "compact" | "gestao";
 
 interface DateRangeResult {
@@ -48,6 +49,7 @@ const PERIOD_OPTIONS: { value: StandardPeriodFilter; label: string }[] = [
   { value: "7dias", label: "7 dias" },
   { value: "mes_atual", label: "Mês atual" },
   { value: "mes_anterior", label: "Mês anterior" },
+  { value: "ano", label: "Ano" },
 ];
 
 export function getDateRangeFromPeriod(
@@ -74,6 +76,9 @@ export function getDateRangeFromPeriod(
         start: startOfMonth(prevMonth), 
         end: endOfDay(endOfMonth(prevMonth)) 
       };
+    
+    case "ano":
+      return { start: startOfYear(now), end: endOfDay(now) };
     
     case "custom":
       if (customRange?.from) {

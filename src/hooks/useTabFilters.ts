@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { DateRange } from "react-day-picker";
-import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
 
 /**
  * Sistema de Filtros Independentes por Aba
@@ -20,7 +20,7 @@ import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } fr
  */
 
 // Tipos de filtros - PADRÃO CONTÁBIL
-export type StandardPeriodFilter = "1dia" | "7dias" | "mes_atual" | "mes_anterior" | "custom";
+export type StandardPeriodFilter = "1dia" | "7dias" | "mes_atual" | "mes_anterior" | "ano" | "custom";
 export type EstrategiaFilter = "all" | "PUNTER" | "SUREBET" | "VALUEBET" | "DUPLO_GREEN" | "EXTRACAO_FREEBET" | "EXTRACAO_BONUS";
 
 export interface DateRangeResult {
@@ -80,6 +80,10 @@ export function getDateRangeFromPeriod(
         start: startOfMonth(prevMonth), 
         end: endOfDay(endOfMonth(prevMonth)) 
       };
+    
+    case "ano":
+      // primeiro dia do ano atual até hoje
+      return { start: startOfYear(now), end: endOfDay(now) };
     
     case "custom":
       if (customRange?.from) {
