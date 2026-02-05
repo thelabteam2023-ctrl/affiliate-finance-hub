@@ -350,7 +350,10 @@ export function ApostaCard({
                   resultado={aposta.resultado || null}
                   onEdit={() => onEdit?.(aposta.id)}
                   onDuplicate={onDuplicate ? () => onDuplicate(aposta.id) : undefined}
-                  onQuickResolve={(resultado) => onQuickResolve?.(aposta.id, resultado)}
+                 onQuickResolve={(resultado) => {
+                   console.log('[ApostaCard] onQuickResolve wrapper:', { apostaId: aposta.id, resultado });
+                   onQuickResolve?.(aposta.id, resultado);
+                 }}
                   onDelete={() => onDelete?.(aposta.id)}
                 />
               )}
@@ -526,7 +529,10 @@ export function ApostaCard({
                 resultado={aposta.resultado || null}
                 onEdit={() => onEdit?.(aposta.id)}
                 onDuplicate={onDuplicate ? () => onDuplicate(aposta.id) : undefined}
-                onQuickResolve={(resultado) => onQuickResolve?.(aposta.id, resultado)}
+               onQuickResolve={(resultado) => {
+                 console.log('[ApostaCard] onQuickResolve wrapper (variant):', { apostaId: aposta.id, resultado });
+                 onQuickResolve?.(aposta.id, resultado);
+               }}
                 onDelete={() => onDelete?.(aposta.id)}
               />
             )}
