@@ -98,6 +98,18 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
       if (bonusError) throw bonusError;
 
       // 2. Buscar apostas com contexto BONUS do projeto
+      // CORREÇÃO: Buscar TODAS as apostas das bookmakers que têm bônus (não filtrar por contexto)
+      // A regra de negócio é: Análise por Casa = todas as apostas da casa, não apenas contexto BONUS
+      const bookmakerIds = (bonusData || [])
+        .map((b: any) => b.bookmaker_id)
+        .filter((id: string | null): id is string => !!id);
+      
+      if (bookmakerIds.length === 0) {
+        setStats([]);
+        setLoading(false);
+        return;
+      }
+
       const { data: betsData, error: betsError } = await supabase
         .from("apostas_unificada")
         .select(`
@@ -114,7 +126,8 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
           )
         `)
         .eq("projeto_id", projectId)
-        .eq("contexto_operacional", "BONUS");
+        .in("bookmaker_id", bookmakerIds)
+        .neq("status", "CANCELADA");
 
       if (betsError) throw betsError;
 
