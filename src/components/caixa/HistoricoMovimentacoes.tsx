@@ -523,9 +523,38 @@ export function HistoricoMovimentacoes({
                       <CheckCircle2 className="h-3 w-3 mr-1" />Atualizar Status
                     </Button>
                   )}
-                  <div className="text-right min-w-[80px]">
-                    <div className="text-sm font-medium">{format(parseLocalDateTime(transacao.data_transacao), "dd/MM/yyyy")}</div>
-                    <div className="text-xs text-muted-foreground">{format(parseLocalDateTime(transacao.data_transacao), "HH:mm")}</div>
+                  <div className="text-right min-w-[100px]">
+                    {/* Para saques confirmados, mostrar data de solicitação e confirmação */}
+                    {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.data_confirmacao ? (
+                      <div className="space-y-0.5">
+                        <div className="text-xs text-muted-foreground">
+                          Solicitado: {format(parseLocalDateTime(transacao.data_transacao), "dd/MM")}
+                        </div>
+                        <div className="text-sm font-medium text-emerald-400">
+                          Recebido: {format(parseLocalDateTime(transacao.data_confirmacao), "dd/MM")}
+                        </div>
+                        {/* Lead time em dias */}
+                        {(() => {
+                          const solicitacao = parseLocalDateTime(transacao.data_transacao);
+                          const confirmacao = parseLocalDateTime(transacao.data_confirmacao);
+                          const diffMs = confirmacao.getTime() - solicitacao.getTime();
+                          const diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24));
+                          if (diffDias > 0) {
+                            return (
+                              <div className="text-[10px] text-muted-foreground">
+                                {diffDias} {diffDias === 1 ? 'dia' : 'dias'} de espera
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-sm font-medium">{format(parseLocalDateTime(transacao.data_transacao), "dd/MM/yyyy")}</div>
+                        <div className="text-xs text-muted-foreground">{format(parseLocalDateTime(transacao.data_transacao), "HH:mm")}</div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
