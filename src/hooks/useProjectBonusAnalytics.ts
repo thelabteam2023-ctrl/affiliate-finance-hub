@@ -30,6 +30,7 @@ export interface BookmakerBonusStats {
   bets_won: number;
   bets_lost: number;
   bets_pending: number;
+  bets_void: number;
   
   // Taxa de conclusão (métrica clara e auditável)
   completion_rate: number; // (finalized / credited) * 100
@@ -202,6 +203,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
         const betsWon = bets.filter(b => b.resultado === 'GREEN' || b.resultado === 'MEIO_GREEN').length;
         const betsLost = bets.filter(b => b.resultado === 'RED' || b.resultado === 'MEIO_RED').length;
         const betsPending = bets.filter(b => b.status === 'PENDENTE').length;
+        const betsVoid = bets.filter(b => b.resultado === 'VOID' || b.resultado === 'REEMBOLSO').length;
 
         // Depósitos
         const totalDeposits = data.totalDeposits;
@@ -225,6 +227,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
           bets_won: betsWon,
           bets_lost: betsLost,
           bets_pending: betsPending,
+          bets_void: betsVoid,
           completion_rate: completionRate,
           total_deposits: totalDeposits,
         });

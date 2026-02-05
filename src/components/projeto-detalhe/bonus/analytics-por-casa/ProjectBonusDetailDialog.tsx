@@ -14,7 +14,8 @@ import {
   XCircle,
   Clock,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  MinusCircle
 } from "lucide-react";
 import { BookmakerBonusStats } from "@/hooks/useProjectBonusAnalytics";
 
@@ -33,7 +34,8 @@ export function ProjectBonusDetailDialog({ bookmaker, open, onOpenChange }: Proj
   if (!bookmaker) return null;
 
   const bk = bookmaker;
-  const winRate = bk.total_bets > 0 
+  // Win Rate exclui VOID - só considera apostas com resultado definido
+  const winRate = (bk.bets_won + bk.bets_lost) > 0 
     ? ((bk.bets_won / (bk.bets_won + bk.bets_lost)) * 100) 
     : 0;
 
@@ -111,7 +113,7 @@ export function ProjectBonusDetailDialog({ bookmaker, open, onOpenChange }: Proj
               <Target className="h-4 w-4 text-blue-500" />
               Apostas de Bônus
             </h4>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <div className="p-3 rounded-lg bg-muted/50 text-center">
                 <p className="text-xl font-bold">{bk.total_bets}</p>
                 <p className="text-xs text-muted-foreground">Total</p>
@@ -129,6 +131,13 @@ export function ProjectBonusDetailDialog({ bookmaker, open, onOpenChange }: Proj
                   {bk.bets_lost}
                 </p>
                 <p className="text-xs text-muted-foreground">Perdidas</p>
+              </div>
+              <div className="p-3 rounded-lg bg-gray-500/10 text-center">
+                <p className="text-xl font-bold text-gray-400 flex items-center justify-center gap-1">
+                  <MinusCircle className="h-4 w-4" />
+                  {bk.bets_void}
+                </p>
+                <p className="text-xs text-muted-foreground">Void</p>
               </div>
             </div>
             
