@@ -72,6 +72,10 @@ interface BookmakerInBonusMode {
   bonus_ativo: number;
   bonuses: ProjectBonus[];
   nearest_expiry: Date | null;
+  // Métricas operacionais de apostas
+  total_apostas: number;
+  volume_apostado: number;
+  lucro_prejuizo: number;
 }
 
 export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
@@ -89,9 +93,44 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
 
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
 
+  // Query para buscar dados de apostas por bookmaker
+  const { data: apostasStats = {} } = useQuery({
+    queryKey: ["bonus-casas-apostas-stats", projetoId],
+    queryFn: async () => {
+      // Busca todas as apostas do projeto agrupadas por bookmaker
+      const { data, error } = await supabase
+        .from("apostas_unificada")
+        .select("bookmaker_id, stake, lucro_prejuizo, status")
+        .eq("projeto_id", projetoId)
+        .neq("status", "CANCELADA");
+
+      if (error) throw error;
+
+      // Agrupa por bookmaker_id
+      const stats: Record<string, { total_apostas: number; volume_apostado: number; lucro_prejuizo: number }> = {};
+      
+      (data || []).forEach((aposta: any) => {
+        const bkId = aposta.bookmaker_id;
+        if (!bkId) return;
+        
+        if (!stats[bkId]) {
+          stats[bkId] = { total_apostas: 0, volume_apostado: 0, lucro_prejuizo: 0 };
+        }
+        
+        stats[bkId].total_apostas += 1;
+        stats[bkId].volume_apostado += Number(aposta.stake) || 0;
+        stats[bkId].lucro_prejuizo += Number(aposta.lucro_prejuizo) || 0;
+      });
+
+      return stats;
+    },
+    enabled: !!projetoId,
+    staleTime: 1000 * 30,
+  });
+
   // Use React Query for fetching bookmakers - automatically refreshes when bonuses change
   const { data: bookmakers = [], isLoading: loading } = useQuery({
-    queryKey: ["bonus-casas-bookmakers", projetoId, bookmakersInBonusMode.join(","), bonuses.length],
+    queryKey: ["bonus-casas-bookmakers", projetoId, bookmakersInBonusMode.join(","), bonuses.length, Object.keys(apostasStats).length],
     queryFn: async () => {
       if (bookmakersInBonusMode.length === 0) return [];
 
@@ -144,6 +183,9 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           ? (bk.saldo_usd || 0) 
           : (bk.saldo_atual || 0);
 
+        // Pegar métricas de apostas
+        const bkApostasStats = apostasStats[bk.id] || { total_apostas: 0, volume_apostado: 0, lucro_prejuizo: 0 };
+
         return {
           id: bk.id,
           nome: bk.nome,
@@ -157,6 +199,9 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
           bonus_ativo: bonusTotal,
           bonuses: bkBonuses,
           nearest_expiry: nearestExpiry,
+          total_apostas: bkApostasStats.total_apostas,
+          volume_apostado: bkApostasStats.volume_apostado,
+          lucro_prejuizo: bkApostasStats.lucro_prejuizo,
         };
       });
 
@@ -391,6 +436,9 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
               <TableRow>
                 <TableHead>Bookmaker</TableHead>
                 <TableHead>Parceiro</TableHead>
+                <TableHead className="text-center">Apostas</TableHead>
+                <TableHead className="text-right">Volume</TableHead>
+                <TableHead className="text-right">P&L</TableHead>
                 <TableHead className="text-right">Saldo Unificado</TableHead>
                 <TableHead className="text-right">Bônus Ativo</TableHead>
                 <TableHead className="min-w-[180px]">Rollover</TableHead>
@@ -435,6 +483,20 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{bk.parceiro_nome || "—"}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline" className="font-mono">
+                        {bk.total_apostas}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-sm">
+                      {formatCurrency(bk.volume_apostado, bk.moeda)}
+                    </TableCell>
+                    <TableCell className={cn(
+                      "text-right font-semibold",
+                      bk.lucro_prejuizo > 0 ? "text-emerald-400" : bk.lucro_prejuizo < 0 ? "text-red-400" : "text-muted-foreground"
+                    )}>
+                      {bk.lucro_prejuizo > 0 ? "+" : ""}{formatCurrency(bk.lucro_prejuizo, bk.moeda)}
+                    </TableCell>
                     <TableCell className="text-right font-semibold text-primary">
                       {formatCurrency(bk.saldo_real, bk.moeda)}
                     </TableCell>
@@ -544,8 +606,36 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                       <span className="text-muted-foreground">{bk.parceiro_nome || "Sem parceiro"}</span>
                     </div>
 
+                    {/* Métricas Operacionais de Apostas */}
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground mb-2 font-medium">Métricas Operacionais</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="text-center p-2 rounded bg-muted/50">
+                          <p className="text-lg font-bold">{bk.total_apostas}</p>
+                          <p className="text-[10px] text-muted-foreground">Apostas</p>
+                        </div>
+                        <div className="text-center p-2 rounded bg-muted/50">
+                          <p className="text-sm font-bold">{formatCurrency(bk.volume_apostado, bk.moeda)}</p>
+                          <p className="text-[10px] text-muted-foreground">Volume</p>
+                        </div>
+                        <div className={cn(
+                          "text-center p-2 rounded",
+                          bk.lucro_prejuizo > 0 ? "bg-emerald-500/10" : bk.lucro_prejuizo < 0 ? "bg-red-500/10" : "bg-muted/50"
+                        )}>
+                          <p className={cn(
+                            "text-sm font-bold",
+                            bk.lucro_prejuizo > 0 ? "text-emerald-400" : bk.lucro_prejuizo < 0 ? "text-red-400" : ""
+                          )}>
+                            {bk.lucro_prejuizo > 0 ? "+" : ""}{formatCurrency(bk.lucro_prejuizo, bk.moeda)}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">P&L</p>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Balances */}
-                    <div className="pt-2 border-t space-y-2">
+                    <div className="pt-2 border-t space-y-2 mt-2">
+                      <p className="text-xs text-muted-foreground mb-2 font-medium">Saldos & Bônus</p>
                       {/* Operational Balance - Highlight */}
                       <TooltipProvider>
                         <Tooltip>
