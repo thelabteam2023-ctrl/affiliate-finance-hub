@@ -976,14 +976,14 @@ export async function reliquidarAposta(
       };
     }
 
-    // Usar reliquidar_aposta_v5 (reverte apenas PAYOUT, não STAKE)
-    const { data: reliqData, error: reliqError } = await supabase.rpc('reliquidar_aposta_v5', {
+    // Usar reliquidar_aposta_v6 (idempotente - usa AJUSTE único baseado na diferença)
+    const { data: reliqData, error: reliqError } = await supabase.rpc('reliquidar_aposta_v6', {
       p_aposta_id: apostaId,
       p_novo_resultado: novoResultado,
       p_lucro_prejuizo: lucroPrejuizo ?? null,
     });
 
-   console.log("[ApostaService] Resposta RPC reliquidar_aposta_v5:", { data: reliqData, error: reliqError });
+   console.log("[ApostaService] Resposta RPC reliquidar_aposta_v6:", { data: reliqData, error: reliqError });
    
     if (reliqError) {
       console.error("[ApostaService] Erro ao reliquidar:", reliqError);
@@ -991,7 +991,7 @@ export async function reliquidarAposta(
         success: false,
         error: {
           code: 'RELIQUIDATION_RPC_ERROR',
-          message: `Falha ao reliquidar aposta: ${reliqError.message}`,
+      message: `Falha ao reliquidar aposta (v6): ${reliqError.message}`,
           details: { error: reliqError },
         },
       };
