@@ -82,7 +82,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   const [casaFilter, setCasaFilter] = useState<string>("todas");
   
   // Internal period filter (local to this tab)
-  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("mes_atual");
   const [internalDateRange, setInternalDateRange] = useState<DateRange | undefined>();
   
   // Navigation mode (sidebar vs tabs)

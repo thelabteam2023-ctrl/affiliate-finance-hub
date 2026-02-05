@@ -8,13 +8,23 @@ import {
 } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CalendarIcon, LayoutDashboard, LayoutList } from "lucide-react";
-import { format, startOfDay, endOfDay, subDays, startOfYear } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
 
 export type { DateRange };
-export type StandardPeriodFilter = "1dia" | "7dias" | "30dias" | "ano" | "custom";
+
+/**
+ * PADRÃO OFICIAL DE FILTROS DE DATA (CONTÁBIL)
+ * 
+ * - 1dia: data_operacional = hoje
+ * - 7dias: hoje - 6 dias até hoje (7 dias incluindo hoje)
+ * - mes_atual: primeiro dia do mês atual até hoje
+ * - mes_anterior: primeiro ao último dia do mês anterior
+ * - custom: período personalizado
+ */
+export type StandardPeriodFilter = "1dia" | "7dias" | "mes_atual" | "mes_anterior" | "custom";
 export type NavigationMode = "compact" | "gestao";
 
 interface DateRangeResult {
@@ -36,8 +46,8 @@ interface StandardTimeFilterProps {
 const PERIOD_OPTIONS: { value: StandardPeriodFilter; label: string }[] = [
   { value: "1dia", label: "1 dia" },
   { value: "7dias", label: "7 dias" },
-  { value: "30dias", label: "30 dias" },
-  { value: "ano", label: "Ano" },
+  { value: "mes_atual", label: "Mês atual" },
+  { value: "mes_anterior", label: "Mês anterior" },
 ];
 
 export function getDateRangeFromPeriod(
@@ -50,12 +60,21 @@ export function getDateRangeFromPeriod(
   switch (period) {
     case "1dia":
       return { start: today, end: endOfDay(now) };
+    
     case "7dias":
-      return { start: subDays(today, 7), end: endOfDay(now) };
-    case "30dias":
-      return { start: subDays(today, 30), end: endOfDay(now) };
-    case "ano":
-      return { start: startOfYear(now), end: endOfDay(now) };
+      // 7 dias incluindo hoje
+      return { start: subDays(today, 6), end: endOfDay(now) };
+    
+    case "mes_atual":
+      return { start: startOfMonth(now), end: endOfDay(now) };
+    
+    case "mes_anterior":
+      const prevMonth = subMonths(now, 1);
+      return { 
+        start: startOfMonth(prevMonth), 
+        end: endOfDay(endOfMonth(prevMonth)) 
+      };
+    
     case "custom":
       if (customRange?.from) {
         return {
@@ -64,6 +83,7 @@ export function getDateRangeFromPeriod(
         };
       }
       return null;
+    
     default:
       return null;
   }
@@ -168,7 +188,7 @@ export function StandardTimeFilter({
                   className="h-7 text-xs"
                   onClick={() => {
                     onCustomDateRangeChange?.(undefined);
-                    onPeriodChange("30dias");
+                    onPeriodChange("mes_atual");
                   }}
                 >
                   Limpar

@@ -58,7 +58,7 @@ export function DashboardTab() {
   const [acordos, setAcordos] = useState<Acordo[]>([]);
   const [bonusPagos, setBonusPagos] = useState<BonusPago[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
-  const [period, setPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [period, setPeriod] = useState<StandardPeriodFilter>("mes_atual");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [historicoOpen, setHistoricoOpen] = useState(false);
   

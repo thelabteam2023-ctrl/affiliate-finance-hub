@@ -1,9 +1,17 @@
 import { createContext, useContext, useState, useCallback, useMemo, ReactNode, useEffect } from "react";
 import { DateRange } from "react-day-picker";
-import { startOfDay, endOfDay, subDays, startOfYear } from "date-fns";
+import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 
-// Tipos de filtros disponíveis
-export type StandardPeriodFilter = "1dia" | "7dias" | "30dias" | "ano" | "custom";
+/**
+ * PADRÃO OFICIAL DE FILTROS DE DATA (CONTÁBIL)
+ * 
+ * - 1dia: data_operacional = hoje
+ * - 7dias: hoje - 6 dias até hoje (7 dias incluindo hoje)
+ * - mes_atual: primeiro dia do mês atual até hoje
+ * - mes_anterior: primeiro ao último dia do mês anterior
+ * - custom: período personalizado
+ */
+export type StandardPeriodFilter = "1dia" | "7dias" | "mes_atual" | "mes_anterior" | "custom";
 export type EstrategiaFilter = "all" | "PUNTER" | "SUREBET" | "VALUEBET" | "DUPLO_GREEN" | "EXTRACAO_FREEBET" | "EXTRACAO_BONUS";
 
 export interface DateRangeResult {
@@ -63,12 +71,20 @@ export function getDateRangeFromPeriod(
   switch (period) {
     case "1dia":
       return { start: today, end: endOfDay(now) };
+    
     case "7dias":
-      return { start: subDays(today, 7), end: endOfDay(now) };
-    case "30dias":
-      return { start: subDays(today, 30), end: endOfDay(now) };
-    case "ano":
-      return { start: startOfYear(now), end: endOfDay(now) };
+      return { start: subDays(today, 6), end: endOfDay(now) };
+    
+    case "mes_atual":
+      return { start: startOfMonth(now), end: endOfDay(now) };
+    
+    case "mes_anterior":
+      const prevMonth = subMonths(now, 1);
+      return { 
+        start: startOfMonth(prevMonth), 
+        end: endOfDay(endOfMonth(prevMonth)) 
+      };
+    
     case "custom":
       if (customRange?.from) {
         return {
@@ -77,6 +93,7 @@ export function getDateRangeFromPeriod(
         };
       }
       return null;
+    
     default:
       return null;
   }
@@ -88,8 +105,8 @@ interface OperationalFiltersProviderProps {
 }
 
 export function OperationalFiltersProvider({ children, projetoId }: OperationalFiltersProviderProps) {
-  // Estado base
-  const [period, setPeriodState] = useState<StandardPeriodFilter>("30dias");
+  // Estado base - Mês atual é o padrão contábil
+  const [period, setPeriodState] = useState<StandardPeriodFilter>("mes_atual");
   const [customDateRange, setCustomDateRangeState] = useState<DateRange | undefined>(undefined);
   const [bookmakerIds, setBookmakerIdsState] = useState<string[]>([]);
   const [parceiroIds, setParceiroIdsState] = useState<string[]>([]);
@@ -182,7 +199,7 @@ export function OperationalFiltersProvider({ children, projetoId }: OperationalF
   }, []);
 
   const clearFilters = useCallback(() => {
-    setPeriodState("30dias");
+    setPeriodState("mes_atual");
     setCustomDateRangeState(undefined);
     setBookmakerIdsState([]);
     setParceiroIdsState([]);

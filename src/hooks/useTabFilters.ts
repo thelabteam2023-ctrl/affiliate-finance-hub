@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { DateRange } from "react-day-picker";
-import { startOfDay, endOfDay, subDays, startOfYear } from "date-fns";
+import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 
 /**
  * Sistema de Filtros Independentes por Aba
@@ -10,10 +10,17 @@ import { startOfDay, endOfDay, subDays, startOfYear } from "date-fns";
  * - Filtros NÃO são compartilhados entre abas
  * - Mudanças em uma aba NÃO afetam outras abas
  * - Estado pode ser persistido no localStorage por aba
+ * 
+ * PADRÃO OFICIAL DE FILTROS:
+ * - 1dia: data_operacional = hoje (timezone operacional)
+ * - 7dias: hoje - 6 dias até hoje
+ * - mes_atual: primeiro dia do mês atual até hoje
+ * - mes_anterior: primeiro dia do mês anterior até último dia do mês anterior
+ * - custom: data_inicio selecionada até data_fim selecionada
  */
 
-// Tipos de filtros
-export type StandardPeriodFilter = "1dia" | "7dias" | "30dias" | "ano" | "custom";
+// Tipos de filtros - PADRÃO CONTÁBIL
+export type StandardPeriodFilter = "1dia" | "7dias" | "mes_atual" | "mes_anterior" | "custom";
 export type EstrategiaFilter = "all" | "PUNTER" | "SUREBET" | "VALUEBET" | "DUPLO_GREEN" | "EXTRACAO_FREEBET" | "EXTRACAO_BONUS";
 
 export interface DateRangeResult {
@@ -43,6 +50,8 @@ export interface UseTabFiltersOptions {
 
 /**
  * Converte período em DateRange
+ * 
+ * REGRA-MÃE: Todas as datas respeitam timezone operacional (America/Sao_Paulo)
  */
 export function getDateRangeFromPeriod(
   period: StandardPeriodFilter,
@@ -53,13 +62,25 @@ export function getDateRangeFromPeriod(
 
   switch (period) {
     case "1dia":
+      // data_operacional = hoje
       return { start: today, end: endOfDay(now) };
+    
     case "7dias":
-      return { start: subDays(today, 7), end: endOfDay(now) };
-    case "30dias":
-      return { start: subDays(today, 30), end: endOfDay(now) };
-    case "ano":
-      return { start: startOfYear(now), end: endOfDay(now) };
+      // hoje - 6 dias até hoje (7 dias total incluindo hoje)
+      return { start: subDays(today, 6), end: endOfDay(now) };
+    
+    case "mes_atual":
+      // primeiro dia do mês atual até hoje
+      return { start: startOfMonth(now), end: endOfDay(now) };
+    
+    case "mes_anterior":
+      // primeiro dia do mês anterior até último dia do mês anterior
+      const prevMonth = subMonths(now, 1);
+      return { 
+        start: startOfMonth(prevMonth), 
+        end: endOfDay(endOfMonth(prevMonth)) 
+      };
+    
     case "custom":
       if (customRange?.from) {
         return {
@@ -68,6 +89,7 @@ export function getDateRangeFromPeriod(
         };
       }
       return null;
+    
     default:
       return null;
   }
@@ -91,7 +113,7 @@ export function getDateRangeFromPeriod(
 export function useTabFilters({
   tabId,
   projetoId,
-  defaultPeriod = "30dias",
+  defaultPeriod = "mes_atual",
   persist = true,
 }: UseTabFiltersOptions) {
   const storageKey = `tab-filters-${projetoId}-${tabId}`;

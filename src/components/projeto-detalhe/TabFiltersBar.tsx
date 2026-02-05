@@ -62,8 +62,8 @@ interface ParceiroOption {
 const PERIOD_OPTIONS: { value: StandardPeriodFilter; label: string }[] = [
   { value: "1dia", label: "1 dia" },
   { value: "7dias", label: "7 dias" },
-  { value: "30dias", label: "30 dias" },
-  { value: "ano", label: "Ano" },
+  { value: "mes_atual", label: "Mês atual" },
+  { value: "mes_anterior", label: "Mês anterior" },
 ];
 
 const ESTRATEGIA_OPTIONS: { value: EstrategiaFilter; label: string }[] = [

@@ -56,7 +56,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
   const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Standard time filter state
-  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("mes_atual");
   const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
   
   const dateRange = useMemo(() => getDateRangeFromPeriod(internalPeriod, internalDateRange), [internalPeriod, internalDateRange]);

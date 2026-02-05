@@ -310,7 +310,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const tabFilters = useTabFilters({
     tabId: "apostas",
     projetoId,
-    defaultPeriod: "30dias",
+    defaultPeriod: "mes_atual",
     persist: true,
   });
 
