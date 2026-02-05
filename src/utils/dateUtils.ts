@@ -80,12 +80,56 @@ export const extractLocalDateKey = (dateString: string | null | undefined): stri
   return `${y}-${m}-${d}`;
 };
 
+// Ano mínimo permitido para apostas (proteção contra datas inválidas)
+const ANO_MINIMO_APOSTAS = 2025;
+
+/**
+ * Valida se uma data de aposta está dentro do intervalo aceitável
+ * Protege contra erros de digitação (ex: 2024 em vez de 2026)
+ * 
+ * @param dateString - String de data a validar
+ * @returns Objeto com { valid: boolean, error?: string }
+ */
+export const validarDataAposta = (dateString: string): { valid: boolean; error?: string } => {
+  if (!dateString) {
+    return { valid: false, error: "Data não informada" };
+  }
+  
+  // Extrair ano da string
+  const match = dateString.match(/^(\d{4})/);
+  if (!match) {
+    return { valid: false, error: "Formato de data inválido" };
+  }
+  
+  const ano = parseInt(match[1]);
+  
+  if (ano < ANO_MINIMO_APOSTAS) {
+    return { 
+      valid: false, 
+      error: `Ano ${ano} inválido. Datas anteriores a ${ANO_MINIMO_APOSTAS} não são permitidas.` 
+    };
+  }
+  
+  // Verificar se não é muito no futuro (mais de 1 ano)
+  const anoAtual = new Date().getFullYear();
+  if (ano > anoAtual + 1) {
+    return { 
+      valid: false, 
+      error: `Ano ${ano} parece incorreto. Verifique a data.` 
+    };
+  }
+  
+  return { valid: true };
+};
+
 /**
  * Converte uma string de data/hora para timestamp local literal
  * SEM conversão de timezone - preserva exatamente o que o usuário escolheu.
  * 
  * Esta função garante que não haja shift de dia causado por conversão UTC.
  * Se o usuário escolhe "25/01/2026 23:59", o banco deve salvar "2026-01-25 23:59:00".
+ * 
+ * IMPORTANTE: Esta função NÃO valida o ano. Use validarDataAposta() antes de salvar.
  * 
  * @param dateTimeString - String no formato "YYYY-MM-DDTHH:mm" (datetime-local)
  * @returns String no formato "YYYY-MM-DDTHH:mm:ss" (sem Z, sem offset)

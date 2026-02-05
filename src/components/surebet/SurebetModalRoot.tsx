@@ -34,7 +34,7 @@ import { toast } from "sonner";
 import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
-import { toLocalTimestamp } from "@/utils/dateUtils";
+import { toLocalTimestamp, validarDataAposta } from "@/utils/dateUtils";
 
 import { SurebetTableRow } from "./SurebetTableRow";
 import { SurebetTableFooter } from "./SurebetTableFooter";
@@ -814,6 +814,13 @@ export function SurebetModalRoot({
     if (!evento.trim()) { toast.error("Informe o evento"); return; }
     if (analysis.pernasCompletasCount < numPernas) {
       toast.error(`Preencha todas as ${numPernas} pernas`);
+      return;
+    }
+    
+    // TRAVA DEFINITIVA: Validar data antes de salvar
+    const dataValidation = validarDataAposta(dataAposta);
+    if (!dataValidation.valid) {
+      toast.error(dataValidation.error || "Data inválida");
       return;
     }
 
