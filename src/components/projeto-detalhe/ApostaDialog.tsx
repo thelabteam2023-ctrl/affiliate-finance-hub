@@ -1950,7 +1950,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           // e aplica novo payout. Isso evita "dupla contagem" do stake.
           // ================================================================
           console.log(
-            "[ApostaDialog] LIQUIDADA → outro resultado (somente resultado): usando reliquidar_aposta_v5",
+            "[ApostaDialog] LIQUIDADA → outro resultado (somente resultado): usando reliquidar_aposta_v6",
             {
               apostaId: aposta.id,
               resultadoAnterior,
@@ -1959,7 +1959,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           );
 
           const { data: reliqData, error: reliqError } = await supabase.rpc(
-            "reliquidar_aposta_v5",
+            "reliquidar_aposta_v6",
             {
               p_aposta_id: aposta.id,
               p_novo_resultado: statusResultado,
@@ -1968,7 +1968,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           );
 
           if (reliqError) {
-            console.error("[ApostaDialog] Erro RPC reliquidar_aposta_v5:", reliqError);
+            console.error("[ApostaDialog] Erro RPC reliquidar_aposta_v6:", reliqError);
             throw new Error(reliqError.message || "Erro ao reliquidar aposta");
           }
 
@@ -1978,7 +1978,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             throw new Error(reliqResult?.error || "Erro ao reliquidar aposta");
           }
 
-          console.log("[ApostaDialog] ✅ reliquidar_aposta_v5 sucesso:", reliqResult);
+          console.log("[ApostaDialog] ✅ reliquidar_aposta_v6 sucesso:", reliqResult);
 
           // Atualizar campos que o RPC não atualiza (campos descritivos)
           const { error: updateError } = await supabase
