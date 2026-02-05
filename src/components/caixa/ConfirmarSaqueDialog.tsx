@@ -105,6 +105,9 @@ export function ConfirmarSaqueDialog({
   
   // Estados para saque CRIPTO - SIMPLIFICADO (apenas quantidade de coins)
   const [qtdCoinRecebida, setQtdCoinRecebida] = useState<string>("");
+  
+  // Data real de confirmação/recebimento (para métricas de tempo de saque)
+  const [dataConfirmacao, setDataConfirmacao] = useState<string>("");
 
   // Determinar se é saque cripto
   const isCryptoWithdrawal = !!saque?.destino_wallet_id;
@@ -114,6 +117,8 @@ export function ConfirmarSaqueDialog({
     if (open && saque) {
       setObservacoes("");
       setParceiroInativo(null);
+      // Data de confirmação padrão = hoje
+      setDataConfirmacao(new Date().toISOString().split("T")[0]);
       
       if (isCryptoWithdrawal) {
         // Pré-preencher com estimativa
@@ -235,6 +240,8 @@ export function ConfirmarSaqueDialog({
             status: "CONFIRMADO",
             qtd_coin: qtdCoinRecebidaNum,
             descricao: descricaoFinal || null,
+            transit_status: "CONFIRMED", // Confirmar trânsito para creditação na wallet
+            data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
           })
           .eq("id", saque.id)
           .eq("status", "PENDENTE")
@@ -295,6 +302,7 @@ export function ConfirmarSaqueDialog({
             status: "CONFIRMADO",
             valor_confirmado: valorRecebidoNum,
             descricao: descricaoFinal || null,
+            data_confirmacao: dataConfirmacao ? new Date(dataConfirmacao + "T12:00:00").toISOString() : new Date().toISOString(),
           })
           .eq("id", saque.id)
           .eq("status", "PENDENTE")
@@ -449,6 +457,7 @@ export function ConfirmarSaqueDialog({
     setObservacoes("");
     setValorRecebido("");
     setQtdCoinRecebida("");
+    setDataConfirmacao("");
   };
 
   if (!saque) return null;
@@ -696,6 +705,34 @@ export function ConfirmarSaqueDialog({
                 )}
               </div>
             )}
+
+            {/* Data de Confirmação (Recebimento Real) */}
+            <div className="space-y-2">
+              <Label htmlFor="data-confirmacao" className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                Data de Recebimento
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Data em que o valor foi efetivamente recebido na conta/wallet. Usado para calcular métricas de "tempo médio de saque".</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Label>
+              <Input
+                id="data-confirmacao"
+                type="date"
+                value={dataConfirmacao}
+                onChange={(e) => setDataConfirmacao(e.target.value)}
+                className="max-w-[200px]"
+              />
+              <p className="text-xs text-muted-foreground">
+                Solicitado em: {saque?.data_transacao ? new Date(saque.data_transacao).toLocaleDateString("pt-BR") : "-"}
+              </p>
+            </div>
 
             {/* Observações */}
             <div className="space-y-2">

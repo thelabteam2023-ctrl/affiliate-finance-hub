@@ -1471,6 +1471,7 @@ export type Database = {
           cotacao_origem_usd: number | null
           cotacao_snapshot_at: string | null
           created_at: string
+          data_confirmacao: string | null
           data_transacao: string
           debito_bonus: number | null
           debito_freebet: number | null
@@ -1531,6 +1532,7 @@ export type Database = {
           cotacao_origem_usd?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string
+          data_confirmacao?: string | null
           data_transacao?: string
           debito_bonus?: number | null
           debito_freebet?: number | null
@@ -1591,6 +1593,7 @@ export type Database = {
           cotacao_origem_usd?: number | null
           cotacao_snapshot_at?: string | null
           created_at?: string
+          data_confirmacao?: string | null
           data_transacao?: string
           debito_bonus?: number | null
           debito_freebet?: number | null
