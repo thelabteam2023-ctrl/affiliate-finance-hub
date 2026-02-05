@@ -4,45 +4,54 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * Estatísticas de bônus por casa (bookmaker_catalogo_id) DENTRO DE UM PROJETO
  * 
- * Correções conceituais aplicadas:
- * - Sem classificação automática (dados insuficientes para classificar)
- * - Multi-moeda: valores exibidos na moeda nativa da casa
- * - Remoção de ROI e Eficiência (conceitos mal definidos neste estágio)
- * - Foco em métricas claras: contagem, volume, taxa de conclusão
+ * Métricas avançadas de rentabilidade e risco para apoiar decisão estratégica:
+ * - ROI: (Sacado - Depositado) / Depositado * 100
+ * - Taxa de conversão de bônus
+ * - Índice de problemas (risco)
+ * - Eficiência do rollover
  */
 export interface BookmakerBonusStats {
   bookmaker_catalogo_id: string;
   nome: string;
   logo_url: string | null;
-  currency: string; // Moeda nativa da casa
+  currency: string;
   
-  // Métricas de bônus (valores na moeda nativa)
+  // Métricas de bônus
   total_bonus_count: number;
-  total_bonus_value: number; // Em moeda nativa
+  total_bonus_value: number;
   bonus_credited_count: number;
   bonus_finalized_count: number;
-  bonus_converted_count: number; // rollover_completed
-  bonus_problem_count: number; // failed, expired, reversed, cancelled
+  bonus_converted_count: number;
+  bonus_problem_count: number;
   
-  // Métricas de apostas de bônus (valores na moeda nativa)
+  // Métricas de apostas
   total_bets: number;
-  total_stake: number; // Em moeda nativa
+  total_stake: number;
   bets_won: number;
   bets_lost: number;
   bets_pending: number;
   bets_void: number;
   
-  // Taxa de conclusão (métrica clara e auditável)
-  completion_rate: number; // (finalized / credited) * 100
+  // Taxa de conclusão
+  completion_rate: number;
   
-  // Depósitos associados (valores na moeda nativa)
+  // Depósitos e Saques
   total_deposits: number;
+  total_withdrawals: number;
+  
+  // MÉTRICAS AVANÇADAS DE RENTABILIDADE
+  net_profit: number; // Lucro Líquido = Sacado - Depositado
+  roi: number; // ROI (%) = (Sacado - Depositado) / Depositado * 100
+  
+  // MÉTRICAS DE RISCO E EFICIÊNCIA
+  bonus_conversion_rate: number; // % de bônus que resultaram em conversão
+  problem_index: number; // % de bônus com problema
+  rollover_efficiency: number; // Lucro / Volume Apostado * 100
 }
 
 export interface ProjectBonusAnalyticsSummary {
   total_bookmakers: number;
   total_bonus_count: number;
-  // Multi-moeda: só agrega se todas forem iguais, senão mostra "multi"
   primary_currency: string | 'MULTI';
   total_bonus_value_display: string;
   total_stake_display: string;
@@ -98,9 +107,6 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
 
       if (bonusError) throw bonusError;
 
-      // 2. Buscar apostas com contexto BONUS do projeto
-      // CORREÇÃO: Buscar TODAS as apostas das bookmakers que têm bônus (não filtrar por contexto)
-      // A regra de negócio é: Análise por Casa = todas as apostas da casa, não apenas contexto BONUS
       const bookmakerIds = (bonusData || [])
         .map((b: any) => b.bookmaker_id)
         .filter((id: string | null): id is string => !!id);
@@ -111,6 +117,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
         return;
       }
 
+      // 2. Buscar apostas das bookmakers
       const { data: betsData, error: betsError } = await supabase
         .from("apostas_unificada")
         .select(`
@@ -132,14 +139,32 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
 
       if (betsError) throw betsError;
 
-      // 3. Agregar por bookmaker_catalogo_id
+      // 3. Buscar saques CONFIRMADOS do cash_ledger
+      const { data: withdrawalsData, error: withdrawalsError } = await supabase
+        .from("cash_ledger")
+        .select(`
+          id,
+          valor,
+          origem_bookmaker_id,
+          tipo_transacao,
+          status
+        `)
+        .in("origem_bookmaker_id", bookmakerIds)
+        .eq("tipo_transacao", "SAQUE")
+        .eq("status", "CONFIRMADO");
+
+      if (withdrawalsError) throw withdrawalsError;
+
+      // 4. Agregar por bookmaker_catalogo_id
       const catalogoMap = new Map<string, {
         nome: string;
         logo_url: string | null;
         currency: string;
+        bookmakerIds: Set<string>;
         bonus: typeof bonusData;
         bets: typeof betsData;
         totalDeposits: number;
+        totalWithdrawals: number;
       }>();
 
       // Processar bônus
@@ -155,14 +180,17 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
             nome: catalogoInfo?.nome || b.bookmakers?.nome || 'Casa Desconhecida',
             logo_url: catalogoInfo?.logo_url || null,
             currency,
+            bookmakerIds: new Set(),
             bonus: [],
             bets: [],
             totalDeposits: 0,
+            totalWithdrawals: 0,
           });
         }
         
         const entry = catalogoMap.get(catalogoId)!;
         entry.bonus.push(b);
+        entry.bookmakerIds.add(b.bookmaker_id);
         entry.totalDeposits += Number(b.deposit_amount) || 0;
       });
 
@@ -174,7 +202,18 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
         catalogoMap.get(catalogoId)!.bets.push(bet);
       });
 
-      // 4. Calcular métricas
+      // Processar saques
+      (withdrawalsData || []).forEach((w: any) => {
+        // Encontrar o catalogo_id pelo bookmaker_id
+        for (const [catalogoId, data] of catalogoMap.entries()) {
+          if (data.bookmakerIds.has(w.origem_bookmaker_id)) {
+            data.totalWithdrawals += Number(w.valor) || 0;
+            break;
+          }
+        }
+      });
+
+      // 5. Calcular métricas
       const statsArray: BookmakerBonusStats[] = [];
 
       catalogoMap.forEach((data, catalogoId) => {
@@ -199,17 +238,26 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
         // Métricas de apostas
         const totalBets = bets.length;
         const totalStake = bets.reduce((sum, b) => sum + Number(b.stake || 0), 0);
-        // CORREÇÃO: O banco usa 'GREEN' para ganhou e 'RED' para perdeu
         const betsWon = bets.filter(b => b.resultado === 'GREEN' || b.resultado === 'MEIO_GREEN').length;
         const betsLost = bets.filter(b => b.resultado === 'RED' || b.resultado === 'MEIO_RED').length;
         const betsPending = bets.filter(b => b.status === 'PENDENTE').length;
         const betsVoid = bets.filter(b => b.resultado === 'VOID' || b.resultado === 'REEMBOLSO').length;
 
-        // Depósitos
+        // Depósitos e Saques
         const totalDeposits = data.totalDeposits;
+        const totalWithdrawals = data.totalWithdrawals;
 
-        // Taxa de conclusão (métrica clara)
+        // MÉTRICAS AVANÇADAS DE RENTABILIDADE
+        const netProfit = totalWithdrawals - totalDeposits;
+        const roi = totalDeposits > 0 ? ((totalWithdrawals - totalDeposits) / totalDeposits) * 100 : 0;
+
+        // Taxa de conclusão
         const completionRate = creditedCount > 0 ? (finalizedCount / creditedCount) * 100 : 0;
+
+        // MÉTRICAS DE RISCO E EFICIÊNCIA
+        const bonusConversionRate = creditedCount > 0 ? (convertedCount / creditedCount) * 100 : 0;
+        const problemIndex = totalBonusCount > 0 ? (problemCount / totalBonusCount) * 100 : 0;
+        const rolloverEfficiency = totalStake > 0 ? (netProfit / totalStake) * 100 : 0;
 
         statsArray.push({
           bookmaker_catalogo_id: catalogoId,
@@ -230,11 +278,17 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
           bets_void: betsVoid,
           completion_rate: completionRate,
           total_deposits: totalDeposits,
+          total_withdrawals: totalWithdrawals,
+          net_profit: netProfit,
+          roi,
+          bonus_conversion_rate: bonusConversionRate,
+          problem_index: problemIndex,
+          rollover_efficiency: rolloverEfficiency,
         });
       });
 
-      // Ordenar por total de bônus decrescente
-      statsArray.sort((a, b) => b.total_bonus_count - a.total_bonus_count);
+      // Ordenar por ROI decrescente
+      statsArray.sort((a, b) => b.roi - a.roi);
 
       setStats(statsArray);
     } catch (err) {
@@ -263,7 +317,6 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
 
     const totalBonusCount = stats.reduce((sum, s) => sum + s.total_bonus_count, 0);
     
-    // Detectar se é multi-moeda
     const currencies = [...new Set(stats.map(s => s.currency))];
     const isMultiCurrency = currencies.length > 1;
     
@@ -276,7 +329,6 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
     let totalStakeDisplay: string;
     
     if (isMultiCurrency) {
-      // Multi-moeda: mostrar por moeda
       const byCurrency: Record<string, { bonus: number; stake: number }> = {};
       stats.forEach(s => {
         if (!byCurrency[s.currency]) {
