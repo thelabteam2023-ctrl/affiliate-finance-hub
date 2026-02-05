@@ -11496,6 +11496,10 @@ export type Database = {
               success: boolean
             }[]
           }
+      recalcular_saldo_por_apostas: {
+        Args: { p_bookmaker_id: string }
+        Returns: Json
+      }
       recalcular_saldos_apos_correcao_stablecoins: {
         Args: { p_workspace_id?: string }
         Returns: {
@@ -11536,11 +11540,23 @@ export type Database = {
           saldo_calculado: number
         }[]
       }
+      reconciliar_saldo_bookmaker: {
+        Args: { p_bookmaker_id: string }
+        Returns: Json
+      }
       record_login_attempt: {
         Args: { p_email: string; p_ip_address?: string; p_success: boolean }
         Returns: undefined
       }
       reliquidar_aposta_v5: {
+        Args: {
+          p_aposta_id: string
+          p_lucro_prejuizo?: number
+          p_novo_resultado: string
+        }
+        Returns: Json
+      }
+      reliquidar_aposta_v6: {
         Args: {
           p_aposta_id: string
           p_lucro_prejuizo?: number
