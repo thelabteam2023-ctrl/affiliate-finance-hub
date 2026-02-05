@@ -1613,10 +1613,23 @@ export function CaixaTransacaoDialog({
         return;
       }
 
-      if (tipoMoeda === "CRYPTO" && (!coin || !qtdCoin || parseFloat(qtdCoin) <= 0)) {
+      // Validação CRYPTO: moeda sempre obrigatória
+      if (tipoMoeda === "CRYPTO" && !coin) {
         toast({
           title: "Erro",
-          description: "Informe a moeda crypto e quantidade",
+          description: "Selecione a moeda crypto",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validação CRYPTO: quantidade obrigatória EXCETO para SAQUE
+      // SAQUE CRYPTO calcula qtd_coin automaticamente a partir do valor na moeda da casa
+      const isSaqueCrypto = tipoTransacao === "SAQUE" && tipoMoeda === "CRYPTO";
+      if (tipoMoeda === "CRYPTO" && !isSaqueCrypto && (!qtdCoin || parseFloat(qtdCoin) <= 0)) {
+        toast({
+          title: "Erro",
+          description: "Informe a quantidade de crypto",
           variant: "destructive",
         });
         return;
