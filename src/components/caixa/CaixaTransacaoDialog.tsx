@@ -2126,7 +2126,7 @@ export function CaixaTransacaoDialog({
       // - PENDING: Transações que saem para blockchain externa (depósito em bookmaker, saque externo)
       // - CONFIRMED: Transferências internas WALLET→WALLET (instantâneas, sem blockchain)
       // =========================================================================
-      const isTransacaoCryptoDeWallet = tipoMoeda === "CRYPTO" && origemWalletId;
+       const isTransacaoCryptoDeWallet = tipoMoeda === "CRYPTO" && (origemWalletId || destinoWalletId);
       const isWalletToWalletTransfer = origemWalletId && destinoWalletId;
       
       if (isTransacaoCryptoDeWallet) {
@@ -2138,13 +2138,29 @@ export function CaixaTransacaoDialog({
             origem: origemWalletId,
             destino: destinoWalletId,
           });
-        } else {
-          // Saída para blockchain externa - precisa de confirmação
+         } else if (origemWalletId) {
+           // Saída de wallet para blockchain externa (WALLET → BOOKMAKER) - precisa de confirmação
           transactionData.transit_status = "PENDING";
-          console.log("[CRYPTO TRANSIT] Transação para blockchain externa: PENDING", {
+           console.log("[CRYPTO TRANSIT] Saída de wallet para blockchain externa: PENDING", {
             walletId: origemWalletId,
             valorQueSeraTravado: valorUsdReferencia,
           });
+         } else if (destinoWalletId && tipoTransacao === "SAQUE") {
+           // SAQUE BOOKMAKER → WALLET: Aguarda confirmação de recebimento
+           // A wallet NÃO deve ser creditada até o usuário confirmar na conciliação
+           transactionData.transit_status = "PENDING";
+           console.log("[CRYPTO TRANSIT] Saque BOOKMAKER→WALLET: PENDING até confirmação", {
+             origemBookmaker: origemBookmakerId,
+             destinoWallet: destinoWalletId,
+             valorEstimado: valorUsdReferencia,
+           });
+         } else {
+           // Outros casos crypto com wallet envolvida - conservador = PENDING
+           transactionData.transit_status = "PENDING";
+           console.log("[CRYPTO TRANSIT] Transação crypto genérica com wallet: PENDING", {
+             origemWalletId,
+             destinoWalletId,
+           });
         }
       }
 
