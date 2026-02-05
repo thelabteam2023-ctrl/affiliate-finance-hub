@@ -48,15 +48,6 @@ interface BonusApostasTabProps {
   projetoId: string;
 }
 
-// SubTabValue agora usa o tipo HistorySubTab exportado de operations
-
-const REASON_LABELS: Record<FinalizeReason, { label: string; icon: React.ElementType; color: string }> = {
-  rollover_completed: { label: "Rollover Concluído (Saque)", icon: CheckCircle2, color: "text-emerald-400 bg-emerald-500/20 border-emerald-500/30" },
-  cycle_completed: { label: "Ciclo Encerrado", icon: CheckCircle2, color: "text-blue-400 bg-blue-500/20 border-blue-500/30" },
-  expired: { label: "Expirado", icon: XCircle, color: "text-red-400 bg-red-500/20 border-red-500/30" },
-  cancelled_reversed: { label: "Cancelado / Revertido", icon: RotateCcw, color: "text-gray-400 bg-gray-500/20 border-gray-500/30" },
-};
-
 interface Aposta {
   id: string;
   data_aposta: string;
@@ -614,40 +605,10 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
 
   // Auto-switch to history tab when no open operations
   useEffect(() => {
-    if (!loading && apostasAbertas.length === 0 && (apostasHistorico.length > 0 || bonuses.some(b => b.status === 'finalized')) && subTab === 'abertas') {
+    if (!loading && apostasAbertas.length === 0 && apostasHistorico.length > 0 && subTab === 'abertas') {
       setSubTab('historico');
     }
-  }, [loading, apostasAbertas.length, apostasHistorico.length, bonuses]);
-
-  // Finalized bonuses for "Histórico" sub-tab
-  const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
-
-  const filteredFinalizedBonuses = finalizedBonuses.filter(bonus => {
-    const matchesSearch = 
-      bonus.bookmaker_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bonus.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bonus.parceiro_nome?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesReason = reasonFilter === "all" || bonus.finalize_reason === reasonFilter;
-    
-    return matchesSearch && matchesReason;
-  }).sort((a, b) => {
-    if (!a.finalized_at) return 1;
-    if (!b.finalized_at) return -1;
-    return new Date(b.finalized_at).getTime() - new Date(a.finalized_at).getTime();
-  });
-
-  const getReasonBadge = (reason: FinalizeReason | null) => {
-    if (!reason) return null;
-    const config = REASON_LABELS[reason];
-    const Icon = config.icon;
-    return (
-      <Badge className={config.color}>
-        <Icon className="h-3 w-3 mr-1" />
-        {config.label}
-      </Badge>
-    );
-  };
+  }, [loading, apostasAbertas.length, apostasHistorico.length]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -980,7 +941,7 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
               subTab={subTab}
               onSubTabChange={setSubTab}
               openCount={apostasAbertas.length}
-              historyCount={apostasHistorico.length + filteredFinalizedBonuses.length}
+              historyCount={apostasHistorico.length}
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}
@@ -1034,75 +995,13 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
                 </div>
               )}
               
-              {/* Bônus Finalizados */}
-              {filteredFinalizedBonuses.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                    <History className="h-4 w-4" />
-                    Bônus Finalizados ({filteredFinalizedBonuses.length})
-                  </h4>
-                  <Card>
-                    <CardContent className="pt-4">
-                      <ScrollArea className="h-[400px]">
-                        <div className="space-y-3">
-                          {filteredFinalizedBonuses.map(bonus => (
-                            <div key={bonus.id} className="flex items-center gap-4 p-4 rounded-lg bg-card border">
-                              {/* Logo */}
-                              {bonus.bookmaker_logo_url ? (
-                                <img
-                                  src={bonus.bookmaker_logo_url}
-                                  alt={bonus.bookmaker_nome}
-                                  className="h-10 w-10 rounded-lg object-contain bg-white p-1 flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                  <Building2 className="h-5 w-5 text-primary" />
-                                </div>
-                              )}
-
-                              {/* Info */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-medium">{bonus.bookmaker_nome}</span>
-                                  <span className="text-muted-foreground">•</span>
-                                  <span className="text-sm text-muted-foreground">{bonus.title || 'Bônus'}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                                  {bonus.parceiro_nome && (
-                                    <>
-                                      <span>{bonus.parceiro_nome}</span>
-                                      <span>•</span>
-                                    </>
-                                  )}
-                                  {bonus.finalized_at && (
-                                    <span>
-                                      Finalizado em {format(parseISO(bonus.finalized_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Value */}
-                              <div className="text-right flex-shrink-0">
-                                <p className="font-bold">{formatCurrencyWithMoeda(bonus.bonus_amount, bonus.currency)}</p>
-                                {getReasonBadge(bonus.finalize_reason)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-              
               {/* Empty state for histórico */}
-              {apostasHistorico.length === 0 && filteredFinalizedBonuses.length === 0 && (
+              {apostasHistorico.length === 0 && (
                 <div className="text-center py-10">
                   <History className="mx-auto h-12 w-12 text-muted-foreground/50" />
                   <h3 className="mt-4 text-lg font-semibold">Nenhum histórico</h3>
                   <p className="text-muted-foreground">
-                    Apostas liquidadas e bônus finalizados aparecerão aqui
+                    Apostas liquidadas aparecerão aqui
                   </p>
                 </div>
               )}
