@@ -493,12 +493,30 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
   };
 
-  // KPIs calculados
-  // Filtrar surebets pelos filtros locais da aba (bookmaker/parceiro)
-  const filteredSurebets = useMemo(() => {
+  // === ISOLAMENTO TOTAL DE FILTROS POR SUB-ABA ===
+  // ARQUITETURA: Filtros dimensionais (Casa/Parceiro) afetam APENAS a aba "Operações"
+  // "Visão Geral" e "Por Casa" usam TODOS os dados (apenas filtro de data)
+  
+  // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer dados legados no SurebetCard
+  const bookmakerNomeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    bookmakers.forEach(bk => {
+      const parceiroNome = bk.parceiro_nome?.split(" ");
+      const shortName = parceiroNome 
+        ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
+        : "";
+      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      map.set(bk.id, nomeCompleto);
+    });
+    return map;
+  }, [bookmakers]);
+
+  // FILTRO PARA OPERAÇÕES: Aplica filtros dimensionais (Casa/Parceiro)
+  // Este filtro afeta APENAS a sub-aba "Operações"
+  const filteredSurebetsForOperacoes = useMemo(() => {
     const { bookmakerIds, parceiroIds } = tabFilters;
     
-    // Se nenhum filtro ativo, retorna tudo
+    // Se nenhum filtro dimensional ativo, retorna tudo
     if (bookmakerIds.length === 0 && parceiroIds.length === 0) {
       return surebets;
     }
@@ -516,8 +534,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       
       // Filtro por parceiro (verificar via bookmakers)
       if (parceiroIds.length > 0) {
-        // Para filtrar por parceiro, precisamos verificar as pernas
-        // Como não temos parceiro_id direto, verificamos os bookmakers correspondentes
         const surebetBookmakerIds = (surebet.pernas || []).map(p => p.bookmaker_id).filter(Boolean);
         if (surebet.bookmaker_id) surebetBookmakerIds.push(surebet.bookmaker_id);
         
@@ -534,34 +550,38 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     });
   }, [surebets, tabFilters.bookmakerIds, tabFilters.parceiroIds, bookmakers]);
 
-  // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer dados legados no SurebetCard
-  const bookmakerNomeMap = useMemo(() => {
-    const map = new Map<string, string>();
-    bookmakers.forEach(bk => {
-      const parceiroNome = bk.parceiro_nome?.split(" ");
-      const shortName = parceiroNome 
-        ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
-        : "";
-      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
-      map.set(bk.id, nomeCompleto);
-    });
-    return map;
-  }, [bookmakers]);
-
-  const kpis = useMemo(() => {
-    const total = filteredSurebets.length;
-    const pendentes = filteredSurebets.filter(s => s.status === "PENDENTE").length;
-    const liquidadas = filteredSurebets.filter(s => s.status === "LIQUIDADA").length;
-    const greens = filteredSurebets.filter(s => s.resultado === "GREEN").length;
-    const reds = filteredSurebets.filter(s => s.resultado === "RED").length;
-    const lucroTotal = filteredSurebets.reduce((acc, s) => acc + (s.lucro_real || 0), 0);
-    // CORREÇÃO: Usar fallback para stake quando stake_total é null
-    // stake_total pode ser NULL para apostas antigas ou migradas
-    const stakeTotal = filteredSurebets.reduce((acc, s) => acc + (s.stake_total || s.stake || 0), 0);
+  // KPIs GLOBAIS (para Visão Geral) - NUNCA filtrados por Casa/Parceiro
+  // Usa `surebets` diretamente (já filtrado por data no fetch)
+  const kpisGlobal = useMemo(() => {
+    const total = surebets.length;
+    const pendentes = surebets.filter(s => s.status === "PENDENTE").length;
+    const liquidadas = surebets.filter(s => s.status === "LIQUIDADA").length;
+    const greens = surebets.filter(s => s.resultado === "GREEN").length;
+    const reds = surebets.filter(s => s.resultado === "RED").length;
+    const lucroTotal = surebets.reduce((acc, s) => acc + (s.lucro_real || 0), 0);
+    const stakeTotal = surebets.reduce((acc, s) => acc + (s.stake_total || s.stake || 0), 0);
     const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
-  }, [filteredSurebets]);
+  }, [surebets]);
+
+  // KPIs FILTRADOS (para Operações) - Aplicam filtros dimensionais
+  const kpisOperacoes = useMemo(() => {
+    const total = filteredSurebetsForOperacoes.length;
+    const pendentes = filteredSurebetsForOperacoes.filter(s => s.status === "PENDENTE").length;
+    const liquidadas = filteredSurebetsForOperacoes.filter(s => s.status === "LIQUIDADA").length;
+    const greens = filteredSurebetsForOperacoes.filter(s => s.resultado === "GREEN").length;
+    const reds = filteredSurebetsForOperacoes.filter(s => s.resultado === "RED").length;
+    const lucroTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + (s.lucro_real || 0), 0);
+    const stakeTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + (s.stake_total || s.stake || 0), 0);
+    const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
+    
+    return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
+  }, [filteredSurebetsForOperacoes]);
+
+  // Alias para compatibilidade - o KPI de referência depende da sub-aba ativa
+  // Mas para a Visão Geral sempre usamos kpisGlobal
+  const kpis = kpisGlobal;
 
   // casaData agregado por CASA (não por vínculo) - Padrão unificado
   const casaData = useMemo((): CasaAgregada[] => {
@@ -604,7 +624,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       vinculoEntry.lucro += lucro;
     };
 
-    filteredSurebets.forEach((surebet) => {
+    // ISOLAMENTO: casaData usa dados GLOBAIS (surebets), sem filtro dimensional
+    // Isso garante que "Por Casa" sempre mostre TODAS as casas
+    surebets.forEach((surebet) => {
       // Apostas simples (sem pernas) - usar bookmaker_nome direto
       if (surebet.forma_registro === "SIMPLES" || !surebet.pernas?.length) {
         const nomeCompleto = surebet.bookmaker_nome || "Desconhecida";
@@ -643,7 +665,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       })
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 8);
-  }, [filteredSurebets]);
+  }, [surebets]);
 
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   // Prioridade: catálogo global (mais completo e confiável)
@@ -708,9 +730,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     });
   }, [casaData, porCasaSort]);
 
-  // Separar surebets em abertas e histórico (usando filteredSurebets)
-  const surebetsAbertas = useMemo(() => filteredSurebets.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE"), [filteredSurebets]);
-  const surebetsHistorico = useMemo(() => filteredSurebets.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE"), [filteredSurebets]);
+  // Separar surebets em abertas e histórico (usando dados FILTRADOS para Operações)
+  // ISOLAMENTO: Filtros dimensionais (Casa/Parceiro) afetam APENAS esta lista
+  const surebetsAbertas = useMemo(() => filteredSurebetsForOperacoes.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE"), [filteredSurebetsForOperacoes]);
+  const surebetsHistorico = useMemo(() => filteredSurebetsForOperacoes.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE"), [filteredSurebetsForOperacoes]);
 
   // Auto-switch to history tab when no open operations
   useEffect(() => {
@@ -836,12 +859,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       </div>
 
       {/* Gráficos - layout igual ao ValueBet */}
-      {filteredSurebets.length > 0 && (
+      {/* ISOLAMENTO: Visão Geral SEMPRE usa dados globais (surebets), sem filtros dimensionais */}
+      {surebets.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Coluna esquerda: Gráfico + Estatísticas */}
           <div className="lg:col-span-2 space-y-4">
             <VisaoGeralCharts 
-              apostas={filteredSurebets.map(s => {
+              apostas={surebets.map(s => {
                 const isSimples = s.forma_registro === "SIMPLES" || !s.pernas?.length;
                 return {
                   data_aposta: s.data_operacao,
@@ -874,12 +898,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               isSingleDayPeriod={tabFilters.period === "1dia"}
               formatCurrency={formatCurrency}
             />
-            <SurebetStatisticsCard surebets={filteredSurebets} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
+            <SurebetStatisticsCard surebets={surebets} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
           </div>
           {/* Coluna direita: Casas Mais Utilizadas */}
           <div className="lg:col-span-1">
             <VisaoGeralCharts 
-              apostas={filteredSurebets.map(s => {
+              apostas={surebets.map(s => {
                 const isSimples = s.forma_registro === "SIMPLES" || !s.pernas?.length;
                 return {
                   data_aposta: s.data_operacao,
