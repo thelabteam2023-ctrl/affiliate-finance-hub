@@ -105,17 +105,16 @@ export function BetRowActionsMenu({
       <DropdownMenuContent 
         align="end" 
         className="min-w-[160px]"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Editar */}
-        <DropdownMenuItem onClick={() => handleAction(onEdit)}>
+        <DropdownMenuItem onSelect={() => handleAction(onEdit)}>
           <Pencil className="h-4 w-4 mr-2" />
           Editar
         </DropdownMenuItem>
 
         {/* Duplicar (opcional) */}
         {onDuplicate && (
-          <DropdownMenuItem onClick={() => handleAction(onDuplicate)}>
+          <DropdownMenuItem onSelect={() => handleAction(onDuplicate)}>
             <Copy className="h-4 w-4 mr-2" />
             Duplicar
           </DropdownMenuItem>
@@ -129,14 +128,14 @@ export function BetRowActionsMenu({
             <CheckCircle2 className="h-4 w-4 mr-2" />
             Alterar Resultado
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
+          <DropdownMenuSubContent>
             {RESULTADO_OPTIONS.map((option) => {
               const Icon = option.icon;
               const isCurrentResult = resultado === option.value;
               return (
                 <DropdownMenuItem
                   key={option.value}
-                  onClick={() => handleQuickResolve(option.value)}
+                  onSelect={() => handleQuickResolve(option.value)}
                   className={cn(option.className, isCurrentResult && "bg-muted/50")}
                   disabled={isCurrentResult}
                 >
@@ -155,7 +154,7 @@ export function BetRowActionsMenu({
 
         {/* Excluir (abre modal) */}
         <DropdownMenuItem
-          onClick={() => handleAction(onDelete)}
+          onSelect={() => handleAction(onDelete)}
           className="text-red-400 focus:text-red-400 focus:bg-red-500/10"
         >
           <Trash2 className="h-4 w-4 mr-2" />
