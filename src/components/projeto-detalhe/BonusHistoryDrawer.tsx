@@ -113,10 +113,10 @@ const getStatusBadge = (status: BonusStatus) => {
 const getFinalizeReasonLabel = (reason: FinalizeReason | null): string => {
   if (!reason) return "";
   const labels: Record<FinalizeReason, string> = {
-    rollover_completed: "Rollover concluído",
-    bonus_consumed: "Bônus consumido",
-    expired: "Expirou",
-    cancelled_reversed: "Cancelado/Revertido",
+    rollover_completed: "Rollover concluído (Saque)",
+    cycle_completed: "Ciclo encerrado",
+    expired: "Expirado",
+    cancelled_reversed: "Cancelado / Revertido",
   };
   return labels[reason] || reason;
 };

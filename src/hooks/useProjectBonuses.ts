@@ -7,7 +7,7 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 
 export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
 
-export type FinalizeReason = "rollover_completed" | "bonus_consumed" | "expired" | "cancelled_reversed";
+export type FinalizeReason = "rollover_completed" | "cycle_completed" | "expired" | "cancelled_reversed";
 
 export type BonusSource = "manual" | "template";
 
@@ -469,10 +469,10 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     },
     onSuccess: (reason) => {
       const reasonLabels: Record<FinalizeReason, string> = {
-        rollover_completed: "Rollover concluído",
-        bonus_consumed: "Bônus consumido/zerado",
-        expired: "Expirou",
-        cancelled_reversed: "Cancelado/Revertido",
+        rollover_completed: "Rollover concluído (saque liberado)",
+        cycle_completed: "Bônus utilizado / ciclo encerrado",
+        expired: "Expirado",
+        cancelled_reversed: "Cancelado / Revertido",
       };
       toast.success(`Bônus finalizado: ${reasonLabels[reason]}`);
       invalidateBonusQueries(projectId);
