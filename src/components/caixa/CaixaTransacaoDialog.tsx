@@ -2058,7 +2058,6 @@ export function CaixaTransacaoDialog({
           transactionData.valor_usd = valorEmUSD;
           transactionData.cotacao = cotacaoCoin;
           transactionData.cotacao_implicita = cotacaoCoin;
-          transactionData.cotacao_snapshot = cotacaoCoin; // Para auditoria
           
           // Registrar moeda de origem (moeda da casa)
           transactionData.moeda_origem = moedaCasaSaque;
