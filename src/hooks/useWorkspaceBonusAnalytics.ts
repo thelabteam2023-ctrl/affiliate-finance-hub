@@ -183,8 +183,9 @@ export function useWorkspaceBonusAnalytics(): UseWorkspaceBonusAnalyticsReturn {
         const totalBets = bets.length;
         const totalStake = bets.reduce((sum, b) => sum + Number(b.stake || 0), 0);
         const totalProfit = bets.reduce((sum, b) => sum + Number(b.lucro_prejuizo || 0), 0);
-        const betsWon = bets.filter(b => b.resultado === 'GANHOU').length;
-        const betsLost = bets.filter(b => b.resultado === 'PERDEU').length;
+        // CORREÇÃO: O banco usa 'GREEN' para ganhou e 'RED' para perdeu
+        const betsWon = bets.filter(b => b.resultado === 'GREEN' || b.resultado === 'MEIO_GREEN').length;
+        const betsLost = bets.filter(b => b.resultado === 'RED' || b.resultado === 'MEIO_RED').length;
         const betsPending = bets.filter(b => b.status === 'PENDENTE').length;
 
         // Depósitos
