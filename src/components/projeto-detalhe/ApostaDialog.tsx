@@ -47,6 +47,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useImportBetPrint } from "@/hooks/useImportBetPrint";
+import { DateAnomalyAlert } from "@/components/ui/date-anomaly-alert";
 import { RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
 import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, FONTE_SALDO, isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
@@ -457,9 +458,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     imagePreview: printImagePreview,
     fieldsNeedingReview: printFieldsNeedingReview,
     pendingData: printPendingData,
+    dateAnomaly: printDateAnomaly,
+    dateAnomalyConfirmed: printDateAnomalyConfirmed,
     processImage: processPrintImage,
     processFromClipboard: processPrintClipboard,
     clearParsedData: clearPrintData,
+    confirmDateAnomaly: confirmPrintDateAnomaly,
     applyParsedData: applyPrintData,
     resolveMarketForSport: resolvePrintMarket
   } = useImportBetPrint();
@@ -2740,6 +2744,24 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             <XCircle className="h-3.5 w-3.5" />
           </Button>
         </div>
+      )}
+
+      {/* ★ ALERTA DE ANOMALIA TEMPORAL - Data suspeita detectada por OCR */}
+      {!isPrintProcessing && printParsedData && printDateAnomaly && !printDateAnomalyConfirmed && !aposta && (
+        <DateAnomalyAlert
+          anomaly={printDateAnomaly}
+          origin="ocr"
+          onConfirm={confirmPrintDateAnomaly}
+          onEdit={() => {
+            // Foca no campo de data para edição manual
+            const dateField = document.querySelector('[data-date-field="dataAposta"]') as HTMLElement;
+            if (dateField) {
+              dateField.click();
+            }
+            confirmPrintDateAnomaly(); // Marca como confirmado pois o usuário vai editar
+          }}
+          className="mx-3"
+        />
       )}
     </>
   );

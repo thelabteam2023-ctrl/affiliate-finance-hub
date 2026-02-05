@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
@@ -9,6 +9,7 @@ import {
   normalizeMarketSemantically
 } from "@/lib/marketNormalizer";
 import { parseOcrMarket, resolveOcrResultToOption, formatSelectionFromOcrResult } from "@/lib/marketOcrParser";
+import { detectDateAnomaly, type DateAnomalyResult } from "@/lib/dateAnomalyDetection";
 
 export interface ParsedField {
   value: string | null;
@@ -59,9 +60,15 @@ interface UseImportBetPrintReturn {
   imagePreview: string | null;
   fieldsNeedingReview: FieldsNeedingReview;
   pendingData: PendingPrintData;
+  /** Resultado da detecção de anomalia temporal na data */
+  dateAnomaly: DateAnomalyResult | null;
+  /** Indica se o usuário já confirmou a anomalia de data */
+  dateAnomalyConfirmed: boolean;
   processImage: (file: File) => Promise<void>;
   processFromClipboard: (event: ClipboardEvent) => Promise<void>;
   clearParsedData: () => void;
+  /** Confirma conscientemente uma data anômala detectada */
+  confirmDateAnomaly: () => void;
   applyParsedData: () => {
     evento: string;
     dataHora: string;
@@ -98,6 +105,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     mercadoRaw: null,
     esporteDetectado: null
   });
+  const [dateAnomalyConfirmed, setDateAnomalyConfirmed] = useState(false);
 
   // Refs for concurrency control
   const processingLockRef = useRef<boolean>(false);
@@ -105,6 +113,23 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
   const processingIdRef = useRef<number>(0);
   const queueRef = useRef<QueuedImage[]>([]);
   const isProcessingQueueRef = useRef<boolean>(false);
+
+  // ★ DETECÇÃO DE ANOMALIA TEMPORAL - Roda automaticamente quando parsedData muda
+  const dateAnomaly = useMemo<DateAnomalyResult | null>(() => {
+    if (!parsedData?.dataHora?.value) return null;
+    const result = detectDateAnomaly(parsedData.dataHora.value);
+    // Reset confirmation when anomaly changes
+    if (result.isAnomalous) {
+      return result;
+    }
+    return null;
+  }, [parsedData?.dataHora?.value]);
+
+  // Reset confirmation when parsed data changes
+  const confirmDateAnomaly = useCallback(() => {
+    setDateAnomalyConfirmed(true);
+    console.log("[useImportBetPrint] Date anomaly confirmed by user");
+  }, []);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -515,6 +540,7 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     setImagePreview(null);
     setPendingData({ mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null });
     setProcessingPhase("idle");
+    setDateAnomalyConfirmed(false);
   }, []);
 
   const resolveMarketForSport = useCallback((sport: string, availableOptions: string[]): string => {
@@ -587,9 +613,12 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
     imagePreview,
     fieldsNeedingReview,
     pendingData,
+    dateAnomaly,
+    dateAnomalyConfirmed,
     processImage,
     processFromClipboard,
     clearParsedData,
+    confirmDateAnomaly,
     applyParsedData,
     resolveMarketForSport
   };
