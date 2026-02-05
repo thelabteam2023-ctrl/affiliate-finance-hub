@@ -41,7 +41,7 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
   
   // Estados gerais
   const [activeTab, setActiveTab] = useState("resumo");
-  const [period, setPeriod] = useState<StandardPeriodFilter>("30dias");
+  const [period, setPeriod] = useState<StandardPeriodFilter>("mes_atual");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [showHistorico, setShowHistorico] = useState(false);
 

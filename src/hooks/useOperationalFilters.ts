@@ -116,7 +116,7 @@ export function useOperationalFiltersQuery<T extends FilterableOperation>(
 /**
  * Hook simplificado para obter apenas o dateRange do contexto
  */
-export function useFiltersDateRange(fallbackPeriod: "1dia" | "7dias" | "30dias" | "ano" = "30dias") {
+export function useFiltersDateRange(fallbackPeriod: "1dia" | "7dias" | "mes_atual" | "mes_anterior" = "mes_atual") {
   const contextFilters = useOperationalFiltersOptional();
   
   return useMemo(() => {
