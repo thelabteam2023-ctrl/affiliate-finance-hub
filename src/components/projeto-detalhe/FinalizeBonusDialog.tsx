@@ -14,6 +14,37 @@ import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle2, AlertTriangle, Clock, XCircle } from "lucide-react";
 import { FinalizeReason } from "@/hooks/useProjectBonuses";
 
+const FINALIZE_REASONS: { value: FinalizeReason; label: string; description: string; icon: React.ReactNode; impact: string }[] = [
+  {
+    value: "rollover_completed",
+    label: "Rollover concluído (Saque liberado)",
+    description: "O requisito de rollover foi cumprido. O saldo agora é 100% real e pode ser sacado.",
+    icon: <CheckCircle2 className="h-4 w-4 text-emerald-400" />,
+    impact: "Sem impacto financeiro",
+  },
+  {
+    value: "cycle_completed",
+    label: "Bônus utilizado / Ciclo encerrado",
+    description: "O bônus foi usado e o ciclo promocional terminou com sucesso.",
+    icon: <CheckCircle2 className="h-4 w-4 text-blue-400" />,
+    impact: "Sem impacto financeiro",
+  },
+  {
+    value: "expired",
+    label: "Expirado",
+    description: "O prazo de validade expirou sem cumprir o rollover.",
+    icon: <Clock className="h-4 w-4 text-gray-400" />,
+    impact: "Sem impacto financeiro",
+  },
+  {
+    value: "cancelled_reversed",
+    label: "Cancelado / Revertido",
+    description: "A casa cancelou o bônus ou houve violação de regras.",
+    icon: <XCircle className="h-4 w-4 text-red-400" />,
+    impact: "Sem impacto financeiro",
+  },
+];
+
 interface FinalizeBonusDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,33 +52,6 @@ interface FinalizeBonusDialogProps {
   currency: string;
   onConfirm: (reason: FinalizeReason) => Promise<boolean>;
 }
-
-const FINALIZE_REASONS: { value: FinalizeReason; label: string; description: string; icon: React.ReactNode }[] = [
-  {
-    value: "rollover_completed",
-    label: "Rollover concluído",
-    description: "O requisito de rollover foi cumprido com sucesso",
-    icon: <CheckCircle2 className="h-4 w-4 text-emerald-400" />,
-  },
-  {
-    value: "bonus_consumed",
-    label: "Bônus consumido/zerado",
-    description: "O saldo do bônus foi totalmente utilizado",
-    icon: <AlertTriangle className="h-4 w-4 text-amber-400" />,
-  },
-  {
-    value: "expired",
-    label: "Expirou",
-    description: "O prazo de validade do bônus expirou",
-    icon: <Clock className="h-4 w-4 text-gray-400" />,
-  },
-  {
-    value: "cancelled_reversed",
-    label: "Cancelado/Revertido",
-    description: "O bônus foi cancelado ou estornado pela casa",
-    icon: <XCircle className="h-4 w-4 text-red-400" />,
-  },
-];
 
 const formatCurrency = (value: number, currency: string = "BRL") => {
   const symbols: Record<string, string> = {
@@ -92,8 +96,11 @@ export function FinalizeBonusDialog({
               </span>
               .
             </p>
-            <p className="text-amber-500">
-              Após finalizar, o bônus deixará de compor o saldo operável da casa.
+            <p className="text-muted-foreground text-sm">
+              Após finalizar, o vínculo lógico do bônus será encerrado.
+              <span className="block mt-1 text-emerald-500 font-medium">
+                ✓ Nenhuma alteração será feita no saldo.
+              </span>
             </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -124,7 +131,12 @@ export function FinalizeBonusDialog({
                     {reason.icon}
                     {reason.label}
                   </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">{reason.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {reason.description}
+                  </p>
+                  <p className="text-xs text-emerald-500/80 mt-0.5">
+                    📌 {reason.impact}
+                  </p>
                 </div>
               </div>
             ))}
@@ -136,7 +148,7 @@ export function FinalizeBonusDialog({
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={confirming}
-            className="bg-amber-600 hover:bg-amber-700"
+            className="bg-primary hover:bg-primary/90"
           >
             {confirming ? (
               <>

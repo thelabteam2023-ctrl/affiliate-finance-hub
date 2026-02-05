@@ -62,10 +62,10 @@ import {
 } from "@/components/ui/collapsible";
 
 const REASON_LABELS: Record<FinalizeReason, { label: string; icon: React.ElementType; color: string }> = {
-  rollover_completed: { label: "Rollover Concluído", icon: CheckCircle2, color: "text-emerald-400 bg-emerald-500/20 border-emerald-500/30" },
-  bonus_consumed: { label: "Bônus Consumido", icon: AlertTriangle, color: "text-yellow-400 bg-yellow-500/20 border-yellow-500/30" },
-  expired: { label: "Expirou", icon: XCircle, color: "text-red-400 bg-red-500/20 border-red-500/30" },
-  cancelled_reversed: { label: "Cancelado/Revertido", icon: RotateCcw, color: "text-gray-400 bg-gray-500/20 border-gray-500/30" },
+  rollover_completed: { label: "Rollover Concluído (Saque)", icon: CheckCircle2, color: "text-emerald-400 bg-emerald-500/20 border-emerald-500/30" },
+  cycle_completed: { label: "Ciclo Encerrado", icon: CheckCircle2, color: "text-blue-400 bg-blue-500/20 border-blue-500/30" },
+  expired: { label: "Expirado", icon: XCircle, color: "text-red-400 bg-red-500/20 border-red-500/30" },
+  cancelled_reversed: { label: "Cancelado / Revertido", icon: RotateCcw, color: "text-gray-400 bg-gray-500/20 border-gray-500/30" },
 };
 
 // Subcomponent to show finalized bonus history
