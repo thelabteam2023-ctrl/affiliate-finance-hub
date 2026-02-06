@@ -115,6 +115,75 @@ export const extractLocalDateKey = (dateString: string | null | undefined): stri
   return formatTz(zonedDate, 'yyyy-MM-dd', { timeZone: TIMEZONE_OPERACIONAL });
 };
 
+/**
+ * Converte um range de datas operacionais (dia civil em São Paulo) para 
+ * um range de timestamps UTC para uso em queries de banco.
+ * 
+ * CRÍTICO: Esta função resolve o problema onde apostas feitas às 23:00 BRT
+ * (02:00 UTC do dia seguinte) eram incorretamente filtradas.
+ * 
+ * Exemplo:
+ * - Dia operacional: 05/02/2026 (São Paulo)
+ * - Range UTC retornado: 2026-02-05T03:00:00Z até 2026-02-06T02:59:59.999Z
+ * 
+ * @param startDate - Data de início (considerada como início do dia em São Paulo)
+ * @param endDate - Data de fim (considerada como fim do dia em São Paulo)
+ * @returns Objeto com startUTC e endUTC em formato ISO para queries
+ */
+export const getOperationalDateRangeForQuery = (
+  startDate: Date,
+  endDate: Date
+): { startUTC: string; endUTC: string } => {
+  // Offset de São Paulo: UTC-3 (simplificado, não considera horário de verão pois foi abolido no Brasil)
+  // Para pegar início do dia em São Paulo (00:00), precisamos adicionar 3h ao UTC
+  // Ex: 00:00 São Paulo = 03:00 UTC
+  
+  // Início do dia operacional em São Paulo (00:00 local)
+  const startYear = startDate.getFullYear();
+  const startMonth = startDate.getMonth();
+  const startDay = startDate.getDate();
+  
+  // Criar data UTC que representa 00:00 em São Paulo
+  // 00:00 São Paulo = 03:00 UTC do mesmo dia
+  const startUTC = new Date(Date.UTC(startYear, startMonth, startDay, 3, 0, 0, 0));
+  
+  // Fim do dia operacional em São Paulo (23:59:59.999 local)
+  const endYear = endDate.getFullYear();
+  const endMonth = endDate.getMonth();
+  const endDay = endDate.getDate();
+  
+  // Criar data UTC que representa 23:59:59.999 em São Paulo
+  // 23:59:59.999 São Paulo = 02:59:59.999 UTC do dia SEGUINTE
+  const endUTC = new Date(Date.UTC(endYear, endMonth, endDay + 1, 2, 59, 59, 999));
+  
+  return {
+    startUTC: startUTC.toISOString(),
+    endUTC: endUTC.toISOString(),
+  };
+};
+
+/**
+ * Versão simplificada que aceita strings YYYY-MM-DD e retorna strings para queries
+ */
+export const getOperationalDateRangeFromStrings = (
+  startDateStr: string,
+  endDateStr: string
+): { startUTC: string; endUTC: string } => {
+  const [startYear, startMonth, startDay] = startDateStr.split('-').map(Number);
+  const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
+  
+  // 00:00 São Paulo = 03:00 UTC
+  const startUTC = new Date(Date.UTC(startYear, startMonth - 1, startDay, 3, 0, 0, 0));
+  
+  // 23:59:59.999 São Paulo = 02:59:59.999 UTC do dia seguinte
+  const endUTC = new Date(Date.UTC(endYear, endMonth - 1, endDay + 1, 2, 59, 59, 999));
+  
+  return {
+    startUTC: startUTC.toISOString(),
+    endUTC: endUTC.toISOString(),
+  };
+};
+
 // Ano mínimo permitido para apostas (proteção contra datas inválidas)
 const ANO_MINIMO_APOSTAS = 2025;
 

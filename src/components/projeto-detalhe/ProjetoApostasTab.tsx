@@ -32,6 +32,7 @@ import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasRes
 import { ApostaCard } from "./ApostaCard";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
 import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
 import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
@@ -387,8 +388,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         .order("data_aposta", { ascending: false });
       
       if (dateRange) {
-        query = query.gte("data_aposta", dateRange.start.toISOString());
-        query = query.lte("data_aposta", dateRange.end.toISOString());
+        // CRÍTICO: Usar getOperationalDateRangeForQuery para garantir timezone operacional (São Paulo)
+        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
+        query = query.gte("data_aposta", startUTC);
+        query = query.lte("data_aposta", endUTC);
       }
 
       const { data, error } = await query;
@@ -463,8 +466,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         .order("data_aposta", { ascending: false });
       
       if (dateRange) {
-        query = query.gte("data_aposta", dateRange.start.toISOString());
-        query = query.lte("data_aposta", dateRange.end.toISOString());
+        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
+        query = query.gte("data_aposta", startUTC);
+        query = query.lte("data_aposta", endUTC);
       }
 
       const { data, error } = await query;
@@ -516,8 +520,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         .order("data_aposta", { ascending: false });
       
       if (dateRange) {
-        query = query.gte("data_aposta", dateRange.start.toISOString());
-        query = query.lte("data_aposta", dateRange.end.toISOString());
+        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
+        query = query.gte("data_aposta", startUTC);
+        query = query.lte("data_aposta", endUTC);
       }
 
       const { data, error } = await query;

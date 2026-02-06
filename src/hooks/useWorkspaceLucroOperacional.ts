@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getOperationalDateRangeFromStrings } from '@/utils/dateUtils';
 
 /**
  * Interface de retorno do lucro por módulo
@@ -168,11 +169,19 @@ async function fetchApostasModulo(
     .not('resultado', 'is', null);
 
   // Aplicar filtro de período
-  if (dataInicio) {
-    query = query.gte('data_aposta', dataInicio);
-  }
-  if (dataFim) {
-    query = query.lte('data_aposta', dataFim + 'T23:59:59');
+  // CRÍTICO: Usar getOperationalDateRangeFromStrings para garantir timezone operacional (São Paulo)
+  if (dataInicio && dataFim) {
+    const { startUTC, endUTC } = getOperationalDateRangeFromStrings(dataInicio, dataFim);
+    query = query.gte('data_aposta', startUTC);
+    query = query.lte('data_aposta', endUTC);
+  } else if (dataInicio) {
+    // Apenas início definido - usar início do dia no timezone operacional
+    const { startUTC } = getOperationalDateRangeFromStrings(dataInicio, dataInicio);
+    query = query.gte('data_aposta', startUTC);
+  } else if (dataFim) {
+    // Apenas fim definido - usar fim do dia no timezone operacional
+    const { endUTC } = getOperationalDateRangeFromStrings(dataFim, dataFim);
+    query = query.lte('data_aposta', endUTC);
   }
 
   const { data, error } = await query;
@@ -291,11 +300,17 @@ async function fetchGirosGratisModulo(
     .eq('status', 'confirmado');
 
   // Aplicar filtro de período
-  if (dataInicio) {
-    query = query.gte('data_registro', dataInicio);
-  }
-  if (dataFim) {
-    query = query.lte('data_registro', dataFim + 'T23:59:59');
+  // CRÍTICO: Usar getOperationalDateRangeFromStrings para garantir timezone operacional (São Paulo)
+  if (dataInicio && dataFim) {
+    const { startUTC, endUTC } = getOperationalDateRangeFromStrings(dataInicio, dataFim);
+    query = query.gte('data_registro', startUTC);
+    query = query.lte('data_registro', endUTC);
+  } else if (dataInicio) {
+    const { startUTC } = getOperationalDateRangeFromStrings(dataInicio, dataInicio);
+    query = query.gte('data_registro', startUTC);
+  } else if (dataFim) {
+    const { endUTC } = getOperationalDateRangeFromStrings(dataFim, dataFim);
+    query = query.lte('data_registro', endUTC);
   }
 
   const { data, error } = await query;
