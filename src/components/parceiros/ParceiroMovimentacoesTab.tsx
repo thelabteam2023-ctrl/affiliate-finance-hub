@@ -614,6 +614,11 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       autoAdjustLabel = match?.[1] || "Liquidação Cripto";
     }
 
+    // Resolver logos de bookmakers
+    const origemBookmakerLogo = origemBookmakerName ? getLogoUrl(origemBookmakerName) : null;
+    const destinoBookmakerLogo = destinoBookmakerName ? getLogoUrl(destinoBookmakerName) : null;
+    const autoAdjustLogo = autoAdjustLabel ? getLogoUrl(autoAdjustLabel) : null;
+
     // Construir party de origem
     const from: CryptoParty = {
       owner_name: origemParceiro 
@@ -625,6 +630,7 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
         || (transacao.origem_tipo === "BOOKMAKER" ? "Conta Bookmaker" : null)
         || (isAutoAdjust && !transacao.origem_tipo ? "Conciliação" : null),
       address: origemWallet?.endereco || null,
+      logo_url: origemBookmakerLogo || (isAutoAdjust && !transacao.origem_tipo ? autoAdjustLogo : null),
     };
     
     // Construir party de destino
@@ -638,6 +644,7 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
         || (transacao.destino_tipo === "BOOKMAKER" ? "Conta Bookmaker" : null)
         || (isAutoAdjust && !transacao.destino_tipo ? "Conciliação" : null),
       address: destinoWallet?.endereco || null,
+      logo_url: destinoBookmakerLogo || (isAutoAdjust && !transacao.destino_tipo ? autoAdjustLogo : null),
     };
     
     // Determinar a rede (da wallet de origem ou destino)
