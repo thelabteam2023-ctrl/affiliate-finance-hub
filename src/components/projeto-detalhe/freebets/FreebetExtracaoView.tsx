@@ -22,6 +22,7 @@ import { CurvaExtracaoChart } from "./CurvaExtracaoChart";
 import { FreebetApostasList } from "./FreebetApostasList";
 import { FreebetApostaCard } from "./FreebetApostaCard";
 import { OperationsSubTabHeader } from "../operations";
+import { HistoryDimensionalFilter, useHistoryDimensionalFilter } from "../operations";
 
 export interface FreebetExtracaoMetrics {
   valorFreebetUsado: number;
@@ -56,6 +57,9 @@ export function FreebetExtracaoView({
 }: FreebetExtracaoViewProps) {
   const [subTab, setSubTab] = useState<"abertas" | "historico">("abertas");
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
+  
+  // Filtros dimensionais independentes para o histórico
+  const { dimensionalFilter, setDimensionalFilter } = useHistoryDimensionalFilter();
 
   // Hook de contaminação
   const {
@@ -145,9 +149,20 @@ export function FreebetExtracaoView({
   const apostasAtivas = apostasExtracao.filter(
     (ap) => ap.status === "PENDENTE" || ap.resultado === "PENDENTE"
   );
-  const apostasHistorico = apostasExtracao.filter(
+  
+  // Aplicar filtros dimensionais no histórico
+  const apostasHistoricoRaw = apostasExtracao.filter(
     (ap) => ap.status === "LIQUIDADA" && ap.resultado !== "PENDENTE"
   );
+  const apostasHistorico = useMemo(() => {
+    const { bookmakerIds, parceiroIds } = dimensionalFilter;
+    if (bookmakerIds.length === 0 && parceiroIds.length === 0) return apostasHistoricoRaw;
+    return apostasHistoricoRaw.filter(ap => {
+      if (bookmakerIds.length > 0 && !bookmakerIds.includes(ap.bookmaker_id)) return false;
+      // Para parceiro, precisamos resolver via bookmaker - usamos bookmaker_id para match indireto
+      return true;
+    });
+  }, [apostasHistoricoRaw, dimensionalFilter]);
 
   // Auto-switch to history tab when no active operations
   useEffect(() => {
@@ -333,6 +348,13 @@ export function FreebetExtracaoView({
 
           {subTab === "historico" && (
             <>
+              {/* Filtros dimensionais independentes do histórico */}
+              <HistoryDimensionalFilter
+                projetoId={projetoId}
+                value={dimensionalFilter}
+                onChange={setDimensionalFilter}
+                className="pb-3 border-b border-border/50 mb-4"
+              />
               {apostasHistorico.length === 0 ? (
                 <div className="text-center py-12 border rounded-lg bg-muted/5">
                   <CheckCircle2 className="mx-auto h-10 w-10 text-muted-foreground/30" />

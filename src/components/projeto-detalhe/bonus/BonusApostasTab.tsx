@@ -40,7 +40,9 @@ import { useProjectBonuses, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { 
   OperationsSubTabHeader,
-  type HistorySubTab 
+  type HistorySubTab,
+  HistoryDimensionalFilter,
+  useHistoryDimensionalFilter,
 } from "../operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 
@@ -213,6 +215,9 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
   // Sub-tab state (Abertas/Histórico pattern)
   const [subTab, setSubTab] = useState<HistorySubTab>("abertas");
   const [reasonFilter, setReasonFilter] = useState<string>("all");
+  
+  // Filtros dimensionais independentes para o histórico
+  const { dimensionalFilter, setDimensionalFilter } = useHistoryDimensionalFilter();
 
   // Initial fetch and when projetoId changes - reset refs
   useEffect(() => {
@@ -528,6 +533,15 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     onSync: handleApostaUpdated,
   });
 
+  // Dimensional filter helpers
+  const matchesDimensionalFilter = (bookmaker_id: string | undefined, parceiro_id: string | undefined) => {
+    const { bookmakerIds, parceiroIds } = dimensionalFilter;
+    if (bookmakerIds.length > 0 && bookmaker_id && !bookmakerIds.includes(bookmaker_id)) return false;
+    if (parceiroIds.length > 0 && parceiro_id && !parceiroIds.includes(parceiro_id)) return false;
+    if (parceiroIds.length > 0 && !parceiro_id) return false;
+    return true;
+  };
+
   // Filter apostas
   const filteredApostas = apostas.filter((aposta) => {
     const matchesSearch = 
@@ -537,7 +551,8 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     const matchesStatus = statusFilter === "all" || aposta.status === statusFilter;
     const matchesResultado = resultadoFilter === "all" || aposta.resultado === resultadoFilter;
     const matchesTipo = tipoFilter === "todas" || tipoFilter === "simples";
-    return matchesSearch && matchesStatus && matchesResultado && matchesTipo;
+    const matchesDim = matchesDimensionalFilter(aposta.bookmaker_id, aposta.bookmaker?.parceiro_id);
+    return matchesSearch && matchesStatus && matchesResultado && matchesTipo && matchesDim;
   });
 
   // Filter multiplas
@@ -548,7 +563,8 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     const matchesStatus = statusFilter === "all" || am.status === statusFilter;
     const matchesResultado = resultadoFilter === "all" || am.resultado === resultadoFilter;
     const matchesTipo = tipoFilter === "todas" || tipoFilter === "multiplas";
-    return (searchTerm === "" || matchesSearch) && matchesStatus && matchesResultado && matchesTipo;
+    const matchesDim = matchesDimensionalFilter(am.bookmaker_id, am.bookmaker?.parceiro_id);
+    return (searchTerm === "" || matchesSearch) && matchesStatus && matchesResultado && matchesTipo && matchesDim;
   });
 
   // Filter surebets
@@ -560,7 +576,11 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
     const matchesStatus = statusFilter === "all" || sb.status === statusFilter;
     const matchesResultado = resultadoFilter === "all" || sb.resultado === resultadoFilter;
     const matchesTipo = tipoFilter === "todas" || tipoFilter === "surebets";
-    return matchesSearch && matchesStatus && matchesResultado && matchesTipo;
+    // Surebets: match if ANY perna matches the dimensional filter
+    const matchesDim = dimensionalFilter.bookmakerIds.length === 0 && dimensionalFilter.parceiroIds.length === 0
+      ? true
+      : (sb.pernas || []).some(p => matchesDimensionalFilter(p.bookmaker_id, undefined));
+    return matchesSearch && matchesStatus && matchesResultado && matchesTipo && matchesDim;
   });
 
   // Unify and sort
@@ -983,7 +1003,14 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
 
           {/* Histórico Content */}
           {subTab === "historico" && (
-            <div className="space-y-6">
+            <div className="space-y-4">
+              {/* Filtros dimensionais independentes do histórico */}
+              <HistoryDimensionalFilter
+                projetoId={projetoId}
+                value={dimensionalFilter}
+                onChange={setDimensionalFilter}
+                className="pb-3 border-b border-border/50"
+              />
               {/* Apostas Liquidadas */}
               {apostasHistorico.length > 0 && (
                 <div className="space-y-3">
