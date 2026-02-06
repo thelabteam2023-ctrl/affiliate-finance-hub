@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getOperationalDateRangeForQuery } from '@/utils/dateUtils';
 
 // Fonte única de verdade para o resultado do projeto
 export interface ProjetoResultado {
@@ -236,8 +237,17 @@ async function fetchGrossProfitFromBets(
     .eq('projeto_id', projetoId)
     .eq('status', 'LIQUIDADA');
   
-  if (dataInicio) query = query.gte('data_aposta', dataInicio.toISOString());
-  if (dataFim) query = query.lte('data_aposta', dataFim.toISOString());
+  // CRÍTICO: Usar timezone operacional (America/Sao_Paulo)
+  if (dataInicio && dataFim) {
+    const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicio, dataFim);
+    query = query.gte('data_aposta', startUTC).lte('data_aposta', endUTC);
+  } else if (dataInicio) {
+    const { startUTC } = getOperationalDateRangeForQuery(dataInicio, dataInicio);
+    query = query.gte('data_aposta', startUTC);
+  } else if (dataFim) {
+    const { endUTC } = getOperationalDateRangeForQuery(dataFim, dataFim);
+    query = query.lte('data_aposta', endUTC);
+  }
 
   const { data, error } = await query;
 
@@ -272,8 +282,17 @@ async function fetchTotalStaked(
     .select('stake, stake_total, stake_consolidado, forma_registro, moeda_operacao, consolidation_currency')
     .eq('projeto_id', projetoId);
   
-  if (dataInicio) query = query.gte('data_aposta', dataInicio.toISOString());
-  if (dataFim) query = query.lte('data_aposta', dataFim.toISOString());
+  // CRÍTICO: Usar timezone operacional (America/Sao_Paulo)
+  if (dataInicio && dataFim) {
+    const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicio, dataFim);
+    query = query.gte('data_aposta', startUTC).lte('data_aposta', endUTC);
+  } else if (dataInicio) {
+    const { startUTC } = getOperationalDateRangeForQuery(dataInicio, dataInicio);
+    query = query.gte('data_aposta', startUTC);
+  } else if (dataFim) {
+    const { endUTC } = getOperationalDateRangeForQuery(dataFim, dataFim);
+    query = query.lte('data_aposta', endUTC);
+  }
 
   const { data, error } = await query;
 
@@ -309,8 +328,17 @@ async function fetchOperationalLosses(
     .select('valor, status')
     .eq('projeto_id', projetoId);
   
-  if (dataInicio) query = query.gte('data_perda', dataInicio.toISOString());
-  if (dataFim) query = query.lte('data_perda', dataFim.toISOString());
+  // CRÍTICO: Usar timezone operacional (America/Sao_Paulo)
+  if (dataInicio && dataFim) {
+    const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicio, dataFim);
+    query = query.gte('data_perda', startUTC).lte('data_perda', endUTC);
+  } else if (dataInicio) {
+    const { startUTC } = getOperationalDateRangeForQuery(dataInicio, dataInicio);
+    query = query.gte('data_perda', startUTC);
+  } else if (dataFim) {
+    const { endUTC } = getOperationalDateRangeForQuery(dataFim, dataFim);
+    query = query.lte('data_perda', endUTC);
+  }
 
   const { data, error } = await query;
 
@@ -380,8 +408,17 @@ async function fetchLucroGirosGratis(
     .eq('projeto_id', projetoId)
     .eq('status', 'confirmado'); // Apenas giros confirmados
   
-  if (dataInicio) query = query.gte('data_registro', dataInicio.toISOString());
-  if (dataFim) query = query.lte('data_registro', dataFim.toISOString());
+  // CRÍTICO: Usar timezone operacional (America/Sao_Paulo)
+  if (dataInicio && dataFim) {
+    const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicio, dataFim);
+    query = query.gte('data_registro', startUTC).lte('data_registro', endUTC);
+  } else if (dataInicio) {
+    const { startUTC } = getOperationalDateRangeForQuery(dataInicio, dataInicio);
+    query = query.gte('data_registro', startUTC);
+  } else if (dataFim) {
+    const { endUTC } = getOperationalDateRangeForQuery(dataFim, dataFim);
+    query = query.lte('data_registro', endUTC);
+  }
 
   const { data, error } = await query;
 
@@ -416,8 +453,15 @@ async function fetchLucroCashback(
     .select('valor, moeda_operacao, valor_brl_referencia')
     .eq('projeto_id', projetoId);
 
-  if (dataInicio) query = query.gte('data_credito', dataInicio.toISOString().split('T')[0]);
-  if (dataFim) query = query.lte('data_credito', dataFim.toISOString().split('T')[0]);
+  // Cashback usa data (YYYY-MM-DD), não timestamp - extrair apenas a data operacional
+  if (dataInicio) {
+    const startDate = `${dataInicio.getFullYear()}-${String(dataInicio.getMonth() + 1).padStart(2, '0')}-${String(dataInicio.getDate()).padStart(2, '0')}`;
+    query = query.gte('data_credito', startDate);
+  }
+  if (dataFim) {
+    const endDate = `${dataFim.getFullYear()}-${String(dataFim.getMonth() + 1).padStart(2, '0')}-${String(dataFim.getDate()).padStart(2, '0')}`;
+    query = query.lte('data_credito', endDate);
+  }
 
   const { data, error } = await query;
 
