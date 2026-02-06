@@ -122,19 +122,25 @@ export function SurebetRowActionsMenu({
   const voidOption = quickOptions.find(o => o.type === "all_void");
   
   const handleAction = (action: () => void) => {
-    action();
     setIsOpen(false);
+    setTimeout(() => action(), 0);
   };
   
   const handleQuickResolve = (result: SurebetQuickResult) => {
-    onQuickResolve(result);
     setIsOpen(false);
+    setTimeout(() => {
+      try {
+        onQuickResolve(result);
+      } catch (err) {
+        console.error('[SurebetRowActionsMenu] Erro ao chamar onQuickResolve:', err);
+      }
+    }, 0);
   };
   
   const isLiquidada = status === "LIQUIDADA";
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -154,17 +160,17 @@ export function SurebetRowActionsMenu({
       <DropdownMenuContent 
         align="end" 
         className="min-w-[180px] bg-popover"
-        onClick={(e) => e.stopPropagation()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {/* Editar */}
-        <DropdownMenuItem onClick={() => handleAction(onEdit)}>
+        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleAction(onEdit); }}>
           <Pencil className="h-4 w-4 mr-2" />
           Editar
         </DropdownMenuItem>
 
         {/* Duplicar */}
         {onDuplicate && (
-          <DropdownMenuItem onClick={() => handleAction(onDuplicate)}>
+          <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleAction(onDuplicate); }}>
             <Copy className="h-4 w-4 mr-2" />
             Duplicar
           </DropdownMenuItem>
@@ -180,7 +186,6 @@ export function SurebetRowActionsMenu({
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent 
             className="min-w-[180px] max-h-[320px] overflow-y-auto bg-popover"
-            onClick={(e) => e.stopPropagation()}
           >
             {/* Single Win Options */}
             <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -191,7 +196,7 @@ export function SurebetRowActionsMenu({
               {singleWinOptions.map((option, idx) => (
                 <DropdownMenuItem
                   key={`single-${idx}`}
-                  onClick={() => handleQuickResolve(option)}
+                  onSelect={(e) => { e.preventDefault(); handleQuickResolve(option); }}
                   className="text-emerald-400 focus:text-emerald-400 focus:bg-emerald-500/10"
                 >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -212,7 +217,7 @@ export function SurebetRowActionsMenu({
                   {doubleGreenOptions.map((option, idx) => (
                     <DropdownMenuItem
                       key={`double-${idx}`}
-                      onClick={() => handleQuickResolve(option)}
+                      onSelect={(e) => { e.preventDefault(); handleQuickResolve(option); }}
                       className="text-teal-400 focus:text-teal-400 focus:bg-teal-500/10"
                     >
                       <Layers className="h-4 w-4 mr-2" />
@@ -228,7 +233,7 @@ export function SurebetRowActionsMenu({
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => handleQuickResolve(voidOption)}
+                  onSelect={(e) => { e.preventDefault(); handleQuickResolve(voidOption); }}
                   className="text-gray-400 focus:text-gray-400 focus:bg-gray-500/10"
                 >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -243,7 +248,7 @@ export function SurebetRowActionsMenu({
 
         {/* Excluir */}
         <DropdownMenuItem
-          onClick={() => handleAction(onDelete)}
+          onSelect={(e) => { e.preventDefault(); handleAction(onDelete); }}
           className="text-red-400 focus:text-red-400 focus:bg-red-500/10"
         >
           <Trash2 className="h-4 w-4 mr-2" />
