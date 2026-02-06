@@ -92,6 +92,13 @@ interface VisaoGeralChartsProps {
   apostas: ApostaBase[];
   /** Apostas de todos os projetos (para visão global) */
   apostasGlobal?: ApostaBase[];
+  /**
+   * DESACOPLAMENTO CALENDÁRIO-FILTROS:
+   * Apostas específicas para o calendário (SEM filtro de período).
+   * O calendário é VISUAL e deve exibir dados do mês navegado,
+   * independente dos filtros analíticos aplicados.
+   */
+  apostasCalendario?: ApostaBase[];
   /** Entradas extras de lucro (cashback, giros grátis, freebets, bônus) */
   extrasLucro?: ExtraLucroEntry[];
   accentColor?: string;
@@ -468,6 +475,7 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
 export function VisaoGeralCharts({ 
   apostas, 
   apostasGlobal,
+  apostasCalendario,
   extrasLucro = [],
   accentColor = "hsl(var(--primary))", 
   logoMap, 
@@ -479,6 +487,10 @@ export function VisaoGeralCharts({
   formatChartAxis,
   showScopeToggle = false
 }: VisaoGeralChartsProps) {
+  
+  // DESACOPLAMENTO: O calendário usa seus próprios dados (sem filtro de período)
+  // Se apostasCalendario não for fornecido, usa apostas como fallback
+  const calendarData = apostasCalendario ?? apostas;
   // Fallback para formatChartAxis se não fornecido - usa versão compacta do formatCurrency
   const axisFormatter = formatChartAxis || ((v: number) => {
     const absVal = Math.abs(v);
@@ -777,7 +789,7 @@ export function VisaoGeralCharts({
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="end">
                     <CalendarioLucros 
-                      apostas={apostas.map(a => ({
+                      apostas={calendarData.map(a => ({
                         data_aposta: a.data_aposta,
                         resultado: null,
                         lucro_prejuizo: a.lucro_prejuizo
@@ -839,7 +851,7 @@ export function VisaoGeralCharts({
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="end">
                     <CalendarioLucros 
-                      apostas={apostas.map(a => ({
+                      apostas={calendarData.map(a => ({
                         data_aposta: a.data_aposta,
                         resultado: null,
                         lucro_prejuizo: a.lucro_prejuizo

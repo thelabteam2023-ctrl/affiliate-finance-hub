@@ -61,6 +61,7 @@ import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateR
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
+import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -194,6 +195,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   // Hook de formatação de moeda do projeto
   const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol } = useProjetoCurrency(projetoId);
   const currencySymbol = getSymbol();
+  
+  // DESACOPLAMENTO CALENDÁRIO: Dados separados para o calendário (sem filtro de período)
+  const { apostas: calendarApostas, refetch: refetchCalendar } = useCalendarApostas({
+    projetoId,
+    estrategia: "SUREBET",
+  });
   
   // Sub-abas Abertas/Histórico - usa tipo padronizado
   const [operacoesSubTab, setOperacoesSubTab] = useState<HistorySubTab>("abertas");
@@ -895,6 +902,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                       }))
                 };
               })}
+              apostasCalendario={transformCalendarApostasForCharts(calendarApostas)}
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showCasasCard={false}
