@@ -603,14 +603,27 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       ? data?.bookmakerNames.get(transacao.destino_bookmaker_id) || null
       : null;
 
+    // Detectar tipos automáticos sem origem/destino explícito
+    const isAutoAdjust = ["GANHO_CAMBIAL", "PERDA_CAMBIAL"].includes(transacao.tipo_transacao);
+    
+    // Resolver referência do lançamento automático (buscar bookmaker do saque original)
+    let autoAdjustLabel: string | null = null;
+    if (isAutoAdjust && transacao.descricao) {
+      // Extrair nome da bookmaker da descrição (ex: "Ganho na liquidação cripto - MAFIA CASINO (diferença: ...)")
+      const match = transacao.descricao.match(/cripto\s*-\s*(.+?)\s*\(/);
+      autoAdjustLabel = match?.[1] || "Liquidação Cripto";
+    }
+
     // Construir party de origem
     const from: CryptoParty = {
       owner_name: origemParceiro 
         || (transacao.origem_tipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" : null)
-        || (transacao.origem_tipo === "BOOKMAKER" ? origemBookmakerName : null),
+        || (transacao.origem_tipo === "BOOKMAKER" ? origemBookmakerName : null)
+        || (isAutoAdjust && !transacao.origem_tipo ? (autoAdjustLabel || "Ajuste Cambial") : null),
       wallet_name: origemWallet?.exchange 
         || (transacao.origem_tipo === "CAIXA_OPERACIONAL" ? "Operacional" : null)
-        || (transacao.origem_tipo === "BOOKMAKER" ? "Conta Bookmaker" : null),
+        || (transacao.origem_tipo === "BOOKMAKER" ? "Conta Bookmaker" : null)
+        || (isAutoAdjust && !transacao.origem_tipo ? "Conciliação" : null),
       address: origemWallet?.endereco || null,
     };
     
@@ -618,10 +631,12 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
     const to: CryptoParty = {
       owner_name: destinoParceiro 
         || (transacao.destino_tipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" : null)
-        || (transacao.destino_tipo === "BOOKMAKER" ? destinoBookmakerName : null),
+        || (transacao.destino_tipo === "BOOKMAKER" ? destinoBookmakerName : null)
+        || (isAutoAdjust && !transacao.destino_tipo ? (autoAdjustLabel || "Ajuste Cambial") : null),
       wallet_name: destinoWallet?.exchange 
         || (transacao.destino_tipo === "CAIXA_OPERACIONAL" ? "Operacional" : null)
-        || (transacao.destino_tipo === "BOOKMAKER" ? "Conta Bookmaker" : null),
+        || (transacao.destino_tipo === "BOOKMAKER" ? "Conta Bookmaker" : null)
+        || (isAutoAdjust && !transacao.destino_tipo ? "Conciliação" : null),
       address: destinoWallet?.endereco || null,
     };
     
