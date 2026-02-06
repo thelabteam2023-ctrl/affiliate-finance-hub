@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
+import { DashboardPeriodFilter, getDashboardDateRangeAsStrings } from "@/types/dashboardFilters";
 import { PageHeader } from "@/components/PageHeader";
 import {
   Loader2,
@@ -233,10 +234,14 @@ export default function Financeiro() {
   // Hook para conversão de moedas (usa a API centralizada)
   const { convertFromBRL } = useCurrencySnapshot({ cryptoSymbols });
 
-  // Filtros de período
-  const [periodoPreset, setPeriodoPreset] = useState<string>("1m");
-  const [dataInicio, setDataInicio] = useState<string>("");
-  const [dataFim, setDataFim] = useState<string>("");
+  // Filtro de período unificado (padrão: mês atual)
+  const [periodoPreset, setPeriodoPreset] = useState<DashboardPeriodFilter>("mes");
+  
+  // Datas derivadas do filtro selecionado (sem estado manual)
+  const { dataInicio, dataFim } = useMemo(
+    () => getDashboardDateRangeAsStrings(periodoPreset),
+    [periodoPreset]
+  );
 
   // ==================== FONTE ÚNICA DE VERDADE: LUCRO OPERACIONAL ====================
   // Hook centralizado que consolida: apostas + cashback + giros grátis (e futuros módulos)
@@ -298,32 +303,7 @@ export default function Financeiro() {
     setLoading(true);
   }, []));
 
-  useEffect(() => {
-    // Aplicar presets de período
-    const hoje = new Date();
-    switch (periodoPreset) {
-      case "1m":
-        setDataInicio(format(subMonths(hoje, 1), "yyyy-MM-dd"));
-        setDataFim(format(hoje, "yyyy-MM-dd"));
-        break;
-      case "3m":
-        setDataInicio(format(subMonths(hoje, 3), "yyyy-MM-dd"));
-        setDataFim(format(hoje, "yyyy-MM-dd"));
-        break;
-      case "6m":
-        setDataInicio(format(subMonths(hoje, 6), "yyyy-MM-dd"));
-        setDataFim(format(hoje, "yyyy-MM-dd"));
-        break;
-      case "12m":
-        setDataInicio(format(subMonths(hoje, 12), "yyyy-MM-dd"));
-        setDataFim(format(hoje, "yyyy-MM-dd"));
-        break;
-      case "all":
-        setDataInicio("");
-        setDataFim("");
-        break;
-    }
-  }, [periodoPreset]);
+  // Datas derivadas automaticamente do periodoPreset via useMemo - sem necessidade de useEffect
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -1128,46 +1108,11 @@ export default function Financeiro() {
         cotacaoUSD={cotacaoUSD}
       />
 
-      {/* Filtros de Período - Compacto */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="inline-flex items-center rounded-lg border border-border/50 bg-muted/30 p-0.5">
-          {[
-            { value: "1m", label: "Mês" },
-            { value: "3m", label: "3M" },
-            { value: "6m", label: "6M" },
-            { value: "12m", label: "Ano" },
-            { value: "all", label: "Tudo" },
-          ].map((preset) => (
-            <button
-              key={preset.value}
-              onClick={() => setPeriodoPreset(preset.value)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                periodoPreset === preset.value
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-        
-        <div className="h-4 w-px bg-border/50 mx-1 hidden sm:block" />
-        
-        <div className="flex items-center gap-1.5 text-xs">
-          <DatePicker
-            value={dataInicio}
-            onChange={(val) => { setDataInicio(val); setPeriodoPreset("custom"); }}
-            placeholder="Início"
-          />
-          <span className="text-muted-foreground/60">—</span>
-          <DatePicker
-            value={dataFim}
-            onChange={(val) => { setDataFim(val); setPeriodoPreset("custom"); }}
-            placeholder="Fim"
-          />
-        </div>
-      </div>
+      {/* Filtros de Período - Padrão Unificado (sem calendário manual) */}
+      <DashboardPeriodFilterBar
+        value={periodoPreset}
+        onChange={setPeriodoPreset}
+      />
 
       {/* Tabs */}
       <Tabs defaultValue={tabFromUrl || "overview"} className="space-y-6">
