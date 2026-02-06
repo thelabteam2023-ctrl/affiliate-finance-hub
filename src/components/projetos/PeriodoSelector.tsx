@@ -37,8 +37,9 @@ export function PeriodoSelector({ periodo, onChange }: PeriodoSelectorProps) {
     
     // Converter para o formato PeriodoAnalise esperado pelo sistema legado
     const presetMap: Record<DashboardPeriodFilter, PeriodoAnalise['preset']> = {
+      'anterior': 'custom',
       'mes': 'mes',
-      'anterior': 'custom', // Anterior não existe no tipo antigo
+      'ano': 'ano',
       'tudo': 'tudo',
       'custom': 'custom',
     };

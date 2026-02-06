@@ -17,12 +17,13 @@ export const OPERATIONAL_TIMEZONE = "America/Sao_Paulo";
 /**
  * Filtros temporais padrão disponíveis em TODOS os dashboards
  * 
- * - mes: Mês corrente (01 até hoje)
  * - anterior: Mês anterior completo
+ * - mes: Mês corrente (01 até hoje)
+ * - ano: Ano corrente (01/01 até hoje)
  * - tudo: Todo o histórico disponível
  * - custom: Período personalizado via calendário
  */
-export type DashboardPeriodFilter = "mes" | "anterior" | "tudo" | "custom";
+export type DashboardPeriodFilter = "anterior" | "mes" | "ano" | "tudo" | "custom";
 
 export interface DashboardDateRange {
   start: Date | null;
@@ -39,8 +40,9 @@ export interface DashboardPeriodOption {
  * O "custom" não aparece como botão, mas como calendário
  */
 export const DASHBOARD_PERIOD_OPTIONS: DashboardPeriodOption[] = [
-  { value: "mes", label: "Mês atual" },
   { value: "anterior", label: "Anterior" },
+  { value: "mes", label: "Atual" },
+  { value: "ano", label: "Ano" },
   { value: "tudo", label: "Tudo" },
 ];
 
@@ -60,6 +62,14 @@ export function getDashboardDateRange(
   const nowLocal = toZonedTime(nowUTC, OPERATIONAL_TIMEZONE);
   
   switch (filter) {
+    case "anterior":
+      // Mês anterior completo
+      const prevMonth = subMonths(nowLocal, 1);
+      return {
+        start: startOfMonth(prevMonth),
+        end: endOfMonth(prevMonth),
+      };
+    
     case "mes":
       // Mês corrente: 01 até hoje
       return {
@@ -67,12 +77,11 @@ export function getDashboardDateRange(
         end: endOfDay(nowLocal),
       };
     
-    case "anterior":
-      // Mês anterior completo
-      const prevMonth = subMonths(nowLocal, 1);
+    case "ano":
+      // Ano corrente: 01/01 até hoje
       return {
-        start: startOfMonth(prevMonth),
-        end: endOfMonth(prevMonth),
+        start: startOfYear(nowLocal),
+        end: endOfDay(nowLocal),
       };
     
     case "custom":
