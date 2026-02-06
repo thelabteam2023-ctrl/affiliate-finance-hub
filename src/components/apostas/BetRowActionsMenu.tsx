@@ -74,22 +74,26 @@ export function BetRowActionsMenu({
   const [isOpen, setIsOpen] = useState(false);
 
   const handleAction = (action: () => void) => {
-    action();
     setIsOpen(false);
+    // Defer action to next tick so menu closes cleanly first
+    setTimeout(() => action(), 0);
   };
 
   const handleQuickResolve = (novoResultado: BetResultado) => {
     console.log('[BetRowActionsMenu] handleQuickResolve chamado:', { apostaId, novoResultado, currentResultado: resultado });
-    try {
-      onQuickResolve(novoResultado);
-    } catch (err) {
-      console.error('[BetRowActionsMenu] Erro ao chamar onQuickResolve:', err);
-    }
+    // Close menu first, then fire the async mutation on next tick
     setIsOpen(false);
+    setTimeout(() => {
+      try {
+        onQuickResolve(novoResultado);
+      } catch (err) {
+        console.error('[BetRowActionsMenu] Erro ao chamar onQuickResolve:', err);
+      }
+    }, 0);
   };
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -109,16 +113,17 @@ export function BetRowActionsMenu({
       <DropdownMenuContent 
         align="end" 
         className="min-w-[160px]"
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {/* Editar */}
-        <DropdownMenuItem onSelect={() => handleAction(onEdit)}>
+        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleAction(onEdit); }}>
           <Pencil className="h-4 w-4 mr-2" />
           Editar
         </DropdownMenuItem>
 
         {/* Duplicar (opcional) */}
         {onDuplicate && (
-          <DropdownMenuItem onSelect={() => handleAction(onDuplicate)}>
+          <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleAction(onDuplicate); }}>
             <Copy className="h-4 w-4 mr-2" />
             Duplicar
           </DropdownMenuItem>
@@ -139,7 +144,12 @@ export function BetRowActionsMenu({
               return (
                 <DropdownMenuItem
                   key={option.value}
-                  onSelect={() => handleQuickResolve(option.value)}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    if (!isCurrentResult) {
+                      handleQuickResolve(option.value);
+                    }
+                  }}
                   className={cn(option.className, isCurrentResult && "bg-muted/50")}
                   disabled={isCurrentResult}
                 >
@@ -158,7 +168,7 @@ export function BetRowActionsMenu({
 
         {/* Excluir (abre modal) */}
         <DropdownMenuItem
-          onSelect={() => handleAction(onDelete)}
+          onSelect={(e) => { e.preventDefault(); handleAction(onDelete); }}
           className="text-red-400 focus:text-red-400 focus:bg-red-500/10"
         >
           <Trash2 className="h-4 w-4 mr-2" />
