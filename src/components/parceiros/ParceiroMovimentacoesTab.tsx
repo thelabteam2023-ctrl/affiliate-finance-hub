@@ -593,17 +593,35 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       ? data?.parceiroNames.get(transacao.destino_parceiro_id)
       : (destinoWallet?.parceiro_id ? data?.parceiroNames.get(destinoWallet.parceiro_id) : null);
     
+    // Resolver nome da bookmaker de origem (quando tipo é BOOKMAKER)
+    const origemBookmakerName = transacao.origem_tipo === "BOOKMAKER" && transacao.origem_bookmaker_id
+      ? data?.bookmakerNames.get(transacao.origem_bookmaker_id) || null
+      : null;
+
+    // Resolver nome da bookmaker de destino (quando tipo é BOOKMAKER)
+    const destinoBookmakerName = transacao.destino_tipo === "BOOKMAKER" && transacao.destino_bookmaker_id
+      ? data?.bookmakerNames.get(transacao.destino_bookmaker_id) || null
+      : null;
+
     // Construir party de origem
     const from: CryptoParty = {
-      owner_name: origemParceiro || (transacao.origem_tipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" : null),
-      wallet_name: origemWallet?.exchange || (transacao.origem_tipo === "CAIXA_OPERACIONAL" ? "Operacional" : null),
+      owner_name: origemParceiro 
+        || (transacao.origem_tipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" : null)
+        || (transacao.origem_tipo === "BOOKMAKER" ? origemBookmakerName : null),
+      wallet_name: origemWallet?.exchange 
+        || (transacao.origem_tipo === "CAIXA_OPERACIONAL" ? "Operacional" : null)
+        || (transacao.origem_tipo === "BOOKMAKER" ? "Conta Bookmaker" : null),
       address: origemWallet?.endereco || null,
     };
     
     // Construir party de destino
     const to: CryptoParty = {
-      owner_name: destinoParceiro || (transacao.destino_tipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" : null),
-      wallet_name: destinoWallet?.exchange || (transacao.destino_tipo === "CAIXA_OPERACIONAL" ? "Operacional" : null),
+      owner_name: destinoParceiro 
+        || (transacao.destino_tipo === "CAIXA_OPERACIONAL" ? "Caixa Operacional" : null)
+        || (transacao.destino_tipo === "BOOKMAKER" ? destinoBookmakerName : null),
+      wallet_name: destinoWallet?.exchange 
+        || (transacao.destino_tipo === "CAIXA_OPERACIONAL" ? "Operacional" : null)
+        || (transacao.destino_tipo === "BOOKMAKER" ? "Conta Bookmaker" : null),
       address: destinoWallet?.endereco || null,
     };
     
