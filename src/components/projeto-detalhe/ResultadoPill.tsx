@@ -12,6 +12,7 @@ import { Loader2, Pencil, CheckCircle2, XCircle, CircleDot, X, Check } from "luc
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { reliquidarAposta } from "@/services/aposta/ApostaService";
+import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
 
 type OperationType = "bookmaker" | "back" | "lay" | "cobertura";
 
@@ -577,7 +578,7 @@ export function ResultadoPill({
                 .eq("id", freebetPendente.id);
               
               // MIGRADO PARA LEDGER: Creditar via RPC atômica
-              const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+               // MIGRADO PARA LEDGER: Creditar via RPC atômica
               await creditarFreebetViaLedger(freebetPendente.bookmaker_id, freebetPendente.valor, 'LIBERACAO_PENDENTE', { descricao: 'Freebet liberada após liquidação de aposta qualificadora' });
             } else if (valorFreebetGerada && valorFreebetGerada > 0) {
               // FALLBACK: Registro não existe, criar agora e liberar
@@ -606,7 +607,7 @@ export function ResultadoPill({
                   });
                 
                 // MIGRADO PARA LEDGER: Creditar via RPC atômica
-                const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+                 // MIGRADO PARA LEDGER: Creditar via RPC atômica
                 await creditarFreebetViaLedger(bookmarkerId, valorFreebetGerada, 'FALLBACK_QUALIFICADORA', { descricao: `Freebet criada via fallback para aposta ${apostaId.slice(0, 8)}` });
                 
                 console.log(`[ResultadoPill] Fallback: Criado freebet de ${valorFreebetGerada} para bookmaker ${bookmarkerId}`);
@@ -625,7 +626,7 @@ export function ResultadoPill({
           
           if (freebetLiberada) {
             // MIGRADO PARA LEDGER: Estornar via RPC atômica
-            const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+             // MIGRADO PARA LEDGER: Estornar via RPC atômica
             await estornarFreebetViaLedger(
               freebetLiberada.bookmaker_id, 
               freebetLiberada.valor, 
@@ -650,7 +651,7 @@ export function ResultadoPill({
           
           if (freebetLiberada) {
             // MIGRADO PARA LEDGER: Estornar via RPC atômica
-            const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+             // MIGRADO PARA LEDGER: Estornar via RPC atômica
             await estornarFreebetViaLedger(
               freebetLiberada.bookmaker_id, 
               freebetLiberada.valor, 

@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
-import { criarAposta, deletarAposta, type SelecaoMultipla } from "@/services/aposta";
+import { criarAposta, deletarAposta, liquidarAposta, reliquidarAposta, type SelecaoMultipla } from "@/services/aposta";
+import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +57,7 @@ import {
   formatCurrency as formatCurrencyCanonical,
   getCurrencyTextColor 
 } from "@/components/bookmakers/BookmakerSelectOption";
-import { reliquidarAposta } from "@/services/aposta";
+// reliquidarAposta already imported at line 5
 // updateBookmakerBalance REMOVIDO - Motor v7 usa exclusivamente RPCs de liquidação
 import { useImportMultiplaBetPrint } from "@/hooks/useImportMultiplaBetPrint";
 import { GerouFreebetInput } from "./GerouFreebetInput";
@@ -888,8 +889,7 @@ export function ApostaMultiplaDialog({
         if (error) throw error;
 
         // Se resultado mudou, usar motor v7 para reliquidar
-        if (resultadoMudou && resultadoFinal && resultadoFinal !== "PENDENTE") {
-          const { reliquidarAposta } = await import("@/services/aposta");
+         if (resultadoMudou && resultadoFinal && resultadoFinal !== "PENDENTE") {
           const reliquidResult = await reliquidarAposta(
             aposta.id,
             resultadoFinal,
@@ -900,9 +900,8 @@ export function ApostaMultiplaDialog({
             console.error("[ApostaMultiplaDialog] Erro ao reliquidar:", reliquidResult.error);
             // Não lançar exceção - dados já foram atualizados
           }
-        } else if (resultadoMudou && resultadoAnterior !== "PENDENTE" && resultadoFinal === "PENDENTE") {
+         } else if (resultadoMudou && resultadoAnterior !== "PENDENTE" && resultadoFinal === "PENDENTE") {
           // Reversão para PENDENTE
-          const { supabase } = await import("@/integrations/supabase/client");
           await supabase.rpc('reverter_liquidacao_v4', { p_aposta_id: aposta.id });
         }
 
@@ -944,7 +943,7 @@ export function ApostaMultiplaDialog({
 
             if (freebetLiberada) {
               // Usar ledger para estornar
-              const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+               // Usar ledger para estornar
               await estornarFreebetViaLedger(
                 freebetLiberada.bookmaker_id,
                 freebetLiberada.valor,
@@ -994,8 +993,7 @@ export function ApostaMultiplaDialog({
         const novaApostaId = result.data?.id;
 
         // Se resultado não é PENDENTE, liquidar via motor v7
-        if (novaApostaId && resultadoFinal && resultadoFinal !== "PENDENTE") {
-          const { liquidarAposta } = await import("@/services/aposta");
+         if (novaApostaId && resultadoFinal && resultadoFinal !== "PENDENTE") {
           const liquidResult = await liquidarAposta({
             id: novaApostaId,
             resultado: resultadoFinal as any,
@@ -1070,8 +1068,8 @@ export function ApostaMultiplaDialog({
       const moedaOperacao = bookmaker?.moeda || "BRL";
 
       // MIGRADO PARA LEDGER: Só creditar saldo_freebet se a freebet for liberada
-      if (status === "LIBERADA") {
-        const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+       if (status === "LIBERADA") {
+        await creditarFreebetViaLedger(bkId, valor, 'APOSTA_MULTIPLA_QUALIFICADORA', { descricao: 'Freebet de aposta múltipla qualificadora' });
         await creditarFreebetViaLedger(bkId, valor, 'APOSTA_MULTIPLA_QUALIFICADORA', { descricao: 'Freebet de aposta múltipla qualificadora' });
       }
 
@@ -1115,7 +1113,7 @@ export function ApostaMultiplaDialog({
           .eq("id", freebetPendente.id);
 
         // MIGRADO PARA LEDGER: Creditar via RPC atômica
-        const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+         // MIGRADO PARA LEDGER: Creditar via RPC atômica
         await creditarFreebetViaLedger(freebetPendente.bookmaker_id, freebetPendente.valor, 'LIBERACAO_PENDENTE', { descricao: 'Freebet liberada após liquidação de aposta múltipla' });
       }
     } catch (error) {
@@ -1149,7 +1147,7 @@ export function ApostaMultiplaDialog({
 
       if (freebetLiberada) {
         // MIGRADO PARA LEDGER: Estornar via RPC atômica
-        const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+         // MIGRADO PARA LEDGER: Estornar via RPC atômica
         await estornarFreebetViaLedger(
           freebetLiberada.bookmaker_id, 
           freebetLiberada.valor, 
