@@ -31,6 +31,7 @@ export interface CryptoParty {
   owner_name: string | null;
   wallet_name: string | null;
   address: string | null;
+  logo_url?: string | null;
 }
 
 export interface CryptoTransactionData {
@@ -207,11 +208,19 @@ const PartyIdentity = memo(function PartyIdentity({
         {label}
       </span>
       
-      {/* Nível 1: Pessoa (Owner) */}
+      {/* Nível 1: Pessoa (Owner) + Logo */}
       <div className={cn(
         "flex items-center gap-1.5",
         isRight && "flex-row-reverse"
       )}>
+        {party.logo_url && (
+          <img 
+            src={party.logo_url} 
+            alt="" 
+            className="h-4 w-4 rounded-sm object-contain shrink-0"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        )}
         <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
           {party.owner_name || "Proprietário desconhecido"}
         </span>
