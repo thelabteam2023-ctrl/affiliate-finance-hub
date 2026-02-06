@@ -79,17 +79,22 @@ export function BetRowActionsMenu({
     setTimeout(() => action(), 0);
   };
 
-  const handleQuickResolve = (novoResultado: BetResultado) => {
-    console.log('[BetRowActionsMenu] handleQuickResolve chamado:', { apostaId, novoResultado, currentResultado: resultado });
+  const handleQuickResolve = (novoResultado: BetResultado, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    console.warn('[BetRowActionsMenu] 🔥 handleQuickResolve FIRED:', { apostaId, novoResultado, currentResultado: resultado });
     // Close menu first, then fire the async mutation on next tick
     setIsOpen(false);
     setTimeout(() => {
       try {
+        console.warn('[BetRowActionsMenu] 🚀 Calling onQuickResolve callback now');
         onQuickResolve(novoResultado);
       } catch (err) {
         console.error('[BetRowActionsMenu] Erro ao chamar onQuickResolve:', err);
       }
-    }, 0);
+    }, 50);
   };
 
   return (
@@ -144,10 +149,9 @@ export function BetRowActionsMenu({
               return (
                 <DropdownMenuItem
                   key={option.value}
-                  onSelect={(e) => {
-                    e.preventDefault();
+                  onClick={(e) => {
                     if (!isCurrentResult) {
-                      handleQuickResolve(option.value);
+                      handleQuickResolve(option.value, e);
                     }
                   }}
                   className={cn(option.className, isCurrentResult && "bg-muted/50")}
