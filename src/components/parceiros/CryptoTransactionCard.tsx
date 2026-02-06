@@ -200,11 +200,11 @@ const PartyIdentity = memo(function PartyIdentity({
   
   return (
     <div className={cn(
-      "flex flex-col min-w-0 flex-1",
+      "flex flex-col min-w-0 flex-1 gap-0",
       isRight ? "items-end text-right" : "items-start text-left"
     )}>
       {/* Label */}
-      <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-0.5">
+      <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 leading-tight">
         {label}
       </span>
       
@@ -280,7 +280,7 @@ export const CryptoTransactionCard = memo(function CryptoTransactionCard({
   return (
     <div className="p-3 border border-border rounded-lg hover:bg-muted/20 transition-colors">
       {/* Header: Badges + Data */}
-      <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           {/* Badge: Tipo */}
           <Badge variant="outline" className={cn("text-[10px]", getTypeBadgeColor())}>
@@ -328,21 +328,24 @@ export const CryptoTransactionCard = memo(function CryptoTransactionCard({
       </div>
       
       {/* Flow: Origem → Valor → Destino */}
-      <div className="flex items-stretch gap-3">
+      <div className="flex items-center gap-3">
         {/* Origem (From) */}
         <PartyIdentity party={from} align="left" label="Origem" />
         
         {/* Arrow + Value */}
-        <div className="flex flex-col items-center justify-center shrink-0 px-2">
-          <ArrowRight className="h-4 w-4 text-muted-foreground mb-1" />
-          <span className="text-sm font-bold text-foreground whitespace-nowrap">
-            {formatValue()}
-          </span>
-          {asset && (
-            <span className="text-[9px] text-muted-foreground">
-              {amount.toFixed(asset === "ETH" || asset === "BTC" ? 6 : 2)} {asset}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col items-center">
+            <span className="text-sm font-semibold text-foreground whitespace-nowrap">
+              {formatValue()}
             </span>
-          )}
+            {asset && (
+              <span className="text-[9px] text-muted-foreground leading-none">
+                {amount.toFixed(asset === "ETH" || asset === "BTC" ? 6 : 2)} {asset}
+              </span>
+            )}
+          </div>
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
         </div>
         
         {/* Destino (To) */}
