@@ -8,7 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn, getFirstLastName } from "@/lib/utils";
 
 /**
  * ARQUITETURA: Card de Transação Crypto Institucional
@@ -208,7 +208,7 @@ const PartyIdentity = memo(function PartyIdentity({
         {label}
       </span>
       
-      {/* Nível 1: Pessoa (Owner) + Logo */}
+      {/* Nível 1: Wallet/Bookmaker + Logo */}
       <div className={cn(
         "flex items-center gap-1.5",
         isRight && "flex-row-reverse"
@@ -222,20 +222,14 @@ const PartyIdentity = memo(function PartyIdentity({
           />
         )}
         <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
-          {party.owner_name || "Proprietário desconhecido"}
-        </span>
-      </div>
-      
-      {/* Nível 2: Wallet */}
-      <div className={cn(
-        "flex items-center gap-1",
-        isRight && "flex-row-reverse"
-      )}>
-        <Wallet className="h-3 w-3 text-muted-foreground/70" />
-        <span className="text-[11px] text-muted-foreground truncate max-w-[130px]">
           {party.wallet_name || "Wallet desconhecida"}
         </span>
       </div>
+      
+      {/* Nível 2: Pessoa (Primeiro + Último nome) */}
+      <span className="text-[11px] text-muted-foreground truncate max-w-[140px]">
+        {party.owner_name ? getFirstLastName(party.owner_name) : "Proprietário desconhecido"}
+      </span>
       
       {/* Nível 3: Endereço */}
       <CopyableAddress address={party.address} />
