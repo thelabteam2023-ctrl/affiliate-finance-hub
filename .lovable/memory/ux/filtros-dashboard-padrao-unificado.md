@@ -13,15 +13,16 @@ O sistema adota **exclusivamente** os seguintes filtros de período para **TODOS
 
 | Filtro | Valor | Definição Exata |
 |--------|-------|-----------------|
-| **Mês atual** | `mes` | `01 do mês corrente até hoje` (timezone operacional) |
 | **Anterior** | `anterior` | `Mês anterior completo (01 até último dia)` |
+| **Atual** | `mes` | `01 do mês corrente até hoje` (timezone operacional) |
+| **Ano** | `ano` | `01/01 do ano corrente até hoje` |
 | **Tudo** | `tudo` | `Todo o histórico disponível` |
 | **Período** | `custom` | `Seleção manual via calendário` |
 
 ### Tipo TypeScript
 
 ```typescript
-export type DashboardPeriodFilter = "mes" | "anterior" | "tudo" | "custom";
+export type DashboardPeriodFilter = "anterior" | "mes" | "ano" | "tudo" | "custom";
 ```
 
 ### Arquivos de Implementação
@@ -34,14 +35,6 @@ export type DashboardPeriodFilter = "mes" | "anterior" | "tudo" | "custom";
 ### Timezone
 
 > **TODAS AS DATAS RESPEITAM TIMEZONE OPERACIONAL (America/Sao_Paulo)**
-
-### Justificativas da Padronização
-
-1. **UX Consistente**: Usuário aprende um modelo e aplica em todo o sistema
-2. **Menos Erro Humano**: Filtros rápidos + calendário quando necessário
-3. **Código Reutilizável**: Um componente, múltiplos usos
-4. **Previsibilidade Financeira**: Períodos sempre contábeis e fechados
-5. **Manutenção Simplificada**: Alteração em um lugar afeta todos os dashboards
 
 ### Default
 
