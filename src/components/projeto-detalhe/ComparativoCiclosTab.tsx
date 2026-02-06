@@ -15,9 +15,10 @@ import {
   ThumbsDown,
   Building2
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
+import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { AnalisePorCasaSection } from "./AnalisePorCasaSection";
 import { useBookmakerAnalise } from "@/hooks/useBookmakerAnalise";
 import { PerdaCicloTooltip } from "./ciclos/PerdaCicloTooltip";
@@ -101,41 +102,43 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
         ciclosData.map(async (ciclo) => {
           const dataFim = ciclo.data_fim_real || ciclo.data_fim_prevista;
           
-          // Ajustar data fim para incluir o dia inteiro (timestamp com hora 23:59:59)
-          const dataFimAjustada = `${dataFim}T23:59:59.999Z`;
+          // CRÍTICO: Converter datas do ciclo para UTC usando timezone operacional (America/Sao_Paulo)
+          const dataInicioCiclo = parseISO(ciclo.data_inicio);
+          const dataFimCiclo = parseISO(dataFim);
+          const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioCiclo, dataFimCiclo);
           
           const [apostasResult, perdasResult, bookmakersResult, cashbackResult, girosResult] = await Promise.all([
             supabase
               .from("apostas_unificada")
               .select("lucro_prejuizo, stake, stake_total, status, forma_registro")
               .eq("projeto_id", projetoId)
-              .gte("data_aposta", ciclo.data_inicio)
-              .lte("data_aposta", dataFimAjustada),
+              .gte("data_aposta", startUTC)
+              .lte("data_aposta", endUTC),
             supabase
               .from("projeto_perdas")
               .select("valor, status, categoria, bookmaker_id")
               .eq("projeto_id", projetoId)
               .eq("status", "CONFIRMADA")
-              .gte("data_registro", ciclo.data_inicio)
-              .lte("data_registro", dataFimAjustada),
+              .gte("data_registro", startUTC)
+              .lte("data_registro", endUTC),
             supabase
               .from("bookmakers")
               .select("id, nome"),
-            // NOVO: Buscar cashback do período do ciclo
+            // Buscar cashback do período do ciclo (usa date-only)
             supabase
               .from("cashback_manual")
               .select("valor")
               .eq("projeto_id", projetoId)
               .gte("data_credito", ciclo.data_inicio)
               .lte("data_credito", dataFim),
-            // NOVO: Buscar giros grátis do período do ciclo
+            // Buscar giros grátis do período do ciclo
             supabase
               .from("giros_gratis")
               .select("valor_retorno")
               .eq("projeto_id", projetoId)
               .eq("status", "confirmado")
-              .gte("data_registro", ciclo.data_inicio)
-              .lte("data_registro", dataFimAjustada)
+              .gte("data_registro", startUTC)
+              .lte("data_registro", endUTC)
           ]);
 
           const apostas = apostasResult.data || [];

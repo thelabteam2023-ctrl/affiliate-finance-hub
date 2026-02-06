@@ -16,6 +16,21 @@ LUCRO_CICLO = LUCRO_APOSTAS + CASHBACK + GIROS_GRATIS - PERDAS_CONFIRMADAS
 3. **GIROS_GRATIS**: Soma de `valor_retorno` de `giros_gratis` onde `status = 'confirmado'` (sempre >= 0)
 4. **PERDAS_CONFIRMADAS**: Soma de `valor` de `projeto_perdas` onde `status = 'CONFIRMADA'`
 
+### CRÍTICO: Timezone Operacional
+
+Todas as queries de ciclo DEVEM usar `getOperationalDateRangeForQuery()` para converter datas do ciclo para UTC:
+
+```typescript
+const dataInicioCiclo = parseISO(ciclo.data_inicio);
+const dataFimCiclo = parseISO(ciclo.data_fim_prevista);
+const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioCiclo, dataFimCiclo);
+
+// Usar startUTC e endUTC nas queries
+query.gte("data_aposta", startUTC).lte("data_aposta", endUTC)
+```
+
+**PROIBIDO**: Usar comparação direta de strings de data (ex: `.gte("data_aposta", ciclo.data_inicio)`)
+
 ### Arquivos que implementam esta fórmula:
 
 - `src/hooks/useProjetoResultado.ts` - Hook principal de resultado do projeto ✅

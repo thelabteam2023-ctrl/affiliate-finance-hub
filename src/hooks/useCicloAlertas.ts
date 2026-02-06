@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInDays } from "date-fns";
+import { differenceInDays, parseISO } from "date-fns";
+import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 
 export interface AlertaCiclo {
   id: string;
@@ -60,14 +61,19 @@ export function useCicloAlertas() {
       const alertasCalculados: AlertaCiclo[] = [];
 
       for (const ciclo of ciclos) {
+        // CRÍTICO: Converter datas do ciclo para UTC usando timezone operacional (America/Sao_Paulo)
+        const dataInicioCiclo = parseISO(ciclo.data_inicio);
+        const dataFimCiclo = parseISO(ciclo.data_fim_prevista);
+        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioCiclo, dataFimCiclo);
+        
         // Buscar todas as apostas do período from apostas_unificada
         const [apostasResult, cashbackResult, girosResult] = await Promise.all([
           supabase
             .from("apostas_unificada")
             .select("lucro_prejuizo, stake, stake_total, status, resultado, estrategia")
             .eq("projeto_id", ciclo.projeto_id)
-            .gte("data_aposta", ciclo.data_inicio)
-            .lte("data_aposta", ciclo.data_fim_prevista),
+            .gte("data_aposta", startUTC)
+            .lte("data_aposta", endUTC),
           supabase
             .from("cashback_manual")
             .select("valor")
@@ -79,8 +85,8 @@ export function useCicloAlertas() {
             .select("valor_retorno")
             .eq("projeto_id", ciclo.projeto_id)
             .eq("status", "confirmado")
-            .gte("data_registro", ciclo.data_inicio)
-            .lte("data_registro", ciclo.data_fim_prevista)
+            .gte("data_registro", startUTC)
+            .lte("data_registro", endUTC)
         ]);
 
         if (apostasResult.error) throw apostasResult.error;
