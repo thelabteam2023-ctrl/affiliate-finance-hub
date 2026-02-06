@@ -1,6 +1,6 @@
 /**
  * Seletor de Período para Projetos
- * Padrão unificado: Mês | 3M | 6M | Ano | Tudo
+ * Padrão unificado: Mês atual | Anterior | Tudo + Calendário
  * 
  * IMPORTANTE: Este componente segue o mesmo padrão do Dashboard Financeiro
  * para garantir consistência de UX em todo o sistema.
@@ -20,12 +20,13 @@ export function PeriodoSelector({ periodo, onChange }: PeriodoSelectorProps) {
     switch (periodo.preset) {
       case 'mes':
         return 'mes';
-      case 'ano':
-        return 'ano';
       case 'tudo':
         return 'tudo';
+      case 'custom':
+        return 'custom';
       case '7dias':
       case '30dias':
+      case 'ano':
       default:
         return 'mes'; // Default para mês se preset antigo
     }
@@ -37,10 +38,9 @@ export function PeriodoSelector({ periodo, onChange }: PeriodoSelectorProps) {
     // Converter para o formato PeriodoAnalise esperado pelo sistema legado
     const presetMap: Record<DashboardPeriodFilter, PeriodoAnalise['preset']> = {
       'mes': 'mes',
-      '3m': 'custom', // 3M não existe no tipo antigo, usar custom
-      '6m': 'custom', // 6M não existe no tipo antigo, usar custom
-      'ano': 'ano',
+      'anterior': 'custom', // Anterior não existe no tipo antigo
       'tudo': 'tudo',
+      'custom': 'custom',
     };
     
     onChange({
@@ -50,10 +50,25 @@ export function PeriodoSelector({ periodo, onChange }: PeriodoSelectorProps) {
     });
   };
 
+  const handleCustomRangeChange = (range: { start: Date; end: Date }) => {
+    onChange({
+      dataInicio: range.start,
+      dataFim: range.end,
+      preset: 'custom',
+    });
+  };
+
+  // Extrair customRange do período atual se for custom
+  const customRange = periodo.preset === 'custom' && periodo.dataInicio && periodo.dataFim
+    ? { start: periodo.dataInicio, end: periodo.dataFim }
+    : undefined;
+
   return (
     <DashboardPeriodFilterBar
       value={getCurrentFilter()}
       onChange={handleChange}
+      customRange={customRange}
+      onCustomRangeChange={handleCustomRangeChange}
       size="sm"
     />
   );

@@ -236,11 +236,12 @@ export default function Financeiro() {
 
   // Filtro de período unificado (padrão: mês atual)
   const [periodoPreset, setPeriodoPreset] = useState<DashboardPeriodFilter>("mes");
+  const [customRange, setCustomRange] = useState<{ start: Date; end: Date } | undefined>(undefined);
   
-  // Datas derivadas do filtro selecionado (sem estado manual)
+  // Datas derivadas do filtro selecionado
   const { dataInicio, dataFim } = useMemo(
-    () => getDashboardDateRangeAsStrings(periodoPreset),
-    [periodoPreset]
+    () => getDashboardDateRangeAsStrings(periodoPreset, customRange),
+    [periodoPreset, customRange]
   );
 
   // ==================== FONTE ÚNICA DE VERDADE: LUCRO OPERACIONAL ====================
@@ -1108,10 +1109,12 @@ export default function Financeiro() {
         cotacaoUSD={cotacaoUSD}
       />
 
-      {/* Filtros de Período - Padrão Unificado (sem calendário manual) */}
+      {/* Filtros de Período - Padrão Unificado */}
       <DashboardPeriodFilterBar
         value={periodoPreset}
         onChange={setPeriodoPreset}
+        customRange={customRange}
+        onCustomRangeChange={setCustomRange}
       />
 
       {/* Tabs */}

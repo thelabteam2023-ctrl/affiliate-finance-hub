@@ -6,7 +6,7 @@
  * - Dashboard Financeiro
  * 
  * REGRA-MÃE: Todo dashboard compartilha o mesmo modelo de filtro temporal.
- * NÃO há seleção manual de datas - apenas filtros rápidos padronizados.
+ * Filtros: Mês atual | Anterior | Tudo + Calendário para período customizado
  */
 
 import { startOfMonth, endOfDay, subMonths, startOfYear, endOfMonth } from "date-fns";
@@ -18,12 +18,11 @@ export const OPERATIONAL_TIMEZONE = "America/Sao_Paulo";
  * Filtros temporais padrão disponíveis em TODOS os dashboards
  * 
  * - mes: Mês corrente (01 até hoje)
- * - 3m: Últimos 3 meses fechados + mês corrente
- * - 6m: Últimos 6 meses fechados + mês corrente
- * - ano: Ano corrente (01/01 até hoje)
+ * - anterior: Mês anterior completo
  * - tudo: Todo o histórico disponível
+ * - custom: Período personalizado via calendário
  */
-export type DashboardPeriodFilter = "mes" | "3m" | "6m" | "ano" | "tudo";
+export type DashboardPeriodFilter = "mes" | "anterior" | "tudo" | "custom";
 
 export interface DashboardDateRange {
   start: Date | null;
@@ -36,14 +35,12 @@ export interface DashboardPeriodOption {
 }
 
 /**
- * Opções de filtro para exibição na UI
- * Ordem: do menor para o maior período
+ * Opções de filtro para exibição na UI (botões rápidos)
+ * O "custom" não aparece como botão, mas como calendário
  */
 export const DASHBOARD_PERIOD_OPTIONS: DashboardPeriodOption[] = [
-  { value: "mes", label: "Mês" },
-  { value: "3m", label: "3M" },
-  { value: "6m", label: "6M" },
-  { value: "ano", label: "Ano" },
+  { value: "mes", label: "Mês atual" },
+  { value: "anterior", label: "Anterior" },
   { value: "tudo", label: "Tudo" },
 ];
 
@@ -54,7 +51,10 @@ export const DASHBOARD_PERIOD_OPTIONS: DashboardPeriodOption[] = [
  * @param filter - Filtro selecionado
  * @returns Intervalo de datas {start, end} ou null para 'tudo'
  */
-export function getDashboardDateRange(filter: DashboardPeriodFilter): DashboardDateRange {
+export function getDashboardDateRange(
+  filter: DashboardPeriodFilter,
+  customRange?: { start: Date; end: Date }
+): DashboardDateRange {
   // Usar timezone operacional
   const nowUTC = new Date();
   const nowLocal = toZonedTime(nowUTC, OPERATIONAL_TIMEZONE);
@@ -67,27 +67,23 @@ export function getDashboardDateRange(filter: DashboardPeriodFilter): DashboardD
         end: endOfDay(nowLocal),
       };
     
-    case "3m":
-      // Últimos 3 meses fechados + mês corrente
-      // Exemplo: Se estamos em Fev, inclui Dez, Jan e Fev (do dia 01 de Dez até hoje)
+    case "anterior":
+      // Mês anterior completo
+      const prevMonth = subMonths(nowLocal, 1);
       return {
-        start: startOfMonth(subMonths(nowLocal, 2)),
-        end: endOfDay(nowLocal),
+        start: startOfMonth(prevMonth),
+        end: endOfMonth(prevMonth),
       };
     
-    case "6m":
-      // Últimos 6 meses fechados + mês corrente
-      return {
-        start: startOfMonth(subMonths(nowLocal, 5)),
-        end: endOfDay(nowLocal),
-      };
-    
-    case "ano":
-      // Ano corrente: 01/01 até hoje
-      return {
-        start: startOfYear(nowLocal),
-        end: endOfDay(nowLocal),
-      };
+    case "custom":
+      // Período personalizado
+      if (customRange) {
+        return {
+          start: customRange.start,
+          end: endOfDay(customRange.end),
+        };
+      }
+      return { start: null, end: null };
     
     case "tudo":
     default:
@@ -103,11 +99,14 @@ export function getDashboardDateRange(filter: DashboardPeriodFilter): DashboardD
  * Converte o intervalo de datas para strings no formato ISO (yyyy-MM-dd)
  * Útil para queries e persistência
  */
-export function getDashboardDateRangeAsStrings(filter: DashboardPeriodFilter): {
+export function getDashboardDateRangeAsStrings(
+  filter: DashboardPeriodFilter,
+  customRange?: { start: Date; end: Date }
+): {
   dataInicio: string;
   dataFim: string;
 } {
-  const range = getDashboardDateRange(filter);
+  const range = getDashboardDateRange(filter, customRange);
   
   if (!range.start || !range.end) {
     return { dataInicio: "", dataFim: "" };
