@@ -140,10 +140,6 @@ export function BetRowActionsMenu({
                 <DropdownMenuItem
                   key={option.value}
                   onSelect={() => handleQuickResolve(option.value)}
-                  onClick={() => {
-                    console.log('[BetRowActionsMenu] onClick direto:', option.value);
-                    handleQuickResolve(option.value);
-                  }}
                   className={cn(option.className, isCurrentResult && "bg-muted/50")}
                   disabled={isCurrentResult}
                 >

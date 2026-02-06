@@ -48,6 +48,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { useImportBetPrint } from "@/hooks/useImportBetPrint";
 import { DateAnomalyAlert } from "@/components/ui/date-anomaly-alert";
+import { liquidarAposta, reverterLiquidacao } from "@/lib/financialEngine";
+import { estornarFreebetViaLedger, creditarFreebetViaLedger, consumirFreebetViaLedger } from "@/lib/freebetLedgerService";
 import { RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } from "./RegistroApostaFields";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
 import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, FONTE_SALDO, isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
@@ -1904,8 +1906,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         if (apostaEstaLiquidada && agoraPendente && houveMudancaResultado) {
           console.log("[ApostaDialog] LIQUIDADA → PENDENTE: usando reverter_liquidacao_v4");
           
-          const { reverterLiquidacao } = await import("@/lib/financialEngine");
-          const revertResult = await reverterLiquidacao(aposta.id);
+           const revertResult = await reverterLiquidacao(aposta.id);
           
           if (!revertResult.success) {
             console.error("[ApostaDialog] Falha na reversão:", revertResult.message);
@@ -2136,8 +2137,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           // - Edição de PENDENTE→LIQUIDADO: usar RPC de liquidação
           // ================================================================
           if (bookmakerAtualId && !apostaEstaLiquidada) {
-            // Importar motor financeiro v7
-            const { liquidarAposta, reverterLiquidacao } = await import("@/lib/financialEngine");
+             // Motor financeiro v7 (imports estáticos)
             
             // Se mudou de PENDENTE para resultado final, usar liquidação v7
             if (eraPendente && !agoraPendente) {
@@ -2210,8 +2210,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               .maybeSingle();
 
             if (freebetLiberada) {
-              // MIGRADO PARA LEDGER: Estornar via RPC atômica
-              const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+               // MIGRADO PARA LEDGER: Estornar via RPC atômica
               await estornarFreebetViaLedger(
                 freebetLiberada.bookmaker_id, 
                 freebetLiberada.valor, 
@@ -2245,7 +2244,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 
                 if (freebetExistente?.status === "LIBERADA") {
                   // MIGRADO PARA LEDGER: Estornar antigo e creditar novo valor
-                  const { estornarFreebetViaLedger, creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+                  // MIGRADO PARA LEDGER: Estornar antigo e creditar novo valor
                   await estornarFreebetViaLedger(bookmakerParaFreebet, valorFreebetAnterior, 'Ajuste de valor de freebet');
                   await creditarFreebetViaLedger(bookmakerParaFreebet, novoValorFreebet, 'AJUSTE_VALOR', { descricao: 'Novo valor de freebet' });
                 }
@@ -2273,7 +2272,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             
             if (freebetExistente?.status === "LIBERADA") {
               // MIGRADO PARA LEDGER: Estornar via RPC atômica
-              const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+               // MIGRADO PARA LEDGER: Estornar via RPC atômica
               await estornarFreebetViaLedger(bookmakerParaFreebet, valorFreebetAnterior, 'Freebet removida da aposta');
             }
             // Remover registro de freebet_recebida
@@ -2342,8 +2341,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // ================================================================
         if (novaApostaId && statusResultado !== "PENDENTE") {
           console.log("[ApostaDialog] Nova aposta criada já liquidada - usando FinancialEngine v7");
-          const { liquidarAposta } = await import("@/lib/financialEngine");
-          const liquidResult = await liquidarAposta(
+           const liquidResult = await liquidarAposta(
             novaApostaId,
             statusResultado as 'GREEN' | 'RED' | 'VOID' | 'MEIO_GREEN' | 'MEIO_RED',
             apostaData.lucro_prejuizo || undefined
@@ -2444,8 +2442,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
       // MIGRADO PARA LEDGER: Creditar freebet via RPC atômica
       if (status === "LIBERADA") {
-        const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
-        await creditarFreebetViaLedger(bookmakerIdFreebet, valor, 'QUALIFICADORA', { 
+         await creditarFreebetViaLedger(bookmakerIdFreebet, valor, 'QUALIFICADORA', { 
           descricao: 'Freebet de aposta qualificadora',
           apostaId,
         });
@@ -2493,7 +2490,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           .eq("id", freebetPendente.id);
 
         // MIGRADO PARA LEDGER: Creditar via RPC atômica
-        const { creditarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+         // MIGRADO PARA LEDGER: Creditar via RPC atômica
         await creditarFreebetViaLedger(
           freebetPendente.bookmaker_id, 
           freebetPendente.valor, 
@@ -2532,7 +2529,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
       if (freebetLiberada) {
         // MIGRADO PARA LEDGER: Estornar via RPC atômica
-        const { estornarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+         // MIGRADO PARA LEDGER: Estornar via RPC atômica
         await estornarFreebetViaLedger(
           freebetLiberada.bookmaker_id, 
           freebetLiberada.valor, 
@@ -2555,7 +2552,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const debitarFreebetUsada = async (bookmakerIdFreebet: string, valor: number, apostaId?: string) => {
     try {
       // 1. Debitar saldo_freebet via ledger (RPC atômica)
-      const { consumirFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+       // 1. Debitar saldo_freebet via ledger (RPC atômica)
       const result = await consumirFreebetViaLedger(bookmakerIdFreebet, valor, {
         apostaId,
         descricao: `Freebet consumida em aposta${apostaId ? ` #${apostaId.slice(0, 8)}` : ''}`,
