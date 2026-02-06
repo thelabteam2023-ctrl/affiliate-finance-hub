@@ -58,6 +58,8 @@ interface ApostaUnificada {
 
 export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const [apostasUnificadas, setApostasUnificadas] = useState<ApostaUnificada[]>([]);
+  // DESACOPLAMENTO CALENDÁRIO: Dados separados para o calendário (sem filtro de período)
+  const [apostasCalendario, setApostasCalendario] = useState<ApostaUnificada[]>([]);
   const [extrasLucro, setExtrasLucro] = useState<ExtraLucroEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEsporte, setSelectedEsporte] = useState<string>("");
@@ -77,6 +79,12 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     return getDateRangeFromPeriod(period, customDateRange);
   }, [period, customDateRange]);
 
+  // Busca apostas para o calendário (SEM filtro de período) - apenas quando projetoId muda
+  useEffect(() => {
+    fetchApostasCalendario();
+  }, [projetoId]);
+
+  // Busca apostas filtradas quando filtros mudam
   useEffect(() => {
     fetchAllData();
   }, [projetoId, dateRange]);
@@ -86,6 +94,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   
   const handleBetUpdate = useCallback(() => {
     fetchAllData();
+    fetchApostasCalendario(); // DESACOPLAMENTO: Também atualiza calendário
     queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
   }, [queryClient, projetoId]);
@@ -106,6 +115,60 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * DESACOPLAMENTO CALENDÁRIO-FILTROS:
+   * Busca apostas SEM filtro de data para alimentar o calendário.
+   * O calendário é um componente VISUAL que deve mostrar dados independentemente
+   * dos filtros analíticos aplicados nos KPIs/gráficos.
+   */
+  const fetchApostasCalendario = async () => {
+    try {
+      // Busca simplificada apenas para o calendário (sem enriquecimento completo)
+      const { data, error } = await supabase
+        .from("apostas_unificada")
+        .select(`
+          id, 
+          data_aposta, 
+          lucro_prejuizo, 
+          pl_consolidado,
+          resultado,
+          stake,
+          stake_total,
+          bookmaker_id
+        `)
+        .eq("projeto_id", projetoId)
+        .eq("status", "LIQUIDADA")
+        .is("cancelled_at", null)
+        .order("data_aposta", { ascending: true });
+
+      if (error) throw error;
+
+      // Transformação simplificada para o calendário
+      const apostasCalendarioData: ApostaUnificada[] = (data || []).map((item: any) => ({
+        id: item.id,
+        data_aposta: item.data_aposta,
+        lucro_prejuizo: item.pl_consolidado ?? item.lucro_prejuizo,
+        pl_consolidado: item.pl_consolidado,
+        resultado: item.resultado,
+        stake: item.stake || 0,
+        stake_total: item.stake_total,
+        esporte: 'N/A',
+        bookmaker_id: item.bookmaker_id || 'unknown',
+        bookmaker_nome: '',
+        parceiro_nome: null,
+        logo_url: null,
+        forma_registro: null,
+        estrategia: null,
+        bonus_id: null,
+        pernas: undefined,
+      }));
+
+      setApostasCalendario(apostasCalendarioData);
+    } catch (error) {
+      console.error("[Calendário] Erro ao carregar apostas:", error);
     }
   };
 
@@ -467,6 +530,17 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       {/* Gráficos de Evolução e Casas Mais Utilizadas */}
       <VisaoGeralCharts 
         apostas={apostasParaGraficos}
+        apostasCalendario={apostasCalendario.map(a => ({
+          data_aposta: a.data_aposta,
+          lucro_prejuizo: a.pl_consolidado ?? a.lucro_prejuizo,
+          stake: a.stake,
+          stake_total: a.stake_total,
+          bookmaker_nome: a.bookmaker_nome,
+          parceiro_nome: a.parceiro_nome,
+          bookmaker_id: a.bookmaker_id,
+          pernas: a.pernas,
+          forma_registro: a.forma_registro ?? undefined,
+        }))}
         extrasLucro={extrasLucro}
         accentColor="hsl(var(--primary))"
         logoMap={catalogLogoMap}

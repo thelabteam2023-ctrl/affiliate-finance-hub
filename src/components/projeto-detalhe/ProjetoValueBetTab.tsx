@@ -59,6 +59,7 @@ import { useTabFilters } from "@/hooks/useTabFilters";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
+import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -166,6 +167,12 @@ export function ProjetoValueBetTab({
 
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  
+  // DESACOPLAMENTO CALENDÁRIO: Dados separados para o calendário (sem filtro de período)
+  const { apostas: calendarApostas, refetch: refetchCalendar } = useCalendarApostas({
+    projetoId,
+    estrategia: "VALUEBET",
+  });
   
   // Hook para gerenciamento de rollover (bônus)
   // NOTA: processarLiquidacaoBonus e reverterLiquidacaoBonus removidos - modelo unificado
@@ -723,7 +730,14 @@ export function ProjetoValueBetTab({
       {/* Gráficos e Estatísticas */}
       {metricas.total > 0 && (
         <>
-          <VisaoGeralCharts apostas={apostas} accentColor="hsl(270, 76%, 60%)" logoMap={logoMap} isSingleDayPeriod={tabFilters.period === "1dia"} formatCurrency={formatCurrency} />
+          <VisaoGeralCharts 
+            apostas={apostas} 
+            apostasCalendario={transformCalendarApostasForCharts(calendarApostas)}
+            accentColor="hsl(270, 76%, 60%)" 
+            logoMap={logoMap} 
+            isSingleDayPeriod={tabFilters.period === "1dia"} 
+            formatCurrency={formatCurrency} 
+          />
           <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
         </>
       )}

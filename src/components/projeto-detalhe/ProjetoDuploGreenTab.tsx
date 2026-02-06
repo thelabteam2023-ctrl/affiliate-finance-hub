@@ -62,6 +62,7 @@ import { useTabFilters } from "@/hooks/useTabFilters";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
+import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
 
 interface ProjetoDuploGreenTabProps {
   projetoId: string;
@@ -170,6 +171,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   
   // Hook global de logos de bookmakers (busca do catálogo)
   const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
+  
+  // DESACOPLAMENTO CALENDÁRIO: Dados separados para o calendário (sem filtro de período)
+  const { apostas: calendarApostas, refetch: refetchCalendar } = useCalendarApostas({
+    projetoId,
+    estrategia: "DUPLO_GREEN",
+  });
   // Estados removidos - dialogs agora abrem em janelas externas
   // const [dialogOpen, setDialogOpen] = useState(false);
   // const [surebetDialogOpen, setSurebetDialogOpen] = useState(false);
@@ -692,7 +699,14 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       </div>
 
       {metricas.total > 0 && (
-        <VisaoGeralCharts apostas={apostas} accentColor="#84cc16" logoMap={logoMap} isSingleDayPeriod={tabFilters.period === "1dia"} formatCurrency={formatCurrency} />
+        <VisaoGeralCharts 
+          apostas={apostas} 
+          apostasCalendario={transformCalendarApostasForCharts(calendarApostas)}
+          accentColor="#84cc16" 
+          logoMap={logoMap} 
+          isSingleDayPeriod={tabFilters.period === "1dia"} 
+          formatCurrency={formatCurrency} 
+        />
       )}
 
       {/* Card de Estatísticas Detalhadas */}
