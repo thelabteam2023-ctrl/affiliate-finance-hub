@@ -220,9 +220,32 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
           return false;
         }
 
-        const moedaOperacao = bookmaker.moeda || "BRL";
+        // 2. PROTEÇÃO ANTI-DUPLICIDADE: Verificar se já existe cashback igual recente
         const dataCredito = data.data_credito || new Date().toISOString().split("T")[0];
+        const { data: existingCashback, error: checkError } = await supabase
+          .from("cashback_manual")
+          .select("id, created_at")
+          .eq("bookmaker_id", data.bookmaker_id)
+          .eq("valor", data.valor)
+          .eq("data_credito", dataCredito)
+          .maybeSingle();
 
+        if (checkError) {
+          console.error("[criarCashback] Erro ao verificar duplicidade:", checkError);
+        }
+
+        if (existingCashback) {
+          toast.error(`Já existe um cashback de mesmo valor (R$ ${data.valor}) para esta casa nesta data.`);
+          console.warn("[criarCashback] Cashback duplicado bloqueado:", {
+            bookmaker_id: data.bookmaker_id,
+            valor: data.valor,
+            data_credito: dataCredito,
+            existing_id: existingCashback.id,
+          });
+          return false;
+        }
+
+        const moedaOperacao = bookmaker.moeda || "BRL";
         // Calcular valor_brl_referencia
         let valorBRLReferencia: number | null = null;
         let cotacaoSnapshot: number | null = null;
