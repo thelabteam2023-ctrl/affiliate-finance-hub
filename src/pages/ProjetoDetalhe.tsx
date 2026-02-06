@@ -66,6 +66,7 @@ import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar"
 import { ModuleActivationDialog } from "@/components/projeto-detalhe/ModuleActivationDialog";
 import { SetDefaultTabButton } from "@/components/projeto-detalhe/SetDefaultTabButton";
 import { useActionAccess } from "@/hooks/useModuleAccess";
+import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 // REMOVIDO: OperationalFiltersProvider - filtros agora são isolados por aba
 
 // Icon map for dynamic modules
@@ -363,12 +364,23 @@ export default function ProjetoDetalhe() {
         .select("valor, moeda_operacao, valor_brl_referencia")
         .eq("projeto_id", id);
       
-      if (start) {
-        apostasQuery = apostasQuery.gte("data_aposta", start.toISOString());
+      // CRÍTICO: Usar getOperationalDateRangeForQuery para garantir timezone operacional (São Paulo)
+      if (start && end) {
+        const { startUTC, endUTC } = getOperationalDateRangeForQuery(start, end);
+        apostasQuery = apostasQuery.gte("data_aposta", startUTC);
+        apostasQuery = apostasQuery.lte("data_aposta", endUTC);
+        // Cashback usa data (não timestamp), então mantém formato YYYY-MM-DD
+        const startDateStr = start.toISOString().split("T")[0];
+        const endDateStr = end.toISOString().split("T")[0];
+        cashbackQuery = cashbackQuery.gte("data_credito", startDateStr);
+        cashbackQuery = cashbackQuery.lte("data_credito", endDateStr);
+      } else if (start) {
+        const { startUTC } = getOperationalDateRangeForQuery(start, start);
+        apostasQuery = apostasQuery.gte("data_aposta", startUTC);
         cashbackQuery = cashbackQuery.gte("data_credito", start.toISOString().split("T")[0]);
-      }
-      if (end) {
-        apostasQuery = apostasQuery.lte("data_aposta", end.toISOString());
+      } else if (end) {
+        const { endUTC } = getOperationalDateRangeForQuery(end, end);
+        apostasQuery = apostasQuery.lte("data_aposta", endUTC);
         cashbackQuery = cashbackQuery.lte("data_credito", end.toISOString().split("T")[0]);
       }
       

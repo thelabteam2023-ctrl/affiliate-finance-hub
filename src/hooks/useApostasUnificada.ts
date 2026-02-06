@@ -20,6 +20,7 @@ import {
   determinarResultadoArbitragem,
   parsePernaFromJson
 } from "@/types/apostasUnificada";
+import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { pernasToInserts } from "@/types/apostasPernas";
 import { SupportedCurrency } from "@/types/currency";
 import { useCurrencySnapshot } from "./useCurrencySnapshot";
@@ -61,8 +62,10 @@ export function useApostasUnificada(): UseApostasUnificadaReturn {
         .order("data_aposta", { ascending: false });
       
       if (dateRange) {
-        query = query.gte("data_aposta", dateRange.start.toISOString());
-        query = query.lte("data_aposta", dateRange.end.toISOString());
+        // CRÍTICO: Usar getOperationalDateRangeForQuery para garantir timezone operacional (São Paulo)
+        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
+        query = query.gte("data_aposta", startUTC);
+        query = query.lte("data_aposta", endUTC);
       }
 
       const { data, error } = await query;

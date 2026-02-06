@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 // Removido: Dialogs agora abrem em janelas externas
 // import { ApostaDialog } from "./ApostaDialog";
 // import { ApostaMultiplaDialog } from "./ApostaMultiplaDialog";
@@ -269,8 +270,10 @@ export function ProjetoValueBetTab({
         .order("data_aposta", { ascending: false });
       
       if (dateRange) {
-        query = query.gte("data_aposta", dateRange.start.toISOString());
-        query = query.lte("data_aposta", dateRange.end.toISOString());
+        // CRÍTICO: Usar getOperationalDateRangeForQuery para garantir timezone operacional (São Paulo)
+        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
+        query = query.gte("data_aposta", startUTC);
+        query = query.lte("data_aposta", endUTC);
       }
 
       const { data, error } = await query;

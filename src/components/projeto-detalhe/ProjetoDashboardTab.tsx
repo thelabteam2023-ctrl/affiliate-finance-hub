@@ -22,7 +22,8 @@ import { VisaoGeralCharts, ExtraLucroEntry } from "./VisaoGeralCharts";
 import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
 import { DateRange } from "react-day-picker";
-import { format, isSameDay } from "date-fns";
+import { isSameDay } from "date-fns";
+import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 
 interface ProjetoDashboardTabProps {
   projetoId: string;
@@ -214,10 +215,12 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         .order("data_aposta", { ascending: true });
 
       // Aplica filtro de data se existir
+      // CRÍTICO: Usar getOperationalDateRangeForQuery para garantir timezone operacional (São Paulo)
       if (dateRange) {
+        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
         query = query
-          .gte("data_aposta", format(dateRange.start, "yyyy-MM-dd"))
-          .lte("data_aposta", format(dateRange.end, "yyyy-MM-dd"));
+          .gte("data_aposta", startUTC)
+          .lte("data_aposta", endUTC);
       }
 
       const { data, error } = await query;
