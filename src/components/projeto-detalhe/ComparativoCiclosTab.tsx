@@ -104,7 +104,7 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
           // Ajustar data fim para incluir o dia inteiro (timestamp com hora 23:59:59)
           const dataFimAjustada = `${dataFim}T23:59:59.999Z`;
           
-          const [apostasResult, perdasResult, bookmakersResult] = await Promise.all([
+          const [apostasResult, perdasResult, bookmakersResult, cashbackResult, girosResult] = await Promise.all([
             supabase
               .from("apostas_unificada")
               .select("lucro_prejuizo, stake, stake_total, status, forma_registro")
@@ -120,12 +120,29 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
               .lte("data_registro", dataFimAjustada),
             supabase
               .from("bookmakers")
-              .select("id, nome")
+              .select("id, nome"),
+            // NOVO: Buscar cashback do período do ciclo
+            supabase
+              .from("cashback_manual")
+              .select("valor")
+              .eq("projeto_id", projetoId)
+              .gte("data_credito", ciclo.data_inicio)
+              .lte("data_credito", dataFim),
+            // NOVO: Buscar giros grátis do período do ciclo
+            supabase
+              .from("giros_gratis")
+              .select("valor_retorno")
+              .eq("projeto_id", projetoId)
+              .eq("status", "confirmado")
+              .gte("data_registro", ciclo.data_inicio)
+              .lte("data_registro", dataFimAjustada)
           ]);
 
           const apostas = apostasResult.data || [];
           const perdas = perdasResult.data || [];
           const bookmakers = bookmakersResult.data || [];
+          const cashbacks = cashbackResult.data || [];
+          const giros = girosResult.data || [];
           
           // Mapa de bookmaker ID -> nome
           const bookmakerMap = new Map(bookmakers.map(b => [b.id, b.nome]));
@@ -138,9 +155,19 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
             return acc + (a.stake || 0);
           }, 0);
           
-          const lucroBrutoCalculado = apostas
+          // Lucro de apostas liquidadas
+          const lucroApostas = apostas
             .filter(a => a.status === "LIQUIDADA")
             .reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+          
+          // NOVO: Lucro de cashback (sempre >= 0)
+          const lucroCashback = cashbacks.reduce((acc, cb) => acc + Math.max(0, cb.valor || 0), 0);
+          
+          // NOVO: Lucro de giros grátis (sempre >= 0)
+          const lucroGiros = giros.reduce((acc, g) => acc + Math.max(0, (g as any).valor_retorno || 0), 0);
+          
+          // LUCRO BRUTO = apostas + cashback + giros
+          const lucroBrutoCalculado = lucroApostas + lucroCashback + lucroGiros;
 
           const perdasConfirmadas = perdas.reduce((acc, p) => acc + p.valor, 0);
           

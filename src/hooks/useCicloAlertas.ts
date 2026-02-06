@@ -61,16 +61,33 @@ export function useCicloAlertas() {
 
       for (const ciclo of ciclos) {
         // Buscar todas as apostas do período from apostas_unificada
-        const { data: apostasData, error: apostasError } = await supabase
-          .from("apostas_unificada")
-          .select("lucro_prejuizo, stake, stake_total, status, resultado, estrategia")
-          .eq("projeto_id", ciclo.projeto_id)
-          .gte("data_aposta", ciclo.data_inicio)
-          .lte("data_aposta", ciclo.data_fim_prevista);
+        const [apostasResult, cashbackResult, girosResult] = await Promise.all([
+          supabase
+            .from("apostas_unificada")
+            .select("lucro_prejuizo, stake, stake_total, status, resultado, estrategia")
+            .eq("projeto_id", ciclo.projeto_id)
+            .gte("data_aposta", ciclo.data_inicio)
+            .lte("data_aposta", ciclo.data_fim_prevista),
+          supabase
+            .from("cashback_manual")
+            .select("valor")
+            .eq("projeto_id", ciclo.projeto_id)
+            .gte("data_credito", ciclo.data_inicio)
+            .lte("data_credito", ciclo.data_fim_prevista),
+          supabase
+            .from("giros_gratis")
+            .select("valor_retorno")
+            .eq("projeto_id", ciclo.projeto_id)
+            .eq("status", "confirmado")
+            .gte("data_registro", ciclo.data_inicio)
+            .lte("data_registro", ciclo.data_fim_prevista)
+        ]);
 
-        if (apostasError) throw apostasError;
+        if (apostasResult.error) throw apostasResult.error;
         
-        const allApostas = apostasData || [];
+        const allApostas = apostasResult.data || [];
+        const cashbacks = cashbackResult.data || [];
+        const giros = girosResult.data || [];
         
         // Separate by estrategia
         const apostasSimples = allApostas.filter(a => a.estrategia === "SIMPLES");
@@ -84,10 +101,19 @@ export function useCicloAlertas() {
           surebets.reduce((acc, a) => acc + (a.stake_total || 0), 0);
 
         // Calcular lucro realizado (apenas apostas finalizadas)
-        const lucroTotal = 
+        const lucroApostas = 
           apostasSimples.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
           apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado || "")).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
           surebets.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+
+        // Calcular lucro de cashback (sempre positivo)
+        const lucroCashback = cashbacks.reduce((acc, cb) => acc + Math.max(0, cb.valor || 0), 0);
+        
+        // Calcular lucro de giros grátis (sempre positivo)
+        const lucroGiros = giros.reduce((acc, g) => acc + Math.max(0, (g as any).valor_retorno || 0), 0);
+        
+        // LUCRO TOTAL DO CICLO = apostas + cashback + giros
+        const lucroTotal = lucroApostas + lucroCashback + lucroGiros;
 
         // Definir valor acumulado baseado na métrica (sem TURNOVER)
         let valorAcumuladoReal = 0;
