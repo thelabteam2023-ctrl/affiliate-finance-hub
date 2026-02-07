@@ -468,6 +468,19 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
+      // GUARD: Check current status in DB to prevent double finalization
+      const { data: currentBonus, error: fetchError } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .select("status")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (currentBonus?.status === "finalized") {
+        toast.info("Este bônus já foi finalizado.");
+        return reason;
+      }
+
       const updateData = {
         status: "finalized",
         finalized_at: new Date().toISOString(),
@@ -478,12 +491,13 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       const { error } = await supabase
         .from("project_bookmaker_link_bonuses")
         .update(updateData)
-        .eq("id", id);
+        .eq("id", id)
+        .eq("status", "credited"); // Only finalize if still credited (DB-level guard)
 
       if (error) throw error;
       return reason;
     },
-    onSuccess: (reason) => {
+    onSuccess: async (reason) => {
       const reasonLabels: Record<FinalizeReason, string> = {
         rollover_completed: "Rollover concluído (saque liberado)",
         cycle_completed: "Bônus utilizado / ciclo encerrado",
@@ -491,6 +505,8 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         cancelled_reversed: "Cancelado / Revertido",
       };
       toast.success(`Bônus finalizado: ${reasonLabels[reason]}`);
+      // Force immediate refetch before invalidation to ensure UI updates
+      await refetch();
       invalidateBonusQueries(projectId);
     },
     onError: (error: Error) => {
