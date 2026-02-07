@@ -511,10 +511,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const bookmakerNomeMap = useMemo(() => {
     const map = new Map<string, string>();
     bookmakers.forEach(bk => {
-      const parceiroNome = bk.parceiro_nome?.split(" ");
-      const shortName = parceiroNome 
-        ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
-        : "";
+      const shortName = getFirstLastName(bk.parceiro_nome || "");
       const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
       map.set(bk.id, nomeCompleto);
     });

@@ -20,6 +20,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle, Clock, Lock } from "lucide-react";
 import { BonusFormData, BonusStatus, ProjectBonus } from "@/hooks/useProjectBonuses";
+import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
 import { format, addDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -403,7 +404,7 @@ export function BonusDialog({
                               </span>
                             </div>
                             {bk.parceiro_nome && (
-                              <span className="text-xs text-muted-foreground truncate">{bk.parceiro_nome}</span>
+                              <span className="text-xs text-muted-foreground truncate">{getFirstLastName(bk.parceiro_nome)}</span>
                             )}
                           </div>
                         </div>

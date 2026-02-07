@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getFirstLastName } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -604,10 +604,10 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                           )}>
                             {item.nome}
                           </span>
-                          {/* Modo saque: exibir o nome do parceiro */}
+                          {/* Modo saque: exibir nome curto do parceiro */}
                           {isModoSaque && item.parceiro_nome && (
                             <span className="text-[10px] text-muted-foreground leading-tight">
-                              {item.parceiro_nome}
+                              {getFirstLastName(item.parceiro_nome)}
                             </span>
                           )}
                         </div>
