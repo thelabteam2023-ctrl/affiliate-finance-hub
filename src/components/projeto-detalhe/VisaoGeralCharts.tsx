@@ -747,8 +747,11 @@ export function VisaoGeralCharts({
     });
   }, [apostas, logoMap]);
 
-  const lastAccumulated = evolucaoData[evolucaoData.length - 1]?.acumulado ?? 0;
-  const isPositive = lastAccumulated >= 0;
+  // Badge exibe SOMENTE lucro de apostas (sem extras como cashback/giros)
+  const lucroApostasOnly = useMemo(() => {
+    return apostas.reduce((sum, a) => sum + (a.lucro_prejuizo ?? 0), 0);
+  }, [apostas]);
+  const isPositive = lucroApostasOnly >= 0;
 
   // Se só vai mostrar um dos dois, não precisa do grid de 3 colunas
   const showBoth = showEvolucaoChart && showCasasCard;
@@ -807,7 +810,7 @@ export function VisaoGeralCharts({
                 variant="outline"
                 className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
               >
-                {formatCurrency(lastAccumulated)}
+                {formatCurrency(lucroApostasOnly)}
               </Badge>
             </div>
           </div>
@@ -870,7 +873,7 @@ export function VisaoGeralCharts({
                 variant="outline"
                 className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
               >
-                {formatCurrency(lastAccumulated)}
+                {formatCurrency(lucroApostasOnly)}
               </Badge>
             </div>
           </div>
