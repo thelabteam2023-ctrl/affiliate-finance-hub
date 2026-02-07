@@ -212,6 +212,8 @@ REGRAS IMPORTANTES:
     - NÃO substitua por nomenclaturas padrão como "1X2" ou "Moneyline"
 11. Identifique o esporte a partir de indicadores visuais ou textuais
 12. Para a seleção, extraia o que foi apostado (ex: "Over 2.5", "Team Name", "1")
+13. REGRA IMPORTANTE para mercado 1X2: Se a seleção for apenas "1", substitua pelo nome do time mandante (primeiro time). Se for "2", substitua pelo nome do time visitante (segundo time). Se for "X", substitua por "Empate". Isso torna a seleção mais descritiva.
+14. Para valores numéricos (odd, stake, retorno), extraia APENAS os números, sem símbolos de moeda
 13. Para valores numéricos (odd, stake, retorno), extraia APENAS os números, sem símbolos de moeda
 
 Esportes reconhecidos: ${SPORTS_LIST.join(", ")}
@@ -417,6 +419,18 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
           if (sel.evento?.value) {
             sel.evento.value = sel.evento.value.toUpperCase();
           }
+          // Normalize 1x2 selection for multi-bet legs
+          if (sel.selecao?.value && sel.evento?.value) {
+            const selTrimmed = sel.selecao.value.trim();
+            const eventParts = sel.evento.value.split(/\s+(?:X|VS|V)\s+/i);
+            if (eventParts.length === 2) {
+              const home = eventParts[0].trim();
+              const away = eventParts[1].trim();
+              if (selTrimmed === "1") sel.selecao.value = home;
+              else if (selTrimmed === "2") sel.selecao.value = away;
+              else if (selTrimmed.toUpperCase() === "X") sel.selecao.value = "Empate";
+            }
+          }
         }
         
         // Auto-detect tipo based on number of selections
@@ -513,6 +527,18 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
           parsedData.resultado.value = "RED";
         } else if (resultLower.includes("void") || resultLower.includes("cancelado") || resultLower.includes("devolvido")) {
           parsedData.resultado.value = "VOID";
+        }
+      }
+
+      // Normalize 1x2 selection: "1" → home team, "2" → away team, "X" → Empate
+      if (parsedData.selecao?.value) {
+        const selTrimmed = parsedData.selecao.value.trim();
+        if (selTrimmed === "1" && parsedData.mandante?.value) {
+          parsedData.selecao.value = parsedData.mandante.value;
+        } else if (selTrimmed === "2" && parsedData.visitante?.value) {
+          parsedData.selecao.value = parsedData.visitante.value;
+        } else if (selTrimmed.toUpperCase() === "X") {
+          parsedData.selecao.value = "Empate";
         }
       }
 
