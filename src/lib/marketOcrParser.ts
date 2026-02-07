@@ -95,7 +95,7 @@ const OVER_PATTERNS = [
   /over\s+(\d+[.,]?\d*)/i,           // "Over 21.5"
   /acima\s+(de\s+)?(\d+[.,]?\d*)/i,  // "Acima de 21.5"
   /\+(\d+[.,]?\d*)/,                  // "+21.5" (quando é over)
-  /o\s*(\d+[.,]?\d*)/i,               // "O 21.5"
+  /\bo\s+(\d+[.,]?\d*)/i,              // "O 21.5" (word boundary to avoid matching inside words like "Como")
   />\s*(\d+[.,]?\d*)/,                // "> 21.5"
   /(\d+[.,]?\d*)\s*\+/,               // "21.5+"
 ];
@@ -246,17 +246,25 @@ export function parseOcrMarket(
   sport: string
 ): OcrMarketResult {
   const combinedText = `${rawMarket} ${rawSelection}`.toLowerCase();
+  const marketTextLower = rawMarket.toLowerCase();
   
   // 1. DETECTAR TIPO DE MERCADO
   let type: MarketType = "OTHER";
   let confidence: "exact" | "high" | "medium" | "low" = "low";
   
-  // Prioridade 1: Verificar se é TOTAL (Over/Under)
+  // Extract side/line for potential TOTAL detection
   const sideLineFromSelection = extractSideAndLine(rawSelection);
   const sideLineFromMarket = extractSideAndLine(rawMarket);
   const sideLine = sideLineFromSelection || sideLineFromMarket;
   
-  if (sideLine || isTotalMarket(combinedText)) {
+  // Prioridade 0: Se o texto do MERCADO explicitamente contém "1x2" ou "1×2", é 1X2
+  // Isso evita que nomes de times com números (ex: "Como 1907") confundam o parser
+  if (/1\s*[x×]\s*2/i.test(marketTextLower)) {
+    type = "1X2";
+    confidence = "high";
+  }
+  // Prioridade 1: Verificar se é TOTAL (Over/Under)
+  else if (sideLine || isTotalMarket(combinedText)) {
     type = "TOTAL";
     confidence = sideLine ? "high" : "medium";
   }
