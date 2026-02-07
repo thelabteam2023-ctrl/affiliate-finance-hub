@@ -348,6 +348,8 @@ export async function registrarBonusCreditadoViaLedger(params: {
   descricao?: string;
   bonusId?: string;
   restricaoRollover?: number;
+  /** Data do crédito real do bônus (credited_at). Se omitido, usa a data atual. */
+  dataCredito?: string;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'BONUS_CREDITADO',
@@ -358,6 +360,7 @@ export async function registrarBonusCreditadoViaLedger(params: {
     destinoBookmakerId: params.bookmakerId,
     // NOVA ARQUITETURA: Bônus credita saldo_atual (normal), não pool separado
     descricao: params.descricao || 'Crédito de bônus (saldo normal)',
+    dataTransacao: params.dataCredito,
     impactaCaixaOperacional: false, // Evento promocional - NÃO impacta caixa real
     auditoriaMetadata: {
       bonus_id: params.bonusId,
