@@ -11,6 +11,7 @@ import {
 import { parseOcrMarket, resolveOcrResultToOption, formatSelectionFromOcrResult } from "@/lib/marketOcrParser";
 import { detectDateAnomaly, type DateAnomalyResult } from "@/lib/dateAnomalyDetection";
 import { calcularOddReal, formatOddDisplay, type OddCalculationResult } from "@/lib/oddRealCalculation";
+import { applyInferenceRules } from "@/lib/ocrInference";
 
 export interface ParsedField {
   value: string | null;
@@ -374,6 +375,9 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
       }
     }
     
+    // ★ APLICAR REGRAS DE INFERÊNCIA PÓS-OCR (mercado, resultado, retorno/odd)
+    applyInferenceRules(rawData as any);
+    
     // Normalize market using OCR parser - PRESERVAR TEXTO BRUTO (igual ao Surebet)
     if (rawData.mercado?.value) {
       const marketRaw = rawData.mercado.value;
@@ -387,10 +391,6 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
         mercadoRaw: marketRaw,
         esporteDetectado: sportDetected
       });
-      
-      // ★ CRÍTICO: NÃO sobrescrever mercado.value com displayName!
-      // O texto bruto do OCR deve ser preservado (igual ao pipeline do Surebet)
-      // rawData.mercado.value = ocrResult.displayName; // ← REMOVIDO!
       
       // Ajustar confiança baseado na categorização
       if (ocrResult.confidence === "low") {
@@ -409,6 +409,13 @@ export function useImportBetPrint(): UseImportBetPrintReturn {
           }
         }
       }
+    } else {
+      // Mercado may have been set by inference (e.g., "1x2") — still populate pendingData
+      setPendingData({
+        mercadoIntencao: null,
+        mercadoRaw: null,
+        esporteDetectado: rawData.esporte?.value || "Outro"
+      });
     }
     
     // ★ INTELIGÊNCIA DE ODD REAL: Calcular odd baseada no ganho liquidado
