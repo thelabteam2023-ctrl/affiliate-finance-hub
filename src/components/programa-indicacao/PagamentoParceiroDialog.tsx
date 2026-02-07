@@ -265,6 +265,7 @@ export function PagamentoParceiroDialog({
             <DatePicker
               value={dataPagamento}
               onChange={setDataPagamento}
+              maxDate={new Date()}
             />
           </div>
 

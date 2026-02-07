@@ -729,7 +729,8 @@ export function ConfirmarSaqueDialog({
                   onChange={(date) => setDataConfirmacao(date)}
                   placeholder="Selecione a data"
                   fromYear={2020}
-                  toYear={new Date().getFullYear() + 1}
+                  toYear={new Date().getFullYear()}
+                  maxDate={new Date()}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
