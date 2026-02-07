@@ -90,8 +90,12 @@ export default function GestaoBookmakers() {
   const bookmakerIds = useMemo(() => bookmakers.map((b) => b.id), [bookmakers]);
   const { usageMap, refetch: refetchUsage } = useBookmakerUsageStatus(bookmakerIds);
 
-  // Hook para obter tempo médio de saque por bookmaker
-  const { leadTimes } = useWithdrawalLeadTime(bookmakerIds);
+  // Hook para obter tempo médio de saque por bookmaker (catálogo — agrega TODOS os usuários do workspace)
+  const catalogoIds = useMemo(() => {
+    const ids = bookmakers.map((b) => b.bookmaker_catalogo_id).filter(Boolean) as string[];
+    return [...new Set(ids)];
+  }, [bookmakers]);
+  const { leadTimes } = useWithdrawalLeadTime(catalogoIds);
 
   // SEGURANÇA: Refetch quando workspace muda
   useEffect(() => {
@@ -829,16 +833,16 @@ export default function GestaoBookmakers() {
                       </div>
                     </div>
 
-                    {/* Tempo médio de saque */}
-                    {leadTimes[bookmaker.id] && (
+                    {/* Tempo médio de saque (catálogo — todos os usuários do workspace) */}
+                    {bookmaker.bookmaker_catalogo_id && leadTimes[bookmaker.bookmaker_catalogo_id] && (
                       <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-md">
                         <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground">Saque:</span>
                         <span className="text-xs font-medium">
-                          {formatLeadTimeDays(leadTimes[bookmaker.id].avg_days)}
+                          {formatLeadTimeDays(leadTimes[bookmaker.bookmaker_catalogo_id].avg_days)}
                         </span>
                         <span className="text-[10px] text-muted-foreground ml-auto">
-                          ({leadTimes[bookmaker.id].total_saques} {leadTimes[bookmaker.id].total_saques === 1 ? 'saque' : 'saques'})
+                          ({leadTimes[bookmaker.bookmaker_catalogo_id].total_saques} {leadTimes[bookmaker.bookmaker_catalogo_id].total_saques === 1 ? 'saque' : 'saques'})
                         </span>
                       </div>
                     )}

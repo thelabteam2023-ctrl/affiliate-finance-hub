@@ -11201,10 +11201,10 @@ export type Database = {
         }[]
       }
       get_bookmaker_withdrawal_lead_times: {
-        Args: { _bookmaker_ids?: string[] }
+        Args: { _bookmaker_catalogo_ids?: string[] }
         Returns: {
           avg_days: number
-          bookmaker_id: string
+          bookmaker_catalogo_id: string
           max_days: number
           min_days: number
           total_saques: number
