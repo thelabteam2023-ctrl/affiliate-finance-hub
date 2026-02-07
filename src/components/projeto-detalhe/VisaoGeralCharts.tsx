@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -504,7 +504,39 @@ export function VisaoGeralCharts({
     return `${prefix}R$${absVal.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [calendarMonthTotal, setCalendarMonthTotal] = useState<number>(0);
+
+  // Calcula o lucro do mês ATUAL (hoje) diretamente, sem depender do Popover estar aberto
+  const currentMonthTotal = useMemo(() => {
+    const now = new Date();
+    const mesAno = format(now, "yyyy-MM");
+    let total = 0;
+
+    // Apostas do calendário (sem filtro de período)
+    calendarData.forEach((a) => {
+      const dateKey = extractLocalDateKey(a.data_aposta);
+      if (dateKey.startsWith(mesAno) && a.lucro_prejuizo != null) {
+        total += a.lucro_prejuizo;
+      }
+    });
+
+    // Extras (cashback, giros grátis, etc.)
+    extrasLucro.forEach((e) => {
+      const dateStr = e.data.includes('T') ? e.data.split('T')[0] : e.data;
+      if (dateStr.startsWith(mesAno)) {
+        total += e.valor;
+      }
+    });
+
+    return total;
+  }, [calendarData, extrasLucro]);
+
+  // Estado do badge: começa com o total do mês atual, atualiza ao navegar no calendário
+  const [calendarMonthTotal, setCalendarMonthTotal] = useState<number | null>(null);
+  const badgeValue = calendarMonthTotal ?? currentMonthTotal;
+
+  const handleMonthTotalChange = useCallback((total: number) => {
+    setCalendarMonthTotal(total);
+  }, []);
   
   // Prepara mapa de extras por data para inclusão no gráfico de evolução
   const extrasMap = useMemo(() => {
@@ -749,7 +781,7 @@ export function VisaoGeralCharts({
   }, [apostas, logoMap]);
 
   // Badge exibe o lucro do mês atualmente navegado no calendário (apostas + extras)
-  const isPositive = calendarMonthTotal >= 0;
+  const isPositive = badgeValue >= 0;
 
   // Se só vai mostrar um dos dois, não precisa do grid de 3 colunas
   const showBoth = showEvolucaoChart && showCasasCard;
@@ -800,7 +832,7 @@ export function VisaoGeralCharts({
                       accentColor="purple"
                       compact
                       formatCurrency={formatCurrency}
-                      onMonthTotalChange={setCalendarMonthTotal}
+                      onMonthTotalChange={handleMonthTotalChange}
                     />
                   </PopoverContent>
                 </Popover>
@@ -809,7 +841,7 @@ export function VisaoGeralCharts({
                 variant="outline"
                 className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
               >
-                {formatCurrency(calendarMonthTotal)}
+                {formatCurrency(badgeValue)}
               </Badge>
             </div>
           </div>
@@ -864,7 +896,7 @@ export function VisaoGeralCharts({
                       accentColor="purple"
                       compact
                       formatCurrency={formatCurrency}
-                      onMonthTotalChange={setCalendarMonthTotal}
+                      onMonthTotalChange={handleMonthTotalChange}
                     />
                   </PopoverContent>
                 </Popover>
@@ -873,7 +905,7 @@ export function VisaoGeralCharts({
                 variant="outline"
                 className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
               >
-                {formatCurrency(calendarMonthTotal)}
+                {formatCurrency(badgeValue)}
               </Badge>
             </div>
           </div>
