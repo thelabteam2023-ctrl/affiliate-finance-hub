@@ -20,6 +20,7 @@ import {
   formatSelectionFromOcrResult,
   type OcrMarketResult 
 } from "@/lib/marketOcrParser";
+import { applyInferenceRules } from "@/lib/ocrInference";
 
 // ========================================================================
 // INTERFACES
@@ -242,11 +243,15 @@ export function normalizeOcrData(rawData: any): NormalizationResult {
     }
   }
   
+  // 5. APLICAR REGRAS DE INFERÊNCIA PÓS-OCR
+  applyInferenceRules(data);
+  
   console.log("[ocrNormalization] Pipeline complete:", {
     evento: data.evento.value,
     esporte: data.esporte.value,
     mercado: data.mercado.value,
     selecao: data.selecao.value,
+    resultado: data.resultado?.value,
     pendingData
   });
   
