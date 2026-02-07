@@ -757,6 +757,21 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       if (data.stake) {
         setStake(data.stake);
       }
+      
+      // NEW: Fill resultado from print/inference if detected
+      if (data.resultado) {
+        const resultMap: Record<string, string> = {
+          "green": "GREEN", "Green": "GREEN", "GREEN": "GREEN", "won": "GREEN", "Won": "GREEN",
+          "red": "RED", "Red": "RED", "RED": "RED", "lost": "RED", "Lost": "RED",
+          "half green": "MEIO_GREEN", "Half Green": "MEIO_GREEN", "MEIO_GREEN": "MEIO_GREEN",
+          "half red": "MEIO_RED", "Half Red": "MEIO_RED", "MEIO_RED": "MEIO_RED",
+          "void": "VOID", "Void": "VOID", "VOID": "VOID",
+        };
+        const mapped = resultMap[data.resultado] || data.resultado.toUpperCase();
+        if (["GREEN", "RED", "MEIO_GREEN", "MEIO_RED", "VOID"].includes(mapped)) {
+          setStatusResultado(mapped);
+        }
+      }
     }
   }, [printParsedData, aposta, applyPrintData, printPendingData]);
 
