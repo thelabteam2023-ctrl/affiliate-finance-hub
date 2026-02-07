@@ -250,6 +250,7 @@ export function GiroGratisDialog({
             <DatePicker
               value={dataRegistro}
               onChange={setDataRegistro}
+              maxDate={new Date()}
             />
           </div>
 

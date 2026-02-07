@@ -4641,7 +4641,8 @@ export function CaixaTransacaoDialog({
                   onChange={(date) => setDataTransacao(date)}
                   placeholder="Hoje (padrão)"
                   fromYear={2020}
-                  toYear={new Date().getFullYear() + 1}
+                  toYear={new Date().getFullYear()}
+                  maxDate={new Date()}
                 />
               </div>
               <p className="text-xs text-muted-foreground">

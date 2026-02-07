@@ -18,6 +18,8 @@ interface DatePickerProps {
   placeholder?: string;
   fromYear?: number;
   toYear?: number;
+  /** Maximum selectable date. Dates after this are disabled. */
+  maxDate?: Date;
 }
 
 // Parse YYYY-MM-DD string as local date (not UTC)
@@ -35,6 +37,7 @@ export function DatePicker({
   placeholder = "Selecione uma data",
   fromYear = 1920,
   toYear = new Date().getFullYear() + 10,
+  maxDate,
 }: DatePickerProps) {
   const [date, setDate] = React.useState<Date | undefined>(
     value ? parseLocalDate(value) : undefined
@@ -83,12 +86,17 @@ export function DatePicker({
           mode="single"
           selected={date}
           onSelect={handleSelect}
-          disabled={disabled}
+          disabled={(d) => {
+            if (disabled) return true;
+            if (maxDate && d > maxDate) return true;
+            return false;
+          }}
           initialFocus
           locale={ptBR}
           captionLayout="dropdown-buttons"
           fromYear={fromYear}
           toYear={toYear}
+          toDate={maxDate}
         />
       </PopoverContent>
     </Popover>
