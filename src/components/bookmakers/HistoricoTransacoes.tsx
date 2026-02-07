@@ -32,6 +32,7 @@ interface HistoricoTransacoesProps {
     id: string;
     nome: string;
     moeda: string;
+    bookmaker_catalogo_id?: string | null;
   };
 }
 
@@ -39,8 +40,9 @@ export default function HistoricoTransacoes({ open, onClose, bookmaker }: Histor
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { leadTimes } = useWithdrawalLeadTime(open ? [bookmaker.id] : []);
-  const leadTime = leadTimes[bookmaker.id];
+  const catalogoId = bookmaker.bookmaker_catalogo_id;
+  const { leadTimes } = useWithdrawalLeadTime(open && catalogoId ? [catalogoId] : []);
+  const leadTime = catalogoId ? leadTimes[catalogoId] : undefined;
 
   useEffect(() => {
     if (open) {

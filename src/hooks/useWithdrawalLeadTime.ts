@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface WithdrawalLeadTime {
-  bookmaker_id: string;
+  bookmaker_catalogo_id: string;
   avg_days: number;
   total_saques: number;
   min_days: number;
@@ -10,26 +10,27 @@ export interface WithdrawalLeadTime {
 }
 
 /**
- * Fetches average withdrawal lead time per bookmaker.
+ * Fetches average withdrawal lead time per bookmaker CATALOG entry.
+ * Aggregates ALL withdrawals across ALL users/instances in the workspace.
  * Uses SECURITY INVOKER function — scoped by RLS (workspace isolation).
  */
-export function useWithdrawalLeadTime(bookmakerIds: string[]) {
+export function useWithdrawalLeadTime(catalogoIds: string[]) {
   const [leadTimes, setLeadTimes] = useState<Record<string, WithdrawalLeadTime>>({});
   const [loading, setLoading] = useState(false);
 
   const fetch = useCallback(async () => {
-    if (!bookmakerIds.length) return;
+    if (!catalogoIds.length) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc("get_bookmaker_withdrawal_lead_times", {
-        _bookmaker_ids: bookmakerIds,
+        _bookmaker_catalogo_ids: catalogoIds,
       });
       if (error) throw error;
 
       const map: Record<string, WithdrawalLeadTime> = {};
       (data || []).forEach((row: any) => {
-        map[row.bookmaker_id] = {
-          bookmaker_id: row.bookmaker_id,
+        map[row.bookmaker_catalogo_id] = {
+          bookmaker_catalogo_id: row.bookmaker_catalogo_id,
           avg_days: Number(row.avg_days),
           total_saques: Number(row.total_saques),
           min_days: Number(row.min_days),
@@ -42,7 +43,7 @@ export function useWithdrawalLeadTime(bookmakerIds: string[]) {
     } finally {
       setLoading(false);
     }
-  }, [bookmakerIds.join(",")]);
+  }, [catalogoIds.join(",")]);
 
   useEffect(() => {
     fetch();
