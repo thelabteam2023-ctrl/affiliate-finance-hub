@@ -364,6 +364,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       if (data.status === "credited") {
         const moeda = await getBookmakerMoeda(data.bookmaker_id);
         
+        const creditedAt = data.credited_at || new Date().toISOString();
         const result = await registrarBonusCreditadoViaLedger({
           bookmakerId: data.bookmaker_id,
           valor: data.bonus_amount,
@@ -371,6 +372,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
           workspaceId,
           userId: userData.user.id,
           descricao: `Crédito de bônus: ${data.title || 'Sem título'}`,
+          dataCredito: creditedAt.split('T')[0],
         });
         
         if (!result.success) {
@@ -412,6 +414,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
           
           const moeda = await getBookmakerMoeda(existingBonus.bookmaker_id);
           
+          const creditedAt = (data.credited_at || existingBonus.credited_at || new Date().toISOString());
           const result = await registrarBonusCreditadoViaLedger({
             bookmakerId: existingBonus.bookmaker_id,
             valor: bonusAmount,
@@ -420,6 +423,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
             userId: userData?.user?.id || '',
             descricao: `Crédito de bônus: ${existingBonus.title || 'Sem título'}`,
             bonusId: id,
+            dataCredito: creditedAt.split('T')[0],
           });
           
           if (!result.success) {
