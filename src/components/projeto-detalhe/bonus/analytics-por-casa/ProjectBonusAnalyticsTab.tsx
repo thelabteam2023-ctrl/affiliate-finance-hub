@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProjectBonusAnalytics, BookmakerBonusStats } from "@/hooks/useProjectBonusAnalytics";
+import { useWithdrawalLeadTime, formatLeadTimeDays } from "@/hooks/useWithdrawalLeadTime";
 import { ProjectBonusAnalyticsSummary } from "./ProjectBonusAnalyticsSummary";
 import { ProjectBonusDetailDialog } from "./ProjectBonusDetailDialog";
 
@@ -33,6 +34,9 @@ export function ProjectBonusAnalyticsTab({ projectId }: ProjectBonusAnalyticsTab
   const { stats, summary, loading, error } = useProjectBonusAnalytics(projectId);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBookmaker, setSelectedBookmaker] = useState<BookmakerBonusStats | null>(null);
+
+  const catalogoIds = stats.map(s => s.bookmaker_catalogo_id);
+  const { leadTimes } = useWithdrawalLeadTime(catalogoIds);
 
   const filteredStats = stats.filter(s => 
     s.nome.toLowerCase().includes(searchTerm.toLowerCase())
@@ -146,7 +150,7 @@ export function ProjectBonusAnalyticsTab({ projectId }: ProjectBonusAnalyticsTab
                           {bk.currency}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
                         <span className="flex items-center gap-1">
                           <Gift className="h-3 w-3" />
                           {bk.total_bonus_count} bônus
@@ -166,6 +170,23 @@ export function ProjectBonusAnalyticsTab({ projectId }: ProjectBonusAnalyticsTab
                             <XCircle className="h-3 w-3" />
                             {bk.bonus_problem_count} problema{bk.bonus_problem_count > 1 ? 's' : ''}
                           </span>
+                        )}
+                        {leadTimes[bk.bookmaker_catalogo_id] && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center gap-1 text-blue-400">
+                                <Clock className="h-3 w-3" />
+                                Saque: {formatLeadTimeDays(leadTimes[bk.bookmaker_catalogo_id].avg_days)}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs space-y-0.5">
+                                <p>Tempo médio de saque: {formatLeadTimeDays(leadTimes[bk.bookmaker_catalogo_id].avg_days)}</p>
+                                <p>Min: {formatLeadTimeDays(leadTimes[bk.bookmaker_catalogo_id].min_days)} · Max: {formatLeadTimeDays(leadTimes[bk.bookmaker_catalogo_id].max_days)}</p>
+                                <p>{leadTimes[bk.bookmaker_catalogo_id].total_saques} saque(s) analisado(s)</p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     </div>
