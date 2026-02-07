@@ -251,9 +251,9 @@ export function BonusDialog({
     }
     if (template.prazo) {
       setDeadlineDays(template.prazo);
-      // Auto-set expiration date
-      const today = new Date();
-      const expiration = addDays(today, Number(template.prazo));
+      // Auto-set expiration date based on credit date (or today)
+      const baseDate = creditedAt ? new Date(creditedAt) : new Date();
+      const expiration = addDays(baseDate, Number(template.prazo));
       setExpiresAt(format(expiration, "yyyy-MM-dd"));
     }
     
@@ -710,7 +710,16 @@ export function BonusDialog({
                 {status === "credited" ? (
                   <DatePicker
                     value={creditedAt}
-                    onChange={setCreditedAt}
+                    onChange={(val) => {
+                      setCreditedAt(val);
+                      // Auto-recalculate expiration from new credit date + deadline
+                      if (val && deadlineDays) {
+                        const baseDate = new Date(val);
+                        const expiration = addDays(baseDate, Number(deadlineDays));
+                        setExpiresAt(format(expiration, "yyyy-MM-dd"));
+                      }
+                    }}
+                    maxDate={new Date()}
                   />
                 ) : (
                   <div className="h-10 flex items-center justify-center text-xs text-muted-foreground border border-dashed rounded-md">
