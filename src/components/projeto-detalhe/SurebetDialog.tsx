@@ -53,6 +53,7 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RegistroApostaFields, RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFields";
 import { isAbaEstrategiaFixa, getEstrategiaFromTab } from "@/lib/apostaConstants";
+import { getFirstLastName } from "@/lib/utils";
 import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao } from "@/types/apostasUnificada";
 import { pernasToInserts } from "@/types/apostasPernas";
 import { useSurebetService, type SurebetPerna as SurebetPernaService } from "@/hooks/useSurebetService";
@@ -1449,10 +1450,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   const getBookmakerNome = (bookmakerId: string): string => {
     const bk = bookmakerSaldos.find(b => b.id === bookmakerId);
     if (!bk) return "";
-    const parceiroNome = bk.parceiro_nome?.split(" ");
-    const shortName = parceiroNome 
-      ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
-      : "";
+    const shortName = getFirstLastName(bk.parceiro_nome || "");
     return shortName ? `${bk.nome} - ${shortName}` : bk.nome;
   };
 
@@ -2813,10 +2811,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                     const saldoLivreBase = getBookmakerSaldoLivre(entry.bookmaker_id);
                     const saldoDisponivelPosicao = getSaldoDisponivelParaPosicao(entry.bookmaker_id, index);
                     const selectedBookmaker = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
-                    const parceiroNome = selectedBookmaker?.parceiro_nome?.split(" ");
-                    const parceiroShortName = parceiroNome 
-                      ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
-                      : "";
+                    const parceiroShortName = getFirstLastName(selectedBookmaker?.parceiro_nome || "");
                     // Usar suggestedStakes (stake calculada automaticamente) para comparação
                     const stakeCalculada = analysis?.suggestedStakes?.[index] || 0;
                     const stakeAtual = parseFloat(entry.stake) || 0;
@@ -3462,10 +3457,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                                 const addStake = parseFloat(addEntry.stake) || 0;
                                 const addSaldoDisponivel = getSaldoDisponivelParaAdditionalEntry(addEntry.bookmaker_id, index, addIdx);
                                 const addSaldoInsuficiente = addEntry.bookmaker_id && addStake > 0 && addSaldoDisponivel !== null && addStake > addSaldoDisponivel + 0.01;
-                                const addParceiroNome = addBk?.parceiro_nome?.split(" ");
-                                const addParceiroShortName = addParceiroNome 
-                                  ? `${addParceiroNome[0]} ${addParceiroNome[addParceiroNome.length - 1] || ""}`.trim()
-                                  : "";
+                                const addParceiroShortName = getFirstLastName(addBk?.parceiro_nome || "");
                                 
                                 return (
                                   <div key={addIdx} className="space-y-1 animate-in fade-in slide-in-from-top-1">

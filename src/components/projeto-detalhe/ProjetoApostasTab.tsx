@@ -959,10 +959,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const bookmakerNomeMap = useMemo(() => {
     const map = new Map<string, string>();
     bookmakers.forEach(bk => {
-      const parceiroNome = bk.parceiro?.nome?.split(" ");
-      const shortName = parceiroNome 
-        ? `${parceiroNome[0]} ${parceiroNome[parceiroNome.length - 1] || ""}`.trim()
-        : "";
+      const shortName = getFirstLastName(bk.parceiro?.nome || "");
       const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
       map.set(bk.id, nomeCompleto);
     });
