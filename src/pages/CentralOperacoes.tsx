@@ -14,6 +14,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
+import { getFirstLastName } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1021,45 +1022,37 @@ export default function CentralOperacoes() {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-2">
-                {saquesPendentes.slice(0, 4).map((saque) => (
-                  <div key={saque.id} className="flex items-center justify-between p-2 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                {saquesPendentes.slice(0, 4).map((saque) => {
+                  const destinoNome = saque.destino_wallet_id 
+                    ? (saque.wallet_exchange || saque.wallet_nome || "Wallet") 
+                    : (saque.banco_nome || "Conta Bancária");
+                  const parceiroShort = saque.parceiro_nome ? getFirstLastName(saque.parceiro_nome) : "";
+                  
+                  return (
+                    <div key={saque.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
                       {saque.destino_wallet_id ? (
-                        <Wallet className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+                        <Wallet className="h-4 w-4 text-yellow-400 shrink-0" />
                       ) : (
-                        <Building2 className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+                        <Building2 className="h-4 w-4 text-yellow-400 shrink-0" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="text-xs font-medium truncate max-w-[100px]">{saque.bookmaker_nome}</p>
-                          {saque.projeto_nome && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-yellow-500/30 text-yellow-300 shrink-0 whitespace-nowrap">
-                              {saque.projeto_nome}
-                            </Badge>
-                          )}
-                        </div>
+                        <p className="text-xs font-medium truncate">
+                          {destinoNome}{parceiroShort ? ` · ${parceiroShort}` : ""}
+                        </p>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          → {saque.destino_wallet_id ? (saque.wallet_nome || "Wallet Crypto") : (saque.banco_nome || "Conta Bancária")}
+                          {saque.bookmaker_nome}
+                          {saque.coin ? ` · ${saque.coin}` : ""}
                         </p>
                       </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-0.5 shrink-0">
-                      {/* Valor ORIGEM (débito da casa) */}
-                      <span className="text-xs font-bold text-yellow-400">
+                      <span className="text-xs font-bold text-yellow-400 shrink-0">
                         {formatCurrency(saque.valor_origem || saque.valor, saque.moeda_origem || saque.moeda)}
                       </span>
-                      {/* Valor ESPERADO (crédito destino) - se houver conversão */}
-                      {saque.valor_destino && saque.moeda_destino && saque.moeda_destino !== saque.moeda_origem && (
-                        <span className="text-[10px] text-muted-foreground">
-                          ≈ {formatCurrency(saque.valor_destino, saque.moeda_destino)}
-                        </span>
-                      )}
+                      <Button size="sm" onClick={() => handleConfirmarSaque(saque)} className="bg-yellow-600 hover:bg-yellow-700 h-6 text-xs px-2 shrink-0">
+                        Confirmar
+                      </Button>
                     </div>
-                    <Button size="sm" onClick={() => handleConfirmarSaque(saque)} className="bg-yellow-600 hover:bg-yellow-700 h-6 text-xs px-2">
-                      Confirmar
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
