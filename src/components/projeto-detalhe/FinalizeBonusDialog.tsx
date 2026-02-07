@@ -146,7 +146,10 @@ export function FinalizeBonusDialog({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={confirming}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleConfirm}
+            onClick={(e) => {
+              e.preventDefault();
+              handleConfirm();
+            }}
             disabled={confirming}
             className="bg-primary hover:bg-primary/90"
           >
