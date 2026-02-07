@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { 
   Plus, 
@@ -75,7 +76,33 @@ export function GlobalActionsBar({
   onNavigateToTab 
 }: GlobalActionsBarProps) {
   const { workspaceId } = useAuth();
-  const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
+  // React Query para bookmakers - sincronizado com o grafo FINANCIAL_STATE
+  const { data: bookmakers = [] } = useQuery<Bookmaker[]>({
+    queryKey: ["bookmakers", projetoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select(`
+          id,
+          nome,
+          saldo_atual,
+          saldo_usd,
+          saldo_freebet,
+          moeda,
+          login_username,
+          login_password_encrypted,
+          bookmaker_catalogo_id,
+          parceiro:parceiros (nome),
+          bookmakers_catalogo (logo_url)
+        `)
+        .eq("projeto_id", projetoId);
+
+      if (error) throw error;
+      return (data || []) as Bookmaker[];
+    },
+    enabled: !!projetoId,
+    staleTime: 10_000,
+  });
   
   // Verificação centralizada: botão só aparece em abas operacionais
   const showNovaApostaButton = ABAS_OPERACIONAIS_APOSTA.includes(activeTab || "");
@@ -103,37 +130,6 @@ export function GlobalActionsBar({
         .map((b) => b.bookmaker_id)
     );
   }, [bonuses]);
-
-  // Re-fetch bookmakers when project changes OR when bonuses change (ensures newly linked bookmakers appear)
-  useEffect(() => {
-    fetchBookmakers();
-  }, [projetoId, bonuses]);
-
-  const fetchBookmakers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("bookmakers")
-        .select(`
-          id,
-          nome,
-          saldo_atual,
-          saldo_usd,
-          saldo_freebet,
-          moeda,
-          login_username,
-          login_password_encrypted,
-          bookmaker_catalogo_id,
-          parceiro:parceiros (nome),
-          bookmakers_catalogo (logo_url)
-        `)
-        .eq("projeto_id", projetoId);
-
-      if (error) throw error;
-      setBookmakers(data || []);
-    } catch (error: any) {
-      console.error("Erro ao carregar bookmakers:", error.message);
-    }
-  };
 
   // Handlers para abrir janelas de apostas
   const handleOpenApostaSimples = () => {
