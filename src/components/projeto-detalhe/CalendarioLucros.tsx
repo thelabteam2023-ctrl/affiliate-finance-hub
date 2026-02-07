@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
@@ -38,6 +38,8 @@ interface CalendarioLucrosProps {
   accentColor?: string;
   compact?: boolean;
   formatCurrency?: (value: number) => string;
+  /** Callback disparado quando o lucro total do mês exibido muda (navegação ou dados) */
+  onMonthTotalChange?: (total: number) => void;
 }
 
 // Fallback para formatação de moeda
@@ -66,7 +68,8 @@ export function CalendarioLucros({
   titulo = "Calendário de Lucros",
   accentColor = "purple",
   compact = false,
-  formatCurrency: formatCurrencyProp
+  formatCurrency: formatCurrencyProp,
+  onMonthTotalChange,
 }: CalendarioLucrosProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -148,6 +151,11 @@ export function CalendarioLucros({
     
     return { lucroTotal, totalApostas };
   }, [apostas, extrasLucro, currentMonth]);
+
+  // Notifica o pai quando o lucro do mês muda
+  useEffect(() => {
+    onMonthTotalChange?.(estatisticasMes.lucroTotal);
+  }, [estatisticasMes.lucroTotal, onMonthTotalChange]);
 
   const formatCurrencyValue = formatCurrencyProp || defaultFormatCurrencyCompact;
   const formatFullCurrency = formatCurrencyProp || defaultFormatCurrencyFull;
