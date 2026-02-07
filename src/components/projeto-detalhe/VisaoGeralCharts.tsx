@@ -504,6 +504,7 @@ export function VisaoGeralCharts({
     return `${prefix}R$${absVal.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonthTotal, setCalendarMonthTotal] = useState<number>(0);
   
   // Prepara mapa de extras por data para inclusão no gráfico de evolução
   const extrasMap = useMemo(() => {
@@ -747,11 +748,8 @@ export function VisaoGeralCharts({
     });
   }, [apostas, logoMap]);
 
-  // Badge exibe SOMENTE lucro de apostas (sem extras como cashback/giros)
-  const lucroApostasOnly = useMemo(() => {
-    return apostas.reduce((sum, a) => sum + (a.lucro_prejuizo ?? 0), 0);
-  }, [apostas]);
-  const isPositive = lucroApostasOnly >= 0;
+  // Badge exibe o lucro do mês atualmente navegado no calendário (apostas + extras)
+  const isPositive = calendarMonthTotal >= 0;
 
   // Se só vai mostrar um dos dois, não precisa do grid de 3 colunas
   const showBoth = showEvolucaoChart && showCasasCard;
@@ -802,6 +800,7 @@ export function VisaoGeralCharts({
                       accentColor="purple"
                       compact
                       formatCurrency={formatCurrency}
+                      onMonthTotalChange={setCalendarMonthTotal}
                     />
                   </PopoverContent>
                 </Popover>
@@ -810,7 +809,7 @@ export function VisaoGeralCharts({
                 variant="outline"
                 className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
               >
-                {formatCurrency(lucroApostasOnly)}
+                {formatCurrency(calendarMonthTotal)}
               </Badge>
             </div>
           </div>
@@ -865,6 +864,7 @@ export function VisaoGeralCharts({
                       accentColor="purple"
                       compact
                       formatCurrency={formatCurrency}
+                      onMonthTotalChange={setCalendarMonthTotal}
                     />
                   </PopoverContent>
                 </Popover>
@@ -873,7 +873,7 @@ export function VisaoGeralCharts({
                 variant="outline"
                 className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
               >
-                {formatCurrency(lucroApostasOnly)}
+                {formatCurrency(calendarMonthTotal)}
               </Badge>
             </div>
           </div>
