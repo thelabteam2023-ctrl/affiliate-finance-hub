@@ -11200,6 +11200,16 @@ export type Database = {
           status: string
         }[]
       }
+      get_bookmaker_withdrawal_lead_times: {
+        Args: { _bookmaker_ids?: string[] }
+        Returns: {
+          avg_days: number
+          bookmaker_id: string
+          max_days: number
+          min_days: number
+          total_saques: number
+        }[]
+      }
       get_bookmakers_pendentes_conciliacao: {
         Args: { p_workspace_id: string }
         Returns: {

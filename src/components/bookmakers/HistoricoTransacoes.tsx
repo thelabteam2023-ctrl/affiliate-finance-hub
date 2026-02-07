@@ -8,10 +8,11 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, TrendingDown, DollarSign, Award, Settings } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Award, Settings, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDateTime } from "@/utils/dateUtils";
+import { useWithdrawalLeadTime, formatLeadTimeDays } from "@/hooks/useWithdrawalLeadTime";
 
 interface Transacao {
   id: string;
@@ -38,6 +39,8 @@ export default function HistoricoTransacoes({ open, onClose, bookmaker }: Histor
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { leadTimes } = useWithdrawalLeadTime(open ? [bookmaker.id] : []);
+  const leadTime = leadTimes[bookmaker.id];
 
   useEffect(() => {
     if (open) {
@@ -125,6 +128,31 @@ export default function HistoricoTransacoes({ open, onClose, bookmaker }: Histor
         <DialogHeader>
           <DialogTitle>Histórico de Transações - {bookmaker.nome}</DialogTitle>
         </DialogHeader>
+
+        {/* Resumo de tempo médio de saque */}
+        {leadTime && (
+          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border/50">
+            <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              <div>
+                <span className="text-muted-foreground">Tempo médio de saque: </span>
+                <span className="font-semibold">{formatLeadTimeDays(leadTime.avg_days)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Mínimo: </span>
+                <span className="font-medium">{formatLeadTimeDays(leadTime.min_days)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Máximo: </span>
+                <span className="font-medium">{formatLeadTimeDays(leadTime.max_days)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Total: </span>
+                <span className="font-medium">{leadTime.total_saques} {leadTime.total_saques === 1 ? 'saque' : 'saques'}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="py-8 text-center text-muted-foreground">

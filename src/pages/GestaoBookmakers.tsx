@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen, Filter, UserCheck, UserX, Users, History, Ban } from "lucide-react";
+import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen, Filter, UserCheck, UserX, Users, History, Ban, Clock } from "lucide-react";
 import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBookmakerUsageStatus, canDeleteBookmaker } from "@/hooks/useBookmakerUsageStatus";
 import { BookmakerUsageBadge } from "@/components/bookmakers/BookmakerUsageBadge";
 import { useActionAccess } from "@/hooks/useModuleAccess";
+import { useWithdrawalLeadTime, formatLeadTimeDays } from "@/hooks/useWithdrawalLeadTime";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Tooltip,
@@ -88,6 +89,9 @@ export default function GestaoBookmakers() {
   // Hook para obter status de uso de cada bookmaker
   const bookmakerIds = useMemo(() => bookmakers.map((b) => b.id), [bookmakers]);
   const { usageMap, refetch: refetchUsage } = useBookmakerUsageStatus(bookmakerIds);
+
+  // Hook para obter tempo médio de saque por bookmaker
+  const { leadTimes } = useWithdrawalLeadTime(bookmakerIds);
 
   // SEGURANÇA: Refetch quando workspace muda
   useEffect(() => {
@@ -824,6 +828,20 @@ export default function GestaoBookmakers() {
                         })()}
                       </div>
                     </div>
+
+                    {/* Tempo médio de saque */}
+                    {leadTimes[bookmaker.id] && (
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-md">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Saque:</span>
+                        <span className="text-xs font-medium">
+                          {formatLeadTimeDays(leadTimes[bookmaker.id].avg_days)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground ml-auto">
+                          ({leadTimes[bookmaker.id].total_saques} {leadTimes[bookmaker.id].total_saques === 1 ? 'saque' : 'saques'})
+                        </span>
+                      </div>
+                    )}
 
                     <div className="flex gap-2 pt-2 border-t">
                       <Button
