@@ -101,12 +101,79 @@ function inferMarketAndLine(data: NormalizedBetData): void {
 }
 
 /**
+ * REGRA FINANCEIRA CRÍTICA: Normalização Won/Retorno
+ * 
+ * Muitas casas exibem "Won" como LUCRO LÍQUIDO (não retorno bruto).
+ * Se o valor "Won" < stake, ele representa apenas o lucro.
+ * 
+ * Regra-mãe:
+ *   Se won < stake → retorno_total = stake + won, odd_real = retorno_total / stake
+ *   Se won >= stake → won É o retorno total
+ * 
+ * Adicionalmente, valida contra a odd exibida no print para confirmar.
+ */
+function normalizeRetornoAndOdd(data: NormalizedBetData): void {
+  const stake = parseNumericValue(data.stake?.value ?? null);
+  const retornoRaw = parseNumericValue(data.retorno?.value ?? null);
+  const oddExibida = parseNumericValue(data.odd?.value ?? null);
+
+  if (stake === null || retornoRaw === null || stake <= 0) return;
+
+  let retornoReal = retornoRaw;
+  let oddReal = oddExibida;
+
+  if (retornoRaw < stake && retornoRaw > 0) {
+    // "Won" is profit, not gross return
+    retornoReal = stake + retornoRaw;
+    oddReal = retornoReal / stake;
+    
+    console.log(`[ocrInference] Won→Lucro detected: won=${retornoRaw}, stake=${stake} → retorno_real=${retornoReal}, odd_real=${oddReal?.toFixed(4)}`);
+    
+    data.retorno = { value: retornoReal.toFixed(2), confidence: "high" };
+    
+    // Update odd if not already set or if calculated matches better
+    if (oddReal) {
+      // Cross-validate: if print shows odd and our calculation matches, high confidence
+      if (oddExibida && Math.abs(oddReal - oddExibida) < 0.02) {
+        console.log(`[ocrInference] Odd cross-validated: calculated=${oddReal.toFixed(4)}, print=${oddExibida}`);
+      }
+      data.odd = { value: oddReal.toFixed(2), confidence: "high" };
+    }
+  } else if (retornoRaw >= stake) {
+    // "Won" is gross return — validate odd
+    if (oddExibida && oddExibida > 1) {
+      const expectedReturn = stake * oddExibida;
+      if (Math.abs(retornoRaw - expectedReturn) < 1) {
+        // Consistent: won = gross return matching odd * stake
+        console.log(`[ocrInference] Won=Retorno bruto confirmed (matches odd)`);
+      } else {
+        // Won might still be profit even if > stake (rare high-odds case)
+        const oddFromGross = retornoRaw / stake;
+        const oddFromProfit = (stake + retornoRaw) / stake;
+        
+        // Pick whichever is closer to the displayed odd
+        const diffGross = Math.abs(oddFromGross - oddExibida);
+        const diffProfit = Math.abs(oddFromProfit - oddExibida);
+        
+        if (diffProfit < diffGross) {
+          // Won is actually profit
+          retornoReal = stake + retornoRaw;
+          oddReal = retornoReal / stake;
+          data.retorno = { value: retornoReal.toFixed(2), confidence: "high" };
+          data.odd = { value: oddReal.toFixed(2), confidence: "high" };
+          console.log(`[ocrInference] Won→Lucro (high odds): retorno_real=${retornoReal}, odd_real=${oddReal.toFixed(4)}`);
+        }
+      }
+    }
+  }
+}
+
+/**
  * Rules 5-8: Infer result from stake vs return comparison
  * - return > stake → Green
  * - return === 0 → Red
  * - 0 < return < stake → Half Red
  * - return === stake → Void
- * - stake < return < full_payout → Half Green (rare, handled via odd comparison)
  */
 function inferResult(data: NormalizedBetData): void {
   // Only infer if result is missing or low confidence
@@ -127,11 +194,10 @@ function inferResult(data: NormalizedBetData): void {
   if (retorno === 0) {
     resultado = "Red";
     confidence = "high";
-  } else if (retorno === stake) {
+  } else if (Math.abs(retorno - stake) < 0.01) {
     resultado = "Void";
     confidence = "high";
   } else if (retorno > stake) {
-    // Check if it's a full win or half win
     if (odd !== null && odd > 1) {
       const expectedFullReturn = stake * odd;
       const ratio = retorno / expectedFullReturn;
@@ -147,7 +213,6 @@ function inferResult(data: NormalizedBetData): void {
       confidence = "medium";
     }
   } else {
-    // 0 < retorno < stake → Half Red
     resultado = "Half Red";
     confidence = "medium";
   }
@@ -169,6 +234,7 @@ export function applyInferenceRules(data: NormalizedBetData): void {
   
   inferSport(data);
   inferMarketAndLine(data);
+  normalizeRetornoAndOdd(data);  // MUST run before inferResult
   inferResult(data);
   
   console.log("[ocrInference] Inference complete:", {
