@@ -1,19 +1,19 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Filter, Calendar, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X } from "lucide-react";
+import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X } from "lucide-react";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
-import { format, subDays, startOfDay, endOfDay, isToday } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
 import { SimplePagination } from "@/components/ui/simple-pagination";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { parseLocalDateTime } from "@/utils/dateUtils";
+import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
+import { DashboardPeriodFilter, getDashboardDateRange } from "@/types/dashboardFilters";
 const PAGE_SIZE = 50;
 
 const getStatusBadge = (status: string) => {
@@ -187,35 +187,22 @@ export function HistoricoMovimentacoes({
   // Client-side pagination
   const pagination = usePagination(transacoesComBusca, { initialPageSize: PAGE_SIZE });
 
-  const handlePeriodoRapido = (dias: number | null) => {
-    if (dias === null) {
-      setDataInicio(undefined);
-      setDataFim(undefined);
-    } else if (dias === 0) {
-      setDataInicio(startOfDay(new Date()));
-      setDataFim(endOfDay(new Date()));
-    } else {
-      setDataInicio(subDays(new Date(), dias));
-      setDataFim(new Date());
-    }
-    // Reset to first page when changing date filter
-    pagination.goToFirstPage();
-  };
+  // Period filter state
+  const [periodFilter, setPeriodFilter] = useState<DashboardPeriodFilter>("tudo");
   
-  const handleBuscaChange = (value: string) => {
-    setTermoBusca(value);
+  const handlePeriodChange = useCallback((filter: DashboardPeriodFilter) => {
+    setPeriodFilter(filter);
+    const range = getDashboardDateRange(filter);
+    setDataInicio(range.start ?? undefined);
+    setDataFim(range.end ?? undefined);
     pagination.goToFirstPage();
-  };
+  }, [setDataInicio, setDataFim, pagination]);
 
-  const getPeriodoAtivo = () => {
-    if (!dataInicio && !dataFim) return "todos";
-    if (dataInicio && dataFim && isToday(dataInicio) && isToday(dataFim)) return "hoje";
-    const hoje = new Date();
-    const diffDays = dataInicio ? Math.floor((hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)) : null;
-    if (diffDays === 7) return "7dias";
-    if (diffDays === 30) return "30dias";
-    return "custom";
-  };
+  const handleCustomRangeChange = useCallback((range: { start: Date; end: Date }) => {
+    setDataInicio(range.start);
+    setDataFim(endOfDay(range.end));
+    pagination.goToFirstPage();
+  }, [setDataInicio, setDataFim, pagination]);
 
   return (
     <>
@@ -233,7 +220,10 @@ export function HistoricoMovimentacoes({
             <Input
               placeholder="Buscar por casa, parceiro, wallet, banco, descrição..."
               value={termoBusca}
-              onChange={(e) => handleBuscaChange(e.target.value)}
+              onChange={(e) => {
+                setTermoBusca(e.target.value);
+                pagination.goToFirstPage();
+              }}
               className="pl-9 pr-9"
             />
             {termoBusca && (
@@ -241,13 +231,16 @@ export function HistoricoMovimentacoes({
                 variant="ghost"
                 size="icon"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                onClick={() => handleBuscaChange("")}
+                onClick={() => {
+                  setTermoBusca("");
+                  pagination.goToFirstPage();
+                }}
               >
                 <X className="h-4 w-4" />
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={filtroTipo} onValueChange={setFiltroTipo}>
@@ -293,44 +286,13 @@ export function HistoricoMovimentacoes({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-[140px] justify-start text-left">
-                    {dataInicio ? format(dataInicio, "dd/MM/yyyy") : "Data início"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent mode="single" selected={dataInicio} onSelect={setDataInicio} initialFocus className="pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-              <span className="text-muted-foreground">até</span>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-[140px] justify-start text-left">
-                    {dataFim ? format(dataFim, "dd/MM/yyyy") : "Data fim"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent mode="single" selected={dataFim} onSelect={setDataFim} initialFocus className="pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Período:</span>
-            {["hoje", "7dias", "30dias", "todos"].map((p) => (
-              <Button
-                key={p}
-                variant={getPeriodoAtivo() === p ? "default" : "outline"}
-                size="sm"
-                onClick={() => handlePeriodoRapido(p === "hoje" ? 0 : p === "7dias" ? 7 : p === "30dias" ? 30 : null)}
-                className="h-7 px-3 text-xs"
-              >
-                {p === "hoje" ? "Hoje" : p === "7dias" ? "Últimos 7 dias" : p === "30dias" ? "Últimos 30 dias" : "Todo o período"}
-              </Button>
-            ))}
+            <DashboardPeriodFilterBar
+              value={periodFilter}
+              onChange={handlePeriodChange}
+              customRange={periodFilter === "custom" && dataInicio && dataFim ? { start: dataInicio, end: dataFim } : undefined}
+              onCustomRangeChange={handleCustomRangeChange}
+              size="sm"
+            />
           </div>
         </div>
       </CardHeader>
