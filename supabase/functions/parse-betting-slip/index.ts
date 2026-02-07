@@ -199,8 +199,10 @@ REGRAS IMPORTANTES:
    - IMPORTANTE: O valor 120.00 visível na imagem é o STAKE, não o retorno!
 4. O RETORNO é o valor total a receber se ganhar (stake * odd) - normalmente maior que stake
 5. O RESULTADO pode ser: "GREEN" (ganhou), "RED" (perdeu), "VOID" (cancelado), ou null se pendente
-   - Identifique por textos como: "GANHOU", "VENCIDO", "PERDIDO", "CANCELADO", etc.
-   - Badge verde/vermelho também indica resultado
+   - GREEN: "GANHOU", "VENCIDO", "VITÓRIA", "VITORIA", "WON", "WIN", "ACERTOU", "GANHO", "VENCEU", badge verde
+   - RED: "PERDIDO", "PERDEU", "DERROTA", "DEFEAT", "LOST", "LOSE", "ERROU", "PERDA", badge vermelho
+   - VOID: "CANCELADO", "DEVOLVIDO", "ANULADO", "REEMBOLSO", "REFUND", "VOID"
+   - null: se o resultado ainda está pendente
 6. O BOOKMAKER/CASA é o nome da casa de apostas (ex: "Bet365", "Betano", "EstrelaBet")
    - Geralmente aparece no topo ou rodapé do bilhete
    - Pode ser logo ou texto
@@ -521,11 +523,11 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
       // Normalize resultado to standard values
       if (parsedData.resultado?.value) {
         const resultLower = parsedData.resultado.value.toLowerCase();
-        if (resultLower.includes("ganhou") || resultLower.includes("vencido") || resultLower.includes("win") || resultLower === "green") {
+        if (resultLower.includes("ganhou") || resultLower.includes("vencido") || resultLower.includes("win") || resultLower === "green" || resultLower.includes("vitória") || resultLower.includes("vitoria") || resultLower.includes("acertou") || resultLower.includes("won") || resultLower.includes("ganho") || resultLower.includes("venceu")) {
           parsedData.resultado.value = "GREEN";
-        } else if (resultLower.includes("perdeu") || resultLower.includes("perdido") || resultLower.includes("lose") || resultLower.includes("lost") || resultLower === "red") {
+        } else if (resultLower.includes("perdeu") || resultLower.includes("perdido") || resultLower.includes("lose") || resultLower.includes("lost") || resultLower === "red" || resultLower.includes("derrota") || resultLower.includes("errou") || resultLower.includes("defeat") || resultLower.includes("perda")) {
           parsedData.resultado.value = "RED";
-        } else if (resultLower.includes("void") || resultLower.includes("cancelado") || resultLower.includes("devolvido")) {
+        } else if (resultLower.includes("void") || resultLower.includes("cancelado") || resultLower.includes("devolvido") || resultLower.includes("reembolso") || resultLower.includes("anulado") || resultLower.includes("refund")) {
           parsedData.resultado.value = "VOID";
         }
       }
