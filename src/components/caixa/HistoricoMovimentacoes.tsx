@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X } from "lucide-react";
+import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { usePagination } from "@/hooks/usePagination";
@@ -280,7 +281,7 @@ export function HistoricoMovimentacoes({
                   {parceirosLista
                     .sort((a, b) => a.nome.localeCompare(b.nome))
                     .map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>{getFirstLastName(p.nome)}</SelectItem>
                     ))
                   }
                 </SelectContent>
