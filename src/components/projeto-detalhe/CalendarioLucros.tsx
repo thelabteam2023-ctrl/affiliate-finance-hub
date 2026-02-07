@@ -24,8 +24,16 @@ interface ApostaData {
   lucro_prejuizo: number | null;
 }
 
+/** Entrada extra de lucro (cashback, giros grátis, etc.) por competência */
+export interface ExtraLucroCalendarioEntry {
+  data: string; // YYYY-MM-DD (data de competência)
+  valor: number;
+}
+
 interface CalendarioLucrosProps {
   apostas: ApostaData[];
+  /** Entradas extras de lucro (cashback, giros grátis) para consolidar no calendário */
+  extrasLucro?: ExtraLucroCalendarioEntry[];
   titulo?: string;
   accentColor?: string;
   compact?: boolean;
@@ -54,6 +62,7 @@ const defaultFormatCurrencyFull = (value: number): string => {
 
 export function CalendarioLucros({ 
   apostas, 
+  extrasLucro = [],
   titulo = "Calendário de Lucros",
   accentColor = "purple",
   compact = false,
@@ -61,20 +70,18 @@ export function CalendarioLucros({
 }: CalendarioLucrosProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Agrupar lucro por dia
+  // Agrupar lucro por dia (apostas + extras por competência)
   const lucroPorDia = useMemo(() => {
     const mapa = new Map<string, { lucro: number; count: number }>();
     
+    // 1. Apostas liquidadas
     apostas.forEach((aposta) => {
-      // Considerar todas as apostas que têm lucro_prejuizo (liquidadas)
-      // Se resultado for null/undefined, usa lucro_prejuizo como critério
       const isLiquidada = aposta.resultado 
         ? aposta.resultado !== "PENDENTE" 
         : aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined;
       
       if (!isLiquidada) return;
       
-      // Usar extractLocalDateKey para garantir agrupamento por dia civil correto
       const dataKey = extractLocalDateKey(aposta.data_aposta);
       const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
       
@@ -83,9 +90,19 @@ export function CalendarioLucros({
         count: atual.count + 1
       });
     });
+
+    // 2. Extras (cashback, giros grátis) por data de competência
+    extrasLucro.forEach((extra) => {
+      const dataKey = extra.data.includes('T') ? extra.data.split('T')[0] : extra.data;
+      const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
+      mapa.set(dataKey, {
+        lucro: atual.lucro + extra.valor,
+        count: atual.count > 0 ? atual.count : 1, // garante que o dia apareça no calendário
+      });
+    });
     
     return mapa;
-  }, [apostas]);
+  }, [apostas, extrasLucro]);
 
   // Calcular dias do mês para exibição
   const diasDoMes = useMemo(() => {
@@ -100,11 +117,12 @@ export function CalendarioLucros({
     return eachDayOfInterval({ start: inicioSemana, end: fimSemana });
   }, [currentMonth]);
 
-  // Estatísticas do mês
+  // Estatísticas do mês (apostas + extras por competência)
   const estatisticasMes = useMemo(() => {
     let lucroTotal = 0;
     let totalApostas = 0;
     
+    // 1. Apostas liquidadas no mês
     apostas.forEach((aposta) => {
       const dataAposta = parseLocalDateTime(aposta.data_aposta);
       if (isSameMonth(dataAposta, currentMonth)) {
@@ -118,9 +136,18 @@ export function CalendarioLucros({
         }
       }
     });
+
+    // 2. Extras (cashback, giros grátis) com competência no mês
+    const mesAno = format(currentMonth, "yyyy-MM");
+    extrasLucro.forEach((extra) => {
+      const extraDate = extra.data.includes('T') ? extra.data.split('T')[0] : extra.data;
+      if (extraDate.startsWith(mesAno)) {
+        lucroTotal += extra.valor;
+      }
+    });
     
     return { lucroTotal, totalApostas };
-  }, [apostas, currentMonth]);
+  }, [apostas, extrasLucro, currentMonth]);
 
   const formatCurrencyValue = formatCurrencyProp || defaultFormatCurrencyCompact;
   const formatFullCurrency = formatCurrencyProp || defaultFormatCurrencyFull;

@@ -794,6 +794,7 @@ export function VisaoGeralCharts({
                         resultado: null,
                         lucro_prejuizo: a.lucro_prejuizo
                       }))} 
+                      extrasLucro={extrasLucro}
                       titulo="Calendário de Lucros"
                       accentColor="purple"
                       compact
@@ -856,6 +857,7 @@ export function VisaoGeralCharts({
                         resultado: null,
                         lucro_prejuizo: a.lucro_prejuizo
                       }))} 
+                      extrasLucro={extrasLucro}
                       titulo="Calendário de Lucros"
                       accentColor="purple"
                       compact
