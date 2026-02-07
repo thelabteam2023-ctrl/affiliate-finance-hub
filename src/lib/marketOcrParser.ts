@@ -274,12 +274,12 @@ export function parseOcrMarket(
     confidence = "high";
   }
   // Prioridade 3: Outros tipos específicos
-  else if (/moneyline|money\s*line|\bml\b|vencedor/i.test(combinedText)) {
-    type = "MONEYLINE";
+  else if (/1x2|resultado.*final|tres.*vias|match\s*winner|vencedor\s*(da\s*)?(partida|match)/i.test(combinedText)) {
+    type = "1X2";
     confidence = "high";
   }
-  else if (/1x2|resultado.*final|tres.*vias/i.test(combinedText)) {
-    type = "1X2";
+  else if (/moneyline|money\s*line|\bml\b|vencedor/i.test(combinedText)) {
+    type = "MONEYLINE";
     confidence = "high";
   }
   else if (/btts|ambas?\s*marcam|gol.*gol|\bgg\b/i.test(combinedText)) {
