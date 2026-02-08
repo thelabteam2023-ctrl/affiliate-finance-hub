@@ -182,12 +182,18 @@ serve(async (req) => {
     const systemPrompt = isMultipla ? MULTIPLA_SYSTEM_PROMPT : `Você é um especialista em ler boletins de apostas esportivas. Sua tarefa é extrair TODAS as informações visíveis do print de um boletim de aposta.
 
 REGRA CRÍTICA DE DATA/HORA:
-1. Se o bilhete mostrar APENAS dia e mês (ex: "11/06", "11-6", "11 de junho") SEM o ano explícito:
+1. FORMATO DE DATA NOS PRINTS: As datas em bilhetes de apostas usam o formato DD/MM (dia/mês), NUNCA MM/DD.
+   - "07/02" significa 7 de fevereiro (dia 7, mês 2), NÃO 2 de julho
+   - "11/06" significa 11 de junho (dia 11, mês 6), NÃO 6 de novembro
+   - "25/12" significa 25 de dezembro (dia 25, mês 12)
+   - SEMPRE interprete o PRIMEIRO número como DIA e o SEGUNDO como MÊS
+2. Se o bilhete mostrar APENAS dia e mês (ex: "07/02", "11-6", "11 de junho") SEM o ano explícito:
    - SEMPRE assuma o ANO ATUAL: ${currentYear}
    - Combine: dia + mês reconhecidos + ${currentYear}
-   - Exemplo: "11/6" → "${currentYear}-06-11"
-2. NUNCA invente anos passados ou futuros
-3. Se houver ambiguidade, use o melhor palpite mas com confiança "medium"
+   - Exemplo: "07/02" → "${currentYear}-02-07" (7 de fevereiro)
+   - Exemplo: "11/6" → "${currentYear}-06-11" (11 de junho)
+3. NUNCA invente anos passados ou futuros
+4. Se houver ambiguidade, use o melhor palpite mas com confiança "medium"
 
 REGRAS IMPORTANTES:
 1. Extraia TODOS os campos visíveis: times, data, esporte, mercado, seleção, ODD, STAKE, RETORNO, RESULTADO, NOME DA CASA
@@ -356,9 +362,24 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
     const normalizeDateWithCurrentYear = (dateStr: string | null): { value: string | null; wasYearInferred: boolean } => {
       if (!dateStr) return { value: null, wasYearInferred: false };
       
-      // If already has a valid year (2020-2030 range), return as is
+      // If already has a valid year (2020-2030 range), validate DD/MM wasn't swapped
       const yearMatch = dateStr.match(/20[2-3]\d/);
       if (yearMatch) {
+        // Check for swapped month/day: if month > 12, it's likely DD in month position
+        const isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+          const month = parseInt(isoMatch[2]);
+          const day = parseInt(isoMatch[3]);
+          // If month > 12, the AI swapped DD/MM (e.g., 2026-07-02 instead of 2026-02-07)
+          if (month > 12 && day <= 12) {
+            const corrected = dateStr.replace(
+              `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`,
+              `${isoMatch[1]}-${isoMatch[3].padStart(2, '0')}-${isoMatch[2].padStart(2, '0')}`
+            );
+            console.log(`[normalizeDateWithCurrentYear] Swapped month/day: "${dateStr}" → "${corrected}"`);
+            return { value: corrected, wasYearInferred: false };
+          }
+        }
         return { value: dateStr, wasYearInferred: false };
       }
       
