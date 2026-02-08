@@ -11869,6 +11869,7 @@ export type Database = {
         | "login_success"
         | "login_blocked"
         | "password_reset_requested"
+        | "CLOSE"
       billing_period: "monthly" | "semiannual" | "annual" | "lifetime"
       bookmaker_visibility:
         | "GLOBAL_REGULATED"
@@ -12045,6 +12046,7 @@ export const Constants = {
         "login_success",
         "login_blocked",
         "password_reset_requested",
+        "CLOSE",
       ],
       billing_period: ["monthly", "semiannual", "annual", "lifetime"],
       bookmaker_visibility: [
