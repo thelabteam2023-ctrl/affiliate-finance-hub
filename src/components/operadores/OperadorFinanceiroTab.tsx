@@ -33,6 +33,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PagamentoOperadorDialog } from "./PagamentoOperadorDialog";
+import { ConfirmarPagamentoOperadorDialog } from "./ConfirmarPagamentoOperadorDialog";
 import { toast } from "sonner";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 
@@ -116,6 +117,8 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPagamento, setSelectedPagamento] = useState<Pagamento | null>(null);
+  const [confirmarPagamentoOpen, setConfirmarPagamentoOpen] = useState(false);
+  const [pagamentoParaPagar, setPagamentoParaPagar] = useState<Pagamento | null>(null);
 
   useEffect(() => {
     if (operadorId) {
@@ -712,8 +715,8 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
                           variant="default"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedPagamento(pag);
-                            setDialogOpen(true);
+                            setPagamentoParaPagar(pag);
+                            setConfirmarPagamentoOpen(true);
                           }}
                         >
                           <DollarSign className="h-3 w-3 mr-1" />
@@ -767,6 +770,27 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
           descricao: selectedPagamento.descricao,
           status: selectedPagamento.status,
         } : undefined}
+        onSuccess={fetchData}
+      />
+
+      <ConfirmarPagamentoOperadorDialog
+        open={confirmarPagamentoOpen}
+        onOpenChange={(open) => {
+          setConfirmarPagamentoOpen(open);
+          if (!open) setPagamentoParaPagar(null);
+        }}
+        pagamento={pagamentoParaPagar ? {
+          id: pagamentoParaPagar.id,
+          operador_id: operadorId,
+          operador_nome: operadorNome,
+          projeto_id: pagamentoParaPagar.projeto_id || null,
+          projeto_nome: pagamentoParaPagar.projeto_nome || undefined,
+          tipo_pagamento: pagamentoParaPagar.tipo_pagamento,
+          valor: pagamentoParaPagar.valor,
+          moeda: pagamentoParaPagar.moeda,
+          data_pagamento: pagamentoParaPagar.data_pagamento,
+          descricao: pagamentoParaPagar.descricao,
+        } : null}
         onSuccess={fetchData}
       />
     </div>
