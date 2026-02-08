@@ -274,7 +274,7 @@ export function parseOcrMarket(
     confidence = "high";
   }
   // Prioridade 3: Outros tipos específicos
-  else if (/1x2|resultado.*final|tres.*vias|match\s*winner|match\s*result|vencedor\s*(da\s*)?(partida|match)/i.test(combinedText)) {
+  else if (/1x2|resultado.*final|final\s*(da|de)\s*partida|tres.*vias|match\s*winner|match\s*result|vencedor\s*(da\s*)?(partida|match)/i.test(combinedText)) {
     type = "1X2";
     confidence = "high";
   }
