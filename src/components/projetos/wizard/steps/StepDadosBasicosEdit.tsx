@@ -79,30 +79,33 @@ export function StepDadosBasicosEdit({
       const operadorIds = opProjetos.map((op) => op.operador_id);
       const { data: operadores, error: opDetailsError } = await supabase
         .from("operadores")
-        .select("id, auth_user_id")
+        .select("id, auth_user_id, nome")
         .in("id", operadorIds);
 
       if (opDetailsError) throw opDetailsError;
 
       // Step 3: Get profiles for names
       const authUserIds = operadores?.map((op) => op.auth_user_id).filter(Boolean) || [];
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", authUserIds);
+      const { data: profiles, error: profilesError } = authUserIds.length > 0
+        ? await supabase
+            .from("profiles")
+            .select("id, full_name")
+            .in("id", authUserIds)
+        : { data: [] as { id: string; full_name: string | null }[], error: null };
 
       if (profilesError) throw profilesError;
 
       // Step 4: Map everything together
       const profilesMap = new Map(profiles?.map((p) => [p.id, p.full_name]) || []);
-      const operadoresMap = new Map(operadores?.map((o) => [o.id, o.auth_user_id]) || []);
+      const operadoresDetailMap = new Map(operadores?.map((o) => [o.id, o]) || []);
 
       const operadoresComNome = opProjetos.map((op) => {
-        const authUserId = operadoresMap.get(op.operador_id);
+        const opDetail = operadoresDetailMap.get(op.operador_id);
+        const authUserId = opDetail?.auth_user_id;
         const fullName = authUserId ? profilesMap.get(authUserId) : null;
         return {
           operador_id: op.operador_id,
-          nome: fullName || "Sem nome",
+          nome: fullName || opDetail?.nome || "Sem nome",
           status: op.status,
         };
       });
