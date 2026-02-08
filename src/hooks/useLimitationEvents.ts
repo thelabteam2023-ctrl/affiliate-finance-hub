@@ -6,7 +6,8 @@ import { toast } from "sonner";
 // ─── Types ───────────────────────────────────────────────────────────
 export type LimitationType = "stake_limit" | "odds_limit" | "market_block" | "full_limit" | "unknown";
 export type LimitationBucket = "early" | "mid" | "late";
-export type StrategicProfile = "early_limiter" | "mid_limiter" | "late_limiter" | "low_risk";
+export type StrategicProfile = "early_limiter" | "mid_limiter" | "late_limiter" | "low_risk" | "mixed" | "low_data";
+export type ConfidenceScore = "HIGH" | "MEDIUM" | "LOW";
 
 export interface LimitationEvent {
   id: string;
@@ -44,6 +45,29 @@ export interface LimitationStats {
   most_common_type: LimitationType;
   last_limitation_at: string;
   strategic_profile: StrategicProfile;
+}
+
+export interface GlobalLimitationStats {
+  workspace_id: string;
+  bookmaker_catalogo_id: string;
+  bookmaker_nome: string;
+  logo_url: string | null;
+  total_events: number;
+  total_projects: number;
+  total_vinculos: number;
+  avg_bets_before_limitation: number;
+  stddev_bets: number | null;
+  early_count: number;
+  mid_count: number;
+  late_count: number;
+  early_pct: number;
+  mid_pct: number;
+  late_pct: number;
+  most_common_type: LimitationType;
+  last_limitation_at: string;
+  first_limitation_at: string;
+  strategic_profile: StrategicProfile;
+  confidence_score: ConfidenceScore;
 }
 
 export interface CreateLimitationEventInput {
@@ -87,6 +111,24 @@ export const STRATEGIC_PROFILE_CONFIG: Record<StrategicProfile, { label: string;
     bgColor: "bg-emerald-500/10",
     description: "Baixa taxa de limitação",
   },
+  mixed: {
+    label: "Inconsistente",
+    color: "text-orange-500",
+    bgColor: "bg-orange-500/10",
+    description: "Distribuição mista entre buckets",
+  },
+  low_data: {
+    label: "Dados Insuficientes",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted/50",
+    description: "Poucos eventos para classificar",
+  },
+};
+
+export const CONFIDENCE_CONFIG: Record<ConfidenceScore, { label: string; color: string; bgColor: string }> = {
+  HIGH: { label: "Alta", color: "text-emerald-500", bgColor: "bg-emerald-500/10" },
+  MEDIUM: { label: "Média", color: "text-yellow-500", bgColor: "bg-yellow-500/10" },
+  LOW: { label: "Baixa", color: "text-muted-foreground", bgColor: "bg-muted/50" },
 };
 
 export const BUCKET_LABELS: Record<LimitationBucket, string> = {
@@ -127,7 +169,7 @@ export function useLimitationEvents(projetoId: string) {
     enabled: !!projetoId && !!workspaceId,
   });
 
-  // Fetch aggregated stats from view
+  // Fetch aggregated stats from view (per-project)
   const statsQuery = useQuery({
     queryKey: ["limitation-stats", projetoId, workspaceId],
     queryFn: async () => {
@@ -143,6 +185,23 @@ export function useLimitationEvents(projetoId: string) {
       return (data || []) as LimitationStats[];
     },
     enabled: !!projetoId && !!workspaceId,
+  });
+
+  // Fetch global longitudinal stats
+  const globalStatsQuery = useQuery({
+    queryKey: ["limitation-stats-global", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+
+      const { data, error } = await supabase
+        .from("v_limitation_stats_global")
+        .select("*")
+        .eq("workspace_id", workspaceId);
+
+      if (error) throw error;
+      return (data || []) as GlobalLimitationStats[];
+    },
+    enabled: !!workspaceId,
   });
 
   // Create event mutation
@@ -217,7 +276,8 @@ export function useLimitationEvents(projetoId: string) {
   return {
     events: eventsQuery.data || [],
     stats: statsQuery.data || [],
-    isLoading: eventsQuery.isLoading || statsQuery.isLoading,
+    globalStats: globalStatsQuery.data || [],
+    isLoading: eventsQuery.isLoading || statsQuery.isLoading || globalStatsQuery.isLoading,
     createEvent,
     deleteEvent,
   };
