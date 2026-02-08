@@ -124,8 +124,9 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
       if (moedaConsolidacao === "BRL") {
         return valor * cotacaoEUR;
       }
-      // EUR -> USD: usar proporção das cotações
-      return valor * (cotacaoEUR / cotacaoUSD);
+      // EUR -> USD: converter EUR para BRL primeiro, depois dividir pela cotação USD ativa
+      // CRÍTICO: Usar cotacaoAtual (que respeita fonte_cotacao TRABALHO) em vez de cotacaoUSD da API
+      return valor * (cotacaoEUR / cotacaoAtual);
     }
 
     // GBP -> moeda de consolidação  
@@ -133,8 +134,8 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
       if (moedaConsolidacao === "BRL") {
         return valor * cotacaoGBP;
       }
-      // GBP -> USD: usar proporção das cotações
-      return valor * (cotacaoGBP / cotacaoUSD);
+      // GBP -> USD: mesma lógica, usar cotacaoAtual
+      return valor * (cotacaoGBP / cotacaoAtual);
     }
 
     // Crypto (USDT, USDC, etc - assumindo paridade 1:1 com USD)
