@@ -93,7 +93,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         .from("cash_ledger")
         .select("destino_bookmaker_id, valor, status, projeto_id_snapshot")
         .eq("tipo_transacao", "DEPOSITO")
-        .in("status", ["CONFIRMADO", "PENDENTE"])
+        .in("status", ["CONFIRMADO", "PENDENTE", "LIQUIDADO"])
         .in("destino_bookmaker_id", bookmakerIds)
         .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
 
@@ -102,7 +102,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         .from("cash_ledger")
         .select("origem_bookmaker_id, valor, status, projeto_id_snapshot")
         .eq("tipo_transacao", "SAQUE")
-        .in("status", ["CONFIRMADO", "PENDENTE"])
+        .in("status", ["CONFIRMADO", "PENDENTE", "LIQUIDADO"])
         .in("origem_bookmaker_id", bookmakerIds)
         .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
 
@@ -141,7 +141,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
       const girosGratisMap: Record<string, number> = {};
 
       depositos?.forEach((d: any) => {
-        if (d.status === "CONFIRMADO") {
+        if (d.status === "CONFIRMADO" || d.status === "LIQUIDADO") {
           depositosConfirmadosMap[d.destino_bookmaker_id] = (depositosConfirmadosMap[d.destino_bookmaker_id] || 0) + Number(d.valor);
         } else if (d.status === "PENDENTE") {
           depositosPendentesMap[d.destino_bookmaker_id] = (depositosPendentesMap[d.destino_bookmaker_id] || 0) + Number(d.valor);
@@ -149,7 +149,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
       });
 
       saques?.forEach((s: any) => {
-        if (s.status === "CONFIRMADO") {
+        if (s.status === "CONFIRMADO" || s.status === "LIQUIDADO") {
           saquesConfirmadosMap[s.origem_bookmaker_id] = (saquesConfirmadosMap[s.origem_bookmaker_id] || 0) + Number(s.valor);
         } else if (s.status === "PENDENTE") {
           saquesPendentesMap[s.origem_bookmaker_id] = (saquesPendentesMap[s.origem_bookmaker_id] || 0) + Number(s.valor);
