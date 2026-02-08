@@ -1,27 +1,17 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldAlert, Plus, BarChart3, List } from "lucide-react";
+import { ShieldAlert, BarChart3, List } from "lucide-react";
 import { useLimitationEvents } from "@/hooks/useLimitationEvents";
 import { LimitationStatsCards } from "./LimitationStatsCards";
 import { LimitationRankingTable } from "./LimitationRankingTable";
 import { LimitationEventsTimeline } from "./LimitationEventsTimeline";
-import { RegistrarLimitacaoDialog } from "./RegistrarLimitacaoDialog";
 
 interface LimitationSectionProps {
   projetoId: string;
 }
 
 export function LimitationSection({ projetoId }: LimitationSectionProps) {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const { events, stats, isLoading, createEvent, deleteEvent } = useLimitationEvents(projetoId);
-
-  const handleCreate = (input: Parameters<typeof createEvent.mutate>[0]) => {
-    createEvent.mutate(input, {
-      onSuccess: () => setDialogOpen(false),
-    });
-  };
+  const { events, stats, isLoading, deleteEvent } = useLimitationEvents(projetoId);
 
   if (isLoading) {
     return (
@@ -36,22 +26,16 @@ export function LimitationSection({ projetoId }: LimitationSectionProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center">
-            <ShieldAlert className="h-5 w-5 text-red-500" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold">Estatísticas de Limitação</h3>
-            <p className="text-sm text-muted-foreground">
-              Inteligência estratégica sobre comportamento de casas
-            </p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+          <ShieldAlert className="h-5 w-5 text-red-500" />
         </div>
-        <Button size="sm" onClick={() => setDialogOpen(true)} className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          Registrar Limitação
-        </Button>
+        <div>
+          <h3 className="text-lg font-semibold">Estatísticas de Limitação</h3>
+          <p className="text-sm text-muted-foreground">
+            Inteligência estratégica — dados capturados automaticamente ao limitar contas
+          </p>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -91,15 +75,6 @@ export function LimitationSection({ projetoId }: LimitationSectionProps) {
           </CardContent>
         </Tabs>
       </Card>
-
-      {/* Dialog */}
-      <RegistrarLimitacaoDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        projetoId={projetoId}
-        onSubmit={handleCreate}
-        isSubmitting={createEvent.isPending}
-      />
     </div>
   );
 }
