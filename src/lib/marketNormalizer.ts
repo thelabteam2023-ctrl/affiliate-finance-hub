@@ -747,7 +747,7 @@ const SPORT_RULES: SportRules[] = [
     sport: ["eFootball", "FIFA", "PES", "EA FC", "EA Sports FC"],
     rules: [
       // Vencedor / 1X2
-      { patterns: [/1x2/i, /resultado\s*final/i, /vencedor\s*(da\s*)?partida/i, /winner/i], canonicalType: "1X2", displayName: "1X2", priority: 10 },
+      { patterns: [/1x2/i, /resultado\s*final/i, /final\s*(da|de)\s*partida/i, /vencedor\s*(da\s*)?partida/i, /winner/i], canonicalType: "1X2", displayName: "1X2", priority: 10 },
       
       // Over/Under Gols
       { patterns: [/over\s*\/?\s*under\s*(de\s*)?(gol|goal)/i, /total\s*(de\s*)?(gol|goal)/i], canonicalType: "OVER_UNDER", displayName: "Over/Under Gols" },
@@ -957,7 +957,8 @@ export function normalizeMarketSemantically(context: SemanticMarketContext): Sem
 const MARKET_EQUIVALENCES: Record<string, string[]> = {
   "1X2": [
     "1x2", "1 x 2", "resultado final", "match result", "full time result",
-    "match winner", "vencedor", "winner", "três vias", "tres vias", "3 way"
+    "match winner", "vencedor", "winner", "três vias", "tres vias", "3 way",
+    "final da partida", "final de partida"
   ],
   "Moneyline": [
     "moneyline", "money line", "ml", "to win", "vencedor da partida incluindo prorrogação"
