@@ -274,7 +274,7 @@ export function parseOcrMarket(
     confidence = "high";
   }
   // Prioridade 3: Outros tipos específicos
-  else if (/1x2|resultado.*final|final\s*(da|de)\s*partida|tres.*vias|match\s*winner|match\s*result|vencedor\s*(da\s*)?(partida|match)/i.test(combinedText)) {
+  else if (/1x2|resultado.*final|final\s*(da|de)\s*partida|tres.*vias|match\s*winner|matched?\s*winner|match\s*result|vencedor\s*(da\s*)?(partida|match)|main\s*line/i.test(combinedText)) {
     type = "1X2";
     confidence = "high";
   }
@@ -430,6 +430,18 @@ export function resolveOcrResultToOption(
             return option;
           }
         }
+      }
+    }
+    
+    // Match por tipo para 1X2 / Moneyline
+    if (result.type === "1X2") {
+      if (normalizedOption.includes("1x2") || normalizedOption.includes("1 x 2")) {
+        return option;
+      }
+    }
+    if (result.type === "MONEYLINE") {
+      if (normalizedOption.includes("moneyline") || normalizedOption.includes("vencedor")) {
+        return option;
       }
     }
   }

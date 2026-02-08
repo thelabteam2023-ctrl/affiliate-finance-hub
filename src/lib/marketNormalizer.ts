@@ -237,8 +237,8 @@ const SPORT_RULES: SportRules[] = [
     sport: ["Futebol", "Soccer", "Football"],
     rules: [
       // Vencedor / 1X2
-      { patterns: [/1x2/i, /resultado\s*final/i, /match\s*result/i, /full\s*time/i, /tres\s*vias/i, /three\s*way/i], canonicalType: "1X2", displayName: "1X2", priority: 10 },
-      { patterns: [/vencedor\s*(da\s*)?partida/i, /winner/i, /match\s*winner/i], canonicalType: "1X2", displayName: "1X2" },
+      { patterns: [/1x2/i, /resultado\s*final/i, /match\s*result/i, /full\s*time/i, /tres\s*vias/i, /three\s*way/i, /main\s*line/i], canonicalType: "1X2", displayName: "1X2", priority: 10 },
+      { patterns: [/vencedor\s*(da\s*)?partida/i, /winner/i, /match\s*winner/i, /matched?\s*winner/i], canonicalType: "1X2", displayName: "1X2" },
       
       // Dupla Chance
       { patterns: [/dupla\s*chance/i, /double\s*chance/i], canonicalType: "DOUBLE_CHANCE", displayName: "Dupla Chance", priority: 10 },
