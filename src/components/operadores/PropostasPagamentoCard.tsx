@@ -241,84 +241,71 @@ export function PropostasPagamentoCard() {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+      <Card className="border-amber-500/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <AlertTriangle className="h-4 w-4 text-amber-400" />
             Propostas de Pagamento
-            <Badge variant="secondary">{propostas.length}</Badge>
+            <Badge className="ml-auto bg-amber-500/20 text-amber-400">{propostas.length}</Badge>
           </CardTitle>
-          <CardDescription>Aguardando aprovação manual</CardDescription>
+          <CardDescription className="text-xs">Aguardando aprovação manual</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="pt-0">
+          <div className="space-y-2">
             {propostas.map((proposta) => (
               <div
                 key={proposta.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 border rounded-lg bg-card"
+                className="flex items-center justify-between p-2 rounded-lg border border-amber-500/20 bg-amber-500/5"
               >
-                <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="font-medium truncate">{proposta.operador_nome}</span>
-                    <Badge variant="outline" className="text-xs shrink-0">
-                      {getModeloLabel(proposta.modelo_pagamento)}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground flex-wrap">
-                    <span className="flex items-center gap-1 truncate">
-                      <FolderKanban className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{proposta.projeto_nome}</span>
-                    </span>
-                    {proposta.ciclo_numero && (
-                      <span className="shrink-0">Ciclo {proposta.ciclo_numero}</span>
-                    )}
-                    <span className="flex items-center gap-1 shrink-0">
-                      <Calendar className="h-3 w-3" />
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <User className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-medium truncate">{proposta.operador_nome}</p>
+                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 shrink-0">
+                        {getModeloLabel(proposta.modelo_pagamento)}
+                      </Badge>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {proposta.projeto_nome}
+                      {proposta.ciclo_numero ? ` • Ciclo ${proposta.ciclo_numero}` : ""}
+                      {" • "}
+                      <Calendar className="h-2.5 w-2.5 inline" />
+                      {" "}
                       {format(new Date(proposta.data_proposta), "dd/MM/yyyy", { locale: ptBR })}
-                    </span>
-                  </div>
-                  {proposta.desconto_prejuizo_anterior > 0 && (
-                    <p className="text-xs text-amber-500">
-                      Desconto de prejuízo anterior: {formatCurrency(proposta.desconto_prejuizo_anterior)}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
-                  <div className="text-left sm:text-right">
-                    <p className="text-base sm:text-lg font-bold text-emerald-500">
-                      {formatCurrency(proposta.valor_ajustado ?? proposta.valor_calculado)}
                     </p>
                     {proposta.lucro_base > 0 && proposta.percentual_aplicado && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] text-muted-foreground">
                         {proposta.percentual_aplicado}% de {formatCurrency(proposta.lucro_base)}
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-500 hover:text-red-600"
-                      onClick={() => {
-                        setSelectedProposta(proposta);
-                        setRejeitarDialogOpen(true);
-                      }}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                      onClick={() => {
-                        setSelectedProposta(proposta);
-                        setAprovarDialogOpen(true);
-                      }}
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-1" />
-                      Aprovar
-                    </Button>
-                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs font-bold text-emerald-400">
+                    {formatCurrency(proposta.valor_ajustado ?? proposta.valor_calculado)}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0 text-red-400 hover:text-red-500"
+                    onClick={() => {
+                      setSelectedProposta(proposta);
+                      setRejeitarDialogOpen(true);
+                    }}
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 h-6 text-xs px-2"
+                    onClick={() => {
+                      setSelectedProposta(proposta);
+                      setAprovarDialogOpen(true);
+                    }}
+                  >
+                    Aprovar
+                  </Button>
                 </div>
               </div>
             ))}
