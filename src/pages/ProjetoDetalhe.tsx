@@ -38,7 +38,8 @@ import {
   ArrowLeftRight,
   Sparkles,
   Zap,
-  Puzzle
+  Puzzle,
+  ShieldAlert
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import {
@@ -64,6 +65,7 @@ import { ProjetoGestaoTab } from "@/components/projeto-detalhe/ProjetoGestaoTab"
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
 import { ModuleActivationDialog } from "@/components/projeto-detalhe/ModuleActivationDialog";
+import { LimitationSection } from "@/components/projeto-detalhe/limitation/LimitationSection";
 import { SetDefaultTabButton } from "@/components/projeto-detalhe/SetDefaultTabButton";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
@@ -762,6 +764,7 @@ export default function ProjetoDetalhe() {
                 icon: <Settings2 className="h-3.5 w-3.5 md:h-4 md:w-4" />,
                 items: [
                   { value: "modulos", label: "Módulos", icon: <Puzzle className="h-4 w-4" /> },
+                  { value: "limitacoes", label: "Limitações", icon: <ShieldAlert className="h-4 w-4" /> },
                   { value: "ciclos", label: "Ciclos", icon: <Clock className="h-4 w-4" /> },
                   { value: "perdas", label: "Perdas", icon: <AlertTriangle className="h-4 w-4" /> },
                 ],
@@ -858,6 +861,14 @@ export default function ProjetoDetalhe() {
 
           <TabsContent value="modulos" className="h-full m-0">
             <ProjetoGestaoTab projetoId={id!} />
+          </TabsContent>
+
+          <TabsContent value="limitacoes" className="h-full m-0">
+            <div className="h-full overflow-y-auto py-4 px-1">
+              <div className="max-w-5xl mx-auto">
+                <LimitationSection projetoId={id!} />
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="ciclos" className="h-full m-0">
