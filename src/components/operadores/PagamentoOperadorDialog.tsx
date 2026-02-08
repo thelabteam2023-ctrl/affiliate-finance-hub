@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import {
@@ -32,6 +33,11 @@ interface Operador {
 interface Projeto {
   id: string;
   nome: string;
+}
+
+interface CicloRef {
+  data_inicio: string;
+  data_fim_prevista: string;
 }
 
 interface PagamentoOperador {
@@ -93,7 +99,9 @@ export function PagamentoOperadorDialog({
     saldoDisponivel: 0,
     saldoInsuficiente: false,
   });
+  const [cicloRef, setCicloRef] = useState<CicloRef | null>(null);
 
+  const isEditing = !!pagamento?.id;
   const isSaldoInsuficiente = formData.status === "CONFIRMADO" && formData.valor > 0 && (origemData.saldoInsuficiente || origemData.saldoDisponivel < formData.valor);
 
   useEffect(() => {
@@ -106,6 +114,9 @@ export function PagamentoOperadorDialog({
           ...pagamento,
           data_competencia: pagamento.data_competencia || null,
         });
+        if (pagamento.id) {
+          fetchCicloRef(pagamento.id);
+        }
       } else {
         setFormData({
           operador_id: defaultOperadorId || "",
@@ -125,6 +136,7 @@ export function PagamentoOperadorDialog({
           saldoDisponivel: 0,
           saldoInsuficiente: false,
         });
+        setCicloRef(null);
       }
     }
   }, [open, pagamento, defaultOperadorId]);
@@ -151,6 +163,22 @@ export function PagamentoOperadorDialog({
 
     if (!error && data) {
       setProjetos(data);
+    }
+  };
+
+  const fetchCicloRef = async (pagamentoId: string) => {
+    const { data } = await supabase
+      .from("pagamentos_propostos")
+      .select("ciclo_id, projeto_ciclos:ciclo_id(data_inicio, data_fim_prevista)")
+      .eq("pagamento_id", pagamentoId)
+      .limit(1)
+      .maybeSingle();
+
+    if (data?.projeto_ciclos) {
+      const ciclo = data.projeto_ciclos as any;
+      setCicloRef({ data_inicio: ciclo.data_inicio, data_fim_prevista: ciclo.data_fim_prevista });
+    } else {
+      setCicloRef(null);
     }
   };
 
@@ -377,7 +405,7 @@ export function PagamentoOperadorDialog({
             <Select
               value={formData.operador_id}
               onValueChange={(value) => setFormData({ ...formData, operador_id: value })}
-              disabled={!!defaultOperadorId}
+              disabled={!!defaultOperadorId || isEditing}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o operador" />
@@ -397,6 +425,7 @@ export function PagamentoOperadorDialog({
             <Select
               value={formData.projeto_id || "none"}
               onValueChange={(value) => setFormData({ ...formData, projeto_id: value === "none" ? null : value })}
+              disabled={isEditing}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Vincular a um projeto" />
@@ -418,6 +447,7 @@ export function PagamentoOperadorDialog({
               <Select
                 value={formData.tipo_pagamento}
                 onValueChange={(value) => setFormData({ ...formData, tipo_pagamento: value })}
+                disabled={isEditing}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -455,12 +485,18 @@ export function PagamentoOperadorDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Competência (opcional)</Label>
-              <DatePicker
-                value={formData.data_competencia || ""}
-                onChange={(date) => setFormData({ ...formData, data_competencia: date || null })}
-                placeholder="Mês de referência"
-              />
+              <Label>Competência</Label>
+              {cicloRef ? (
+                <div className="flex items-center gap-1.5 h-10 px-3 rounded-md border bg-muted/50 text-sm">
+                  {format(new Date(cicloRef.data_inicio + "T12:00:00"), "dd/MM/yyyy")} — {format(new Date(cicloRef.data_fim_prevista + "T12:00:00"), "dd/MM/yyyy")}
+                </div>
+              ) : (
+                <DatePicker
+                  value={formData.data_competencia || ""}
+                  onChange={(date) => setFormData({ ...formData, data_competencia: date || null })}
+                  placeholder="Mês de referência"
+                />
+              )}
             </div>
           </div>
 
