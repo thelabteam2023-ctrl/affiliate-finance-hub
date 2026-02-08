@@ -37,7 +37,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       
       const { data, error } = await supabase
         .from("apostas_unificada")
-        .select("id, pl_consolidado, lucro_prejuizo")
+        .select("id, pl_consolidado, lucro_prejuizo, moeda_operacao")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDate.split('T')[0])
         .not("bonus_id", "is", null);
@@ -55,7 +55,13 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
     
     const totalJuice = bonusBetsData.reduce((acc, bet) => {
-      return acc + (bet.pl_consolidado ?? bet.lucro_prejuizo ?? 0);
+      // Priorizar pl_consolidado (já na moeda do projeto)
+      if (bet.pl_consolidado != null) {
+        return acc + bet.pl_consolidado;
+      }
+      // Se não tiver pl_consolidado, converter da moeda de operação
+      const moedaOperacao = bet.moeda_operacao || "BRL";
+      return acc + convertToConsolidation(bet.lucro_prejuizo ?? 0, moedaOperacao);
     }, 0);
     
     const total = totalBonusCreditado + totalJuice;
