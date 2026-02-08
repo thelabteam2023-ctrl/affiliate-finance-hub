@@ -389,11 +389,15 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
       case "EM_ANDAMENTO":
         return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30"><Play className="h-3 w-3 mr-1" />Em Andamento</Badge>;
       case "FECHADO":
-        const motivoLabel = gatilhoFechamento === "META" ? "por Meta" : gatilhoFechamento === "PRAZO" ? "por Prazo" : "";
+        const motivoLabel = gatilhoFechamento === "META" || gatilhoFechamento === "META_ATINGIDA" 
+          ? "por Meta" 
+          : gatilhoFechamento === "PRAZO" 
+            ? "por Prazo" 
+            : "";
         return (
           <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
             <CheckCircle2 className="h-3 w-3 mr-1" />
-            Fechado {motivoLabel}
+            Concluído {motivoLabel}
           </Badge>
         );
       case "CANCELADO":
@@ -633,7 +637,7 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                 </CardHeader>
                 <CardContent>
                   {/* Barra de progresso para ciclos por meta */}
-                  {ciclo.tipo_gatilho === "META" && ciclo.meta_volume && ciclo.status === "EM_ANDAMENTO" && (
+                  {ciclo.tipo_gatilho === "META" && ciclo.meta_volume && (ciclo.status === "EM_ANDAMENTO" || ciclo.status === "FECHADO") && (
                     <div className="mb-4 space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">
@@ -651,7 +655,7 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                         value={progressoVolume} 
                         className={isMetaAtingida ? "bg-emerald-500/20" : isMetaProxima ? "bg-amber-500/20" : ""} 
                       />
-                      {isMetaAtingida && (
+                      {ciclo.status === "EM_ANDAMENTO" && isMetaAtingida && (
                         <div className="flex items-center justify-between text-emerald-400 text-sm">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4" />
@@ -675,7 +679,19 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                           </Button>
                         </div>
                       )}
-                      {isMetaProxima && !isMetaAtingida && (
+                      {ciclo.status === "FECHADO" && isMetaAtingida && (
+                        <div className="flex items-center gap-2 text-emerald-400 text-sm">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Meta atingida ✓</span>
+                        </div>
+                      )}
+                      {ciclo.status === "FECHADO" && !isMetaAtingida && (
+                        <div className="flex items-center gap-2 text-amber-400 text-sm">
+                          <Target className="h-4 w-4" />
+                          <span>Meta não atingida — {progressoVolume.toFixed(1)}% concluído</span>
+                        </div>
+                      )}
+                      {ciclo.status === "EM_ANDAMENTO" && isMetaProxima && !isMetaAtingida && (
                         <div className="flex items-center gap-2 text-amber-400 text-sm">
                           <AlertTriangle className="h-4 w-4" />
                           <span>Meta próxima de ser atingida!</span>

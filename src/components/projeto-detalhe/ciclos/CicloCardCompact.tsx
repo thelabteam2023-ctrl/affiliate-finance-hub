@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calendar, TrendingUp, TrendingDown, Target, CheckCircle2, Clock, ChevronDown, Pencil } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, Target, CheckCircle2, Clock, ChevronDown, Pencil, Trophy, Flag } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -27,6 +28,30 @@ interface CicloCardCompactProps {
   formatCurrency: (value: number) => string;
   onEdit: () => void;
   parseLocalDate: (dateString: string) => Date;
+}
+
+function MetaProgressoCompact({ valorAtual, metaVolume, formatCurrency }: { valorAtual: number; metaVolume: number; formatCurrency: (v: number) => string }) {
+  const progresso = Math.min(100, (valorAtual / metaVolume) * 100);
+  const atingiu = progresso >= 100;
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-1">
+        {atingiu ? (
+          <Trophy className="h-3 w-3 text-emerald-400" />
+        ) : (
+          <Target className="h-3 w-3 text-amber-400" />
+        )}
+        <span className={`text-sm font-semibold ${atingiu ? "text-emerald-400" : "text-amber-400"}`}>
+          {progresso.toFixed(0)}%
+        </span>
+      </div>
+      <Progress value={progresso} className={`h-1.5 ${atingiu ? "bg-emerald-500/20" : "bg-amber-500/20"}`} />
+      <p className="text-[10px] text-muted-foreground">
+        {formatCurrency(valorAtual)} / {formatCurrency(metaVolume)}
+      </p>
+    </div>
+  );
 }
 
 export function CicloCardCompact({ ciclo, formatCurrency, onEdit, parseLocalDate }: CicloCardCompactProps) {
@@ -163,18 +188,26 @@ export function CicloCardCompact({ ciclo, formatCurrency, onEdit, parseLocalDate
           </div>
           <div className="bg-muted/30 rounded-md p-2">
             <p className="text-xs text-muted-foreground">
-              {ciclo.status === "FECHADO" ? "Resultado" : "Meta/dia"}
+              {ciclo.status === "FECHADO" 
+                ? (ciclo.meta_volume ? "Progresso da Meta" : "Fechamento") 
+                : "Meta/dia"}
             </p>
             {ciclo.status === "FECHADO" ? (
-              <p className="text-sm font-medium">
-                {ciclo.gatilho_fechamento === "META_ATINGIDA" ? (
-                  <span className="text-emerald-400">Meta atingida</span>
-                ) : ciclo.gatilho_fechamento === "PRAZO" ? (
-                  <span className="text-blue-400">Por prazo</span>
-                ) : (
-                  <span className="text-muted-foreground">Manual</span>
-                )}
-              </p>
+              ciclo.meta_volume ? (
+                <MetaProgressoCompact 
+                  valorAtual={ciclo.valor_acumulado} 
+                  metaVolume={ciclo.meta_volume} 
+                  formatCurrency={formatCurrency}
+                />
+              ) : (
+                <p className="text-sm font-medium">
+                  {ciclo.gatilho_fechamento === "PRAZO" ? (
+                    <span className="text-blue-400 flex items-center gap-1"><Clock className="h-3 w-3" /> Por prazo</span>
+                  ) : (
+                    <span className="text-blue-400 flex items-center gap-1"><Flag className="h-3 w-3" /> Encerrado</span>
+                  )}
+                </p>
+              )
             ) : (
               <p className="text-sm font-medium text-purple-400">
                 {metaDiaria ? `${formatCurrency(metaDiaria)}/dia` : "—"}
