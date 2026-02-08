@@ -163,7 +163,11 @@ export function FecharCicloConfirmDialog({
         : `Ciclo fechado! ${m.qtd_apostas} apostas, Lucro: R$ ${m.lucro_liquido?.toFixed(2)}, ROI: ${m.roi?.toFixed(2)}%`;
 
       if (m.valor_participacao && m.valor_participacao > 0) {
-        toast.success(`Participação de R$ ${m.valor_participacao.toFixed(2)} apurada para o investidor`);
+        toast.success(`Investidor (${m.investidor_percentual}%): R$ ${m.valor_participacao.toFixed(2)} apurado`);
+      }
+
+      if (m.valor_pagamento_operador && m.valor_pagamento_operador > 0) {
+        toast.success(`Operador (${m.operador_percentual}%): R$ ${m.valor_pagamento_operador.toFixed(2)} proposto`);
       }
 
       toast.success(toastMsg);
