@@ -255,25 +255,25 @@ export function PropostasPagamentoCard() {
             {propostas.map((proposta) => (
               <div
                 key={proposta.id}
-                className="flex items-center justify-between p-4 border rounded-lg bg-card"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 border rounded-lg bg-card"
               >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{proposta.operador_nome}</span>
-                    <Badge variant="outline" className="text-xs">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="font-medium truncate">{proposta.operador_nome}</span>
+                    <Badge variant="outline" className="text-xs shrink-0">
                       {getModeloLabel(proposta.modelo_pagamento)}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <FolderKanban className="h-3 w-3" />
-                      {proposta.projeto_nome}
+                  <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground flex-wrap">
+                    <span className="flex items-center gap-1 truncate">
+                      <FolderKanban className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{proposta.projeto_nome}</span>
                     </span>
                     {proposta.ciclo_numero && (
-                      <span>Ciclo {proposta.ciclo_numero}</span>
+                      <span className="shrink-0">Ciclo {proposta.ciclo_numero}</span>
                     )}
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 shrink-0">
                       <Calendar className="h-3 w-3" />
                       {format(new Date(proposta.data_proposta), "dd/MM/yyyy", { locale: ptBR })}
                     </span>
@@ -284,9 +284,9 @@ export function PropostasPagamentoCard() {
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-emerald-500">
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                  <div className="text-left sm:text-right">
+                    <p className="text-base sm:text-lg font-bold text-emerald-500">
                       {formatCurrency(proposta.valor_ajustado ?? proposta.valor_calculado)}
                     </p>
                     {proposta.lucro_base > 0 && proposta.percentual_aplicado && (
@@ -295,7 +295,7 @@ export function PropostasPagamentoCard() {
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 shrink-0">
                     <Button
                       size="sm"
                       variant="outline"
