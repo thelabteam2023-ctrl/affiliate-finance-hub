@@ -9813,6 +9813,53 @@ export type Database = {
           },
         ]
       }
+      v_limitation_stats_global: {
+        Row: {
+          avg_bets_before_limitation: number | null
+          bookmaker_catalogo_id: string | null
+          bookmaker_nome: string | null
+          confidence_score: string | null
+          early_count: number | null
+          early_pct: number | null
+          first_limitation_at: string | null
+          last_limitation_at: string | null
+          late_count: number | null
+          late_pct: number | null
+          logo_url: string | null
+          mid_count: number | null
+          mid_pct: number | null
+          most_common_type: string | null
+          stddev_bets: number | null
+          strategic_profile: string | null
+          total_events: number | null
+          total_projects: number | null
+          total_vinculos: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmakers_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmakers_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "limitation_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_movimentacoes_indicacao_workspace: {
         Row: {
           coin: string | null
