@@ -29,6 +29,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { useCotacoes, CotacaoSourceInfo } from "@/hooks/useCotacoes";
+import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from "@/utils/formatCurrency";
 
 interface HistoricoVinculosTabProps {
   projetoId: string;
@@ -209,10 +210,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
   };
 
   const formatCurrency = (value: number, moeda: string = 'BRL') => {
-    if (moeda === 'USD') {
-      return `$ ${value.toFixed(2)}`;
-    }
-    return `R$ ${value.toFixed(2).replace(".", ",")}`;
+    return formatCurrencyUtil(value, moeda);
   };
 
   const formatDate = (dateString: string) => {
@@ -228,7 +226,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
     colorClass: string,
     pendingValue?: number
   ) => {
-    const isUSD = moeda === 'USD';
+    const isForeign = moeda !== 'BRL';
     const hasPending = pendingValue !== undefined && pendingValue > 0;
     const totalValue = value + (pendingValue || 0);
     
@@ -243,9 +241,9 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
             ({formatCurrency(pendingValue, moeda)} pendente)
           </p>
         )}
-        {isUSD && !hasPending && (
+        {isForeign && !hasPending && (
           <Badge variant="outline" className="text-[9px] px-1 py-0 mt-0.5 border-emerald-500/30 text-emerald-400">
-            USD
+            {moeda}
           </Badge>
         )}
       </div>
@@ -346,10 +344,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
 
   // Formatar valor para exibição simples
   const formatSimple = (valor: number, moeda: string) => {
-    if (moeda === "BRL") {
-      return `R$ ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    return `$ ${valor.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return formatCurrencyUtil(valor, moeda);
   };
 
   // Componente para renderizar badges por moeda com tooltip
@@ -574,9 +569,9 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{item.bookmaker_nome}</span>
                               {getStatusBadge(item.status_final, isActive)}
-                              {moeda === 'USD' && (
+                              {moeda !== 'BRL' && (
                                 <Badge variant="outline" className="text-[9px] px-1 py-0 border-emerald-500/30 text-emerald-400">
-                                  USD
+                                  {moeda}
                                 </Badge>
                               )}
                             </div>
