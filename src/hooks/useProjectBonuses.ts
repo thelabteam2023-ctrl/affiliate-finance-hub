@@ -2,7 +2,7 @@ import { useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { registrarBonusCreditadoViaLedger, getBookmakerMoeda } from "@/lib/ledgerService";
+import { registrarBonusCreditadoViaLedger, estornarBonusViaLedger, getBookmakerMoeda } from "@/lib/ledgerService";
 import { useWorkspace } from "@/hooks/useWorkspace";
 
 export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
@@ -50,6 +50,7 @@ export interface ProjectBonus {
   cotacao_credito_snapshot?: number | null;
   cotacao_credito_at?: string | null;
   valor_brl_referencia?: number | null;
+  valor_creditado_no_saldo?: number | null;
 }
 
 export interface BonusFormData {
@@ -201,6 +202,7 @@ async function fetchBonusesFromDb(projectId: string, bookmakerId?: string): Prom
     cotacao_credito_snapshot: b.cotacao_credito_snapshot ? Number(b.cotacao_credito_snapshot) : null,
     cotacao_credito_at: b.cotacao_credito_at,
     valor_brl_referencia: b.valor_brl_referencia ? Number(b.valor_brl_referencia) : null,
+    valor_creditado_no_saldo: b.valor_creditado_no_saldo ? Number(b.valor_creditado_no_saldo) : null,
   }));
 }
 
@@ -402,16 +404,13 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         updateData.credited_at = new Date().toISOString();
       }
 
-      // CORREÇÃO: saldo_atual do bônus deve refletir o valor creditado
-      // A RPC get_bookmaker_saldos calcula saldo_bonus via SUM(saldo_atual) dos bônus creditados
+      const { data: userData } = await supabase.auth.getUser();
+      if (!workspaceId) throw new Error("Workspace não definido nesta aba");
+
+      // CASO 1: Mudança de STATUS (ex: pending → credited)
       if (existingBonus && data.status && data.status !== existingBonus.status) {
         if (data.status === "credited") {
-          // Creditar via ledger (para impactar saldo_real)
           const bonusAmount = data.bonus_amount ?? existingBonus.bonus_amount;
-          const { data: userData } = await supabase.auth.getUser();
-
-          if (!workspaceId) throw new Error("Workspace não definido nesta aba");
-          
           const moeda = await getBookmakerMoeda(existingBonus.bookmaker_id);
           
           const creditedAt = (data.credited_at || existingBonus.credited_at || new Date().toISOString());
@@ -434,14 +433,69 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
 
           updateData.valor_creditado_no_saldo = bonusAmount;
           updateData.migrado_para_saldo_unificado = true;
-          // CORREÇÃO: saldo_atual = valor do bônus quando creditado
           updateData.saldo_atual = bonusAmount;
         } else {
-          // Se status muda de credited para outro, zerar saldo_atual
           updateData.saldo_atual = 0;
         }
         if (data.status !== "credited" && typeof data.credited_at === "undefined") {
           updateData.credited_at = null;
+        }
+      }
+      // CASO 2: Edição de bonus_amount SEM mudança de status (bônus já creditado)
+      // REGRA CRÍTICA: Toda edição de valor deve sincronizar o saldo via ledger
+      else if (
+        existingBonus &&
+        existingBonus.status === "credited" &&
+        data.bonus_amount !== undefined &&
+        data.bonus_amount !== existingBonus.bonus_amount
+      ) {
+        const valorAnteriorNoSaldo = existingBonus.valor_creditado_no_saldo ?? existingBonus.bonus_amount;
+        const delta = data.bonus_amount - valorAnteriorNoSaldo;
+        const moeda = await getBookmakerMoeda(existingBonus.bookmaker_id);
+
+        if (delta !== 0) {
+          if (delta > 0) {
+            // Bônus aumentou: creditar a diferença
+            const result = await registrarBonusCreditadoViaLedger({
+              bookmakerId: existingBonus.bookmaker_id,
+              valor: delta,
+              moeda,
+              workspaceId,
+              userId: userData?.user?.id || '',
+              descricao: `Ajuste de bônus: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (+${delta})`,
+              bonusId: id,
+            });
+            if (!result.success) {
+              console.error("[useProjectBonuses] Erro ao ajustar bônus (crédito) via ledger:", result.error);
+            }
+          } else {
+            // Bônus diminuiu: estornar a diferença
+            const result = await estornarBonusViaLedger({
+              bookmakerId: existingBonus.bookmaker_id,
+              valor: Math.abs(delta),
+              moeda,
+              workspaceId,
+              userId: userData?.user?.id || '',
+              descricao: `Ajuste de bônus: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (${delta})`,
+              bonusId: id,
+            });
+            if (!result.success) {
+              console.error("[useProjectBonuses] Erro ao ajustar bônus (estorno) via ledger:", result.error);
+            }
+          }
+          console.log(`[useProjectBonuses] Bônus ${id} editado: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (delta: ${delta})`);
+        }
+
+        // Atualizar campos de controle
+        updateData.valor_creditado_no_saldo = data.bonus_amount;
+        updateData.saldo_atual = data.bonus_amount;
+
+        // Recalcular rollover se aplicável
+        if (existingBonus.rollover_multiplier && existingBonus.rollover_base) {
+          const base = existingBonus.rollover_base === 'bonus'
+            ? data.bonus_amount
+            : (existingBonus.deposit_amount || 0) + data.bonus_amount;
+          updateData.rollover_target_amount = base * (existingBonus.rollover_multiplier || 1);
         }
       }
 
