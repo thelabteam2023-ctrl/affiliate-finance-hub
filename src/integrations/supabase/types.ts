@@ -11661,6 +11661,14 @@ export type Database = {
           workspace_slug: string
         }[]
       }
+      get_volume_pl_by_catalogo_limitadas: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          bookmaker_catalogo_id: string
+          total_pl: number
+          total_volume: number
+        }[]
+      }
       get_wallet_balances: { Args: { p_wallet_id: string }; Returns: Json }
       get_workspace_auth_version: {
         Args: { p_user_id: string; p_workspace_id: string }
