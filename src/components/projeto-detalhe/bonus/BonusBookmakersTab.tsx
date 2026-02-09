@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
@@ -45,7 +46,8 @@ import {
   XCircle,
   AlertTriangle,
   RotateCcw,
-  BarChart3
+  BarChart3,
+  ArrowDownUp
 } from "lucide-react";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -70,9 +72,11 @@ const REASON_LABELS: Record<FinalizeReason, { label: string; icon: React.Element
 
 // Subcomponent to show finalized bonus history
 function FinalizedBonusHistory({ 
+  projetoId,
   bonuses, 
   formatCurrency 
 }: { 
+  projetoId: string;
   bonuses: ProjectBonus[]; 
   formatCurrency: (value: number, moeda: string) => string;
 }) {
@@ -80,18 +84,85 @@ function FinalizedBonusHistory({
   
   const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
   
-  // Sort by finalized_at descending
-  const sortedBonuses = [...finalizedBonuses].sort((a, b) => {
-    if (!a.finalized_at) return 1;
-    if (!b.finalized_at) return -1;
-    return new Date(b.finalized_at).getTime() - new Date(a.finalized_at).getTime();
+  // Fetch ajustes pós-limitação
+  const { data: ajustesData = [] } = useQuery({
+    queryKey: ["bonus-historico-ajustes", projetoId],
+    queryFn: async () => {
+      const { data: bookmakers } = await supabase
+        .from("bookmakers")
+        .select("id, nome, moeda, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)")
+        .eq("projeto_id", projetoId);
+
+      if (!bookmakers || bookmakers.length === 0) return [];
+
+      const bookmakerIds = bookmakers.map((b: any) => b.id);
+      const bkMap = new Map(bookmakers.map((b: any) => [b.id, {
+        nome: b.nome,
+        moeda: b.moeda || "BRL",
+        logo_url: (b as any).bookmakers_catalogo?.logo_url || null,
+      }]));
+
+      const { data, error } = await supabase
+        .from("financial_events")
+        .select("id, valor, bookmaker_id, moeda, metadata, created_at")
+        .in("bookmaker_id", bookmakerIds)
+        .eq("tipo_evento", "AJUSTE")
+        .not("metadata", "is", null);
+
+      if (error) throw error;
+
+      return (data || []).filter(evt => {
+        try {
+          const meta = typeof evt.metadata === "string" ? JSON.parse(evt.metadata) : evt.metadata;
+          return meta?.tipo_ajuste === "AJUSTE_POS_LIMITACAO";
+        } catch { return false; }
+      }).map(evt => {
+        const meta = typeof evt.metadata === "string" ? JSON.parse(evt.metadata) : evt.metadata;
+        const bk = bkMap.get(evt.bookmaker_id);
+        return {
+          id: evt.id,
+          type: "ajuste" as const,
+          valor: Number(evt.valor) || 0,
+          moeda: evt.moeda || bk?.moeda || "BRL",
+          bookmaker_nome: meta?.bookmaker_nome || bk?.nome || "Casa Desconhecida",
+          bookmaker_logo_url: bk?.logo_url || null,
+          data_ajuste: meta?.data_encerramento || evt.created_at,
+          saldo_limitacao: Number(meta?.saldo_no_momento_limitacao) || 0,
+          saldo_final: Number(meta?.saldo_final) || 0,
+          created_at: evt.created_at,
+        };
+      });
+    },
+    enabled: !!projetoId,
+    staleTime: 30000,
   });
+
+  const totalEntries = finalizedBonuses.length + ajustesData.length;
   
-  if (finalizedBonuses.length === 0) return null;
+  if (totalEntries === 0) return null;
+
+  // Merge and sort by date
+  type HistoryEntry = 
+    | { type: "bonus"; data: ProjectBonus; sortDate: string }
+    | { type: "ajuste"; data: typeof ajustesData[0]; sortDate: string };
+
+  const entries: HistoryEntry[] = [
+    ...finalizedBonuses.map(b => ({
+      type: "bonus" as const,
+      data: b,
+      sortDate: b.finalized_at || b.created_at,
+    })),
+    ...ajustesData.map(a => ({
+      type: "ajuste" as const,
+      data: a,
+      sortDate: a.created_at,
+    })),
+  ].sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
   
   const getReasonBadge = (reason: FinalizeReason | null) => {
     if (!reason) return null;
     const config = REASON_LABELS[reason];
+    if (!config) return null;
     const Icon = config.icon;
     return (
       <Badge className={config.color}>
@@ -111,7 +182,7 @@ function FinalizedBonusHistory({
                 <History className="h-4 w-4 text-muted-foreground" />
                 <span>Histórico de Bônus Finalizados</span>
                 <Badge variant="secondary" className="ml-2">
-                  {finalizedBonuses.length}
+                  {totalEntries}
                 </Badge>
               </div>
               {isOpen ? (
@@ -124,56 +195,100 @@ function FinalizedBonusHistory({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="pt-0">
-            <ScrollArea className="max-h-[400px]">
-              <div className="space-y-2">
-                {sortedBonuses.map(bonus => (
-                  <div key={bonus.id} className="flex items-center gap-3 p-3 rounded-lg bg-card border">
-                    {/* Logo */}
-                    {bonus.bookmaker_logo_url ? (
-                      <img
-                        src={bonus.bookmaker_logo_url}
-                        alt={bonus.bookmaker_nome}
-                        className="h-8 w-8 rounded-lg object-contain bg-white p-0.5 flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Building2 className="h-4 w-4 text-primary" />
+            <ScrollArea className="h-[400px]">
+              <div className="space-y-2 pr-4">
+                {entries.map(entry => {
+                  if (entry.type === "bonus") {
+                    const bonus = entry.data;
+                    return (
+                      <div key={bonus.id} className="flex items-center gap-3 p-3 rounded-lg bg-card border">
+                        {bonus.bookmaker_logo_url ? (
+                          <img
+                            src={bonus.bookmaker_logo_url}
+                            alt={bonus.bookmaker_nome}
+                            className="h-8 w-8 rounded-lg object-contain bg-white p-0.5 flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Building2 className="h-4 w-4 text-primary" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm">{bonus.bookmaker_nome}</span>
+                            {bonus.title && (
+                              <>
+                                <span className="text-muted-foreground text-xs">•</span>
+                                <span className="text-xs text-muted-foreground">{bonus.title}</span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            {bonus.parceiro_nome && (
+                              <>
+                                <span>{bonus.parceiro_nome}</span>
+                                <span>•</span>
+                              </>
+                            )}
+                            {bonus.finalized_at && (
+                              <span>
+                                {format(parseISO(bonus.finalized_at), "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
+                          <span className="font-semibold text-sm">{formatCurrency(bonus.bonus_amount, bonus.currency)}</span>
+                          {getReasonBadge(bonus.finalize_reason)}
+                        </div>
                       </div>
-                    )}
+                    );
+                  }
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">{bonus.bookmaker_nome}</span>
-                        {bonus.title && (
-                          <>
-                            <span className="text-muted-foreground text-xs">•</span>
-                            <span className="text-xs text-muted-foreground">{bonus.title}</span>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                        {bonus.parceiro_nome && (
-                          <>
-                            <span>{bonus.parceiro_nome}</span>
-                            <span>•</span>
-                          </>
-                        )}
-                        {bonus.finalized_at && (
+                  // Ajuste Pós-Limitação
+                  const ajuste = entry.data;
+                  const isPositive = ajuste.valor >= 0;
+                  return (
+                    <div key={ajuste.id} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-amber-500/20">
+                      {ajuste.bookmaker_logo_url ? (
+                        <img
+                          src={ajuste.bookmaker_logo_url}
+                          alt={ajuste.bookmaker_nome}
+                          className="h-8 w-8 rounded-lg object-contain bg-white p-0.5 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                          <ArrowDownUp className="h-4 w-4 text-amber-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm">{ajuste.bookmaker_nome}</span>
+                          <span className="text-muted-foreground text-xs">•</span>
+                          <span className="text-xs text-muted-foreground">Ajuste Pós-Limitação</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                           <span>
-                            {format(parseISO(bonus.finalized_at), "dd/MM/yyyy", { locale: ptBR })}
+                            {formatCurrency(ajuste.saldo_limitacao, ajuste.moeda)} → {formatCurrency(ajuste.saldo_final, ajuste.moeda)}
                           </span>
-                        )}
+                          <span>•</span>
+                          <span>
+                            {format(parseISO(ajuste.data_ajuste), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
+                        <span className={`font-semibold text-sm ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
+                          {isPositive ? "+" : ""}{formatCurrency(ajuste.valor, ajuste.moeda)}
+                        </span>
+                        <Badge className="text-amber-400 bg-amber-500/20 border-amber-500/30">
+                          <ArrowDownUp className="h-3 w-3 mr-1" />
+                          Pós-Limitação
+                        </Badge>
                       </div>
                     </div>
-
-                    {/* Value & Reason */}
-                    <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
-                      <span className="font-semibold text-sm">{formatCurrency(bonus.bonus_amount, bonus.currency)}</span>
-                      {getReasonBadge(bonus.finalize_reason)}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           </CardContent>
@@ -182,7 +297,6 @@ function FinalizedBonusHistory({
     </Collapsible>
   );
 }
-
 interface BonusBookmakersTabProps {
   projetoId: string;
 }
@@ -868,6 +982,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
 
       {/* Histórico de Bônus Finalizados */}
       <FinalizedBonusHistory 
+        projetoId={projetoId}
         bonuses={bonuses} 
         formatCurrency={formatCurrency}
       />
