@@ -39,10 +39,22 @@ interface VinculoDetail {
   parceiro_nome: string;
   tipo_projeto: string;
   status: string;
+  moeda: string;
   total_bets: number;
   total_pl: number;
   total_volume: number;
+  ajuste_pos_limitacao: number;
   limitation_date: string | null;
+}
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  BRL: 'R$', USD: '$', EUR: '€', GBP: '£', MYR: 'RM', USDT: '$', USDC: '$',
+};
+
+function formatWithCurrency(value: number, moeda: string = 'BRL'): string {
+  const symbol = CURRENCY_SYMBOLS[moeda] || moeda;
+  const formatted = Math.abs(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${value < 0 ? '-' : ''}${symbol} ${formatted}`;
 }
 
 const TIPO_PROJETO_LABELS: Record<string, { label: string; color: string }> = {
@@ -71,7 +83,7 @@ export function BookmakerLimitationDetailModal({
       // Get only LIMITED bookmakers with parceiro info
       const { data: bookmakers, error: bErr } = await supabase
         .from("bookmakers")
-        .select("id, nome, projeto_id, status, parceiro_id, parceiros(nome)")
+        .select("id, nome, moeda, projeto_id, status, parceiro_id, parceiros(nome)")
         .eq("bookmaker_catalogo_id", bookmakerCatalogoId)
         .eq("workspace_id", workspaceId)
         .eq("status", "limitada");
@@ -81,8 +93,8 @@ export function BookmakerLimitationDetailModal({
 
       const bookmakerIds = bookmakers.map((b: any) => b.id);
 
-      // Fetch limitation events (with projeto_id), bets stats in parallel
-      const [betsResult, limitationsResult] = await Promise.all([
+      // Fetch bets, limitation events, and post-limitation adjustments in parallel
+      const [betsResult, limitationsResult, adjustmentsResult] = await Promise.all([
         supabase
           .from("apostas_unificada")
           .select("bookmaker_id, stake, lucro_prejuizo")
@@ -95,6 +107,13 @@ export function BookmakerLimitationDetailModal({
           .in("bookmaker_id", bookmakerIds)
           .eq("workspace_id", workspaceId)
           .order("event_timestamp", { ascending: false }),
+        supabase
+          .from("financial_events")
+          .select("bookmaker_id, valor")
+          .in("bookmaker_id", bookmakerIds)
+          .eq("workspace_id", workspaceId)
+          .eq("tipo_evento", "AJUSTE")
+          .eq("origem", "AJUSTE"),
       ]);
 
       // Latest limitation per bookmaker (with historical projeto_id)
@@ -107,6 +126,15 @@ export function BookmakerLimitationDetailModal({
               projeto_id: le.projeto_id,
             });
           }
+        }
+      }
+
+      // Aggregate post-limitation adjustments per bookmaker
+      const adjustmentMap = new Map<string, number>();
+      if (!adjustmentsResult.error && adjustmentsResult.data) {
+        for (const adj of adjustmentsResult.data as any[]) {
+          const current = adjustmentMap.get(adj.bookmaker_id) || 0;
+          adjustmentMap.set(adj.bookmaker_id, current + (Number(adj.valor) || 0));
         }
       }
 
@@ -149,6 +177,7 @@ export function BookmakerLimitationDetailModal({
       return bookmakers.map((b: any): VinculoDetail => {
         const stats = betsMap.get(b.id) || { count: 0, pl: 0, volume: 0 };
         const lim = limitMap.get(b.id);
+        const ajuste = adjustmentMap.get(b.id) || 0;
         // Resolve project: prefer limitation event's projeto_id (historical), fallback to current
         const resolvedProjetoId = lim?.projeto_id || b.projeto_id;
         const proj = resolvedProjetoId ? projectMap.get(resolvedProjetoId) : null;
@@ -158,9 +187,11 @@ export function BookmakerLimitationDetailModal({
           parceiro_nome: (b.parceiros as any)?.nome || "—",
           tipo_projeto: proj?.tipo_projeto || "—",
           status: b.status,
+          moeda: b.moeda || 'BRL',
           total_bets: stats.count,
-          total_pl: stats.pl,
+          total_pl: stats.pl + ajuste,
           total_volume: stats.volume,
+          ajuste_pos_limitacao: ajuste,
           limitation_date: lim?.date || null,
         };
       });
@@ -168,13 +199,8 @@ export function BookmakerLimitationDetailModal({
     enabled: open && !!workspaceId && !!bookmakerCatalogoId,
   });
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-    }).format(value);
-  };
+  // Determine predominant currency for summary (use first vinculo's moeda)
+  const predominantMoeda = vinculos?.[0]?.moeda || 'BRL';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -249,12 +275,12 @@ export function BookmakerLimitationDetailModal({
                         {v.total_bets}
                       </TableCell>
                       <TableCell className="text-right text-sm">
-                        {formatCurrency(v.total_volume)}
+                        {formatWithCurrency(v.total_volume, v.moeda)}
                       </TableCell>
                       <TableCell className={`text-right text-sm font-medium ${plColor}`}>
                         <div className="flex items-center justify-end gap-1">
                           <PlIcon className="h-3 w-3" />
-                          {formatCurrency(v.total_pl)}
+                          {formatWithCurrency(v.total_pl, v.moeda)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right text-xs text-muted-foreground">
@@ -283,7 +309,7 @@ export function BookmakerLimitationDetailModal({
                 <span className="text-muted-foreground">
                   Volume:{" "}
                   <span className="font-medium text-foreground">
-                    {formatCurrency(vinculos.reduce((a, v) => a + v.total_volume, 0))}
+                    {formatWithCurrency(vinculos.reduce((a, v) => a + v.total_volume, 0), predominantMoeda)}
                   </span>
                 </span>
                 <span className="text-muted-foreground">
@@ -295,7 +321,7 @@ export function BookmakerLimitationDetailModal({
                         : "text-red-500"
                     }`}
                   >
-                    {formatCurrency(vinculos.reduce((a, v) => a + v.total_pl, 0))}
+                    {formatWithCurrency(vinculos.reduce((a, v) => a + v.total_pl, 0), predominantMoeda)}
                   </span>
                 </span>
               </div>
