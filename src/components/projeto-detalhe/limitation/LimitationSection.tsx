@@ -1,10 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldAlert, BarChart3, List, Globe } from "lucide-react";
+import { ShieldAlert, BarChart3, List } from "lucide-react";
 import { useLimitationEvents } from "@/hooks/useLimitationEvents";
 import { LimitationStatsCards } from "./LimitationStatsCards";
 import { LimitationRankingTable } from "./LimitationRankingTable";
-import { LimitationGlobalRankingTable } from "./LimitationGlobalRankingTable";
 import { LimitationEventsTimeline } from "./LimitationEventsTimeline";
 
 interface LimitationSectionProps {
@@ -12,7 +11,7 @@ interface LimitationSectionProps {
 }
 
 export function LimitationSection({ projetoId }: LimitationSectionProps) {
-  const { events, stats, globalStats, isLoading, deleteEvent } = useLimitationEvents(projetoId);
+  const { events, stats, isLoading, deleteEvent } = useLimitationEvents(projetoId);
 
   if (isLoading) {
     return (
@@ -42,17 +41,13 @@ export function LimitationSection({ projetoId }: LimitationSectionProps) {
       {/* KPI Cards */}
       <LimitationStatsCards events={events} stats={stats} />
 
-      {/* Tabs: Ranking Projeto / Ranking Global / Timeline */}
+      {/* Tabs: Ranking Projeto / Timeline */}
       <Card className="border-border/50">
-        <Tabs defaultValue="global">
+        <Tabs defaultValue="ranking">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Análise por Casa</CardTitle>
               <TabsList className="h-8">
-                <TabsTrigger value="global" className="text-xs gap-1 px-3">
-                  <Globe className="h-3.5 w-3.5" />
-                  Global ({globalStats.length})
-                </TabsTrigger>
                 <TabsTrigger value="ranking" className="text-xs gap-1 px-3">
                   <BarChart3 className="h-3.5 w-3.5" />
                   Projeto ({stats.length})
@@ -64,13 +59,10 @@ export function LimitationSection({ projetoId }: LimitationSectionProps) {
               </TabsList>
             </div>
             <CardDescription>
-              Classificação estratégica longitudinal e histórico de limitações
+              Classificação estratégica e histórico de limitações deste projeto
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TabsContent value="global" className="mt-0">
-              <LimitationGlobalRankingTable stats={globalStats} />
-            </TabsContent>
             <TabsContent value="ranking" className="mt-0">
               <LimitationRankingTable stats={stats} />
             </TabsContent>
