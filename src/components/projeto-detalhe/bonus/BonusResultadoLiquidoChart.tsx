@@ -41,9 +41,17 @@ interface BonusBetData {
   estrategia?: string | null;
 }
 
+interface AjustePostLimitacao {
+  valor: number;
+  moeda: string;
+  bookmaker_id: string;
+  created_at: string;
+}
+
 interface BonusResultadoLiquidoChartProps {
   bonuses: ProjectBonus[];
   bonusBets: BonusBetData[];
+  ajustesPostLimitacao?: AjustePostLimitacao[];
   formatCurrency: (value: number) => string;
   /** Função para converter valores para moeda de consolidação do projeto */
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
@@ -74,6 +82,7 @@ type ChartMode = "resultado" | "bonus_juice";
 export function BonusResultadoLiquidoChart({
   bonuses,
   bonusBets,
+  ajustesPostLimitacao = [],
   formatCurrency,
   convertToConsolidation,
   isSingleDayPeriod = false,
@@ -167,6 +176,26 @@ export function BonusResultadoLiquidoChart({
       juiceByDate[date] = (juiceByDate[date] || 0) + pl;
     });
 
+    // Inclui ajustes pós-limitação no juice por data
+    ajustesPostLimitacao.forEach(ajuste => {
+      // Filtro por bookmaker se ativo
+      if (selectedBookmaker && ajuste.bookmaker_id !== selectedBookmaker) return;
+
+      const date = ajuste.created_at.split("T")[0];
+
+      // Filtro por dateRange
+      if (dateRange) {
+        const ajusteDate = parseISO(date);
+        if (ajusteDate < dateRange.start || ajusteDate > dateRange.end) return;
+      }
+
+      const valor = convertToConsolidation
+        ? convertToConsolidation(ajuste.valor, ajuste.moeda)
+        : ajuste.valor;
+
+      juiceByDate[date] = (juiceByDate[date] || 0) + valor;
+    });
+
     // Combina todas as datas
     const allDates = new Set([...Object.keys(bonusByDate), ...Object.keys(juiceByDate)]);
     const sortedDates = Array.from(allDates).sort();
@@ -194,7 +223,7 @@ export function BonusResultadoLiquidoChart({
     });
 
     return data;
-  }, [filteredBonuses, bonusBets, bonuses, dateRange, selectedBookmaker, convertToConsolidation]);
+  }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, dateRange, selectedBookmaker, convertToConsolidation]);
 
   // KPIs
   const kpis = useMemo(() => {
