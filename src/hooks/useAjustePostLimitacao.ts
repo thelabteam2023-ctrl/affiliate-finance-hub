@@ -139,13 +139,16 @@ export function useRegistrarAjustePostLimitacao(projetoId: string) {
       toast.success(
         `Ajuste pós-limitação registrado: ${ajuste > 0 ? "+" : ""}${ajuste.toFixed(2)} ${moeda}`
       );
-      // Invalidate eligibility + saldos + KPIs
+      // Invalidate eligibility + saldos + KPIs + bonus performance
       queryClient.invalidateQueries({ queryKey: ["ajuste-pos-limitacao-eligibility"] });
       queryClient.invalidateQueries({ queryKey: ["projeto-vinculos", projetoId] });
       queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projetoId] });
       queryClient.invalidateQueries({ queryKey: ["saldo-operavel-rpc", projetoId] });
       queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
       queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["bonus-ajustes-pos-limitacao"] });
+      queryClient.invalidateQueries({ queryKey: ["bonus-bets-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["bonus-bets-juice"] });
     },
     onError: (error: any) => {
       toast.error("Erro ao registrar ajuste: " + error.message);
