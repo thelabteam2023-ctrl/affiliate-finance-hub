@@ -91,7 +91,6 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
               <TableHead className="text-right">Volume Total</TableHead>
               <TableHead className="text-right">Lucro/Prejuízo</TableHead>
               <TableHead className="text-center">Tempo Saque</TableHead>
-              <TableHead className="text-right">Última</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -234,10 +233,6 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
                     )}
                   </TableCell>
 
-                  {/* Última */}
-                  <TableCell className="text-right text-xs text-muted-foreground">
-                    {format(new Date(s.last_limitation_at), "dd/MM/yy")}
-                  </TableCell>
                 </TableRow>
               );
             })}
