@@ -11665,6 +11665,7 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: {
           bookmaker_catalogo_id: string
+          moeda: string
           total_pl: number
           total_volume: number
         }[]

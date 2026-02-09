@@ -24,6 +24,16 @@ import {
 } from "@/components/ui/tooltip";
 import { BookmakerLimitationDetailModal } from "@/components/bookmakers/BookmakerLimitationDetailModal";
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  BRL: 'R$', USD: '$', EUR: '€', GBP: '£', MYR: 'RM', USDT: '$', USDC: '$',
+};
+
+function formatWithCurrency(value: number, moeda?: string): string {
+  const symbol = CURRENCY_SYMBOLS[moeda || 'BRL'] || moeda || 'R$';
+  const formatted = Math.abs(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${value < 0 ? '-' : ''}${symbol} ${formatted}`;
+}
+
 interface LimitationGlobalRankingTableProps {
   stats: GlobalLimitationStats[];
 }
@@ -180,7 +190,7 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
 
                   {/* Volume Total */}
                   <TableCell className="text-right text-sm font-medium">
-                    {(s.volume_total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {formatWithCurrency(s.volume_total ?? 0, s.moeda_volume)}
                   </TableCell>
 
                   {/* Lucro/Prejuízo */}
@@ -193,7 +203,7 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
                         <span className={`flex items-center justify-end gap-1 ${isPositive ? "text-emerald-500" : isNegative ? "text-red-500" : "text-muted-foreground"}`}>
                           {isPositive && <TrendingUp className="h-3 w-3" />}
                           {isNegative && <TrendingDown className="h-3 w-3" />}
-                          {pl.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {formatWithCurrency(pl, s.moeda_volume)}
                         </span>
                       );
                     })()}
