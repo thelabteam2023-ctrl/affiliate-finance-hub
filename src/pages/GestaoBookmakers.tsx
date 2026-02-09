@@ -17,6 +17,7 @@ import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
 import CatalogoBookmakers from "@/components/bookmakers/CatalogoBookmakers";
 import AccessGroupsManager from "@/components/bookmakers/AccessGroupsManager";
+import { AjustePostLimitacaoDialog } from "@/components/bookmakers/AjustePostLimitacaoDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useBookmakerUsageStatus, canDeleteBookmaker } from "@/hooks/useBookmakerUsageStatus";
 import { BookmakerUsageBadge } from "@/components/bookmakers/BookmakerUsageBadge";
@@ -81,6 +82,7 @@ export default function GestaoBookmakers() {
   const [limitadaPopoverOpen, setLimitadaPopoverOpen] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const [historicoProjetoDialog, setHistoricoProjetoDialog] = useState<{ open: boolean; bookmaker: Bookmaker | null }>({ open: false, bookmaker: null });
+  const [ajustePostLimitacao, setAjustePostLimitacao] = useState<Bookmaker | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSystemOwner } = useAuth();
@@ -909,6 +911,18 @@ export default function GestaoBookmakers() {
                     </div>
 
                     <div className="flex gap-2">
+                      {/* Botão Ajuste Pós-Limitação - apenas para contas limitadas */}
+                      {bookmaker.status === "limitada" && canEdit('bookmakers', 'bookmakers.accounts.edit') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-warning border-warning/30 hover:bg-warning/10"
+                          onClick={() => setAjustePostLimitacao(bookmaker)}
+                        >
+                          <TrendingDown className="mr-1 h-4 w-4" />
+                          Encerrar
+                        </Button>
+                      )}
                       {canEdit('bookmakers', 'bookmakers.accounts.edit') && (
                         <Button
                           variant="outline"
@@ -1124,6 +1138,18 @@ export default function GestaoBookmakers() {
                                 </TooltipTrigger>
                               </Tooltip>
                             </TooltipProvider>
+                            {/* Botão Encerrar para limitadas na visão lista */}
+                            {bookmaker.status === "limitada" && canEdit('bookmakers', 'bookmakers.accounts.edit') && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-warning hover:text-warning hover:bg-warning/10"
+                                onClick={() => setAjustePostLimitacao(bookmaker)}
+                                title="Ajuste pós-limitação"
+                              >
+                                <TrendingDown className="h-4 w-4" />
+                              </Button>
+                            )}
                             {canEdit('bookmakers', 'bookmakers.accounts.edit') && (
                               <Button
                                 variant="ghost"
@@ -1180,7 +1206,18 @@ export default function GestaoBookmakers() {
           />
         </>
       )}
-
+      {ajustePostLimitacao && workspaceId && (
+        <AjustePostLimitacaoDialog
+          open={!!ajustePostLimitacao}
+          onClose={() => setAjustePostLimitacao(null)}
+          bookmaker={ajustePostLimitacao}
+          workspaceId={workspaceId}
+          onSuccess={() => {
+            fetchBookmakers();
+            setAjustePostLimitacao(null);
+          }}
+        />
+      )}
 
     </div>
   );
