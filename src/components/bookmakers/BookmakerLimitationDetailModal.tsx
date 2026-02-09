@@ -35,6 +35,7 @@ interface BookmakerLimitationDetailModalProps {
 interface VinculoDetail {
   bookmaker_id: string;
   bookmaker_nome: string;
+  parceiro_nome: string;
   tipo_projeto: string;
   status: string;
   total_bets: number;
@@ -49,6 +50,7 @@ const TIPO_PROJETO_LABELS: Record<string, { label: string; color: string }> = {
   valuebet: { label: "Valuebet", color: "bg-purple-500/10 text-purple-400" },
   trading: { label: "Trading", color: "bg-emerald-500/10 text-emerald-400" },
   matched_betting: { label: "Matched Betting", color: "bg-cyan-500/10 text-cyan-400" },
+  outros: { label: "Outros", color: "bg-muted/50 text-muted-foreground" },
 };
 
 export function BookmakerLimitationDetailModal({
@@ -65,10 +67,10 @@ export function BookmakerLimitationDetailModal({
     queryFn: async () => {
       if (!workspaceId) return [];
 
-      // Get only LIMITED bookmakers (vínculos) for this catalogo in the workspace
+      // Get only LIMITED bookmakers with parceiro info
       const { data: bookmakers, error: bErr } = await supabase
         .from("bookmakers")
-        .select("id, nome, projeto_id, status")
+        .select("id, nome, projeto_id, status, parceiro_id, parceiros(nome)")
         .eq("bookmaker_catalogo_id", bookmakerCatalogoId)
         .eq("workspace_id", workspaceId)
         .eq("status", "limitada");
@@ -77,13 +79,9 @@ export function BookmakerLimitationDetailModal({
       if (!bookmakers || bookmakers.length === 0) return [];
 
       const bookmakerIds = bookmakers.map((b: any) => b.id);
-      const projetoIds = [...new Set(bookmakers.map((b: any) => b.projeto_id).filter(Boolean))] as string[];
 
-      // Fetch project info (nome + tipo), bets stats and limitation events in parallel
-      const [projectsResult, betsResult, limitationsResult] = await Promise.all([
-        projetoIds.length > 0
-          ? supabase.from("projetos").select("id, nome, tipo").in("id", projetoIds)
-          : Promise.resolve({ data: [], error: null }),
+      // Fetch limitation events (with projeto_id), bets stats in parallel
+      const [betsResult, limitationsResult] = await Promise.all([
         supabase
           .from("apostas_unificada")
           .select("bookmaker_id, stake, lucro_prejuizo")
@@ -92,17 +90,45 @@ export function BookmakerLimitationDetailModal({
           .not("resultado", "is", null),
         supabase
           .from("limitation_events")
-          .select("bookmaker_id, event_timestamp")
+          .select("bookmaker_id, evento_timestamp:event_timestamp, projeto_id")
           .in("bookmaker_id", bookmakerIds)
           .eq("workspace_id", workspaceId)
           .order("event_timestamp", { ascending: false }),
       ]);
 
-      // Build project map (id -> { nome, tipo })
-      const projectMap = new Map<string, { nome: string; tipo: string }>();
-      if (projectsResult.data) {
-        for (const p of projectsResult.data as any[]) {
-          projectMap.set(p.id, { nome: p.nome, tipo: p.tipo || "" });
+      // Latest limitation per bookmaker (with historical projeto_id)
+      const limitMap = new Map<string, { date: string; projeto_id: string | null }>();
+      if (!limitationsResult.error && limitationsResult.data) {
+        for (const le of limitationsResult.data as any[]) {
+          if (!limitMap.has(le.bookmaker_id)) {
+            limitMap.set(le.bookmaker_id, {
+              date: le.evento_timestamp,
+              projeto_id: le.projeto_id,
+            });
+          }
+        }
+      }
+
+      // Collect all project IDs (from bookmaker current + limitation events historical)
+      const allProjetoIds = new Set<string>();
+      for (const b of bookmakers as any[]) {
+        if (b.projeto_id) allProjetoIds.add(b.projeto_id);
+      }
+      for (const [, lim] of limitMap) {
+        if (lim.projeto_id) allProjetoIds.add(lim.projeto_id);
+      }
+
+      // Fetch project info
+      let projectMap = new Map<string, { nome: string; tipo_projeto: string }>();
+      if (allProjetoIds.size > 0) {
+        const { data: projetos } = await supabase
+          .from("projetos")
+          .select("id, nome, tipo_projeto")
+          .in("id", [...allProjetoIds]);
+        if (projetos) {
+          for (const p of projetos as any[]) {
+            projectMap.set(p.id, { nome: p.nome, tipo_projeto: p.tipo_projeto || "" });
+          }
         }
       }
 
@@ -119,28 +145,22 @@ export function BookmakerLimitationDetailModal({
         }
       }
 
-      // Latest limitation date per bookmaker
-      const limitDateMap = new Map<string, string>();
-      if (!limitationsResult.error && limitationsResult.data) {
-        for (const le of limitationsResult.data) {
-          if (!limitDateMap.has(le.bookmaker_id)) {
-            limitDateMap.set(le.bookmaker_id, le.event_timestamp);
-          }
-        }
-      }
-
       return bookmakers.map((b: any): VinculoDetail => {
         const stats = betsMap.get(b.id) || { count: 0, pl: 0, volume: 0 };
-        const proj = b.projeto_id ? projectMap.get(b.projeto_id) : null;
+        const lim = limitMap.get(b.id);
+        // Resolve project: prefer limitation event's projeto_id (historical), fallback to current
+        const resolvedProjetoId = lim?.projeto_id || b.projeto_id;
+        const proj = resolvedProjetoId ? projectMap.get(resolvedProjetoId) : null;
         return {
           bookmaker_id: b.id,
           bookmaker_nome: b.nome,
-          tipo_projeto: proj?.tipo || "—",
+          parceiro_nome: (b.parceiros as any)?.nome || "—",
+          tipo_projeto: proj?.tipo_projeto || "—",
           status: b.status,
           total_bets: stats.count,
           total_pl: stats.pl,
           total_volume: stats.volume,
-          limitation_date: limitDateMap.get(b.id) || null,
+          limitation_date: lim?.date || null,
         };
       });
     },
@@ -207,7 +227,10 @@ export function BookmakerLimitationDetailModal({
                   return (
                     <TableRow key={v.bookmaker_id}>
                       <TableCell>
-                        <div className="font-medium text-sm">{v.bookmaker_nome}</div>
+                        <div className="space-y-0.5">
+                          <div className="font-medium text-sm">{v.bookmaker_nome}</div>
+                          <div className="text-xs text-muted-foreground">{v.parceiro_nome}</div>
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         {tipoConfig ? (
