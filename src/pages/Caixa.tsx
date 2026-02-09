@@ -911,23 +911,43 @@ export default function Caixa() {
           await new Promise(resolve => setTimeout(resolve, 300));
           fetchData();
         }}
-        saque={saqueParaConfirmar ? {
-          id: saqueParaConfirmar.id,
-          valor: saqueParaConfirmar.valor,
-          moeda: saqueParaConfirmar.moeda,
-          data_transacao: saqueParaConfirmar.data_transacao,
-          descricao: saqueParaConfirmar.descricao,
-          origem_bookmaker_id: saqueParaConfirmar.origem_bookmaker_id,
-          destino_parceiro_id: saqueParaConfirmar.destino_parceiro_id,
-          destino_conta_bancaria_id: saqueParaConfirmar.destino_conta_bancaria_id,
-          destino_wallet_id: saqueParaConfirmar.destino_wallet_id || null,
-          bookmaker_nome: bookmakers[saqueParaConfirmar.origem_bookmaker_id]?.nome,
-          parceiro_nome: parceiros[saqueParaConfirmar.destino_parceiro_id],
-          banco_nome: saqueParaConfirmar.destino_conta_bancaria_id 
-            ? contasBancarias.find(c => c.id === saqueParaConfirmar.destino_conta_bancaria_id)?.banco 
-            : undefined,
-          wallet_nome: saqueParaConfirmar.wallet_nome || undefined,
-        } : null}
+        saque={saqueParaConfirmar ? (() => {
+          const walletDetail = saqueParaConfirmar.destino_wallet_id
+            ? walletsDetalhes.find(w => w.id === saqueParaConfirmar.destino_wallet_id)
+            : null;
+          const walletLabel = walletDetail
+            ? `${(walletDetail.exchange || "WALLET").replace(/-/g, " ").toUpperCase()}${walletDetail.network ? ` (${walletDetail.network})` : ""}`
+            : undefined;
+          return {
+            id: saqueParaConfirmar.id,
+            valor: saqueParaConfirmar.valor,
+            moeda: saqueParaConfirmar.moeda,
+            data_transacao: saqueParaConfirmar.data_transacao,
+            descricao: saqueParaConfirmar.descricao,
+            origem_bookmaker_id: saqueParaConfirmar.origem_bookmaker_id,
+            destino_parceiro_id: saqueParaConfirmar.destino_parceiro_id,
+            destino_conta_bancaria_id: saqueParaConfirmar.destino_conta_bancaria_id,
+            destino_wallet_id: saqueParaConfirmar.destino_wallet_id || null,
+            bookmaker_nome: bookmakers[saqueParaConfirmar.origem_bookmaker_id]?.nome,
+            parceiro_nome: parceiros[saqueParaConfirmar.destino_parceiro_id],
+            banco_nome: saqueParaConfirmar.destino_conta_bancaria_id 
+              ? contasBancarias.find(c => c.id === saqueParaConfirmar.destino_conta_bancaria_id)?.banco 
+              : undefined,
+            wallet_nome: saqueParaConfirmar.wallet_nome || walletLabel,
+            // Campos cripto
+            coin: saqueParaConfirmar.coin || undefined,
+            qtd_coin: saqueParaConfirmar.qtd_coin || undefined,
+            cotacao_original: saqueParaConfirmar.cotacao || undefined,
+            moeda_origem: saqueParaConfirmar.moeda_origem || undefined,
+            valor_origem: saqueParaConfirmar.valor_origem || undefined,
+            moeda_destino: saqueParaConfirmar.moeda_destino || undefined,
+            valor_destino: saqueParaConfirmar.valor_destino || undefined,
+            cotacao: saqueParaConfirmar.cotacao || undefined,
+            // Dados da wallet
+            wallet_network: walletDetail?.network || undefined,
+            wallet_exchange: walletDetail?.exchange?.replace(/-/g, " ").toUpperCase() || undefined,
+          };
+        })() : null}
       />
 
       {/* Dialog Ajuste Manual */}
