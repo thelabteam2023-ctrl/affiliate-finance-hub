@@ -45,7 +45,7 @@ interface AjustePostLimitacao {
   valor: number;
   moeda: string;
   bookmaker_id: string;
-  created_at: string;
+  data_operacional: string;
 }
 
 interface BonusResultadoLiquidoChartProps {
@@ -181,7 +181,7 @@ export function BonusResultadoLiquidoChart({
       // Filtro por bookmaker se ativo
       if (selectedBookmaker && ajuste.bookmaker_id !== selectedBookmaker) return;
 
-      const date = ajuste.created_at.split("T")[0];
+      const date = ajuste.data_operacional.split("T")[0];
 
       // Filtro por dateRange
       if (dateRange) {
