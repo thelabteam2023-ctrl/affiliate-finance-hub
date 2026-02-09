@@ -17,12 +17,15 @@ export function GlobalLimitationSection() {
     queryFn: async () => {
       if (!workspaceId) return [];
 
-      const [globalResult, withdrawalResult] = await Promise.all([
+      const [globalResult, withdrawalResult, volumeResult] = await Promise.all([
         supabase
           .from("v_limitation_stats_global")
           .select("*")
           .eq("workspace_id", workspaceId),
         supabase.rpc("get_avg_withdrawal_duration_by_catalogo" as any, {
+          p_workspace_id: workspaceId,
+        }),
+        supabase.rpc("get_volume_pl_by_catalogo_limitadas" as any, {
           p_workspace_id: workspaceId,
         }),
       ]);
@@ -39,10 +42,22 @@ export function GlobalLimitationSection() {
         }
       }
 
+      const volumeMap = new Map<string, { volume: number; pl: number }>();
+      if (!volumeResult.error && volumeResult.data) {
+        for (const row of (volumeResult.data as unknown as any[])) {
+          volumeMap.set(row.bookmaker_catalogo_id, {
+            volume: Number(row.total_volume) || 0,
+            pl: Number(row.total_pl) || 0,
+          });
+        }
+      }
+
       return (globalResult.data || []).map((s: any) => ({
         ...s,
         avg_withdrawal_days: withdrawalMap.get(s.bookmaker_catalogo_id)?.avg_days ?? null,
         total_confirmed_withdrawals: withdrawalMap.get(s.bookmaker_catalogo_id)?.total ?? 0,
+        volume_total: volumeMap.get(s.bookmaker_catalogo_id)?.volume ?? 0,
+        lucro_prejuizo_total: volumeMap.get(s.bookmaker_catalogo_id)?.pl ?? 0,
       })) as GlobalLimitationStats[];
     },
     enabled: !!workspaceId,
