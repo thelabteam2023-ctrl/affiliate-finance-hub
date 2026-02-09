@@ -63,20 +63,25 @@ export function BookmakerLimitationDetailModal({
     queryFn: async () => {
       if (!workspaceId) return [];
 
-      // Get all bookmakers (vínculos) for this catalogo in the workspace
+      // Get only LIMITED bookmakers (vínculos) for this catalogo in the workspace
       const { data: bookmakers, error: bErr } = await supabase
         .from("bookmakers")
-        .select("id, nome, projeto_id, status, projetos(nome)")
+        .select("id, nome, projeto_id, status")
         .eq("bookmaker_catalogo_id", bookmakerCatalogoId)
-        .eq("workspace_id", workspaceId);
+        .eq("workspace_id", workspaceId)
+        .eq("status", "limitada");
 
       if (bErr) throw bErr;
       if (!bookmakers || bookmakers.length === 0) return [];
 
       const bookmakerIds = bookmakers.map((b: any) => b.id);
+      const projetoIds = [...new Set(bookmakers.map((b: any) => b.projeto_id).filter(Boolean))] as string[];
 
-      // Fetch bets stats and limitation events in parallel
-      const [betsResult, limitationsResult] = await Promise.all([
+      // Fetch project names, bets stats and limitation events in parallel
+      const [projectsResult, betsResult, limitationsResult] = await Promise.all([
+        projetoIds.length > 0
+          ? supabase.from("projetos").select("id, nome").in("id", projetoIds)
+          : Promise.resolve({ data: [], error: null }),
         supabase
           .from("apostas_unificada")
           .select("bookmaker_id, stake, lucro_prejuizo")
@@ -90,6 +95,14 @@ export function BookmakerLimitationDetailModal({
           .eq("workspace_id", workspaceId)
           .order("event_timestamp", { ascending: false }),
       ]);
+
+      // Build project name map
+      const projectMap = new Map<string, string>();
+      if (projectsResult.data) {
+        for (const p of projectsResult.data as any[]) {
+          projectMap.set(p.id, p.nome);
+        }
+      }
 
       // Aggregate bets per bookmaker
       const betsMap = new Map<string, { count: number; pl: number; volume: number }>();
@@ -124,7 +137,7 @@ export function BookmakerLimitationDetailModal({
         return {
           bookmaker_id: b.id,
           bookmaker_nome: b.nome,
-          projeto_nome: (b.projetos as any)?.nome || "—",
+          projeto_nome: (b.projeto_id && projectMap.get(b.projeto_id)) || "Sem projeto",
           projeto_id: b.projeto_id,
           status: b.status,
           total_bets: stats.count,
@@ -149,7 +162,7 @@ export function BookmakerLimitationDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <Avatar className="h-8 w-8">

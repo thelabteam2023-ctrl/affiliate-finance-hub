@@ -211,7 +211,7 @@ export function useLimitationEvents(projetoId: string) {
         supabase
           .from("apostas_pernas")
           .select(`
-            bookmakers!inner(bookmaker_catalogo_id, workspace_id),
+            bookmakers!inner(bookmaker_catalogo_id, workspace_id, status),
             stake,
             lucro_prejuizo
           `)
@@ -237,7 +237,8 @@ export function useLimitationEvents(projetoId: string) {
         for (const row of (volumeResult.data as unknown as any[])) {
           const catalogoId = row.bookmakers?.bookmaker_catalogo_id;
           const rowWorkspace = row.bookmakers?.workspace_id;
-          if (!catalogoId || rowWorkspace !== workspaceId) continue;
+          const rowStatus = row.bookmakers?.status;
+          if (!catalogoId || rowWorkspace !== workspaceId || rowStatus !== "limitada") continue;
           const existing = volumeMap.get(catalogoId) || { volume: 0, pl: 0 };
           existing.volume += Number(row.stake) || 0;
           existing.pl += Number(row.lucro_prejuizo) || 0;
