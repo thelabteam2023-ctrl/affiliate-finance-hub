@@ -202,7 +202,7 @@ export function useLimitationEvents(projetoId: string) {
           .from("v_limitation_stats_global")
           .select("*")
           .eq("workspace_id", workspaceId),
-        supabase.rpc("get_avg_withdrawal_duration_by_catalogo", {
+        supabase.rpc("get_avg_withdrawal_duration_by_catalogo" as any, {
           p_workspace_id: workspaceId,
         }),
       ]);
@@ -212,7 +212,7 @@ export function useLimitationEvents(projetoId: string) {
       // Build withdrawal duration map by bookmaker_catalogo_id
       const withdrawalMap = new Map<string, { avg_days: number; total: number }>();
       if (!withdrawalResult.error && withdrawalResult.data) {
-        for (const row of withdrawalResult.data as any[]) {
+        for (const row of (withdrawalResult.data as unknown as any[])) {
           withdrawalMap.set(row.bookmaker_catalogo_id, {
             avg_days: Number(row.avg_days) || 0,
             total: Number(row.total_confirmed) || 0,

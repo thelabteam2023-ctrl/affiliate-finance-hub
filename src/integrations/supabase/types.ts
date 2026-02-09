@@ -11427,6 +11427,14 @@ export type Database = {
         Returns: Json
       }
       generate_public_id: { Args: never; Returns: string }
+      get_avg_withdrawal_duration_by_catalogo: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          avg_days: number
+          bookmaker_catalogo_id: string
+          total_confirmed: number
+        }[]
+      }
       get_bookmaker_saldos: {
         Args: { p_projeto_id?: string }
         Returns: {

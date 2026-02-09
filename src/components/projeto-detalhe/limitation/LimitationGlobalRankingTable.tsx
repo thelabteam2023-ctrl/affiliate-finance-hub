@@ -1,6 +1,6 @@
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Building2, ShieldCheck, AlertTriangle, HelpCircle } from "lucide-react";
+import { Building2, ShieldCheck, AlertTriangle, HelpCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import {
   type GlobalLimitationStats,
@@ -60,6 +60,7 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
             <TableHead className="text-center w-[180px]">Distribuição</TableHead>
             <TableHead className="text-center">Perfil Global</TableHead>
             <TableHead className="text-center">Confiança</TableHead>
+            <TableHead className="text-center">Tempo Saque</TableHead>
             <TableHead className="text-right">Última</TableHead>
           </TableRow>
         </TableHeader>
@@ -169,6 +170,31 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
                     <ConfIcon className="h-3 w-3" />
                     {confConfig.label}
                   </Badge>
+                </TableCell>
+
+                {/* Tempo Médio de Saque */}
+                <TableCell className="text-center">
+                  {s.avg_withdrawal_days != null ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <div className="flex items-center justify-center gap-1 text-xs">
+                            <Clock className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-medium">
+                              {s.avg_withdrawal_days === 0
+                                ? "< 1d"
+                                : `${s.avg_withdrawal_days}d`}
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="text-xs">
+                          Média de {s.total_confirmed_withdrawals} saque(s) confirmado(s)
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
                 </TableCell>
 
                 {/* Última */}
