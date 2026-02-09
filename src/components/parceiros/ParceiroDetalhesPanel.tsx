@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -68,6 +68,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null });
   const [filtroMoeda, setFiltroMoeda] = useState<string>("todas");
+  const [buscaCasa, setBuscaCasa] = useState("");
   const { canEdit, canDelete } = useActionAccess();
   const { convertToBRL, dataSource, isUsingFallback, rates } = useCotacoes();
 
@@ -75,6 +76,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   // that may not exist for the new partner
   useEffect(() => {
     setFiltroMoeda("todas");
+    setBuscaCasa("");
   }, [parceiroId]);
   
   // Converter rates para um mapa simples de moeda → cotação em BRL
@@ -139,12 +141,20 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     return Array.from(moedas).sort();
   }, [data?.bookmakers]);
 
-  // Bookmakers filtrados por moeda
-  const bookmakersFiltrados = useMemo(() => {
+  // Bookmakers filtrados por moeda e busca
+  const bookmakersFiltradosMoeda = useMemo(() => {
     if (!data?.bookmakers) return [];
     if (filtroMoeda === "todas") return data.bookmakers;
     return data.bookmakers.filter(b => (b.moeda || "BRL") === filtroMoeda);
   }, [data?.bookmakers, filtroMoeda]);
+
+  const bookmakersFiltrados = useMemo(() => {
+    if (!buscaCasa.trim()) return bookmakersFiltradosMoeda;
+    const termo = buscaCasa.trim().toLowerCase();
+    return bookmakersFiltradosMoeda.filter(b => 
+      b.bookmaker_nome.toLowerCase().includes(termo)
+    );
+  }, [bookmakersFiltradosMoeda, buscaCasa]);
 
   // KPIs filtrados por moeda - recalcula com base nos bookmakers filtrados
   // Quando "todas", consolida em BRL e mantém breakdown por moeda original
@@ -178,7 +188,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     let resultadoTotal = 0;
     let apostasTotal = 0;
     
-    bookmakersFiltrados.forEach(bm => {
+    bookmakersFiltradosMoeda.forEach(bm => {
       depositadoTotal += bm.total_depositado ?? 0;
       sacadoTotal += bm.total_sacado ?? 0;
       saldoTotal += bm.saldo_atual ?? 0;
@@ -198,7 +208,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       apostas: apostasTotal,
       isConsolidado: false,
     };
-  }, [filtroMoeda, bookmakersFiltrados, depositadoEntries, sacadoEntries, saldoEntries, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
+  }, [filtroMoeda, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntries, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
 
   // Determinar lucro/prejuízo baseado nos KPIs filtrados
   const hasLucroFiltrado = useMemo(() => kpisFiltrados.resultado.some(e => e.value > 0), [kpisFiltrados.resultado]);
@@ -547,33 +557,55 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
 
               {/* Card Desempenho por Casa - ocupa espaço restante com scroll interno */}
               <div className="flex-1 min-h-0 mt-3 border border-border rounded-lg flex flex-col">
-                  {/* Header do card com filtro de moeda */}
+                  {/* Header do card com filtro de moeda e busca */}
                   <div className="px-3 py-2 bg-muted/30 border-b border-border flex items-center justify-between gap-2">
-                    <h3 className="text-xs font-medium flex items-center gap-1.5">
+                    <h3 className="text-xs font-medium flex items-center gap-1.5 shrink-0">
                       <Building2 className="h-3.5 w-3.5 text-primary" />
-                      Desempenho por Casa ({bookmakersFiltrados.length}{filtroMoeda !== "todas" ? `/${data.bookmakers.length}` : ""})
+                      Desempenho por Casa ({bookmakersFiltradosMoeda.length}{filtroMoeda !== "todas" ? `/${data.bookmakers.length}` : ""})
                     </h3>
-                    {moedasDisponiveis.length > 1 && (
-                      <Select value={filtroMoeda} onValueChange={setFiltroMoeda}>
-                        <SelectTrigger className="h-6 w-[80px] text-[10px] px-2 py-0">
-                          <SelectValue placeholder="Moeda" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="todas" className="text-xs">Todas</SelectItem>
-                          {moedasDisponiveis.map(moeda => (
-                            <SelectItem key={moeda} value={moeda} className="text-xs">{moeda}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                        <input
+                          type="text"
+                          value={buscaCasa}
+                          onChange={(e) => setBuscaCasa(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Escape") setBuscaCasa(""); }}
+                          placeholder="Buscar casa…"
+                          className="h-6 w-[130px] rounded border border-border/50 bg-background/50 pl-6 pr-2 text-[10px] placeholder:text-muted-foreground/60 focus:outline-none focus:border-border transition-colors"
+                        />
+                      </div>
+                      {moedasDisponiveis.length > 1 && (
+                        <Select value={filtroMoeda} onValueChange={setFiltroMoeda}>
+                          <SelectTrigger className="h-6 w-[80px] text-[10px] px-2 py-0">
+                            <SelectValue placeholder="Moeda" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todas" className="text-xs">Todas</SelectItem>
+                            {moedasDisponiveis.map(moeda => (
+                              <SelectItem key={moeda} value={moeda} className="text-xs">{moeda}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
                   </div>
 
                   {bookmakersFiltrados.length === 0 ? (
                     <div className="text-center py-6 text-muted-foreground text-xs">
-                      {data.bookmakers.length === 0 ? "Nenhuma casa vinculada" : "Nenhuma casa com esta moeda"}
+                      {data.bookmakers.length === 0 
+                        ? "Nenhuma casa vinculada" 
+                        : buscaCasa.trim() 
+                          ? "Nenhuma casa encontrada"
+                          : "Nenhuma casa com esta moeda"}
                     </div>
                   ) : (
                     <>
+                      {buscaCasa.trim() && (
+                        <div className="px-3 py-1 text-[10px] text-muted-foreground bg-muted/20 border-b border-border">
+                          Mostrando {bookmakersFiltrados.length} de {bookmakersFiltradosMoeda.length} casas
+                        </div>
+                      )}
                       {/* Header da tabela */}
                       <div className="grid grid-cols-7 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border">
                         <div className="col-span-2">Casa</div>
