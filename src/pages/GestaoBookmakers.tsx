@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen, Filter, UserCheck, UserX, Users, History, Ban, Clock } from "lucide-react";
+import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen, Filter, UserCheck, UserX, Users, History, Ban, Clock, BarChart3 } from "lucide-react";
 import { GlobalLimitationSection } from "@/components/bookmakers/GlobalLimitationSection";
 import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
@@ -440,7 +440,7 @@ export default function GestaoBookmakers() {
               Bookmakers
             </TabsTrigger>
             <TabsTrigger value="limitacoes" className="flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4" />
+              <BarChart3 className="h-4 w-4" />
               Estatísticas
             </TabsTrigger>
             {isSystemOwner && (
