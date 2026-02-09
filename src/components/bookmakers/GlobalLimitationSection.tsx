@@ -42,12 +42,13 @@ export function GlobalLimitationSection() {
         }
       }
 
-      const volumeMap = new Map<string, { volume: number; pl: number }>();
+      const volumeMap = new Map<string, { volume: number; pl: number; moeda: string }>();
       if (!volumeResult.error && volumeResult.data) {
         for (const row of (volumeResult.data as unknown as any[])) {
           volumeMap.set(row.bookmaker_catalogo_id, {
             volume: Number(row.total_volume) || 0,
             pl: Number(row.total_pl) || 0,
+            moeda: row.moeda || 'BRL',
           });
         }
       }
@@ -58,6 +59,7 @@ export function GlobalLimitationSection() {
         total_confirmed_withdrawals: withdrawalMap.get(s.bookmaker_catalogo_id)?.total ?? 0,
         volume_total: volumeMap.get(s.bookmaker_catalogo_id)?.volume ?? 0,
         lucro_prejuizo_total: volumeMap.get(s.bookmaker_catalogo_id)?.pl ?? 0,
+        moeda_volume: volumeMap.get(s.bookmaker_catalogo_id)?.moeda ?? 'BRL',
       })) as GlobalLimitationStats[];
     },
     enabled: !!workspaceId,
