@@ -68,6 +68,9 @@ export interface GlobalLimitationStats {
   first_limitation_at: string;
   strategic_profile: StrategicProfile;
   confidence_score: ConfidenceScore;
+  // Withdrawal duration stats
+  avg_withdrawal_days?: number | null;
+  total_confirmed_withdrawals?: number;
 }
 
 export interface CreateLimitationEventInput {
@@ -193,13 +196,36 @@ export function useLimitationEvents(projetoId: string) {
     queryFn: async () => {
       if (!workspaceId) return [];
 
-      const { data, error } = await supabase
-        .from("v_limitation_stats_global")
-        .select("*")
-        .eq("workspace_id", workspaceId);
+      // Fetch global limitation stats and withdrawal duration in parallel
+      const [globalResult, withdrawalResult] = await Promise.all([
+        supabase
+          .from("v_limitation_stats_global")
+          .select("*")
+          .eq("workspace_id", workspaceId),
+        supabase.rpc("get_avg_withdrawal_duration_by_catalogo", {
+          p_workspace_id: workspaceId,
+        }),
+      ]);
 
-      if (error) throw error;
-      return (data || []) as GlobalLimitationStats[];
+      if (globalResult.error) throw globalResult.error;
+
+      // Build withdrawal duration map by bookmaker_catalogo_id
+      const withdrawalMap = new Map<string, { avg_days: number; total: number }>();
+      if (!withdrawalResult.error && withdrawalResult.data) {
+        for (const row of withdrawalResult.data as any[]) {
+          withdrawalMap.set(row.bookmaker_catalogo_id, {
+            avg_days: Number(row.avg_days) || 0,
+            total: Number(row.total_confirmed) || 0,
+          });
+        }
+      }
+
+      // Merge withdrawal data into global stats
+      return (globalResult.data || []).map((s: any) => ({
+        ...s,
+        avg_withdrawal_days: withdrawalMap.get(s.bookmaker_catalogo_id)?.avg_days ?? null,
+        total_confirmed_withdrawals: withdrawalMap.get(s.bookmaker_catalogo_id)?.total ?? 0,
+      })) as GlobalLimitationStats[];
     },
     enabled: !!workspaceId,
   });
