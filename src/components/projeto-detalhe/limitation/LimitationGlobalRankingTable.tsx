@@ -1,15 +1,13 @@
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Building2, ShieldCheck, AlertTriangle, HelpCircle, Clock } from "lucide-react";
+import { Building2, Clock } from "lucide-react";
 import { format } from "date-fns";
 import {
   type GlobalLimitationStats,
   STRATEGIC_PROFILE_CONFIG,
   LIMITATION_TYPE_LABELS,
-  CONFIDENCE_CONFIG,
   type LimitationType,
   type StrategicProfile,
-  type ConfidenceScore,
 } from "@/hooks/useLimitationEvents";
 import {
   Table,
@@ -30,11 +28,7 @@ interface LimitationGlobalRankingTableProps {
   stats: GlobalLimitationStats[];
 }
 
-const confidenceIcons: Record<ConfidenceScore, typeof ShieldCheck> = {
-  HIGH: ShieldCheck,
-  MEDIUM: AlertTriangle,
-  LOW: HelpCircle,
-};
+
 
 export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingTableProps) {
   const sorted = [...stats].sort((a, b) => b.total_events - a.total_events);
@@ -55,11 +49,11 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
             <TableHead className="w-[180px]">Bookmaker</TableHead>
             <TableHead className="text-center">Eventos</TableHead>
             <TableHead className="text-center">Vínculos</TableHead>
-            <TableHead className="text-center">Projetos</TableHead>
+            
             <TableHead className="text-center">Média Apostas</TableHead>
             <TableHead className="text-center w-[180px]">Distribuição</TableHead>
             <TableHead className="text-center">Perfil Global</TableHead>
-            <TableHead className="text-center">Confiança</TableHead>
+            
             <TableHead className="text-center">Tempo Saque</TableHead>
             <TableHead className="text-right">Última</TableHead>
           </TableRow>
@@ -67,8 +61,6 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
         <TableBody>
           {sorted.map((s) => {
             const profileConfig = STRATEGIC_PROFILE_CONFIG[s.strategic_profile as StrategicProfile] || STRATEGIC_PROFILE_CONFIG.low_data;
-            const confConfig = CONFIDENCE_CONFIG[s.confidence_score as ConfidenceScore] || CONFIDENCE_CONFIG.LOW;
-            const ConfIcon = confidenceIcons[s.confidence_score as ConfidenceScore] || HelpCircle;
 
             return (
               <TableRow key={s.bookmaker_catalogo_id}>
@@ -97,10 +89,8 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
                   {s.total_vinculos}
                 </TableCell>
 
-                {/* Projetos */}
-                <TableCell className="text-center text-sm">
-                  {s.total_projects}
-                </TableCell>
+
+
 
                 {/* Média */}
                 <TableCell className="text-center text-sm">
@@ -161,16 +151,8 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
                   </Badge>
                 </TableCell>
 
-                {/* Confiança */}
-                <TableCell className="text-center">
-                  <Badge
-                    variant="outline"
-                    className={`text-xs border-transparent gap-1 ${confConfig.bgColor} ${confConfig.color}`}
-                  >
-                    <ConfIcon className="h-3 w-3" />
-                    {confConfig.label}
-                  </Badge>
-                </TableCell>
+
+
 
                 {/* Tempo Médio de Saque */}
                 <TableCell className="text-center">
