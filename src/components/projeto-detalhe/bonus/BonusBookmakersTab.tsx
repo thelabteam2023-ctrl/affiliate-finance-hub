@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
+import { EditFinalizeReasonDialog } from "./EditFinalizeReasonDialog";
 import { useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
 import { FinalizeBonusDialog } from "../FinalizeBonusDialog";
@@ -47,7 +48,8 @@ import {
   AlertTriangle,
   RotateCcw,
   BarChart3,
-  ArrowDownUp
+  ArrowDownUp,
+  Pencil
 } from "lucide-react";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -74,13 +76,16 @@ const REASON_LABELS: Record<FinalizeReason, { label: string; icon: React.Element
 function FinalizedBonusHistory({ 
   projetoId,
   bonuses, 
-  formatCurrency 
+  formatCurrency,
+  updateFinalizeReason,
 }: { 
   projetoId: string;
   bonuses: ProjectBonus[]; 
   formatCurrency: (value: number, moeda: string) => string;
+  updateFinalizeReason: (id: string, reason: FinalizeReason) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
   
   const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
   
@@ -239,7 +244,16 @@ function FinalizedBonusHistory({
                         </div>
                         <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
                           <span className="font-semibold text-sm">{formatCurrency(bonus.bonus_amount, bonus.currency)}</span>
-                          {getReasonBadge(bonus.finalize_reason)}
+                          <div className="flex items-center gap-1">
+                            {getReasonBadge(bonus.finalize_reason)}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingBonus(bonus); }}
+                              className="p-1 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                              title="Editar motivo"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -294,6 +308,17 @@ function FinalizedBonusHistory({
           </CardContent>
         </CollapsibleContent>
       </Card>
+
+      {editingBonus && (
+        <EditFinalizeReasonDialog
+          open={!!editingBonus}
+          onOpenChange={(open) => { if (!open) setEditingBonus(null); }}
+          currentReason={editingBonus.finalize_reason}
+          bonusTitle={editingBonus.title}
+          bookmakerNome={editingBonus.bookmaker_nome || ""}
+          onSave={(reason) => updateFinalizeReason(editingBonus.id, reason)}
+        />
+      )}
     </Collapsible>
   );
 }
@@ -318,7 +343,7 @@ interface BookmakerInBonusMode {
 }
 
 export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
-  const { bonuses, fetchBonuses, finalizeBonus, updateBonus, saving, getBookmakersWithActiveBonus, getRolloverPercentage } = useProjectBonuses({ projectId: projetoId });
+  const { bonuses, fetchBonuses, finalizeBonus, updateBonus, saving, getBookmakersWithActiveBonus, getRolloverPercentage, updateFinalizeReason } = useProjectBonuses({ projectId: projetoId });
   const [bookmakers, setBookmakers] = useState<BookmakerInBonusMode[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -985,6 +1010,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
         projetoId={projetoId}
         bonuses={bonuses} 
         formatCurrency={formatCurrency}
+        updateFinalizeReason={updateFinalizeReason}
       />
 
         </TabsContent>
