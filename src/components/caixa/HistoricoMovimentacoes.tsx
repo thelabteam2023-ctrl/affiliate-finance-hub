@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X } from "lucide-react";
+import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil } from "lucide-react";
 import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { format, startOfDay, endOfDay } from "date-fns";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
 import { DashboardPeriodFilter, getDashboardDateRange } from "@/types/dashboardFilters";
+import { EditarDataTransacaoDialog } from "./EditarDataTransacaoDialog";
 const PAGE_SIZE = 50;
 
 const getStatusBadge = (status: string) => {
@@ -126,6 +127,8 @@ export function HistoricoMovimentacoes({
 }: HistoricoMovimentacoesProps) {
   const { getLogoUrl } = useBookmakerLogoMap();
   const [termoBusca, setTermoBusca] = useState("");
+  const [editDateId, setEditDateId] = useState<string | null>(null);
+  const [editDateValue, setEditDateValue] = useState<string>("");
   
   // Get all filtered transactions
   const transacoesFiltradas = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
@@ -310,7 +313,7 @@ export function HistoricoMovimentacoes({
             <ScrollArea className="h-[500px]">
               <div className="space-y-2 pr-4">
                 {pagination.paginatedItems.map((transacao) => (
-                  <div key={transacao.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
+                  <div key={transacao.id} className="group flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-4 flex-1">
                   <Badge className={getTipoColor(transacao.tipo_transacao, transacao)}>
                     {getTipoLabel(transacao.tipo_transacao, transacao)}
@@ -486,7 +489,8 @@ export function HistoricoMovimentacoes({
                       <CheckCircle2 className="h-3 w-3 mr-1" />Atualizar Status
                     </Button>
                   )}
-                  <div className="text-right min-w-[100px]">
+                  <div className="flex items-center gap-1 text-right min-w-[100px]">
+                    <div className="flex-1">
                     {/* Para saques confirmados, mostrar data de solicitação e confirmação */}
                     {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.data_confirmacao ? (
                       <div className="space-y-0.5">
@@ -496,7 +500,6 @@ export function HistoricoMovimentacoes({
                         <div className="text-sm font-medium text-emerald-400">
                           Recebido: {format(parseLocalDateTime(transacao.data_confirmacao), "dd/MM")}
                         </div>
-                        {/* Lead time em dias */}
                         {(() => {
                           const solicitacao = parseLocalDateTime(transacao.data_transacao);
                           const confirmacao = parseLocalDateTime(transacao.data_confirmacao);
@@ -518,6 +521,17 @@ export function HistoricoMovimentacoes({
                         <div className="text-xs text-muted-foreground">{format(parseLocalDateTime(transacao.data_transacao), "HH:mm")}</div>
                       </>
                     )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEditDateId(transacao.id);
+                        setEditDateValue(transacao.data_transacao);
+                      }}
+                      className="p-1 rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                      title="Editar data"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -545,6 +559,19 @@ export function HistoricoMovimentacoes({
           </div>
         )}
       </CardContent>
+
+      {editDateId && (
+        <EditarDataTransacaoDialog
+          open={!!editDateId}
+          onClose={() => setEditDateId(null)}
+          transacaoId={editDateId}
+          dataAtual={editDateValue}
+          onSuccess={() => {
+            // Dispatch event to refresh caixa data
+            window.dispatchEvent(new CustomEvent("lovable:caixa-data-changed"));
+          }}
+        />
+      )}
     </>
   );
 }
