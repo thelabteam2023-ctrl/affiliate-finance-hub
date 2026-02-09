@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/PageHeader";
 import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen, Filter, UserCheck, UserX, Users, History, Ban, Clock } from "lucide-react";
+import { GlobalLimitationSection } from "@/components/bookmakers/GlobalLimitationSection";
 import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
@@ -429,7 +430,7 @@ export default function GestaoBookmakers() {
         />
 
         <Tabs defaultValue="contas" className="flex flex-col flex-1 min-h-0">
-          <TabsList className={`grid w-full max-w-md shrink-0 ${isSystemOwner ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <TabsList className={`grid w-full max-w-lg shrink-0 ${isSystemOwner ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="contas" className="flex items-center gap-2">
               <Wallet className="h-4 w-4" />
               Vínculos
@@ -437,6 +438,10 @@ export default function GestaoBookmakers() {
             <TabsTrigger value="catalogo" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
               Bookmakers
+            </TabsTrigger>
+            <TabsTrigger value="limitacoes" className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4" />
+              Limitações
             </TabsTrigger>
             {isSystemOwner && (
               <TabsTrigger value="grupos" className="flex items-center gap-2">
@@ -448,6 +453,10 @@ export default function GestaoBookmakers() {
 
           <TabsContent value="catalogo" className="flex-1 min-h-0 overflow-y-auto mt-6">
             <CatalogoBookmakers />
+          </TabsContent>
+
+          <TabsContent value="limitacoes" className="flex-1 min-h-0 overflow-y-auto mt-6">
+            <GlobalLimitationSection />
           </TabsContent>
 
           {isSystemOwner && (
