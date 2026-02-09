@@ -153,15 +153,15 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
                         <TooltipContent className="p-2 text-xs space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="h-2 w-2 rounded-full bg-red-500" />
-                            Early (1-5): {s.early_count} ({s.early_pct}%)
+                            Rápida (1-5): {s.early_count} ({s.early_pct}%)
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                            Mid (6-10): {s.mid_count} ({s.mid_pct}%)
+                            Moderada (6-10): {s.mid_count} ({s.mid_pct}%)
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="h-2 w-2 rounded-full bg-blue-500" />
-                            Late (10+): {s.late_count} ({s.late_pct}%)
+                            Tardia (10+): {s.late_count} ({s.late_pct}%)
                           </div>
                         </TooltipContent>
                       </Tooltip>
