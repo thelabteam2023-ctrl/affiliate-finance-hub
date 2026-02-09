@@ -71,6 +71,9 @@ export interface GlobalLimitationStats {
   // Withdrawal duration stats
   avg_withdrawal_days?: number | null;
   total_confirmed_withdrawals?: number;
+  // Volume & P&L stats
+  volume_total?: number;
+  lucro_prejuizo_total?: number;
 }
 
 export interface CreateLimitationEventInput {
@@ -196,8 +199,8 @@ export function useLimitationEvents(projetoId: string) {
     queryFn: async () => {
       if (!workspaceId) return [];
 
-      // Fetch global limitation stats and withdrawal duration in parallel
-      const [globalResult, withdrawalResult] = await Promise.all([
+      // Fetch global limitation stats, withdrawal duration, and volume/PL in parallel
+      const [globalResult, withdrawalResult, volumeResult] = await Promise.all([
         supabase
           .from("v_limitation_stats_global")
           .select("*")
@@ -205,6 +208,14 @@ export function useLimitationEvents(projetoId: string) {
         supabase.rpc("get_avg_withdrawal_duration_by_catalogo" as any, {
           p_workspace_id: workspaceId,
         }),
+        supabase
+          .from("apostas_pernas")
+          .select(`
+            bookmakers!inner(bookmaker_catalogo_id, workspace_id),
+            stake,
+            lucro_prejuizo
+          `)
+          .not("lucro_prejuizo", "is", null),
       ]);
 
       if (globalResult.error) throw globalResult.error;
@@ -220,11 +231,27 @@ export function useLimitationEvents(projetoId: string) {
         }
       }
 
-      // Merge withdrawal data into global stats
+      // Build volume/PL map by bookmaker_catalogo_id (filter by workspace)
+      const volumeMap = new Map<string, { volume: number; pl: number }>();
+      if (!volumeResult.error && volumeResult.data) {
+        for (const row of (volumeResult.data as unknown as any[])) {
+          const catalogoId = row.bookmakers?.bookmaker_catalogo_id;
+          const rowWorkspace = row.bookmakers?.workspace_id;
+          if (!catalogoId || rowWorkspace !== workspaceId) continue;
+          const existing = volumeMap.get(catalogoId) || { volume: 0, pl: 0 };
+          existing.volume += Number(row.stake) || 0;
+          existing.pl += Number(row.lucro_prejuizo) || 0;
+          volumeMap.set(catalogoId, existing);
+        }
+      }
+
+      // Merge withdrawal and volume data into global stats
       return (globalResult.data || []).map((s: any) => ({
         ...s,
         avg_withdrawal_days: withdrawalMap.get(s.bookmaker_catalogo_id)?.avg_days ?? null,
         total_confirmed_withdrawals: withdrawalMap.get(s.bookmaker_catalogo_id)?.total ?? 0,
+        volume_total: volumeMap.get(s.bookmaker_catalogo_id)?.volume ?? 0,
+        lucro_prejuizo_total: volumeMap.get(s.bookmaker_catalogo_id)?.pl ?? 0,
       })) as GlobalLimitationStats[];
     },
     enabled: !!workspaceId,

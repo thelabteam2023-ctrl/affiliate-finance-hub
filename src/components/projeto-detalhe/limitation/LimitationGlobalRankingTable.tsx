@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Clock } from "lucide-react";
+import { Building2, Clock, TrendingUp, TrendingDown } from "lucide-react";
 import { format } from "date-fns";
 import {
   type GlobalLimitationStats,
@@ -52,6 +52,8 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
               <TableHead className="text-center">Média Apostas</TableHead>
               <TableHead className="text-center w-[180px]">Distribuição</TableHead>
               <TableHead className="text-center">Perfil Global</TableHead>
+              <TableHead className="text-right">Volume Total</TableHead>
+              <TableHead className="text-right">Lucro/Prejuízo</TableHead>
               <TableHead className="text-center">Tempo Saque</TableHead>
               <TableHead className="text-right">Última</TableHead>
             </TableRow>
@@ -148,6 +150,27 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
                     >
                       {profileConfig.label}
                     </Badge>
+                  </TableCell>
+
+                  {/* Volume Total */}
+                  <TableCell className="text-right text-sm font-medium">
+                    {(s.volume_total ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </TableCell>
+
+                  {/* Lucro/Prejuízo */}
+                  <TableCell className="text-right text-sm font-medium">
+                    {(() => {
+                      const pl = s.lucro_prejuizo_total ?? 0;
+                      const isPositive = pl > 0;
+                      const isNegative = pl < 0;
+                      return (
+                        <span className={`flex items-center justify-end gap-1 ${isPositive ? "text-emerald-500" : isNegative ? "text-red-500" : "text-muted-foreground"}`}>
+                          {isPositive && <TrendingUp className="h-3 w-3" />}
+                          {isNegative && <TrendingDown className="h-3 w-3" />}
+                          {pl.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
 
                   {/* Tempo Médio de Saque */}
