@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList } from "lucide-react";
+import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList, History } from "lucide-react";
 import { BonusVisaoGeralTab } from "./BonusVisaoGeralTab";
 import { BonusBookmakersTab } from "./BonusBookmakersTab";
 import { BonusApostasTab } from "./BonusApostasTab";
+import { BonusHistoricoTab } from "./BonusHistoricoTab";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ interface ProjetoBonusAreaProps {
 }
 
 type NavigationMode = "tabs" | "sidebar";
-type TabValue = "visao-geral" | "bookmakers" | "apostas";
+type TabValue = "visao-geral" | "bookmakers" | "apostas" | "historico";
 
 const STORAGE_KEY = "bonus-area-nav-mode";
 
@@ -38,6 +39,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
     { value: "visao-geral" as TabValue, label: "Visão Geral", icon: LayoutDashboard },
     { value: "apostas" as TabValue, label: "Operações", icon: Target, showBadge: true, count: openOperationsCount },
     { value: "bookmakers" as TabValue, label: "Por Casa", icon: Building2, showCount: true, count: bookmakersInBonusMode.length },
+    { value: "historico" as TabValue, label: "Histórico", icon: History },
   ], [openOperationsCount, bookmakersInBonusMode.length]);
   
   // Refetch when refreshTrigger changes
@@ -103,6 +105,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
         {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} dateRange={dateRange} isSingleDayPeriod={isSingleDayPeriod} />}
         {activeTab === "bookmakers" && <BonusBookmakersTab projetoId={projetoId} />}
         {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} />}
+        {activeTab === "historico" && <BonusHistoricoTab projetoId={projetoId} />}
       </div>
     );
   };
