@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -21,8 +20,6 @@ import {
 import { Building2, TrendingUp, TrendingDown, Minus, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import {
-  LIMITATION_TYPE_LABELS,
-  BUCKET_LABELS,
   type LimitationType,
   type LimitationBucket,
 } from "@/hooks/useLimitationEvents";
@@ -38,16 +35,21 @@ interface BookmakerLimitationDetailModalProps {
 interface VinculoDetail {
   bookmaker_id: string;
   bookmaker_nome: string;
-  projeto_nome: string;
-  projeto_id: string;
+  tipo_projeto: string;
   status: string;
   total_bets: number;
   total_pl: number;
   total_volume: number;
-  limitation_type: LimitationType | null;
-  limitation_bucket: LimitationBucket | null;
   limitation_date: string | null;
 }
+
+const TIPO_PROJETO_LABELS: Record<string, { label: string; color: string }> = {
+  surebet: { label: "Surebet", color: "bg-blue-500/10 text-blue-400" },
+  bonus: { label: "Bônus", color: "bg-amber-500/10 text-amber-400" },
+  valuebet: { label: "Valuebet", color: "bg-purple-500/10 text-purple-400" },
+  trading: { label: "Trading", color: "bg-emerald-500/10 text-emerald-400" },
+  matched_betting: { label: "Matched Betting", color: "bg-cyan-500/10 text-cyan-400" },
+};
 
 export function BookmakerLimitationDetailModal({
   open,
@@ -77,10 +79,10 @@ export function BookmakerLimitationDetailModal({
       const bookmakerIds = bookmakers.map((b: any) => b.id);
       const projetoIds = [...new Set(bookmakers.map((b: any) => b.projeto_id).filter(Boolean))] as string[];
 
-      // Fetch project names, bets stats and limitation events in parallel
+      // Fetch project info (nome + tipo), bets stats and limitation events in parallel
       const [projectsResult, betsResult, limitationsResult] = await Promise.all([
         projetoIds.length > 0
-          ? supabase.from("projetos").select("id, nome").in("id", projetoIds)
+          ? supabase.from("projetos").select("id, nome, tipo").in("id", projetoIds)
           : Promise.resolve({ data: [], error: null }),
         supabase
           .from("apostas_unificada")
@@ -90,17 +92,17 @@ export function BookmakerLimitationDetailModal({
           .not("resultado", "is", null),
         supabase
           .from("limitation_events")
-          .select("bookmaker_id, limitation_type, limitation_bucket, event_timestamp")
+          .select("bookmaker_id, event_timestamp")
           .in("bookmaker_id", bookmakerIds)
           .eq("workspace_id", workspaceId)
           .order("event_timestamp", { ascending: false }),
       ]);
 
-      // Build project name map
-      const projectMap = new Map<string, string>();
+      // Build project map (id -> { nome, tipo })
+      const projectMap = new Map<string, { nome: string; tipo: string }>();
       if (projectsResult.data) {
         for (const p of projectsResult.data as any[]) {
-          projectMap.set(p.id, p.nome);
+          projectMap.set(p.id, { nome: p.nome, tipo: p.tipo || "" });
         }
       }
 
@@ -117,35 +119,28 @@ export function BookmakerLimitationDetailModal({
         }
       }
 
-      // Latest limitation per bookmaker
-      const limitMap = new Map<string, { type: LimitationType; bucket: LimitationBucket; date: string }>();
+      // Latest limitation date per bookmaker
+      const limitDateMap = new Map<string, string>();
       if (!limitationsResult.error && limitationsResult.data) {
         for (const le of limitationsResult.data) {
-          if (!limitMap.has(le.bookmaker_id)) {
-            limitMap.set(le.bookmaker_id, {
-              type: le.limitation_type as LimitationType,
-              bucket: le.limitation_bucket as LimitationBucket,
-              date: le.event_timestamp,
-            });
+          if (!limitDateMap.has(le.bookmaker_id)) {
+            limitDateMap.set(le.bookmaker_id, le.event_timestamp);
           }
         }
       }
 
       return bookmakers.map((b: any): VinculoDetail => {
         const stats = betsMap.get(b.id) || { count: 0, pl: 0, volume: 0 };
-        const lim = limitMap.get(b.id);
+        const proj = b.projeto_id ? projectMap.get(b.projeto_id) : null;
         return {
           bookmaker_id: b.id,
           bookmaker_nome: b.nome,
-          projeto_nome: (b.projeto_id && projectMap.get(b.projeto_id)) || "Sem projeto",
-          projeto_id: b.projeto_id,
+          tipo_projeto: proj?.tipo || "—",
           status: b.status,
           total_bets: stats.count,
           total_pl: stats.pl,
           total_volume: stats.volume,
-          limitation_type: lim?.type || null,
-          limitation_bucket: lim?.bucket || null,
-          limitation_date: lim?.date || null,
+          limitation_date: limitDateMap.get(b.id) || null,
         };
       });
     },
@@ -171,7 +166,7 @@ export function BookmakerLimitationDetailModal({
                 <Building2 className="h-4 w-4" />
               </AvatarFallback>
             </Avatar>
-            <span>{bookmakerNome} — Histórico de Vínculos</span>
+            <span>{bookmakerNome} — Vínculos Limitados</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -181,19 +176,18 @@ export function BookmakerLimitationDetailModal({
           </div>
         ) : !vinculos || vinculos.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground text-sm">
-            Nenhum vínculo encontrado para esta bookmaker.
+            Nenhum vínculo limitado encontrado para esta bookmaker.
           </div>
         ) : (
           <div className="rounded-md border border-border/50 overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vínculo / Projeto</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead>Vínculo</TableHead>
+                  <TableHead className="text-center">Tipo Projeto</TableHead>
                   <TableHead className="text-center">Apostas</TableHead>
                   <TableHead className="text-right">Volume</TableHead>
                   <TableHead className="text-right">Lucro/Prejuízo</TableHead>
-                  <TableHead className="text-center">Limitação</TableHead>
                   <TableHead className="text-right">Data Lim.</TableHead>
                 </TableRow>
               </TableHeader>
@@ -208,27 +202,24 @@ export function BookmakerLimitationDetailModal({
                       ? "text-red-500"
                       : "text-muted-foreground";
 
+                  const tipoConfig = TIPO_PROJETO_LABELS[v.tipo_projeto?.toLowerCase()] || null;
+
                   return (
                     <TableRow key={v.bookmaker_id}>
                       <TableCell>
-                        <div className="space-y-0.5">
-                          <div className="font-medium text-sm">{v.bookmaker_nome}</div>
-                          <div className="text-xs text-muted-foreground">{v.projeto_nome}</div>
-                        </div>
+                        <div className="font-medium text-sm">{v.bookmaker_nome}</div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge
-                          variant="outline"
-                          className={`text-xs border-transparent ${
-                            v.status === "limitada"
-                              ? "bg-destructive/10 text-destructive"
-                              : v.status === "ativa"
-                              ? "bg-emerald-500/10 text-emerald-500"
-                              : "bg-muted/50 text-muted-foreground"
-                          }`}
-                        >
-                          {v.status}
-                        </Badge>
+                        {tipoConfig ? (
+                          <Badge
+                            variant="outline"
+                            className={`text-xs border-transparent ${tipoConfig.color}`}
+                          >
+                            {tipoConfig.label}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{v.tipo_projeto}</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center font-medium text-sm">
                         {v.total_bets}
@@ -241,18 +232,6 @@ export function BookmakerLimitationDetailModal({
                           <PlIcon className="h-3 w-3" />
                           {formatCurrency(v.total_pl)}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {v.limitation_type ? (
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-transparent bg-muted/50"
-                          >
-                            {LIMITATION_TYPE_LABELS[v.limitation_type]}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
                       </TableCell>
                       <TableCell className="text-right text-xs text-muted-foreground">
                         {v.limitation_date
@@ -268,7 +247,7 @@ export function BookmakerLimitationDetailModal({
             {/* Summary row */}
             <div className="border-t border-border/50 px-4 py-3 flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                {vinculos.length} vínculo(s)
+                {vinculos.length} vínculo(s) limitado(s)
               </span>
               <div className="flex items-center gap-6">
                 <span className="text-muted-foreground">
