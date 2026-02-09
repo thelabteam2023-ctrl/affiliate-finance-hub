@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { getFirstLastName } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -229,7 +230,7 @@ export function BookmakerLimitationDetailModal({
                       <TableCell>
                         <div className="space-y-0.5">
                           <div className="font-medium text-sm">{v.bookmaker_nome}</div>
-                          <div className="text-xs text-muted-foreground">{v.parceiro_nome}</div>
+                          <div className="text-xs text-muted-foreground">{getFirstLastName(v.parceiro_nome)}</div>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
