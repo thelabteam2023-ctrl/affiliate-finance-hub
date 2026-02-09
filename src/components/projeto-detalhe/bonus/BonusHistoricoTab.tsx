@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
-import { Building2, Search, History, CheckCircle2, XCircle, AlertTriangle, RotateCcw, ArrowDownUp } from "lucide-react";
+import { Building2, Search, History, CheckCircle2, XCircle, AlertTriangle, RotateCcw, ArrowDownUp, Pencil } from "lucide-react";
+import { EditFinalizeReasonDialog } from "./EditFinalizeReasonDialog";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
@@ -45,9 +46,10 @@ type HistoricoEntry =
   | { type: "ajuste"; data: AjustePostLimitacaoEntry; sortDate: string };
 
 export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
-  const { bonuses } = useProjectBonuses({ projectId: projetoId });
+  const { bonuses, updateFinalizeReason } = useProjectBonuses({ projectId: projetoId });
   const [searchTerm, setSearchTerm] = useState("");
   const [reasonFilter, setReasonFilter] = useState<string>("all");
+  const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
 
   // Fetch ajustes pós-limitação
   const { data: ajustesData = [] } = useQuery({
@@ -254,7 +256,16 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className="font-bold">{formatCurrencyValue(bonus.bonus_amount, bonus.currency)}</p>
-                          {getReasonBadge(bonus.finalize_reason)}
+                          <div className="flex items-center gap-1 justify-end">
+                            {getReasonBadge(bonus.finalize_reason)}
+                            <button
+                              onClick={() => setEditingBonus(bonus)}
+                              className="p-1 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                              title="Editar motivo"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -308,6 +319,17 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
             </ScrollArea>
           </CardContent>
         </Card>
+      )}
+
+      {editingBonus && (
+        <EditFinalizeReasonDialog
+          open={!!editingBonus}
+          onOpenChange={(open) => { if (!open) setEditingBonus(null); }}
+          currentReason={editingBonus.finalize_reason}
+          bonusTitle={editingBonus.title}
+          bookmakerNome={editingBonus.bookmaker_nome || ""}
+          onSave={(reason) => updateFinalizeReason(editingBonus.id, reason)}
+        />
       )}
     </div>
   );

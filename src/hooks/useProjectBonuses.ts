@@ -670,7 +670,32 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     return Math.min(100, (progress / bonus.rollover_target_amount) * 100);
   }, []);
 
-  const saving = createMutation.isPending || updateMutation.isPending || finalizeMutation.isPending || deleteMutation.isPending || updateRolloverMutation.isPending;
+  // Update finalize reason mutation (ONLY changes finalize_reason, no financial impact)
+  const updateFinalizeReasonMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: FinalizeReason }) => {
+      const { error } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .update({ finalize_reason: reason } as any)
+        .eq("id", id)
+        .eq("status", "finalized");
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Motivo de finalização atualizado");
+      invalidateBonusQueries(projectId);
+    },
+    onError: (error: Error) => {
+      console.error("Erro ao atualizar motivo:", error.message);
+      toast.error("Erro ao atualizar motivo: " + error.message);
+    },
+  });
+
+  const updateFinalizeReason = async (id: string, reason: FinalizeReason) => {
+    await updateFinalizeReasonMutation.mutateAsync({ id, reason });
+  };
+
+  const saving = createMutation.isPending || updateMutation.isPending || finalizeMutation.isPending || deleteMutation.isPending || updateRolloverMutation.isPending || updateFinalizeReasonMutation.isPending;
 
   return {
     bonuses,
@@ -690,5 +715,6 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
    getBookmakersWithAnyBonus,
     updateRolloverProgress,
     getRolloverPercentage,
+    updateFinalizeReason,
   };
 }
