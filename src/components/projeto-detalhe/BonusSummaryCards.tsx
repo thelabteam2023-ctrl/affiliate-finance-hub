@@ -48,21 +48,65 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
     staleTime: 30000,
   });
 
-  // Performance de Bônus = Total de bônus creditados + Juice das operações
+  // Fetch ajustes pós-limitação (financial_events com AJUSTE_POS_LIMITACAO)
+  const { data: ajustesPostLimitacao = [], isLoading: ajustesLoading } = useQuery({
+    queryKey: ["bonus-ajustes-pos-limitacao", projetoId],
+    queryFn: async () => {
+      // Buscar bookmakers do projeto para filtrar os ajustes
+      const { data: bookmakers } = await supabase
+        .from("bookmakers")
+        .select("id, moeda")
+        .eq("projeto_id", projetoId);
+
+      if (!bookmakers || bookmakers.length === 0) return [];
+
+      const bookmakerIds = bookmakers.map(b => b.id);
+      const moedaMap = new Map(bookmakers.map(b => [b.id, b.moeda || "BRL"]));
+
+      const { data, error } = await supabase
+        .from("financial_events")
+        .select("id, valor, bookmaker_id, moeda, metadata")
+        .in("bookmaker_id", bookmakerIds)
+        .eq("tipo_evento", "AJUSTE")
+        .not("metadata", "is", null);
+
+      if (error) throw error;
+
+      // Filtrar apenas AJUSTE_POS_LIMITACAO
+      return (data || []).filter(evt => {
+        try {
+          const meta = typeof evt.metadata === "string" ? JSON.parse(evt.metadata) : evt.metadata;
+          return meta?.tipo_ajuste === "AJUSTE_POS_LIMITACAO";
+        } catch { return false; }
+      }).map(evt => ({
+        valor: Number(evt.valor) || 0,
+        moeda: evt.moeda || moedaMap.get(evt.bookmaker_id) || "BRL",
+      }));
+    },
+    enabled: !!projetoId,
+    staleTime: 30000,
+  });
+
+  // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação
   const bonusPerformance = useMemo(() => {
     const totalBonusCreditado = bonuses
       .filter(b => b.status === "credited" || b.status === "finalized")
       .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
     
-    const totalJuice = bonusBetsData.reduce((acc, bet) => {
-      // Priorizar pl_consolidado (já na moeda do projeto)
+    const juiceBets = bonusBetsData.reduce((acc, bet) => {
       if (bet.pl_consolidado != null) {
         return acc + bet.pl_consolidado;
       }
-      // Se não tiver pl_consolidado, converter da moeda de operação
       const moedaOperacao = bet.moeda_operacao || "BRL";
       return acc + convertToConsolidation(bet.lucro_prejuizo ?? 0, moedaOperacao);
     }, 0);
+
+    // Somar ajustes pós-limitação ao juice
+    const juiceAjustes = ajustesPostLimitacao.reduce((acc, a) => {
+      return acc + convertToConsolidation(a.valor, a.moeda);
+    }, 0);
+
+    const totalJuice = juiceBets + juiceAjustes;
     
     const total = totalBonusCreditado + totalJuice;
     const performancePercent = totalBonusCreditado > 0 
@@ -70,9 +114,9 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       : 0;
     
     return { totalBonusCreditado, totalJuice, total, performancePercent };
-  }, [bonuses, bonusBetsData, convertToConsolidation]);
+  }, [bonuses, bonusBetsData, ajustesPostLimitacao, convertToConsolidation]);
 
-  const isLoading = bonusesLoading || betsLoading;
+  const isLoading = bonusesLoading || betsLoading || ajustesLoading;
 
   if (isLoading) {
     return (
