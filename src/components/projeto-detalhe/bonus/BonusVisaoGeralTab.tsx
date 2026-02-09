@@ -237,7 +237,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
       const { data, error } = await supabase
         .from("financial_events")
-        .select("id, valor, bookmaker_id, moeda, metadata")
+        .select("id, valor, bookmaker_id, moeda, metadata, created_at")
         .in("bookmaker_id", bookmakerIds)
         .eq("tipo_evento", "AJUSTE")
         .not("metadata", "is", null);
@@ -252,6 +252,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       }).map(evt => ({
         valor: Number(evt.valor) || 0,
         moeda: evt.moeda || moedaMap.get(evt.bookmaker_id) || "BRL",
+        bookmaker_id: evt.bookmaker_id,
+        created_at: evt.created_at,
       }));
     },
     enabled: !!projetoId,
@@ -387,6 +389,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       <BonusResultadoLiquidoChart
         bonuses={bonuses}
         bonusBets={bonusBetsData}
+        ajustesPostLimitacao={ajustesPostLimitacao}
         formatCurrency={formatCurrency}
         convertToConsolidation={convertToConsolidation}
         isSingleDayPeriod={isSingleDayPeriod}
