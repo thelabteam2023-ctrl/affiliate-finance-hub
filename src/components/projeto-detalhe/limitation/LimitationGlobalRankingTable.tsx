@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Clock, TrendingUp, TrendingDown } from "lucide-react";
+import { Building2, Clock, TrendingUp, TrendingDown, HelpCircle } from "lucide-react";
 import { format } from "date-fns";
 import {
   type GlobalLimitationStats,
@@ -50,7 +50,33 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
               <TableHead className="text-center">Eventos</TableHead>
               <TableHead className="text-center">Vínculos</TableHead>
               <TableHead className="text-center">Média Apostas</TableHead>
-              <TableHead className="text-center w-[180px]">Distribuição</TableHead>
+              <TableHead className="text-center w-[180px]">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center justify-center gap-1">
+                        Distribuição
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[260px] p-3 text-xs space-y-1.5">
+                      <p className="font-medium">Velocidade de limitação:</p>
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-red-500" />
+                        <span><strong>Rápida</strong> — limitou em até 5 apostas</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                        <span><strong>Moderada</strong> — limitou entre 6-10 apostas</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-blue-500" />
+                        <span><strong>Tardia</strong> — limitou após 10+ apostas</span>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
               <TableHead className="text-center">Perfil Global</TableHead>
               <TableHead className="text-right">Volume Total</TableHead>
               <TableHead className="text-right">Lucro/Prejuízo</TableHead>

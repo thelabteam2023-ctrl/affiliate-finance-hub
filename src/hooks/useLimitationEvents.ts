@@ -94,25 +94,25 @@ export const LIMITATION_TYPE_LABELS: Record<LimitationType, string> = {
 
 export const STRATEGIC_PROFILE_CONFIG: Record<StrategicProfile, { label: string; color: string; bgColor: string; description: string }> = {
   early_limiter: {
-    label: "Early Limiter",
+    label: "Rápida",
     color: "text-red-500",
     bgColor: "bg-red-500/10",
     description: "Limita em até 5 apostas",
   },
   mid_limiter: {
-    label: "Mid Limiter",
+    label: "Moderada",
     color: "text-yellow-500",
     bgColor: "bg-yellow-500/10",
     description: "Limita entre 6-10 apostas",
   },
   late_limiter: {
-    label: "Late Limiter",
+    label: "Tardia",
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",
     description: "Limita após 10+ apostas",
   },
   low_risk: {
-    label: "Low Risk",
+    label: "Baixo Risco",
     color: "text-emerald-500",
     bgColor: "bg-emerald-500/10",
     description: "Baixa taxa de limitação",
