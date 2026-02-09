@@ -441,7 +441,7 @@ export default function GestaoBookmakers() {
             </TabsTrigger>
             <TabsTrigger value="limitacoes" className="flex items-center gap-2">
               <ShieldAlert className="h-4 w-4" />
-              Limitações
+              Estatísticas
             </TabsTrigger>
             {isSystemOwner && (
               <TabsTrigger value="grupos" className="flex items-center gap-2">
