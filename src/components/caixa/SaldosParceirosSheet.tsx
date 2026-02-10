@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
@@ -618,10 +618,12 @@ export function SaldosParceirosSheet() {
       </Tooltip>
 
       <SheetContent className="w-full sm:max-w-2xl">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Saldos por Parceiro
+         <SheetHeader>
+          <SheetTitle className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              <span>Saldos por Parceiro</span>
+            </div>
             {!loading && parceirosAgrupados.length > 0 && (() => {
               // Consolidar total geral em BRL usando cotações do banco de dados
               let totalGeralBRL = 0;
@@ -639,17 +641,19 @@ export function SaldosParceirosSheet() {
                 });
               });
               return (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="outline" className="ml-auto text-xs font-mono tabular-nums cursor-help gap-1">
-                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalGeralBRL)}
-                      <Info className="h-3 w-3 opacity-50" />
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p className="text-xs">Valor consolidado em Real, convertido pelas cotações do sistema</p>
-                  </TooltipContent>
-                </Tooltip>
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-xs font-mono tabular-nums cursor-help gap-1 shrink-0">
+                        {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalGeralBRL)}
+                        <Info className="h-3 w-3 opacity-50" />
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="z-[9999]">
+                      <p className="text-xs">Valor consolidado em Real, convertido pelas cotações do sistema</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               );
             })()}
           </SheetTitle>
