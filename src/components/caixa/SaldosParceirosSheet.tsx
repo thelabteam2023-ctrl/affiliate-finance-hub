@@ -288,18 +288,20 @@ export function SaldosParceirosSheet() {
       });
 
       // Process bookmakers (multi-currency)
-      // SALDO OPERÁVEL = saldo_real + saldo_freebet + bônus_creditado
+      // SALDO OPERÁVEL = saldo_atual + saldo_freebet
+      // NOTA: saldo_atual já inclui o bônus creditado (via financial_events BONUS),
+      // portanto NÃO devemos somar project_bookmaker_link_bonuses novamente.
       (bookmakers || []).forEach((bk) => {
         if (!bk.parceiro_id) return;
 
         const parceiro = getOrCreateParceiro(bk.parceiro_id, "Parceiro");
         const saldoReal = bk.saldo_atual || 0;
         const saldoFreebet = bk.saldo_freebet || 0;
-        const bonusCreditado = bonusMap.get(bk.id) || 0;
         const moeda = bk.moeda || "BRL";
         
         // Calculate operable balance in native currency
-        const saldoOperavel = saldoReal + saldoFreebet + bonusCreditado;
+        // Bonus is already included in saldo_atual via the financial engine
+        const saldoOperavel = saldoReal + saldoFreebet;
         
         // Only add if has meaningful balance
         if (saldoOperavel > 0.50) {
@@ -307,7 +309,7 @@ export function SaldosParceirosSheet() {
             nome: bk.nome,
             saldo_operavel: saldoOperavel,
             moeda: moeda,
-            has_bonus: bonusCreditado > 0 || saldoFreebet > 0,
+            has_bonus: (bonusMap.get(bk.id) || 0) > 0 || saldoFreebet > 0,
           });
           
           // Aggregate by currency
