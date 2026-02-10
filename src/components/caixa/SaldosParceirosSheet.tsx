@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin } from "lucide-react";
+import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin, Info } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -620,6 +620,28 @@ export function SaldosParceirosSheet() {
           <SheetTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Saldos por Parceiro
+            {!loading && parceirosAgrupados.length > 0 && (() => {
+              // Consolidar total geral em BRL (soma bruta de todas as moedas - sem conversão cambial)
+              let totalGeral = 0;
+              parceirosAgrupados.forEach(p => {
+                Object.values(p.total_fiat_por_moeda).forEach(v => { totalGeral += (v || 0); });
+                totalGeral += (p.total_crypto_usd - p.total_crypto_locked_usd);
+                Object.values(p.total_bookmakers_por_moeda).forEach(v => { totalGeral += (v || 0); });
+              });
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="ml-auto text-xs font-mono tabular-nums cursor-help gap-1">
+                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalGeral)}
+                      <Info className="h-3 w-3 opacity-50" />
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p className="text-xs">Valor consolidado em Real (soma bruta de todos os saldos, sem conversão cambial)</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })()}
           </SheetTitle>
         </SheetHeader>
 
