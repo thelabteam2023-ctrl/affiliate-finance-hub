@@ -372,45 +372,49 @@ export function SaldosParceirosSheet() {
   const totalParceiros = parceirosAgrupados.length;
 
   const FiatHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_fiat"] }) => (
-    <div className="space-y-2">
-      <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">Saldo por Banco</p>
+    <div className="space-y-1">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70 pb-1 mb-1 border-b border-border/30">
+        Saldo por Banco
+      </p>
       {saldos.map((s, idx) => (
-        <div key={idx} className="flex justify-between items-center gap-3 text-sm">
-          <span className="text-foreground truncate max-w-[150px]">{s.banco}</span>
-          <span className="font-mono text-chart-1 whitespace-nowrap">{formatCurrency(s.saldo, s.moeda)}</span>
+        <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
+          <span className="text-[13px] text-foreground/90 truncate max-w-[160px] leading-tight">{s.banco}</span>
+          <span className="text-[13px] font-mono font-medium text-chart-1 whitespace-nowrap tabular-nums">{formatCurrency(s.saldo, s.moeda)}</span>
         </div>
       ))}
     </div>
   );
 
   const CryptoHoverContent = ({ saldos, totalLocked }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number }) => (
-    <div className="space-y-2">
-      <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">Saldo por Moeda</p>
+    <div className="space-y-1.5">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70 pb-1 mb-0.5 border-b border-border/30">
+        Saldo por Moeda
+      </p>
       {saldos.map((s, idx) => (
-        <div key={idx} className="flex justify-between items-center gap-3 text-sm">
-          <div className="flex flex-col">
+        <div key={idx} className="flex justify-between items-start gap-4 py-0.5">
+          <div className="flex flex-col gap-0">
             <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-foreground">{s.coin}</span>
-              <span className="text-xs text-muted-foreground">• {s.exchange}</span>
+              <span className="text-[13px] font-semibold text-foreground leading-tight">{s.coin}</span>
+              <span className="text-[11px] text-muted-foreground/60 leading-tight">• {s.exchange}</span>
             </div>
-            <span className="text-xs text-muted-foreground font-mono">
+            <span className="text-[11px] text-muted-foreground/50 font-mono tabular-nums leading-tight">
               {s.saldo_coin.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {s.coin}
             </span>
           </div>
-          <div className="flex flex-col items-end">
-            <span className="font-mono text-chart-2 whitespace-nowrap">{formatCurrency(s.saldo_usd, "USD")}</span>
+          <div className="flex flex-col items-end gap-0">
+            <span className="text-[13px] font-mono font-medium text-chart-2 whitespace-nowrap tabular-nums leading-tight">{formatCurrency(s.saldo_usd, "USD")}</span>
             {s.saldo_locked_usd > 0 && (
-              <span className="text-xs font-mono text-chart-3 whitespace-nowrap">
-                -{formatCurrency(s.saldo_locked_usd, "USD")} em trânsito
+              <span className="text-[11px] font-mono text-chart-3/80 whitespace-nowrap tabular-nums leading-tight">
+                -{formatCurrency(s.saldo_locked_usd, "USD")} trânsito
               </span>
             )}
           </div>
         </div>
       ))}
       {totalLocked > 0 && (
-        <div className="pt-2 mt-2 border-t border-border/50 flex justify-between text-sm">
-          <span className="text-chart-3 font-medium">⏳ Total em Trânsito</span>
-          <span className="font-mono text-chart-3">{formatCurrency(totalLocked, "USD")}</span>
+        <div className="pt-1.5 mt-1 border-t border-border/30 flex justify-between items-center">
+          <span className="text-[11px] text-chart-3/80 font-medium">⏳ Em Trânsito</span>
+          <span className="text-[13px] font-mono font-medium text-chart-3 tabular-nums">{formatCurrency(totalLocked, "USD")}</span>
         </div>
       )}
     </div>
