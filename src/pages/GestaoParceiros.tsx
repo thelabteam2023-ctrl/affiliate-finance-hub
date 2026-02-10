@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
-import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
+import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { ParceiroListaSidebar } from "@/components/parceiros/ParceiroListaSidebar";
 import { ParceiroDetalhesPanel } from "@/components/parceiros/ParceiroDetalhesPanel";
 import { formatCPF, maskCPFPartial } from "@/lib/validators";
@@ -581,7 +581,7 @@ export default function GestaoParceiros() {
       saldo_usd: saldoUsd,
       moeda,
     });
-    setTransacaoTipo(tipo);
+    setTransacaoTipo(tipo === "deposito" ? "DEPOSITO" : "SAQUE");
     setTransacaoDialogOpen(true);
   }, []);
 
@@ -774,11 +774,17 @@ export default function GestaoParceiros() {
         />
 
         {transacaoBookmaker && (
-          <TransacaoDialog
+          <CaixaTransacaoDialog
             open={transacaoDialogOpen}
             onClose={handleTransacaoClose}
-            bookmaker={transacaoBookmaker}
-            defaultTipo={transacaoTipo}
+            onSuccess={handleTransacaoClose}
+            defaultTipoTransacao={transacaoTipo}
+            defaultOrigemBookmakerId={transacaoTipo === "SAQUE" ? transacaoBookmaker.id : undefined}
+            defaultDestinoBookmakerId={transacaoTipo === "DEPOSITO" ? transacaoBookmaker.id : undefined}
+            defaultOrigemParceiroId={transacaoTipo === "DEPOSITO" ? selectedParceiroDetalhes || undefined : undefined}
+            defaultDestinoParceiroId={transacaoTipo === "SAQUE" ? selectedParceiroDetalhes || undefined : undefined}
+            defaultTipoMoeda="FIAT"
+            defaultMoeda={transacaoBookmaker.moeda || "BRL"}
           />
         )}
 
