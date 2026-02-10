@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FIAT_CURRENCIES, CURRENCY_SYMBOLS } from "@/types/currency";
 import { getFirstLastName } from "@/lib/utils";
 
@@ -423,43 +424,119 @@ export function SaldosParceirosSheet() {
     pendentes: ParceiroSaldoAgrupado["pendentes_bookmakers"];
   }) => {
     const saldosFiltrados = saldos.filter(s => s.saldo_operavel > 0.50);
+    
+    // Group bookmakers by currency
+    const bookmakersPorMoeda = saldosFiltrados.reduce<Record<string, typeof saldosFiltrados>>((acc, s) => {
+      const moeda = s.moeda || "USD";
+      if (!acc[moeda]) acc[moeda] = [];
+      acc[moeda].push(s);
+      return acc;
+    }, {});
+
+    // Group pendentes by currency
+    const pendentesPorMoeda = pendentes.reduce<Record<string, typeof pendentes>>((acc, p) => {
+      const moeda = p.moeda || "USD";
+      if (!acc[moeda]) acc[moeda] = [];
+      acc[moeda].push(p);
+      return acc;
+    }, {});
+
+    const moedas = [...new Set([...Object.keys(bookmakersPorMoeda), ...Object.keys(pendentesPorMoeda)])];
+    const defaultMoeda = moedas[0] || "USD";
+
+    // If only one currency, show flat list (no tabs needed)
+    if (moedas.length <= 1) {
+      return (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">
+            Saldo por Bookmaker {moedas[0] && <span className="text-primary">• {moedas[0]}</span>}
+          </p>
+          <BookmakerListByMoeda 
+            bookmakers={saldosFiltrados} 
+            pendentes={pendentes} 
+          />
+        </div>
+      );
+    }
+
+    // Multiple currencies: show tabs
     return (
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">Saldo por Bookmaker</p>
-        {saldosFiltrados.map((s, idx) => (
-          <div key={idx} className="flex justify-between items-center gap-3 text-sm">
-            <div className="flex items-center gap-1.5 truncate max-w-[150px]">
-              <span className="text-foreground truncate">{s.nome}</span>
-              {s.has_bonus && (
-                <span className="text-[10px] text-primary" title="Inclui bônus/freebet">🎁</span>
-              )}
-            </div>
-            <div className="flex flex-col items-end">
-              <span className="font-mono text-chart-4 whitespace-nowrap">
-                {CURRENCY_SYMBOLS[s.moeda] || s.moeda} {s.saldo_operavel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-          </div>
-        ))}
-        {/* Transações pendentes (em trânsito) */}
-        {pendentes.length > 0 && (
-          <>
-            <div className="pt-2 mt-2 border-t border-border/50">
-              <p className="text-xs font-semibold text-chart-3 mb-1.5">⏳ Em Trânsito (Pendentes)</p>
-              {pendentes.map((p, idx) => (
-                <div key={idx} className="flex justify-between items-center gap-3 text-sm">
-                  <span className="text-muted-foreground truncate max-w-[150px]">{p.bookmaker_nome}</span>
-                  <span className="font-mono text-chart-3 whitespace-nowrap">
-                    +{CURRENCY_SYMBOLS[p.moeda] || p.moeda} {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+      <div className="space-y-1">
+        <p className="text-xs font-semibold text-muted-foreground pb-1">Saldo por Bookmaker</p>
+        <Tabs defaultValue={defaultMoeda} className="w-full">
+          <TabsList className="w-full h-7 bg-muted/50 p-0.5 gap-0.5">
+            {moedas.map(moeda => {
+              const totalMoeda = (bookmakersPorMoeda[moeda] || []).reduce((s, b) => s + b.saldo_operavel, 0);
+              return (
+                <TabsTrigger 
+                  key={moeda} 
+                  value={moeda} 
+                  className="flex-1 text-[10px] h-6 px-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  {CURRENCY_SYMBOLS[moeda] || moeda} {moeda}
+                  <span className="ml-1 opacity-60">({(bookmakersPorMoeda[moeda] || []).length})</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+          {moedas.map(moeda => (
+            <TabsContent key={moeda} value={moeda} className="mt-2 space-y-2">
+              {/* Total da moeda */}
+              <div className="flex justify-between items-center text-xs text-muted-foreground border-b border-border/30 pb-1">
+                <span>Total {moeda}</span>
+                <span className="font-mono font-medium text-foreground">
+                  {CURRENCY_SYMBOLS[moeda] || moeda} {(bookmakersPorMoeda[moeda] || []).reduce((s, b) => s + b.saldo_operavel, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <BookmakerListByMoeda 
+                bookmakers={bookmakersPorMoeda[moeda] || []} 
+                pendentes={pendentesPorMoeda[moeda] || []} 
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
     );
   };
+
+  const BookmakerListByMoeda = ({ 
+    bookmakers, 
+    pendentes 
+  }: { 
+    bookmakers: ParceiroSaldoAgrupado["saldos_bookmakers"]; 
+    pendentes: ParceiroSaldoAgrupado["pendentes_bookmakers"];
+  }) => (
+    <>
+      {bookmakers.map((s, idx) => (
+        <div key={idx} className="flex justify-between items-center gap-3 text-sm">
+          <div className="flex items-center gap-1.5 truncate max-w-[150px]">
+            <span className="text-foreground truncate">{s.nome}</span>
+            {s.has_bonus && (
+              <span className="text-[10px] text-primary" title="Inclui bônus/freebet">🎁</span>
+            )}
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="font-mono text-chart-4 whitespace-nowrap">
+              {CURRENCY_SYMBOLS[s.moeda] || s.moeda} {s.saldo_operavel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+      ))}
+      {pendentes.length > 0 && (
+        <div className="pt-2 mt-2 border-t border-border/50">
+          <p className="text-xs font-semibold text-chart-3 mb-1.5">⏳ Em Trânsito (Pendentes)</p>
+          {pendentes.map((p, idx) => (
+            <div key={idx} className="flex justify-between items-center gap-3 text-sm">
+              <span className="text-muted-foreground truncate max-w-[150px]">{p.bookmaker_nome}</span>
+              <span className="font-mono text-chart-3 whitespace-nowrap">
+                +{CURRENCY_SYMBOLS[p.moeda] || p.moeda} {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
