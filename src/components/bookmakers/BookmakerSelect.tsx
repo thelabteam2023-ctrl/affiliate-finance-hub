@@ -82,6 +82,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
 }, ref) => {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<BookmakerItem[]>([]);
+  const selectedItemRef = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
   // CRÍTICO: Iniciar como false para evitar flash - loading só deve ser true durante fetch ativo
   const [loading, setLoading] = useState(false);
@@ -461,6 +462,21 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
     fetchDisplayData();
   }, [value, usaBookmakerInstancia]); // Depende de value e modo de busca
 
+  // Auto-scroll para o item selecionado quando o popover abre
+  useEffect(() => {
+    if (open && value && selectedItemRef.current) {
+      // Aguardar render do popover antes de scrollar
+      const timer = setTimeout(() => {
+        selectedItemRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest",
+        });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [open, value, items]);
+
   // Filtrar itens pela busca
   const filteredItems = items.filter((item) => 
     item.nome.toLowerCase().includes(searchTerm.toLowerCase())
@@ -574,6 +590,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                   return (
                     <CommandItem
                       key={item.id}
+                      ref={isSelected ? selectedItemRef : undefined}
                       value={item.id}
                       onSelect={() => handleSelect(item.id)}
                       className={cn(
