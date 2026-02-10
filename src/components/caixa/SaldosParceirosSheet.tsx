@@ -451,8 +451,8 @@ export function SaldosParceirosSheet() {
     // If only one currency, show flat list (no tabs needed)
     if (moedas.length <= 1) {
       return (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground border-b border-border/50 pb-1.5">
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70 pb-1 mb-1 border-b border-border/30">
             Saldo por Bookmaker {moedas[0] && <span className="text-primary">• {moedas[0]}</span>}
           </p>
           <BookmakerListByMoeda 
@@ -466,7 +466,7 @@ export function SaldosParceirosSheet() {
     // Multiple currencies: show tabs
     return (
       <div className="space-y-1">
-        <p className="text-xs font-semibold text-muted-foreground pb-1">Saldo por Bookmaker</p>
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70 pb-1">Saldo por Bookmaker</p>
         <Tabs defaultValue={defaultMoeda} className="w-full">
           <TabsList className="w-full h-7 bg-muted/50 p-0.5 gap-0.5">
             {moedas.map(moeda => {
@@ -512,27 +512,25 @@ export function SaldosParceirosSheet() {
   }) => (
     <>
       {bookmakers.map((s, idx) => (
-        <div key={idx} className="flex justify-between items-center gap-3 text-sm">
-          <div className="flex items-center gap-1.5 truncate max-w-[150px]">
-            <span className="text-foreground truncate">{s.nome}</span>
+        <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
+          <div className="flex items-center gap-1.5 truncate max-w-[160px]">
+            <span className="text-[13px] font-medium tracking-wide uppercase text-foreground/90 truncate leading-tight">{s.nome}</span>
             {s.has_bonus && (
               <span className="text-[10px] text-primary" title="Inclui bônus/freebet">🎁</span>
             )}
           </div>
-          <div className="flex flex-col items-end">
-            <span className="font-mono text-chart-4 whitespace-nowrap">
-              {CURRENCY_SYMBOLS[s.moeda] || s.moeda} {s.saldo_operavel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
+          <span className="text-[13px] font-mono font-medium text-chart-4 whitespace-nowrap tabular-nums leading-tight">
+            {CURRENCY_SYMBOLS[s.moeda] || s.moeda} {s.saldo_operavel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </span>
         </div>
       ))}
       {pendentes.length > 0 && (
-        <div className="pt-2 mt-2 border-t border-border/50">
-          <p className="text-xs font-semibold text-chart-3 mb-1.5">⏳ Em Trânsito (Pendentes)</p>
+        <div className="pt-1.5 mt-1.5 border-t border-border/30">
+          <p className="text-[11px] font-medium text-chart-3/80 mb-1">⏳ Em Trânsito</p>
           {pendentes.map((p, idx) => (
-            <div key={idx} className="flex justify-between items-center gap-3 text-sm">
-              <span className="text-muted-foreground truncate max-w-[150px]">{p.bookmaker_nome}</span>
-              <span className="font-mono text-chart-3 whitespace-nowrap">
+            <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
+              <span className="text-[13px] tracking-wide uppercase text-muted-foreground/70 truncate max-w-[160px] leading-tight">{p.bookmaker_nome}</span>
+              <span className="text-[13px] font-mono font-medium text-chart-3 whitespace-nowrap tabular-nums leading-tight">
                 +{CURRENCY_SYMBOLS[p.moeda] || p.moeda} {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>
