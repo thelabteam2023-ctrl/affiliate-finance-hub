@@ -240,7 +240,7 @@ export function TabFiltersBar({
               <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-64 p-0" align="start">
+          <PopoverContent className="w-72 p-0" align="start">
             <Command>
               <CommandInput placeholder="Buscar casa..." />
               <CommandList>
@@ -252,10 +252,11 @@ export function TabFiltersBar({
                       <CommandItem
                         key={bk.id}
                         onSelect={() => filters.toggleBookmaker(bk.id)}
+                        className="py-2"
                       >
                         <div
                           className={cn(
-                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary flex-shrink-0",
                             isSelected
                               ? "bg-primary text-primary-foreground"
                               : "opacity-50 [&_svg]:invisible"
@@ -263,12 +264,16 @@ export function TabFiltersBar({
                         >
                           <Check className="h-3 w-3" />
                         </div>
-                        <span>{bk.nome}</span>
-                        {bk.parceiroNome && (
-                          <span className="ml-auto text-xs text-muted-foreground">
-                            {bk.parceiroNome}
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-medium text-sm tracking-wide uppercase truncate">
+                            {bk.nome}
                           </span>
-                        )}
+                          {bk.parceiroNome && (
+                            <span className="text-[11px] text-muted-foreground truncate">
+                              {bk.parceiroNome}
+                            </span>
+                          )}
+                        </div>
                       </CommandItem>
                     );
                   })}
