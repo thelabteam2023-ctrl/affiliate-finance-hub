@@ -5,7 +5,7 @@ import { TrendingUp, Calendar } from "lucide-react";
 import { GirosGratisChartData } from "@/types/girosGratis";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { getSmartTickInterval } from "@/utils/chartAxisUtils";
+
 
 interface GirosGratisChartProps {
   data: GirosGratisChartData[];
@@ -96,8 +96,6 @@ export function GirosGratisChart({ data, formatCurrency }: GirosGratisChartProps
                 tickFormatter={(value) => format(parseISO(value), "dd/MM")}
                 tick={{ fontSize: 10 }}
                 className="text-muted-foreground"
-                interval={getSmartTickInterval(data.length)}
-                tickLine={false}
               />
               <YAxis
                 tickFormatter={(value) => `R$${value}`}
