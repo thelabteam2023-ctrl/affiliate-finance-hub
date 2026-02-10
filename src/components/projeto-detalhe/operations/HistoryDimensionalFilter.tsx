@@ -16,7 +16,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Building2, Users, ChevronDown, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getFirstLastName } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
 interface BookmakerOption {
@@ -160,7 +160,7 @@ export function HistoryDimensionalFilter({
                         </span>
                         {bk.parceiroNome && (
                           <span className="text-[11px] text-muted-foreground truncate">
-                            {bk.parceiroNome}
+                            {getFirstLastName(bk.parceiroNome)}
                           </span>
                         )}
                       </div>
@@ -225,7 +225,7 @@ export function HistoryDimensionalFilter({
                         >
                           <Check className="h-3 w-3" />
                         </div>
-                        <span>{p.nome}</span>
+                        <span>{getFirstLastName(p.nome)}</span>
                       </CommandItem>
                     );
                   })}
