@@ -358,6 +358,23 @@ export function SaldosParceirosSheet() {
     }
   }, [open]);
 
+  // Reagir a mudanças financeiras (FINANCIAL_STATE) para manter dados atualizados
+  useEffect(() => {
+    const handleFinancialChange = () => {
+      if (open) {
+        fetchSaldosParceiros();
+      }
+    };
+
+    window.addEventListener("lovable:financial-state-changed", handleFinancialChange);
+    window.addEventListener("lovable:caixa-data-changed", handleFinancialChange);
+    
+    return () => {
+      window.removeEventListener("lovable:financial-state-changed", handleFinancialChange);
+      window.removeEventListener("lovable:caixa-data-changed", handleFinancialChange);
+    };
+  }, [open]);
+
   const formatCurrency = (value: number, currency: string) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
