@@ -773,6 +773,8 @@ export function CaixaTransacaoDialog({
   }, [fluxoTransferencia, tipoTransacao, tipoMoeda]);
 
   // Limpar DESTINO quando ORIGEM mudar (para TRANSFERENCIA e DEPOSITO)
+  // CRÍTICO: Wallet/Conta são origens FINANCEIRAS e NÃO devem resetar bookmaker (destino da transação)
+  // Apenas mudança de PARCEIRO (identidade) deve resetar bookmaker
   useEffect(() => {
     if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO") {
       setDestinoParceiroId("");
@@ -780,7 +782,12 @@ export function CaixaTransacaoDialog({
       setDestinoWalletId("");
     }
     if (tipoTransacao === "DEPOSITO") {
-      setDestinoBookmakerId("");
+      // Só resetar bookmaker se o PARCEIRO mudou (mudança de identidade)
+      // Wallet e conta bancária são origens financeiras - não impactam o destino
+      const parceiroMudou = origemParceiroId !== prevOrigemParceiroId.current;
+      if (parceiroMudou) {
+        setDestinoBookmakerId("");
+      }
     }
   }, [origemParceiroId, origemContaId, origemWalletId, tipoTransacao, fluxoTransferencia]);
 
