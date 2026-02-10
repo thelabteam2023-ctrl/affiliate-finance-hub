@@ -224,6 +224,41 @@ export function CaixaTransacaoDialog({
     coin?: string;
   } | null>(null);
 
+  // ============================================================================
+  // INTELIGÊNCIA DE SAQUE: Detectar origem do último depósito para pré-selecionar
+  // tipo de moeda correto (FIAT vs CRYPTO) baseado na verdade operacional
+  // "A origem do dinheiro define o saque, não a moeda contábil da casa."
+  // ============================================================================
+  const fetchLastDepositFundingSource = async (bookmakerId: string): Promise<{
+    tipoMoeda: "FIAT" | "CRYPTO";
+    moeda?: string;
+    coin?: string;
+  } | null> => {
+    try {
+      const { data, error } = await supabase
+        .from("cash_ledger")
+        .select("tipo_moeda, moeda, coin")
+        .eq("destino_bookmaker_id", bookmakerId)
+        .eq("tipo_transacao", "DEPOSITO")
+        .in("status", ["CONFIRMADO", "PENDENTE", "LIQUIDADO"])
+        .order("data_transacao", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data) return null;
+
+      console.log("[CaixaTransacaoDialog] Último depósito detectado:", data);
+      return {
+        tipoMoeda: data.tipo_moeda === "CRYPTO" ? "CRYPTO" : "FIAT",
+        moeda: data.moeda || undefined,
+        coin: data.coin || undefined,
+      };
+    } catch (err) {
+      console.error("[CaixaTransacaoDialog] Erro ao buscar último depósito:", err);
+      return null;
+    }
+  };
+
   // Aplicar defaults quando dialog abre
   useEffect(() => {
     if (open) {
@@ -244,10 +279,31 @@ export function CaixaTransacaoDialog({
         pendingDefaultsRef.current = null;
       }
       
-      // Aplicar tipo de transação imediatamente - isso dispara o reset de contexto
-      // Os outros defaults serão aplicados pelo efeito de tipoTransacao
-      if (defaultTipoTransacao) {
-        setTipoTransacao(defaultTipoTransacao);
+      // ========================================================================
+      // SAQUE INTELIGENTE: Se é um saque com bookmaker pré-definida,
+      // buscar o último depósito para detectar a origem real do dinheiro
+      // e sobrescrever tipoMoeda/moeda/coin nos pendingDefaults
+      // ========================================================================
+      if (defaultTipoTransacao === "SAQUE" && defaultOrigemBookmakerId) {
+        fetchLastDepositFundingSource(defaultOrigemBookmakerId).then((fundingSource) => {
+          if (fundingSource && pendingDefaultsRef.current) {
+            console.log("[CaixaTransacaoDialog] Sobrescrevendo defaults com origem do último depósito:", fundingSource);
+            pendingDefaultsRef.current = {
+              ...pendingDefaultsRef.current,
+              tipoMoeda: fundingSource.tipoMoeda,
+              moeda: fundingSource.tipoMoeda === "FIAT" ? (fundingSource.moeda || pendingDefaultsRef.current.moeda) : undefined,
+              coin: fundingSource.tipoMoeda === "CRYPTO" ? (fundingSource.coin || undefined) : undefined,
+            };
+          }
+          // Aplicar tipo de transação APÓS a detecção (para que pendingDefaults esteja atualizado)
+          setTipoTransacao(defaultTipoTransacao);
+        });
+      } else {
+        // Aplicar tipo de transação imediatamente - isso dispara o reset de contexto
+        // Os outros defaults serão aplicados pelo efeito de tipoTransacao
+        if (defaultTipoTransacao) {
+          setTipoTransacao(defaultTipoTransacao);
+        }
       }
     }
   }, [open, defaultTipoTransacao, defaultOrigemBookmakerId, defaultDestinoBookmakerId, defaultOrigemParceiroId, defaultDestinoParceiroId, defaultTipoMoeda, defaultMoeda, defaultCoin]);
