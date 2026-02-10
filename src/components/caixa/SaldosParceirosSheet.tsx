@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FIAT_CURRENCIES, CURRENCY_SYMBOLS } from "@/types/currency";
 import { getFirstLastName } from "@/lib/utils";
+import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 
 // Multi-currency type
 type SaldosPorMoeda = Record<string, number>;
@@ -110,6 +111,7 @@ export function SaldosParceirosSheet() {
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [pricesLoading, setPricesLoading] = useState(false);
   const [lastPriceUpdate, setLastPriceUpdate] = useState<Date | null>(null);
+  const { convertToBRL } = useExchangeRates();
 
   const fetchCryptoPrices = async (coins: string[]) => {
     if (coins.length === 0) return {};
@@ -621,23 +623,31 @@ export function SaldosParceirosSheet() {
             <Users className="h-5 w-5" />
             Saldos por Parceiro
             {!loading && parceirosAgrupados.length > 0 && (() => {
-              // Consolidar total geral em BRL (soma bruta de todas as moedas - sem conversão cambial)
-              let totalGeral = 0;
+              // Consolidar total geral em BRL usando cotações do banco de dados
+              let totalGeralBRL = 0;
               parceirosAgrupados.forEach(p => {
-                Object.values(p.total_fiat_por_moeda).forEach(v => { totalGeral += (v || 0); });
-                totalGeral += (p.total_crypto_usd - p.total_crypto_locked_usd);
-                Object.values(p.total_bookmakers_por_moeda).forEach(v => { totalGeral += (v || 0); });
+                // FIAT: converter cada moeda para BRL via cotação
+                Object.entries(p.total_fiat_por_moeda).forEach(([moeda, v]) => {
+                  if (v) totalGeralBRL += convertToBRL(v, moeda);
+                });
+                // Crypto: converter USD para BRL
+                const cryptoUsd = p.total_crypto_usd - p.total_crypto_locked_usd;
+                if (cryptoUsd > 0) totalGeralBRL += convertToBRL(cryptoUsd, "USD");
+                // Bookmakers: converter cada moeda para BRL
+                Object.entries(p.total_bookmakers_por_moeda).forEach(([moeda, v]) => {
+                  if (v) totalGeralBRL += convertToBRL(v, moeda);
+                });
               });
               return (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Badge variant="outline" className="ml-auto text-xs font-mono tabular-nums cursor-help gap-1">
-                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalGeral)}
+                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalGeralBRL)}
                       <Info className="h-3 w-3 opacity-50" />
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    <p className="text-xs">Valor consolidado em Real (soma bruta de todos os saldos, sem conversão cambial)</p>
+                    <p className="text-xs">Valor consolidado em Real, convertido pelas cotações do sistema</p>
                   </TooltipContent>
                 </Tooltip>
               );
