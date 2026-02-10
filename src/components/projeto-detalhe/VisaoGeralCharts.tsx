@@ -373,13 +373,12 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
           Por volume apostado {scope === "global" && "(Todos os projetos)"}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2.5">
         {/* Header row */}
-        <div className="grid grid-cols-[auto_24px_1fr_60px_90px_70px] gap-2 items-center text-xs text-muted-foreground border-b pb-2">
-          <span className="w-5"></span>
+        <div className="grid grid-cols-[40px_1fr_36px_auto_56px] gap-x-2 items-center text-[11px] text-muted-foreground border-b pb-2 uppercase tracking-wide">
+          <span className="text-center">Casa</span>
           <span></span>
-          <span>Casa</span>
-          <span className="text-right">Qtd</span>
+          <span className="text-center">Qtd</span>
           <span className="text-right">Volume</span>
           <span className="text-right">ROI</span>
         </div>
@@ -392,23 +391,30 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
             <Tooltip key={casa.casa}>
               <TooltipTrigger asChild>
                 <div className="space-y-1.5 cursor-default">
-                  <div className="grid grid-cols-[auto_24px_1fr_60px_90px_70px] gap-2 items-center text-sm">
-                    <span className="text-xs text-muted-foreground w-5">{idx + 1}.</span>
-                    <div className="w-6 h-6 rounded bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
-                      {logoUrl ? (
-                        <img src={logoUrl} alt={casa.casa} className="w-5 h-5 object-contain" />
-                      ) : (
-                        <Building2 className="w-3 h-3 text-muted-foreground" />
-                      )}
+                  <div className="grid grid-cols-[40px_1fr_36px_auto_56px] gap-x-2 items-center">
+                    {/* Icon + rank badge */}
+                    <div className="flex flex-col items-center gap-0.5">
+                      <div className="w-8 h-8 rounded-md bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
+                        {logoUrl ? (
+                          <img src={logoUrl} alt={casa.casa} className="w-7 h-7 object-contain" />
+                        ) : (
+                          <Building2 className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <span className="text-[9px] text-muted-foreground/60 font-medium">{idx + 1}º</span>
                     </div>
-                    <span className="font-medium truncate">{casa.casa}</span>
-                    <span className="text-right text-muted-foreground tabular-nums">{casa.apostas}</span>
-                    <span className="text-right font-medium tabular-nums">{formatCurrency(casa.volume)}</span>
-                    <span className={`text-right font-semibold tabular-nums ${roiColor}`}>
+                    {/* Casa name */}
+                    <span className="text-xs font-medium leading-tight line-clamp-2">{casa.casa}</span>
+                    {/* Qtd */}
+                    <span className="text-center text-xs text-muted-foreground tabular-nums">{casa.apostas}</span>
+                    {/* Volume - always single line */}
+                    <span className="text-right text-[11px] font-medium tabular-nums whitespace-nowrap">{formatCurrency(casa.volume)}</span>
+                    {/* ROI */}
+                    <span className={`text-right text-xs font-semibold tabular-nums whitespace-nowrap ${roiColor}`}>
                       {casa.roi >= 0 ? '+' : ''}{casa.roi.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="h-1 rounded-full bg-muted overflow-hidden ml-12">
+                  <div className="h-1 rounded-full bg-muted overflow-hidden ml-11">
                     <div
                       className="h-full rounded-full transition-all duration-300"
                       style={{
