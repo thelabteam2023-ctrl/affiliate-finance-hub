@@ -256,7 +256,14 @@ export function CaixaTransacaoDialog({
   // FUNÇÃO CENTRALIZADA: Reset de contexto de transação
   // Qualquer mudança em tipoMoeda/moeda/coin deve chamar esta função
   // ============================================================================
-  const resetContextoDependente = (resetMoedaCoin: boolean = true, resetValores: boolean = true) => {
+  /**
+   * Reset de contexto dependente.
+   * @param resetMoedaCoin - Resetar moeda/coin (quando muda tipoMoeda)
+   * @param resetValores - Resetar valores monetários
+   * @param preserveTransactionContext - Se true, preserva parceiro e bookmaker (identidade da transação)
+   *   Usado ao alternar FIAT ↔ CRYPTO, onde apenas a origem financeira muda.
+   */
+  const resetContextoDependente = (resetMoedaCoin: boolean = true, resetValores: boolean = true, preserveTransactionContext: boolean = false) => {
     isResettingContext.current = true;
     
     // Reset valores monetários
@@ -273,31 +280,33 @@ export function CaixaTransacaoDialog({
       setMoeda("BRL");
     }
     
-    // Reset ORIGEM (parceiro, conta, wallet, bookmaker)
-    setOrigemParceiroId("");
+    // Reset contas/wallets (sempre resetam - são dependentes da moeda)
     setOrigemContaId("");
     setOrigemWalletId("");
-    setOrigemBookmakerId("");
-    
-    // Reset DESTINO (parceiro, conta, wallet, bookmaker)
-    setDestinoParceiroId("");
     setDestinoContaId("");
     setDestinoWalletId("");
-    setDestinoBookmakerId("");
     
-    // Reset descrição
-    setDescricao("");
+    if (!preserveTransactionContext) {
+      // Reset COMPLETO: parceiro e bookmaker também
+      setOrigemParceiroId("");
+      setOrigemBookmakerId("");
+      setDestinoParceiroId("");
+      setDestinoBookmakerId("");
+      setDescricao("");
+      
+      // Reset refs de parceiro/bookmaker
+      prevDestinoParceiroId.current = "";
+      prevOrigemBookmakerId.current = "";
+      prevOrigemParceiroId.current = "";
+      prevDestinoBookmakerId.current = "";
+    }
     
-    // Reset TODOS os refs de tracking (evitar auto-focus indevido)
-    prevCoin.current = "";
-    prevDestinoParceiroId.current = "";
+    // Reset refs de contas/wallets (sempre)
+    prevCoin.current = resetMoedaCoin ? "" : coin;
     prevDestinoWalletId.current = "";
     prevDestinoContaId.current = "";
-    prevOrigemBookmakerId.current = "";
-    prevOrigemParceiroId.current = "";
     prevOrigemContaId.current = "";
     prevOrigemWalletId.current = "";
-    prevDestinoBookmakerId.current = "";
     prevMoeda.current = resetMoedaCoin ? "BRL" : moeda;
     prevValor.current = "";
     prevQtdCoin.current = "";
@@ -317,20 +326,18 @@ export function CaixaTransacaoDialog({
   useEffect(() => {
     if (tipoMoeda === prevTipoMoeda.current) return; // Sem mudança real
     
-    // 🔒 RESET TOTAL - Invalidar todo o fluxo dependente
-    resetContextoDependente(true, true);
+    // 🔒 RESET FINANCEIRO APENAS - Preservar parceiro e bookmaker (identidade da transação)
+    // "Trocar FIAT ↔ CRYPTO não muda a transação. Muda apenas a origem financeira."
+    resetContextoDependente(true, true, true);
     
     // Auto-focus baseado no novo contexto
     setTimeout(() => {
       if (tipoMoeda === "CRYPTO") {
-        // DEPÓSITO CRYPTO: abre CoinSelect
-        // SAQUE CRYPTO: será tratado em useEffect separado (depende de bookmakers)
         if (tipoTransacao !== "SAQUE") {
           coinSelectRef.current?.focus();
           coinSelectRef.current?.click();
         }
       } else {
-        // FIAT: abre MoedaSelect
         moedaFiatSelectRef.current?.focus();
         moedaFiatSelectRef.current?.click();
       }
@@ -358,15 +365,12 @@ export function CaixaTransacaoDialog({
     setOrigemWalletId("");
     setDestinoWalletId("");
     
-    // Resetar parceiros (para forçar re-seleção de wallet compatível)
-    setOrigemParceiroId("");
-    setDestinoParceiroId("");
+    // NÃO resetar parceiros - eles são identidade da transação
+    // A wallet será re-selecionada mas o parceiro permanece
     
     // Refs
     prevOrigemWalletId.current = "";
     prevDestinoWalletId.current = "";
-    prevOrigemParceiroId.current = "";
-    prevDestinoParceiroId.current = "";
     
     prevCoin.current = coin;
     
@@ -394,23 +398,16 @@ export function CaixaTransacaoDialog({
     setOrigemContaId("");
     setDestinoContaId("");
     
-    // Resetar bookmaker (saldo pode não ser compatível)
-    setOrigemBookmakerId("");
-    setDestinoBookmakerId("");
+    // NÃO resetar bookmaker nem parceiro - são identidade da transação
+    // A conta bancária será re-selecionada mas parceiro/bookmaker permanecem
     
     // Refs
     prevOrigemContaId.current = "";
     prevDestinoContaId.current = "";
-    prevOrigemBookmakerId.current = "";
-    prevDestinoBookmakerId.current = "";
     
     prevMoeda.current = moeda;
     
-    // Resetar bookmaker de origem (contexto de moeda mudou)
-    setOrigemBookmakerId("");
-    prevOrigemBookmakerId.current = "";
-    
-    // Auto-focus para próximo passo
+    // Auto-focus para próximo passo (apenas se parceiro não está preenchido)
     if ((tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") && moeda && parceiroSelectRef.current) {
       setTimeout(() => {
         parceiroSelectRef.current?.open();
