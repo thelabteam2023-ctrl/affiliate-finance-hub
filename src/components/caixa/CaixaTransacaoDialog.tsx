@@ -174,7 +174,7 @@ export function CaixaTransacaoDialog({
   const [fluxoAporte, setFluxoAporte] = useState<"APORTE" | "LIQUIDACAO">("APORTE");
   const [investidorId, setInvestidorId] = useState<string>("");
   const [tipoMoeda, setTipoMoeda] = useState<string>("FIAT");
-  const [moeda, setMoeda] = useState<string>("BRL");
+  const [moeda, setMoeda] = useState<string>("");
   const [coin, setCoin] = useState<string>("");
   const [valor, setValor] = useState<string>("");
   const [valorDisplay, setValorDisplay] = useState<string>("");
@@ -333,7 +333,7 @@ export function CaixaTransacaoDialog({
     // Reset moeda/coin (quando muda tipoMoeda)
     if (resetMoedaCoin) {
       setCoin("");
-      setMoeda("BRL");
+      setMoeda("");
     }
     
     // Reset contas/wallets (sempre resetam - são dependentes da moeda)
@@ -363,7 +363,7 @@ export function CaixaTransacaoDialog({
     prevDestinoContaId.current = "";
     prevOrigemContaId.current = "";
     prevOrigemWalletId.current = "";
-    prevMoeda.current = resetMoedaCoin ? "BRL" : moeda;
+    prevMoeda.current = resetMoedaCoin ? "" : moeda;
     prevValor.current = "";
     prevQtdCoin.current = "";
     
@@ -682,7 +682,7 @@ export function CaixaTransacaoDialog({
     setCotacao("");
     setCoin("");
     setTipoMoeda("FIAT");
-    setMoeda("BRL");
+    setMoeda("");
     setDescricao("");
     
     // Reset TODOS os refs de tracking (evita auto-focus indevido e herança de estado)
@@ -695,7 +695,7 @@ export function CaixaTransacaoDialog({
     prevOrigemContaId.current = "";
     prevOrigemWalletId.current = "";
     prevDestinoBookmakerId.current = "";
-    prevMoeda.current = "BRL";
+    prevMoeda.current = "";
     prevTipoMoeda.current = "FIAT";
     prevValor.current = "";
     prevQtdCoin.current = "";
@@ -1403,7 +1403,7 @@ export function CaixaTransacaoDialog({
     setFluxoAporte("APORTE");
     setInvestidorId("");
     setTipoMoeda("FIAT");
-    setMoeda("BRL");
+    setMoeda("");
     setCoin("");
     setValor("");
     setValorDisplay("");
@@ -1473,7 +1473,7 @@ export function CaixaTransacaoDialog({
     return { 
       brl: bm?.saldo_atual || 0,
       usd: bm?.saldo_usd || 0,
-      moeda: bm?.moeda || "BRL"
+      moeda: bm?.moeda || "USD"
     };
   };
 
@@ -1546,7 +1546,7 @@ export function CaixaTransacaoDialog({
     const bm = bookmakers.find(b => b.id === bookmakerId);
     if (!bm) return null;
     
-    const moedaCasa = bm.moeda || "BRL";
+    const moedaCasa = bm.moeda || "USD";
     const precisaConversao = moedaOrigem !== moedaCasa;
     
     const currencySymbols: Record<string, string> = {
@@ -1884,7 +1884,7 @@ export function CaixaTransacaoDialog({
       let moedaDestinoTemp = tipoMoeda === "FIAT" ? moeda : "USD";
       if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
         const destBm = bookmakers.find(b => b.id === destinoBookmakerId);
-        moedaDestinoTemp = destBm?.moeda || "BRL";
+        moedaDestinoTemp = destBm?.moeda || moedaOrigemTemp;
       }
       const temConversaoMoeda = moedaOrigemTemp !== moedaDestinoTemp;
       
@@ -1900,17 +1900,17 @@ export function CaixaTransacaoDialog({
       // =========================================================================
       let moedaOrigem = tipoMoeda === "CRYPTO" ? coin : moeda;
       let moedaDestino = tipoMoeda === "FIAT" ? moeda : "USD";
-      let destinoBookmakerMoeda = "BRL";
+      let destinoBookmakerMoeda = "";
       
       if (tipoTransacao === "DEPOSITO" && destinoBookmakerId) {
         // DEPÓSITO: origem = moeda de transporte, destino = moeda da casa
         const destBm = bookmakers.find(b => b.id === destinoBookmakerId);
-        destinoBookmakerMoeda = destBm?.moeda || "BRL";
+        destinoBookmakerMoeda = destBm?.moeda || moedaDestino;
         moedaDestino = destinoBookmakerMoeda;
       } else if (tipoTransacao === "SAQUE" && origemBookmakerId) {
         // SAQUE: origem = moeda da CASA, destino = moeda de recebimento (BRL ou crypto)
         const origBm = bookmakers.find(b => b.id === origemBookmakerId);
-        const moedaCasa = origBm?.moeda || "BRL";
+        const moedaCasa = origBm?.moeda || moedaOrigem;
         moedaOrigem = moedaCasa; // A origem é a moeda NATIVA da casa!
         moedaDestino = tipoMoeda === "CRYPTO" ? coin : moeda; // Destino é onde vai receber
         destinoBookmakerMoeda = moedaCasa;
@@ -1945,66 +1945,17 @@ export function CaixaTransacaoDialog({
         const qtdCoinParsed = parseFloat(qtdCoin) || 0;
         valorUsdReferencia = qtdCoinParsed > 0 ? qtdCoinParsed * cryptoPrice : valorOrigem;
       } else {
-        // FIAT: converter para USD
-        if (moedaOrigem === "BRL") {
-          cotacaoOrigemUsd = 1 / cotacaoUSD; // 1 BRL = 0.189 USD (quando 1 USD = 5.31 BRL)
-          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
-        } else if (moedaOrigem === "USD") {
-          cotacaoOrigemUsd = 1.0;
-          valorUsdReferencia = valorOrigem;
-        } else if (moedaOrigem === "EUR") {
-          cotacaoOrigemUsd = cotacaoEUR / cotacaoUSD; // EUR→BRL / USD→BRL = EUR→USD
-          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
-        } else if (moedaOrigem === "GBP") {
-          cotacaoOrigemUsd = cotacaoGBP / cotacaoUSD;
-          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
-        } else if (moedaOrigem === "MXN") {
-          // MXN→USD usando cotação centralizada: MXN→BRL / USD→BRL
-          cotacaoOrigemUsd = cotacaoMXN / cotacaoUSD;
-          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
-        } else if (moedaOrigem === "MYR") {
-          cotacaoOrigemUsd = cotacaoMYR / cotacaoUSD;
-          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
-        } else if (moedaOrigem === "ARS") {
-          cotacaoOrigemUsd = cotacaoARS / cotacaoUSD;
-          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
-        } else if (moedaOrigem === "COP") {
-          cotacaoOrigemUsd = cotacaoCOP / cotacaoUSD;
-          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
-        } else {
-          // Moeda não mapeada - usar cotação via getRate como fallback
-          const taxaBRL = getRate(moedaOrigem);
-          cotacaoOrigemUsd = taxaBRL / cotacaoUSD;
-          valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
-          console.warn(`[CaixaTransacao] Moeda origem não mapeada: ${moedaOrigem}, usando getRate fallback`);
-        }
+        // FIAT: converter para USD usando getRate() (fonte única de verdade para TODAS as moedas)
+        // getRate() retorna a taxa MOEDA→BRL, então MOEDA→USD = getRate(MOEDA) / getRate("USD")
+        const taxaBrlOrigem = getRate(moedaOrigem); // X BRL por 1 unidade da moeda
+        cotacaoOrigemUsd = taxaBrlOrigem / cotacaoUSD; // Converte para USD
+        valorUsdReferencia = valorOrigem * cotacaoOrigemUsd;
       }
       
       // Calcular cotação da moeda de destino (casa) para USD
-      // IMPORTANTE: Usar fonte única de verdade (useCotacoes) para TODAS as moedas
-      if (destinoBookmakerMoeda === "BRL") {
-        cotacaoDestinoUsd = 1 / cotacaoUSD;
-      } else if (destinoBookmakerMoeda === "USD") {
-        cotacaoDestinoUsd = 1.0;
-      } else if (destinoBookmakerMoeda === "EUR") {
-        cotacaoDestinoUsd = cotacaoEUR / cotacaoUSD;
-      } else if (destinoBookmakerMoeda === "GBP") {
-        cotacaoDestinoUsd = cotacaoGBP / cotacaoUSD;
-      } else if (destinoBookmakerMoeda === "MXN") {
-        // MXN→USD: cotacaoMXN (MXN→BRL) / cotacaoUSD (USD→BRL)
-        cotacaoDestinoUsd = cotacaoMXN / cotacaoUSD;
-      } else if (destinoBookmakerMoeda === "MYR") {
-        cotacaoDestinoUsd = cotacaoMYR / cotacaoUSD;
-      } else if (destinoBookmakerMoeda === "ARS") {
-        cotacaoDestinoUsd = cotacaoARS / cotacaoUSD;
-      } else if (destinoBookmakerMoeda === "COP") {
-        cotacaoDestinoUsd = cotacaoCOP / cotacaoUSD;
-      } else {
-        // Moeda destino não mapeada - usar getRate como fallback
-        const taxaBRL = getRate(destinoBookmakerMoeda);
-        cotacaoDestinoUsd = taxaBRL / cotacaoUSD;
-        console.warn(`[CaixaTransacao] Moeda destino não mapeada: ${destinoBookmakerMoeda}, usando getRate fallback`);
-      }
+      // Usando getRate() como fonte única de verdade para TODAS as moedas
+      const taxaBrlDestino = getRate(destinoBookmakerMoeda);
+      cotacaoDestinoUsd = taxaBrlDestino / cotacaoUSD;
       
       // Calcular valor de destino (na moeda da casa)
       // Agora SEMPRE usa estimativa - o valor real será informado na Conciliação
@@ -2060,11 +2011,11 @@ export function CaixaTransacaoDialog({
       // =========================================================================
       if (tipoTransacao === "SAQUE" && origemBookmakerId && tipoMoeda === "FIAT") {
         const bm = bookmakers.find(b => b.id === origemBookmakerId);
-        const moedaCasa = bm?.moeda || "BRL";
+        const moedaCasa = bm?.moeda || moeda;
         
         // Buscar moeda REAL da conta bancária de destino
         const contaDestino = contasBancarias.find(c => c.id === destinoContaId);
-        const moedaContaDestino = contaDestino?.moeda || "BRL";
+        const moedaContaDestino = contaDestino?.moeda || moeda;
         
         console.log("[SAQUE FIAT] Debug conversão:", {
           origemBookmakerId,
@@ -2092,16 +2043,11 @@ export function CaixaTransacaoDialog({
             taxaDestino,   // BRL/BRL = 1
           });
           
-          // Conversão: Casa → BRL → Destino (usando BRL como pivot)
-          let valorBRLFromCasa = valorOrigem;
-          if (moedaCasa !== "BRL") {
-            valorBRLFromCasa = valorOrigem * taxaCasa; // €102 * 6.21 = R$ 633.42
-          }
-          
-          let valorDestinoEstimado = valorBRLFromCasa;
-          if (moedaContaDestino !== "BRL") {
-            valorDestinoEstimado = valorBRLFromCasa / taxaDestino;
-          }
+          // Conversão genérica: Casa → BRL (pivot) → Destino
+          // getRate(X) retorna "quantos BRL por 1 unidade de X"
+          // Então: valorOrigem * taxaCasa = valor em BRL; valor em BRL / taxaDestino = valor na moeda destino
+          const valorBRLFromCasa = valorOrigem * taxaCasa;
+          const valorDestinoEstimado = valorBRLFromCasa / taxaDestino;
           
           // Cotação direta: Casa → Destino (para auditoria)
           // Ex: EUR → BRL = 6.21 / 1 = 6.21
@@ -3669,7 +3615,7 @@ export function CaixaTransacaoDialog({
 
   // Suporta todas as 8 moedas FIAT + USD para crypto
   const formatCurrency = (value: number, forceCurrency?: string) => {
-    let currencyCode = forceCurrency || (tipoMoeda === "CRYPTO" ? "USD" : (moeda || "BRL"));
+    let currencyCode = forceCurrency || (tipoMoeda === "CRYPTO" ? "USD" : (moeda || "USD"));
     
     // Tratar USDT como USD para formatação
     if (currencyCode === "USDT") currencyCode = "USD";
@@ -3697,18 +3643,12 @@ export function CaixaTransacaoDialog({
   // saldo_atual é o saldo canônico na moeda operacional da casa
   const formatBookmakerFullBalance = (bookmarkerId: string): React.ReactNode => {
     const bm = bookmakers.find(b => b.id === bookmarkerId);
-    if (!bm) return formatCurrency(0, "BRL");
+    if (!bm) return formatCurrency(0, "USD");
     
-    const moedaCasa = bm.moeda || "BRL";
+    const moedaCasa = bm.moeda || "USD";
     const saldoOperacional = bm.saldo_atual || 0;
-    const isUsdMoeda = moedaCasa === "USD" || moedaCasa === "USDT";
     
-    // Mostrar APENAS o saldo na moeda operacional da casa
-    if (isUsdMoeda) {
-      return <span className="text-cyan-400">{formatCurrency(saldoOperacional, "USD")}</span>;
-    }
-    
-    // Para outras moedas (BRL, EUR, GBP, MXN, etc.), usar formatação apropriada
+    // Formatação uniforme para TODAS as moedas - sem tratamento especial
     return formatCurrency(saldoOperacional, moedaCasa as string);
   };
 
@@ -4018,27 +3958,19 @@ export function CaixaTransacaoDialog({
             {tipoTransacao === "SAQUE" && origemBookmakerId && (() => {
               const valorNum = parseFloat(valor) || 0;
               const bm = bookmakers.find(b => b.id === origemBookmakerId);
-              const moedaCasa = bm?.moeda || "BRL";
+              const moedaCasa = bm?.moeda || "USD";
               const moedaDestino = moeda; // Moeda da conta de destino
               const precisaConversao = moedaCasa !== moedaDestino;
               
               if (!precisaConversao || valorNum <= 0) return null;
               
-              // Calcular estimativa: Casa → Destino
-              const taxaCasa = getRate(moedaCasa);
-              const taxaDestino = getRate(moedaDestino);
+              // Calcular estimativa genérica: Casa → BRL (pivot) → Destino
+              const taxaCasa = getRate(moedaCasa);     // BRL por 1 unidade moeda casa
+              const taxaDestino = getRate(moedaDestino); // BRL por 1 unidade moeda destino
               
-              // Casa → BRL → USD → Destino
-              let valorBRLFromCasa = valorNum;
-              if (moedaCasa !== "BRL") {
-                valorBRLFromCasa = valorNum * taxaCasa;
-              }
-              const valorUSD = valorBRLFromCasa / cotacaoUSD;
-              
-              let valorDestinoEstimado = valorBRLFromCasa;
-              if (moedaDestino !== "BRL") {
-                valorDestinoEstimado = valorUSD * cotacaoUSD / taxaDestino;
-              }
+              // Conversão: valorOrigem * taxaCasa = BRL; BRL / taxaDestino = destino
+              const valorBRLFromCasa = valorNum * taxaCasa;
+              const valorDestinoEstimado = valorBRLFromCasa / taxaDestino;
               
               const currencySymbols: Record<string, string> = {
                 BRL: "R$", USD: "$", EUR: "€", GBP: "£", 
@@ -4591,13 +4523,12 @@ export function CaixaTransacaoDialog({
                                       
                                       // Sem conversão - mostra o valor direto na moeda da casa
                                       const bmDest = bookmakers.find(b => b.id === destinoBookmakerId);
-                                      const moedaCasaDest = bmDest?.moeda || "BRL";
-                                      const isUsdCasa = moedaCasaDest === "USD" || moedaCasaDest === "USDT";
+                                      const moedaCasaDest = bmDest?.moeda || "USD";
                                       
                                       return (
                                         <div className="mt-2 flex items-center justify-center gap-2">
                                           <TrendingUp className="h-4 w-4 text-emerald-500" />
-                                          <span className={`text-sm font-semibold ${isUsdCasa ? "text-cyan-400" : "text-foreground"}`}>
+                                          <span className="text-sm font-semibold text-foreground">
                                             {formatCurrency(getSaldoAtual("BOOKMAKER", destinoBookmakerId) + valorNum, moedaCasaDest)}
                                           </span>
                                         </div>
