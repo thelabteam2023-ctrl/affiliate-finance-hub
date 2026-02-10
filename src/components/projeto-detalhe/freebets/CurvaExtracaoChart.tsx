@@ -17,6 +17,7 @@ import { TrendingUp, Activity, Percent, Info } from "lucide-react";
 import { ApostaOperacionalFreebet, FreebetRecebida } from "./types";
 import { format, parseISO, startOfDay, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, subDays, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getSmartLabelInterval } from "@/utils/chartAxisUtils";
 import {
   Tooltip as UITooltip,
   TooltipContent,
@@ -317,6 +318,7 @@ export function CurvaExtracaoChart({
                 tick={{ fontSize: 10 }} 
                 className="text-muted-foreground"
                 tickLine={false}
+                interval={getSmartLabelInterval(chartData.length)}
               />
               <YAxis 
                 tick={{ fontSize: 10 }} 
