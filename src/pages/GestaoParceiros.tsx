@@ -103,6 +103,7 @@ export default function GestaoParceiros() {
   const [vinculoDialogOpen, setVinculoDialogOpen] = useState(false);
   const [vinculoParceiroId, setVinculoParceiroId] = useState<string | null>(null);
   const [vinculoBookmakerId, setVinculoBookmakerId] = useState<string | null>(null);
+  const [editingBookmaker, setEditingBookmaker] = useState<any | null>(null);
   // Persistência: Inicializa com o último parceiro selecionado do localStorage
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -530,20 +531,42 @@ export default function GestaoParceiros() {
   }, [editingParceiro?.id, parceiroCache]);
 
   const handleVinculoDialogClose = useCallback(() => {
-    const parceiroId = vinculoParceiroId;
+    const parceiroId = vinculoParceiroId || editingBookmaker?.parceiro_id;
     setVinculoDialogOpen(false);
     setVinculoParceiroId(null);
     setVinculoBookmakerId(null);
+    setEditingBookmaker(null);
     fetchParceiros();
     if (parceiroId) {
       parceiroCache.invalidateCache(parceiroId);
     }
-  }, [vinculoParceiroId, parceiroCache]);
+  }, [vinculoParceiroId, editingBookmaker?.parceiro_id, parceiroCache]);
 
   const handleCreateVinculo = useCallback((parceiroId: string, bookmakerCatalogoId: string) => {
+    setEditingBookmaker(null);
     setVinculoParceiroId(parceiroId);
     setVinculoBookmakerId(bookmakerCatalogoId);
     setVinculoDialogOpen(true);
+  }, []);
+
+  const handleEditVinculo = useCallback(async (bookmakerId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select("*")
+        .eq("id", bookmakerId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) throw new Error("Vínculo não encontrado");
+
+      setEditingBookmaker(data);
+      setVinculoParceiroId(null);
+      setVinculoBookmakerId(null);
+      setVinculoDialogOpen(true);
+    } catch (error: any) {
+      console.error("Erro ao carregar vínculo:", error);
+    }
   }, []);
 
   // ============== MEMOIZED MODAL HANDLERS ==============
@@ -692,6 +715,7 @@ export default function GestaoParceiros() {
                 showSensitiveData={showSensitiveData}
                 onToggleSensitiveData={handleToggleSensitiveData}
                 onCreateVinculo={handleCreateVinculo}
+                onEditVinculo={handleEditVinculo}
                 parceiroStatus={currentParceiroStatus}
                 hasParceria={currentHasParceria}
                 diasRestantes={currentDiasRestantes}
@@ -713,14 +737,14 @@ export default function GestaoParceiros() {
         />
 
         <BookmakerDialog
-          key={`vinculo-${vinculoDialogOpen}-${vinculoParceiroId || 'none'}-${vinculoBookmakerId || 'none'}`}
+          key={`vinculo-${vinculoDialogOpen}-${editingBookmaker?.id || 'none'}-${vinculoParceiroId || 'none'}-${vinculoBookmakerId || 'none'}`}
           open={vinculoDialogOpen}
           onClose={handleVinculoDialogClose}
-          bookmaker={null}
+          bookmaker={editingBookmaker}
           defaultParceiroId={vinculoParceiroId || undefined}
           defaultBookmakerId={vinculoBookmakerId || undefined}
-          lockParceiro={!!vinculoParceiroId}
-          lockBookmaker={!!vinculoBookmakerId}
+          lockParceiro={!!vinculoParceiroId || !!editingBookmaker}
+          lockBookmaker={!!vinculoBookmakerId || !!editingBookmaker}
         />
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

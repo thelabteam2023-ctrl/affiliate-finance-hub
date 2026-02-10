@@ -376,10 +376,19 @@ export default function BookmakerDialog({
         if (error) throw error;
       }
 
+      const credentialsUpdated = bookmaker && !!loginPassword;
+      
       toast({
-        title: bookmaker ? "Vínculo atualizado" : "Vínculo criado",
-        description: "Os dados foram salvos com sucesso.",
+        title: bookmaker ? "✅ Vínculo atualizado com sucesso" : "Vínculo criado",
+        description: credentialsUpdated 
+          ? "🔒 Credenciais atualizadas com sucesso" 
+          : "Os dados foram salvos com sucesso.",
       });
+
+      // Limpar campo de senha após salvar com sucesso
+      if (credentialsUpdated) {
+        setLoginPassword("");
+      }
 
       onClose();
     } catch (error: any) {

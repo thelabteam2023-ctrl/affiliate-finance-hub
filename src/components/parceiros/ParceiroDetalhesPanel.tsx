@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, memo, useEffect } from "react";
+import { useState, useCallback, useMemo, memo, useEffect, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ParceiroFinanceiroConsolidado, saldosToEntries } from "@/hooks/useParceiroFinanceiroConsolidado";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search, Pencil } from "lucide-react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -35,6 +41,7 @@ interface ParceiroDetalhesPanelProps {
   showSensitiveData?: boolean;
   onToggleSensitiveData?: () => void;
   onCreateVinculo?: (parceiroId: string, bookmakerId: string) => void;
+  onEditVinculo?: (bookmakerId: string) => void;
   onViewParceiro?: () => void;
   onEditParceiro?: () => void;
   onDeleteParceiro?: () => void;
@@ -51,6 +58,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   showSensitiveData = false,
   onToggleSensitiveData,
   onCreateVinculo,
+  onEditVinculo,
   onViewParceiro,
   onEditParceiro,
   onDeleteParceiro,
@@ -619,10 +627,11 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                       {/* Lista de bookmakers - único elemento rolável */}
                       <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border">
                         {bookmakersFiltrados.map((bm) => (
-                          <div
-                            key={bm.bookmaker_id}
-                            className="grid grid-cols-7 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center"
-                          >
+                          <ContextMenu key={bm.bookmaker_id}>
+                            <ContextMenuTrigger asChild>
+                              <div
+                                className="grid grid-cols-7 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center cursor-context-menu"
+                              >
                             <div className="col-span-2 flex items-center gap-2 min-w-0">
                               {bm.logo_url ? (
                                 <img
@@ -879,7 +888,18 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                             <div className="text-right text-sm font-medium text-muted-foreground">
                               {bm.qtd_apostas.toLocaleString("pt-BR")}
                             </div>
-                          </div>
+                              </div>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem
+                                onClick={() => onEditVinculo?.(bm.bookmaker_id)}
+                                className="gap-2"
+                              >
+                                <Pencil className="h-4 w-4" />
+                                Editar vínculo
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
                         ))}
                       </div>
                     </>
