@@ -1856,10 +1856,12 @@ export function CaixaTransacaoDialog({
       
       // Calcular cotação da moeda de origem para USD
       if (tipoMoeda === "CRYPTO") {
-        // Crypto: preço já está em USD
+        // Crypto: calcular valor em USD a partir da quantidade de coins × preço
         const cryptoPrice = cryptoPrices[coin] || 1;
         cotacaoOrigemUsd = cryptoPrice; // 1 BTC = 89000 USD
-        valorUsdReferencia = valorOrigem; // valor já está em USD (qtd × price)
+        // Para crypto, valor_usd = qtd_coin × preço da coin (NÃO valorOrigem que pode estar em BRL/EUR)
+        const qtdCoinParsed = parseFloat(qtdCoin) || 0;
+        valorUsdReferencia = qtdCoinParsed > 0 ? qtdCoinParsed * cryptoPrice : valorOrigem;
       } else {
         // FIAT: converter para USD
         if (moedaOrigem === "BRL") {
