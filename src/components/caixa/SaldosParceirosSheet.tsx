@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Users, RefreshCw } from "lucide-react";
+import { Users, RefreshCw, ArrowUpDown, Wallet, Landmark, Bitcoin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -390,54 +390,72 @@ export function SaldosParceirosSheet() {
 
   const totalParceiros = parceirosAgrupados.length;
 
-  const FiatHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_fiat"] }) => (
-    <div className="space-y-1">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70 pb-1 mb-1 border-b border-border/30">
-        Saldo por Banco
-      </p>
-      {saldos.map((s, idx) => (
-        <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
-          <span className="text-[13px] text-foreground/90 truncate max-w-[160px] leading-tight">{s.banco}</span>
-          <span className="text-[13px] font-mono font-medium text-chart-1 whitespace-nowrap tabular-nums">{formatCurrency(s.saldo, s.moeda)}</span>
+  const FiatHoverContent = ({ saldos }: { saldos: ParceiroSaldoAgrupado["saldos_fiat"] }) => {
+    const [ascending, setAscending] = useState(false);
+    const sorted = [...saldos].sort((a, b) => ascending ? a.saldo - b.saldo : b.saldo - a.saldo);
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center justify-between pb-1 mb-1 border-b border-border/30">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+            Saldo por Banco
+          </p>
+          <button onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors">
+            <ArrowUpDown className="h-3 w-3" />
+          </button>
         </div>
-      ))}
-    </div>
-  );
+        {sorted.map((s, idx) => (
+          <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
+            <span className="text-[13px] text-foreground/90 truncate max-w-[160px] leading-tight">{s.banco}</span>
+            <span className="text-[13px] font-mono font-medium text-chart-1 whitespace-nowrap tabular-nums">{formatCurrency(s.saldo, s.moeda)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
-  const CryptoHoverContent = ({ saldos, totalLocked }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number }) => (
-    <div className="space-y-1.5">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70 pb-1 mb-0.5 border-b border-border/30">
-        Saldo por Moeda
-      </p>
-      {saldos.map((s, idx) => (
-        <div key={idx} className="flex justify-between items-start gap-4 py-0.5">
-          <div className="flex flex-col gap-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[13px] font-semibold text-foreground leading-tight">{s.coin}</span>
-              <span className="text-[11px] text-muted-foreground/60 leading-tight">• {s.exchange}</span>
-            </div>
-            <span className="text-[11px] text-muted-foreground/50 font-mono tabular-nums leading-tight">
-              {s.saldo_coin.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {s.coin}
-            </span>
-          </div>
-          <div className="flex flex-col items-end gap-0">
-            <span className="text-[13px] font-mono font-medium text-chart-2 whitespace-nowrap tabular-nums leading-tight">{formatCurrency(s.saldo_usd, "USD")}</span>
-            {s.saldo_locked_usd > 0 && (
-              <span className="text-[11px] font-mono text-chart-3/80 whitespace-nowrap tabular-nums leading-tight">
-                -{formatCurrency(s.saldo_locked_usd, "USD")} trânsito
+  const CryptoHoverContent = ({ saldos, totalLocked }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number }) => {
+    const [ascending, setAscending] = useState(false);
+    const sorted = [...saldos].sort((a, b) => ascending ? a.saldo_usd - b.saldo_usd : b.saldo_usd - a.saldo_usd);
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between pb-1 mb-0.5 border-b border-border/30">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+            Saldo por Moeda
+          </p>
+          <button onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors">
+            <ArrowUpDown className="h-3 w-3" />
+          </button>
+        </div>
+        {sorted.map((s, idx) => (
+          <div key={idx} className="flex justify-between items-start gap-4 py-0.5">
+            <div className="flex flex-col gap-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[13px] font-semibold text-foreground leading-tight">{s.coin}</span>
+                <span className="text-[11px] text-muted-foreground/60 leading-tight">• {s.exchange}</span>
+              </div>
+              <span className="text-[11px] text-muted-foreground/50 font-mono tabular-nums leading-tight">
+                {s.saldo_coin.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {s.coin}
               </span>
-            )}
+            </div>
+            <div className="flex flex-col items-end gap-0">
+              <span className="text-[13px] font-mono font-medium text-chart-2 whitespace-nowrap tabular-nums leading-tight">{formatCurrency(s.saldo_usd, "USD")}</span>
+              {s.saldo_locked_usd > 0 && (
+                <span className="text-[11px] font-mono text-chart-3/80 whitespace-nowrap tabular-nums leading-tight">
+                  -{formatCurrency(s.saldo_locked_usd, "USD")} trânsito
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
-      {totalLocked > 0 && (
-        <div className="pt-1.5 mt-1 border-t border-border/30 flex justify-between items-center">
-          <span className="text-[11px] text-chart-3/80 font-medium">⏳ Em Trânsito</span>
-          <span className="text-[13px] font-mono font-medium text-chart-3 tabular-nums">{formatCurrency(totalLocked, "USD")}</span>
-        </div>
-      )}
-    </div>
-  );
+        ))}
+        {totalLocked > 0 && (
+          <div className="pt-1.5 mt-1 border-t border-border/30 flex justify-between items-center">
+            <span className="text-[11px] text-chart-3/80 font-medium">⏳ Em Trânsito</span>
+            <span className="text-[13px] font-mono font-medium text-chart-3 tabular-nums">{formatCurrency(totalLocked, "USD")}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const BookmakerHoverContent = ({ 
     saldos, 
@@ -446,6 +464,7 @@ export function SaldosParceirosSheet() {
     saldos: ParceiroSaldoAgrupado["saldos_bookmakers"]; 
     pendentes: ParceiroSaldoAgrupado["pendentes_bookmakers"];
   }) => {
+    const [ascending, setAscending] = useState(false);
     const saldosFiltrados = saldos.filter(s => s.saldo_operavel > 0.50);
     
     // Group bookmakers by currency
@@ -467,16 +486,26 @@ export function SaldosParceirosSheet() {
     const moedas = [...new Set([...Object.keys(bookmakersPorMoeda), ...Object.keys(pendentesPorMoeda)])];
     const defaultMoeda = moedas[0] || "USD";
 
+    const sortToggle = (
+      <button onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors">
+        <ArrowUpDown className="h-3 w-3" />
+      </button>
+    );
+
     // If only one currency, show flat list (no tabs needed)
     if (moedas.length <= 1) {
       return (
         <div className="space-y-1">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70 pb-1 mb-1 border-b border-border/30">
-            Saldo por Bookmaker {moedas[0] && <span className="text-primary">• {moedas[0]}</span>}
-          </p>
+          <div className="flex items-center justify-between pb-1 mb-1 border-b border-border/30">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+              Saldo por Bookmaker {moedas[0] && <span className="text-primary">• {moedas[0]}</span>}
+            </p>
+            {sortToggle}
+          </div>
           <BookmakerListByMoeda 
             bookmakers={saldosFiltrados} 
-            pendentes={pendentes} 
+            pendentes={pendentes}
+            ascending={ascending}
           />
         </div>
       );
@@ -485,11 +514,13 @@ export function SaldosParceirosSheet() {
     // Multiple currencies: show tabs
     return (
       <div className="space-y-1">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70 pb-1">Saldo por Bookmaker</p>
+        <div className="flex items-center justify-between pb-1">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Saldo por Bookmaker</p>
+          {sortToggle}
+        </div>
         <Tabs defaultValue={defaultMoeda} className="w-full">
           <TabsList className="w-full h-7 bg-muted/50 p-0.5 gap-0.5">
             {moedas.map(moeda => {
-              const totalMoeda = (bookmakersPorMoeda[moeda] || []).reduce((s, b) => s + b.saldo_operavel, 0);
               return (
                 <TabsTrigger 
                   key={moeda} 
@@ -504,7 +535,6 @@ export function SaldosParceirosSheet() {
           </TabsList>
           {moedas.map(moeda => (
             <TabsContent key={moeda} value={moeda} className="mt-2 space-y-2">
-              {/* Total da moeda */}
               <div className="flex justify-between items-center text-xs text-muted-foreground border-b border-border/30 pb-1">
                 <span>Total {moeda}</span>
                 <span className="font-mono font-medium text-foreground">
@@ -513,7 +543,8 @@ export function SaldosParceirosSheet() {
               </div>
               <BookmakerListByMoeda 
                 bookmakers={bookmakersPorMoeda[moeda] || []} 
-                pendentes={pendentesPorMoeda[moeda] || []} 
+                pendentes={pendentesPorMoeda[moeda] || []}
+                ascending={ascending}
               />
             </TabsContent>
           ))}
@@ -524,40 +555,45 @@ export function SaldosParceirosSheet() {
 
   const BookmakerListByMoeda = ({ 
     bookmakers, 
-    pendentes 
+    pendentes,
+    ascending = false,
   }: { 
     bookmakers: ParceiroSaldoAgrupado["saldos_bookmakers"]; 
     pendentes: ParceiroSaldoAgrupado["pendentes_bookmakers"];
-  }) => (
-    <>
-      {bookmakers.map((s, idx) => (
-        <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
-          <div className="flex items-center gap-1.5 truncate max-w-[160px]">
-            <span className="text-[13px] font-medium tracking-wide uppercase text-foreground/90 truncate leading-tight">{s.nome}</span>
-            {s.has_bonus && (
-              <span className="text-[10px] text-primary" title="Inclui bônus/freebet">🎁</span>
-            )}
-          </div>
-          <span className="text-[13px] font-mono font-medium text-chart-4 whitespace-nowrap tabular-nums leading-tight">
-            {CURRENCY_SYMBOLS[s.moeda] || s.moeda} {s.saldo_operavel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </span>
-        </div>
-      ))}
-      {pendentes.length > 0 && (
-        <div className="pt-1.5 mt-1.5 border-t border-border/30">
-          <p className="text-[11px] font-medium text-chart-3/80 mb-1">⏳ Em Trânsito</p>
-          {pendentes.map((p, idx) => (
-            <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
-              <span className="text-[13px] tracking-wide uppercase text-muted-foreground/70 truncate max-w-[160px] leading-tight">{p.bookmaker_nome}</span>
-              <span className="text-[13px] font-mono font-medium text-chart-3 whitespace-nowrap tabular-nums leading-tight">
-                +{CURRENCY_SYMBOLS[p.moeda] || p.moeda} {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
+    ascending?: boolean;
+  }) => {
+    const sorted = [...bookmakers].sort((a, b) => ascending ? a.saldo_operavel - b.saldo_operavel : b.saldo_operavel - a.saldo_operavel);
+    return (
+      <>
+        {sorted.map((s, idx) => (
+          <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
+            <div className="flex items-center gap-1.5 truncate max-w-[160px]">
+              <span className="text-[13px] font-medium tracking-wide uppercase text-foreground/90 truncate leading-tight">{s.nome}</span>
+              {s.has_bonus && (
+                <span className="text-[10px] text-primary" title="Inclui bônus/freebet">🎁</span>
+              )}
             </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
+            <span className="text-[13px] font-mono font-medium text-chart-4 whitespace-nowrap tabular-nums leading-tight">
+              {CURRENCY_SYMBOLS[s.moeda] || s.moeda} {s.saldo_operavel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        ))}
+        {pendentes.length > 0 && (
+          <div className="pt-1.5 mt-1.5 border-t border-border/30">
+            <p className="text-[11px] font-medium text-chart-3/80 mb-1">⏳ Em Trânsito</p>
+            {pendentes.map((p, idx) => (
+              <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
+                <span className="text-[13px] tracking-wide uppercase text-muted-foreground/70 truncate max-w-[160px] leading-tight">{p.bookmaker_nome}</span>
+                <span className="text-[13px] font-mono font-medium text-chart-3 whitespace-nowrap tabular-nums leading-tight">
+                  +{CURRENCY_SYMBOLS[p.moeda] || p.moeda} {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -599,6 +635,72 @@ export function SaldosParceirosSheet() {
             </div>
           ) : (
             <>
+              {/* KPIs Consolidados */}
+              {(() => {
+                const totalFiatPorMoeda: SaldosPorMoeda = {};
+                let totalCryptoUsd = 0;
+                const totalBkPorMoeda: SaldosPorMoeda = {};
+                
+                parceirosAgrupados.forEach(p => {
+                  Object.entries(p.total_fiat_por_moeda).forEach(([m, v]) => {
+                    if (v) totalFiatPorMoeda[m] = (totalFiatPorMoeda[m] || 0) + v;
+                  });
+                  totalCryptoUsd += (p.total_crypto_usd - p.total_crypto_locked_usd);
+                  Object.entries(p.total_bookmakers_por_moeda).forEach(([m, v]) => {
+                    if (v) totalBkPorMoeda[m] = (totalBkPorMoeda[m] || 0) + v;
+                  });
+                });
+
+                const fiatEntries = Object.entries(totalFiatPorMoeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
+                const bkEntries = Object.entries(totalBkPorMoeda).filter(([_, v]) => v > 0).sort(([, a], [, b]) => b - a);
+                
+                return (
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {/* Fiat */}
+                    <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Landmark className="h-3.5 w-3.5 text-chart-1" />
+                        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Fiat</span>
+                      </div>
+                      {fiatEntries.length > 0 ? fiatEntries.map(([moeda, valor]) => (
+                        <div key={moeda} className="text-sm font-mono font-semibold text-chart-1 tabular-nums">
+                          {formatCurrency(valor, moeda)}
+                        </div>
+                      )) : (
+                        <span className="text-sm text-muted-foreground/50">—</span>
+                      )}
+                    </div>
+                    {/* Crypto */}
+                    <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Bitcoin className="h-3.5 w-3.5 text-chart-2" />
+                        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Crypto</span>
+                      </div>
+                      {totalCryptoUsd > 0 ? (
+                        <div className="text-sm font-mono font-semibold text-chart-2 tabular-nums">
+                          {formatCurrency(totalCryptoUsd, "USD")}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground/50">—</span>
+                      )}
+                    </div>
+                    {/* Bookmakers */}
+                    <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Wallet className="h-3.5 w-3.5 text-chart-4" />
+                        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Casas</span>
+                      </div>
+                      {bkEntries.length > 0 ? bkEntries.map(([moeda, valor]) => (
+                        <div key={moeda} className="text-sm font-mono font-semibold text-chart-4 tabular-nums">
+                          {CURRENCY_SYMBOLS[moeda] || moeda} {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                      )) : (
+                        <span className="text-sm text-muted-foreground/50">—</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="flex items-center justify-between mb-3 px-1">
                 <span className="text-sm text-muted-foreground">
                   {totalParceiros} parceiro{totalParceiros !== 1 ? "s" : ""} com capital
