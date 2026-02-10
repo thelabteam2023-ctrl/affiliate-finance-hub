@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search, Pencil } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search, Pencil, Plus, Minus } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -42,6 +42,7 @@ interface ParceiroDetalhesPanelProps {
   onToggleSensitiveData?: () => void;
   onCreateVinculo?: (parceiroId: string, bookmakerId: string) => void;
   onEditVinculo?: (bookmakerId: string) => void;
+  onNewTransacao?: (bookmakerId: string, bookmakerNome: string, moeda: string, saldoAtual: number, saldoUsd: number, tipo: "deposito" | "retirada") => void;
   onViewParceiro?: () => void;
   onEditParceiro?: () => void;
   onDeleteParceiro?: () => void;
@@ -59,6 +60,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   onToggleSensitiveData,
   onCreateVinculo,
   onEditVinculo,
+  onNewTransacao,
   onViewParceiro,
   onEditParceiro,
   onDeleteParceiro,
@@ -897,6 +899,20 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                               >
                                 <Pencil className="h-4 w-4" />
                                 Editar vínculo
+                              </ContextMenuItem>
+                              <ContextMenuItem
+                                onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")}
+                                className="gap-2"
+                              >
+                                <Plus className="h-4 w-4 text-success" />
+                                Depósito
+                              </ContextMenuItem>
+                              <ContextMenuItem
+                                onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")}
+                                className="gap-2"
+                              >
+                                <Minus className="h-4 w-4 text-destructive" />
+                                Saque
                               </ContextMenuItem>
                             </ContextMenuContent>
                           </ContextMenu>

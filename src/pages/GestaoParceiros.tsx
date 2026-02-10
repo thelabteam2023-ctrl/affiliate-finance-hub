@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
+import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import { ParceiroListaSidebar } from "@/components/parceiros/ParceiroListaSidebar";
 import { ParceiroDetalhesPanel } from "@/components/parceiros/ParceiroDetalhesPanel";
 import { formatCPF, maskCPFPartial } from "@/lib/validators";
@@ -104,6 +105,9 @@ export default function GestaoParceiros() {
   const [vinculoParceiroId, setVinculoParceiroId] = useState<string | null>(null);
   const [vinculoBookmakerId, setVinculoBookmakerId] = useState<string | null>(null);
   const [editingBookmaker, setEditingBookmaker] = useState<any | null>(null);
+  const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
+  const [transacaoBookmaker, setTransacaoBookmaker] = useState<{ id: string; nome: string; saldo_atual: number; saldo_usd?: number; moeda: string } | null>(null);
+  const [transacaoTipo, setTransacaoTipo] = useState<string>("deposito");
   // Persistência: Inicializa com o último parceiro selecionado do localStorage
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -569,6 +573,27 @@ export default function GestaoParceiros() {
     }
   }, []);
 
+  const handleNewTransacao = useCallback((bookmakerId: string, bookmakerNome: string, moeda: string, saldoAtual: number, saldoUsd: number, tipo: "deposito" | "retirada") => {
+    setTransacaoBookmaker({
+      id: bookmakerId,
+      nome: bookmakerNome,
+      saldo_atual: saldoAtual,
+      saldo_usd: saldoUsd,
+      moeda,
+    });
+    setTransacaoTipo(tipo);
+    setTransacaoDialogOpen(true);
+  }, []);
+
+  const handleTransacaoClose = useCallback(() => {
+    setTransacaoDialogOpen(false);
+    setTransacaoBookmaker(null);
+    if (selectedParceiroDetalhes) {
+      parceiroCache.invalidateCache(selectedParceiroDetalhes);
+    }
+    fetchParceiros();
+  }, [selectedParceiroDetalhes, parceiroCache]);
+
   // ============== MEMOIZED MODAL HANDLERS ==============
   // Estes handlers são memoizados para evitar re-render do ParceiroDetalhesPanel
   // quando o estado do dialog (dialogOpen, viewMode) muda
@@ -716,6 +741,7 @@ export default function GestaoParceiros() {
                 onToggleSensitiveData={handleToggleSensitiveData}
                 onCreateVinculo={handleCreateVinculo}
                 onEditVinculo={handleEditVinculo}
+                onNewTransacao={handleNewTransacao}
                 parceiroStatus={currentParceiroStatus}
                 hasParceria={currentHasParceria}
                 diasRestantes={currentDiasRestantes}
@@ -746,6 +772,15 @@ export default function GestaoParceiros() {
           lockParceiro={!!vinculoParceiroId || !!editingBookmaker}
           lockBookmaker={!!vinculoBookmakerId || !!editingBookmaker}
         />
+
+        {transacaoBookmaker && (
+          <TransacaoDialog
+            open={transacaoDialogOpen}
+            onClose={handleTransacaoClose}
+            bookmaker={transacaoBookmaker}
+            defaultTipo={transacaoTipo}
+          />
+        )}
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
