@@ -375,9 +375,8 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
       </CardHeader>
       <CardContent className="space-y-2.5">
         {/* Header row */}
-        <div className="grid grid-cols-[40px_1fr_36px_auto_56px] gap-x-2 items-center text-[11px] text-muted-foreground border-b pb-2 uppercase tracking-wide">
+        <div className="grid grid-cols-[72px_40px_1fr_56px] gap-x-3 items-center text-[11px] text-muted-foreground border-b pb-2 uppercase tracking-wide">
           <span className="text-center">Casa</span>
-          <span></span>
           <span className="text-center">Qtd</span>
           <span className="text-right">Volume</span>
           <span className="text-right">ROI</span>
@@ -391,30 +390,29 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
             <Tooltip key={casa.casa}>
               <TooltipTrigger asChild>
                 <div className="space-y-1.5 cursor-default">
-                  <div className="grid grid-cols-[40px_1fr_36px_auto_56px] gap-x-2 items-center">
-                    {/* Icon + rank badge */}
-                    <div className="flex flex-col items-center gap-0.5">
-                      <div className="w-8 h-8 rounded-md bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
+                  <div className="grid grid-cols-[72px_40px_1fr_56px] gap-x-3 items-center">
+                    {/* Icon above name, centered */}
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-9 h-9 rounded-md bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
                         {logoUrl ? (
-                          <img src={logoUrl} alt={casa.casa} className="w-7 h-7 object-contain" />
+                          <img src={logoUrl} alt={casa.casa} className="w-8 h-8 object-contain" />
                         ) : (
                           <Building2 className="w-4 h-4 text-muted-foreground" />
                         )}
                       </div>
-                      <span className="text-[9px] text-muted-foreground/60 font-medium">{idx + 1}º</span>
+                      <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2 uppercase">{casa.casa}</span>
+                      <span className="text-[9px] text-muted-foreground/50 font-medium -mt-0.5">{idx + 1}º</span>
                     </div>
-                    {/* Casa name */}
-                    <span className="text-xs font-medium leading-tight line-clamp-2">{casa.casa}</span>
                     {/* Qtd */}
                     <span className="text-center text-xs text-muted-foreground tabular-nums">{casa.apostas}</span>
-                    {/* Volume - always single line */}
+                    {/* Volume */}
                     <span className="text-right text-[11px] font-medium tabular-nums whitespace-nowrap">{formatCurrency(casa.volume)}</span>
                     {/* ROI */}
                     <span className={`text-right text-xs font-semibold tabular-nums whitespace-nowrap ${roiColor}`}>
                       {casa.roi >= 0 ? '+' : ''}{casa.roi.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="h-1 rounded-full bg-muted overflow-hidden ml-11">
+                  <div className="h-1 rounded-full bg-muted overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-300"
                       style={{
