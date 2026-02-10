@@ -641,19 +641,15 @@ export function SaldosParceirosSheet() {
                 });
               });
               return (
-                <TooltipProvider delayDuration={100}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge variant="outline" className="text-xs font-mono tabular-nums cursor-help gap-1 shrink-0">
-                        {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalGeralBRL)}
-                        <Info className="h-3 w-3 opacity-50" />
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="z-[9999]">
-                      <p className="text-xs">Valor consolidado em Real, convertido pelas cotações do sistema</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div className="relative group shrink-0">
+                  <Badge variant="outline" className="text-xs font-mono tabular-nums cursor-help gap-1">
+                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalGeralBRL)}
+                    <Info className="h-3 w-3 opacity-50" />
+                  </Badge>
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 px-3 py-1.5 rounded-md border bg-popover text-popover-foreground shadow-md text-xs whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                    Valor consolidado em Real, convertido pelas cotações do sistema
+                  </div>
+                </div>
               );
             })()}
           </SheetTitle>
