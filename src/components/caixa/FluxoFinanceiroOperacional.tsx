@@ -819,7 +819,6 @@ export function FluxoFinanceiroOperacional({
                 customTooltipContent={(payload, label) => {
                   const data = payload[0]?.payload;
                   
-                  // Collect currencies with data
                   const currenciesWithData = dadosCapitalExterno.moedasAtivas.filter(currency => {
                     const key = currency.toLowerCase();
                     return (data?.[`aportes_${key}`] || 0) > 0 || (data?.[`liquidacoes_${key}`] || 0) > 0;
@@ -828,23 +827,14 @@ export function FluxoFinanceiroOperacional({
                   if (currenciesWithData.length === 0) return <p className="text-sm text-muted-foreground">Sem dados</p>;
                   
                   return (
-                    <>
-                      <p className="font-medium text-sm mb-2">{label}</p>
-                      {/* Header */}
-                      <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground uppercase font-medium mb-1.5">
-                        <span></span>
-                        <span className="text-right">Aportes</span>
-                        <span className="text-right">Liquidações</span>
-                        <span className="text-right">Delta</span>
-                        <span className="text-right">Δ%</span>
-                      </div>
-                      {/* Rows per currency */}
-                      {currenciesWithData.map(currency => {
+                    <div className="space-y-0">
+                      <p className="font-medium text-sm mb-3">{label}</p>
+                      {currenciesWithData.map((currency, idx) => {
                         const key = currency.toLowerCase();
                         const aportes = data?.[`aportes_${key}`] || 0;
                         const liquidacoes = data?.[`liquidacoes_${key}`] || 0;
-                        const delta = aportes - liquidacoes;
-                        const deltaPct = aportes > 0 ? (delta / aportes) * 100 : (delta !== 0 ? (delta > 0 ? 100 : -100) : 0);
+                        const fluxo = aportes - liquidacoes;
+                        const fluxoPct = aportes > 0 ? (fluxo / aportes) * 100 : (fluxo !== 0 ? (fluxo > 0 ? 100 : -100) : 0);
                         const config = CURRENCY_CONFIG[currency];
                         const isBRL = currency === "BRL";
                         const aportesNorm = data?.[`aportes_${key}_norm`] || 0;
@@ -852,30 +842,25 @@ export function FluxoFinanceiroOperacional({
                         
                         return (
                           <div key={currency}>
-                            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-x-3 items-center text-xs">
-                              <span className={cn("font-semibold text-[11px]", config?.depositColor || "text-foreground")}>{currency}</span>
-                              <span className="font-mono text-right">{formatCurrencyValue(aportes, currency)}</span>
-                              <span className="font-mono text-right">{liquidacoes > 0 ? formatCurrencyValue(liquidacoes, currency) : "—"}</span>
-                              <span className={cn("font-mono text-right font-medium", delta > 0 ? "text-emerald-400" : delta < 0 ? "text-destructive" : "text-muted-foreground")}>
-                                {delta > 0 ? "+" : ""}{formatCurrencyValue(delta, currency)}
-                              </span>
-                              <span className={cn("font-mono text-right text-[10px]", delta > 0 ? "text-emerald-400" : delta < 0 ? "text-destructive" : "text-muted-foreground")}>
-                                {delta > 0 ? "+" : ""}{deltaPct.toFixed(1)}%
-                              </span>
+                            {idx > 0 && <div className="border-t border-white/10 my-2" />}
+                            <p className={cn("font-semibold text-[11px] mb-1", config?.depositColor || "text-foreground")}>{currency}</p>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <span className="font-mono">Aportes: {formatCurrencyValue(aportes, currency)}</span>
+                              <span className="font-mono">Liquidações: {liquidacoes > 0 ? formatCurrencyValue(liquidacoes, currency) : "—"}</span>
                             </div>
                             {!isBRL && (
-                              <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-x-3 text-[10px] text-muted-foreground/70">
-                                <span></span>
-                                <span className="text-right font-mono">≈ {formatCurrencyValue(aportesNorm, "BRL")}</span>
-                                <span className="text-right font-mono">{liquidacoesNorm > 0 ? `≈ ${formatCurrencyValue(liquidacoesNorm, "BRL")}` : ""}</span>
-                                <span></span>
-                                <span></span>
+                              <div className="flex items-center gap-4 text-[10px] text-muted-foreground/60 mt-0.5">
+                                <span className="font-mono">≈ {formatCurrencyValue(aportesNorm, "BRL")}</span>
+                                <span className="font-mono">{liquidacoesNorm > 0 ? `≈ ${formatCurrencyValue(liquidacoesNorm, "BRL")}` : ""}</span>
                               </div>
                             )}
+                            <div className={cn("text-xs font-medium mt-1", fluxo > 0 ? "text-emerald-400" : fluxo < 0 ? "text-destructive" : "text-muted-foreground")}>
+                              <span className="font-mono">Fluxo líquido: {fluxo > 0 ? "+" : ""}{formatCurrencyValue(fluxo, currency)} ({fluxo > 0 ? "+" : ""}{fluxoPct.toFixed(1)}%)</span>
+                            </div>
                           </div>
                         );
                       })}
-                    </>
+                    </div>
                   );
                 }}
               />
@@ -1013,23 +998,14 @@ export function FluxoFinanceiroOperacional({
                   if (currenciesWithData.length === 0) return <p className="text-sm text-muted-foreground">Sem dados</p>;
                   
                   return (
-                    <>
-                      <p className="font-medium text-sm mb-2">{label}</p>
-                      {/* Header */}
-                      <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground uppercase font-medium mb-1.5">
-                        <span></span>
-                        <span className="text-right">Depósitos</span>
-                        <span className="text-right">Saques</span>
-                        <span className="text-right">Delta</span>
-                        <span className="text-right">Δ%</span>
-                      </div>
-                      {/* Rows per currency */}
-                      {currenciesWithData.map(moeda => {
+                    <div className="space-y-0">
+                      <p className="font-medium text-sm mb-3">{label}</p>
+                      {currenciesWithData.map((moeda, idx) => {
                         const key = moeda.toLowerCase();
                         const depositos = data?.[`depositos_${key}`] || 0;
                         const saques = data?.[`saques_${key}`] || 0;
-                        const delta = depositos - saques;
-                        const deltaPct = depositos > 0 ? (delta / depositos) * 100 : (delta !== 0 ? (delta > 0 ? 100 : -100) : 0);
+                        const fluxo = depositos - saques;
+                        const fluxoPct = depositos > 0 ? (fluxo / depositos) * 100 : (fluxo !== 0 ? (fluxo > 0 ? 100 : -100) : 0);
                         const config = CURRENCY_CONFIG[moeda];
                         const isBRL = moeda === "BRL";
                         const depositosNorm = data?.[`depositos_${key}_norm`] || 0;
@@ -1037,30 +1013,25 @@ export function FluxoFinanceiroOperacional({
                         
                         return (
                           <div key={moeda}>
-                            <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-x-3 items-center text-xs">
-                              <span className={cn("font-semibold text-[11px]", config?.depositColor || "text-foreground")}>{moeda}</span>
-                              <span className="font-mono text-right">{formatCurrencyValue(depositos, moeda)}</span>
-                              <span className="font-mono text-right">{saques > 0 ? formatCurrencyValue(saques, moeda) : "—"}</span>
-                              <span className={cn("font-mono text-right font-medium", delta > 0 ? "text-emerald-400" : delta < 0 ? "text-destructive" : "text-muted-foreground")}>
-                                {delta > 0 ? "+" : ""}{formatCurrencyValue(delta, moeda)}
-                              </span>
-                              <span className={cn("font-mono text-right text-[10px]", delta > 0 ? "text-emerald-400" : delta < 0 ? "text-destructive" : "text-muted-foreground")}>
-                                {delta > 0 ? "+" : ""}{deltaPct.toFixed(1)}%
-                              </span>
+                            {idx > 0 && <div className="border-t border-white/10 my-2" />}
+                            <p className={cn("font-semibold text-[11px] mb-1", config?.depositColor || "text-foreground")}>{moeda}</p>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <span className="font-mono">Depósitos: {formatCurrencyValue(depositos, moeda)}</span>
+                              <span className="font-mono">Saques: {saques > 0 ? formatCurrencyValue(saques, moeda) : "—"}</span>
                             </div>
                             {!isBRL && (
-                              <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-x-3 text-[10px] text-muted-foreground/70">
-                                <span></span>
-                                <span className="text-right font-mono">≈ {formatCurrencyValue(depositosNorm, "BRL")}</span>
-                                <span className="text-right font-mono">{saquesNorm > 0 ? `≈ ${formatCurrencyValue(saquesNorm, "BRL")}` : ""}</span>
-                                <span></span>
-                                <span></span>
+                              <div className="flex items-center gap-4 text-[10px] text-muted-foreground/60 mt-0.5">
+                                <span className="font-mono">≈ {formatCurrencyValue(depositosNorm, "BRL")}</span>
+                                <span className="font-mono">{saquesNorm > 0 ? `≈ ${formatCurrencyValue(saquesNorm, "BRL")}` : ""}</span>
                               </div>
                             )}
+                            <div className={cn("text-xs font-medium mt-1", fluxo > 0 ? "text-emerald-400" : fluxo < 0 ? "text-destructive" : "text-muted-foreground")}>
+                              <span className="font-mono">Fluxo líquido: {fluxo > 0 ? "+" : ""}{formatCurrencyValue(fluxo, moeda)} ({fluxo > 0 ? "+" : ""}{fluxoPct.toFixed(1)}%)</span>
+                            </div>
                           </div>
                         );
                       })}
-                    </>
+                    </div>
                   );
                 }}
               />
