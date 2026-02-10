@@ -1,10 +1,12 @@
 import { useMemo, useState, useCallback } from "react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil } from "lucide-react";
+import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil, FolderKanban, Users } from "lucide-react";
 import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { format, startOfDay, endOfDay } from "date-fns";
@@ -95,6 +97,88 @@ interface HistoricoMovimentacoesProps {
   getDestinoInfo?: (transacao: any) => LabelInfo;
   formatCurrency: (value: number, currency: string) => string;
   onConfirmarSaque?: (transacao: any) => void;
+}
+
+/** Searchable Projeto filter */
+function ProjetoFilterSelect({ value, onChange, projetos }: { value: string; onChange: (v: string) => void; projetos: { id: string; nome: string }[] }) {
+  const [open, setOpen] = useState(false);
+  const selected = value === "TODOS" ? null : value === "SEM_PROJETO" ? "SEM_PROJETO" : projetos.find(p => p.id === value);
+  const label = value === "TODOS" ? "Projeto: Todos" : value === "SEM_PROJETO" ? "Projeto: Sem vínculo" : (selected as any)?.nome ? `Projeto: ${(selected as any).nome}` : "Projeto: Todos";
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant={value !== "TODOS" ? "secondary" : "outline"} size="sm" className="h-8 text-xs gap-1 border-border/50">
+          <FolderKanban className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate max-w-[150px]">{label}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar projeto…" />
+          <CommandList>
+            <CommandEmpty>Nenhum resultado encontrado</CommandEmpty>
+            <CommandGroup>
+              <CommandItem onSelect={() => { onChange("TODOS"); setOpen(false); }} className="text-xs">
+                Todos os projetos
+              </CommandItem>
+              <CommandItem onSelect={() => { onChange("SEM_PROJETO"); setOpen(false); }} className="text-xs text-muted-foreground">
+                Sem projeto vinculado
+              </CommandItem>
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup>
+              {projetos.map(p => (
+                <CommandItem key={p.id} onSelect={() => { onChange(p.id); setOpen(false); }} className="text-xs">
+                  {p.nome}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Searchable Parceiro filter */
+function ParceiroFilterSelect({ value, onChange, parceiros }: { value: string; onChange: (v: string) => void; parceiros: { id: string; nome: string }[] }) {
+  const [open, setOpen] = useState(false);
+  const selected = value === "TODOS" ? null : parceiros.find(p => p.id === value);
+  const label = value === "TODOS" ? "Parceiro: Todos" : selected ? `Parceiro: ${getFirstLastName(selected.nome)}` : "Parceiro: Todos";
+  const sorted = useMemo(() => [...parceiros].sort((a, b) => a.nome.localeCompare(b.nome)), [parceiros]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant={value !== "TODOS" ? "secondary" : "outline"} size="sm" className="h-8 text-xs gap-1 border-border/50">
+          <Users className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate max-w-[150px]">{label}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar parceiro…" />
+          <CommandList>
+            <CommandEmpty>Nenhum resultado encontrado</CommandEmpty>
+            <CommandGroup>
+              <CommandItem onSelect={() => { onChange("TODOS"); setOpen(false); }} className="text-xs">
+                Todos os parceiros
+              </CommandItem>
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup>
+              {sorted.map(p => (
+                <CommandItem key={p.id} onSelect={() => { onChange(p.id); setOpen(false); }} className="text-xs">
+                  {getFirstLastName(p.nome)}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export function HistoricoMovimentacoes({
@@ -222,7 +306,7 @@ export function HistoricoMovimentacoes({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por casa, parceiro, wallet, banco, descrição..."
+              placeholder="Buscar movimentação…"
               value={termoBusca}
               onChange={(e) => {
                 setTermoBusca(e.target.value);
@@ -244,52 +328,35 @@ export function HistoricoMovimentacoes({
               </Button>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Tipo filter */}
+            <div className="flex items-center">
               <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Tipo de transação" />
+                <SelectTrigger className={`h-8 text-xs gap-1 ${filtroTipo !== "TODOS" ? "bg-secondary border-secondary" : "border-border/50"}`}>
+                  <Filter className="h-3.5 w-3.5 shrink-0" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="TODOS">Todos os tipos</SelectItem>
-                  <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
-                  <SelectItem value="DEPOSITO">Depósito</SelectItem>
-                  <SelectItem value="SAQUE">Saque</SelectItem>
-                  <SelectItem value="APORTE_FINANCEIRO">Aporte & Liquidação</SelectItem>
+                  <SelectItem value="TODOS">Tipo: Todos</SelectItem>
+                  <SelectItem value="TRANSFERENCIA">Tipo: Transferência</SelectItem>
+                  <SelectItem value="DEPOSITO">Tipo: Depósito</SelectItem>
+                  <SelectItem value="SAQUE">Tipo: Saque</SelectItem>
+                  <SelectItem value="APORTE_FINANCEIRO">Tipo: Aporte & Liquidação</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
-              <Select value={filtroProjeto} onValueChange={setFiltroProjeto}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Projeto" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TODOS">Todos os projetos</SelectItem>
-                  <SelectItem value="SEM_PROJETO">Sem projeto vinculado</SelectItem>
-                  {projetos.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Select value={filtroParceiro} onValueChange={setFiltroParceiro}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Parceiro" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TODOS">Todos os parceiros</SelectItem>
-                  {parceirosLista
-                    .sort((a, b) => a.nome.localeCompare(b.nome))
-                    .map(p => (
-                      <SelectItem key={p.id} value={p.id}>{getFirstLastName(p.nome)}</SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Projeto filter with search */}
+            <ProjetoFilterSelect
+              value={filtroProjeto}
+              onChange={setFiltroProjeto}
+              projetos={projetos}
+            />
+            {/* Parceiro filter with search */}
+            <ParceiroFilterSelect
+              value={filtroParceiro}
+              onChange={setFiltroParceiro}
+              parceiros={parceirosLista}
+            />
             <DashboardPeriodFilterBar
               value={periodFilter}
               onChange={handlePeriodChange}
