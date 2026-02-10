@@ -332,7 +332,7 @@ export function HistoricoMovimentacoes({
             {/* Tipo filter */}
             <div className="flex items-center">
               <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                <SelectTrigger className={`h-8 text-xs gap-1 ${filtroTipo !== "TODOS" ? "bg-secondary border-secondary" : "border-border/50"}`}>
+                <SelectTrigger className={`h-8 text-xs gap-1 whitespace-nowrap flex-nowrap items-center ${filtroTipo !== "TODOS" ? "bg-secondary border-secondary" : "border-border/50"}`}>
                   <Filter className="h-3.5 w-3.5 shrink-0" />
                   <SelectValue />
                 </SelectTrigger>
