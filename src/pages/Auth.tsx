@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { z } from "zod";
 
@@ -39,6 +39,8 @@ export default function Auth() {
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockedUntil, setBlockedUntil] = useState<Date | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [capsLockOn, setCapsLockOn] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -385,15 +387,34 @@ export default function Auth() {
             {!showPasswordReset && (
               <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading || isBlocked}
-                  minLength={6}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyUp={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
+                    onKeyDown={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
+                    required
+                    disabled={loading || isBlocked}
+                    minLength={6}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {capsLockOn && (
+                  <p className="text-xs text-yellow-500 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Caps Lock está ativado
+                  </p>
+                )}
               </div>
             )}
             <Button 
