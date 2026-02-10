@@ -1018,11 +1018,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           </div>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
-          {/* Filtros Locais da Aba (Período, Casa, Parceiro) */}
+          {/* Filtros Dimensionais da Aba Operações (Casa, Parceiro) */}
+          {/* ISOLAMENTO: Período já é controlado pelo filtro de nível superior */}
+          {/* Apenas filtros dimensionais são exibidos aqui para não afetar Visão Geral */}
           <TabFiltersBar
             projetoId={projetoId}
             filters={tabFilters}
             showEstrategiaFilter={false}
+            showPeriodFilter={false}
             className="pb-3 border-b border-border/50"
           />
         </CardContent>
