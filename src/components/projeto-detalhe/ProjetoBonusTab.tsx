@@ -14,6 +14,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -39,7 +52,10 @@ import {
   TrendingUp,
   DollarSign,
   Filter,
+  ChevronDown,
+  Check,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useProjectBonuses, ProjectBonus, BonusStatus, BonusFormData } from "@/hooks/useProjectBonuses";
@@ -411,20 +427,71 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
           </SelectContent>
         </Select>
 
-        <Select value={bookmakerFilter} onValueChange={setBookmakerFilter}>
-          <SelectTrigger className="w-[180px]">
-            <Building2 className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Casa" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as Casas</SelectItem>
-            {bookmakers.map((bk) => (
-              <SelectItem key={bk.id} value={bk.id}>
-                {bk.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={bookmakerFilter !== "all" ? "secondary" : "outline"}
+              size="sm"
+              className="h-8 text-xs"
+            >
+              <Building2 className="h-3.5 w-3.5 mr-1" />
+              {bookmakerFilter === "all" 
+                ? "Casas" 
+                : bookmakers.find(b => b.id === bookmakerFilter)?.nome || "Casa"}
+              <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Buscar casa..." />
+              <CommandList>
+                <CommandEmpty>Nenhuma casa encontrada.</CommandEmpty>
+                <CommandGroup>
+                  <CommandItem onSelect={() => setBookmakerFilter("all")} className="py-2">
+                    <div
+                      className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary flex-shrink-0",
+                        bookmakerFilter === "all"
+                          ? "bg-primary text-primary-foreground"
+                          : "opacity-50 [&_svg]:invisible"
+                      )}
+                    >
+                      <Check className="h-3 w-3" />
+                    </div>
+                    <span className="text-sm">Todas as Casas</span>
+                  </CommandItem>
+                  {bookmakers.map((bk) => {
+                    const isSelected = bookmakerFilter === bk.id;
+                    return (
+                      <CommandItem key={bk.id} onSelect={() => setBookmakerFilter(bk.id)} className="py-2">
+                        <div
+                          className={cn(
+                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary flex-shrink-0",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "opacity-50 [&_svg]:invisible"
+                          )}
+                        >
+                          <Check className="h-3 w-3" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-medium text-sm tracking-wide uppercase truncate">
+                            {bk.nome}
+                          </span>
+                          {bk.parceiro_nome && (
+                            <span className="text-[11px] text-muted-foreground truncate">
+                              {bk.parceiro_nome}
+                            </span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Bonus Table */}
