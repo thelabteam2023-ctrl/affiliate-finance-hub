@@ -84,6 +84,8 @@ interface CaixaTransacaoDialogProps {
   onSuccess: () => void;
   defaultTipoTransacao?: string;
   defaultOrigemBookmakerId?: string;
+  defaultDestinoBookmakerId?: string;
+  defaultOrigemParceiroId?: string;
   defaultDestinoParceiroId?: string;
   defaultTipoMoeda?: "FIAT" | "CRYPTO";
   defaultMoeda?: string;
@@ -149,6 +151,8 @@ export function CaixaTransacaoDialog({
   onSuccess,
   defaultTipoTransacao,
   defaultOrigemBookmakerId,
+  defaultDestinoBookmakerId,
+  defaultOrigemParceiroId,
   defaultDestinoParceiroId,
   defaultTipoMoeda,
   defaultMoeda,
@@ -212,6 +216,8 @@ export function CaixaTransacaoDialog({
   // ============================================================================
   const pendingDefaultsRef = useRef<{
     origemBookmakerId?: string;
+    destinoBookmakerId?: string;
+    origemParceiroId?: string;
     destinoParceiroId?: string;
     tipoMoeda?: "FIAT" | "CRYPTO";
     moeda?: string;
@@ -224,9 +230,11 @@ export function CaixaTransacaoDialog({
       resetForm();
       
       // CRÍTICO: Armazenar os defaults que devem ser aplicados APÓS o reset do tipoTransacao
-      if (defaultOrigemBookmakerId || defaultDestinoParceiroId || defaultTipoMoeda || defaultMoeda || defaultCoin) {
+      if (defaultOrigemBookmakerId || defaultDestinoBookmakerId || defaultOrigemParceiroId || defaultDestinoParceiroId || defaultTipoMoeda || defaultMoeda || defaultCoin) {
         pendingDefaultsRef.current = {
           origemBookmakerId: defaultOrigemBookmakerId,
+          destinoBookmakerId: defaultDestinoBookmakerId,
+          origemParceiroId: defaultOrigemParceiroId,
           destinoParceiroId: defaultDestinoParceiroId,
           tipoMoeda: defaultTipoMoeda,
           moeda: defaultMoeda,
@@ -242,7 +250,7 @@ export function CaixaTransacaoDialog({
         setTipoTransacao(defaultTipoTransacao);
       }
     }
-  }, [open, defaultTipoTransacao, defaultOrigemBookmakerId, defaultDestinoParceiroId, defaultTipoMoeda, defaultMoeda, defaultCoin]);
+  }, [open, defaultTipoTransacao, defaultOrigemBookmakerId, defaultDestinoBookmakerId, defaultOrigemParceiroId, defaultDestinoParceiroId, defaultTipoMoeda, defaultMoeda, defaultCoin]);
 
   // ============================================================================
   // FUNÇÃO CENTRALIZADA: Reset de contexto de transação
@@ -679,11 +687,25 @@ export function CaixaTransacaoDialog({
           prevDestinoParceiroId.current = pendingDefaults.destinoParceiroId;
         }
         
+        // Aplicar parceiro origem (ex: depósito contextual)
+        if (pendingDefaults.origemParceiroId) {
+          setOrigemParceiroId(pendingDefaults.origemParceiroId);
+          prevOrigemParceiroId.current = pendingDefaults.origemParceiroId;
+        }
+        
         // Aplicar bookmaker origem com delay adicional para garantir que o parceiro foi processado
         if (pendingDefaults.origemBookmakerId) {
           setTimeout(() => {
             setOrigemBookmakerId(pendingDefaults.origemBookmakerId!);
             prevOrigemBookmakerId.current = pendingDefaults.origemBookmakerId!;
+          }, 100);
+        }
+        
+        // Aplicar bookmaker destino (ex: depósito contextual)
+        if (pendingDefaults.destinoBookmakerId) {
+          setTimeout(() => {
+            setDestinoBookmakerId(pendingDefaults.destinoBookmakerId!);
+            prevDestinoBookmakerId.current = pendingDefaults.destinoBookmakerId!;
           }, 100);
         }
         
