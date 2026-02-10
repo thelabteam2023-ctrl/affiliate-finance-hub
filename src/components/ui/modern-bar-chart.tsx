@@ -342,7 +342,9 @@ export function ModernBarChart({
               visibility: 'visible',
               pointerEvents: 'none',
             }}
-            allowEscapeViewBox={{ x: true, y: true }}
+            allowEscapeViewBox={{ x: false, y: false }}
+            position={{ y: 0 }}
+            offset={15}
           />
           
           {bars.map((bar, barIndex) => (
