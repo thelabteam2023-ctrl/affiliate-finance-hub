@@ -1,49 +1,51 @@
 # CPF Attribution and CAC Calculation Logic
 
-## CAC Pago Real vs CAC Global
+## CAC Pago Real vs Investimento Total
 
 ### Core Principle
-Only CPFs with financial cost > 0 enter the CAC (Customer Acquisition Cost) calculation. CPFs without cost (organic, migrated, own) are displayed in totals but do NOT dilute the CAC.
+CAC measures **acquisition efficiency** only. Retention costs (renewals, bonifications) are tracked separately and do NOT enter the CAC formula, but ARE included in Investimento Total.
 
 ### Formulas
 
 ```
-CPFS_PAGOS = COUNT(*) WHERE custo_total > 0
-CPFS_SEM_CUSTO = COUNT(*) WHERE custo_total = 0
+# Acquisition costs only
+CUSTO_AQUISICAO = PAGTO_PARCEIRO + PAGTO_FORNECEDOR + COMISSAO_INDICADOR + BONUS_INDICADOR
 
-TOTAL_INVESTIDO = SUM(all confirmed payments)
+# Retention costs (separate)
+CUSTO_RETENCAO = RENOVACAO_PARCERIA + BONIFICACAO_ESTRATEGICA
 
-CAC_PAGO_REAL = TOTAL_INVESTIDO / CPFS_PAGOS
+# Total investment
+INVESTIMENTO_TOTAL = CUSTO_AQUISICAO + CUSTO_RETENCAO
+
+CPFS_PAGOS = COUNT(*) WHERE custo_total_aquisicao > 0
+CPFS_SEM_CUSTO = COUNT(*) WHERE custo_total_aquisicao = 0
+
+CAC_PAGO_REAL = CUSTO_AQUISICAO / CPFS_PAGOS
 
 TAXA_ORGANICA = (CPFS_SEM_CUSTO / TOTAL_CPFS) * 100
 ```
 
-### CPF Classification
+### CPF Classification (for CAC)
 
 | Type | Description | Enters CAC |
 |------|-------------|------------|
-| **PAGO** | Partner/Supplier with cost | ✅ Yes |
-| **ORGANICO** | Direct with zero cost | ❌ No |
+| **PAGO** | Partner/Supplier with acquisition cost | ✅ Yes |
+| **ORGANICO** | Direct with zero acquisition cost | ❌ No |
 | **HERDADO** | Migrated from external bases | ❌ No (unless historical cost informed) |
 | **PROPRIO** | Internal operator use | ❌ No |
 
-### Dashboard Display
+### Dashboard KPIs
 
-The Captação de Parceiros dashboard shows:
-- **Investimento Total**: All confirmed payments
-- **Total de CPFs**: All CPFs (pagos + sem custo)
-- **CAC Pago Real**: Only calculated with CPFs with cost
-- **Taxa Orgânica**: Percentage without cost
+| Metric | Includes | Purpose |
+|--------|----------|---------|
+| **Investimento Total** | Acquisition + Retention | Full spending view |
+| **CAC Pago Real** | Only acquisition costs / paid CPFs | Acquisition efficiency |
+| **Custo de Retenção** | Renewals + Bonifications | Retention spending (shown only when > 0) |
+| **Taxa Orgânica** | % CPFs without acquisition cost | Base composition |
 
-A warning banner appears when CPFs without cost exist:
-> "X CPFs não entram no CAC (sem custo financeiro)"
+### Why Separate
 
-### Why This Matters
-
-This prevents:
-- Base migration from breaking CAC
-- Own CPFs from distorting CAC
-- Direct CPFs from diluting CAC
-- False efficiency metrics
-
-The system measures **acquisition efficiency**, not base size.
+- Renewals = maintaining existing partner → retention, not acquisition
+- Bonifications = incentive for existing partner → retention, not acquisition
+- Mixing them in CAC would make the metric meaningless
+- The system measures **acquisition efficiency** separately from **retention investment**
