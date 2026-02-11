@@ -34,6 +34,7 @@ import { PagamentoBonusDialog } from "./PagamentoBonusDialog";
 import { PagamentoComissaoDialog } from "./PagamentoComissaoDialog";
 import { PagamentoParceiroDialog } from "./PagamentoParceiroDialog";
 import { PagamentoCaptacaoDialog } from "./PagamentoCaptacaoDialog";
+import { ParceriaDialog } from "@/components/parcerias/ParceriaDialog";
 
 interface Movimentacao {
   id: string;
@@ -88,6 +89,49 @@ export function FinanceiroTab() {
   const [selectedBonus, setSelectedBonus] = useState<BonusPendente | null>(null);
   const [selectedComissao, setSelectedComissao] = useState<ComissaoPendente | null>(null);
   const [selectedParceiro, setSelectedParceiro] = useState<ParceiroPendente | null>(null);
+  
+  // Estado para editar parceria após renovação
+  const [editParceriaOpen, setEditParceriaOpen] = useState(false);
+  const [editParceriaData, setEditParceriaData] = useState<any>(null);
+
+  const handleRenovacao = async (parceiroId: string) => {
+    try {
+      // Buscar parceria ativa do parceiro
+      const { data: parceria } = await supabase
+        .from("parcerias")
+        .select("*, parceiros!inner(nome)")
+        .eq("parceiro_id", parceiroId)
+        .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (parceria) {
+        // Calcular dias restantes
+        const dataFim = new Date(parceria.data_inicio);
+        dataFim.setDate(dataFim.getDate() + parceria.duracao_dias);
+        const hoje = new Date();
+        const diffMs = dataFim.getTime() - hoje.getTime();
+        const diasRestantes = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+        setEditParceriaData({
+          ...parceria,
+          parceiro_nome: (parceria.parceiros as any)?.nome || "",
+          dias_restantes: diasRestantes,
+          data_fim_prevista: dataFim.toISOString().split("T")[0],
+        });
+        setEditParceriaOpen(true);
+      } else {
+        toast({
+          title: "Parceria não encontrada",
+          description: "Nenhuma parceria ativa encontrada para este parceiro.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Erro ao buscar parceria:", error);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -723,6 +767,13 @@ export function FinanceiroTab() {
         open={captacaoDialogOpen}
         onOpenChange={setCaptacaoDialogOpen}
         onSuccess={fetchData}
+        onRenovacao={handleRenovacao}
+      />
+      <ParceriaDialog
+        open={editParceriaOpen}
+        onOpenChange={setEditParceriaOpen}
+        parceria={editParceriaData}
+        isViewMode={false}
       />
     </div>
   );

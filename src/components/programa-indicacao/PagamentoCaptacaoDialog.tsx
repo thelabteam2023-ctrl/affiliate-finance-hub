@@ -43,6 +43,7 @@ interface PagamentoCaptacaoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  onRenovacao?: (parceiroId: string) => void;
 }
 
 interface ParceiroOption {
@@ -54,6 +55,7 @@ export function PagamentoCaptacaoDialog({
   open,
   onOpenChange,
   onSuccess,
+  onRenovacao,
 }: PagamentoCaptacaoDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
@@ -199,9 +201,16 @@ export function PagamentoCaptacaoDialog({
         description: `${tipoLabel} de R$ ${valorNumerico.toFixed(2)} para ${parceiroNome} registrada com sucesso.`,
       });
 
+      const savedParceiroId = parceiroId;
+      const savedTipo = tipoTransacao;
       resetForm();
       onOpenChange(false);
       onSuccess();
+
+      // Após renovação, redirecionar para edição da parceria
+      if (savedTipo === "RENOVACAO_PARCERIA" && onRenovacao) {
+        onRenovacao(savedParceiroId);
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao registrar pagamento",
