@@ -204,15 +204,15 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
     <div className="space-y-4">
 
       {/* KPI Cards — compact 4-col */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Volume por moeda */}
         <Card className="border-border/50">
-          <CardContent className="px-4 py-3">
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
+          <CardContent className="px-3 py-2">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-0.5">
               <DollarSign className="h-3 w-3" />
               Volume Total
             </div>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {currencyBreakdown.map(item => (
                 <div key={item.moeda} className="flex items-center justify-between gap-2">
                   <Badge variant="secondary" className="text-[9px] px-1 py-0 font-mono shrink-0">
@@ -225,7 +225,7 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
               ))}
               {hasMultipleCurrencies && (
                 <>
-                  <div className="border-t border-border/50 my-1" />
+                  <div className="border-t border-border/50 my-0.5" />
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
                       <ArrowRight className="h-2 w-2" />
@@ -248,12 +248,12 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
 
         {/* P&L por moeda */}
         <Card className="border-border/50">
-          <CardContent className="px-4 py-3">
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
+          <CardContent className="px-3 py-2">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-0.5">
               <BarChart3 className="h-3 w-3" />
               Lucro / Prejuízo
             </div>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {currencyBreakdown.map(item => (
                 <div key={item.moeda} className="flex items-center justify-between gap-2">
                   <Badge variant="secondary" className="text-[9px] px-1 py-0 font-mono shrink-0">
@@ -266,7 +266,7 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
               ))}
               {hasMultipleCurrencies && (
                 <>
-                  <div className="border-t border-border/50 my-1" />
+                  <div className="border-t border-border/50 my-0.5" />
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
                       <ArrowRight className="h-2 w-2" />
@@ -289,7 +289,7 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
 
         {/* Apostas */}
         <Card className="border-border/50">
-          <CardContent className="px-4 py-3">
+          <CardContent className="px-3 py-2">
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-0.5">
               <Hash className="h-3 w-3" />
               Total de Apostas
@@ -300,7 +300,7 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
 
         {/* Casas */}
         <Card className="border-border/50">
-          <CardContent className="px-4 py-3">
+          <CardContent className="px-3 py-2">
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-0.5">
               <Building2 className="h-3 w-3" />
               Casas
