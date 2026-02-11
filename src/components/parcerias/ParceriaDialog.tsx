@@ -73,6 +73,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
   });
 
   const [orcamentoDisponivel, setOrcamentoDisponivel] = useState(0);
+  const [diasRenovacao, setDiasRenovacao] = useState(0);
 
   useEffect(() => {
     if (open) {
@@ -607,6 +608,42 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
           )}
 
           <Separator />
+
+          {/* Renovação rápida - apenas ao editar parceria existente */}
+          {parceria && !isRenewalMode && !isViewMode && (
+            <div className="space-y-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <Label className="text-primary font-medium">Renovar Prazo</Label>
+              <p className="text-xs text-muted-foreground">
+                Adicione dias extras a partir da data de término atual ({parceria.data_fim_prevista ? format(new Date(parceria.data_fim_prevista), "dd/MM/yyyy") : "N/A"}).
+              </p>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Ex: 30"
+                  value={diasRenovacao || ""}
+                  onChange={(e) => setDiasRenovacao(parseInt(e.target.value) || 0)}
+                  className="w-32"
+                />
+                <span className="text-sm text-muted-foreground">dias extras</span>
+                {diasRenovacao > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const novaDuracao = formData.duracao_dias + diasRenovacao;
+                      setFormData({ ...formData, duracao_dias: novaDuracao });
+                      setDiasRenovacao(0);
+                      toast({ title: `+${diasRenovacao} dias adicionados`, description: `Nova duração: ${novaDuracao} dias` });
+                    }}
+                  >
+                    Aplicar
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Duration and Status */}
           <div className="grid grid-cols-2 gap-4">
