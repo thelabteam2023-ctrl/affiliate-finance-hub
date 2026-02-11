@@ -40,7 +40,7 @@ export interface DashboardPeriodOption {
  * O "custom" não aparece como botão, mas como calendário
  */
 export const DASHBOARD_PERIOD_OPTIONS: DashboardPeriodOption[] = [
-  { value: "anterior", label: "Anterior" },
+  { value: "anterior", label: "Mês anterior" },
   { value: "mes", label: "Atual" },
   { value: "ano", label: "Ano" },
   { value: "tudo", label: "Tudo" },
