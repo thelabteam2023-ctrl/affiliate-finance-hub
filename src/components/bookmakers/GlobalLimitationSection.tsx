@@ -1,6 +1,5 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, Zap, BarChart3, Building2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,27 +8,15 @@ import {
   type GlobalLimitationStats,
 } from "@/hooks/useLimitationEvents";
 import { LimitationGlobalRankingTable } from "@/components/projeto-detalhe/limitation/LimitationGlobalRankingTable";
+import type { RegFilter } from "./EstatisticasTab";
 
-type RegFilter = "todas" | "REGULAMENTADA" | "NAO_REGULAMENTADA";
+interface GlobalLimitationSectionProps {
+  regFilter: RegFilter;
+  regMap: Map<string, string>;
+}
 
-export function GlobalLimitationSection() {
+export function GlobalLimitationSection({ regFilter, regMap }: GlobalLimitationSectionProps) {
   const { workspaceId } = useWorkspace();
-  const [regFilter, setRegFilter] = useState<RegFilter>("todas");
-
-  // Fetch regulation status for each bookmaker_catalogo_id
-  const { data: regMap = new Map() } = useQuery({
-    queryKey: ["bookmakers-catalogo-regulation", workspaceId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("bookmakers_catalogo")
-        .select("id, status");
-      const map = new Map<string, string>();
-      (data || []).forEach((b: any) => map.set(b.id, b.status));
-      return map;
-    },
-    enabled: !!workspaceId,
-    staleTime: 10 * 60 * 1000,
-  });
 
   const { data: globalStats = [], isLoading } = useQuery({
     queryKey: ["limitation-stats-global", workspaceId],
@@ -51,37 +38,43 @@ export function GlobalLimitationSection() {
 
       if (globalResult.error) throw globalResult.error;
 
-      const withdrawalMap = new Map<string, { avg_days: number; total: number }>();
+      const withdrawalMap = new Map<string, { avg_days: number; total_confirmed: number }>();
       if (!withdrawalResult.error && withdrawalResult.data) {
-        for (const row of (withdrawalResult.data as unknown as any[])) {
-          withdrawalMap.set(row.bookmaker_catalogo_id, {
-            avg_days: Number(row.avg_days) || 0,
-            total: Number(row.total_confirmed) || 0,
+        for (const w of withdrawalResult.data as any[]) {
+          withdrawalMap.set(w.bookmaker_catalogo_id, {
+            avg_days: Number(w.avg_withdrawal_days),
+            total_confirmed: Number(w.total_confirmed_withdrawals),
           });
         }
       }
 
       const volumeMap = new Map<string, { volume: number; pl: number; moeda: string }>();
       if (!volumeResult.error && volumeResult.data) {
-        for (const row of (volumeResult.data as unknown as any[])) {
-          volumeMap.set(row.bookmaker_catalogo_id, {
-            volume: Number(row.total_volume) || 0,
-            pl: Number(row.total_pl) || 0,
-            moeda: row.moeda || 'BRL',
+        for (const v of volumeResult.data as any[]) {
+          volumeMap.set(v.bookmaker_catalogo_id, {
+            volume: Number(v.volume_total),
+            pl: Number(v.lucro_prejuizo_total),
+            moeda: v.moeda_predominante || "BRL",
           });
         }
       }
 
-      return (globalResult.data || []).map((s: any) => ({
-        ...s,
-        avg_withdrawal_days: withdrawalMap.get(s.bookmaker_catalogo_id)?.avg_days ?? null,
-        total_confirmed_withdrawals: withdrawalMap.get(s.bookmaker_catalogo_id)?.total ?? 0,
-        volume_total: volumeMap.get(s.bookmaker_catalogo_id)?.volume ?? 0,
-        lucro_prejuizo_total: volumeMap.get(s.bookmaker_catalogo_id)?.pl ?? 0,
-        moeda_volume: volumeMap.get(s.bookmaker_catalogo_id)?.moeda ?? 'BRL',
-      })) as GlobalLimitationStats[];
+      return (globalResult.data || []).map((s: any): GlobalLimitationStats => {
+        const wd = withdrawalMap.get(s.bookmaker_catalogo_id);
+        const vol = volumeMap.get(s.bookmaker_catalogo_id);
+        return {
+          ...s,
+          avg_withdrawal_days: wd?.avg_days ?? null,
+          total_confirmed_withdrawals: wd?.total_confirmed ?? 0,
+          volume_total: vol?.volume ?? null,
+          lucro_prejuizo_total: vol?.pl ?? null,
+          moeda_volume: vol?.moeda ?? null,
+        };
+      });
     },
     enabled: !!workspaceId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   // Filter by regulation
@@ -102,12 +95,6 @@ export function GlobalLimitationSection() {
   const earlyLimiters = filteredStats.filter(s => s.strategic_profile === "early_limiter").length;
   const earlyPct = totalCasas > 0 ? Math.round((earlyLimiters / totalCasas) * 100) : 0;
 
-  const REG_OPTIONS: { value: RegFilter; label: string }[] = [
-    { value: "todas", label: "Todas" },
-    { value: "REGULAMENTADA", label: "Regulamentadas" },
-    { value: "NAO_REGULAMENTADA", label: "Não Regulamentadas" },
-  ];
-
   if (isLoading) {
     return (
       <Card className="border-border/50">
@@ -120,25 +107,6 @@ export function GlobalLimitationSection() {
 
   return (
     <div className="space-y-4">
-      {/* Regulation filter */}
-      <div className="flex items-center justify-end">
-        <div className="flex items-center gap-1 rounded-lg border border-border p-1">
-          {REG_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setRegFilter(opt.value)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                regFilter === opt.value
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="border-border/50">
