@@ -550,8 +550,8 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
             </div>
           )}
 
-          {/* Aquisição Direta - Custo de Aquisição (oculto se pagamento já foi feito via Financeiro) */}
-          {formData.origem_tipo === "DIRETO" && !pagamentoJaRealizado && (
+          {/* Aquisição Direta - Custo de Aquisição (oculto se pagamento já foi feito via Financeiro ou em modo renovação) */}
+          {formData.origem_tipo === "DIRETO" && !pagamentoJaRealizado && !isRenewalMode && (
             <div className="space-y-4 p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
               <div className="space-y-3">
               <div className="flex items-center gap-2">
