@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery, keepPreviousData } from "@tanstack/react-query";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,7 @@ import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
+import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
 interface ProjetoSurebetTabProps {
   projetoId: string;
@@ -163,8 +165,7 @@ const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null })
 
 export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: ProjetoSurebetTabProps) {
   const queryClient = useQueryClient();
-  const [surebets, setSurebets] = useState<Surebet[]>([]);
-  const [loading, setLoading] = useState(true);
+  
   
   // FONTE ÚNICA DE VERDADE: Usa o hook centralizado para saldos de bookmakers
   const { data: bookmakers = [], refetch: refetchBookmakers } = useBookmakerSaldosQuery({
@@ -228,6 +229,106 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   // dateRange derivado dos filtros locais
   const dateRange = tabFilters.dateRange;
 
+  // React Query para surebets - com cache e transição suave
+  const surebetsQueryKey = useMemo(() => [
+    "surebets-tab", projetoId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString(),
+    refreshTrigger
+  ], [projetoId, dateRange, refreshTrigger]);
+  
+  const { data: surebets = [], isLoading: loading, refetch: refetchSurebets } = useQuery({
+    queryKey: surebetsQueryKey,
+    queryFn: async (): Promise<Surebet[]> => {
+      let query = supabase
+        .from("apostas_unificada")
+        .select(`
+          id, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
+          spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
+          status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
+          odd, selecao, bookmaker_id, bonus_id,
+          bookmaker:bookmakers(nome, parceiro:parceiros(nome))
+        `)
+        .eq("projeto_id", projetoId)
+        .eq("estrategia", "SUREBET")
+        .is("cancelled_at", null)
+        .order("data_aposta", { ascending: false });
+      
+      if (dateRange) {
+        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
+        query = query.gte("data_aposta", startUTC);
+        query = query.lte("data_aposta", endUTC);
+      }
+
+      const { data: arbitragensData, error } = await query;
+      if (error) throw error;
+      if (!arbitragensData || arbitragensData.length === 0) return [];
+
+      const apostaIdsMultiLeg = arbitragensData
+        .filter((arb: any) => 
+          arb.forma_registro === 'ARBITRAGEM' || arb.forma_registro === 'SUREBET' ||
+          (arb.modelo && arb.modelo !== 'SIMPLES')
+        )
+        .map((arb: any) => arb.id);
+      
+      let pernasMap: Record<string, any[]> = {};
+      if (apostaIdsMultiLeg.length > 0) {
+        const { data: pernasData } = await supabase
+          .from("apostas_pernas")
+          .select(`
+            aposta_id, bookmaker_id, selecao, selecao_livre, odd, stake,
+            resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
+            bookmakers (nome, parceiro:parceiros(nome))
+          `)
+          .in("aposta_id", apostaIdsMultiLeg)
+          .order("ordem", { ascending: true });
+        
+        (pernasData || []).forEach((p: any) => {
+          if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
+          const bookmaker = p.bookmakers as any;
+          const parceiroNome = bookmaker?.parceiro?.nome;
+          pernasMap[p.aposta_id].push({
+            bookmaker_id: p.bookmaker_id,
+            bookmaker_nome: parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}` : (bookmaker?.nome || "—"),
+            selecao: p.selecao, selecao_livre: p.selecao_livre, odd: p.odd, stake: p.stake,
+            resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
+            gerou_freebet: p.gerou_freebet, valor_freebet_gerada: p.valor_freebet_gerada,
+          });
+        });
+      }
+
+      return arbitragensData.map((arb: any) => {
+        const pernasRaw = pernasMap[arb.id] || parsePernaFromJson(arb.pernas);
+        const pernasOrdenadas = [...pernasRaw].sort((a, b) => {
+          const order: Record<string, number> = { "Casa": 1, "1": 1, "Empate": 2, "X": 2, "Fora": 3, "2": 3 };
+          return (order[a.selecao] || 99) - (order[b.selecao] || 99);
+        });
+        const pernasSurebetCard: SurebetPerna[] = pernasOrdenadas.map((p, idx) => ({
+          id: `perna-${idx}`, selecao: p.selecao, selecao_livre: p.selecao_livre,
+          odd: p.odd, stake: p.stake, resultado: p.resultado,
+          bookmaker_nome: p.bookmaker_nome || "—", bookmaker_id: p.bookmaker_id
+        }));
+        const hasValidPernas = pernasSurebetCard.length > 0;
+        const isSimples = arb.forma_registro === "SIMPLES" && !hasValidPernas;
+        return {
+          id: arb.id, data_operacao: arb.data_aposta, evento: arb.evento || "",
+          esporte: arb.esporte || "", modelo: arb.modelo || "1-2", mercado: arb.mercado,
+          stake_total: arb.stake_total || arb.stake || 0, spread_calculado: arb.spread_calculado,
+          roi_esperado: arb.roi_esperado, lucro_esperado: arb.lucro_esperado,
+          lucro_real: arb.lucro_prejuizo, roi_real: arb.roi_real,
+          status: arb.status, resultado: arb.resultado, observacoes: arb.observacoes,
+          pernas: pernasSurebetCard, forma_registro: arb.forma_registro,
+          estrategia: arb.estrategia, contexto_operacional: arb.contexto_operacional,
+          stake: arb.stake, stake_bonus: arb.stake_bonus, bonus_id: arb.bonus_id,
+          odd: arb.odd, selecao: arb.selecao, bookmaker_id: arb.bookmaker_id,
+          bookmaker_nome: isSimples ? ((arb as any).bookmaker?.nome || "—") : (pernasRaw[0]?.bookmaker_nome || "—"),
+          parceiro_nome: isSimples ? ((arb as any).bookmaker?.parceiro?.nome || undefined) : undefined,
+        };
+      });
+    },
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
+    placeholderData: keepPreviousData,
+  });
+
   // Count of open operations for badge - uses the canonical hook
   const { count: openOperationsCount } = useOpenOperationsCount({
     projetoId,
@@ -251,189 +352,16 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   useCrossWindowSync({
     projetoId,
     onSync: useCallback(() => {
-      fetchSurebets();
+      refetchSurebets();
       queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
       queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
-    }, [queryClient, projetoId]),
+    }, [queryClient, projetoId, refetchSurebets]),
   });
-
-  // Refetch quando filtros locais mudarem (apenas surebets, bookmakers são gerenciados pelo hook)
-  useEffect(() => {
-    fetchSurebets();
-  }, [projetoId, dateRange, refreshTrigger, tabFilters.bookmakerIds, tabFilters.parceiroIds]);
-  // Carregar surebets quando necessário
-  const loadSurebets = async () => {
-    setLoading(true);
-    await fetchSurebets();
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    loadSurebets();
-  }, [projetoId, dateRange, refreshTrigger, tabFilters.bookmakerIds, tabFilters.parceiroIds]);
-
-  const fetchSurebets = async () => {
-    try {
-      // CORREÇÃO: Filtrar por ESTRATÉGIA, não por forma_registro
-      // A estratégia define onde a aposta é contabilizada
-      // O forma_registro define apenas COMO foi estruturada
-      let query = supabase
-        .from("apostas_unificada")
-        .select(`
-          id, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
-          spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
-          status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
-          odd, selecao, bookmaker_id, bonus_id,
-          bookmaker:bookmakers(nome, parceiro:parceiros(nome))
-        `)
-        .eq("projeto_id", projetoId)
-        .eq("estrategia", "SUREBET")
-        .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false });
-      
-      if (dateRange) {
-        // CRÍTICO: Usar getOperationalDateRangeForQuery para garantir timezone operacional (São Paulo)
-        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
-        query = query.gte("data_aposta", startUTC);
-        query = query.lte("data_aposta", endUTC);
-      }
-
-      const { data: arbitragensData, error } = await query;
-
-      if (error) throw error;
-      
-      if (arbitragensData && arbitragensData.length > 0) {
-        // Buscar pernas da tabela normalizada para TODAS as apostas multi-leg
-        // Incluir ARBITRAGEM e operações com modelo multi-leg (1-2, 1-X-2, etc.)
-        const apostaIdsMultiLeg = arbitragensData
-          .filter((arb: any) => 
-            arb.forma_registro === 'ARBITRAGEM' || 
-            arb.forma_registro === 'SUREBET' ||
-            (arb.modelo && arb.modelo !== 'SIMPLES')
-          )
-          .map((arb: any) => arb.id);
-        
-        let pernasMap: Record<string, any[]> = {};
-        if (apostaIdsMultiLeg.length > 0) {
-          const { data: pernasData } = await supabase
-            .from("apostas_pernas")
-            .select(`
-              aposta_id,
-              bookmaker_id,
-              selecao,
-              selecao_livre,
-              odd,
-              stake,
-              resultado,
-              lucro_prejuizo,
-              gerou_freebet,
-              valor_freebet_gerada,
-              bookmakers (nome, parceiro:parceiros(nome))
-            `)
-            .in("aposta_id", apostaIdsMultiLeg)
-            .order("ordem", { ascending: true });
-          
-          (pernasData || []).forEach((p: any) => {
-            if (!pernasMap[p.aposta_id]) {
-              pernasMap[p.aposta_id] = [];
-            }
-            const bookmaker = p.bookmakers as any;
-            const parceiroNome = bookmaker?.parceiro?.nome;
-            pernasMap[p.aposta_id].push({
-              bookmaker_id: p.bookmaker_id,
-              bookmaker_nome: parceiroNome 
-                ? `${bookmaker?.nome || "—"} - ${parceiroNome}` 
-                : (bookmaker?.nome || "—"),
-              selecao: p.selecao,
-              selecao_livre: p.selecao_livre,
-              odd: p.odd,
-              stake: p.stake,
-              resultado: p.resultado,
-              lucro_prejuizo: p.lucro_prejuizo,
-              gerou_freebet: p.gerou_freebet,
-              valor_freebet_gerada: p.valor_freebet_gerada,
-            });
-          });
-        }
-        
-        const surebetsFormatadas: Surebet[] = arbitragensData.map((arb: any) => {
-          // Usar pernas da tabela normalizada (com fallback para JSONB legado)
-          const pernasRaw = pernasMap[arb.id] || parsePernaFromJson(arb.pernas);
-          
-          const pernasOrdenadas = [...pernasRaw].sort((a, b) => {
-            const order: Record<string, number> = { 
-              "Casa": 1, "1": 1,
-              "Empate": 2, "X": 2,
-              "Fora": 3, "2": 3
-            };
-            return (order[a.selecao] || 99) - (order[b.selecao] || 99);
-          });
-
-          const pernasSurebetCard: SurebetPerna[] = pernasOrdenadas.map((p, idx) => ({
-            id: `perna-${idx}`,
-            selecao: p.selecao,
-            selecao_livre: p.selecao_livre,
-            odd: p.odd,
-            stake: p.stake,
-            resultado: p.resultado,
-            bookmaker_nome: p.bookmaker_nome || "—",
-            bookmaker_id: p.bookmaker_id
-          }));
-          
-          // Verificar se é uma aposta simples: forma_registro = 'SIMPLES' E não tem pernas
-          const hasValidPernas = pernasSurebetCard.length > 0;
-          const isSimples = arb.forma_registro === "SIMPLES" && !hasValidPernas;
-
-          return {
-            id: arb.id,
-            data_operacao: arb.data_aposta,
-            evento: arb.evento || "",
-            esporte: arb.esporte || "",
-            modelo: arb.modelo || "1-2",
-            mercado: arb.mercado,
-            stake_total: arb.stake_total || arb.stake || 0,
-            spread_calculado: arb.spread_calculado,
-            roi_esperado: arb.roi_esperado,
-            lucro_esperado: arb.lucro_esperado,
-            lucro_real: arb.lucro_prejuizo,
-            roi_real: arb.roi_real,
-            status: arb.status,
-            resultado: arb.resultado,
-            observacoes: arb.observacoes,
-            pernas: pernasSurebetCard,
-            // Campos extras para apostas simples
-            forma_registro: arb.forma_registro,
-            estrategia: arb.estrategia,
-            contexto_operacional: arb.contexto_operacional,
-            stake: arb.stake,
-            stake_bonus: arb.stake_bonus,
-            bonus_id: arb.bonus_id,
-            odd: arb.odd,
-            selecao: arb.selecao,
-            bookmaker_id: arb.bookmaker_id,
-            // Para apostas simples, buscar do join; para surebets, usar a primeira perna
-            bookmaker_nome: isSimples 
-              ? ((arb as any).bookmaker?.nome || "—")
-              : (pernasRaw[0]?.bookmaker_nome || "—"),
-            parceiro_nome: isSimples
-              ? ((arb as any).bookmaker?.parceiro?.nome || undefined)
-              : undefined,
-          };
-        });
-        
-        setSurebets(surebetsFormatadas);
-      } else {
-        setSurebets([]);
-      }
-    } catch (error: any) {
-      console.error("Erro ao carregar arbitragens:", error.message);
-    }
-  };
 
   // REMOVIDO: fetchBookmakers - agora usa useBookmakerSaldosQuery centralizado
 
   const handleDataChange = () => {
-    fetchSurebets();
+    refetchSurebets();
     onDataChange?.();
   };
 
@@ -469,12 +397,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         }
       }
 
-      // 3. Atualizar estado local
-      setSurebets(prev => prev.map(s => 
-        s.id === apostaId 
-          ? { ...s, resultado, lucro_real: lucro, status: "LIQUIDADA" }
-          : s
-      ));
+      // 3. Invalidar cache de surebets para refetch
+      queryClient.invalidateQueries({ queryKey: ["surebets-tab", projetoId] });
 
       // 4. Invalidar cache de saldos
       invalidateSaldos(projetoId);
@@ -867,7 +791,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
       {/* Gráficos - layout igual ao ValueBet */}
       {/* ISOLAMENTO: Visão Geral SEMPRE usa dados globais (surebets), sem filtros dimensionais */}
-      {surebets.length > 0 && (
+      {surebets.length > 0 ? (
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Coluna esquerda: Gráfico + Estatísticas */}
           <div className="lg:col-span-2 space-y-4">
@@ -880,7 +804,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                   stake: isSimples ? (s.stake || s.stake_total) : s.stake_total,
                   bookmaker_nome: isSimples ? (s.bookmaker_nome || "—") : (s.pernas?.[0]?.bookmaker_nome || "—"),
                   parceiro_nome: isSimples ? s.parceiro_nome : undefined,
-                  // Para apostas simples, criar uma "perna virtual" para o cálculo de casas
                   pernas: isSimples 
                     ? [{
                         bookmaker_nome: s.bookmaker_nome || "—",
@@ -949,6 +872,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             />
           </div>
         </div>
+      ) : (
+        <Card>
+          <CardContent className="py-16">
+            <ChartEmptyState 
+              isSingleDayPeriod={tabFilters.period === "1dia"}
+              genericMessage="Sem operações no período selecionado"
+            />
+          </CardContent>
+        </Card>
       )}
 
       {/* Banner Info */}
