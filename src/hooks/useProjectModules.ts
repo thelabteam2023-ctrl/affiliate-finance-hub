@@ -157,6 +157,15 @@ export function useProjectModules(projetoId: string | undefined) {
     }
   }, [projetoId, refresh]);
 
+  // Listen for module changes from other instances
+  useEffect(() => {
+    const handler = () => {
+      if (projetoId) refresh();
+    };
+    window.addEventListener("lovable:project-modules-changed", handler);
+    return () => window.removeEventListener("lovable:project-modules-changed", handler);
+  }, [projetoId, refresh]);
+
   // Get active modules only (for menu rendering)
   const activeModules = modulesWithStatus.filter((m) => m.status === "active");
 
@@ -216,6 +225,7 @@ export function useProjectModules(projetoId: string | undefined) {
 
         toast.success("Módulo ativado com sucesso");
         await refresh();
+        window.dispatchEvent(new CustomEvent("lovable:project-modules-changed"));
         return true;
       } catch (error: any) {
         toast.error("Erro ao ativar módulo: " + error.message);
@@ -292,6 +302,7 @@ export function useProjectModules(projetoId: string | undefined) {
         }
 
         await refresh();
+        window.dispatchEvent(new CustomEvent("lovable:project-modules-changed"));
         return true;
       } catch (error: any) {
         console.error("Error deactivating module:", error);
