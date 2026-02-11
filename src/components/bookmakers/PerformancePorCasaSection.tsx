@@ -2,11 +2,12 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Building2, TrendingUp, TrendingDown, DollarSign, BarChart3, Hash } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, DollarSign, BarChart3, Hash, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { RegFilter } from "./EstatisticasTab";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useCotacoes } from "@/hooks/useCotacoes";
 import {
   Table,
   TableBody,
@@ -48,13 +49,13 @@ interface PerformancePorCasaSectionProps {
 
 export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorCasaSectionProps) {
   const { workspaceId } = useWorkspace();
+  const { convertToBRL } = useCotacoes();
 
   const { data: performances = [], isLoading } = useQuery({
     queryKey: ["performance-por-casa", workspaceId],
     queryFn: async () => {
       if (!workspaceId) return [];
 
-      // Fetch all bookmakers with their catalogo info and operational results
       const [bookmakersResult, resultadosResult] = await Promise.all([
         supabase
           .from("bookmakers")
@@ -68,12 +69,10 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
 
       if (bookmakersResult.error) throw bookmakersResult.error;
 
-      // Fetch total stakes per bookmaker
       const bookmakerIds = (bookmakersResult.data || []).map(b => b.id);
       let stakeMap = new Map<string, number>();
       
       if (bookmakerIds.length > 0) {
-        // Get total volume from apostas_unificada
         const { data: apostasData } = await supabase
           .from("apostas_unificada")
           .select("bookmaker_id, stake")
@@ -97,7 +96,6 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
         }
       }
 
-      // Aggregate by bookmaker_catalogo_id
       const catalogoMap = new Map<string, CasaPerformance>();
 
       for (const bm of bookmakersResult.data || []) {
@@ -134,7 +132,6 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
         }
       }
 
-      // Calculate derived metrics
       const result = Array.from(catalogoMap.values()).map(p => ({
         ...p,
         roi: p.volume_total > 0 ? (p.lucro_prejuizo / p.volume_total) * 100 : 0,
@@ -157,9 +154,39 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
     });
   }, [performances, regFilter, regMap]);
 
-  // KPIs
-  const totalVolume = filteredPerformances.reduce((s, p) => s + p.volume_total, 0);
-  const totalPL = filteredPerformances.reduce((s, p) => s + p.lucro_prejuizo, 0);
+  // KPIs por moeda
+  const currencyBreakdown = useMemo(() => {
+    const byMoeda: Record<string, { volume: number; pl: number }> = {};
+    
+    for (const p of filteredPerformances) {
+      const m = p.moeda || "BRL";
+      if (!byMoeda[m]) byMoeda[m] = { volume: 0, pl: 0 };
+      byMoeda[m].volume += p.volume_total;
+      byMoeda[m].pl += p.lucro_prejuizo;
+    }
+    
+    return Object.entries(byMoeda)
+      .map(([moeda, vals]) => ({ moeda, ...vals }))
+      .sort((a, b) => {
+        // BRL first, then by volume desc
+        if (a.moeda === "BRL") return -1;
+        if (b.moeda === "BRL") return 1;
+        return b.volume - a.volume;
+      });
+  }, [filteredPerformances]);
+
+  // Consolidado em BRL
+  const consolidatedBRL = useMemo(() => {
+    let totalVolume = 0;
+    let totalPL = 0;
+    for (const item of currencyBreakdown) {
+      totalVolume += convertToBRL(item.volume, item.moeda);
+      totalPL += convertToBRL(item.pl, item.moeda);
+    }
+    return { volume: totalVolume, pl: totalPL };
+  }, [currencyBreakdown, convertToBRL]);
+
+  const hasMultipleCurrencies = currencyBreakdown.length > 1;
   const totalApostas = filteredPerformances.reduce((s, p) => s + p.total_apostas, 0);
   const totalCasas = filteredPerformances.length;
 
@@ -177,29 +204,90 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
     <div className="space-y-4">
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Volume por moeda */}
         <Card className="border-border/50">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
               <DollarSign className="h-3.5 w-3.5" />
               Volume Total
             </div>
-            <div className="text-2xl font-bold tabular-nums">
-              {fmt(totalVolume, "BRL")}
+            <div className="space-y-1.5">
+              {currencyBreakdown.map(item => (
+                <div key={item.moeda} className="flex items-center justify-between">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-mono">
+                    {item.moeda}
+                  </Badge>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {fmt(item.volume, item.moeda)}
+                  </span>
+                </div>
+              ))}
+              {hasMultipleCurrencies && (
+                <>
+                  <div className="border-t border-border/50 my-1.5" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <ArrowRight className="h-2.5 w-2.5" />
+                      Consolidado
+                    </span>
+                    <span className="text-lg font-bold tabular-nums">
+                      {fmt(consolidatedBRL.volume, "BRL")}
+                    </span>
+                  </div>
+                </>
+              )}
+              {!hasMultipleCurrencies && currencyBreakdown.length === 1 && (
+                <div className="text-lg font-bold tabular-nums mt-1">
+                  {fmt(currencyBreakdown[0].volume, currencyBreakdown[0].moeda)}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
+
+        {/* P&L por moeda */}
         <Card className="border-border/50">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
               <BarChart3 className="h-3.5 w-3.5" />
               Lucro / Prejuízo
             </div>
-            <div className={`text-2xl font-bold tabular-nums ${totalPL >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-              {fmt(totalPL, "BRL")}
+            <div className="space-y-1.5">
+              {currencyBreakdown.map(item => (
+                <div key={item.moeda} className="flex items-center justify-between">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-mono">
+                    {item.moeda}
+                  </Badge>
+                  <span className={`text-sm font-semibold tabular-nums ${item.pl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    {fmt(item.pl, item.moeda)}
+                  </span>
+                </div>
+              ))}
+              {hasMultipleCurrencies && (
+                <>
+                  <div className="border-t border-border/50 my-1.5" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <ArrowRight className="h-2.5 w-2.5" />
+                      Consolidado
+                    </span>
+                    <span className={`text-lg font-bold tabular-nums ${consolidatedBRL.pl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                      {fmt(consolidatedBRL.pl, "BRL")}
+                    </span>
+                  </div>
+                </>
+              )}
+              {!hasMultipleCurrencies && currencyBreakdown.length === 1 && (
+                <div className={`text-lg font-bold tabular-nums mt-1 ${currencyBreakdown[0].pl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                  {fmt(currencyBreakdown[0].pl, currencyBreakdown[0].moeda)}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
+
+        {/* Apostas */}
         <Card className="border-border/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
@@ -209,6 +297,8 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
             <div className="text-2xl font-bold">{totalApostas.toLocaleString("pt-BR")}</div>
           </CardContent>
         </Card>
+
+        {/* Casas */}
         <Card className="border-border/50">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
