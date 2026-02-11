@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { validateCPF } from "@/lib/validators";
 
 const NovoParceiro = () => {
   const navigate = useNavigate();
@@ -22,7 +23,6 @@ const NovoParceiro = () => {
 
   const [formData, setFormData] = useState({
     nome: "",
-    sobrenome: "",
     cpf: "",
     email: "",
     telefone: "",
@@ -66,22 +66,40 @@ const NovoParceiro = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validações básicas
-    if (!formData.nome || !formData.sobrenome || !formData.cpf) {
+    const nomeTrimmed = formData.nome.trim();
+    const cpfDigits = formData.cpf.replace(/\D/g, "");
+
+    if (!nomeTrimmed) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha nome, sobrenome e CPF",
+        title: "Campo obrigatório",
+        description: "Preencha o nome completo do parceiro",
         variant: "destructive",
       });
       setIsSubmitting(false);
       return;
     }
 
-    // Simular salvamento
+    if (!validateCPF(cpfDigits)) {
+      toast({
+        title: "CPF inválido",
+        description: "Informe um CPF válido com 11 dígitos",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Simular salvamento (CPF normalizado sem máscara)
+    const dataToSave = {
+      ...formData,
+      nome: nomeTrimmed,
+      cpf: cpfDigits,
+    };
+
     setTimeout(() => {
       toast({
         title: "Parceiro cadastrado!",
-        description: `${formData.nome} ${formData.sobrenome} foi adicionado com sucesso.`,
+        description: `${dataToSave.nome} foi adicionado com sucesso.`,
       });
       setIsSubmitting(false);
       navigate("/parceiros");
@@ -120,27 +138,15 @@ const NovoParceiro = () => {
             <Card className="border-border bg-gradient-surface p-6 shadow-soft">
               <h2 className="mb-6 text-xl font-semibold">Dados Pessoais</h2>
               <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="nome">
-                    Nome <span className="text-destructive">*</span>
+                    Nome Completo <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="nome"
-                    placeholder="Digite o nome"
+                    placeholder="Nome completo do parceiro"
                     value={formData.nome}
                     onChange={(e) => handleChange("nome", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sobrenome">
-                    Sobrenome <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="sobrenome"
-                    placeholder="Digite o sobrenome"
-                    value={formData.sobrenome}
-                    onChange={(e) => handleChange("sobrenome", e.target.value)}
                     required
                   />
                 </div>
