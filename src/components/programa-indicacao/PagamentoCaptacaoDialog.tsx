@@ -21,7 +21,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, RefreshCw, Star, Calendar, Banknote, User } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Loader2, RefreshCw, Star, Calendar, Banknote, User, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "./OrigemPagamentoSelect";
 
@@ -52,6 +66,7 @@ export function PagamentoCaptacaoDialog({
   const [dataPagamento, setDataPagamento] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [valor, setValor] = useState<string>("");
   const [descricao, setDescricao] = useState<string>("");
+  const [parceiroOpen, setParceiroOpen] = useState(false);
 
   const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
     origemTipo: "CAIXA_OPERACIONAL",
@@ -263,18 +278,49 @@ export function PagamentoCaptacaoDialog({
                 Carregando parceiros...
               </div>
             ) : (
-              <Select value={parceiroId} onValueChange={setParceiroId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o parceiro" />
-                </SelectTrigger>
-                <SelectContent>
-                  {parceiros.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={parceiroOpen} onOpenChange={setParceiroOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={parceiroOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {parceiroId
+                      ? parceiros.find((p) => p.id === parceiroId)?.nome
+                      : "Selecione o parceiro"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar parceiro..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {parceiros.map((p) => (
+                          <CommandItem
+                            key={p.id}
+                            value={p.nome}
+                            onSelect={() => {
+                              setParceiroId(p.id);
+                              setParceiroOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                parceiroId === p.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {p.nome}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             )}
           </div>
 
