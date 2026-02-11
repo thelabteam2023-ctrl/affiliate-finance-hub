@@ -332,16 +332,16 @@ export function HistoricoMovimentacoes({
             {/* Tipo filter */}
             <div className="flex items-center">
               <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                <SelectTrigger className={`h-8 text-xs gap-1 whitespace-nowrap flex-nowrap items-center ${filtroTipo !== "TODOS" ? "bg-secondary border-secondary" : "border-border/50"}`}>
+                <SelectTrigger className={`h-8 text-xs gap-1 whitespace-nowrap flex-nowrap flex items-center ${filtroTipo !== "TODOS" ? "bg-secondary border-secondary" : "border-border/50"}`}>
                   <Filter className="h-3.5 w-3.5 shrink-0" />
-                  <SelectValue />
+                  <span className="shrink-0">Tipo:</span> <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="TODOS">Tipo: Todos</SelectItem>
-                  <SelectItem value="TRANSFERENCIA">Tipo: Transferência</SelectItem>
-                  <SelectItem value="DEPOSITO">Tipo: Depósito</SelectItem>
-                  <SelectItem value="SAQUE">Tipo: Saque</SelectItem>
-                  <SelectItem value="APORTE_FINANCEIRO">Tipo: Aporte & Liquidação</SelectItem>
+                  <SelectItem value="TODOS">Todos</SelectItem>
+                  <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
+                  <SelectItem value="DEPOSITO">Depósito</SelectItem>
+                  <SelectItem value="SAQUE">Saque</SelectItem>
+                  <SelectItem value="APORTE_FINANCEIRO">Aporte & Liquidação</SelectItem>
                 </SelectContent>
               </Select>
             </div>
