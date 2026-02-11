@@ -25,6 +25,7 @@ interface BonusVisaoGeralTabProps {
   projetoId: string;
   dateRange?: DateRangeResult | null;
   isSingleDayPeriod?: boolean;
+  periodFilter?: React.ReactNode;
 }
 
 interface BookmakerWithBonus {
@@ -45,7 +46,7 @@ interface BonusResultEntry {
   juice: number; // custo operacional (P&L das apostas com bônus)
 }
 
-export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false }: BonusVisaoGeralTabProps) {
+export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false, periodFilter }: BonusVisaoGeralTabProps) {
   const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
@@ -392,6 +393,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
           </Card>
         </TooltipProvider>
       </div>
+
+      {/* Filtro de período - abaixo dos KPIs */}
+      {periodFilter}
 
       {/* Gráfico de Resultado Líquido de Bônus (substituindo "Evolução do Lucro") */}
       <BonusResultadoLiquidoChart
