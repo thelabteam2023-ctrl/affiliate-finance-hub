@@ -663,8 +663,13 @@ export default function Financeiro() {
   const totalBonus = filteredDespesas.filter(d => d.tipo === "BONUS_INDICADOR").reduce((acc, d) => acc + d.valor, 0);
   const totalDespesasIndicacao = totalComissoes + totalBonus;
 
-  // Custos Operacionais Totais (Aquisição + Indicação)
-  const totalCustosOperacionais = totalCustosAquisicao + totalDespesasIndicacao;
+  // Custos de Retenção = RENOVACAO_PARCERIA + BONIFICACAO_ESTRATEGICA
+  const totalRenovacoes = filteredDespesas.filter(d => d.tipo === "RENOVACAO_PARCERIA").reduce((acc, d) => acc + d.valor, 0);
+  const totalBonificacoes = filteredDespesas.filter(d => d.tipo === "BONIFICACAO_ESTRATEGICA").reduce((acc, d) => acc + d.valor, 0);
+  const totalCustosRetencao = totalRenovacoes + totalBonificacoes;
+
+  // Custos Operacionais Totais (Aquisição + Indicação + Retenção)
+  const totalCustosOperacionais = totalCustosAquisicao + totalDespesasIndicacao + totalCustosRetencao;
   
   // Despesas administrativas (infraestrutura - exclui RH que vai para operadores)
   const despesasInfraestrutura = filteredDespesasAdmin.filter(d => d.grupo !== 'RECURSOS_HUMANOS');
