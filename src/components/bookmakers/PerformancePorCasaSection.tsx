@@ -227,8 +227,7 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
                 <>
                   <div className="border-t border-border/50 my-0.5" />
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
-                      <ArrowRight className="h-2 w-2" />
+                    <span className="text-[9px] text-muted-foreground">
                       Consolidação → BRL
                     </span>
                     <span className="text-sm font-bold tabular-nums">
@@ -268,8 +267,7 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
                 <>
                   <div className="border-t border-border/50 my-0.5" />
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
-                      <ArrowRight className="h-2 w-2" />
+                    <span className="text-[9px] text-muted-foreground">
                       Consolidação → BRL
                     </span>
                     <span className={`text-sm font-bold tabular-nums ${consolidatedBRL.pl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
