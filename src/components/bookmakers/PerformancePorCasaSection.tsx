@@ -204,7 +204,7 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
     <div className="space-y-4">
 
       {/* KPI Cards — compact 4-col */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto_auto] lg:grid-cols-[1fr_1fr_auto_auto] gap-3">
         {/* Volume por moeda */}
         <Card className="border-border/50">
           <CardContent className="px-3 py-2">
@@ -229,7 +229,7 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
                       <ArrowRight className="h-2 w-2" />
-                      BRL
+                      Consolidação → BRL
                     </span>
                     <span className="text-sm font-bold tabular-nums">
                       {fmt(consolidatedBRL.volume, "BRL")}
@@ -270,7 +270,7 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
                       <ArrowRight className="h-2 w-2" />
-                      BRL
+                      Consolidação → BRL
                     </span>
                     <span className={`text-sm font-bold tabular-nums ${consolidatedBRL.pl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                       {fmt(consolidatedBRL.pl, "BRL")}
@@ -287,25 +287,25 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
           </CardContent>
         </Card>
 
-        {/* Apostas */}
+        {/* Apostas — compact */}
         <Card className="border-border/50">
-          <CardContent className="px-3 py-2">
+          <CardContent className="px-3 py-2 flex flex-col justify-center">
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-0.5">
               <Hash className="h-3 w-3" />
-              Total de Apostas
+              Apostas
             </div>
-            <div className="text-xl font-bold leading-tight">{totalApostas.toLocaleString("pt-BR")}</div>
+            <div className="text-lg font-bold leading-tight tabular-nums">{totalApostas.toLocaleString("pt-BR")}</div>
           </CardContent>
         </Card>
 
-        {/* Casas */}
+        {/* Casas — compact */}
         <Card className="border-border/50">
-          <CardContent className="px-3 py-2">
+          <CardContent className="px-3 py-2 flex flex-col justify-center">
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-0.5">
               <Building2 className="h-3 w-3" />
               Casas
             </div>
-            <div className="text-xl font-bold leading-tight">{totalCasas}</div>
+            <div className="text-lg font-bold leading-tight tabular-nums">{totalCasas}</div>
           </CardContent>
         </Card>
       </div>
