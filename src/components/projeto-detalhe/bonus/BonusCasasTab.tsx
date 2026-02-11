@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { useQuery } from "@tanstack/react-query";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { VinculoBonusDrawer } from "../VinculoBonusDrawer";
 import { FinalizeBonusDialog } from "../FinalizeBonusDialog";
 import { cn } from "@/lib/utils";
@@ -128,7 +129,8 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
       return stats;
     },
     enabled: !!projetoId,
-    staleTime: 1000 * 30,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 
   // Use React Query for fetching bookmakers - automatically refreshes when bonuses change
@@ -215,7 +217,8 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
       return mapped;
     },
     enabled: !!projetoId,
-    staleTime: 1000 * 30,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 
   const handleOpenBonusDrawer = (bk: BookmakerInBonusMode) => {

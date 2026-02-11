@@ -21,6 +21,7 @@ import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts, ExtraLucroEntry } from "./VisaoGeralCharts";
 import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { DateRange } from "react-day-picker";
 import { isSameDay } from "date-fns";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
@@ -220,8 +221,8 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
 }
 
 // Cache key helpers
-const STALE_TIME = 5 * 60 * 1000; // 5 minutes - data is considered fresh
-const GC_TIME = 30 * 60 * 1000; // 30 minutes - keep in cache
+const STALE_TIME = PERIOD_STALE_TIME;
+const GC_TIME = PERIOD_GC_TIME;
 
 export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const [selectedEsporte, setSelectedEsporte] = useState<string>("");

@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -219,7 +220,8 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     queryKey,
     queryFn: () => fetchBonusesFromDb(projectId, bookmakerId),
     enabled: !!projectId,
-    staleTime: 1000 * 30, // 30 seconds
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
   
   const fetchBonuses = refetch;

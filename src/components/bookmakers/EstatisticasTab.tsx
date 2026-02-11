@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { ShieldAlert, TrendingUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { GlobalLimitationSection } from "./GlobalLimitationSection";
@@ -55,7 +56,8 @@ export function EstatisticasTab() {
       return map;
     },
     enabled: !!workspaceId,
-    staleTime: 10 * 60 * 1000,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 
   const meta = TAB_META[activeTab];

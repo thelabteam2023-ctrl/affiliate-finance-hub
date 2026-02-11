@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -47,7 +48,8 @@ export function useBookmakerResultadoOperacional(bookmakerIds: string[]) {
       return (data || []) as BookmakerResultadoOperacional[];
     },
     enabled: bookmakerIds.length > 0,
-    staleTime: 30000, // 30 segundos
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 }
 
@@ -74,7 +76,8 @@ export function useBookmakerResultadoOperacionalSingle(bookmakerId: string | nul
       return data as BookmakerResultadoOperacional | null;
     },
     enabled: !!bookmakerId,
-    staleTime: 30000,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 }
 

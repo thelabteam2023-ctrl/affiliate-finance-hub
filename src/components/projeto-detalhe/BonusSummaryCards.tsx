@@ -6,6 +6,7 @@ import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 import { subDays } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,7 +46,8 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       if (error) throw error;
       return data || [];
     },
-    staleTime: 30000,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 
   // Fetch ajustes pós-limitação (financial_events com AJUSTE_POS_LIMITACAO)
@@ -84,7 +86,8 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       }));
     },
     enabled: !!projetoId,
-    staleTime: 30000,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 
   // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação

@@ -4,6 +4,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Building2, TrendingUp, TrendingDown, DollarSign, BarChart3, Hash, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import type { RegFilter } from "./EstatisticasTab";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -141,8 +142,8 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
       return result.sort((a, b) => b.volume_total - a.volume_total);
     },
     enabled: !!workspaceId,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 
   // Filter by regulation
