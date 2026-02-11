@@ -162,7 +162,7 @@ export default function ProjetoDetalhe() {
     // Note: "Gestão" is rendered as a tabGroup dropdown, not a direct tab
     const baseTabs: TabItem[] = [
       { value: "visao-geral", label: "Visão Geral", icon: <LayoutDashboard className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
-      { value: "apostas", label: "Apostas Livres", icon: <Target className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
+      { value: "apostas", label: "Todas as Apostas", icon: <Target className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
       { value: "vinculos", label: "Vínculos", icon: <Link2 className="h-3.5 w-3.5 md:h-4 md:w-4" /> },
     ];
 
@@ -248,7 +248,7 @@ export default function ProjetoDetalhe() {
   const getTabLabel = (tabKey: string): string => {
     const tabLabels: Record<string, string> = {
       "visao-geral": "Visão Geral",
-      "apostas": "Apostas Livres",
+      "apostas": "Todas as Apostas",
       "vinculos": "Vínculos",
       "promocoes": "Promoções",
       "bonus": "Bônus",
@@ -796,13 +796,13 @@ export default function ProjetoDetalhe() {
 
         {/* Conteúdo das abas com contenção */}
         <div className="flex-1 min-h-0 overflow-hidden">
-          <TabsContent value="visao-geral" className="h-full m-0">
+          <TabsContent value="visao-geral" forceMount className={cn("h-full m-0", activeTab !== "visao-geral" && "hidden")}>
             <ProjetoDashboardTab 
               projetoId={id!} 
             />
           </TabsContent>
 
-          <TabsContent value="apostas" className="h-full m-0">
+          <TabsContent value="apostas" forceMount className={cn("h-full m-0", activeTab !== "apostas" && "hidden")}>
             <ProjetoApostasTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -811,7 +811,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="promocoes" className="h-full m-0">
+          <TabsContent value="promocoes" forceMount className={cn("h-full m-0", activeTab !== "promocoes" && "hidden")}>
             <ProjetoPromocoesTab 
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
@@ -820,14 +820,14 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="bonus" className="h-full m-0">
+          <TabsContent value="bonus" forceMount className={cn("h-full m-0", activeTab !== "bonus" && "hidden")}>
             <ProjetoBonusArea 
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
             />
           </TabsContent>
 
-          <TabsContent value="surebet" className="h-full m-0">
+          <TabsContent value="surebet" forceMount className={cn("h-full m-0", activeTab !== "surebet" && "hidden")}>
             <ProjetoSurebetTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -835,7 +835,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="valuebet" className="h-full m-0">
+          <TabsContent value="valuebet" forceMount className={cn("h-full m-0", activeTab !== "valuebet" && "hidden")}>
             <ProjetoValueBetTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}
@@ -843,7 +843,7 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
-          <TabsContent value="duplogreen" className="h-full m-0">
+          <TabsContent value="duplogreen" forceMount className={cn("h-full m-0", activeTab !== "duplogreen" && "hidden")}>
             <ProjetoDuploGreenTab 
               projetoId={id!} 
               onDataChange={triggerGlobalRefresh}

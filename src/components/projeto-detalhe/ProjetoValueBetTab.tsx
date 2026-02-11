@@ -758,7 +758,7 @@ export function ProjetoValueBetTab({
             <Info className="h-4 w-4 text-purple-400 mt-0.5 shrink-0" />
             <p className="text-xs text-muted-foreground">
               <span className="font-medium text-purple-400">Visão Especializada:</span> Esta aba exibe apenas apostas com estratégia ValueBet. 
-              As mesmas apostas também aparecem na aba "Apostas Livres".
+              As mesmas apostas também aparecem na aba "Todas as Apostas".
             </p>
           </div>
         </CardContent>
