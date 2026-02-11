@@ -562,22 +562,18 @@ export function VisaoGeralCharts({
       }
     });
 
-    // Extras: filtrar pelo mesmo range das apostas
-    // Usa as datas min/max das apostas para delimitar o período
-    if (apostas.length > 0 && extrasLucro.length > 0) {
-      const dates = apostas.map(a => extractLocalDateKey(a.data_aposta)).sort();
-      const minDate = dates[0];
-      const maxDate = dates[dates.length - 1];
-      extrasLucro.forEach((e) => {
-        const dateStr = e.data.includes('T') ? e.data.split('T')[0] : e.data;
-        if (dateStr >= minDate && dateStr <= maxDate) {
-          total += e.valor;
-        }
-      });
-    }
+    // Extras: filtrar pelo período selecionado (periodStart/periodEnd)
+    extrasLucro.forEach((e) => {
+      const dateStr = e.data.includes('T') ? e.data.split('T')[0] : e.data;
+      if (periodStart && periodEnd) {
+        const extraDate = new Date(dateStr + 'T12:00:00');
+        if (extraDate < startOfDay(periodStart) || extraDate > periodEnd) return;
+      }
+      total += e.valor;
+    });
 
     return total;
-  }, [apostas, extrasLucro]);
+  }, [apostas, extrasLucro, periodStart, periodEnd]);
 
   const isPositiveBadge = periodTotal >= 0;
   
