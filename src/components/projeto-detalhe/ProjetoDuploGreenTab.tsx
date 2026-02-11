@@ -723,7 +723,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
             <Info className="h-4 w-4 text-lime-400 mt-0.5 shrink-0" />
             <p className="text-xs text-muted-foreground">
               <span className="font-medium text-lime-400">Visão Especializada:</span> Esta aba exibe apenas operações de Duplo Green. 
-              As mesmas apostas também aparecem na aba "Todas as Apostas".
+              As mesmas apostas também aparecem na aba "Todas Apostas".
             </p>
           </div>
         </CardContent>
