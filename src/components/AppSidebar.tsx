@@ -98,7 +98,7 @@ const menuGroups: MenuGroup[] = [
       { title: "Bancos", url: "/bancos", icon: Landmark, iconName: "Landmark", moduleKey: "bancos" },
       { title: "Investidores", url: "/investidores", icon: TrendingUp, iconName: "TrendingUp", moduleKey: "investidores" },
       { title: "Operadores", url: "/operadores", icon: Briefcase, iconName: "Briefcase", moduleKey: "operadores" },
-      { title: "Workspace", url: "/workspace", icon: Settings, iconName: "Settings", moduleKey: "workspace" },
+      
     ],
   },
   {
@@ -564,7 +564,7 @@ export function AppSidebar() {
             {canManageWorkspace && (
               <DropdownMenuItem onClick={() => navigate("/workspace")}>
                 <Settings className="mr-2 h-4 w-4" />
-                Configurações
+                Workspace
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
