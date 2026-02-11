@@ -730,6 +730,9 @@ export function ProjetoValueBetTab({
         </Card>
       </div>
 
+      {/* Filtro de período - abaixo dos KPIs */}
+      {periodFilterComponent}
+
       {/* Gráficos e Estatísticas */}
       {metricas.total > 0 ? (
         <>
@@ -1025,8 +1028,8 @@ export function ProjetoValueBetTab({
 
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
-        {periodFilterComponent}
         {activeNavTab === "visao-geral" && renderVisaoGeral()}
+        {activeNavTab !== "visao-geral" && periodFilterComponent}
         {activeNavTab === "apostas" && renderApostas()}
         {activeNavTab === "por-casa" && renderPorCasa()}
       </div>
