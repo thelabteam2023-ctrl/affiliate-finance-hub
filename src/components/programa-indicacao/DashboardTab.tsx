@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Users, TrendingUp, UserPlus, Truck, ArrowRight, Trophy, Award, Target, Gift, History } from "lucide-react";
+import { DollarSign, Users, TrendingUp, UserPlus, Truck, ArrowRight, Trophy, Award, Target, Gift, History, RefreshCcw } from "lucide-react";
 import { ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { HistoricoCaptacaoDrawer } from "./HistoricoCaptacaoDrawer";
 import { ModernDonutChart } from "@/components/ui/modern-donut-chart";
@@ -150,7 +150,7 @@ export function DashboardTab() {
   const filteredMovimentacoes = filterMovByPeriod(movimentacoes);
 
   // Calculate KPIs - using movimentacoes (same as Financeiro tab)
-  // Total Investment = all confirmed payments from movimentacoes_indicacao
+  // ACQUISITION costs only (used for CAC)
   const totalPagtoParceiros = filteredMovimentacoes
     .filter((m) => (m.tipo === "PAGTO_PARCEIRO" || m.tipo === "PAGTO_FORNECEDOR") && m.status === "CONFIRMADO")
     .reduce((acc, m) => acc + m.valor, 0);
@@ -160,44 +160,33 @@ export function DashboardTab() {
   const totalBonus = filteredMovimentacoes
     .filter((m) => m.tipo === "BONUS_INDICADOR" && m.status === "CONFIRMADO")
     .reduce((acc, m) => acc + m.valor, 0);
+  
+  // RETENTION costs (renewals + strategic bonuses) - separate from acquisition
   const totalRenovacoes = filteredMovimentacoes
     .filter((m) => m.tipo === "RENOVACAO_PARCERIA" && m.status === "CONFIRMADO")
     .reduce((acc, m) => acc + m.valor, 0);
   const totalBonificacoes = filteredMovimentacoes
     .filter((m) => m.tipo === "BONIFICACAO_ESTRATEGICA" && m.status === "CONFIRMADO")
     .reduce((acc, m) => acc + m.valor, 0);
+  const custoRetencao = totalRenovacoes + totalBonificacoes;
   
-  // Total Investment = same as "Total Geral" in Financeiro tab (includes renewals and strategic bonuses)
-  const totalInvestimento = totalPagtoParceiros + totalComissoes + totalBonus + totalRenovacoes + totalBonificacoes;
+  // Investimento em Aquisição (only acquisition costs - used for CAC)
+  const totalInvestimentoAquisicao = totalPagtoParceiros + totalComissoes + totalBonus;
+  // Investimento Total (acquisition + retention - full view of spending)
+  const totalInvestimento = totalInvestimentoAquisicao + custoRetencao;
   const totalParceiros = filteredCustos.length;
   
-  // Build map of extra costs (renewals + bonifications) per parceiro_id
-  const custosExtrasPorParceiro: Record<string, number> = {};
-  filteredMovimentacoes
-    .filter((m) => (m.tipo === "RENOVACAO_PARCERIA" || m.tipo === "BONIFICACAO_ESTRATEGICA") && m.status === "CONFIRMADO" && m.parceiro_id)
-    .forEach((m) => {
-      custosExtrasPorParceiro[m.parceiro_id!] = (custosExtrasPorParceiro[m.parceiro_id!] || 0) + m.valor;
-    });
-  
-  // NEW CAC LOGIC: Only CPFs with cost > 0 enter the CAC calculation
-  // custo_total from view + extra costs (renewals/bonifications) from movimentacoes
-  const cpfsPagos = filteredCustos.filter((c) => {
-    const custoView = c.custo_total || 0;
-    const custosExtras = custosExtrasPorParceiro[c.parceiro_id] || 0;
-    return (custoView + custosExtras) > 0;
-  });
-  const cpfsSemCusto = filteredCustos.filter((c) => {
-    const custoView = c.custo_total || 0;
-    const custosExtras = custosExtrasPorParceiro[c.parceiro_id] || 0;
-    return (custoView + custosExtras) === 0;
-  });
+  // CAC LOGIC: Only CPFs with acquisition cost > 0 enter the CAC calculation
+  // Renewals/bonifications do NOT affect CPF classification (they're retention, not acquisition)
+  const cpfsPagos = filteredCustos.filter((c) => (c.custo_total || 0) > 0);
+  const cpfsSemCusto = filteredCustos.filter((c) => (c.custo_total || 0) === 0);
   const qtdCpfsPagos = cpfsPagos.length;
   const qtdCpfsSemCusto = cpfsSemCusto.length;
   
-  // CAC Pago Real: Only CPFs with financial cost
-  const cacPago = qtdCpfsPagos > 0 ? totalInvestimento / qtdCpfsPagos : 0;
+  // CAC Pago Real: acquisition investment / paid CPFs only
+  const cacPago = qtdCpfsPagos > 0 ? totalInvestimentoAquisicao / qtdCpfsPagos : 0;
   
-  // Taxa Orgânica: Percentage of CPFs without cost
+  // Taxa Orgânica: Percentage of CPFs without acquisition cost
   const taxaOrganica = totalParceiros > 0 ? (qtdCpfsSemCusto / totalParceiros) * 100 : 0;
 
   // Calculate by origin
@@ -369,9 +358,16 @@ export function DashboardTab() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalInvestimento)}</div>
-            <p className="text-xs text-muted-foreground">
-              Custo operacional da captação
-            </p>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-xs text-muted-foreground">
+                Aquisição: <span className="font-medium text-foreground">{formatCurrency(totalInvestimentoAquisicao)}</span>
+              </span>
+              {custoRetencao > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  Retenção: <span className="font-medium text-foreground">{formatCurrency(custoRetencao)}</span>
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -401,10 +397,34 @@ export function DashboardTab() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(cacPago)}</div>
             <p className="text-xs text-muted-foreground">
-              Apenas CPFs com custo ({qtdCpfsPagos})
+              Apenas custos de aquisição ({qtdCpfsPagos} CPFs)
             </p>
           </CardContent>
         </Card>
+
+        {custoRetencao > 0 && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Custo de Retenção</CardTitle>
+              <RefreshCcw className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(custoRetencao)}</div>
+              <div className="flex items-center gap-3 mt-1">
+                {totalRenovacoes > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    Renovações: <span className="font-medium text-foreground">{formatCurrency(totalRenovacoes)}</span>
+                  </span>
+                )}
+                {totalBonificacoes > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    Bonificações: <span className="font-medium text-foreground">{formatCurrency(totalBonificacoes)}</span>
+                  </span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* KPIs - Row 2: Organic Rate Warning */}
