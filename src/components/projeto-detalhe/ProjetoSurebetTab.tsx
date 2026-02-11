@@ -789,6 +789,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         </Card>
       </div>
 
+      {/* Filtro de período - abaixo dos KPIs */}
+      {periodFilterComponent}
+
       {/* Gráficos - layout igual ao ValueBet */}
       {/* ISOLAMENTO: Visão Geral SEMPRE usa dados globais (surebets), sem filtros dimensionais */}
       {surebets.length > 0 ? (
@@ -1207,8 +1210,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
-        {periodFilterComponent}
         {activeNavTab === "visao-geral" && renderVisaoGeral()}
+        {activeNavTab !== "visao-geral" && periodFilterComponent}
         {activeNavTab === "operacoes" && renderOperacoes()}
         {activeNavTab === "por-casa" && renderPorCasa()}
       </div>
