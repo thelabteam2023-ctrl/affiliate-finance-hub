@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace/WorkspaceSwitcher";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface MenuItem {
@@ -138,6 +138,31 @@ export function AppSidebar() {
   
   const isCollapsed = state === "collapsed";
   const isActive = (path: string) => currentPath === path;
+
+  // Scroll overflow detection for collapsed sidebar
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollUp(el.scrollTop > 4);
+    setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener("scroll", checkScroll, { passive: true });
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", checkScroll);
+      ro.disconnect();
+    };
+  }, [checkScroll, isCollapsed]);
 
   // Load project names for favorites
   useEffect(() => {
@@ -409,9 +434,9 @@ export function AppSidebar() {
       className={isCollapsed ? "w-16" : "w-56"}
       collapsible="icon"
     >
-      <SidebarContent className="py-4">
+      <SidebarContent className="relative py-4 flex flex-col overflow-hidden">
         {/* Logo/Brand Section */}
-        <div className="flex items-center justify-center px-3 pb-4 bg-transparent">
+        <div className="flex items-center justify-center px-3 pb-4 bg-transparent shrink-0">
           {isCollapsed ? (
             <img src="/favicon.png" alt="LABBET" className="h-10 w-10 bg-transparent" />
           ) : (
@@ -420,7 +445,7 @@ export function AppSidebar() {
         </div>
 
         {/* Workspace Switcher */}
-        <div className={`px-2 pb-4 ${isCollapsed ? 'px-1' : ''}`}>
+        <div className={`px-2 pb-4 shrink-0 ${isCollapsed ? 'px-1' : ''}`}>
           <WorkspaceSwitcher
             workspaces={userWorkspaces}
             pendingInvites={pendingInvites}
@@ -433,39 +458,65 @@ export function AppSidebar() {
           />
         </div>
 
-        <div className="mx-3 border-t border-border/50 mb-4" />
+        <div className="mx-3 border-t border-border/50 mb-4 shrink-0" />
 
-        {/* Favorites Section - Shows page favorites and project favorites */}
-        {hasAnyFavorites && (
-          <SidebarGroup>
-            <SidebarGroupLabel 
-              className={`
-                text-[10px] font-semibold tracking-widest text-muted-foreground/70 
-                uppercase mb-2 px-3
-                ${isCollapsed ? 'sr-only' : ''}
-              `}
+        {/* Scrollable area with overflow indicators */}
+        <div className="relative flex-1 min-h-0">
+          {/* Top scroll indicator */}
+          {isCollapsed && canScrollUp && (
+            <div 
+              className="absolute top-0 left-0 right-0 z-10 flex justify-center py-0.5 bg-gradient-to-b from-sidebar to-transparent cursor-pointer"
+              onClick={() => scrollRef.current?.scrollBy({ top: -80, behavior: 'smooth' })}
             >
-              ATALHOS
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="space-y-0.5">
-                {/* Page favorites */}
-                {visibleFavorites.map(renderFavoriteItem)}
-                {/* Project favorites */}
-                {hasProjectAccess && projectFavorites.map(renderProjectFavoriteItem)}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+              <ChevronUp className="h-3.5 w-3.5 text-muted-foreground animate-pulse" />
+            </div>
+          )}
 
-        {/* Separator after favorites */}
-        {hasAnyFavorites && (
-          <div className="my-4 mx-3 border-t border-border/50" />
-        )}
+          <div 
+            ref={scrollRef} 
+            className="h-full overflow-y-auto overflow-x-hidden scrollbar-none"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {/* Favorites Section */}
+            {hasAnyFavorites && (
+              <SidebarGroup>
+                <SidebarGroupLabel 
+                  className={`
+                    text-[10px] font-semibold tracking-widest text-muted-foreground/70 
+                    uppercase mb-2 px-3
+                    ${isCollapsed ? 'sr-only' : ''}
+                  `}
+                >
+                  ATALHOS
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu className="space-y-0.5">
+                    {visibleFavorites.map(renderFavoriteItem)}
+                    {hasProjectAccess && projectFavorites.map(renderProjectFavoriteItem)}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
 
-        {/* Menu Groups */}
-        <div className="flex-1 px-2">
-          {menuGroups.map((group, index) => renderMenuGroup(group, index))}
+            {hasAnyFavorites && (
+              <div className="my-4 mx-3 border-t border-border/50" />
+            )}
+
+            {/* Menu Groups */}
+            <div className="px-2">
+              {menuGroups.map((group, index) => renderMenuGroup(group, index))}
+            </div>
+          </div>
+
+          {/* Bottom scroll indicator */}
+          {isCollapsed && canScrollDown && (
+            <div 
+              className="absolute bottom-0 left-0 right-0 z-10 flex justify-center py-0.5 bg-gradient-to-t from-sidebar to-transparent cursor-pointer"
+              onClick={() => scrollRef.current?.scrollBy({ top: 80, behavior: 'smooth' })}
+            >
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground animate-pulse" />
+            </div>
+          )}
         </div>
       </SidebarContent>
 
