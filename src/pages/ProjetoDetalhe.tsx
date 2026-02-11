@@ -774,21 +774,23 @@ export default function ProjetoDetalhe() {
             onTabChange={handleTabChange}
             minVisibleTabs={2}
             extraContent={
-              <div className="flex items-center gap-1.5">
-                <SetDefaultTabButton
-                  projectId={id!}
-                  tabKey={activeTab}
-                  tabLabel={getTabLabel(activeTab)}
-                />
-                <GlobalActionsBar 
-                  projetoId={id!}
-                  activeTab={activeTab}
-                  onApostaCreated={triggerGlobalRefresh}
-                  onBonusCreated={triggerGlobalRefresh}
-                  onNavigateToTab={setActiveTab}
-                />
-              </div>
+              <SetDefaultTabButton
+                projectId={id!}
+                tabKey={activeTab}
+                tabLabel={getTabLabel(activeTab)}
+              />
             }
+          />
+        </div>
+
+        {/* Action Bar - Botões de ação globais */}
+        <div className="flex items-center gap-2 md:gap-3 pt-1 md:pt-2 pb-2 border-b border-border/50 flex-shrink-0 overflow-x-auto">
+          <GlobalActionsBar 
+            projetoId={id!}
+            activeTab={activeTab}
+            onApostaCreated={triggerGlobalRefresh}
+            onBonusCreated={triggerGlobalRefresh}
+            onNavigateToTab={setActiveTab}
           />
         </div>
 
