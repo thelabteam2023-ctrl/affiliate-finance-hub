@@ -1291,7 +1291,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="dataNascimento">Data de Nascimento *</Label>
+                  <Label htmlFor="dataNascimento">Data de Nascimento <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
                   <DatePicker
                     value={dataNascimento}
                     onChange={setDataNascimento}
@@ -1300,7 +1300,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">Email <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
                   <div className="flex gap-2">
                     <Input
                       id="parceiro-email-field"
@@ -1310,7 +1310,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                       autoComplete="off"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      required
                       disabled={loading || viewMode}
                     />
                     {viewMode && email && (
@@ -1331,7 +1330,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="telefone">Telefone *</Label>
+                  <Label htmlFor="telefone">Telefone <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <PhoneInput
