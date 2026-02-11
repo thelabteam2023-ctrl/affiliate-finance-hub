@@ -203,42 +203,42 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
   return (
     <div className="space-y-4">
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* KPI Cards — compact 4-col */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Volume por moeda */}
         <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-              <DollarSign className="h-3.5 w-3.5" />
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
+              <DollarSign className="h-3 w-3" />
               Volume Total
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {currencyBreakdown.map(item => (
-                <div key={item.moeda} className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-mono">
+                <div key={item.moeda} className="flex items-center justify-between gap-2">
+                  <Badge variant="secondary" className="text-[9px] px-1 py-0 font-mono shrink-0">
                     {item.moeda}
                   </Badge>
-                  <span className="text-sm font-semibold tabular-nums">
+                  <span className="text-xs font-semibold tabular-nums truncate">
                     {fmt(item.volume, item.moeda)}
                   </span>
                 </div>
               ))}
               {hasMultipleCurrencies && (
                 <>
-                  <div className="border-t border-border/50 my-1.5" />
+                  <div className="border-t border-border/50 my-1" />
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <ArrowRight className="h-2.5 w-2.5" />
-                      Consolidado
+                    <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                      <ArrowRight className="h-2 w-2" />
+                      BRL
                     </span>
-                    <span className="text-lg font-bold tabular-nums">
+                    <span className="text-sm font-bold tabular-nums">
                       {fmt(consolidatedBRL.volume, "BRL")}
                     </span>
                   </div>
                 </>
               )}
               {!hasMultipleCurrencies && currencyBreakdown.length === 1 && (
-                <div className="text-lg font-bold tabular-nums mt-1">
+                <div className="text-lg font-bold tabular-nums leading-tight">
                   {fmt(currencyBreakdown[0].volume, currencyBreakdown[0].moeda)}
                 </div>
               )}
@@ -248,38 +248,38 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
 
         {/* P&L por moeda */}
         <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-              <BarChart3 className="h-3.5 w-3.5" />
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
+              <BarChart3 className="h-3 w-3" />
               Lucro / Prejuízo
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {currencyBreakdown.map(item => (
-                <div key={item.moeda} className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-mono">
+                <div key={item.moeda} className="flex items-center justify-between gap-2">
+                  <Badge variant="secondary" className="text-[9px] px-1 py-0 font-mono shrink-0">
                     {item.moeda}
                   </Badge>
-                  <span className={`text-sm font-semibold tabular-nums ${item.pl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                  <span className={`text-xs font-semibold tabular-nums truncate ${item.pl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                     {fmt(item.pl, item.moeda)}
                   </span>
                 </div>
               ))}
               {hasMultipleCurrencies && (
                 <>
-                  <div className="border-t border-border/50 my-1.5" />
+                  <div className="border-t border-border/50 my-1" />
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <ArrowRight className="h-2.5 w-2.5" />
-                      Consolidado
+                    <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                      <ArrowRight className="h-2 w-2" />
+                      BRL
                     </span>
-                    <span className={`text-lg font-bold tabular-nums ${consolidatedBRL.pl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    <span className={`text-sm font-bold tabular-nums ${consolidatedBRL.pl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                       {fmt(consolidatedBRL.pl, "BRL")}
                     </span>
                   </div>
                 </>
               )}
               {!hasMultipleCurrencies && currencyBreakdown.length === 1 && (
-                <div className={`text-lg font-bold tabular-nums mt-1 ${currencyBreakdown[0].pl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                <div className={`text-lg font-bold tabular-nums leading-tight ${currencyBreakdown[0].pl >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                   {fmt(currencyBreakdown[0].pl, currencyBreakdown[0].moeda)}
                 </div>
               )}
@@ -289,23 +289,23 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
 
         {/* Apostas */}
         <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <Hash className="h-3.5 w-3.5" />
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-0.5">
+              <Hash className="h-3 w-3" />
               Total de Apostas
             </div>
-            <div className="text-2xl font-bold">{totalApostas.toLocaleString("pt-BR")}</div>
+            <div className="text-xl font-bold leading-tight">{totalApostas.toLocaleString("pt-BR")}</div>
           </CardContent>
         </Card>
 
         {/* Casas */}
         <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <Building2 className="h-3.5 w-3.5" />
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-0.5">
+              <Building2 className="h-3 w-3" />
               Casas
             </div>
-            <div className="text-2xl font-bold">{totalCasas}</div>
+            <div className="text-xl font-bold leading-tight">{totalCasas}</div>
           </CardContent>
         </Card>
       </div>

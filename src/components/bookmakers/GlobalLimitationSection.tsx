@@ -107,46 +107,46 @@ export function GlobalLimitationSection({ regFilter, regMap }: GlobalLimitationS
 
   return (
     <div className="space-y-4">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* KPI Cards — compact 4-col */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-red-500 mb-1">
-              <ShieldAlert className="h-3.5 w-3.5" />
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-red-500 mb-0.5">
+              <ShieldAlert className="h-3 w-3" />
               Total de Eventos
             </div>
-            <div className="text-2xl font-bold">{totalEvents}</div>
-            <div className="text-xs text-muted-foreground">em {totalCasas} casa{totalCasas !== 1 ? "s" : ""}</div>
+            <div className="text-xl font-bold leading-tight">{totalEvents}</div>
+            <div className="text-[11px] text-muted-foreground">em {totalCasas} casa{totalCasas !== 1 ? "s" : ""}</div>
           </CardContent>
         </Card>
         <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-emerald-500 mb-1">
-              <BarChart3 className="h-3.5 w-3.5" />
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-emerald-500 mb-0.5">
+              <BarChart3 className="h-3 w-3" />
               Média de Apostas
             </div>
-            <div className="text-2xl font-bold">{avgBets}</div>
-            <div className="text-xs text-muted-foreground">antes da limitação</div>
+            <div className="text-xl font-bold leading-tight">{avgBets}</div>
+            <div className="text-[11px] text-muted-foreground">antes da limitação</div>
           </CardContent>
         </Card>
         <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-yellow-500 mb-1">
-              <Zap className="h-3.5 w-3.5" />
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-yellow-500 mb-0.5">
+              <Zap className="h-3 w-3" />
               Early Limiters
             </div>
-            <div className="text-2xl font-bold">{earlyPct}%</div>
-            <div className="text-xs text-muted-foreground">{earlyLimiters} de {totalCasas} casas</div>
+            <div className="text-xl font-bold leading-tight">{earlyPct}%</div>
+            <div className="text-[11px] text-muted-foreground">{earlyLimiters} de {totalCasas} casas</div>
           </CardContent>
         </Card>
         <Card className="border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-xs text-blue-500 mb-1">
-              <Building2 className="h-3.5 w-3.5" />
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-blue-500 mb-0.5">
+              <Building2 className="h-3 w-3" />
               Casas Analisadas
             </div>
-            <div className="text-2xl font-bold">{totalCasas}</div>
-            <div className="text-xs text-muted-foreground">com dados de limitação</div>
+            <div className="text-xl font-bold leading-tight">{totalCasas}</div>
+            <div className="text-[11px] text-muted-foreground">com dados de limitação</div>
           </CardContent>
         </Card>
       </div>
