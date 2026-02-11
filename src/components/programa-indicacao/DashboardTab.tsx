@@ -17,6 +17,7 @@ import { ptBR } from "date-fns/locale";
 
 interface CustoData {
   parceria_id: string;
+  parceiro_id: string;
   parceiro_nome: string;
   origem_tipo: string;
   data_inicio: string;
@@ -49,6 +50,7 @@ interface Movimentacao {
   valor: number;
   status: string;
   data_movimentacao: string;
+  parceiro_id: string | null;
 }
 
 export function DashboardTab() {
@@ -85,7 +87,7 @@ export function DashboardTab() {
           .eq("status", "CONFIRMADO"),
         // Fetch all movimentacoes for total investment calculation - use workspace-scoped view
         supabase.from("v_movimentacoes_indicacao_workspace")
-          .select("id, tipo, valor, status, data_movimentacao")
+          .select("id, tipo, valor, status, data_movimentacao, parceiro_id")
       ]);
 
       if (custosResult.error) throw custosResult.error;
@@ -158,15 +160,37 @@ export function DashboardTab() {
   const totalBonus = filteredMovimentacoes
     .filter((m) => m.tipo === "BONUS_INDICADOR" && m.status === "CONFIRMADO")
     .reduce((acc, m) => acc + m.valor, 0);
+  const totalRenovacoes = filteredMovimentacoes
+    .filter((m) => m.tipo === "RENOVACAO_PARCERIA" && m.status === "CONFIRMADO")
+    .reduce((acc, m) => acc + m.valor, 0);
+  const totalBonificacoes = filteredMovimentacoes
+    .filter((m) => m.tipo === "BONIFICACAO_ESTRATEGICA" && m.status === "CONFIRMADO")
+    .reduce((acc, m) => acc + m.valor, 0);
   
-  // Total Investment = same as "Total Geral" in Financeiro tab
-  const totalInvestimento = totalPagtoParceiros + totalComissoes + totalBonus;
+  // Total Investment = same as "Total Geral" in Financeiro tab (includes renewals and strategic bonuses)
+  const totalInvestimento = totalPagtoParceiros + totalComissoes + totalBonus + totalRenovacoes + totalBonificacoes;
   const totalParceiros = filteredCustos.length;
   
+  // Build map of extra costs (renewals + bonifications) per parceiro_id
+  const custosExtrasPorParceiro: Record<string, number> = {};
+  filteredMovimentacoes
+    .filter((m) => (m.tipo === "RENOVACAO_PARCERIA" || m.tipo === "BONIFICACAO_ESTRATEGICA") && m.status === "CONFIRMADO" && m.parceiro_id)
+    .forEach((m) => {
+      custosExtrasPorParceiro[m.parceiro_id!] = (custosExtrasPorParceiro[m.parceiro_id!] || 0) + m.valor;
+    });
+  
   // NEW CAC LOGIC: Only CPFs with cost > 0 enter the CAC calculation
-  // CPFs without cost (organic, migrated, own) are displayed but don't dilute CAC
-  const cpfsPagos = filteredCustos.filter((c) => c.custo_total > 0);
-  const cpfsSemCusto = filteredCustos.filter((c) => c.custo_total === 0 || c.custo_total === null);
+  // custo_total from view + extra costs (renewals/bonifications) from movimentacoes
+  const cpfsPagos = filteredCustos.filter((c) => {
+    const custoView = c.custo_total || 0;
+    const custosExtras = custosExtrasPorParceiro[c.parceiro_id] || 0;
+    return (custoView + custosExtras) > 0;
+  });
+  const cpfsSemCusto = filteredCustos.filter((c) => {
+    const custoView = c.custo_total || 0;
+    const custosExtras = custosExtrasPorParceiro[c.parceiro_id] || 0;
+    return (custoView + custosExtras) === 0;
+  });
   const qtdCpfsPagos = cpfsPagos.length;
   const qtdCpfsSemCusto = cpfsSemCusto.length;
   
