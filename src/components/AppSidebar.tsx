@@ -247,7 +247,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild>
                   <button 
                     onClick={(e) => handleMenuItemClick(item, e)}
-                    className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-accent/50"
+                    className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
                   >
                     <item.icon className="h-4 w-4" />
                   </button>
@@ -261,7 +261,7 @@ export function AppSidebar() {
             <SidebarMenuButton asChild>
               <button 
                 onClick={(e) => handleMenuItemClick(item, e)}
-                className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50 w-full text-left"
+                className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10 w-full text-left"
               >
                 <item.icon className="h-4 w-4 shrink-0" />
                 <span className="text-sm flex-1">{item.title}</span>
@@ -281,7 +281,7 @@ export function AppSidebar() {
                 <NavLink 
                   to={item.url} 
                   end 
-                  className="relative flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-accent/50"
+                  className="relative flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
                   activeClassName="bg-primary/10 text-primary"
                 >
                   <item.icon className="h-4 w-4" />
@@ -306,7 +306,7 @@ export function AppSidebar() {
             <NavLink 
               to={item.url} 
               end 
-              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50"
+              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
               activeClassName="bg-primary/10 text-primary font-medium"
             >
               <item.icon className="h-4 w-4 shrink-0" />
@@ -338,7 +338,7 @@ export function AppSidebar() {
                 <NavLink 
                   to={favorite.page_path} 
                   end 
-                  className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-accent/50"
+                  className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
                   activeClassName="bg-primary/10 text-primary"
                 >
                   <IconComponent className="h-4 w-4" />
@@ -354,7 +354,7 @@ export function AppSidebar() {
             <NavLink 
               to={favorite.page_path} 
               end 
-              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50"
+              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
               activeClassName="bg-primary/10 text-primary font-medium"
             >
               <IconComponent className="h-4 w-4 shrink-0" />
@@ -378,7 +378,7 @@ export function AppSidebar() {
               <SidebarMenuButton asChild isActive={currentPath === projectPath}>
                 <NavLink 
                   to={projectPath}
-                  className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-accent/50"
+                  className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
                   activeClassName="bg-primary/10 text-primary"
                 >
                   <FolderKanban className="h-4 w-4" />
@@ -393,7 +393,7 @@ export function AppSidebar() {
           <SidebarMenuButton asChild isActive={currentPath === projectPath}>
             <NavLink 
               to={projectPath}
-              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-accent/50"
+              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
               activeClassName="bg-primary/10 text-primary font-medium"
             >
               <FolderKanban className="h-4 w-4 shrink-0" />
@@ -526,7 +526,7 @@ export function AppSidebar() {
           <DropdownMenuTrigger asChild>
             <button className={`
               flex items-center gap-3 w-full p-2 rounded-lg 
-              hover:bg-accent/50 transition-colors
+              hover:bg-primary/10 transition-colors
               ${isCollapsed ? 'justify-center' : ''}
             `}>
               <Avatar className="h-7 w-7">
