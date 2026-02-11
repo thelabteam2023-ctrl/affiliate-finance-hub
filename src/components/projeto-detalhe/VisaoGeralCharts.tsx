@@ -202,7 +202,7 @@ const createCustomTooltip = (formatCurrency: (value: number) => string, isSingle
 function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurrency, formatChartAxis }: EvolucaoLucroChartProps) {
   // Adaptive X-axis: for long periods, show monthly markers instead of daily labels
   const MONTH_NAMES_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-  const useMonthlyTicks = !isSingleDayPeriod && data.length > 60;
+  const useMonthlyTicks = !isSingleDayPeriod && data.length > 20;
   
   // Build set of indices that should show a tick (first day of each month)
   const monthlyTickIndices = useMemo(() => {
