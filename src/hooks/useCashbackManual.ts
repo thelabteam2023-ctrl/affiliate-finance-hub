@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -83,7 +84,8 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
     queryKey: [CASHBACK_MANUAL_QUERY_KEY, projetoId, dataInicio?.toISOString(), dataFim?.toISOString()],
     queryFn: () => fetchCashbackRegistros(projetoId, dataInicio, dataFim),
     enabled: !!projetoId,
-    staleTime: 1000 * 30, // 30 seconds
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 
   /**

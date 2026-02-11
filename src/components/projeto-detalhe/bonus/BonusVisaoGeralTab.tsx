@@ -13,6 +13,7 @@ import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
 import { BonusContaminationAlert } from "./BonusContaminationAlert";
 import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { BonusResultadoLiquidoChart } from "./BonusResultadoLiquidoChart";
 
 interface DateRangeResult {
@@ -135,7 +136,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       return uniqueBets;
     },
     enabled: !!projetoId,
-    staleTime: 1000 * 30,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 
   // Note: Removed cash_ledger fetch - now using deposit_amount from bonus records
@@ -262,7 +264,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       });
     },
     enabled: !!projetoId,
-    staleTime: 30000,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 
   // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação

@@ -9,6 +9,7 @@ import { EditFinalizeReasonDialog } from "./EditFinalizeReasonDialog";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
+import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -101,7 +102,8 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
       return ajustes;
     },
     enabled: !!projetoId,
-    staleTime: 30000,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
   });
 
   const formatCurrencyValue = (value: number, moeda: string = 'BRL') => {
