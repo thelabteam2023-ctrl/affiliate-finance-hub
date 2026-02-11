@@ -498,7 +498,10 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     );
   }
 
-  if (apostasUnificadas.length === 0) {
+  // Distinguir entre "projeto sem apostas" e "filtro sem resultados"
+  const hasAnyBetsInProject = apostasCalendario.length > 0;
+
+  if (!hasAnyBetsInProject && apostasUnificadas.length === 0) {
     return (
       <div className="space-y-4">
         {/* Visão Geral - Sempre consolidada, sem filtros */}
