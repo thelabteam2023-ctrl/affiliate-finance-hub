@@ -890,7 +890,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             <Info className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
             <p className="text-xs text-muted-foreground">
               <span className="font-medium text-blue-400">Visão Especializada:</span> Esta aba exibe apenas operações de Surebet. 
-              As apostas individuais de cada surebet também aparecem na aba "Apostas Livres".
+              As apostas individuais de cada surebet também aparecem na aba "Todas as Apostas".
             </p>
           </div>
         </CardContent>

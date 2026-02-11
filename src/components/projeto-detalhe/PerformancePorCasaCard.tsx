@@ -36,8 +36,8 @@ const ESTRATEGIA_LABELS: Record<string, string> = {
   "DUPLO_GREEN": "Duplo Green",
   "VALUEBET": "ValueBet",
   "EXTRACAO_FREEBET": "Freebets",
-  "PUNTER": "Apostas Livres",
-  "NORMAL": "Apostas Livres",
+  "PUNTER": "Todas as Apostas",
+  "NORMAL": "Todas as Apostas",
 };
 
 interface ApostaUnificada {
@@ -141,7 +141,7 @@ export function PerformancePorCasaCard({
     apostasUnificadas.forEach((aposta) => {
       // Determina a estratégia de negócio (aba) com base no campo estrategia
       const estrategiaCodigo = aposta.estrategia || "PUNTER";
-      const estrategiaNome = ESTRATEGIA_LABELS[estrategiaCodigo] || "Apostas Livres";
+      const estrategiaNome = ESTRATEGIA_LABELS[estrategiaCodigo] || "Todas as Apostas";
 
       if (!estrategiaMap[estrategiaNome]) {
         estrategiaMap[estrategiaNome] = {
