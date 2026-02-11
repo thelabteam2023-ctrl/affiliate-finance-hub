@@ -1222,15 +1222,32 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <Label htmlFor="nome">Nome Completo *</Label>
-                  <Input
-                    id="parceiro-nome-field"
-                    name="parceiro-nome-field"
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value.toUpperCase())}
-                    required
-                    disabled={loading || viewMode}
-                    className="uppercase"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="parceiro-nome-field"
+                      name="parceiro-nome-field"
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value.toUpperCase())}
+                      required
+                      disabled={loading || viewMode}
+                      className="uppercase"
+                    />
+                    {viewMode && nome && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(nome, "Nome")}
+                        className="shrink-0"
+                      >
+                        {copiedField === "Nome" ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="cpf">CPF *</Label>
@@ -1331,7 +1348,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => copyToClipboard(telefone, "Telefone")}
+                        onClick={() => {
+                          const digits = telefone.replace(/\D/g, "");
+                          const cleaned = digits.startsWith("55") ? digits.slice(2) : digits;
+                          copyToClipboard(cleaned, "Telefone");
+                        }}
                         className="shrink-0"
                       >
                         {copiedField === "Telefone" ? (
