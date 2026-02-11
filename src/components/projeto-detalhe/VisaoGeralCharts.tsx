@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TrendingUp, TrendingDown, Building2, Users, Calendar, Globe, FolderOpen, BarChart3 } from "lucide-react";
+import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -222,28 +223,7 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurren
   }, [data, useMonthlyTicks]);
 
   if (data.length === 0) {
-    if (isSingleDayPeriod) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
-          <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
-            <BarChart3 className="h-6 w-6 text-muted-foreground/60" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">
-              Não há apostas registradas neste dia.
-            </p>
-            <p className="text-xs text-muted-foreground/60">
-              Quando houver apostas, o desempenho intradiário será exibido aqui.
-            </p>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-        Sem dados para exibir
-      </div>
-    );
+    return <ChartEmptyState isSingleDayPeriod={isSingleDayPeriod} />;
   }
 
   const lastValue = data[data.length - 1]?.acumulado ?? 0;
