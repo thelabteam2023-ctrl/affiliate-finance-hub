@@ -384,8 +384,10 @@ export default function Caixa() {
       const matchDataFim = !dataFim || dataTransacao <= endOfDay(dataFim);
       
       // Include both APORTE and LIQUIDACAO when filter is APORTE_FINANCEIRO
+      const knownTypes = ["TRANSFERENCIA", "DEPOSITO", "SAQUE", "APORTE", "LIQUIDACAO"];
       const matchTipo = filtroTipo === "TODOS" || 
         (filtroTipo === "APORTE_FINANCEIRO" && (t.tipo_transacao === "APORTE" || t.tipo_transacao === "LIQUIDACAO")) ||
+        (filtroTipo === "OUTROS" && !knownTypes.includes(t.tipo_transacao)) ||
         t.tipo_transacao === filtroTipo;
       
       // Filtro por projeto usando projeto_id_snapshot (imutável, gravado no momento da transação)
