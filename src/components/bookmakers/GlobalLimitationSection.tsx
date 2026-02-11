@@ -52,9 +52,9 @@ export function GlobalLimitationSection({ regFilter, regMap }: GlobalLimitationS
       if (!volumeResult.error && volumeResult.data) {
         for (const v of volumeResult.data as any[]) {
           volumeMap.set(v.bookmaker_catalogo_id, {
-            volume: Number(v.volume_total),
-            pl: Number(v.lucro_prejuizo_total),
-            moeda: v.moeda_predominante || "BRL",
+            volume: Number(v.total_volume),
+            pl: Number(v.total_pl),
+            moeda: v.moeda || "BRL",
           });
         }
       }
