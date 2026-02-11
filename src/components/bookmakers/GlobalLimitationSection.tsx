@@ -120,18 +120,9 @@ export function GlobalLimitationSection() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center">
-          <ShieldAlert className="h-5 w-5 text-red-500" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold">Inteligência de Limitação Global</h3>
-          <p className="text-sm text-muted-foreground">
-            Visão consolidada de limitações em todas as bookmakers do workspace
-          </p>
-        </div>
-        <div className="ml-auto flex items-center gap-1 rounded-lg border border-border p-1">
+      {/* Regulation filter */}
+      <div className="flex items-center justify-end">
+        <div className="flex items-center gap-1 rounded-lg border border-border p-1">
           {REG_OPTIONS.map(opt => (
             <button
               key={opt.value}
