@@ -117,7 +117,7 @@ export function useHistoricoCaptacao() {
         supabase.from("fornecedores").select("id, nome, workspace_id").eq("workspace_id", workspaceId),
         // Movimentações - filtrar por workspace_id
         supabase.from("movimentacoes_indicacao")
-          .select("parceria_id, tipo, valor, status, workspace_id")
+          .select("parceria_id, parceiro_id, tipo, valor, status, workspace_id")
           .eq("workspace_id", workspaceId)
           .eq("status", "CONFIRMADO"),
         // Apostas - filtrar por workspace_id
@@ -175,9 +175,14 @@ export function useHistoricoCaptacao() {
 
       // Build comissões map by parceria_id
       const comissaoMap: Record<string, number> = {};
+      // Build custos extras por parceiro (RENOVACAO_PARCERIA, BONIFICACAO_ESTRATEGICA)
+      const custosExtrasPorParceiro: Record<string, number> = {};
       (movimentacoesResult.data || []).forEach((m: any) => {
         if (m.tipo === "COMISSAO_INDICADOR" && m.parceria_id) {
           comissaoMap[m.parceria_id] = (comissaoMap[m.parceria_id] || 0) + m.valor;
+        }
+        if ((m.tipo === "RENOVACAO_PARCERIA" || m.tipo === "BONIFICACAO_ESTRATEGICA") && m.parceiro_id) {
+          custosExtrasPorParceiro[m.parceiro_id] = (custosExtrasPorParceiro[m.parceiro_id] || 0) + m.valor;
         }
       });
 
@@ -192,8 +197,9 @@ export function useHistoricoCaptacao() {
         // Custo real de indicador: usar o maior entre acordado e pago
         const custoIndicador = Math.max(valorIndicadorAcordado, comissoesPagas);
         
-        // Custo total de aquisição = indicador + parceiro + fornecedor (sem duplicar)
-        const custoTotal = custoIndicador + valorParceiro + valorFornecedor;
+        // Custo total de aquisição = indicador + parceiro + fornecedor + extras (renovações/bonificações)
+        const custosExtras = custosExtrasPorParceiro[p.parceiro_id] || 0;
+        const custoTotal = custoIndicador + valorParceiro + valorFornecedor + custosExtras;
         const lucroGerado = lucroMap[p.parceiro_id] || 0;
         
         // ROI = (lucro / custo) * 100 - PROTEÇÃO CONTRA DIVISÃO POR ZERO

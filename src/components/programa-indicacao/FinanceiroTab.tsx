@@ -17,6 +17,9 @@ import {
   Loader2,
   User,
   HelpCircle,
+  RefreshCw,
+  Star,
+  Plus,
 } from "lucide-react";
 import {
   Tooltip,
@@ -30,6 +33,7 @@ import { ptBR } from "date-fns/locale";
 import { PagamentoBonusDialog } from "./PagamentoBonusDialog";
 import { PagamentoComissaoDialog } from "./PagamentoComissaoDialog";
 import { PagamentoParceiroDialog } from "./PagamentoParceiroDialog";
+import { PagamentoCaptacaoDialog } from "./PagamentoCaptacaoDialog";
 
 interface Movimentacao {
   id: string;
@@ -40,7 +44,8 @@ interface Movimentacao {
   descricao: string | null;
   status: string;
   indicador_id: string | null;
-  parceria_id: string;
+  parceria_id: string | null;
+  parceiro_id: string | null;
 }
 
 interface BonusPendente {
@@ -79,6 +84,7 @@ export function FinanceiroTab() {
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [comissaoDialogOpen, setComissaoDialogOpen] = useState(false);
   const [parceiroDialogOpen, setParceiroDialogOpen] = useState(false);
+  const [captacaoDialogOpen, setCaptacaoDialogOpen] = useState(false);
   const [selectedBonus, setSelectedBonus] = useState<BonusPendente | null>(null);
   const [selectedComissao, setSelectedComissao] = useState<ComissaoPendente | null>(null);
   const [selectedParceiro, setSelectedParceiro] = useState<ParceiroPendente | null>(null);
@@ -273,6 +279,8 @@ export function FinanceiroTab() {
       BONUS_INDICADOR: "Bônus",
       PAGTO_PARCEIRO: "Pagto. Parceiro",
       PAGTO_FORNECEDOR: "Pagto. Fornecedor",
+      RENOVACAO_PARCERIA: "Renovação",
+      BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
     };
     return labels[tipo] || tipo;
   };
@@ -287,6 +295,10 @@ export function FinanceiroTab() {
         return <Users className="h-4 w-4" />;
       case "PAGTO_FORNECEDOR":
         return <Truck className="h-4 w-4" />;
+      case "RENOVACAO_PARCERIA":
+        return <RefreshCw className="h-4 w-4" />;
+      case "BONIFICACAO_ESTRATEGICA":
+        return <Star className="h-4 w-4" />;
       default:
         return <Wallet className="h-4 w-4" />;
     }
@@ -302,7 +314,10 @@ export function FinanceiroTab() {
   const totalBonus = movimentacoes
     .filter((m) => m.tipo === "BONUS_INDICADOR" && m.status === "CONFIRMADO")
     .reduce((acc, m) => acc + m.valor, 0);
-  const totalGeral = totalPagtoParceiros + totalComissoes + totalBonus;
+  const totalRenovacoesBonificacoes = movimentacoes
+    .filter((m) => (m.tipo === "RENOVACAO_PARCERIA" || m.tipo === "BONIFICACAO_ESTRATEGICA") && m.status === "CONFIRMADO")
+    .reduce((acc, m) => acc + m.valor, 0);
+  const totalGeral = totalPagtoParceiros + totalComissoes + totalBonus + totalRenovacoesBonificacoes;
   const totalBonusCiclosPendentes = bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0);
   const totalPendencias = totalBonusCiclosPendentes + comissoesPendentes.length + parceirosPendentes.length;
 
@@ -318,7 +333,7 @@ export function FinanceiroTab() {
     <div className="space-y-6">
       {/* KPIs */}
       <TooltipProvider>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pagto. Parceiros</CardTitle>
@@ -379,6 +394,26 @@ export function FinanceiroTab() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Renov. / Bonif.</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="text-muted-foreground hover:text-foreground transition-colors">
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Renovações de parceria e bonificações estratégicas pagas a parceiros. Integram o custo total por CPF.</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(totalRenovacoesBonificacoes)}</div>
+              <p className="text-xs text-muted-foreground">Custo de retenção</p>
+            </CardContent>
+          </Card>
+
           <Card className="bg-primary/5 border-primary/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Geral</CardTitle>
@@ -389,7 +424,7 @@ export function FinanceiroTab() {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  <p>Soma de todas as despesas do programa: Pagto. Parceiros + Comissões + Bônus.</p>
+                  <p>Soma de todas as despesas do programa: Pagto. Parceiros + Comissões + Bônus + Renovações + Bonificações.</p>
                 </TooltipContent>
               </Tooltip>
             </CardHeader>
@@ -574,8 +609,16 @@ export function FinanceiroTab() {
 
       {/* Histórico de Movimentações */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Histórico de Movimentações</CardTitle>
+          <Button
+            size="sm"
+            onClick={() => setCaptacaoDialogOpen(true)}
+            className="gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            Renovação / Bonificação
+          </Button>
         </CardHeader>
         <CardContent>
           {movimentacoes.length === 0 ? (
@@ -674,6 +717,11 @@ export function FinanceiroTab() {
               }
             : null
         }
+        onSuccess={fetchData}
+      />
+      <PagamentoCaptacaoDialog
+        open={captacaoDialogOpen}
+        onOpenChange={setCaptacaoDialogOpen}
         onSuccess={fetchData}
       />
     </div>
