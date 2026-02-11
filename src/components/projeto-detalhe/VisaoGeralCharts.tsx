@@ -657,7 +657,14 @@ export function VisaoGeralCharts({
     });
     
     // Adiciona lucros extras (cashback, giros grátis, freebets, bônus) ao dailyMap
+    // CORREÇÃO: Filtrar extras pelo período selecionado para evitar expandir o gráfico
     extrasMap.forEach((valor, dateKey) => {
+      // Se há período definido, ignorar extras fora do range
+      if (periodStart && periodEnd) {
+        const extraDate = new Date(dateKey + 'T12:00:00');
+        if (extraDate < startOfDay(periodStart) || extraDate > periodEnd) return;
+      }
+      
       const existing = dailyMap.get(dateKey);
       if (existing) {
         existing.lucroTotal += valor;
