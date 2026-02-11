@@ -103,7 +103,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
         {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} dateRange={dateRange} isSingleDayPeriod={isSingleDayPeriod} periodFilter={periodFilterComponent} />}
         {activeTab !== "visao-geral" && periodFilterComponent}
         {activeTab === "bookmakers" && <BonusBookmakersTab projetoId={projetoId} />}
-        {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} />}
+        {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} dateRange={dateRange} />}
       </div>
     );
   };

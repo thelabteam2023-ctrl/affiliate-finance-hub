@@ -48,6 +48,7 @@ import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface BonusApostasTabProps {
   projetoId: string;
+  dateRange?: { start: Date; end: Date } | null;
 }
 
 interface Aposta {
@@ -166,7 +167,7 @@ type ApostaUnificada = {
   data_aposta: string;
 };
 
-export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
+export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) {
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
   
   // Use refs to track previous values and prevent infinite loops
@@ -584,11 +585,19 @@ export function BonusApostasTab({ projetoId }: BonusApostasTabProps) {
   });
 
   // Unify and sort
-  const apostasUnificadas: ApostaUnificada[] = [
+  const apostasUnificadasRaw: ApostaUnificada[] = [
     ...filteredApostas.map(a => ({ tipo: "simples" as const, data: a, data_aposta: a.data_aposta })),
     ...filteredMultiplas.map(am => ({ tipo: "multipla" as const, data: am, data_aposta: am.data_aposta })),
     ...filteredSurebets.map(sb => ({ tipo: "surebet" as const, data: sb, data_aposta: sb.data_operacao })),
   ].sort((a, b) => parseLocalDateTime(b.data_aposta).getTime() - parseLocalDateTime(a.data_aposta).getTime());
+
+  // Apply date range filter (exclusive to Operações, does not affect Visão Geral)
+  const apostasUnificadas = dateRange
+    ? apostasUnificadasRaw.filter(item => {
+        const itemDate = parseLocalDateTime(item.data_aposta);
+        return itemDate >= dateRange.start && itemDate <= dateRange.end;
+      })
+    : apostasUnificadasRaw;
 
   // Separate into Abertas (pending) and Histórico (settled)
   const apostasAbertas = apostasUnificadas.filter(item => {
