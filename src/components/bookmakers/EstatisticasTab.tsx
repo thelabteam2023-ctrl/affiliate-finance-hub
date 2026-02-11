@@ -1,11 +1,16 @@
-import { useState } from "react";
-import { ShieldAlert, TrendingUp, BarChart3 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { ShieldAlert, TrendingUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { GlobalLimitationSection } from "./GlobalLimitationSection";
 import { PerformancePorCasaSection } from "./PerformancePorCasaSection";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export type RegFilter = "todas" | "REGULAMENTADA" | "NAO_REGULAMENTADA";
 
@@ -22,9 +27,21 @@ const tabs = [
 
 type TabId = (typeof tabs)[number]["id"];
 
+const TAB_META: Record<TabId, { title: string; subtitle: string }> = {
+  limitacao: {
+    title: "Análise Estratégica de Limitações",
+    subtitle: "Visão consolidada do comportamento de limitação e padrões operacionais das casas.",
+  },
+  performance: {
+    title: "Performance Financeira por Casa",
+    subtitle: "Análise consolidada de volume, lucro, eventos e eficiência operacional por bookmaker.",
+  },
+};
+
 export function EstatisticasTab() {
   const [activeTab, setActiveTab] = useState<TabId>("limitacao");
   const [regFilter, setRegFilter] = useState<RegFilter>("todas");
+  const [regOpen, setRegOpen] = useState(false);
   const { workspaceId } = useWorkspace();
 
   const { data: regMap = new Map() } = useQuery({
@@ -41,24 +58,30 @@ export function EstatisticasTab() {
     staleTime: 10 * 60 * 1000,
   });
 
+  const meta = TAB_META[activeTab];
+  const regLabel = REG_OPTIONS.find(o => o.value === regFilter)?.label ?? "Todas";
+
   return (
-    <div className="space-y-6">
-      {/* Section header */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold text-foreground">
-            Inteligência de Limitação Global
-          </h2>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Análise consolidada de comportamento e resultados por casa de apostas
+    <div className="space-y-5">
+      {/* Dynamic title + subtitle */}
+      <div className="space-y-0.5">
+        <h2
+          key={activeTab}
+          className="text-lg font-semibold text-foreground animate-fade-in"
+        >
+          {meta.title}
+        </h2>
+        <p
+          key={`sub-${activeTab}`}
+          className="text-sm text-muted-foreground animate-fade-in"
+        >
+          {meta.subtitle}
         </p>
       </div>
 
-      {/* Content-level tabs + regulation filter */}
+      {/* Tabs + dropdown filter in single row */}
       <div className="flex items-center justify-between border-b border-border">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -67,11 +90,9 @@ export function EstatisticasTab() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors duration-200",
-                  "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  isActive
-                    ? "text-foreground"
-                    : "text-muted-foreground"
+                  "relative inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors duration-200",
+                  "hover:text-foreground focus-visible:outline-none",
+                  isActive ? "text-foreground" : "text-muted-foreground"
                 )}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -84,27 +105,47 @@ export function EstatisticasTab() {
           })}
         </div>
 
-        {/* Shared regulation filter */}
-        <div className="flex items-center gap-1 rounded-lg border border-border p-1 mb-1">
-          {REG_OPTIONS.map(opt => (
+        {/* Dropdown filter */}
+        <Popover open={regOpen} onOpenChange={setRegOpen}>
+          <PopoverTrigger asChild>
             <button
-              key={opt.value}
-              onClick={() => setRegFilter(opt.value)}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                regFilter === opt.value
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                "inline-flex items-center gap-1.5 px-3 py-1.5 mb-1 rounded-md text-xs font-medium transition-colors",
+                "border border-border hover:bg-muted/50",
+                regFilter !== "todas"
+                  ? "bg-secondary text-secondary-foreground"
+                  : "text-muted-foreground"
               )}
             >
-              {opt.label}
+              <span className="text-muted-foreground">Regulamentação:</span>
+              <span>{regLabel}</span>
+              <ChevronDown className="h-3 w-3 opacity-60" />
             </button>
-          ))}
-        </div>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-44 p-1">
+            {REG_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  setRegFilter(opt.value);
+                  setRegOpen(false);
+                }}
+                className={cn(
+                  "w-full text-left px-3 py-2 text-sm rounded-md transition-colors",
+                  regFilter === opt.value
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted text-foreground"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Tab content */}
-      <div className="animate-fade-in">
+      <div className="animate-fade-in" key={activeTab}>
         {activeTab === "limitacao" && <GlobalLimitationSection regFilter={regFilter} regMap={regMap} />}
         {activeTab === "performance" && <PerformancePorCasaSection regFilter={regFilter} regMap={regMap} />}
       </div>
