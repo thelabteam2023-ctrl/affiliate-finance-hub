@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, memo } from "react";
+import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import {
   BarChart,
   Bar,
@@ -260,11 +261,7 @@ export function ModernBarChart({
   const chartRef = useRef<HTMLDivElement>(null);
 
   if (!data || data.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        Sem dados para exibir
-      </div>
-    );
+    return <ChartEmptyState />;
   }
 
   return (

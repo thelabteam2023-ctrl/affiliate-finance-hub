@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Sector } from "recharts";
 import {
   Tooltip as UITooltip,
@@ -401,11 +402,7 @@ export function ModernDonutChart({
   });
 
   if (data.length === 0 || total === 0) {
-    return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        Sem dados para exibir
-      </div>
-    );
+    return <ChartEmptyState />;
   }
 
   return (

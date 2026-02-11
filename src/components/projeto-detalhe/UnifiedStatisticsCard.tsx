@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
+import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
 interface Aposta {
   id: string;
@@ -585,8 +586,8 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
   const renderPorValor = () => (
     <div className="space-y-4">
       {stats.porValor.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground text-sm">
-          Nenhuma aposta registrada
+        <div className="py-8">
+          <ChartEmptyState genericMessage="Nenhuma aposta registrada" />
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -637,8 +638,8 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
     if (chartData.length === 0) {
       return (
-        <div className="text-center py-8 text-muted-foreground text-sm">
-          Nenhuma aposta registrada
+        <div className="py-8">
+          <ChartEmptyState genericMessage="Nenhuma aposta registrada" />
         </div>
       );
     }

@@ -13,6 +13,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -279,8 +280,8 @@ export function BonusResultadoLiquidoChart({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-            Sem dados para exibir
+          <div className="h-[200px]">
+            <ChartEmptyState isSingleDayPeriod={isSingleDayPeriod} />
           </div>
         </CardContent>
       </Card>
