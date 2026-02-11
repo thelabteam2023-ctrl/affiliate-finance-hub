@@ -42,8 +42,8 @@ export function GlobalLimitationSection({ regFilter, regMap }: GlobalLimitationS
       if (!withdrawalResult.error && withdrawalResult.data) {
         for (const w of withdrawalResult.data as any[]) {
           withdrawalMap.set(w.bookmaker_catalogo_id, {
-            avg_days: Number(w.avg_withdrawal_days),
-            total_confirmed: Number(w.total_confirmed_withdrawals),
+            avg_days: Number(w.avg_days),
+            total_confirmed: Number(w.total_confirmed),
           });
         }
       }
