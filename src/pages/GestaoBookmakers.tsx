@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/PageHeader";
 import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDown, DollarSign, BookOpen, Wallet, LayoutGrid, List, User, Building, ShieldAlert, Copy, Check, FolderOpen, Filter, UserCheck, UserX, Users, History, Ban, Clock, BarChart3 } from "lucide-react";
-import { GlobalLimitationSection } from "@/components/bookmakers/GlobalLimitationSection";
+import { EstatisticasTab } from "@/components/bookmakers/EstatisticasTab";
 import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
@@ -456,7 +456,7 @@ export default function GestaoBookmakers() {
           </TabsContent>
 
           <TabsContent value="limitacoes" className="flex-1 min-h-0 overflow-y-auto mt-6">
-            <GlobalLimitationSection />
+            <EstatisticasTab />
           </TabsContent>
 
           {isSystemOwner && (

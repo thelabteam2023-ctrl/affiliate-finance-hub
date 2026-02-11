@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, Zap, BarChart3, Building2 } from "lucide-react";
@@ -9,8 +10,26 @@ import {
 } from "@/hooks/useLimitationEvents";
 import { LimitationGlobalRankingTable } from "@/components/projeto-detalhe/limitation/LimitationGlobalRankingTable";
 
+type RegFilter = "todas" | "REGULAMENTADA" | "NAO_REGULAMENTADA";
+
 export function GlobalLimitationSection() {
   const { workspaceId } = useWorkspace();
+  const [regFilter, setRegFilter] = useState<RegFilter>("todas");
+
+  // Fetch regulation status for each bookmaker_catalogo_id
+  const { data: regMap = new Map() } = useQuery({
+    queryKey: ["bookmakers-catalogo-regulation", workspaceId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("bookmakers_catalogo")
+        .select("id, status");
+      const map = new Map<string, string>();
+      (data || []).forEach((b: any) => map.set(b.id, b.status));
+      return map;
+    },
+    enabled: !!workspaceId,
+    staleTime: 10 * 60 * 1000,
+  });
 
   const { data: globalStats = [], isLoading } = useQuery({
     queryKey: ["limitation-stats-global", workspaceId],
@@ -65,14 +84,29 @@ export function GlobalLimitationSection() {
     enabled: !!workspaceId,
   });
 
+  // Filter by regulation
+  const filteredStats = useMemo(() => {
+    if (regFilter === "todas") return globalStats;
+    return globalStats.filter(s => {
+      const status = regMap.get(s.bookmaker_catalogo_id);
+      return status === regFilter;
+    });
+  }, [globalStats, regFilter, regMap]);
+
   // Compute KPIs from global stats
-  const totalEvents = globalStats.reduce((sum, s) => sum + s.total_events, 0);
-  const totalCasas = globalStats.length;
+  const totalEvents = filteredStats.reduce((sum, s) => sum + s.total_events, 0);
+  const totalCasas = filteredStats.length;
   const avgBets = totalEvents > 0
-    ? Math.round(globalStats.reduce((sum, s) => sum + s.avg_bets_before_limitation * s.total_events, 0) / totalEvents * 10) / 10
+    ? Math.round(filteredStats.reduce((sum, s) => sum + s.avg_bets_before_limitation * s.total_events, 0) / totalEvents * 10) / 10
     : 0;
-  const earlyLimiters = globalStats.filter(s => s.strategic_profile === "early_limiter").length;
+  const earlyLimiters = filteredStats.filter(s => s.strategic_profile === "early_limiter").length;
   const earlyPct = totalCasas > 0 ? Math.round((earlyLimiters / totalCasas) * 100) : 0;
+
+  const REG_OPTIONS: { value: RegFilter; label: string }[] = [
+    { value: "todas", label: "Todas" },
+    { value: "REGULAMENTADA", label: "Regulamentadas" },
+    { value: "NAO_REGULAMENTADA", label: "Não Regulamentadas" },
+  ];
 
   if (isLoading) {
     return (
@@ -96,6 +130,21 @@ export function GlobalLimitationSection() {
           <p className="text-sm text-muted-foreground">
             Visão consolidada de limitações em todas as bookmakers do workspace
           </p>
+        </div>
+        <div className="ml-auto flex items-center gap-1 rounded-lg border border-border p-1">
+          {REG_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setRegFilter(opt.value)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                regFilter === opt.value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -152,7 +201,7 @@ export function GlobalLimitationSection() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <LimitationGlobalRankingTable stats={globalStats} />
+          <LimitationGlobalRankingTable stats={filteredStats} />
         </CardContent>
       </Card>
     </div>
