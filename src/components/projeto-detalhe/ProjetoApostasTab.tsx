@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
@@ -279,6 +279,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
   const [surebets, setSurebets] = useState<Surebet[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadedOnceRef = useRef(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
   const [contextoFilter, setContextoFilter] = useState<ApostaContexto | "all">("all");
@@ -337,10 +338,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   const fetchAllApostas = async () => {
     try {
-      setLoading(true);
+      if (!loadedOnceRef.current) setLoading(true);
       await Promise.all([fetchApostas(), fetchApostasMultiplas(), fetchSurebets(), fetchBookmakers()]);
     } finally {
       setLoading(false);
+      loadedOnceRef.current = true;
     }
   };
 

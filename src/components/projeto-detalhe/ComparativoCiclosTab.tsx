@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +73,7 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [ciclos, setCiclos] = useState<CicloData[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadedOnceRef = useRef(false);
 
   // Hook para análise por casa
   const { analises: bookmakerAnalises, loading: loadingBookmakers, lucroTotal, projetoContexto } = useBookmakerAnalise({ projetoId });
@@ -83,7 +84,7 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
 
   const fetchCiclosComMetricas = async () => {
     try {
-      setLoading(true);
+      if (!loadedOnceRef.current) setLoading(true);
       
       const { data: ciclosData, error } = await supabase
         .from("projeto_ciclos")
@@ -212,6 +213,7 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
       console.error("Erro ao carregar ciclos:", error.message);
     } finally {
       setLoading(false);
+      loadedOnceRef.current = true;
     }
   };
 

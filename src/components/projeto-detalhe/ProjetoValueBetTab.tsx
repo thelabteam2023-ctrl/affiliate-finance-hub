@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -49,6 +49,7 @@ import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateR
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { ApostaCard } from "./ApostaCard";
 import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
+import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
 import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
@@ -157,6 +158,7 @@ export function ProjetoValueBetTab({
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadedOnceRef = useRef(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
@@ -240,10 +242,11 @@ export function ProjetoValueBetTab({
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      if (!loadedOnceRef.current) setLoading(true);
       await Promise.all([fetchApostas(), fetchBookmakers()]);
     } finally {
       setLoading(false);
+      loadedOnceRef.current = true;
     }
   };
 
@@ -728,20 +731,24 @@ export function ProjetoValueBetTab({
       </div>
 
       {/* Gráficos e Estatísticas */}
-      {metricas.total > 0 && (
+      {metricas.total > 0 ? (
         <>
           <VisaoGeralCharts 
             apostas={apostas} 
             apostasCalendario={transformCalendarApostasForCharts(calendarApostas)}
-            accentColor="hsl(270, 76%, 60%)" 
-            logoMap={logoMap} 
-            isSingleDayPeriod={tabFilters.period === "1dia"} 
-            periodStart={tabFilters.dateRange?.start}
-            periodEnd={tabFilters.dateRange?.end}
+            isSingleDayPeriod={tabFilters.period === "1dia"}
+            periodStart={dateRange?.start}
+            periodEnd={dateRange?.end}
             formatCurrency={formatCurrency} 
           />
           <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
         </>
+      ) : (
+        <Card>
+          <CardContent className="py-16">
+            <ChartEmptyState isSingleDayPeriod={tabFilters.period === "1dia"} />
+          </CardContent>
+        </Card>
       )}
 
       {/* Banner Info - No final da página */}

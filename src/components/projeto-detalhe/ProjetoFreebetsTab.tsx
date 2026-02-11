@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +75,7 @@ const NAV_ITEMS = [
 export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp }: ProjetoFreebetsTabProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [loading, setLoading] = useState(true);
+  const loadedOnceRef = useRef(false);
   const [freebets, setFreebets] = useState<FreebetRecebida[]>([]);
   const [bookmakersComFreebet, setBookmakersComFreebet] = useState<BookmakerComFreebet[]>([]);
   const [apostasOperacionais, setApostasOperacionais] = useState<ApostaOperacionalFreebet[]>([]);
@@ -131,7 +132,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      if (!loadedOnceRef.current) setLoading(true);
       await Promise.all([
         fetchFreebets(), 
         fetchBookmakersComFreebet(), 
@@ -140,6 +141,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       ]);
     } finally {
       setLoading(false);
+      loadedOnceRef.current = true;
     }
   };
 
