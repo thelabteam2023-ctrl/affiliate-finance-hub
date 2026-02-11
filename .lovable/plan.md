@@ -15,3 +15,20 @@ Duas alterações simples no arquivo `src/components/AppSidebar.tsx`:
 - Acesso ao Workspace apenas pelo dropdown do perfil (clicando no avatar)
 - Sem duplicidade de navegação
 - Menu lateral mais limpo
+
+---
+
+## Tipos de Transação: RENOVACAO_PARCERIA e BONIFICACAO_ESTRATEGICA ✅
+
+### Implementado
+- Novos tipos adicionados a `CASH_REAL_TYPES` em `cashOperationalTypes.ts`
+- Dialog `PagamentoCaptacaoDialog` para registrar renovações e bonificações vinculadas a parceiro
+- KPI "Renov. / Bonif." na aba Financeiro da Captação
+- Botão "Renovação / Bonificação" no histórico de movimentações
+- Labels e cores nos dashboards: Caixa Operacional, Movimentações do Parceiro
+- CAC no `useHistoricoCaptacao` inclui custos de RENOVACAO_PARCERIA e BONIFICACAO_ESTRATEGICA por parceiro
+
+### Arquitetura
+- Lançamentos vão para `cash_ledger` (com `destino_parceiro_id`) + `movimentacoes_indicacao` (com `parceiro_id`)
+- `parceria_id` agora é nullable em `movimentacoes_indicacao` para permitir lançamentos por parceiro sem parceria específica
+- View `v_movimentacoes_indicacao_workspace` atualizada para usar `workspace_id` diretamente

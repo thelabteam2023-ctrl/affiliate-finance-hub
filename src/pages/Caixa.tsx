@@ -460,6 +460,8 @@ export default function Caixa() {
       DESPESA_ADMINISTRATIVA: "Despesa Admin.",
       PAGTO_OPERADOR: "Pagto. Operador",
       AJUSTE_MANUAL: "Ajuste Manual",
+      RENOVACAO_PARCERIA: "Renovação Parceria",
+      BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
     };
     return labels[tipo] || tipo;
   };
@@ -490,6 +492,8 @@ export default function Caixa() {
       DESPESA_ADMINISTRATIVA: "bg-red-500/20 text-red-400 border-red-500/30",
       PAGTO_OPERADOR: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
       AJUSTE_MANUAL: "bg-amber-600/20 text-amber-500 border-amber-600/30",
+      RENOVACAO_PARCERIA: "bg-teal-500/20 text-teal-400 border-teal-500/30",
+      BONIFICACAO_ESTRATEGICA: "bg-violet-500/20 text-violet-400 border-violet-500/30",
     };
     return colors[tipo] || "bg-muted text-muted-foreground";
   };

@@ -307,6 +307,8 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       FREEBET_CONVERTIDA: "Freebet Convertida",
       BONUS_CREDITADO: "Bônus Creditado",
       CREDITO_PROMOCIONAL: "Crédito Promocional",
+      RENOVACAO_PARCERIA: "Renovação Parceria",
+      BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
     };
     return labels[tipo] || tipo.replace(/_/g, " ");
   };
@@ -335,6 +337,8 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       FREEBET_CONVERTIDA: "bg-lime-500/20 text-lime-400 border-lime-500/30",
       BONUS_CREDITADO: "bg-amber-500/20 text-amber-400 border-amber-500/30",
       CREDITO_PROMOCIONAL: "bg-sky-500/20 text-sky-400 border-sky-500/30",
+      RENOVACAO_PARCERIA: "bg-teal-500/20 text-teal-400 border-teal-500/30",
+      BONIFICACAO_ESTRATEGICA: "bg-violet-500/20 text-violet-400 border-violet-500/30",
     };
     return colors[tipo] || "bg-muted text-muted-foreground border-muted";
   };
