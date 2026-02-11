@@ -647,6 +647,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
 
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
+        {periodFilterComponent}
         {activeNavTab === "estoque" && (
           <FreebetEstoqueView
             projetoId={projetoId}
@@ -965,7 +966,6 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {periodFilterComponent}
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -1030,7 +1030,6 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {periodFilterComponent}
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"

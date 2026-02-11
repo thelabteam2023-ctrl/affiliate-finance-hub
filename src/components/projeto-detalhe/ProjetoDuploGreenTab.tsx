@@ -995,7 +995,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
   const renderMainContent = () => {
     const contentClass = cn("transition-all duration-200 ease-out", isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0");
-    return <div className={cn("min-h-[400px]", contentClass)}>{activeNavTab === "visao-geral" && renderVisaoGeral()}{activeNavTab === "apostas" && renderApostas()}{activeNavTab === "por-casa" && renderPorCasa()}</div>;
+    return <div className={cn("min-h-[400px]", contentClass)}>{periodFilterComponent}{activeNavTab === "visao-geral" && renderVisaoGeral()}{activeNavTab === "apostas" && renderApostas()}{activeNavTab === "por-casa" && renderPorCasa()}</div>;
   };
 
   if (loading) return <div className="space-y-4"><div className="grid gap-4 md:grid-cols-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}</div><Skeleton className="h-64" /></div>;
@@ -1025,7 +1025,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
                 </TabsTrigger>
               ))}
             </TabsList>
-            <div className="flex items-center gap-4">{periodFilterComponent}{modeToggle}</div>
+            <div className="flex items-center gap-4">{modeToggle}</div>
           </div>
           <TabsContent value={activeNavTab} className="mt-0">{renderMainContent()}</TabsContent>
         </Tabs>
@@ -1035,7 +1035,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">{periodFilterComponent}</div>
       <div className="flex gap-6">
         <div className="w-52 shrink-0 space-y-6">
           <div>

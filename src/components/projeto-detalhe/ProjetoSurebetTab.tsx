@@ -1207,6 +1207,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
+        {periodFilterComponent}
         {activeNavTab === "visao-geral" && renderVisaoGeral()}
         {activeNavTab === "operacoes" && renderOperacoes()}
         {activeNavTab === "por-casa" && renderPorCasa()}
@@ -1252,7 +1253,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               ))}
             </TabsList>
             <div className="flex items-center gap-4">
-              {periodFilterComponent}
               {modeToggle}
             </div>
           </div>
@@ -1291,9 +1291,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   // Mode: Sidebar
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        {periodFilterComponent}
-      </div>
       
       <div className="flex gap-6">
         <div className="w-52 shrink-0 space-y-6">
