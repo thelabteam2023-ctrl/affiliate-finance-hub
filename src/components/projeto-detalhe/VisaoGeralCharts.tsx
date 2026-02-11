@@ -72,6 +72,7 @@ interface EvolucaoData {
   data: string;
   hora: string;
   xLabel: string; // Label formatado para o eixo X (hora ou data)
+  dateKey?: string; // yyyy-MM-dd para smart tick formatting
   acumulado: number;
   impacto: number;
   resultado: string;
@@ -199,8 +200,28 @@ const createCustomTooltip = (formatCurrency: (value: number) => string, isSingle
 };
 
 function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurrency, formatChartAxis }: EvolucaoLucroChartProps) {
+  // Adaptive X-axis: for long periods, show monthly markers instead of daily labels
+  const MONTH_NAMES_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const useMonthlyTicks = !isSingleDayPeriod && data.length > 60;
+  
+  // Build set of indices that should show a tick (first day of each month)
+  const monthlyTickIndices = useMemo(() => {
+    if (!useMonthlyTicks) return null;
+    const indices = new Set<number>();
+    let lastMonth = '';
+    data.forEach((d, i) => {
+      if (d.dateKey) {
+        const month = d.dateKey.substring(0, 7);
+        if (month !== lastMonth) {
+          indices.add(i);
+          lastMonth = month;
+        }
+      }
+    });
+    return indices;
+  }, [data, useMonthlyTicks]);
+
   if (data.length === 0) {
-    // Estado vazio explícito para período de 1 dia (granularidade por aposta)
     if (isSingleDayPeriod) {
       return (
         <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
@@ -228,16 +249,13 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurren
   const lastValue = data[data.length - 1]?.acumulado ?? 0;
   const isPositive = lastValue >= 0;
 
-  // Gradient colors based on positive/negative
   const gradientId = `areaGradient-${accentColor.replace(/[^a-zA-Z0-9]/g, "")}`;
   const strokeColor = isPositive ? "hsl(var(--chart-2))" : "hsl(var(--destructive))";
   const fillColor = isPositive ? "hsl(var(--chart-2))" : "hsl(var(--destructive))";
 
-  // Para período de 1 dia, usa intervalo baseado na quantidade
-  // Para múltiplos dias, mostra apenas os ticks com label (filtra vazios)
   const tickInterval = isSingleDayPeriod 
     ? (data.length > 50 ? Math.floor(data.length / 10) : data.length > 20 ? 5 : 0)
-    : 0; // Mostra todos, mas o tickFormatter vai filtrar vazios
+    : useMonthlyTicks ? 0 : 0;
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -255,9 +273,28 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurren
           fontSize={11}
           tickLine={false}
           axisLine={false}
-          interval={tickInterval}
-          tick={({ x, y, payload }: { x: number; y: number; payload: { value: string } }) => {
-            // Não renderiza tick se o label for vazio
+          interval={useMonthlyTicks ? 0 : tickInterval}
+          tick={({ x, y, payload, index }: { x: number; y: number; payload: { value: string }; index: number }) => {
+            if (useMonthlyTicks && monthlyTickIndices) {
+              // Only render ticks at month boundaries
+              if (!monthlyTickIndices.has(index)) return <text />;
+              const entry = data[index];
+              const monthIdx = entry?.dateKey ? parseInt(entry.dateKey.substring(5, 7), 10) - 1 : -1;
+              const label = monthIdx >= 0 ? MONTH_NAMES_SHORT[monthIdx] : '';
+              return (
+                <text 
+                  x={x} 
+                  y={y + 10} 
+                  textAnchor="middle" 
+                  fill="hsl(var(--muted-foreground))" 
+                  fontSize={11}
+                  fontWeight={500}
+                >
+                  {label}
+                </text>
+              );
+            }
+            // Default: render if label is non-empty
             if (!payload.value) return <text />;
             return (
               <text 
@@ -698,6 +735,7 @@ export function VisaoGeralCharts({
         data: day.dataFormatada,
         hora: "",
         xLabel: day.dataFormatada,
+        dateKey: day.dateKey,
         acumulado,
         impacto: day.lucroTotal,
         resultado: day.lucroTotal >= 0 ? 'GREEN' : 'RED',
