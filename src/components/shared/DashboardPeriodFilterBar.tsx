@@ -26,6 +26,8 @@ interface DashboardPeriodFilterProps {
   onCustomRangeChange?: (range: { start: Date; end: Date }) => void;
   className?: string;
   size?: "sm" | "default";
+  /** Override which period options to show (defaults to all) */
+  options?: DashboardPeriodFilter[];
 }
 
 export function DashboardPeriodFilterBar({
@@ -35,7 +37,11 @@ export function DashboardPeriodFilterBar({
   onCustomRangeChange,
   className,
   size = "default",
+  options,
 }: DashboardPeriodFilterProps) {
+  const visibleOptions = options
+    ? DASHBOARD_PERIOD_OPTIONS.filter(o => options.includes(o.value))
+    : DASHBOARD_PERIOD_OPTIONS;
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(undefined);
 
@@ -111,7 +117,7 @@ export function DashboardPeriodFilterBar({
     >
       {/* Botões de filtros rápidos */}
       <div className="inline-flex items-center rounded-lg border border-border/50 bg-muted/30 p-0.5">
-        {DASHBOARD_PERIOD_OPTIONS.map((option) => (
+        {visibleOptions.map((option) => (
           <button
             key={option.value}
             onClick={() => onChange(option.value)}

@@ -1120,6 +1120,7 @@ export default function Financeiro() {
         onChange={setPeriodoPreset}
         customRange={customRange}
         onCustomRangeChange={setCustomRange}
+        options={["mes", "anterior"]}
       />
 
       {/* Tabs */}
