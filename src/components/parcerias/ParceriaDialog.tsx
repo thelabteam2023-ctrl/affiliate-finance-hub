@@ -23,6 +23,7 @@ interface ParceriaDialogProps {
   isViewMode: boolean;
   isRenewalMode?: boolean;
   preSelectedParceiroId?: string | null;
+  pagamentoJaRealizado?: boolean;
 }
 
 interface Parceiro {
@@ -42,7 +43,7 @@ interface Fornecedor {
   nome: string;
 }
 
-export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRenewalMode = false, preSelectedParceiroId }: ParceriaDialogProps) {
+export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRenewalMode = false, preSelectedParceiroId, pagamentoJaRealizado = false }: ParceriaDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
@@ -98,12 +99,12 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
         data_inicio: hojeString,
         duracao_dias: parceria.duracao_dias || 60,
         valor_indicador: 0,
-        valor_parceiro: parceria.valor_parceiro || 0,
+        valor_parceiro: pagamentoJaRealizado ? 0 : (parceria.valor_parceiro || 0),
         valor_fornecedor: 0,
         status: "ATIVA",
         elegivel_renovacao: true,
         observacoes: `Renovação da parceria anterior (${parceria.data_inicio} - ${parceria.data_fim_prevista})`,
-        custo_aquisicao_isento: false,
+        custo_aquisicao_isento: pagamentoJaRealizado ? true : false,
       });
     } else if (parceria) {
       setFormData({
@@ -549,8 +550,8 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
             </div>
           )}
 
-          {/* Aquisição Direta - Custo de Aquisição */}
-          {formData.origem_tipo === "DIRETO" && (
+          {/* Aquisição Direta - Custo de Aquisição (oculto se pagamento já foi feito via Financeiro) */}
+          {formData.origem_tipo === "DIRETO" && !pagamentoJaRealizado && (
             <div className="space-y-4 p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
               <div className="space-y-3">
               <div className="flex items-center gap-2">

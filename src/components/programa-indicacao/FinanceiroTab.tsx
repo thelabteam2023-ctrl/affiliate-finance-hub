@@ -774,6 +774,7 @@ export function FinanceiroTab() {
         onOpenChange={setEditParceriaOpen}
         parceria={editParceriaData}
         isViewMode={false}
+        pagamentoJaRealizado={true}
       />
     </div>
   );
