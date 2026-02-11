@@ -106,6 +106,9 @@ export function useParceiroFinanceiroCache() {
   const [resumoData, setResumoData] = useState<ParceiroFinanceiroConsolidado | null>(null);
   const [resumoLoading, setResumoLoading] = useState(false);
   const [resumoError, setResumoError] = useState<string | null>(null);
+  
+  // Prevent skeleton flash after first successful load
+  const loadedOnceRef = useRef(false);
 
   // ============== HELPERS ==============
 
@@ -348,7 +351,10 @@ export function useParceiroFinanceiroCache() {
       }
     }
 
-    setResumoLoading(true);
+    // Only show loading skeleton on first ever load
+    if (!loadedOnceRef.current) {
+      setResumoLoading(true);
+    }
     setResumoError(null);
 
     try {
@@ -364,6 +370,7 @@ export function useParceiroFinanceiroCache() {
       if (parceiroId === currentParceiroIdRef.current) {
         setResumoData(data);
       }
+      loadedOnceRef.current = true;
     } catch (error: any) {
       console.error("Erro ao carregar resumo:", error);
       setResumoError(error.message || "Erro ao carregar dados");
