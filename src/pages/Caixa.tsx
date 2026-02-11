@@ -384,9 +384,9 @@ export default function Caixa() {
       const matchDataFim = !dataFim || dataTransacao <= endOfDay(dataFim);
       
       // Include both APORTE and LIQUIDACAO when filter is APORTE_FINANCEIRO
-      const knownTypes = ["TRANSFERENCIA", "DEPOSITO", "SAQUE", "APORTE", "LIQUIDACAO"];
+      const knownTypes = ["TRANSFERENCIA", "DEPOSITO", "SAQUE", "APORTE_FINANCEIRO"];
       const matchTipo = filtroTipo === "TODOS" || 
-        (filtroTipo === "APORTE_FINANCEIRO" && (t.tipo_transacao === "APORTE" || t.tipo_transacao === "LIQUIDACAO")) ||
+        (filtroTipo === "APORTE_FINANCEIRO" && t.tipo_transacao === "APORTE_FINANCEIRO") ||
         (filtroTipo === "OUTROS" && !knownTypes.includes(t.tipo_transacao)) ||
         t.tipo_transacao === filtroTipo;
       
