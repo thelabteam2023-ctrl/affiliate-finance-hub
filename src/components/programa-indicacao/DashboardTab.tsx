@@ -125,7 +125,7 @@ export function DashboardTab() {
     if (!dateRange) return data;
     
     return data.filter((item) => {
-      const dataInicio = new Date(item.data_inicio);
+      const dataInicio = parseLocalDate(item.data_inicio);
       if (dataInicio < dateRange.start) return false;
       if (dataInicio > dateRange.end) return false;
       return true;
@@ -137,7 +137,7 @@ export function DashboardTab() {
     if (!dateRange) return data;
     
     return data.filter((item) => {
-      const dataMov = new Date(item.data_movimentacao);
+      const dataMov = parseLocalDate(item.data_movimentacao);
       if (dataMov < dateRange.start) return false;
       if (dataMov > dateRange.end) return false;
       return true;

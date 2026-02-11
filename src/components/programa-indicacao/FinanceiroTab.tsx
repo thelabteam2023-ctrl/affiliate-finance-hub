@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
-import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { PagamentoBonusDialog } from "./PagamentoBonusDialog";
 import { PagamentoComissaoDialog } from "./PagamentoComissaoDialog";
@@ -108,7 +108,7 @@ export function FinanceiroTab() {
 
       if (parceria) {
         // Calcular dias restantes
-        const dataFim = new Date(parceria.data_inicio);
+        const dataFim = parseLocalDate(parceria.data_inicio);
         dataFim.setDate(dataFim.getDate() + parceria.duracao_dias);
         const hoje = new Date();
         const diffMs = dataFim.getTime() - hoje.getTime();
