@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Handshake, Calendar, AlertTriangle, Clock } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 
 interface ProjetoParceriasTabProps {
@@ -153,14 +154,14 @@ export function ProjetoParceriasTab({ projetoId }: ProjetoParceriasTabProps) {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-4 w-4" />
                   <span>
-                    Início: {format(new Date(parceria.data_inicio), "dd/MM/yyyy", { locale: ptBR })}
+                    Início: {format(parseLocalDate(parceria.data_inicio), "dd/MM/yyyy", { locale: ptBR })}
                   </span>
                 </div>
                 {parceria.data_fim_prevista && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
                     <span>
-                      Fim: {format(new Date(parceria.data_fim_prevista), "dd/MM/yyyy", { locale: ptBR })}
+                      Fim: {format(parseLocalDate(parceria.data_fim_prevista), "dd/MM/yyyy", { locale: ptBR })}
                     </span>
                   </div>
                 )}

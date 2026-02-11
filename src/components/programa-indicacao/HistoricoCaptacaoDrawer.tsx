@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseLocalDate } from "@/lib/dateUtils";
 import {
   Sheet,
   SheetContent,
@@ -497,7 +498,7 @@ export function HistoricoCaptacaoDrawer({
                         </TableCell>
                         <TableCell>{getOrigemBadge(record.origemTipo)}</TableCell>
                         <TableCell className="text-muted-foreground">
-                          {format(new Date(record.dataEntrada), "dd/MM/yyyy", { locale: ptBR })}
+                          {format(parseLocalDate(record.dataEntrada), "dd/MM/yyyy", { locale: ptBR })}
                         </TableCell>
                         <TableCell className="text-right">
                           <TooltipProvider>

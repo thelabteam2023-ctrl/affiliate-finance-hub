@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { UserPlus, Truck, ArrowRight, DollarSign, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -365,13 +366,13 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
               </div>
               <Progress value={progressPercent} className="h-2" />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{format(new Date(parceria.data_inicio), "dd/MM/yyyy")}</span>
+                <span>{format(parseLocalDate(parceria.data_inicio), "dd/MM/yyyy")}</span>
                 <span>
                   {parceria.dias_restantes > 0
                     ? `${parceria.dias_restantes} dias restantes`
                     : "Vencida"}
                 </span>
-                <span>{format(new Date(parceria.data_fim_prevista), "dd/MM/yyyy")}</span>
+                <span>{format(parseLocalDate(parceria.data_fim_prevista), "dd/MM/yyyy")}</span>
               </div>
             </div>
           )}
@@ -615,7 +616,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
             <div className="space-y-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
               <Label className="text-primary font-medium">Renovar Prazo</Label>
               <p className="text-xs text-muted-foreground">
-                Adicione dias extras a partir da data de término atual ({parceria.data_fim_prevista ? format(new Date(parceria.data_fim_prevista), "dd/MM/yyyy") : "N/A"}).
+                Adicione dias extras a partir da data de término atual ({parceria.data_fim_prevista ? format(parseLocalDate(parceria.data_fim_prevista), "dd/MM/yyyy") : "N/A"}).
               </p>
               <div className="flex items-center gap-3">
                 <Input
