@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { addDays, startOfDay } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -108,6 +109,10 @@ interface VisaoGeralChartsProps {
   showEvolucaoChart?: boolean;
   showCasasCard?: boolean;
   isSingleDayPeriod?: boolean;
+  /** Início do período selecionado (para preencher dias sem apostas no gráfico) */
+  periodStart?: Date;
+  /** Fim do período selecionado (para preencher dias sem apostas no gráfico) */
+  periodEnd?: Date;
   /** Função de formatação obrigatória - deve vir do useProjetoCurrency */
   formatCurrency: (value: number) => string;
   /** Função de formatação para eixos de gráfico (compacta, sem quebra) */
@@ -487,6 +492,8 @@ export function VisaoGeralCharts({
   showEvolucaoChart = true,
   showCasasCard = true,
   isSingleDayPeriod = false,
+  periodStart,
+  periodEnd,
   formatCurrency,
   formatChartAxis,
   showScopeToggle = false
@@ -634,6 +641,31 @@ export function VisaoGeralCharts({
       }
     });
     
+    // Preencher dias ausentes no intervalo do período (calendário completo)
+    // Determina limites: usa periodStart/periodEnd se disponíveis, senão min/max dos dados
+    const allDateKeys = Array.from(dailyMap.keys()).sort();
+    const rangeStart = periodStart ? startOfDay(periodStart) : (allDateKeys.length > 0 ? new Date(allDateKeys[0] + 'T12:00:00') : null);
+    const rangeEnd = periodEnd ? startOfDay(periodEnd) : (allDateKeys.length > 0 ? new Date(allDateKeys[allDateKeys.length - 1] + 'T12:00:00') : null);
+    
+    if (rangeStart && rangeEnd) {
+      let cursor = startOfDay(rangeStart);
+      const endDay = startOfDay(rangeEnd);
+      while (cursor <= endDay) {
+        const dateKey = format(cursor, "yyyy-MM-dd");
+        if (!dailyMap.has(dateKey)) {
+          const dataFormatada = format(cursor, "dd/MM", { locale: ptBR });
+          dailyMap.set(dateKey, {
+            lucroTotal: 0,
+            apostasCount: 0,
+            dateKey,
+            dataFormatada,
+            incluiExtras: false,
+          });
+        }
+        cursor = addDays(cursor, 1);
+      }
+    }
+    
     // Converte para array ordenado e calcula acumulado
     const dailyEntries = Array.from(dailyMap.values()).sort(
       (a, b) => a.dateKey.localeCompare(b.dateKey)
@@ -656,7 +688,7 @@ export function VisaoGeralCharts({
         incluiExtras: day.incluiExtras,
       };
     });
-  }, [apostas, isSingleDayPeriod, extrasMap]);
+  }, [apostas, isSingleDayPeriod, extrasMap, periodStart, periodEnd]);
 
   // Casas mais utilizadas (por volume) — agrupa por CASA, com detalhamento por vínculo
   // Formato esperado: "PARIMATCH - RAFAEL GOMES" → Casa = "PARIMATCH", Vínculo = "RAFAEL GOMES"

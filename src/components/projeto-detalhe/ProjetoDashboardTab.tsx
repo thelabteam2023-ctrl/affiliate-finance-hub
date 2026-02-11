@@ -548,6 +548,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         showEvolucaoChart={true}
         showCasasCard={true}
         isSingleDayPeriod={isSingleDayPeriod}
+        periodStart={dateRange?.start}
+        periodEnd={dateRange?.end}
         formatCurrency={formatCurrency}
         formatChartAxis={formatChartAxis}
         showScopeToggle={false}

@@ -705,6 +705,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           accentColor="#84cc16" 
           logoMap={logoMap} 
           isSingleDayPeriod={tabFilters.period === "1dia"} 
+          periodStart={tabFilters.dateRange?.start}
+          periodEnd={tabFilters.dateRange?.end}
           formatCurrency={formatCurrency} 
         />
       )}
