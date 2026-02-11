@@ -100,7 +100,8 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
 
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
-        {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} dateRange={dateRange} isSingleDayPeriod={isSingleDayPeriod} />}
+        {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} dateRange={dateRange} isSingleDayPeriod={isSingleDayPeriod} periodFilter={periodFilterComponent} />}
+        {activeTab !== "visao-geral" && periodFilterComponent}
         {activeTab === "bookmakers" && <BonusBookmakersTab projetoId={projetoId} />}
         {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} />}
       </div>
@@ -161,7 +162,6 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
               ))}
             </TabsList>
             <div className="flex items-center gap-4">
-              {periodFilterComponent}
               {modeToggle}
             </div>
           </div>
@@ -177,10 +177,6 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
   // Mode: Sidebar
   return (
     <div className="space-y-4">
-      {/* Period Filter at top right */}
-      <div className="flex justify-end">
-        {periodFilterComponent}
-      </div>
       
       <div className="flex gap-6">
         {/* Sidebar Navigation */}
