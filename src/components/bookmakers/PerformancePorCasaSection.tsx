@@ -2,8 +2,9 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Building2, TrendingUp, TrendingDown, DollarSign, BarChart3, Hash, Wallet } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, DollarSign, BarChart3, Hash } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import type { RegFilter } from "./EstatisticasTab";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import {
@@ -40,7 +41,12 @@ interface CasaPerformance {
   ticket_medio: number;
 }
 
-export function PerformancePorCasaSection() {
+interface PerformancePorCasaSectionProps {
+  regFilter: RegFilter;
+  regMap: Map<string, string>;
+}
+
+export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorCasaSectionProps) {
   const { workspaceId } = useWorkspace();
 
   const { data: performances = [], isLoading } = useQuery({
@@ -142,11 +148,20 @@ export function PerformancePorCasaSection() {
     gcTime: 30 * 60 * 1000,
   });
 
+  // Filter by regulation
+  const filteredPerformances = useMemo(() => {
+    if (regFilter === "todas") return performances;
+    return performances.filter(p => {
+      const status = regMap.get(p.bookmaker_catalogo_id);
+      return status === regFilter;
+    });
+  }, [performances, regFilter, regMap]);
+
   // KPIs
-  const totalVolume = performances.reduce((s, p) => s + p.volume_total, 0);
-  const totalPL = performances.reduce((s, p) => s + p.lucro_prejuizo, 0);
-  const totalApostas = performances.reduce((s, p) => s + p.total_apostas, 0);
-  const totalCasas = performances.length;
+  const totalVolume = filteredPerformances.reduce((s, p) => s + p.volume_total, 0);
+  const totalPL = filteredPerformances.reduce((s, p) => s + p.lucro_prejuizo, 0);
+  const totalApostas = filteredPerformances.reduce((s, p) => s + p.total_apostas, 0);
+  const totalCasas = filteredPerformances.length;
 
   if (isLoading) {
     return (
@@ -160,18 +175,6 @@ export function PerformancePorCasaSection() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-          <TrendingUp className="h-5 w-5 text-emerald-500" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold">Performance por Casa</h3>
-          <p className="text-sm text-muted-foreground">
-            Visão financeira consolidada — resultado operacional por bookmaker
-          </p>
-        </div>
-      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -224,7 +227,7 @@ export function PerformancePorCasaSection() {
           <CardDescription>Métricas financeiras consolidadas por casa de apostas</CardDescription>
         </CardHeader>
         <CardContent>
-          {performances.length === 0 ? (
+          {filteredPerformances.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground text-sm">
               Nenhum dado de performance disponível.
             </div>
@@ -243,7 +246,7 @@ export function PerformancePorCasaSection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {performances.map((p) => (
+                  {filteredPerformances.map((p) => (
                     <TableRow key={p.bookmaker_catalogo_id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
