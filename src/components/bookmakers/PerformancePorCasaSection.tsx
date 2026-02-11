@@ -204,7 +204,7 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
     <div className="space-y-4">
 
       {/* KPI Cards — compact 4-col */}
-      <div className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto_auto] lg:grid-cols-[1fr_1fr_auto_auto] gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2.5fr_2.5fr_1.5fr_1.5fr] gap-3">
         {/* Volume por moeda */}
         <Card className="border-border/50">
           <CardContent className="px-3 py-2">
