@@ -904,6 +904,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               logoMap={logoMap}
               showCasasCard={false}
               isSingleDayPeriod={tabFilters.period === "1dia"}
+              periodStart={dateRange?.start}
+              periodEnd={dateRange?.end}
               formatCurrency={formatCurrency}
             />
             <SurebetStatisticsCard surebets={surebets} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
@@ -941,6 +943,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               logoMap={logoMap}
               showEvolucaoChart={false}
               isSingleDayPeriod={tabFilters.period === "1dia"}
+              periodStart={dateRange?.start}
+              periodEnd={dateRange?.end}
               formatCurrency={formatCurrency}
             />
           </div>

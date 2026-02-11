@@ -736,6 +736,8 @@ export function ProjetoValueBetTab({
             accentColor="hsl(270, 76%, 60%)" 
             logoMap={logoMap} 
             isSingleDayPeriod={tabFilters.period === "1dia"} 
+            periodStart={tabFilters.dateRange?.start}
+            periodEnd={tabFilters.dateRange?.end}
             formatCurrency={formatCurrency} 
           />
           <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
