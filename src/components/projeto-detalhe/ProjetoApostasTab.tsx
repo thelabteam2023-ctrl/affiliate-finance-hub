@@ -1332,25 +1332,24 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               else if (item.contexto === "FREEBET") estrategia = "FREEBET";
               else if (item.contexto === "BONUS") estrategia = "BONUS";
               
-              // Preparar dados para ApostaCard - usar valores consolidados
-              const consolidatedStake = getConsolidatedStake(aposta, convertToConsolidation, moedaConsolidacao);
-              const consolidatedLucro = getConsolidatedLucro(aposta, convertToConsolidation, moedaConsolidacao);
-              const apostaCardData = {
-                id: aposta.id,
-                evento: aposta.evento,
-                esporte: aposta.esporte,
-                selecao: aposta.selecao,
-                odd: aposta.odd,
-                stake: consolidatedStake,
-                data_aposta: aposta.data_aposta,
-                resultado: aposta.resultado,
-                status: aposta.status,
-                lucro_prejuizo: consolidatedLucro,
-                estrategia: aposta.estrategia,
-                bookmaker_nome: bookmakerBase,
-                parceiro_nome: parceiroNome,
-                logo_url: logoUrl,
-              };
+               // Preparar dados para ApostaCard - moeda ORIGINAL da aposta
+               const apostaCardData = {
+                 id: aposta.id,
+                 evento: aposta.evento,
+                 esporte: aposta.esporte,
+                 selecao: aposta.selecao,
+                 odd: aposta.odd,
+                 stake: aposta.stake,
+                 data_aposta: aposta.data_aposta,
+                 resultado: aposta.resultado,
+                 status: aposta.status,
+                 lucro_prejuizo: aposta.lucro_prejuizo,
+                 estrategia: aposta.estrategia,
+                 bookmaker_nome: bookmakerBase,
+                 parceiro_nome: parceiroNome,
+                 logo_url: logoUrl,
+                 moeda: aposta.moeda_operacao || "BRL",
+               };
               
               return (
                 <ApostaCard
@@ -1364,7 +1363,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   }}
                   onQuickResolve={handleQuickResolve}
                   onDelete={prepareDeleteSimples}
-                  formatCurrency={formatCurrency}
+                   /* Card usa moeda original da aposta via defaultFormatCurrency */
                 />
               );
             }
@@ -1383,30 +1382,29 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             else if (item.contexto === "FREEBET") estrategiaMultipla = "FREEBET";
             else if (item.contexto === "BONUS") estrategiaMultipla = "BONUS";
             
-            // Preparar dados para ApostaCard (múltipla) - usar valores consolidados
-            const consolidatedStakeMultipla = getConsolidatedStake(multipla, convertToConsolidation, moedaConsolidacao);
-            const consolidatedLucroMultipla = getConsolidatedLucro(multipla, convertToConsolidation, moedaConsolidacao);
-            const multiplaCardData = {
-              id: multipla.id,
-              evento: `Múltipla ${multipla.tipo_multipla}`,
-              esporte: `${multipla.selecoes.length} seleções`,
-              odd_final: multipla.odd_final,
-              stake: consolidatedStakeMultipla,
-              data_aposta: multipla.data_aposta,
-              resultado: multipla.resultado,
-              status: multipla.status,
-              lucro_prejuizo: consolidatedLucroMultipla,
-              estrategia: multipla.estrategia,
-              tipo_multipla: multipla.tipo_multipla,
-              selecoes: multipla.selecoes.map(s => ({
-                descricao: s.descricao,
-                odd: parseFloat(s.odd),
-                resultado: s.resultado,
-              })),
-              bookmaker_nome: bookmakerBaseMultipla,
-              parceiro_nome: parceiroNomeMultipla,
-              logo_url: logoUrlMultipla,
-            };
+            // Preparar dados para ApostaCard (múltipla) - moeda ORIGINAL
+             const multiplaCardData = {
+               id: multipla.id,
+               evento: `Múltipla ${multipla.tipo_multipla}`,
+               esporte: `${multipla.selecoes.length} seleções`,
+               odd_final: multipla.odd_final,
+               stake: multipla.stake,
+               data_aposta: multipla.data_aposta,
+               resultado: multipla.resultado,
+               status: multipla.status,
+               lucro_prejuizo: multipla.lucro_prejuizo,
+               estrategia: multipla.estrategia,
+               tipo_multipla: multipla.tipo_multipla,
+               selecoes: multipla.selecoes.map(s => ({
+                 descricao: s.descricao,
+                 odd: parseFloat(s.odd),
+                 resultado: s.resultado,
+               })),
+               bookmaker_nome: bookmakerBaseMultipla,
+               parceiro_nome: parceiroNomeMultipla,
+               logo_url: logoUrlMultipla,
+               moeda: multipla.moeda_operacao || "BRL",
+             };
             
             return (
               <ApostaCard
@@ -1417,7 +1415,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 onEdit={() => handleOpenMultiplaDialog(multipla)}
                 onQuickResolve={handleQuickResolve}
                 onDelete={prepareDeleteMultipla}
-                formatCurrency={formatCurrency}
+                 /* Card usa moeda original da aposta via defaultFormatCurrency */
               />
             );
           })}
