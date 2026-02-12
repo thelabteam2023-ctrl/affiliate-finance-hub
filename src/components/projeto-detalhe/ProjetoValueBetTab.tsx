@@ -113,6 +113,12 @@ interface Aposta {
   // Campos para bônus
   stake_bonus?: number | null;
   bonus_id?: string | null;
+  // Campos de consolidação multi-moeda
+  moeda_operacao?: string | null;
+  stake_consolidado?: number | null;
+  pl_consolidado?: number | null;
+  valor_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
 }
 
 type NavigationMode = "tabs" | "sidebar";
@@ -831,21 +837,22 @@ export function ProjetoValueBetTab({
           {apostasFiltradas.map((aposta) => (
             <ApostaCard
               key={aposta.id}
-              aposta={{
-                ...aposta,
-                evento: aposta.evento || '',
-                esporte: aposta.esporte || '',
-                pernas: aposta.pernas ?? undefined,
-                selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
-              }}
-              estrategia="VALUEBET"
-              onEdit={(apostaId) => {
-                const a = apostasFiltradas.find(ap => ap.id === apostaId);
-                if (a) openEditDialog(a);
-              }}
-              onQuickResolve={handleQuickResolve}
-              variant="card"
-              formatCurrency={formatCurrency}
+               aposta={{
+                 ...aposta,
+                 evento: aposta.evento || '',
+                 esporte: aposta.esporte || '',
+                 pernas: aposta.pernas ?? undefined,
+                 selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
+                 moeda: aposta.moeda_operacao || "BRL",
+               }}
+               estrategia="VALUEBET"
+               onEdit={(apostaId) => {
+                 const a = apostasFiltradas.find(ap => ap.id === apostaId);
+                 if (a) openEditDialog(a);
+               }}
+               onQuickResolve={handleQuickResolve}
+               variant="card"
+               /* Card usa moeda original da aposta via defaultFormatCurrency */
             />
           ))}
         </div>
@@ -854,21 +861,22 @@ export function ProjetoValueBetTab({
           {apostasFiltradas.map((aposta) => (
             <ApostaCard
               key={aposta.id}
-              aposta={{
-                ...aposta,
-                evento: aposta.evento || '',
-                esporte: aposta.esporte || '',
-                pernas: aposta.pernas ?? undefined,
-                selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
-              }}
-              estrategia="VALUEBET"
-              onEdit={(apostaId) => {
-                const a = apostasFiltradas.find(ap => ap.id === apostaId);
-                if (a) openEditDialog(a);
-              }}
-              onQuickResolve={handleQuickResolve}
-              variant="list"
-              formatCurrency={formatCurrency}
+               aposta={{
+                 ...aposta,
+                 evento: aposta.evento || '',
+                 esporte: aposta.esporte || '',
+                 pernas: aposta.pernas ?? undefined,
+                 selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
+                 moeda: aposta.moeda_operacao || "BRL",
+               }}
+               estrategia="VALUEBET"
+               onEdit={(apostaId) => {
+                 const a = apostasFiltradas.find(ap => ap.id === apostaId);
+                 if (a) openEditDialog(a);
+               }}
+               onQuickResolve={handleQuickResolve}
+               variant="list"
+               /* Card usa moeda original da aposta via defaultFormatCurrency */
             />
           ))}
         </div>

@@ -117,6 +117,12 @@ interface Aposta {
   // Campos para bônus
   stake_bonus?: number | null;
   bonus_id?: string | null;
+  // Campos de consolidação multi-moeda
+  moeda_operacao?: string | null;
+  stake_consolidado?: number | null;
+  pl_consolidado?: number | null;
+  valor_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
 }
 
 interface Bookmaker {
@@ -982,12 +988,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
                 {apostasSimples.map((aposta) => (
                   <ApostaCard
                     key={aposta.id}
-                    aposta={{ ...aposta, pernas: aposta.pernas as Perna[] }}
+                    aposta={{ ...aposta, pernas: aposta.pernas as Perna[], moeda: aposta.moeda_operacao || "BRL" }}
                     estrategia="DUPLO_GREEN"
                     onEdit={(apostaId) => { const a = apostasFiltradas.find(ap => ap.id === apostaId); if (a) handleOpenAposta(a); }}
                     onQuickResolve={handleQuickResolve}
                     variant="card"
-                    formatCurrency={formatCurrency}
+                    /* Card usa moeda original da aposta via defaultFormatCurrency */
                   />
                 ))}
               </div>
@@ -995,12 +1001,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
               apostasSimples.map((aposta) => (
                 <ApostaCard
                   key={aposta.id}
-                  aposta={{ ...aposta, pernas: aposta.pernas as Perna[] }}
+                  aposta={{ ...aposta, pernas: aposta.pernas as Perna[], moeda: aposta.moeda_operacao || "BRL" }}
                   estrategia="DUPLO_GREEN"
                   onEdit={(apostaId) => { const a = apostasFiltradas.find(ap => ap.id === apostaId); if (a) handleOpenAposta(a); }}
                   onQuickResolve={handleQuickResolve}
                   variant="list"
-                  formatCurrency={formatCurrency}
+                  /* Card usa moeda original da aposta via defaultFormatCurrency */
                 />
               ))
             )}

@@ -86,6 +86,7 @@ interface Aposta {
   forma_registro?: string | null;
   contexto_operacional?: string | null;
   is_bonus_bet?: boolean;
+  moeda_operacao?: string | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -119,6 +120,7 @@ interface ApostaMultipla {
   observacoes: string | null;
   is_bonus_bet?: boolean;
   estrategia?: string | null;
+  moeda_operacao?: string | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -953,38 +955,37 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
           const parceiroNome = aposta.bookmaker?.parceiro?.nome ? getFirstLastName(aposta.bookmaker.parceiro.nome) : null;
           const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
           
-          // Preparar dados para ApostaCard - usar valores consolidados
-          const consolidatedStake = getConsolidatedStake(aposta, convertToConsolidation, moedaConsolidacao);
-          const consolidatedLucro = getConsolidatedLucro(aposta, convertToConsolidation, moedaConsolidacao);
-          const apostaCardData = {
-            id: aposta.id,
-            evento: aposta.evento,
-            esporte: aposta.esporte,
-            selecao: aposta.selecao,
-            odd: aposta.odd,
-            stake: consolidatedStake,
-            data_aposta: aposta.data_aposta,
-            resultado: aposta.resultado,
-            status: aposta.status,
-            lucro_prejuizo: consolidatedLucro,
-            estrategia: aposta.estrategia,
-            bookmaker_nome: bookmakerBase,
-            parceiro_nome: parceiroNome,
-            logo_url: logoUrl,
-          };
-          
-          return (
-            <ApostaCard
-              key={aposta.id}
-              aposta={apostaCardData}
-              estrategia="BONUS"
-              variant={viewMode === "cards" ? "card" : "list"}
-              onEdit={() => handleOpenDialog(aposta)}
-              onQuickResolve={handleQuickResolve}
-              onDelete={handleDeleteAposta}
-              formatCurrency={formatProjectCurrency}
-            />
-          );
+          // Preparar dados para ApostaCard - moeda ORIGINAL da aposta
+           const apostaCardData = {
+             id: aposta.id,
+             evento: aposta.evento,
+             esporte: aposta.esporte,
+             selecao: aposta.selecao,
+             odd: aposta.odd,
+             stake: aposta.stake,
+             data_aposta: aposta.data_aposta,
+             resultado: aposta.resultado,
+             status: aposta.status,
+             lucro_prejuizo: aposta.lucro_prejuizo,
+             estrategia: aposta.estrategia,
+             bookmaker_nome: bookmakerBase,
+             parceiro_nome: parceiroNome,
+             logo_url: logoUrl,
+             moeda: aposta.moeda_operacao || "BRL",
+           };
+           
+           return (
+             <ApostaCard
+               key={aposta.id}
+               aposta={apostaCardData}
+               estrategia="BONUS"
+               variant={viewMode === "cards" ? "card" : "list"}
+               onEdit={() => handleOpenDialog(aposta)}
+               onQuickResolve={handleQuickResolve}
+               onDelete={handleDeleteAposta}
+               /* Card usa moeda original da aposta via defaultFormatCurrency */
+             />
+           );
         }
         
         // ===== APOSTA MÚLTIPLA - Usando ApostaCard padronizado =====
@@ -993,39 +994,38 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
         const parceiroNomeMultipla = multipla.bookmaker?.parceiro?.nome ? getFirstLastName(multipla.bookmaker.parceiro.nome) : null;
         const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
         
-        // Preparar dados para ApostaCard - usar valores consolidados
-        const consolidatedStakeMultipla = getConsolidatedStake(multipla, convertToConsolidation, moedaConsolidacao);
-        const consolidatedLucroMultipla = getConsolidatedLucro(multipla, convertToConsolidation, moedaConsolidacao);
-        const multiplaCardData = {
-          id: multipla.id,
-          evento: `MÚLTIPLA ${multipla.tipo_multipla || ''}`,
-          esporte: `${multipla.selecoes.length} seleções`,
-          odd_final: multipla.odd_final,
-          stake: consolidatedStakeMultipla,
-          data_aposta: multipla.data_aposta,
-          resultado: multipla.resultado,
-          status: multipla.status,
-          lucro_prejuizo: consolidatedLucroMultipla,
-          estrategia: multipla.estrategia,
-          tipo_multipla: multipla.tipo_multipla,
-          selecoes: multipla.selecoes,
-          bookmaker_nome: bookmakerBaseMultipla,
-          parceiro_nome: parceiroNomeMultipla,
-          logo_url: logoUrlMultipla,
-        };
-        
-        return (
-          <ApostaCard
-            key={multipla.id}
-            aposta={multiplaCardData}
-            estrategia="BONUS"
-            variant={viewMode === "cards" ? "card" : "list"}
-            onEdit={() => handleOpenMultiplaDialog(multipla)}
-            onQuickResolve={handleQuickResolve}
-            onDelete={handleDeleteAposta}
-            formatCurrency={formatProjectCurrency}
-          />
-        );
+        // Preparar dados para ApostaCard (múltipla) - moeda ORIGINAL
+         const multiplaCardData = {
+           id: multipla.id,
+           evento: `MÚLTIPLA ${multipla.tipo_multipla || ''}`,
+           esporte: `${multipla.selecoes.length} seleções`,
+           odd_final: multipla.odd_final,
+           stake: multipla.stake,
+           data_aposta: multipla.data_aposta,
+           resultado: multipla.resultado,
+           status: multipla.status,
+           lucro_prejuizo: multipla.lucro_prejuizo,
+           estrategia: multipla.estrategia,
+           tipo_multipla: multipla.tipo_multipla,
+           selecoes: multipla.selecoes,
+           bookmaker_nome: bookmakerBaseMultipla,
+           parceiro_nome: parceiroNomeMultipla,
+           logo_url: logoUrlMultipla,
+           moeda: multipla.moeda_operacao || "BRL",
+         };
+         
+         return (
+           <ApostaCard
+             key={multipla.id}
+             aposta={multiplaCardData}
+             estrategia="BONUS"
+             variant={viewMode === "cards" ? "card" : "list"}
+             onEdit={() => handleOpenMultiplaDialog(multipla)}
+             onQuickResolve={handleQuickResolve}
+             onDelete={handleDeleteAposta}
+             /* Card usa moeda original da aposta via defaultFormatCurrency */
+           />
+         );
       })}
     </div>
   );
