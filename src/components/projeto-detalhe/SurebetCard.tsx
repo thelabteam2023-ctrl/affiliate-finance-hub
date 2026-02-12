@@ -250,21 +250,21 @@ function PernaItem({
         </div>
         
         {/* Row with Logo + Nome + Odd/Stake */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 overflow-hidden">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 overflow-hidden">
           {/* Logo */}
           <div className="shrink-0">
             <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
           </div>
           
           {/* Nome da casa + vínculo abreviado */}
-          <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 uppercase min-w-0">
+          <span className="text-sm text-muted-foreground truncate flex-1 uppercase min-w-0">
             {bookmakerDisplay}
           </span>
           
           {/* Odd e Stake à direita - larguras fixas para alinhamento */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-sm font-medium whitespace-nowrap w-[60px] text-right tabular-nums">@{perna.odd.toFixed(2)}</span>
-            <span className="text-xs text-muted-foreground whitespace-nowrap w-[80px] text-right tabular-nums">{formatValue(perna.stake)}</span>
+            <span className="text-sm sm:text-base font-medium whitespace-nowrap w-[60px] text-right tabular-nums">@{perna.odd.toFixed(2)}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap w-[80px] text-right tabular-nums">{formatValue(perna.stake)}</span>
           </div>
           
           {/* Result pill per perna */}
@@ -425,27 +425,23 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     <Card 
       className={cn("transition-colors overflow-hidden", className)}
     >
-      <CardContent className="p-4 sm:p-5">
-        {/* LINHA 1: Evento + Esporte (título em linha própria) */}
-        <div className="mb-1">
-          <p className="text-sm sm:text-base font-semibold truncate uppercase leading-tight">{surebet.evento || 'Operação'}</p>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            {surebet.esporte && (
-              <span className="text-xs text-muted-foreground">• {surebet.esporte}</span>
-            )}
-            {surebet.mercado && (
-              <span className="text-xs text-muted-foreground">• {surebet.mercado}</span>
-            )}
-          </div>
-        </div>
+      <CardContent className="p-5 sm:p-6">
+        {/* LINHA 1: Evento (título destacado) */}
+        <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5">{surebet.evento || 'Operação'}</p>
         
-        {/* LINHA 2: Badges + Menu de Ações */}
-        <div className="flex items-center gap-1.5 flex-wrap mb-3">
-          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", estrategiaConfig.bgColor, estrategiaConfig.color, estrategiaConfig.borderColor)}>
-            <Icon className="h-2.5 w-2.5" />
+        {/* LINHA 2: Esporte + Mercado + Badges + Menu na mesma linha */}
+        <div className="flex items-center gap-1.5 flex-wrap mb-4">
+          {surebet.esporte && (
+            <span className="text-xs sm:text-sm text-muted-foreground">• {surebet.esporte}</span>
+          )}
+          {surebet.mercado && (
+            <span className="text-xs sm:text-sm text-muted-foreground">• {surebet.mercado}</span>
+          )}
+          <Badge variant="outline" className={cn("text-[10px] sm:text-xs px-1.5 py-0 flex items-center gap-0.5", estrategiaConfig.bgColor, estrategiaConfig.color, estrategiaConfig.borderColor)}>
+            <Icon className="h-3 w-3" />
             {estrategiaConfig.label}
           </Badge>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
+          <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
             {surebet.modelo}
           </Badge>
           <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
@@ -505,8 +501,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
         )}
         
         {/* LINHA FINAL: Data/Hora + Stake + Lucro/ROI - Responsivo */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2 border-t border-border/50 gap-2">
-          <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 border-t border-border/50 gap-2">
+          <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
             {formatDate(parseLocalDateTime(surebet.data_operacao), "dd/MM HH:mm", { locale: ptBR })}
           </span>
           
