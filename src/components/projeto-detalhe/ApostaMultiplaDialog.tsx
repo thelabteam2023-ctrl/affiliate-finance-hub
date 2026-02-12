@@ -4,6 +4,8 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { criarAposta, deletarAposta, liquidarAposta, reliquidarAposta, type SelecaoMultipla } from "@/services/aposta";
 import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
+import { useExchangeRatesSafe } from "@/contexts/ExchangeRatesContext";
+import { isForeignCurrency } from "@/types/currency";
 import {
   Dialog,
   DialogContent,
@@ -136,6 +138,7 @@ export function ApostaMultiplaDialog({
   rascunho = null,
 }: ApostaMultiplaDialogProps) {
   const { workspaceId } = useWorkspace();
+  const exchangeRates = useExchangeRatesSafe();
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -843,6 +846,12 @@ export function ApostaMultiplaDialog({
         return;
       }
 
+      // Multi-moeda: determinar moeda e snapshot
+      const moedaOpEdit = bookmakerSaldo?.moeda || 'BRL';
+      const isForeignEdit = isForeignCurrency(moedaOpEdit);
+      const cotacaoSnapEdit = isForeignEdit && exchangeRates ? exchangeRates.getRate(moedaOpEdit) : null;
+      const valorBrlRefEdit = isForeignEdit && cotacaoSnapEdit ? stakeNum * cotacaoSnapEdit : null;
+
       const apostaData = {
         user_id: user.id,
         workspace_id: workspaceId,
@@ -867,6 +876,10 @@ export function ApostaMultiplaDialog({
         estrategia: registroValues.estrategia,
         forma_registro: registroValues.forma_registro,
         contexto_operacional: registroValues.contexto_operacional,
+        // Multi-moeda
+        moeda_operacao: moedaOpEdit,
+        cotacao_snapshot: cotacaoSnapEdit,
+        valor_brl_referencia: valorBrlRefEdit,
       };
 
       if (aposta) {
@@ -961,6 +974,12 @@ export function ApostaMultiplaDialog({
         }
       } else {
         // ========== USAR criarAposta DO SERVIÇO CENTRALIZADO ==========
+        // Multi-moeda: determinar moeda da operação e snapshot de cotação
+        const moedaOp = bookmakerSaldo?.moeda || 'BRL';
+        const isForeign = isForeignCurrency(moedaOp);
+        const cotacaoSnap = isForeign && exchangeRates ? exchangeRates.getRate(moedaOp) : null;
+        const valorBrlRef = isForeign && cotacaoSnap ? stakeNum * cotacaoSnap : null;
+
         const result = await criarAposta({
           projeto_id: projetoId,
           workspace_id: workspaceId,
@@ -968,7 +987,6 @@ export function ApostaMultiplaDialog({
           forma_registro: 'MULTIPLA',
           estrategia: registroValues.estrategia as any,
           contexto_operacional: registroValues.contexto_operacional as any,
-          // NOVO: fonte_saldo é a VERDADE FINANCEIRA
           fonte_saldo: registroValues.fonte_saldo || 'REAL',
           data_aposta: toLocalTimestamp(dataAposta),
           bookmaker_id: bookmakerId,
@@ -981,6 +999,10 @@ export function ApostaMultiplaDialog({
           gerou_freebet: gerouFreebet,
           valor_freebet_gerada: gerouFreebet ? parseFloat(valorFreebetGerada) || 0 : null,
           observacoes: observacoes || null,
+          // Multi-moeda
+          moeda_operacao: moedaOp,
+          cotacao_snapshot: cotacaoSnap,
+          valor_brl_referencia: valorBrlRef,
         });
 
         if (!result.success) {
