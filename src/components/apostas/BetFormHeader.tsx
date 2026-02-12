@@ -69,6 +69,9 @@ interface BetFormHeaderProps {
   /** Badge extra (ex: número de pernas para arbitragem) */
   extraBadge?: React.ReactNode;
   
+  /** Conteúdo extra no header (ex: radio Dupla/Tripla) */
+  extraHeaderContent?: React.ReactNode;
+  
   /** Fonte de Saldo - verdade financeira */
   fonteSaldo?: FonteSaldo | null;
   
@@ -120,6 +123,7 @@ export function BetFormHeader({
   fileInputRef,
   onFileSelect,
   extraBadge,
+  extraHeaderContent,
   fonteSaldo,
   showCloseButton = false,
   onClose,
@@ -178,6 +182,14 @@ export function BetFormHeader({
           )}
           
           {extraBadge}
+          
+          {/* Conteúdo extra inline (ex: radio Dupla/Tripla com divisor) */}
+          {extraHeaderContent && (
+            <>
+              <div className="h-4 w-px bg-border/20 shrink-0 mx-1" />
+              {extraHeaderContent}
+            </>
+          )}
           
           {/* Badge de Fonte de Saldo */}
           {fonteSaldo && (

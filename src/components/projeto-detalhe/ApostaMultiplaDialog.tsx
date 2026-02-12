@@ -1258,17 +1258,36 @@ export function ApostaMultiplaDialog({
                 </div>
               )
             }
+            extraHeaderContent={
+              <RadioGroup
+                value={tipoMultipla}
+                onValueChange={(v) => setTipoMultipla(v as "DUPLA" | "TRIPLA")}
+                className="flex gap-3"
+              >
+                <div className="flex items-center space-x-1.5">
+                  <RadioGroupItem value="DUPLA" id="dupla" />
+                  <Label htmlFor="dupla" className="cursor-pointer text-xs whitespace-nowrap">
+                    Dupla (2)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <RadioGroupItem value="TRIPLA" id="tripla" />
+                  <Label htmlFor="tripla" className="cursor-pointer text-xs whitespace-nowrap">
+                    Tripla (3)
+                  </Label>
+                </div>
+              </RadioGroup>
+            }
           />
 
           <div className="space-y-2 py-2 px-4">
 
-            {/* Casa / Vínculo + Tipo de Múltipla na mesma linha */}
-            <div className="flex items-start gap-4 max-w-2xl mx-auto">
-              {/* Casa / Vínculo */}
-              <div className="space-y-1 flex-1 min-w-0 max-w-[480px]">
-                <Label className="text-xs">Casa / Vínculo *</Label>
+            {/* Casa / Vínculo — centralizado, label inline */}
+            <div className="flex items-center justify-center gap-2 max-w-[600px] mx-auto">
+              <Label className="text-xs text-muted-foreground font-normal whitespace-nowrap shrink-0">Casa / Vínculo</Label>
+              <div className="flex-1 min-w-0 max-w-[420px]">
                 <Select value={bookmakerId} onValueChange={setBookmakerId}>
-                  <SelectTrigger className="h-8 items-center text-xs">
+                  <SelectTrigger className="h-7 text-xs font-medium border-border/50">
                     <SelectValue placeholder="Selecione a casa..." />
                   </SelectTrigger>
                   <SelectContent className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]">
@@ -1301,28 +1320,6 @@ export function ApostaMultiplaDialog({
                     moeda={bookmakerSaldo.moeda}
                   />
                 )}
-              </div>
-
-              {/* Tipo de Múltipla */}
-              <div className="space-y-1 shrink-0 pt-5">
-                <RadioGroup
-                  value={tipoMultipla}
-                  onValueChange={(v) => setTipoMultipla(v as "DUPLA" | "TRIPLA")}
-                  className="flex gap-3"
-                >
-                  <div className="flex items-center space-x-1.5">
-                    <RadioGroupItem value="DUPLA" id="dupla" />
-                    <Label htmlFor="dupla" className="cursor-pointer text-xs whitespace-nowrap">
-                      Dupla (2)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <RadioGroupItem value="TRIPLA" id="tripla" />
-                    <Label htmlFor="tripla" className="cursor-pointer text-xs whitespace-nowrap">
-                      Tripla (3)
-                    </Label>
-                  </div>
-                </RadioGroup>
               </div>
             </div>
 
