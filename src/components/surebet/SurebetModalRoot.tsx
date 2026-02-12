@@ -16,7 +16,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, KeyboardEvent } from
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
-import { deletarAposta } from "@/services/aposta";
+import { deletarAposta, liquidarPernaSurebet } from "@/services/aposta";
 import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
 import { useApostaRascunho, type ApostaRascunho, type RascunhoPernaData } from "@/hooks/useApostaRascunho";
@@ -1011,6 +1011,52 @@ export function SurebetModalRoot({
           aposta_id: result.aposta_id,
           events_created: result.events_created,
         });
+        
+        // ================================================================
+        // PÓS-CRIAÇÃO: Liquidar pernas que já possuem resultado definido
+        // ================================================================
+        const pernasComResultado = pernasPreenchidas
+          .map((entry, idx) => ({
+            resultado: (entry as any).resultado as string | null,
+            index: idx,
+          }))
+          .filter(p => p.resultado && ['GREEN', 'RED', 'MEIO_GREEN', 'MEIO_RED', 'VOID'].includes(p.resultado!));
+        
+        if (pernasComResultado.length > 0 && result.aposta_id) {
+          // Buscar IDs das pernas recém-criadas
+          const { data: pernasDB } = await supabase
+            .from('apostas_pernas')
+            .select('id, ordem')
+            .eq('aposta_id', result.aposta_id)
+            .order('ordem', { ascending: true });
+          
+          if (pernasDB && pernasDB.length > 0) {
+            for (const p of pernasComResultado) {
+              const pernaDB = pernasDB.find(db => db.ordem === p.index + 1);
+              const entryOriginal = pernasPreenchidas[p.index];
+              if (pernaDB && p.resultado && entryOriginal) {
+                const liqResult = await liquidarPernaSurebet({
+                  surebet_id: result.aposta_id,
+                  perna_id: pernaDB.id,
+                  bookmaker_id: entryOriginal.bookmaker_id,
+                  resultado: p.resultado as 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID',
+                  resultado_anterior: null,
+                  stake: parseFloat(entryOriginal.stake) || 0,
+                  odd: parseFloat(entryOriginal.odd) || 0,
+                  moeda: getBookmakerMoeda(entryOriginal.bookmaker_id),
+                  workspace_id: workspaceId,
+                  fonte_saldo: 'REAL',
+                });
+                
+                if (!liqResult.success) {
+                  console.error(`[SurebetModalRoot] Erro ao liquidar perna ${pernaDB.id}:`, liqResult.error);
+                } else {
+                  console.log(`[SurebetModalRoot] ✅ Perna ${pernaDB.id} liquidada como ${p.resultado}`);
+                }
+              }
+            }
+          }
+        }
       }
 
       // Invalidar cache de saldos (agora os saldos já foram debitados pela RPC)
