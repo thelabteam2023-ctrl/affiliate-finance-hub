@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { reliquidarAposta } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
@@ -164,7 +165,7 @@ export function ProjetoValueBetTab({
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, getSymbol } = useProjetoCurrency(projetoId);
+  const { formatCurrency, getSymbol, convertToConsolidation: convertToConsolidationFn, moedaConsolidacao: moedaConsolidacaoVal } = useProjetoCurrency(projetoId);
   const currencySymbol = getSymbol();
 
   // Hook para invalidar cache de saldos
@@ -272,7 +273,8 @@ export function ProjetoValueBetTab({
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
-          back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final
+          back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final,
+          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia
         `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
@@ -391,34 +393,29 @@ export function ProjetoValueBetTab({
   }, [apostas, onDataChange, projetoId, invalidateSaldos, hasActiveRolloverBonus, atualizarProgressoRollover]);
 
   const metricas = useMemo(() => {
-    const todasApostas = apostas.map((a) => ({
-      stake: typeof a.stake_total === "number" ? a.stake_total : a.stake,
-      lucro: a.lucro_prejuizo,
-      resultado: a.resultado,
-      bookmaker: a.bookmaker_nome,
-    }));
-
-    const total = todasApostas.length;
-    const totalStake = todasApostas.reduce((acc, a) => acc + a.stake, 0);
-    const lucroTotal = todasApostas.reduce((acc, a) => acc + (a.lucro || 0), 0);
-    const pendentes = todasApostas.filter(a => !a.resultado || a.resultado === "PENDENTE").length;
-    const greens = todasApostas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
-    const reds = todasApostas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
-    const liquidadas = todasApostas.filter(a => a.resultado && a.resultado !== "PENDENTE").length;
+    const { convertToConsolidation, moedaConsolidacao } = { convertToConsolidation: convertToConsolidationFn, moedaConsolidacao: moedaConsolidacaoVal };
+    
+    const total = apostas.length;
+    const totalStake = apostas.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
+    const lucroTotal = apostas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao), 0);
+    const pendentes = apostas.filter(a => !a.resultado || a.resultado === "PENDENTE").length;
+    const greens = apostas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+    const reds = apostas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+    const liquidadas = apostas.filter(a => a.resultado && a.resultado !== "PENDENTE").length;
     const taxaAcerto = liquidadas > 0 ? (greens / liquidadas) * 100 : 0;
     const roi = totalStake > 0 ? (lucroTotal / totalStake) * 100 : 0;
 
     const porCasa: Record<string, { stake: number; lucro: number; count: number }> = {};
-    todasApostas.forEach(a => {
-      const casa = a.bookmaker || "Desconhecida";
+    apostas.forEach(a => {
+      const casa = a.bookmaker_nome || "Desconhecida";
       if (!porCasa[casa]) porCasa[casa] = { stake: 0, lucro: 0, count: 0 };
-      porCasa[casa].stake += a.stake;
-      porCasa[casa].lucro += a.lucro || 0;
+      porCasa[casa].stake += getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao);
+      porCasa[casa].lucro += getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao);
       porCasa[casa].count++;
     });
 
     return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa };
-  }, [apostas]);
+  }, [apostas, convertToConsolidationFn, moedaConsolidacaoVal]);
 
   // casaData agregado por CASA (não por vínculo) - Padrão unificado
   const casaData = useMemo((): CasaAgregada[] => {
@@ -468,8 +465,9 @@ export function ProjetoValueBetTab({
 
     apostas.forEach((a) => {
       const bookmakerNome = a.bookmaker_nome || "Desconhecida";
-      const stake = typeof a.stake_total === "number" ? a.stake_total : (a.stake || 0);
-      processEntry(bookmakerNome, a.operador_nome, stake, a.lucro_prejuizo || 0);
+      const stake = getConsolidatedStake(a, convertToConsolidationFn, moedaConsolidacaoVal);
+      const lucro = getConsolidatedLucro(a, convertToConsolidationFn, moedaConsolidacaoVal);
+      processEntry(bookmakerNome, a.operador_nome, stake, lucro);
     });
 
     return Array.from(casaMap.entries())
