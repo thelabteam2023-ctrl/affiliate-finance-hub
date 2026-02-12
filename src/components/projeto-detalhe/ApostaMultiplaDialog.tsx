@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useImportSelecaoPrint } from "@/hooks/useImportSelecaoPrint";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
@@ -18,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, Camera, CheckCircle2, Gift, FileText } from "lucide-react";
+import { Loader2, Save, Trash2, Camera, CheckCircle2, Gift, FileText, ImagePlus } from "lucide-react";
 import { useApostaRascunho, type RascunhoSelecaoData, type ApostaRascunho } from "@/hooks/useApostaRascunho";
 import {
   Tooltip,
@@ -141,6 +142,11 @@ export function ApostaMultiplaDialog({
   const exchangeRates = useExchangeRatesSafe();
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [draggingOverSelecao, setDraggingOverSelecao] = useState<number | null>(null);
+  const [focusedSelecao, setFocusedSelecao] = useState<number | null>(null);
+  
+  // Per-selection OCR import
+  const { isProcessing: isSelecaoProcessing, processingIndex, processImageForSelecao } = useImportSelecaoPrint();
 
   // ========== HOOK CANÔNICO DE SALDOS ==========
   // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
@@ -760,6 +766,63 @@ export function ApostaMultiplaDialog({
       return updated;
     });
   };
+
+  // Per-selection drop handler
+  const handleSelecaoDropImage = useCallback(async (event: React.DragEvent, index: number) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDraggingOverSelecao(null);
+    
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    if (!file.type.startsWith("image/")) return;
+    
+    const result = await processImageForSelecao(file, index);
+    if (result) {
+      setSelecoes(prev => {
+        const updated = [...prev];
+        updated[index] = {
+          ...updated[index],
+          descricao: result.descricao.toUpperCase(),
+          odd: result.odd,
+          resultado: result.resultado as any || updated[index].resultado,
+        };
+        return updated;
+      });
+    }
+  }, [processImageForSelecao]);
+
+  // Per-selection paste handler (Ctrl+V when focused)
+  const handleSelecaoPaste = useCallback(async (event: React.ClipboardEvent, index: number) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        event.preventDefault();
+        event.stopPropagation();
+        const file = items[i].getAsFile();
+        if (!file) continue;
+        
+        const result = await processImageForSelecao(file, index);
+        if (result) {
+          setSelecoes(prev => {
+            const updated = [...prev];
+            updated[index] = {
+              ...updated[index],
+              descricao: result.descricao.toUpperCase(),
+              odd: result.odd,
+              resultado: result.resultado as any || updated[index].resultado,
+            };
+            return updated;
+          });
+        }
+        break;
+      }
+    }
+  }, [processImageForSelecao]);
 
   const handleUsarFreebetChange = (checked: boolean) => {
     setUsarFreebet(checked);
@@ -1399,15 +1462,61 @@ export function ApostaMultiplaDialog({
             <div className="space-y-1">
               <Label className="text-xs">Seleções</Label>
               <div className={`grid gap-2 ${tipoMultipla === "TRIPLA" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"}`}>
-                {selecoes.map((selecao, index) => (
-                  <Card key={index} className={`${
-                    selecao.resultado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
-                    selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
-                    selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
-                    selecao.resultado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
-                    selecao.resultado === "VOID" ? "bg-gray-500/10 border-gray-500/30" :
-                    "bg-muted/30"
-                  }`}>
+                {selecoes.map((selecao, index) => {
+                  const isDragOver = draggingOverSelecao === index;
+                  const isProcessingThis = isSelecaoProcessing && processingIndex === index;
+                  
+                  return (
+                  <Card 
+                    key={index} 
+                    className={`relative transition-all duration-150 ${
+                      isDragOver 
+                        ? "ring-2 ring-primary border-primary bg-primary/5" 
+                        : isProcessingThis
+                          ? "border-primary/50 bg-primary/5 animate-pulse"
+                          : selecao.resultado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
+                            selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
+                            selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
+                            selecao.resultado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
+                            selecao.resultado === "VOID" ? "bg-gray-500/10 border-gray-500/30" :
+                            "bg-muted/30"
+                    }`}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDraggingOverSelecao(index);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (draggingOverSelecao === index) setDraggingOverSelecao(null);
+                    }}
+                    onDrop={(e) => handleSelecaoDropImage(e, index)}
+                    onPaste={(e) => handleSelecaoPaste(e, index)}
+                    onFocus={() => setFocusedSelecao(index)}
+                    onBlur={() => setFocusedSelecao(null)}
+                    tabIndex={0}
+                  >
+                    {/* Drop zone overlay */}
+                    {isDragOver && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-primary/10 border-2 border-dashed border-primary pointer-events-none">
+                        <div className="flex flex-col items-center gap-1 text-primary">
+                          <ImagePlus className="h-5 w-5" />
+                          <span className="text-[10px] font-medium">Soltar print aqui</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Processing overlay */}
+                    {isProcessingThis && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80 pointer-events-none">
+                        <div className="flex items-center gap-2 text-primary">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-xs font-medium">Analisando...</span>
+                        </div>
+                      </div>
+                    )}
+                    
                     <CardContent className="pt-2 pb-2 px-3">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <span className="text-[10px] font-medium text-muted-foreground">
@@ -1450,9 +1559,16 @@ export function ApostaMultiplaDialog({
                           className="text-xs h-8"
                         />
                       </div>
+                      {/* Hint: paste/drop */}
+                      {!selecao.descricao && !selecao.odd && !isProcessingThis && (
+                        <p className="text-[9px] text-muted-foreground/50 mt-1 text-center">
+                          Arraste ou cole (Ctrl+V) um print aqui
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
