@@ -6,6 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2 } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { SurebetRowActionsMenu, type SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
@@ -256,10 +257,19 @@ function PernaItem({
             <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
           </div>
           
-          {/* Nome da casa + vínculo abreviado */}
-          <span className="text-sm text-muted-foreground truncate flex-1 uppercase min-w-0">
-            {bookmakerDisplay}
-          </span>
+          {/* Nome da casa + vínculo abreviado - com tooltip */}
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-sm text-muted-foreground truncate flex-1 uppercase min-w-0 cursor-default">
+                  {bookmakerDisplay}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[300px]">
+                <p className="uppercase">{enrichedBookmakerNome}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           {/* Odd e Stake à direita - larguras fixas para alinhamento */}
           <div className="flex items-center gap-2 shrink-0">
@@ -426,8 +436,17 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
       className={cn("transition-colors overflow-hidden", className)}
     >
       <CardContent className="p-5 sm:p-6">
-        {/* LINHA 1: Evento (título destacado) */}
-        <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5">{surebet.evento || 'Operação'}</p>
+        {/* LINHA 1: Evento (título destacado) - com tooltip */}
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p className="text-base sm:text-lg font-semibold truncate uppercase leading-tight mb-1.5 cursor-default">{surebet.evento || 'Operação'}</p>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[400px]">
+              <p className="uppercase">{surebet.evento || 'Operação'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         
         {/* LINHA 2: Esporte + Mercado + Badges + Menu na mesma linha */}
         <div className="flex items-center gap-1.5 flex-wrap mb-4">
