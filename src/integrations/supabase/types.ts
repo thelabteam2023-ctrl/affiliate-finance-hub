@@ -11548,6 +11548,17 @@ export type Database = {
           success: boolean
         }[]
       }
+      editar_perna_surebet_atomica: {
+        Args: {
+          p_new_bookmaker_id?: string
+          p_new_odd?: number
+          p_new_selecao?: string
+          p_new_selecao_livre?: string
+          p_new_stake?: number
+          p_perna_id: string
+        }
+        Returns: Json
+      }
       encerrar_ciclo_e_criar_proximo: {
         Args: { p_ciclo_id: string; p_excedente?: number; p_gatilho: string }
         Returns: string

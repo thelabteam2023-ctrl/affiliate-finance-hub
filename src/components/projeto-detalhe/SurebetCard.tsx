@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { SurebetRowActionsMenu, type SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
+import { SurebetPernaResultPill } from "@/components/apostas/SurebetPernaResultPill";
 
 // Estrutura de entrada individual (para múltiplas entradas)
 export interface SurebetPernaEntry {
@@ -30,6 +31,7 @@ export interface SurebetPerna {
   resultado: string | null;
   bookmaker_nome: string;
   bookmaker_id?: string;
+  moeda?: string;
   // Campos para múltiplas entradas
   entries?: SurebetPernaEntry[];
   odd_media?: number;
@@ -38,6 +40,7 @@ export interface SurebetPerna {
 
 export interface SurebetData {
   id: string;
+  workspace_id?: string;
   data_operacao: string;
   evento: string;
   esporte: string;
@@ -56,11 +59,26 @@ export interface SurebetData {
   pernas?: SurebetPerna[];
 }
 
+/** Callback para alterar resultado de uma perna individual */
+export interface PernaResultChangeInput {
+  pernaId: string;
+  surebetId: string;
+  bookmarkerId: string;
+  resultado: string;
+  stake: number;
+  odd: number;
+  moeda: string;
+  resultadoAnterior: string | null;
+  workspaceId: string;
+}
+
 interface SurebetCardProps {
   surebet: SurebetData;
   onEdit?: (surebet: SurebetData) => void;
   /** Callback para liquidação rápida com informação de quais pernas ganharam */
   onQuickResolve?: (surebetId: string, result: SurebetQuickResult) => void;
+  /** Callback para alterar resultado de perna individual (inline pill) */
+  onPernaResultChange?: (input: PernaResultChangeInput) => Promise<void>;
   /** Callback para excluir surebet */
   onDelete?: (surebetId: string) => void;
   /** Callback para duplicar surebet */
@@ -177,12 +195,14 @@ function PernaItem({
   perna, 
   formatValue,
   getLogoUrl,
-  bookmakerNomeMap
+  bookmakerNomeMap,
+  onResultChange,
 }: { 
   perna: SurebetPerna; 
   formatValue: (value: number) => string;
   getLogoUrl: (name: string) => string | null;
   bookmakerNomeMap?: Map<string, string>;
+  onResultChange?: (resultado: string) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const hasMultipleEntries = perna.entries && perna.entries.length > 1;
@@ -242,6 +262,14 @@ function PernaItem({
             <span className="text-sm font-medium whitespace-nowrap">@{perna.odd.toFixed(2)}</span>
             <span className="text-xs text-muted-foreground whitespace-nowrap">{formatValue(perna.stake)}</span>
           </div>
+          
+          {/* Result pill per perna */}
+          {onResultChange && (
+            <SurebetPernaResultPill
+              resultado={perna.resultado}
+              onResultChange={onResultChange}
+            />
+          )}
         </div>
         
         {/* Mobile: Selection badge below */}
@@ -335,7 +363,7 @@ function PernaItem({
   );
 }
 
-export function SurebetCard({ surebet, onEdit, onQuickResolve, onDelete, onDuplicate, className, formatCurrency, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
+export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChange, onDelete, onDuplicate, className, formatCurrency, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
   // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
   
@@ -452,6 +480,19 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onDelete, onDupli
                   formatValue={formatValue}
                   getLogoUrl={getLogoUrl}
                   bookmakerNomeMap={bookmakerNomeMap}
+                  onResultChange={onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
+                    await onPernaResultChange({
+                      pernaId: perna.id,
+                      surebetId: surebet.id,
+                      bookmarkerId: perna.bookmaker_id!,
+                      resultado,
+                      stake: perna.stake,
+                      odd: perna.odd,
+                      moeda: perna.moeda || 'BRL',
+                      resultadoAnterior: perna.resultado,
+                      workspaceId: surebet.workspace_id || '',
+                    });
+                  } : undefined}
                 />
               ))}
           </div>

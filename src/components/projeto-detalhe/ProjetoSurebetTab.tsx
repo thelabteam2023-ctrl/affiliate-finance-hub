@@ -41,6 +41,7 @@ import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { toast } from "sonner";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
+import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { ApostaDialog } from "./ApostaDialog";
 import { ApostaCard, ApostaCardData } from "./ApostaCard";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
@@ -52,7 +53,7 @@ import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
-import { reliquidarAposta } from "@/services/aposta/ApostaService";
+import { reliquidarAposta, liquidarPernaSurebet, deletarAposta } from "@/services/aposta/ApostaService";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useInvalidateBookmakerSaldos, useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
@@ -87,6 +88,7 @@ interface Surebet {
   status: string;
   resultado: string | null;
   observacoes: string | null;
+  workspace_id?: string;
   pernas?: SurebetPerna[];
   // Campos adicionais para diferenciar tipo de registro
   forma_registro?: string;
@@ -241,7 +243,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          id, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
+          id, workspace_id, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
           spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
           status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
           odd, selecao, bookmaker_id, bonus_id,
@@ -274,7 +276,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         const { data: pernasData } = await supabase
           .from("apostas_pernas")
           .select(`
-            aposta_id, bookmaker_id, selecao, selecao_livre, odd, stake,
+            id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
             resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
             bookmakers (nome, parceiro:parceiros(nome))
           `)
@@ -286,8 +288,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           const bookmaker = p.bookmakers as any;
           const parceiroNome = bookmaker?.parceiro?.nome;
           pernasMap[p.aposta_id].push({
+            id: p.id,
             bookmaker_id: p.bookmaker_id,
             bookmaker_nome: parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}` : (bookmaker?.nome || "—"),
+            moeda: p.moeda || 'BRL',
             selecao: p.selecao, selecao_livre: p.selecao_livre, odd: p.odd, stake: p.stake,
             resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
             gerou_freebet: p.gerou_freebet, valor_freebet_gerada: p.valor_freebet_gerada,
@@ -302,14 +306,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           return (order[a.selecao] || 99) - (order[b.selecao] || 99);
         });
         const pernasSurebetCard: SurebetPerna[] = pernasOrdenadas.map((p, idx) => ({
-          id: `perna-${idx}`, selecao: p.selecao, selecao_livre: p.selecao_livre,
+          id: p.id || `perna-${idx}`, selecao: p.selecao, selecao_livre: p.selecao_livre,
           odd: p.odd, stake: p.stake, resultado: p.resultado,
-          bookmaker_nome: p.bookmaker_nome || "—", bookmaker_id: p.bookmaker_id
+          bookmaker_nome: p.bookmaker_nome || "—", bookmaker_id: p.bookmaker_id,
+          moeda: p.moeda || 'BRL',
         }));
         const hasValidPernas = pernasSurebetCard.length > 0;
         const isSimples = arb.forma_registro === "SIMPLES" && !hasValidPernas;
         return {
-          id: arb.id, data_operacao: arb.data_aposta, evento: arb.evento || "",
+          id: arb.id, workspace_id: arb.workspace_id, data_operacao: arb.data_aposta, evento: arb.evento || "",
           esporte: arb.esporte || "", modelo: arb.modelo || "1-2", mercado: arb.mercado,
           stake_total: arb.stake_total || arb.stake || 0, spread_calculado: arb.spread_calculado,
           roi_esperado: arb.roi_esperado, lucro_esperado: arb.lucro_esperado,
@@ -418,6 +423,101 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       toast.error("Erro ao atualizar resultado");
     }
   }, [surebets, onDataChange, projetoId, invalidateSaldos, hasActiveRolloverBonus, atualizarProgressoRollover]);
+
+  // Liquidação de perna individual de Surebet via motor financeiro
+  const handleSurebetPernaResolve = useCallback(async (input: {
+    pernaId: string;
+    surebetId: string;
+    bookmarkerId: string;
+    resultado: string;
+    stake: number;
+    odd: number;
+    moeda: string;
+    resultadoAnterior: string | null;
+    workspaceId: string;
+  }) => {
+    try {
+      const result = await liquidarPernaSurebet({
+        surebet_id: input.surebetId,
+        perna_id: input.pernaId,
+        bookmaker_id: input.bookmarkerId,
+        resultado: input.resultado as any,
+        resultado_anterior: input.resultadoAnterior,
+        stake: input.stake,
+        odd: input.odd,
+        moeda: input.moeda,
+        workspace_id: input.workspaceId,
+      });
+
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao liquidar perna");
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["surebets-tab", projetoId] });
+      invalidateSaldos(projetoId);
+
+      const resultLabel = {
+        GREEN: "Green", RED: "Red", MEIO_GREEN: "½ Green",
+        MEIO_RED: "½ Red", VOID: "Void",
+      }[input.resultado] || input.resultado;
+
+      toast.success(`Perna marcada como ${resultLabel}`);
+      onDataChange?.();
+    } catch (error: any) {
+      console.error("Erro ao liquidar perna:", error);
+      toast.error("Erro ao atualizar resultado da perna");
+    }
+  }, [projetoId, invalidateSaldos, onDataChange, queryClient]);
+
+  // Liquidação rápida de Surebet completa (via menu, baseado em winners)
+  const handleSurebetQuickResolve = useCallback(async (surebetId: string, result: SurebetQuickResult) => {
+    try {
+      const operacao = surebets.find(s => s.id === surebetId);
+      if (!operacao?.pernas || !operacao.workspace_id) return;
+
+      const pernas = operacao.pernas.filter(p => p.bookmaker_id && p.odd > 0);
+      
+      for (let i = 0; i < pernas.length; i++) {
+        const perna = pernas[i];
+        const isWinner = result.winners.includes(i);
+        const resultado = result.type === "all_void" ? "VOID" : (isWinner ? "GREEN" : "RED");
+
+        await handleSurebetPernaResolve({
+          pernaId: perna.id,
+          surebetId,
+          bookmarkerId: perna.bookmaker_id!,
+          resultado,
+          stake: perna.stake,
+          odd: perna.odd,
+          moeda: perna.moeda || 'BRL',
+          resultadoAnterior: perna.resultado,
+          workspaceId: operacao.workspace_id!,
+        });
+      }
+    } catch (error: any) {
+      console.error("Erro ao liquidar surebet:", error);
+      toast.error("Erro ao liquidar surebet");
+    }
+  }, [surebets, handleSurebetPernaResolve]);
+
+  // Deletar surebet
+  const handleSurebetDelete = useCallback(async (surebetId: string) => {
+    try {
+      const result = await deletarAposta(surebetId);
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao excluir surebet");
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["surebets-tab", projetoId] });
+      invalidateSaldos(projetoId);
+      toast.success("Surebet excluída");
+      onDataChange?.();
+    } catch (error: any) {
+      console.error("Erro ao excluir surebet:", error);
+      toast.error("Erro ao excluir surebet");
+    }
+  }, [projetoId, invalidateSaldos, onDataChange, queryClient]);
 
   // Usa a formatação do projeto (moeda de consolidação)
   const formatCurrency = projectFormatCurrency;
@@ -1045,10 +1145,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
                   key={operacao.id}
                   surebet={operacao}
                   onEdit={(sb) => {
-                    // Abrir em janela externa
                     const url = `/janela/surebet/${sb.id}?projetoId=${encodeURIComponent(projetoId)}&tab=surebet`;
                     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
                   }}
+                  onQuickResolve={handleSurebetQuickResolve}
+                  onPernaResultChange={handleSurebetPernaResolve}
+                  onDelete={handleSurebetDelete}
                   formatCurrency={formatCurrency}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
