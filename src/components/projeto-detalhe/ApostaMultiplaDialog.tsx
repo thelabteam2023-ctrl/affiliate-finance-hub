@@ -1376,7 +1376,7 @@ export function ApostaMultiplaDialog({
                           value={selecao.resultado || "PENDENTE"} 
                           onValueChange={(v) => handleSelecaoChange(index, "resultado", v)}
                         >
-                          <SelectTrigger className="w-[110px] h-6 text-[10px]">
+                          <SelectTrigger className="w-[130px] h-6 text-[10px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
