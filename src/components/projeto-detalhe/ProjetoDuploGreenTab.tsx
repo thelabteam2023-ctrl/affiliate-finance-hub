@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { calcSurebetWindowHeight } from "@/lib/windowHelper";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -722,9 +723,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   // Abrir formulário em janela externa (padronizado com Surebet)
   const handleOpenAposta = useCallback((aposta: Aposta) => {
     if (aposta.forma_registro === "ARBITRAGEM") {
-      // Surebet/Arbitragem
+      // Surebet/Arbitragem - height will auto-resize based on legs
       const url = `/janela/surebet/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen`;
-      window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+      const height = calcSurebetWindowHeight(3); // editing mode, assume 3 pernas as safe default
+      window.open(url, '_blank', `width=780,height=${height},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`);
     } else {
       // Aposta simples
       const url = `/janela/aposta/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&estrategia=DUPLO_GREEN`;

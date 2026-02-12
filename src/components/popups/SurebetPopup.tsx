@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { calcSurebetWindowHeight } from '@/lib/windowHelper';
 
 interface SurebetPopupProps {
   isOpen: boolean;
@@ -32,7 +33,8 @@ export const SurebetPopup: React.FC<SurebetPopupProps> = ({
       // Abrir em nova janela do navegador
       const surebetId = surebet?.id || 'novo';
       const url = `/janela/surebet/${surebetId}?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab)}`;
-      const windowFeatures = 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+      const height = calcSurebetWindowHeight(2);
+      const windowFeatures = `width=780,height=${height},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`;
       window.open(url, '_blank', windowFeatures);
       
       // Fechar o popup imediatamente após abrir a janela

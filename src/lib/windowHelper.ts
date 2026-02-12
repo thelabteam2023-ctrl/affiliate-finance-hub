@@ -13,13 +13,29 @@ export interface WindowOpenParams {
 const DEFAULT_WINDOW_FEATURES = 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
 
 /**
+ * Calcula altura ideal da janela de Surebet baseada na quantidade de pernas.
+ * Base fixa (header + campos + resumo + footer) + altura por perna.
+ */
+export function calcSurebetWindowHeight(numPernas: number): number {
+  const BASE_HEIGHT = 480; // header + fields + summary + footer + padding
+  const HEIGHT_PER_LEG = 80; // each leg row height
+  const calculated = BASE_HEIGHT + (HEIGHT_PER_LEG * numPernas);
+  // Cap at screen height
+  const maxHeight = typeof window !== 'undefined' ? window.screen.availHeight - 40 : 900;
+  return Math.min(calculated, maxHeight);
+}
+
+const SUREBET_WINDOW_FEATURES = 'width=780,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+
+/**
  * Abre o formulário de Surebet em uma nova janela.
  */
-export function openSurebetWindow(params: WindowOpenParams) {
-  const { projetoId, id, activeTab = 'surebet' } = params;
+export function openSurebetWindow(params: WindowOpenParams & { numPernas?: number }) {
+  const { projetoId, id, activeTab = 'surebet', numPernas = 2 } = params;
   const surebetId = id || 'novo';
   const url = `/janela/surebet/${surebetId}?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab)}`;
-  window.open(url, '_blank', DEFAULT_WINDOW_FEATURES);
+  const height = calcSurebetWindowHeight(numPernas);
+  window.open(url, '_blank', `${SUREBET_WINDOW_FEATURES},height=${height}`);
 }
 
 /**
