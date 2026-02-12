@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
-import { reliquidarAposta } from "@/services/aposta/ApostaService";
+import { reliquidarAposta, liquidarPernaSurebet } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
@@ -48,6 +48,8 @@ import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 // import { SurebetDialog } from "./SurebetDialog";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { ApostaCard } from "./ApostaCard";
+import { SurebetCard } from "./SurebetCard";
+import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
@@ -371,6 +373,103 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       toast.error("Erro ao atualizar resultado");
     }
   }, [apostas, onDataChange, projetoId, invalidateSaldos, hasActiveRolloverBonus, atualizarProgressoRollover]);
+
+  // Handler para liquidação granular por perna (inline pill) - Motor Financeiro Unificado
+  const handleSurebetPernaResolve = useCallback(async (input: {
+    pernaId: string;
+    surebetId: string;
+    bookmarkerId: string;
+    resultado: string;
+    stake: number;
+    odd: number;
+    moeda: string;
+    resultadoAnterior: string | null;
+    workspaceId: string;
+  }) => {
+    try {
+      const result = await liquidarPernaSurebet({
+        surebet_id: input.surebetId,
+        perna_id: input.pernaId,
+        bookmaker_id: input.bookmarkerId,
+        resultado: input.resultado as any,
+        resultado_anterior: input.resultadoAnterior,
+        stake: input.stake,
+        odd: input.odd,
+        moeda: input.moeda,
+        workspace_id: input.workspaceId,
+      });
+
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao liquidar perna");
+        return;
+      }
+
+      invalidateSaldos(projetoId);
+      fetchData();
+      onDataChange?.();
+
+      const resultLabel = {
+        GREEN: "Green", RED: "Red", MEIO_GREEN: "½ Green",
+        MEIO_RED: "½ Red", VOID: "Void",
+      }[input.resultado] || input.resultado;
+
+      toast.success(`Perna marcada como ${resultLabel}`);
+    } catch (error: any) {
+      console.error("Erro ao liquidar perna:", error);
+      toast.error("Erro ao atualizar resultado da perna");
+    }
+  }, [projetoId, invalidateSaldos, onDataChange]);
+
+  // Handler para quick resolve de surebet - usa liquidação por perna (Motor Financeiro Unificado)
+  const handleQuickResolveSurebet = useCallback(async (surebetId: string, quickResult: SurebetQuickResult) => {
+    try {
+      const aposta = apostas.find(a => a.id === surebetId);
+      if (!aposta?.pernas || aposta.pernas.length === 0) return;
+
+      const pernas = aposta.pernas.filter((p: any) => p.bookmaker_id && p.odd > 0);
+      const workspaceId = pernas[0]?.workspace_id || '';
+
+      for (let i = 0; i < pernas.length; i++) {
+        const perna = pernas[i];
+        const isWinner = quickResult.winners.includes(i);
+        const resultado = quickResult.type === "all_void" ? "VOID" : (isWinner ? "GREEN" : "RED");
+
+        await handleSurebetPernaResolve({
+          pernaId: perna.id,
+          surebetId,
+          bookmarkerId: perna.bookmaker_id!,
+          resultado,
+          stake: perna.stake,
+          odd: perna.odd,
+          moeda: perna.moeda || 'BRL',
+          resultadoAnterior: perna.resultado,
+          workspaceId,
+        });
+      }
+    } catch (error: any) {
+      console.error("Erro ao liquidar surebet:", error);
+      toast.error("Erro ao liquidar surebet");
+    }
+  }, [apostas, handleSurebetPernaResolve]);
+
+  // Deletar surebet
+  const handleDeleteSurebet = useCallback(async (surebetId: string) => {
+    try {
+      const { deletarAposta } = await import("@/services/aposta/ApostaService");
+      const result = await deletarAposta(surebetId);
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao excluir surebet");
+        return;
+      }
+      invalidateSaldos(projetoId);
+      fetchData();
+      onDataChange?.();
+      toast.success("Surebet excluída");
+    } catch (error: any) {
+      console.error("Erro ao excluir surebet:", error);
+      toast.error("Erro ao excluir surebet");
+    }
+  }, [projetoId, invalidateSaldos, onDataChange]);
 
   const metricas = useMemo(() => {
     const total = apostas.length;
@@ -816,47 +915,87 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
             <p>{apostasSubTab === "abertas" ? "Nenhuma aposta aberta" : "Nenhuma aposta no histórico"}</p>
           </CardContent>
         </Card>
-      ) : viewMode === "cards" ? (
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {apostasFiltradas.map((aposta) => (
-            <ApostaCard
-              key={aposta.id}
-              aposta={{
-                ...aposta,
-                pernas: aposta.pernas as Perna[],
-              }}
-              estrategia="DUPLO_GREEN"
-              onEdit={(apostaId) => {
-                const a = apostasFiltradas.find(ap => ap.id === apostaId);
-                if (a) handleOpenAposta(a);
-              }}
-              onQuickResolve={handleQuickResolve}
-              variant="card"
-              formatCurrency={formatCurrency}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {apostasFiltradas.map((aposta) => (
-            <ApostaCard
-              key={aposta.id}
-              aposta={{
-                ...aposta,
-                pernas: aposta.pernas as Perna[],
-              }}
-              estrategia="DUPLO_GREEN"
-              onEdit={(apostaId) => {
-                const a = apostasFiltradas.find(ap => ap.id === apostaId);
-                if (a) handleOpenAposta(a);
-              }}
-              onQuickResolve={handleQuickResolve}
-              variant="list"
-              formatCurrency={formatCurrency}
-            />
-          ))}
-        </div>
-      )}
+      ) : (() => {
+        const apostasSimples = apostasFiltradas.filter(a => a.forma_registro !== "ARBITRAGEM");
+        const apostasArbitragem = apostasFiltradas.filter(a => a.forma_registro === "ARBITRAGEM");
+        
+        return (
+          <div className="space-y-2">
+            {/* Surebets renderizadas com SurebetCard (motor financeiro unificado) */}
+            {apostasArbitragem.map((aposta) => {
+              const surebetData = {
+                id: aposta.id,
+                workspace_id: (aposta.pernas as any)?.[0]?.workspace_id || '',
+                data_operacao: aposta.data_aposta,
+                evento: aposta.evento || '',
+                esporte: aposta.esporte || '',
+                modelo: aposta.modelo || 'SIMPLES',
+                mercado: aposta.mercado,
+                estrategia: aposta.estrategia,
+                stake_total: aposta.stake_total || aposta.stake || 0,
+                spread_calculado: aposta.spread_calculado ?? null,
+                roi_esperado: aposta.roi_esperado ?? null,
+                lucro_esperado: aposta.lucro_esperado ?? null,
+                lucro_real: aposta.lucro_prejuizo ?? null,
+                roi_real: aposta.roi_real ?? null,
+                status: aposta.status,
+                resultado: aposta.resultado,
+                observacoes: aposta.observacoes,
+                pernas: (aposta.pernas as any[])?.map((p: any) => ({
+                  id: p.id,
+                  selecao: p.selecao || '',
+                  selecao_livre: p.selecao_livre,
+                  odd: p.odd || 0,
+                  stake: p.stake || 0,
+                  resultado: p.resultado,
+                  bookmaker_nome: p.bookmaker_nome || '',
+                  bookmaker_id: p.bookmaker_id,
+                  moeda: p.moeda || 'BRL',
+                })) || [],
+              };
+              return (
+                <SurebetCard
+                  key={aposta.id}
+                  surebet={surebetData}
+                  onEdit={() => handleOpenAposta(aposta)}
+                  onQuickResolve={handleQuickResolveSurebet}
+                  onPernaResultChange={handleSurebetPernaResolve}
+                  onDelete={handleDeleteSurebet}
+                  formatCurrency={formatCurrency}
+                />
+              );
+            })}
+            {/* Apostas simples */}
+            {viewMode === "cards" ? (
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {apostasSimples.map((aposta) => (
+                  <ApostaCard
+                    key={aposta.id}
+                    aposta={{ ...aposta, pernas: aposta.pernas as Perna[] }}
+                    estrategia="DUPLO_GREEN"
+                    onEdit={(apostaId) => { const a = apostasFiltradas.find(ap => ap.id === apostaId); if (a) handleOpenAposta(a); }}
+                    onQuickResolve={handleQuickResolve}
+                    variant="card"
+                    formatCurrency={formatCurrency}
+                  />
+                ))}
+              </div>
+            ) : (
+              apostasSimples.map((aposta) => (
+                <ApostaCard
+                  key={aposta.id}
+                  aposta={{ ...aposta, pernas: aposta.pernas as Perna[] }}
+                  estrategia="DUPLO_GREEN"
+                  onEdit={(apostaId) => { const a = apostasFiltradas.find(ap => ap.id === apostaId); if (a) handleOpenAposta(a); }}
+                  onQuickResolve={handleQuickResolve}
+                  variant="list"
+                  formatCurrency={formatCurrency}
+                />
+              ))
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 

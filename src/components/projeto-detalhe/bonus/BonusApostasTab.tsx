@@ -815,8 +815,8 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
     }
   }, [projetoId, invalidateSaldos, handleApostaUpdated, hasActiveRolloverBonus, atualizarProgressoRollover]);
 
-  // Handler para liquidação rápida de Surebet (menu cascata)
-  const handleQuickResolveSurebet = async (surebetId: string, quickResult: SurebetQuickResult) => {
+  // Handler para liquidação rápida de Surebet (menu cascata) - USA PER-PERNA (Motor Financeiro Unificado)
+  const handleQuickResolveSurebet = useCallback(async (surebetId: string, quickResult: SurebetQuickResult) => {
     const surebet = surebets.find(sb => sb.id === surebetId);
     if (!surebet || !surebet.pernas || surebet.pernas.length === 0) {
       toast.error("Surebet não encontrada ou sem pernas");
@@ -824,110 +824,30 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
     }
 
     try {
-      const stakeTotal = surebet.stake_total || 0;
-      let lucroTotal = 0;
-      let resultadoFinal: 'GREEN' | 'RED' | 'VOID' = 'GREEN';
+      const pernas = surebet.pernas.filter((p: any) => p.bookmaker_id && p.odd > 0);
 
-      // Preparar resultados das pernas
-      const pernasResultados: LiquidarSurebetPernaInput[] = [];
-      const pernas = surebet.pernas;
+      for (let i = 0; i < pernas.length; i++) {
+        const perna = pernas[i];
+        const isWinner = quickResult.winners.includes(i);
+        const resultado = quickResult.type === "all_void" ? "VOID" : (isWinner ? "GREEN" : "RED");
 
-      if (quickResult.type === "single_win") {
-        // Uma perna venceu, outras perderam
-        const winnerIdx = quickResult.winners[0];
-        const pernaVencedora = pernas[winnerIdx];
-        const stakeVencedor = pernaVencedora?.stake || 0;
-        const oddVencedor = pernaVencedora?.odd || 1;
-        const retornoVencedor = stakeVencedor * oddVencedor;
-        lucroTotal = retornoVencedor - stakeTotal;
-        resultadoFinal = lucroTotal >= 0 ? "GREEN" : "RED";
-
-        // Mapear todas as pernas com seus resultados
-        pernas.forEach((perna, idx) => {
-          const isWinner = idx === winnerIdx;
-          const resultado = isWinner ? 'GREEN' : 'RED';
-          const lucro = isWinner ? (perna.stake * perna.odd) - perna.stake : -perna.stake;
-          
-          pernasResultados.push({
-            perna_id: perna.id,
-            bookmaker_id: perna.bookmaker_id,
-            resultado,
-            stake: perna.stake,
-            odd: perna.odd,
-            lucro_prejuizo: lucro,
-            moeda: perna.moeda || 'BRL',
-          });
+        await handleSurebetPernaResolve({
+          pernaId: perna.id,
+          surebetId,
+          bookmarkerId: perna.bookmaker_id!,
+          resultado,
+          stake: perna.stake,
+          odd: perna.odd,
+          moeda: perna.moeda || 'BRL',
+          resultadoAnterior: perna.resultado,
+          workspaceId: surebet.workspace_id!,
         });
-
-      } else if (quickResult.type === "double_green") {
-        // Duas pernas venceram (duplo green)
-        const winnerIndices = quickResult.winners;
-        let retornoTotal = 0;
-        
-        pernas.forEach((perna, idx) => {
-          const isWinner = winnerIndices.includes(idx);
-          if (isWinner) {
-            retornoTotal += perna.stake * perna.odd;
-          }
-        });
-        
-        lucroTotal = retornoTotal - stakeTotal;
-        resultadoFinal = lucroTotal >= 0 ? "GREEN" : "RED";
-
-        // Mapear pernas
-        pernas.forEach((perna, idx) => {
-          const isWinner = winnerIndices.includes(idx);
-          const resultado = isWinner ? 'GREEN' : 'RED';
-          const lucro = isWinner ? (perna.stake * perna.odd) - perna.stake : -perna.stake;
-          
-          pernasResultados.push({
-            perna_id: perna.id,
-            bookmaker_id: perna.bookmaker_id,
-            resultado,
-            stake: perna.stake,
-            odd: perna.odd,
-            lucro_prejuizo: lucro,
-            moeda: perna.moeda || 'BRL',
-          });
-        });
-
-      } else if (quickResult.type === "all_void") {
-        // Todas as pernas void
-        lucroTotal = 0;
-        resultadoFinal = "VOID";
-
-        pernas.forEach((perna) => {
-          pernasResultados.push({
-            perna_id: perna.id,
-            bookmaker_id: perna.bookmaker_id,
-            resultado: 'VOID',
-            stake: perna.stake,
-            odd: perna.odd,
-            lucro_prejuizo: 0,
-            moeda: perna.moeda || 'BRL',
-          });
-        });
-      }
-
-      const result = await liquidarSurebet(
-        surebetId,
-        pernasResultados,
-        resultadoFinal,
-        lucroTotal,
-        surebet.workspace_id
-      );
-      
-      if (result.success) {
-        toast.success(`Surebet liquidada: ${resultadoFinal}`);
-        handleApostaUpdated();
-      } else {
-        const errorMsg = typeof result.error === 'string' ? result.error : result.error?.message || "Erro ao liquidar surebet";
-        toast.error(errorMsg);
       }
     } catch (error: any) {
-      toast.error("Erro ao liquidar surebet: " + error.message);
+      console.error("Erro ao liquidar surebet:", error);
+      toast.error("Erro ao liquidar surebet");
     }
-  };
+  }, [surebets, handleSurebetPernaResolve]);
 
   // Handler para deletar Surebet
   const handleDeleteSurebet = async (surebetId: string) => {
