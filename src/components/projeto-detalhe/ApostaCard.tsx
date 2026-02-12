@@ -5,6 +5,7 @@ import { ptBR } from "date-fns/locale";
 import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash } from "lucide-react";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import {
   DropdownMenu,
@@ -390,10 +391,19 @@ export function ApostaCard({
                 </div>
               )}
               
-              {/* Nome da casa + Parceiro */}
-              <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
-                {bookmakerDisplay || 'Casa'}
-              </span>
+              {/* Nome da casa + Parceiro - com tooltip */}
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase cursor-default">
+                      {bookmakerDisplay || 'Casa'}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[300px]">
+                    <p className="uppercase">{aposta.bookmaker_nome || 'Casa'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             
             {/* Mobile: Selection badge on separate row */}
@@ -591,10 +601,19 @@ export function ApostaCard({
                 </div>
               )}
               
-              {/* Nome da casa + Vínculo/Parceiro */}
-              <span className="text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
-                {bookmakerDisplayCard || 'Casa'}
-              </span>
+              {/* Nome da casa + Vínculo/Parceiro - com tooltip */}
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase cursor-default">
+                      {bookmakerDisplayCard || 'Casa'}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[300px]">
+                    <p className="uppercase">{aposta.bookmaker_nome || 'Casa'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             
             {/* Mobile: Selection badge on separate row */}
