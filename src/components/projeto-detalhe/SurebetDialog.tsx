@@ -2547,22 +2547,28 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     }
   };
 
-  // Liquidar perna por índice - atualiza JSONB na tabela unificada
+  // Liquidar perna por índice - usa tabela apostas_pernas (Motor v9.5)
   const handleLiquidarPerna = useCallback(async (pernaIndex: number, resultado: "GREEN" | "RED" | "VOID" | "MEIO_GREEN" | "MEIO_RED" | null) => {
     if (!surebet || !workspaceId) return;
     
     try {
-      // Buscar pernas atuais E contexto_operacional da operação na tabela unificada
+      // Buscar pernas da tabela normalizada apostas_pernas
+      const { data: pernasData } = await supabase
+        .from("apostas_pernas")
+        .select("id, bookmaker_id, stake, odd, moeda, resultado")
+        .eq("aposta_id", surebet.id)
+        .order("ordem", { ascending: true });
+      
+      // Buscar fonte_saldo do registro pai
       const { data: operacaoData } = await supabase
         .from("apostas_unificada")
-        .select("pernas, fonte_saldo")
+        .select("fonte_saldo")
         .eq("id", surebet.id)
         .single();
       
-      if (!operacaoData?.pernas) return;
+      if (!pernasData || pernasData.length === 0) return;
       
-      const pernas = operacaoData.pernas as unknown as SurebetPerna[];
-      const perna = pernas[pernaIndex];
+      const perna = pernasData[pernaIndex];
       if (!perna) return;
 
       const stake = perna.stake || 0;
@@ -2570,20 +2576,15 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       const resultadoAnterior = perna.resultado;
       const bookmakerId = perna.bookmaker_id;
       const moeda = perna.moeda || 'BRL';
-      const fonteSaldo = operacaoData.fonte_saldo || 'REAL';
-      const stakeBonus = (perna as { stake_bonus?: number }).stake_bonus || 0;
+      const fonteSaldo = operacaoData?.fonte_saldo || 'REAL';
 
       // Se o resultado não mudou, não fazer nada
       if (resultadoAnterior === resultado) return;
 
       // MOTOR FINANCEIRO v9.5: Usar liquidarPernaSurebet do ApostaService
-      // Esta função cuida de:
-      // 1. Calcular delta (reversão + aplicação)
-      // 2. Criar evento financeiro
-      // 3. Atualizar JSONB da perna
-      // 4. Atualizar status do registro pai
       const liquidacaoResult = await liquidarPernaSurebet({
         surebet_id: surebet.id,
+        perna_id: perna.id,
         perna_index: pernaIndex,
         bookmaker_id: bookmakerId,
         resultado,
@@ -2592,7 +2593,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         odd,
         moeda,
         workspace_id: workspaceId,
-        stake_bonus: stakeBonus,
         fonte_saldo: fonteSaldo,
       });
 
@@ -2611,11 +2611,8 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         const resultadoContaRollover = resultado !== "VOID" && resultado !== null;
         const resultadoAnteriorContava = resultadoAnterior && resultadoAnterior !== "VOID" && resultadoAnterior !== "PENDENTE";
         
-        // Calcular stake total da perna (incluindo entradas adicionais se houver)
+        // Stake da perna (tabela normalizada - sem entries adicionais)
         let stakeTotalPerna = stake;
-        if (perna.entries && Array.isArray(perna.entries)) {
-          stakeTotalPerna = perna.entries.reduce((acc, e) => acc + (e.stake || 0), 0);
-        }
         
         if (resultadoContaRollover && !resultadoAnteriorContava) {
           // Primeira vez liquidando (não VOID/PENDENTE) - adicionar ao rollover
