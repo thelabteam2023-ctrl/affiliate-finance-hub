@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { reliquidarAposta, deletarAposta, liquidarPernaSurebet } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 // useBookmakerLogoMap movido para ProjetoDashboardTab
 import { Button } from "@/components/ui/button";
@@ -106,6 +108,12 @@ interface Aposta {
   contexto_operacional?: string | null;
   forma_registro?: string | null;
   pernas?: unknown | null;
+  // Campos de consolidação multi-moeda
+  moeda_operacao?: string | null;
+  stake_consolidado?: number | null;
+  pl_consolidado?: number | null;
+  valor_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -151,6 +159,12 @@ interface ApostaMultipla {
   contexto_operacional?: string | null;
   estrategia?: string | null;
   forma_registro?: string | null;
+  // Campos de consolidação multi-moeda
+  moeda_operacao?: string | null;
+  stake_consolidado?: number | null;
+  pl_consolidado?: number | null;
+  valor_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
   bookmaker?: {
     nome: string;
     parceiro_id: string;
@@ -275,6 +289,7 @@ function getCasaLabelFromAposta(aposta: { bookmaker?: any; pernas?: unknown | nu
 }
 
 export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp }: ProjetoApostasTabProps) {
+  const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
@@ -381,7 +396,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           status, resultado, valor_retorno, lucro_prejuizo, observacoes, bookmaker_id,
           modo_entrada, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
           back_comissao, back_em_exchange, gerou_freebet, valor_freebet_gerada,
-          tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro, pernas
+          tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro, pernas,
+          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia
         `)
         .eq("projeto_id", projetoId)
         .eq("forma_registro", "SIMPLES")
@@ -461,7 +477,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           id, data_aposta, stake, odd_final, lucro_prejuizo, valor_retorno,
           status, resultado, observacoes, bookmaker_id, estrategia,
           tipo_freebet, gerou_freebet, valor_freebet_gerada, is_bonus_bet,
-          contexto_operacional, forma_registro, selecoes, tipo_multipla, retorno_potencial
+          contexto_operacional, forma_registro, selecoes, tipo_multipla, retorno_potencial,
+          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia
         `)
         .eq("projeto_id", projetoId)
         .eq("forma_registro", "MULTIPLA")
@@ -1315,18 +1332,20 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               else if (item.contexto === "FREEBET") estrategia = "FREEBET";
               else if (item.contexto === "BONUS") estrategia = "BONUS";
               
-              // Preparar dados para ApostaCard
+              // Preparar dados para ApostaCard - usar valores consolidados
+              const consolidatedStake = getConsolidatedStake(aposta, convertToConsolidation, moedaConsolidacao);
+              const consolidatedLucro = getConsolidatedLucro(aposta, convertToConsolidation, moedaConsolidacao);
               const apostaCardData = {
                 id: aposta.id,
                 evento: aposta.evento,
                 esporte: aposta.esporte,
                 selecao: aposta.selecao,
                 odd: aposta.odd,
-                stake: aposta.stake,
+                stake: consolidatedStake,
                 data_aposta: aposta.data_aposta,
                 resultado: aposta.resultado,
                 status: aposta.status,
-                lucro_prejuizo: aposta.lucro_prejuizo,
+                lucro_prejuizo: consolidatedLucro,
                 estrategia: aposta.estrategia,
                 bookmaker_nome: bookmakerBase,
                 parceiro_nome: parceiroNome,
@@ -1364,17 +1383,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             else if (item.contexto === "FREEBET") estrategiaMultipla = "FREEBET";
             else if (item.contexto === "BONUS") estrategiaMultipla = "BONUS";
             
-            // Preparar dados para ApostaCard (múltipla)
+            // Preparar dados para ApostaCard (múltipla) - usar valores consolidados
+            const consolidatedStakeMultipla = getConsolidatedStake(multipla, convertToConsolidation, moedaConsolidacao);
+            const consolidatedLucroMultipla = getConsolidatedLucro(multipla, convertToConsolidation, moedaConsolidacao);
             const multiplaCardData = {
               id: multipla.id,
               evento: `Múltipla ${multipla.tipo_multipla}`,
               esporte: `${multipla.selecoes.length} seleções`,
               odd_final: multipla.odd_final,
-              stake: multipla.stake,
+              stake: consolidatedStakeMultipla,
               data_aposta: multipla.data_aposta,
               resultado: multipla.resultado,
               status: multipla.status,
-              lucro_prejuizo: multipla.lucro_prejuizo,
+              lucro_prejuizo: consolidatedLucroMultipla,
               estrategia: multipla.estrategia,
               tipo_multipla: multipla.tipo_multipla,
               selecoes: multipla.selecoes.map(s => ({

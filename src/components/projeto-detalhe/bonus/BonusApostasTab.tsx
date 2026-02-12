@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import { liquidarSurebet, deletarAposta, reliquidarAposta, liquidarPernaSurebet, type LiquidarSurebetPernaInput } from "@/services/aposta";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { type SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
@@ -172,6 +174,7 @@ type ApostaUnificada = {
 
 export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) {
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
+  const { convertToConsolidation, moedaConsolidacao, formatCurrency: formatProjectCurrency } = useProjetoCurrency(projetoId);
   
   // Use refs to track previous values and prevent infinite loops
   const prevBonusIdsRef = useRef<string>("");
@@ -950,22 +953,23 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
           const parceiroNome = aposta.bookmaker?.parceiro?.nome ? getFirstLastName(aposta.bookmaker.parceiro.nome) : null;
           const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
           
-          // Preparar dados para ApostaCard
+          // Preparar dados para ApostaCard - usar valores consolidados
+          const consolidatedStake = getConsolidatedStake(aposta, convertToConsolidation, moedaConsolidacao);
+          const consolidatedLucro = getConsolidatedLucro(aposta, convertToConsolidation, moedaConsolidacao);
           const apostaCardData = {
             id: aposta.id,
             evento: aposta.evento,
             esporte: aposta.esporte,
             selecao: aposta.selecao,
             odd: aposta.odd,
-            stake: aposta.stake,
+            stake: consolidatedStake,
             data_aposta: aposta.data_aposta,
             resultado: aposta.resultado,
             status: aposta.status,
-            lucro_prejuizo: aposta.lucro_prejuizo,
+            lucro_prejuizo: consolidatedLucro,
             estrategia: aposta.estrategia,
             bookmaker_nome: bookmakerBase,
             parceiro_nome: parceiroNome,
-            moeda: aposta.bookmaker?.moeda || 'BRL',
             logo_url: logoUrl,
           };
           
@@ -978,7 +982,7 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
               onEdit={() => handleOpenDialog(aposta)}
               onQuickResolve={handleQuickResolve}
               onDelete={handleDeleteAposta}
-              formatCurrency={(val) => formatCurrencyWithMoeda(val, aposta.bookmaker?.moeda || 'BRL')}
+              formatCurrency={formatProjectCurrency}
             />
           );
         }
@@ -989,23 +993,24 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
         const parceiroNomeMultipla = multipla.bookmaker?.parceiro?.nome ? getFirstLastName(multipla.bookmaker.parceiro.nome) : null;
         const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
         
-        // Preparar dados para ApostaCard
+        // Preparar dados para ApostaCard - usar valores consolidados
+        const consolidatedStakeMultipla = getConsolidatedStake(multipla, convertToConsolidation, moedaConsolidacao);
+        const consolidatedLucroMultipla = getConsolidatedLucro(multipla, convertToConsolidation, moedaConsolidacao);
         const multiplaCardData = {
           id: multipla.id,
           evento: `MÚLTIPLA ${multipla.tipo_multipla || ''}`,
           esporte: `${multipla.selecoes.length} seleções`,
           odd_final: multipla.odd_final,
-          stake: multipla.stake,
+          stake: consolidatedStakeMultipla,
           data_aposta: multipla.data_aposta,
           resultado: multipla.resultado,
           status: multipla.status,
-          lucro_prejuizo: multipla.lucro_prejuizo,
+          lucro_prejuizo: consolidatedLucroMultipla,
           estrategia: multipla.estrategia,
           tipo_multipla: multipla.tipo_multipla,
           selecoes: multipla.selecoes,
           bookmaker_nome: bookmakerBaseMultipla,
           parceiro_nome: parceiroNomeMultipla,
-          moeda: multipla.bookmaker?.moeda || 'BRL',
           logo_url: logoUrlMultipla,
         };
         
@@ -1018,7 +1023,7 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
             onEdit={() => handleOpenMultiplaDialog(multipla)}
             onQuickResolve={handleQuickResolve}
             onDelete={handleDeleteAposta}
-            formatCurrency={(val) => formatCurrencyWithMoeda(val, multipla.bookmaker?.moeda || 'BRL')}
+            formatCurrency={formatProjectCurrency}
           />
         );
       })}
