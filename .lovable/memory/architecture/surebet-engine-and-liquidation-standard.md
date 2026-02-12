@@ -16,7 +16,18 @@ O ApostaService.liquidarPernaSurebet() é um mero orquestrador — ZERO INSERT d
 
 ## Edição de Pernas
 
-A edição de campos (stake, odd, bookmaker, seleção) utiliza a RPC 'editar_perna_surebet_atomica' com reconciliação financeira via eventos de AJUSTE.
+A edição de campos (stake, odd, bookmaker, seleção) utiliza a RPC 'editar_perna_surebet_atomica' com reconciliação financeira via eventos de AJUSTE. Inclui:
+- **Validação de saldo**: Aumento de stake é bloqueado se `bookmakers.saldo_atual < stake_increase`
+- **Keys determinísticas**: `edit_perna_{id}_{campo}_{old}_to_{new}_n{count}` (monotônico)
+- **Reconciliação de payout**: Se perna já liquidada, recalcula payout e gera AJUSTE delta
+
+## Deleção de Pernas
+
+A RPC 'deletar_perna_surebet_v1' garante integridade total:
+1. REVERSAL da stake (devolve ao bookmaker)
+2. REVERSAL do payout (se perna liquidada com GREEN/VOID/MEIO_GREEN/MEIO_RED)
+3. DELETE da perna em apostas_pernas
+4. Recálculo do pai (ou status CANCELADA se última perna)
 
 ## Princípio Validado
 
