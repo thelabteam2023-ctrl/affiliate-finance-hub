@@ -357,7 +357,7 @@ export default function ProjetoDetalhe() {
       // Build query for apostas_unificada (all types combined)
       let apostasQuery = supabase
         .from("apostas_unificada")
-        .select("stake, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao, status, resultado")
+        .select("id, stake, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao, status, resultado, forma_registro")
         .eq("projeto_id", id);
       
       // Build query for cashback_manual
@@ -396,31 +396,65 @@ export default function ProjetoDetalhe() {
       const todasApostas = apostasResult.data || [];
       const cashbacks = cashbackResult.data || [];
       
+      // Para ARBITRAGEM, contar pernas individuais como operações separadas
+      const arbitragemIds = todasApostas
+        .filter(a => a.forma_registro === "ARBITRAGEM")
+        .map(a => a.id);
+      
+      let pernasCount = 0;
+      if (arbitragemIds.length > 0) {
+        const { count } = await supabase
+          .from("apostas_pernas")
+          .select("*", { count: "exact", head: true })
+          .in("aposta_id", arbitragemIds);
+        pernasCount = count || 0;
+      }
+      
+      // Total = apostas simples/múltiplas + pernas de arbitragem
+      const apostasNaoArbitragem = todasApostas.filter(a => a.forma_registro !== "ARBITRAGEM").length;
+      const totalOperacoes = apostasNaoArbitragem + pernasCount;
+      
       // Calculate lucro from apostas (com conversão de moeda)
       const lucroApostas = todasApostas.reduce((acc, a) => {
-        // Usar valor BRL de referência se disponível, senão usar lucro_prejuizo
         const lucro = a.lucro_prejuizo_brl_referencia ?? Number(a.lucro_prejuizo || 0);
         return acc + lucro;
       }, 0);
       
       // Calculate lucro from cashback manual (é lucro!)
       const lucroCashback = cashbacks.reduce((acc, cb) => {
-        // Usar valor BRL de referência se disponível
         const valor = cb.valor_brl_referencia ?? Number(cb.valor || 0);
         return acc + valor;
       }, 0);
       
-      // Calculate summary from all apostas
+      // Para resultados de pernas de arbitragem, buscar resultados individuais
+      let pernasGreens = 0, pernasReds = 0, pernasVoids = 0, pernasMeioGreens = 0, pernasMeioReds = 0;
+      if (arbitragemIds.length > 0) {
+        const { data: pernasData } = await supabase
+          .from("apostas_pernas")
+          .select("resultado")
+          .in("aposta_id", arbitragemIds);
+        if (pernasData) {
+          pernasGreens = pernasData.filter(p => p.resultado === "GREEN").length;
+          pernasReds = pernasData.filter(p => p.resultado === "RED").length;
+          pernasVoids = pernasData.filter(p => p.resultado === "VOID").length;
+          pernasMeioGreens = pernasData.filter(p => p.resultado === "MEIO_GREEN" || p.resultado === "HALF").length;
+          pernasMeioReds = pernasData.filter(p => p.resultado === "MEIO_RED").length;
+        }
+      }
+      
+      // Resultados de apostas não-arbitragem + pernas de arbitragem
+      const naoArb = todasApostas.filter(a => a.forma_registro !== "ARBITRAGEM");
+      
       const summary: ApostasResumo = {
-        total_apostas: todasApostas.length,
+        total_apostas: totalOperacoes,
         apostas_pendentes: todasApostas.filter(a => a.status === "PENDENTE").length,
-        greens: todasApostas.filter(a => a.resultado === "GREEN").length,
-        reds: todasApostas.filter(a => a.resultado === "RED").length,
-        voids: todasApostas.filter(a => a.resultado === "VOID").length,
-        meio_greens: todasApostas.filter(a => a.resultado === "MEIO_GREEN" || a.resultado === "HALF").length,
-        meio_reds: todasApostas.filter(a => a.resultado === "MEIO_RED").length,
+        greens: naoArb.filter(a => a.resultado === "GREEN").length + pernasGreens,
+        reds: naoArb.filter(a => a.resultado === "RED").length + pernasReds,
+        voids: naoArb.filter(a => a.resultado === "VOID").length + pernasVoids,
+        meio_greens: naoArb.filter(a => a.resultado === "MEIO_GREEN" || a.resultado === "HALF").length + pernasMeioGreens,
+        meio_reds: naoArb.filter(a => a.resultado === "MEIO_RED").length + pernasMeioReds,
         total_stake: todasApostas.reduce((acc, a) => acc + Number(a.stake || 0), 0),
-        lucro_total: lucroApostas + lucroCashback, // Inclui cashback como lucro
+        lucro_total: lucroApostas + lucroCashback,
         roi_percentual: 0
       };
       
