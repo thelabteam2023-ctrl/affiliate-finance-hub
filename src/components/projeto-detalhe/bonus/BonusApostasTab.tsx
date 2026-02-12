@@ -772,6 +772,8 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
     moeda: string;
     resultadoAnterior: string | null;
     workspaceId: string;
+    bookmakerNome?: string;
+    silent?: boolean;
   }) => {
     try {
       const result = await liquidarPernaSurebet({
@@ -808,7 +810,10 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
         MEIO_RED: "½ Red", VOID: "Void",
       }[input.resultado] || input.resultado;
 
-      toast.success(`Perna marcada como ${resultLabel}`);
+      if (!input.silent) {
+        const nome = input.bookmakerNome || '';
+        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
+      }
     } catch (error: any) {
       console.error("Erro ao liquidar perna:", error);
       toast.error("Erro ao atualizar resultado da perna");
@@ -841,8 +846,11 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
           moeda: perna.moeda || 'BRL',
           resultadoAnterior: perna.resultado,
           workspaceId: surebet.workspace_id!,
+          silent: true,
         });
       }
+
+      toast.success("Resultado da surebet alterado com sucesso");
     } catch (error: any) {
       console.error("Erro ao liquidar surebet:", error);
       toast.error("Erro ao liquidar surebet");
