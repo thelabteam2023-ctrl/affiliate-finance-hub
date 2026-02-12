@@ -1163,7 +1163,6 @@ export function ApostaMultiplaDialog({
       // MIGRADO PARA LEDGER: Só creditar saldo_freebet se a freebet for liberada
        if (status === "LIBERADA") {
         await creditarFreebetViaLedger(bkId, valor, 'APOSTA_MULTIPLA_QUALIFICADORA', { descricao: 'Freebet de aposta múltipla qualificadora' });
-        await creditarFreebetViaLedger(bkId, valor, 'APOSTA_MULTIPLA_QUALIFICADORA', { descricao: 'Freebet de aposta múltipla qualificadora' });
       }
 
       // Registrar na tabela freebets_recebidas com status e MOEDA da bookmaker
