@@ -11917,6 +11917,17 @@ export type Database = {
           success: boolean
         }[]
       }
+      liquidar_perna_surebet_v1: {
+        Args: {
+          p_fonte_saldo?: string
+          p_perna_id: string
+          p_resultado: string
+          p_resultado_anterior?: string
+          p_surebet_id: string
+          p_workspace_id?: string
+        }
+        Returns: Json
+      }
       lock_wallet_balance: {
         Args: { p_ledger_id?: string; p_valor_usd: number; p_wallet_id: string }
         Returns: Json
