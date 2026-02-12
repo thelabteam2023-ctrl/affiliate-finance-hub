@@ -891,7 +891,7 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
   const renderBetCards = (items: ApostaUnificada[]) => (
     <div className={cn(
       viewMode === "cards" 
-        ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+        ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" 
         : "space-y-2"
     )}>
       {items.map((item) => {
