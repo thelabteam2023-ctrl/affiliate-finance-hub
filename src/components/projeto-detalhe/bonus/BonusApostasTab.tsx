@@ -26,7 +26,10 @@ import {
   List,
   Gift
 } from "lucide-react";
-import { liquidarSurebet, deletarAposta, type LiquidarSurebetPernaInput } from "@/services/aposta";
+import { liquidarSurebet, deletarAposta, reliquidarAposta, type LiquidarSurebetPernaInput } from "@/services/aposta";
+import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { type SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -219,6 +222,10 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
   
   // Filtros dimensionais independentes para o histórico
   const { dimensionalFilter, setDimensionalFilter } = useHistoryDimensionalFilter();
+
+  // Hooks do motor financeiro unificado
+  const invalidateSaldos = useInvalidateBookmakerSaldos();
+  const { hasActiveRolloverBonus, atualizarProgressoRollover } = useBonusBalanceManager();
 
   // Initial fetch and when projetoId changes - reset refs
   useEffect(() => {
@@ -665,6 +672,80 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
   }, [bookmakers]);
 
 
+  // Resolução rápida de apostas simples/múltiplas - USA RPC ATÔMICA + ROLLOVER (Motor Financeiro Unificado)
+  const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
+    try {
+      const aposta = apostas.find(a => a.id === apostaId) || apostasMultiplas.find(am => am.id === apostaId);
+      if (!aposta) return;
+
+      const stake = aposta.stake || 0;
+      const odd = 'odd' in aposta && aposta.odd ? aposta.odd : (aposta as ApostaMultipla).odd_final || 1;
+      const bookmakerId = aposta.bookmaker_id;
+
+      // Calcular lucro usando função canônica
+      const lucro = calcularImpactoResultado(stake, odd, resultado);
+
+      // 1. Liquidar via RPC atômica (atualiza aposta + registra no ledger + trigger atualiza saldo)
+      const rpcResult = await reliquidarAposta(apostaId, resultado, lucro);
+
+      if (!rpcResult.success) {
+        toast.error(rpcResult.error?.message || "Erro ao liquidar aposta");
+        return;
+      }
+
+      // 2. Atualizar rollover se houver bônus ativo para a casa
+      if (bookmakerId && resultado !== "VOID") {
+        const temBonusAtivo = await hasActiveRolloverBonus(projetoId, bookmakerId);
+        if (temBonusAtivo) {
+          await atualizarProgressoRollover(projetoId, bookmakerId, stake, odd);
+        }
+      }
+
+      // 3. Atualizar lista local
+      setApostas(prev => prev.map(a =>
+        a.id === apostaId
+          ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
+          : a
+      ));
+      setApostasMultiplas(prev => prev.map(am =>
+        am.id === apostaId
+          ? { ...am, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
+          : am
+      ));
+
+      // 4. Invalidar cache de saldos
+      invalidateSaldos(projetoId);
+
+      const resultLabel = {
+        GREEN: "Green",
+        RED: "Red",
+        MEIO_GREEN: "½ Green",
+        MEIO_RED: "½ Red",
+        VOID: "Void"
+      }[resultado] || resultado;
+
+      toast.success(`Aposta marcada como ${resultLabel}`);
+    } catch (error) {
+      console.error("Erro ao resolver aposta:", error);
+      toast.error("Erro ao atualizar resultado");
+    }
+  }, [apostas, apostasMultiplas, projetoId, invalidateSaldos, hasActiveRolloverBonus, atualizarProgressoRollover]);
+
+  // Handler para deletar aposta simples/múltipla
+  const handleDeleteAposta = useCallback(async (apostaId: string) => {
+    try {
+      const result = await deletarAposta(apostaId);
+      if (result.success) {
+        toast.success("Aposta excluída com sucesso");
+        handleApostaUpdated();
+      } else {
+        const errorMsg = typeof result.error === 'string' ? result.error : result.error?.message || "Erro ao excluir aposta";
+        toast.error(errorMsg);
+      }
+    } catch (error: any) {
+      toast.error("Erro ao excluir aposta: " + error.message);
+    }
+  }, [handleApostaUpdated]);
 
   // Abrir aposta simples em janela externa (mesmo comportamento do Surebet)
   const handleOpenDialog = (aposta: Aposta | null) => {
@@ -912,6 +993,8 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
               estrategia="BONUS"
               variant={viewMode === "cards" ? "card" : "list"}
               onEdit={() => handleOpenDialog(aposta)}
+              onQuickResolve={handleQuickResolve}
+              onDelete={handleDeleteAposta}
               formatCurrency={(val) => formatCurrencyWithMoeda(val, aposta.bookmaker?.moeda || 'BRL')}
             />
           );
@@ -950,6 +1033,8 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
             estrategia="BONUS"
             variant={viewMode === "cards" ? "card" : "list"}
             onEdit={() => handleOpenMultiplaDialog(multipla)}
+            onQuickResolve={handleQuickResolve}
+            onDelete={handleDeleteAposta}
             formatCurrency={(val) => formatCurrencyWithMoeda(val, multipla.bookmaker?.moeda || 'BRL')}
           />
         );
