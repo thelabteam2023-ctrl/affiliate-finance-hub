@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { calcSurebetWindowHeight } from "@/lib/windowHelper";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -149,7 +150,8 @@ export function GlobalActionsBar({
     if (rascunhoId) {
       url += `&rascunhoId=${encodeURIComponent(rascunhoId)}`;
     }
-    const windowFeatures = 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+    const height = calcSurebetWindowHeight(2); // Default 2 pernas, will resize dynamically
+    const windowFeatures = `width=780,height=${height},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`;
     window.open(url, '_blank', windowFeatures);
   };
 

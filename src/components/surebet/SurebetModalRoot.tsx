@@ -35,6 +35,7 @@ import { Calculator, Save, Trash2, X, AlertTriangle, ArrowRight, Target, FileTex
 import { cn } from "@/lib/utils";
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
 import { toLocalTimestamp, validarDataAposta } from "@/utils/dateUtils";
+import { calcSurebetWindowHeight } from "@/lib/windowHelper";
 
 import { SurebetTableRow } from "./SurebetTableRow";
 import { SurebetTableFooter } from "./SurebetTableFooter";
@@ -185,6 +186,16 @@ export function SurebetModalRoot({
     return numPernasCustom;
   }, [modeloTipo, numPernasCustom]);
   
+  // Redimensionar janela dinamicamente quando número de pernas muda (modo embedded/popup)
+  useEffect(() => {
+    if (!embedded || !open) return;
+    try {
+      const targetHeight = calcSurebetWindowHeight(numPernas);
+      window.resizeTo(window.outerWidth, targetHeight);
+    } catch {
+      // Silently ignore if resize not supported
+    }
+  }, [numPernas, embedded, open]);
   const [odds, setOdds] = useState<OddEntry[]>(() => 
     getDefaultSelecoes(2).map((sel, i) => ({
       bookmaker_id: "",
@@ -1292,7 +1303,7 @@ export function SurebetModalRoot({
     <>
       {/* Painel Fullscreen - Ocupa 100% da janela */}
       <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in-0 duration-200">
-        <div className="relative w-full h-full flex flex-col overflow-hidden">
+        <div className="relative w-full h-full flex flex-col overflow-hidden max-h-screen">
           {/* Hidden file input */}
           <input
             type="file"
@@ -1331,7 +1342,7 @@ export function SurebetModalRoot({
           />
 
           {/* CONTENT */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
             {/* Operação parcial warning */}
             {analysis.isOperacaoParcial && !isEditing && (
               <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
