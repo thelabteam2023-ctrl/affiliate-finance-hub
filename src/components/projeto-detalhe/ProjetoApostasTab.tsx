@@ -513,7 +513,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         .select(`
           id, evento, esporte, modelo, stake_total, spread_calculado,
           roi_esperado, roi_real, lucro_esperado, lucro_prejuizo,
-          status, resultado, data_aposta, observacoes, created_at, pernas, estrategia
+          status, resultado, data_aposta, observacoes, created_at, pernas, estrategia,
+          workspace_id,
+          apostas_pernas (
+            id, selecao, selecao_livre, odd, stake, resultado, bookmaker_id, moeda, ordem
+          )
         `)
         .eq("projeto_id", projetoId)
         .eq("forma_registro", "ARBITRAGEM")
@@ -530,11 +534,13 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
       if (error) throw error;
       
-      // Buscar nomes de bookmakers para as pernas
+      // Determinar pernas reais: usar apostas_pernas (tabela relacional) se existirem, senão fallback para JSON
       const allBookmakerIds = new Set<string>();
       (data || []).forEach((sb: any) => {
-        const pernas = Array.isArray(sb.pernas) ? sb.pernas : [];
-        pernas.forEach((p: any) => {
+        const pernasRelacionais = Array.isArray(sb.apostas_pernas) ? sb.apostas_pernas : [];
+        const pernasJson = Array.isArray(sb.pernas) ? sb.pernas : [];
+        const pernasEfetivas = pernasRelacionais.length > 0 ? pernasRelacionais : pernasJson;
+        pernasEfetivas.forEach((p: any) => {
           if (p.bookmaker_id) allBookmakerIds.add(p.bookmaker_id);
         });
       });
@@ -550,14 +556,22 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       }
       
       const surebetsFormatadas = (data || []).map((sb: any) => {
-        const pernas = Array.isArray(sb.pernas) ? sb.pernas : [];
+        const pernasRelacionais = Array.isArray(sb.apostas_pernas) ? sb.apostas_pernas : [];
+        const pernasJson = Array.isArray(sb.pernas) ? sb.pernas : [];
+        // Priorizar pernas da tabela relacional (source of truth)
+        const pernasEfetivas = pernasRelacionais.length > 0 
+          ? pernasRelacionais.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0))
+          : pernasJson;
+        
         return {
           ...sb,
           data_operacao: sb.data_aposta,
           stake_total: sb.stake_total ?? 0,
-          pernas: pernas.map((p: any) => ({
+          workspace_id: sb.workspace_id,
+          pernas: pernasEfetivas.map((p: any) => ({
             ...p,
-            bookmaker: bookmakerMap.get(p.bookmaker_id) || { nome: "Desconhecida" }
+            bookmaker: bookmakerMap.get(p.bookmaker_id) || { nome: "Desconhecida" },
+            bookmaker_nome: bookmakerMap.get(p.bookmaker_id)?.nome || p.bookmaker_nome || "Desconhecida",
           }))
         };
       });
