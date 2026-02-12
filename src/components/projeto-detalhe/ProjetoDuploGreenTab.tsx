@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { reliquidarAposta, liquidarPernaSurebet } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
@@ -170,7 +171,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidation: convertFn, moedaConsolidacao: moedaConsol } = useProjetoCurrency(projetoId);
   
   // Hook global de logos de bookmakers (busca do catálogo)
   const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
@@ -264,7 +265,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     try {
       let query = supabase
         .from("apostas_unificada")
-        .select(`id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro, contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao, back_em_exchange, back_comissao, pernas, stake_total, spread_calculado, roi_esperado, roi_real, lucro_esperado, modelo`)
+        .select(`id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro, contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao, back_em_exchange, back_comissao, pernas, stake_total, spread_calculado, roi_esperado, roi_real, lucro_esperado, modelo, moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.DUPLO_GREEN)
         .is("cancelled_at", null)
@@ -491,8 +492,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       return Number.isFinite(value) ? value : 0;
     };
 
-    const totalStake = apostas.reduce((acc, a) => acc + getStakeVolume(a), 0);
-    const lucroTotal = apostas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+    const totalStake = apostas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFn, moedaConsol), 0);
+    const lucroTotal = apostas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertFn, moedaConsol), 0);
     const pendentes = apostas.filter((a) => !a.resultado || a.resultado === "PENDENTE").length;
     const greens = apostas.filter((a) => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
     const reds = apostas.filter((a) => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
@@ -525,13 +526,13 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       // Aposta simples
       const casa = a.bookmaker_nome || "Desconhecida";
       if (!porCasa[casa]) porCasa[casa] = { stake: 0, lucro: 0, count: 0 };
-      porCasa[casa].stake += getStakeVolume(a);
-      porCasa[casa].lucro += a.lucro_prejuizo || 0;
+      porCasa[casa].stake += getConsolidatedStake(a, convertFn, moedaConsol);
+      porCasa[casa].lucro += getConsolidatedLucro(a, convertFn, moedaConsol);
       porCasa[casa].count++;
     });
 
     return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa };
-  }, [apostas]);
+  }, [apostas, convertFn, moedaConsol]);
 
   // Interface para vínculos dentro de cada casa
   interface VinculoData {

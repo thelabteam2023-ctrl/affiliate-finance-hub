@@ -53,6 +53,7 @@ import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
+import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { reliquidarAposta, liquidarPernaSurebet, deletarAposta } from "@/services/aposta/ApostaService";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useInvalidateBookmakerSaldos, useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
@@ -103,6 +104,13 @@ interface Surebet {
   // Campos para bônus
   stake_bonus?: number | null;
   bonus_id?: string | null;
+  // Campos de consolidação multi-moeda
+  moeda_operacao?: string | null;
+  stake_consolidado?: number | null;
+  pl_consolidado?: number | null;
+  valor_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
+  lucro_prejuizo?: number | null;
 }
 
 // REMOVIDO: Interface Bookmaker - agora usa BookmakerSaldo do hook centralizado
@@ -196,7 +204,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
 
   // Hook de formatação de moeda do projeto
-  const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol } = useProjetoCurrency(projetoId);
+  const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol, convertToConsolidation: convertFn } = useProjetoCurrency(projetoId);
   const currencySymbol = getSymbol();
   
   // DESACOPLAMENTO CALENDÁRIO: Dados separados para o calendário (sem filtro de período)
@@ -247,6 +255,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
           status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
           odd, selecao, bookmaker_id, bonus_id,
+          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
           bookmaker:bookmakers(nome, parceiro:parceiros(nome))
         `)
         .eq("projeto_id", projetoId)
@@ -326,6 +335,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           odd: arb.odd, selecao: arb.selecao, bookmaker_id: arb.bookmaker_id,
           bookmaker_nome: isSimples ? ((arb as any).bookmaker?.nome || "—") : (pernasRaw[0]?.bookmaker_nome || "—"),
           parceiro_nome: isSimples ? ((arb as any).bookmaker?.parceiro?.nome || undefined) : undefined,
+          // Campos de consolidação multi-moeda
+          moeda_operacao: arb.moeda_operacao,
+          stake_consolidado: arb.stake_consolidado,
+          pl_consolidado: arb.pl_consolidado,
+          valor_brl_referencia: arb.valor_brl_referencia,
+          lucro_prejuizo_brl_referencia: arb.lucro_prejuizo_brl_referencia,
+          lucro_prejuizo: arb.lucro_prejuizo,
         };
       });
     },
@@ -597,12 +613,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     const liquidadas = surebets.filter(s => s.status === "LIQUIDADA").length;
     const greens = surebets.filter(s => s.resultado === "GREEN").length;
     const reds = surebets.filter(s => s.resultado === "RED").length;
-    const lucroTotal = surebets.reduce((acc, s) => acc + (s.lucro_real || 0), 0);
-    const stakeTotal = surebets.reduce((acc, s) => acc + (s.stake_total || s.stake || 0), 0);
+    const lucroTotal = surebets.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFn, moedaConsolidacao), 0);
+    const stakeTotal = surebets.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
     const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
-  }, [surebets]);
+  }, [surebets, convertFn, moedaConsolidacao]);
 
   // KPIs FILTRADOS (para Operações) - Aplicam filtros dimensionais
   const kpisOperacoes = useMemo(() => {
@@ -611,12 +627,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     const liquidadas = filteredSurebetsForOperacoes.filter(s => s.status === "LIQUIDADA").length;
     const greens = filteredSurebetsForOperacoes.filter(s => s.resultado === "GREEN").length;
     const reds = filteredSurebetsForOperacoes.filter(s => s.resultado === "RED").length;
-    const lucroTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + (s.lucro_real || 0), 0);
-    const stakeTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + (s.stake_total || s.stake || 0), 0);
+    const lucroTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFn, moedaConsolidacao), 0);
+    const stakeTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
     const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
-  }, [filteredSurebetsForOperacoes]);
+  }, [filteredSurebetsForOperacoes, convertFn, moedaConsolidacao]);
 
   // Alias para compatibilidade - o KPI de referência depende da sub-aba ativa
   // Mas para a Visão Geral sempre usamos kpisGlobal

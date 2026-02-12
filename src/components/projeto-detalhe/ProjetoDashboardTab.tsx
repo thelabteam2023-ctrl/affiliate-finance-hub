@@ -96,7 +96,7 @@ async function fetchApostasFiltradas(
 ): Promise<ApostaUnificada[]> {
   let query = supabase
     .from("apostas_unificada")
-    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, resultado, stake, stake_total, esporte, bookmaker_id, forma_registro, estrategia, bonus_id`)
+    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, resultado, stake, stake_total, stake_consolidado, esporte, bookmaker_id, forma_registro, estrategia, bonus_id, moeda_operacao, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
     .eq("projeto_id", projetoId)
     .eq("status", "LIQUIDADA")
     .is("cancelled_at", null)
