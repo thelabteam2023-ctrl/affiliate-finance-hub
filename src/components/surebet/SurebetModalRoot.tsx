@@ -46,6 +46,7 @@ import { SurebetTableFooter } from "./SurebetTableFooter";
 interface Surebet {
   id: string;
   data_operacao: string;
+  data_aposta?: string | null;
   evento: string;
   esporte: string;
   modelo: string;
@@ -280,6 +281,20 @@ export function SurebetModalRoot({
       setMercado(surebet.mercado || "");
       setEstrategia((surebet.estrategia || APOSTA_ESTRATEGIA.SUREBET) as ApostaEstrategia);
       setContexto((surebet.contexto_operacional || CONTEXTO_OPERACIONAL.NORMAL) as ContextoOperacional);
+      
+      // Preservar Data/Hora original no modo edição
+      const dataOrigem = surebet.data_aposta || surebet.data_operacao;
+      if (dataOrigem) {
+        const d = new Date(dataOrigem);
+        if (!isNaN(d.getTime())) {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const hours = String(d.getHours()).padStart(2, '0');
+          const minutes = String(d.getMinutes()).padStart(2, '0');
+          setDataAposta(`${year}-${month}-${day}T${hours}:${minutes}`);
+        }
+      }
       
       const modeloSalvo = surebet.modelo || "1-2";
       if (modeloSalvo === "1-2") setModeloTipo("2");
