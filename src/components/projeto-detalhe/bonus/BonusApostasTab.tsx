@@ -26,7 +26,7 @@ import {
   List,
   Gift
 } from "lucide-react";
-import { liquidarSurebet, deletarAposta, reliquidarAposta, type LiquidarSurebetPernaInput } from "@/services/aposta";
+import { liquidarSurebet, deletarAposta, reliquidarAposta, liquidarPernaSurebet, type LiquidarSurebetPernaInput } from "@/services/aposta";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
@@ -761,6 +761,60 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   };
 
+  // Handler para liquidação granular por perna (inline pill) - Motor Financeiro Unificado
+  const handleSurebetPernaResolve = useCallback(async (input: {
+    pernaId: string;
+    surebetId: string;
+    bookmarkerId: string;
+    resultado: string;
+    stake: number;
+    odd: number;
+    moeda: string;
+    resultadoAnterior: string | null;
+    workspaceId: string;
+  }) => {
+    try {
+      const result = await liquidarPernaSurebet({
+        surebet_id: input.surebetId,
+        perna_id: input.pernaId,
+        bookmaker_id: input.bookmarkerId,
+        resultado: input.resultado as any,
+        resultado_anterior: input.resultadoAnterior,
+        stake: input.stake,
+        odd: input.odd,
+        moeda: input.moeda,
+        workspace_id: input.workspaceId,
+      });
+
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao liquidar perna");
+        return;
+      }
+
+      // Invalidar cache e recarregar
+      invalidateSaldos(projetoId);
+      handleApostaUpdated();
+
+      // Atualizar rollover se houver bônus ativo
+      if (input.bookmarkerId && input.resultado !== "VOID") {
+        const temBonusAtivo = await hasActiveRolloverBonus(projetoId, input.bookmarkerId);
+        if (temBonusAtivo) {
+          await atualizarProgressoRollover(projetoId, input.bookmarkerId, input.stake, input.odd);
+        }
+      }
+
+      const resultLabel = {
+        GREEN: "Green", RED: "Red", MEIO_GREEN: "½ Green",
+        MEIO_RED: "½ Red", VOID: "Void",
+      }[input.resultado] || input.resultado;
+
+      toast.success(`Perna marcada como ${resultLabel}`);
+    } catch (error: any) {
+      console.error("Erro ao liquidar perna:", error);
+      toast.error("Erro ao atualizar resultado da perna");
+    }
+  }, [projetoId, invalidateSaldos, handleApostaUpdated, hasActiveRolloverBonus, atualizarProgressoRollover]);
+
   // Handler para liquidação rápida de Surebet (menu cascata)
   const handleQuickResolveSurebet = async (surebetId: string, quickResult: SurebetQuickResult) => {
     const surebet = surebets.find(sb => sb.id === surebetId);
@@ -955,6 +1009,7 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
                 window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
               }}
               onQuickResolve={(surebetId, result) => handleQuickResolveSurebet(surebetId, result)}
+              onPernaResultChange={handleSurebetPernaResolve}
               onDelete={handleDeleteSurebet}
             />
           );
