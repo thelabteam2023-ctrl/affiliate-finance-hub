@@ -2,17 +2,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash } from "lucide-react";
+import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash, Loader2 } from "lucide-react";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useState } from "react";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { BetRowActionsMenu, type BetResultado } from "@/components/apostas/BetRowActionsMenu";
@@ -132,89 +131,109 @@ interface ResultadoBadgeProps {
   onQuickResolve?: (apostaId: string, resultado: string) => void;
 }
 
+const RESULT_OPTIONS_SIMPLE = [
+  { value: "GREEN", label: "Green", icon: CheckCircle2, color: "text-emerald-400", bg: "hover:bg-emerald-500/20", pillBg: "bg-emerald-500/15 border-emerald-500/30" },
+  { value: "RED", label: "Red", icon: X, color: "text-red-400", bg: "hover:bg-red-500/20", pillBg: "bg-red-500/15 border-red-500/30" },
+  { value: "MEIO_GREEN", label: "½ Green", icon: CheckCircle2, color: "text-teal-400", bg: "hover:bg-teal-500/20", pillBg: "bg-teal-500/15 border-teal-500/30" },
+  { value: "MEIO_RED", label: "½ Red", icon: X, color: "text-orange-400", bg: "hover:bg-orange-500/20", pillBg: "bg-orange-500/15 border-orange-500/30" },
+  { value: "VOID", label: "Void", icon: CircleSlash, color: "text-gray-400", bg: "hover:bg-gray-500/20", pillBg: "bg-gray-500/15 border-gray-500/30" },
+];
+
+function getSimpleResultConfig(resultado: string | null | undefined) {
+  const found = RESULT_OPTIONS_SIMPLE.find(o => o.value === resultado);
+  if (found) return found;
+  return {
+    value: "PENDENTE",
+    label: "Pendente",
+    icon: Clock,
+    color: "text-blue-400",
+    bg: "hover:bg-blue-500/20",
+    pillBg: "bg-blue-500/15 border-blue-500/30",
+  };
+}
+
 function ResultadoBadge({ resultado, apostaId, onQuickResolve }: ResultadoBadgeProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   
-  const getConfig = (r: string | null | undefined) => {
-    switch (r) {
-      case "GREEN": return { label: "Green", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 };
-      case "RED": return { label: "Red", color: "bg-red-500/20 text-red-400 border-red-500/30", icon: CheckCircle2 };
-      case "MEIO_GREEN": return { label: "½ Green", color: "bg-teal-500/20 text-teal-400 border-teal-500/30", icon: CheckCircle2 };
-      case "MEIO_RED": return { label: "½ Red", color: "bg-orange-500/20 text-orange-400 border-orange-500/30", icon: CheckCircle2 };
-      case "VOID": return { label: "Void", color: "bg-gray-500/20 text-gray-400 border-gray-500/30", icon: CircleSlash };
-      default: return { label: "Pendente", color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: Clock };
-    }
-  };
-  
-  const config = getConfig(resultado);
+  const config = getSimpleResultConfig(resultado);
   const Icon = config.icon;
-  const isPending = !resultado || resultado === "PENDENTE";
-  const canQuickResolve = isPending && onQuickResolve && apostaId;
+  const canEdit = onQuickResolve && apostaId;
   
-  const handleResolve = (newResultado: string) => {
-    if (onQuickResolve && apostaId) {
-      onQuickResolve(apostaId, newResultado);
+  const handleSelect = async (newResultado: string) => {
+    if (newResultado === resultado) {
       setIsOpen(false);
+      return;
+    }
+    if (onQuickResolve && apostaId) {
+      setLoading(true);
+      try {
+        onQuickResolve(apostaId, newResultado);
+        setIsOpen(false);
+      } finally {
+        setLoading(false);
+      }
     }
   };
   
-  if (canQuickResolve) {
+  if (canEdit) {
     return (
-      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-          <button 
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <button
+            disabled={loading}
+            onClick={(e) => e.stopPropagation()}
             className={cn(
-              "inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0 text-[10px] font-medium cursor-pointer transition-colors",
-              "bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30"
+              "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium border cursor-pointer transition-all shrink-0",
+              config.pillBg,
+              config.color,
+              "hover:ring-1 hover:ring-current/30",
+              loading && "opacity-50 cursor-not-allowed"
             )}
           >
-            <Icon className="h-2.5 w-2.5" />
+            {loading ? (
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+            ) : (
+              <Icon className="h-2.5 w-2.5" />
+            )}
             {config.label}
           </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-[140px]" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenuItem 
-            onClick={() => handleResolve("GREEN")}
-            className="text-emerald-400 focus:text-emerald-400 focus:bg-emerald-500/10"
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Green
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handleResolve("RED")}
-            className="text-red-400 focus:text-red-400 focus:bg-red-500/10"
-          >
-            <X className="h-4 w-4 mr-2" />
-            Red
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handleResolve("MEIO_GREEN")}
-            className="text-teal-400 focus:text-teal-400 focus:bg-teal-500/10"
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            ½ Green
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handleResolve("MEIO_RED")}
-            className="text-orange-400 focus:text-orange-400 focus:bg-orange-500/10"
-          >
-            <X className="h-4 w-4 mr-2" />
-            ½ Red
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handleResolve("VOID")}
-            className="text-gray-400 focus:text-gray-400 focus:bg-gray-500/10"
-          >
-            <CircleSlash className="h-4 w-4 mr-2" />
-            Void
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-32 p-1"
+          align="end"
+          side="bottom"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="space-y-0.5">
+            {RESULT_OPTIONS_SIMPLE.map((opt) => {
+              const OptIcon = opt.icon;
+              const isActive = opt.value === resultado;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => handleSelect(opt.value)}
+                  disabled={loading}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors",
+                    isActive ? "bg-muted font-medium" : opt.bg,
+                    opt.color
+                  )}
+                >
+                  <OptIcon className="h-3.5 w-3.5" />
+                  {opt.label}
+                  {isActive && <span className="ml-auto text-[10px] opacity-60">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
     );
   }
   
   return (
-    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.color)}>
+    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", config.pillBg, config.color)}>
       <Icon className="h-2.5 w-2.5" />
       {config.label}
     </Badge>
