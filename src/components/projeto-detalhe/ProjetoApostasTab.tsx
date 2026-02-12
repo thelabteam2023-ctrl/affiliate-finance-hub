@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
-import { reliquidarAposta, deletarAposta } from "@/services/aposta/ApostaService";
+import { reliquidarAposta, deletarAposta, liquidarPernaSurebet } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 // useBookmakerLogoMap movido para ProjetoDashboardTab
@@ -181,6 +181,7 @@ interface Surebet {
   data_operacao: string;
   observacoes: string | null;
   created_at: string;
+  workspace_id?: string;
   pernas?: {
     id: string;
     bookmaker_id: string;
@@ -188,6 +189,7 @@ interface Surebet {
     odd: number;
     stake: number;
     resultado: string | null;
+    moeda?: string;
     tipo_freebet?: string | null;
     gerou_freebet?: boolean;
     is_bonus_bet?: boolean;
@@ -734,77 +736,83 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     setDeleteDialogOpen(true);
   }, [surebets]);
 
-  // Handler para quick resolve de surebet - agora com suporte a pernas específicas
+  // Liquidação de perna individual de Surebet via motor financeiro (UNIFICADO com ProjetoSurebetTab)
+  const handleSurebetPernaResolve = useCallback(async (input: {
+    pernaId: string;
+    surebetId: string;
+    bookmarkerId: string;
+    resultado: string;
+    stake: number;
+    odd: number;
+    moeda: string;
+    resultadoAnterior: string | null;
+    workspaceId: string;
+  }) => {
+    try {
+      const result = await liquidarPernaSurebet({
+        surebet_id: input.surebetId,
+        perna_id: input.pernaId,
+        bookmaker_id: input.bookmarkerId,
+        resultado: input.resultado as any,
+        resultado_anterior: input.resultadoAnterior,
+        stake: input.stake,
+        odd: input.odd,
+        moeda: input.moeda,
+        workspace_id: input.workspaceId,
+      });
+
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao liquidar perna");
+        return;
+      }
+
+      // Invalidar cache e recarregar
+      invalidateSaldos(projetoId);
+      fetchAllApostas();
+
+      const resultLabel = {
+        GREEN: "Green", RED: "Red", MEIO_GREEN: "½ Green",
+        MEIO_RED: "½ Red", VOID: "Void",
+      }[input.resultado] || input.resultado;
+
+      toast.success(`Perna marcada como ${resultLabel}`);
+      onDataChange?.();
+    } catch (error: any) {
+      console.error("Erro ao liquidar perna:", error);
+      toast.error("Erro ao atualizar resultado da perna");
+    }
+  }, [projetoId, invalidateSaldos, onDataChange]);
+
+  // Handler para quick resolve de surebet - usa liquidação por perna (UNIFICADO com ProjetoSurebetTab)
   const handleQuickResolveSurebet = useCallback(async (surebetId: string, quickResult: SurebetQuickResult) => {
     try {
       const surebet = surebets.find(sb => sb.id === surebetId);
-      if (!surebet || !surebet.pernas) return;
+      if (!surebet || !surebet.pernas || !surebet.workspace_id) return;
 
-      const stakeTotal = surebet.stake_total || 0;
       const pernas = surebet.pernas.filter(p => p.bookmaker_id && p.odd && p.odd > 0);
       
-      let lucroTotal = 0;
-      let resultadoFinal: string;
-      
-      if (quickResult.type === "all_void") {
-        // Todas as pernas são VOID - retorno do stake
-        lucroTotal = 0;
-        resultadoFinal = "VOID";
-      } else if (quickResult.type === "single_win") {
-        // Uma perna ganha, outras perdem
-        const winnerIdx = quickResult.winners[0];
-        const pernaVencedora = pernas[winnerIdx];
-        if (!pernaVencedora) return;
-        
-        // Usar campos padrão (stake e odd) - campos agregados são opcionais
-        const stakeVencedor = (pernaVencedora as any).stake_total ?? pernaVencedora.stake ?? 0;
-        const oddVencedor = (pernaVencedora as any).odd_media ?? pernaVencedora.odd ?? 1;
-        const retorno = stakeVencedor * oddVencedor;
-        lucroTotal = retorno - stakeTotal;
-        resultadoFinal = "GREEN"; // Surebets em teoria sempre dão lucro no single win
-      } else if (quickResult.type === "double_green") {
-        // Duplo green - duas pernas ganham
-        const [idx1, idx2] = quickResult.winners;
-        const perna1 = pernas[idx1] as any;
-        const perna2 = pernas[idx2] as any;
-        if (!perna1 || !perna2) return;
-        
-        const stake1 = perna1.stake_total ?? perna1.stake ?? 0;
-        const stake2 = perna2.stake_total ?? perna2.stake ?? 0;
-        const odd1 = perna1.odd_media ?? perna1.odd ?? 1;
-        const odd2 = perna2.odd_media ?? perna2.odd ?? 1;
-        
-        const retorno = (stake1 * odd1) + (stake2 * odd2);
-        lucroTotal = retorno - stakeTotal;
-        resultadoFinal = lucroTotal >= 0 ? "GREEN" : "RED";
-      } else {
-        return;
+      for (let i = 0; i < pernas.length; i++) {
+        const perna = pernas[i];
+        const isWinner = quickResult.winners.includes(i);
+        const resultado = quickResult.type === "all_void" ? "VOID" : (isWinner ? "GREEN" : "RED");
+
+        await handleSurebetPernaResolve({
+          pernaId: perna.id,
+          surebetId,
+          bookmarkerId: perna.bookmaker_id,
+          resultado,
+          stake: perna.stake,
+          odd: perna.odd,
+          moeda: perna.moeda || 'BRL',
+          resultadoAnterior: perna.resultado,
+          workspaceId: surebet.workspace_id!,
+        });
       }
-
-      const result = await reliquidarAposta(surebetId, resultadoFinal, lucroTotal);
-      
-      if (!result.success) {
-        toast.error(result.error?.message || "Erro ao liquidar surebet");
-        return;
-      }
-
-      // Atualizar estado local
-      setSurebets(prev => prev.map(sb => 
-        sb.id === surebetId 
-          ? { ...sb, resultado: resultadoFinal, lucro_real: lucroTotal, status: "LIQUIDADA" }
-          : sb
-      ));
-
-      // Invalidar cache de saldos
-      invalidateSaldos(projetoId);
-
-      toast.success(`Surebet liquidada: ${quickResult.label} → ${resultadoFinal}`);
-      onDataChange?.();
     } catch (error: any) {
-      console.error("Erro ao atualizar surebet:", error);
-      toast.error("Erro ao atualizar resultado");
+      console.error("Erro ao liquidar surebet:", error);
+      toast.error("Erro ao liquidar surebet");
     }
-  }, [surebets, onDataChange, projetoId, invalidateSaldos]);
+  }, [surebets, handleSurebetPernaResolve]);
 
   // Filtrar e unificar apostas com contexto - usando filtros LOCAIS da aba
   const apostasUnificadasBase: ApostaUnificada[] = useMemo(() => {
@@ -1246,6 +1254,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               
               const surebetData: SurebetData = {
                 ...sb,
+                workspace_id: sb.workspace_id,
                 lucro_real: sb.lucro_prejuizo,
                 pernas: sb.pernas?.map((p: any) => ({
                   id: p.id,
@@ -1256,6 +1265,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   resultado: p.resultado,
                   bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
                   bookmaker_id: p.bookmaker_id,
+                  moeda: p.moeda || 'BRL',
                   entries: p.entries,
                   odd_media: p.odd_media,
                   stake_total: p.stake_total,
@@ -1272,6 +1282,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
+                  onPernaResultChange={handleSurebetPernaResolve}
                   onDelete={prepareDeleteSurebet}
                   formatCurrency={formatCurrency}
                   bookmakerNomeMap={bookmakerNomeMap}
