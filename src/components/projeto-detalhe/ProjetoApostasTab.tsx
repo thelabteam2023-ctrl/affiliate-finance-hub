@@ -1252,7 +1252,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       ) : (
         <div className={cn(
           viewMode === "cards" 
-            ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" 
+            ? "grid gap-5 md:grid-cols-2 xl:grid-cols-3" 
             : "space-y-2"
         )}>
           {apostasUnificadas.map((item) => {

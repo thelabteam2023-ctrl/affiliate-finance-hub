@@ -500,21 +500,21 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
           </div>
         )}
         
-        {/* LINHA FINAL: Data/Hora + Stake + Lucro/ROI - Responsivo */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 border-t border-border/50 gap-2">
+        {/* LINHA FINAL: Data/Hora + Stake + Lucro/ROI - NUNCA CORTAR */}
+        <div className="flex items-center justify-between pt-3 border-t border-border/50 gap-3">
           <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
             {formatDate(parseLocalDateTime(surebet.data_operacao), "dd/MM HH:mm", { locale: ptBR })}
           </span>
           
-          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
               Stake: {formatValue(surebet.stake_total)}
             </span>
             
             {lucroExibir !== null && lucroExibir !== undefined && (
               <div className="flex items-center gap-1 shrink-0">
                 <span className={cn(
-                  "text-xs sm:text-sm font-medium whitespace-nowrap",
+                  "text-sm sm:text-base font-semibold whitespace-nowrap",
                   lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
                   !isLiquidada && 'opacity-30'
                 )}>
@@ -522,7 +522,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                 </span>
                 {roiExibir !== null && roiExibir !== undefined && (
                   <span className={cn(
-                    "text-[9px] sm:text-[10px] whitespace-nowrap",
+                    "text-[10px] sm:text-xs whitespace-nowrap",
                     roiExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
                     !isLiquidada && 'opacity-30'
                   )}>
