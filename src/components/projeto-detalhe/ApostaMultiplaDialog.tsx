@@ -558,6 +558,37 @@ export function ApostaMultiplaDialog({
     return { oddFinal: oddNominal, oddFinalReal: oddReal };
   }, [selecoes]);
 
+  // Função hierárquica para calcular resultado da múltipla
+  // Regras de prioridade: RED > MEIO_RED > all GREEN > MEIO_GREEN+GREEN > VOID > PENDENTE
+  const calcularResultadoMultipla = useCallback((sels: Selecao[]): string => {
+    const resultados = sels.map(s => s.resultado || "PENDENTE");
+    
+    // 1. Qualquer RED → RED
+    if (resultados.includes("RED")) return "RED";
+    
+    // 2. Qualquer MEIO_RED (sem RED) → MEIO_RED
+    if (resultados.includes("MEIO_RED")) return "MEIO_RED";
+    
+    // 3. Todas GREEN → GREEN
+    if (resultados.every(r => r === "GREEN")) return "GREEN";
+    
+    // 4. Mix de GREEN + MEIO_GREEN (ou VOID) → MEIO_GREEN
+    if (resultados.includes("MEIO_GREEN")) return "MEIO_GREEN";
+    
+    // 5. Todas VOID → VOID
+    if (resultados.every(r => r === "VOID")) return "VOID";
+    
+    // 6. GREEN + VOID (sem pendente) → MEIO_GREEN
+    const nonPendente = resultados.filter(r => r !== "PENDENTE");
+    if (nonPendente.length === resultados.length && 
+        nonPendente.every(r => r === "GREEN" || r === "VOID")) {
+      return "MEIO_GREEN";
+    }
+    
+    // 7. Default → PENDENTE
+    return "PENDENTE";
+  }, []);
+
   // Calcular preview em tempo real com fatores corretos
   const previewCalculo = useMemo(() => {
     const stakeNum = parseFloat(stake) || 0;
@@ -570,46 +601,26 @@ export function ApostaMultiplaDialog({
       return { resultado: "PENDENTE", retorno: 0, lucro: 0 };
     }
 
-    // Se qualquer seleção for RED → múltipla = RED total
-    if (selecoes.some((s) => s.resultado === "RED")) {
-      return {
-        resultado: "RED",
-        retorno: 0,
-        lucro: usarFreebet ? 0 : -stakeNum,
-      };
-    }
-
-    // Verificar se todas são PENDENTE
-    const todasPendente = selecoes.every((s) => (s.resultado || "PENDENTE") === "PENDENTE");
-
     // Calcular fatores para cada seleção
-    // Fórmula: odd_efetiva = retorno_parcial / stake
-    // GREEN: odd_efetiva = odd
-    // RED: já tratado acima (múltipla = RED)
-    // VOID: odd_efetiva = 1 (não altera)
-    // MEIO_GREEN: odd_efetiva = (odd + 1) / 2
-    // MEIO_RED: odd_efetiva = 0.5
     let fatorTotal = 1;
-    let oddTotal = 1; // Para calcular lucro_full (todas green)
 
     for (const s of selecoesValidas) {
       const odd = parseFloat(s.odd);
-      oddTotal *= odd;
-
       const resultado = s.resultado || "PENDENTE";
       switch (resultado) {
         case "GREEN":
           fatorTotal *= odd;
           break;
+        case "RED":
+          fatorTotal *= 0; // RED = perda total
+          break;
         case "VOID":
           fatorTotal *= 1;
           break;
         case "MEIO_GREEN":
-          // odd_efetiva = (odd + 1) / 2
           fatorTotal *= (odd + 1) / 2;
           break;
         case "MEIO_RED":
-          // odd_efetiva = 0.5
           fatorTotal *= 0.5;
           break;
         case "PENDENTE":
@@ -619,30 +630,17 @@ export function ApostaMultiplaDialog({
     }
 
     const retorno = stakeNum * fatorTotal;
-    // Para freebet: RED/perda não perde stake, lucro só vem se ganhar
     const lucro = usarFreebet
       ? retorno > stakeNum
         ? retorno - stakeNum
         : 0
       : retorno - stakeNum;
-    const lucroFull = stakeNum * (oddTotal - 1);
 
-    // Classificar resultado se não for tudo pendente
-    let resultado: string;
-    const EPSILON = 0.01;
-
-    if (todasPendente) {
-      resultado = "PENDENTE";
-    } else if (Math.abs(lucro) < EPSILON) {
-      resultado = "VOID";
-    } else if (lucro > 0) {
-      resultado = Math.abs(lucro - lucroFull) < EPSILON ? "GREEN" : "MEIO_GREEN";
-    } else {
-      resultado = Math.abs(lucro + stakeNum) < EPSILON ? "RED" : "MEIO_RED";
-    }
+    // Usar regra hierárquica para resultado
+    const resultado = calcularResultadoMultipla(selecoes);
 
     return { resultado, retorno, lucro };
-  }, [selecoes, stake, usarFreebet]);
+  }, [selecoes, stake, usarFreebet, calcularResultadoMultipla]);
 
   // Resultado final considerando override manual
   const resultadoCalculado = resultadoManual || previewCalculo.resultado;
@@ -750,6 +748,15 @@ export function ApostaMultiplaDialog({
     setSelecoes((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
+      
+      // Se resultado individual mudou, recalcular e limpar override manual se coincide
+      if (field === "resultado") {
+        const autoResult = calcularResultadoMultipla(updated);
+        if (resultadoManual && resultadoManual === autoResult) {
+          setResultadoManual(null);
+        }
+      }
+      
       return updated;
     });
   };
