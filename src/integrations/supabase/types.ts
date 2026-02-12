@@ -11548,6 +11548,7 @@ export type Database = {
           success: boolean
         }[]
       }
+      deletar_perna_surebet_v1: { Args: { p_perna_id: string }; Returns: Json }
       editar_perna_surebet_atomica: {
         Args: {
           p_new_bookmaker_id?: string
