@@ -261,10 +261,10 @@ function PernaItem({
             {bookmakerDisplay}
           </span>
           
-          {/* Odd e Stake à direita */}
+          {/* Odd e Stake à direita - larguras fixas para alinhamento */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-sm font-medium whitespace-nowrap">@{perna.odd.toFixed(2)}</span>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">{formatValue(perna.stake)}</span>
+            <span className="text-sm font-medium whitespace-nowrap w-[60px] text-right tabular-nums">@{perna.odd.toFixed(2)}</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap w-[80px] text-right tabular-nums">{formatValue(perna.stake)}</span>
           </div>
           
           {/* Result pill per perna */}
