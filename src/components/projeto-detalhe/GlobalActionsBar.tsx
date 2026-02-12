@@ -141,7 +141,7 @@ export function GlobalActionsBar({
 
   const handleOpenApostaMultipla = () => {
     const url = `/janela/multipla/novo?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab || 'apostas')}&estrategia=PUNTER`;
-    const windowFeatures = 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+    const windowFeatures = 'width=900,height=700,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
     window.open(url, '_blank', windowFeatures);
   };
 
@@ -160,7 +160,7 @@ export function GlobalActionsBar({
     if (rascunhoId) {
       url += `&rascunhoId=${encodeURIComponent(rascunhoId)}`;
     }
-    const windowFeatures = 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+    const windowFeatures = 'width=900,height=700,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
     window.open(url, '_blank', windowFeatures);
   };
 
