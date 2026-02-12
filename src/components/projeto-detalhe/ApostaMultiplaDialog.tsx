@@ -54,6 +54,7 @@ import { toLocalTimestamp, validarDataAposta } from "@/utils/dateUtils";
 import { 
   BookmakerSelectOption, 
   SaldoBreakdownDisplay, 
+  CurrencyBadge,
   formatCurrency as formatCurrencyCanonical,
   getCurrencyTextColor 
 } from "@/components/bookmakers/BookmakerSelectOption";
@@ -1288,7 +1289,21 @@ export function ApostaMultiplaDialog({
               <div className="flex-1 min-w-0 max-w-[420px]">
                 <Select value={bookmakerId} onValueChange={setBookmakerId}>
                   <SelectTrigger className="h-7 text-xs font-medium border-border/50">
-                    <SelectValue placeholder="Selecione a casa..." />
+                    {(() => {
+                      const selectedBk = bookmakerId ? bookmakers.find(b => b.id === bookmakerId) : null;
+                      if (selectedBk) {
+                        return (
+                          <div className="flex items-center justify-center gap-2 w-full">
+                            {selectedBk.logo_url && (
+                              <img src={selectedBk.logo_url} alt="" className="h-4 w-4 rounded object-contain flex-shrink-0" />
+                            )}
+                            <span className="uppercase text-xs font-medium truncate">{selectedBk.nome}</span>
+                            <CurrencyBadge moeda={selectedBk.moeda} size="xs" />
+                          </div>
+                        );
+                      }
+                      return <SelectValue placeholder="Selecione a casa..." />;
+                    })()}
                   </SelectTrigger>
                   <SelectContent className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]">
                     {bookmakers.map((bk) => (
