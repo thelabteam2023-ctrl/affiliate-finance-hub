@@ -425,31 +425,32 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     <Card 
       className={cn("transition-colors overflow-hidden", className)}
     >
-      <CardContent className="p-3 sm:p-4">
-        {/* LINHA 1: Evento + Esporte + Badges - Responsivo */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-3">
-          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-            <p className="text-sm font-medium truncate uppercase">{surebet.evento || 'Operação'}</p>
+      <CardContent className="p-4 sm:p-5">
+        {/* LINHA 1: Evento + Esporte (título em linha própria) */}
+        <div className="mb-1">
+          <p className="text-sm sm:text-base font-semibold truncate uppercase leading-tight">{surebet.evento || 'Operação'}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
             {surebet.esporte && (
-              <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">• {surebet.esporte}</span>
+              <span className="text-xs text-muted-foreground">• {surebet.esporte}</span>
             )}
             {surebet.mercado && (
-              <span className="text-xs text-muted-foreground shrink-0 hidden md:inline">• {surebet.mercado}</span>
+              <span className="text-xs text-muted-foreground">• {surebet.mercado}</span>
             )}
           </div>
+        </div>
+        
+        {/* LINHA 2: Badges + Menu de Ações */}
+        <div className="flex items-center gap-1.5 flex-wrap mb-3">
+          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", estrategiaConfig.bgColor, estrategiaConfig.color, estrategiaConfig.borderColor)}>
+            <Icon className="h-2.5 w-2.5" />
+            {estrategiaConfig.label}
+          </Badge>
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
+            {surebet.modelo}
+          </Badge>
+          <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
           
-          {/* Badges + Menu de Ações - wrap on mobile */}
-          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 flex items-center gap-0.5", estrategiaConfig.bgColor, estrategiaConfig.color, estrategiaConfig.borderColor)}>
-              <Icon className="h-2.5 w-2.5" />
-              {estrategiaConfig.label}
-            </Badge>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
-              {surebet.modelo}
-            </Badge>
-            <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
-            
-            {/* Menu de Ações Rápidas - Específico para Surebets com submenu cascata */}
+          <div className="ml-auto">
             {(onDelete || onDuplicate || onQuickResolve) && surebet.pernas && surebet.pernas.length >= 2 && (
               <SurebetRowActionsMenu
                 surebetId={surebet.id}
@@ -474,7 +475,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
         
         {/* LINHA 2+: Pernas - Grid alinhado com coluna de seleção fixa */}
         {surebet.pernas && surebet.pernas.length > 0 && (
-          <div className="space-y-2 mb-3">
+          <div className="space-y-3 mb-3">
             {surebet.pernas
               .filter(perna => perna.bookmaker_id && perna.odd && perna.odd > 0)
               .map((perna) => (
