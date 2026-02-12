@@ -871,8 +871,12 @@ export function ApostaMultiplaDialog({
     }
 
     // Validar saldo contra saldo operável (real + freebet + bonus)
-    if (bookmakerSaldo && stakeNum > bookmakerSaldo.saldoOperavel) {
-      toast.error(`Stake maior que o saldo operável (${formatCurrency(bookmakerSaldo.saldoOperavel)})`);
+    // Em modo edição: a stake original já foi debitada, então devolver ao saldo disponível
+    const saldoDisponivel = bookmakerSaldo 
+      ? bookmakerSaldo.saldoOperavel + (aposta && aposta.bookmaker_id === bookmakerId ? aposta.stake : 0)
+      : Infinity;
+    if (bookmakerSaldo && stakeNum > saldoDisponivel) {
+      toast.error(`Stake maior que o saldo operável (${formatCurrency(saldoDisponivel)})`);
       return;
     }
 
@@ -953,41 +957,84 @@ export function ApostaMultiplaDialog({
       };
 
       if (aposta) {
-        // ========== EDIÇÃO VIA MOTOR v7 ==========
-        // Para edição de apostas já existentes:
-        // 1. Se resultado mudou: usar reliquidarAposta do ApostaService
-        // 2. Se apenas dados mudaram: update direto (sem impacto financeiro)
+        // ========== EDIÇÃO IDEMPOTENTE VIA RPC ATÔMICO ==========
+        // Detectar mudanças financeiras
         const resultadoAnterior = aposta.resultado;
         const resultadoMudou = resultadoAnterior !== resultadoFinal;
-        
-        // Atualizar dados não-financeiros
-        const { error } = await supabase
-          .from("apostas_unificada")
-          .update({
+        const stakeMudou = stakeNum !== aposta.stake;
+        const oddMudou = oddFinal !== aposta.odd_final;
+        const bookmakerMudou = bookmakerId !== aposta.bookmaker_id;
+        const houveMudancaFinanceira = resultadoMudou || stakeMudou || oddMudou || bookmakerMudou;
+
+        // Se resultado vai para PENDENTE a partir de liquidada: reverter
+        if (resultadoMudou && resultadoAnterior !== "PENDENTE" && resultadoAnterior !== null && resultadoFinal === "PENDENTE") {
+          await supabase.rpc('reverter_liquidacao_v4', { p_aposta_id: aposta.id });
+          // Atualizar campos não-financeiros após reversão
+          await supabase.from("apostas_unificada").update({
             ...apostaData,
-            // Não atualizar resultado aqui - será feito via RPC se necessário
-            resultado: resultadoMudou ? resultadoAnterior : resultadoFinal,
-          })
-          .eq("id", aposta.id);
-
-        if (error) throw error;
-
-        // Se resultado mudou, usar motor v7 para reliquidar
-         if (resultadoMudou && resultadoFinal && resultadoFinal !== "PENDENTE") {
-          const reliquidResult = await reliquidarAposta(
-            aposta.id,
-            resultadoFinal,
-            apostaData.lucro_prejuizo || undefined
+            resultado: "PENDENTE",
+            status: "PENDENTE",
+            lucro_prejuizo: null,
+            valor_retorno: null,
+          }).eq("id", aposta.id);
+        } else if (houveMudancaFinanceira) {
+          // Usar RPC atômico para qualquer mudança financeira (PENDENTE ou LIQUIDADA)
+          console.log("[ApostaMultiplaDialog] Edição financeira via RPC atômico:", {
+            stakeMudou: stakeMudou ? `${aposta.stake} → ${stakeNum}` : false,
+            oddMudou: oddMudou ? `${aposta.odd_final} → ${oddFinal}` : false,
+            bookmakerMudou: bookmakerMudou ? `${aposta.bookmaker_id} → ${bookmakerId}` : false,
+            resultadoMudou: resultadoMudou ? `${resultadoAnterior} → ${resultadoFinal}` : false,
+          });
+          
+          const { data: rpcResult, error: rpcError } = await supabase.rpc(
+            'atualizar_aposta_liquidada_atomica_v2',
+            {
+              p_aposta_id: aposta.id,
+              p_novo_bookmaker_id: bookmakerMudou ? bookmakerId : null,
+              p_novo_stake: stakeMudou ? stakeNum : null,
+              p_nova_odd: oddMudou ? oddFinal : null,
+              p_novo_resultado: resultadoMudou && resultadoFinal !== "PENDENTE" ? resultadoFinal : null,
+              p_nova_moeda: null,
+            }
           );
           
-          if (!reliquidResult.success) {
-            console.error("[ApostaMultiplaDialog] Erro ao reliquidar:", reliquidResult.error);
-            // Não lançar exceção - dados já foram atualizados
+          if (rpcError) {
+            console.error("[ApostaMultiplaDialog] Erro no RPC:", rpcError);
+            throw new Error(`Erro ao atualizar aposta: ${rpcError.message}`);
           }
-         } else if (resultadoMudou && resultadoAnterior !== "PENDENTE" && resultadoFinal === "PENDENTE") {
-          // Reversão para PENDENTE
-          await supabase.rpc('reverter_liquidacao_v4', { p_aposta_id: aposta.id });
+          
+          const result = rpcResult as { success: boolean; error?: string };
+          if (!result.success) {
+            throw new Error(result.error || 'Erro desconhecido ao atualizar aposta');
+          }
+
+          // Atualizar campos que o RPC não cobre (seleções, observações, etc.)
+          await supabase.from("apostas_unificada").update({
+            selecoes: selecoesFormatadas,
+            tipo_multipla: tipoMultipla,
+            retorno_potencial: retornoPotencial,
+            data_aposta: apostaData.data_aposta,
+            observacoes: apostaData.observacoes,
+            estrategia: apostaData.estrategia,
+            forma_registro: apostaData.forma_registro,
+            contexto_operacional: apostaData.contexto_operacional,
+            tipo_freebet: apostaData.tipo_freebet,
+            gerou_freebet: apostaData.gerou_freebet,
+            valor_freebet_gerada: apostaData.valor_freebet_gerada,
+            moeda_operacao: apostaData.moeda_operacao,
+            cotacao_snapshot: apostaData.cotacao_snapshot,
+            valor_brl_referencia: apostaData.valor_brl_referencia,
+          }).eq("id", aposta.id);
+        } else {
+          // Sem mudança financeira: update direto de metadados
+          const { error } = await supabase.from("apostas_unificada").update({
+            ...apostaData,
+          }).eq("id", aposta.id);
+          if (error) throw error;
         }
+
+        // Invalidar saldos após qualquer edição financeira
+        await invalidateSaldos(projetoId);
 
         // Registrar freebet gerada (se mudou de não-gerou para gerou)
         if (gerouFreebet && valorFreebetGerada && !aposta.gerou_freebet) {
