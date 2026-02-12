@@ -385,6 +385,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     moeda: string;
     resultadoAnterior: string | null;
     workspaceId: string;
+    bookmakerNome?: string;
+    silent?: boolean;
   }) => {
     try {
       const result = await liquidarPernaSurebet({
@@ -413,7 +415,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
         MEIO_RED: "½ Red", VOID: "Void",
       }[input.resultado] || input.resultado;
 
-      toast.success(`Perna marcada como ${resultLabel}`);
+      if (!input.silent) {
+        const nome = input.bookmakerNome || '';
+        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
+      }
     } catch (error: any) {
       console.error("Erro ao liquidar perna:", error);
       toast.error("Erro ao atualizar resultado da perna");
@@ -444,8 +449,11 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           moeda: perna.moeda || 'BRL',
           resultadoAnterior: perna.resultado,
           workspaceId,
+          silent: true,
         });
       }
+
+      toast.success("Resultado da surebet alterado com sucesso");
     } catch (error: any) {
       console.error("Erro ao liquidar surebet:", error);
       toast.error("Erro ao liquidar surebet");

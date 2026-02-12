@@ -70,6 +70,10 @@ export interface PernaResultChangeInput {
   moeda: string;
   resultadoAnterior: string | null;
   workspaceId: string;
+  /** Nome da bookmaker para exibição em toasts */
+  bookmakerNome?: string;
+  /** Quando true, não exibe toast individual (usado em batch/quick resolve) */
+  silent?: boolean;
 }
 
 interface SurebetCardProps {
@@ -491,6 +495,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                       moeda: perna.moeda || 'BRL',
                       resultadoAnterior: perna.resultado,
                       workspaceId: surebet.workspace_id || '',
+                      bookmakerNome: perna.bookmaker_nome,
                     });
                   } : undefined}
                 />
