@@ -1094,7 +1094,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         </Card>
       ) : (
         <ScrollArea className="h-[calc(100vh-400px)]">
-          <div className={viewMode === "cards" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-2"}>
+          <div className={viewMode === "cards" ? "grid gap-5 md:grid-cols-2 xl:grid-cols-3" : "space-y-2"}>
             {surebetsListaAtual.map((operacao) => {
               // Diferenciar: aposta com pernas usa SurebetCard, simples usa ApostaCard
               const hasPernas = operacao.pernas && operacao.pernas.length > 0;
