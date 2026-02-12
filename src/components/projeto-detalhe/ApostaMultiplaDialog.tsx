@@ -1241,7 +1241,7 @@ export function ApostaMultiplaDialog({
             showCloseButton={!embedded}
             onClose={() => onOpenChange(false)}
             embedded={embedded}
-            fonteSaldo={registroValues.fonte_saldo || null}
+            fonteSaldo={null}
             extraBadge={
               printImagePreview && !isPrintProcessing && (
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded text-xs">
@@ -1260,13 +1260,13 @@ export function ApostaMultiplaDialog({
             }
           />
 
-          <div className="space-y-4 py-4 px-4">
+          <div className="space-y-3 py-3 px-4">
 
             {/* Bookmaker / Vínculo */}
-            <div className="space-y-2">
-              <Label>Casa / Vínculo *</Label>
+            <div className="space-y-1.5 max-w-lg mx-auto">
+              <Label className="text-xs">Casa / Vínculo *</Label>
               <Select value={bookmakerId} onValueChange={setBookmakerId}>
-                <SelectTrigger className="h-10 items-center">
+                <SelectTrigger className="h-9 items-center text-sm">
                   <SelectValue placeholder="Selecione a casa..." />
                 </SelectTrigger>
                 <SelectContent className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]">
@@ -1304,8 +1304,8 @@ export function ApostaMultiplaDialog({
             </div>
 
             {/* Tipo de Múltipla */}
-            <div className="space-y-2">
-              <Label>Tipo de Múltipla</Label>
+            <div className="space-y-1">
+              <Label className="text-xs">Tipo de Múltipla</Label>
               <RadioGroup
                 value={tipoMultipla}
                 onValueChange={(v) => setTipoMultipla(v as "DUPLA" | "TRIPLA")}
@@ -1313,13 +1313,13 @@ export function ApostaMultiplaDialog({
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="DUPLA" id="dupla" />
-                  <Label htmlFor="dupla" className="cursor-pointer">
+                  <Label htmlFor="dupla" className="cursor-pointer text-sm">
                     Dupla (2 seleções)
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="TRIPLA" id="tripla" />
-                  <Label htmlFor="tripla" className="cursor-pointer">
+                  <Label htmlFor="tripla" className="cursor-pointer text-sm">
                     Tripla (3 seleções)
                   </Label>
                 </div>
@@ -1355,127 +1355,125 @@ export function ApostaMultiplaDialog({
               )}
 
             {/* Seleções */}
-            <div className="space-y-3">
-              <Label>Seleções</Label>
-              {selecoes.map((selecao, index) => (
-                <Card key={index} className={`${
-                  selecao.resultado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
-                  selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
-                  selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
-                  selecao.resultado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
-                  selecao.resultado === "VOID" ? "bg-gray-500/10 border-gray-500/30" :
-                  "bg-muted/30"
-                }`}>
-                  <CardContent className="pt-3 pb-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        SELEÇÃO {index + 1}
-                      </span>
-                      <Select 
-                        value={selecao.resultado || "PENDENTE"} 
-                        onValueChange={(v) => handleSelecaoChange(index, "resultado", v)}
-                      >
-                        <SelectTrigger className="w-full sm:w-[110px] h-7 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="PENDENTE" className="hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground">Pendente</SelectItem>
-                          <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
-                          <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">Meio Green</SelectItem>
-                          <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
-                          <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">Meio Red</SelectItem>
-                          <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-[1fr,100px] gap-2">
-                      <Input
-                        placeholder="Ex: Flamengo x Palmeiras - Flamengo vence"
-                        value={selecao.descricao}
-                        onChange={(e) =>
-                          handleSelecaoChange(index, "descricao", e.target.value)
-                        }
-                        className="uppercase"
-                      />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Odd"
-                        value={selecao.odd}
-                        onChange={(e) =>
-                          handleSelecaoChange(index, "odd", e.target.value)
-                        }
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Seleções</Label>
+              <div className={`grid gap-2 ${tipoMultipla === "TRIPLA" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"}`}>
+                {selecoes.map((selecao, index) => (
+                  <Card key={index} className={`${
+                    selecao.resultado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
+                    selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
+                    selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
+                    selecao.resultado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
+                    selecao.resultado === "VOID" ? "bg-gray-500/10 border-gray-500/30" :
+                    "bg-muted/30"
+                  }`}>
+                    <CardContent className="pt-2 pb-2 px-3">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[10px] font-medium text-muted-foreground">
+                          SELEÇÃO {index + 1}
+                        </span>
+                        <Select 
+                          value={selecao.resultado || "PENDENTE"} 
+                          onValueChange={(v) => handleSelecaoChange(index, "resultado", v)}
+                        >
+                          <SelectTrigger className="w-[100px] h-6 text-[10px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PENDENTE" className="hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground">Pendente</SelectItem>
+                            <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
+                            <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">Meio Green</SelectItem>
+                            <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
+                            <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">Meio Red</SelectItem>
+                            <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Input
+                          placeholder="Ex: Flamengo x Palmeiras - Flamengo vence"
+                          value={selecao.descricao}
+                          onChange={(e) =>
+                            handleSelecaoChange(index, "descricao", e.target.value)
+                          }
+                          className="uppercase text-xs h-8"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Odd"
+                          value={selecao.odd}
+                          onChange={(e) =>
+                            handleSelecaoChange(index, "odd", e.target.value)
+                          }
+                          className="text-xs h-8"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
 
             {/* Preview em Tempo Real da Múltipla */}
-            <Card className="border-blue-500/30 bg-blue-500/5">
-              <CardContent className="pt-3 pb-3">
-                <div className="text-xs text-muted-foreground mb-2">
-                  Preview da Múltipla
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
-                  <div>
-                    <span className="text-xs text-muted-foreground block mb-1">Resultado:</span>
-                    <Badge className={`${
-                      previewCalculo.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
-                      previewCalculo.resultado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-300" :
-                      previewCalculo.resultado === "RED" ? "bg-red-500/20 text-red-400" :
-                      previewCalculo.resultado === "MEIO_RED" ? "bg-red-500/10 text-red-300" :
-                      previewCalculo.resultado === "VOID" ? "bg-gray-500/20 text-gray-400" :
-                      "bg-muted text-muted-foreground"
-                    }`}>
-                      {previewCalculo.resultado === "MEIO_GREEN" ? "MEIO GREEN" :
-                       previewCalculo.resultado === "MEIO_RED" ? "MEIO RED" :
-                       previewCalculo.resultado}
-                    </Badge>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground block mb-1">Retorno:</span>
-                    <span className="font-medium">{formatCurrency(previewCalculo.retorno)}</span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground block mb-1">P/L:</span>
-                    <span className={previewCalculo.lucro >= 0 ? "text-emerald-400 font-medium" : "text-red-400 font-medium"}>
-                      {previewCalculo.lucro >= 0 ? "+" : ""}{formatCurrency(previewCalculo.lucro)}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex items-center gap-4 px-3 py-2 rounded-md border border-blue-500/30 bg-blue-500/5 text-sm">
+              <span className="text-[10px] text-muted-foreground shrink-0">Preview</span>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-muted-foreground">Resultado:</span>
+                <Badge className={`text-[10px] px-1.5 py-0 ${
+                  previewCalculo.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
+                  previewCalculo.resultado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-300" :
+                  previewCalculo.resultado === "RED" ? "bg-red-500/20 text-red-400" :
+                  previewCalculo.resultado === "MEIO_RED" ? "bg-red-500/10 text-red-300" :
+                  previewCalculo.resultado === "VOID" ? "bg-gray-500/20 text-gray-400" :
+                  "bg-muted text-muted-foreground"
+                }`}>
+                  {previewCalculo.resultado === "MEIO_GREEN" ? "MEIO GREEN" :
+                   previewCalculo.resultado === "MEIO_RED" ? "MEIO RED" :
+                   previewCalculo.resultado}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-muted-foreground">Retorno:</span>
+                <span className="font-medium text-xs">{formatCurrency(previewCalculo.retorno)}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-muted-foreground">P/L:</span>
+                <span className={`font-medium text-xs ${previewCalculo.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {previewCalculo.lucro >= 0 ? "+" : ""}{formatCurrency(previewCalculo.lucro)}
+                </span>
+              </div>
+            </div>
 
             {/* Stake e Cálculos */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div className="space-y-2">
-                <Label>Stake (R$) *</Label>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Stake (R$) *</Label>
                 <Input
                   type="number"
                   step="0.01"
                   placeholder="0.00"
                   value={stake}
                   onChange={(e) => setStake(e.target.value)}
+                  className="h-9"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Odd Final</Label>
+              <div className="space-y-1">
+                <Label className="text-xs">Odd Final</Label>
                 <Input
                   value={oddFinal > 0 ? oddFinal.toFixed(3) : "-"}
                   disabled
-                  className="bg-muted/50"
+                  className="bg-muted/50 h-9"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Retorno Potencial</Label>
+              <div className="space-y-1">
+                <Label className="text-xs">Retorno Potencial</Label>
                 <Input
                   value={
                     retornoPotencial > 0 ? formatCurrency(retornoPotencial) : "-"
                   }
                   disabled
-                  className="bg-muted/50"
+                  className="bg-muted/50 h-9"
                 />
               </div>
             </div>
@@ -1527,8 +1525,8 @@ export function ApostaMultiplaDialog({
             )}
 
             {/* Data da Aposta */}
-            <div className="space-y-2">
-              <Label>Data/Hora da Aposta</Label>
+            <div className="space-y-1">
+              <Label className="text-xs">Data/Hora da Aposta</Label>
               <DateTimePicker
                 value={dataAposta}
                 onChange={setDataAposta}
@@ -1536,8 +1534,8 @@ export function ApostaMultiplaDialog({
             </div>
 
             {/* Resultado - Calculado automaticamente ou manual */}
-            <div className="space-y-2">
-              <Label>Resultado da Múltipla</Label>
+            <div className="space-y-1">
+              <Label className="text-xs">Resultado da Múltipla</Label>
               <Select 
                 value={resultadoManual || previewCalculo.resultado} 
                 onValueChange={(v) => {
