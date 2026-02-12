@@ -142,14 +142,44 @@ export function BetFormHeader({
 
   return (
     <div className="border-b border-border/50 bg-muted/20">
-      {/* Linha 1: Título + Fechar/Importar */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Icon className={cn("h-5 w-5", config.iconColor)} />
-          <h2 className="font-semibold text-base">{title}</h2>
+      {/* Linha única: Título + Estratégia + Importar/Fechar */}
+      <div className="flex items-center justify-between px-4 py-2 gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon className={cn("h-5 w-5 shrink-0", config.iconColor)} />
+          <h2 className="font-semibold text-sm whitespace-nowrap">{title}</h2>
+          
+          {/* Estratégia inline */}
+          {isEstrategiaFixed && lockedEstrategia ? (
+            <Badge 
+              variant="secondary" 
+              className="text-[10px] font-medium bg-primary/10 text-primary border-primary/20 shrink-0"
+            >
+              {ESTRATEGIA_LABELS[lockedEstrategia]}
+            </Badge>
+          ) : (
+            <Select 
+              value={displayEstrategia || ""} 
+              onValueChange={(v) => onEstrategiaChange(v as ApostaEstrategia)}
+              disabled={isEstrategiaFixed}
+            >
+              <SelectTrigger className={cn(
+                "h-7 text-xs w-[200px] shrink-0", 
+                !displayEstrategia && "border-red-500/50",
+                isEstrategiaFixed && "opacity-70 cursor-not-allowed"
+              )}>
+                <SelectValue placeholder="Estratégia *" />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTRATEGIAS_LIST.map(e => (
+                  <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
           {extraBadge}
           
-          {/* Badge de Fonte de Saldo - verdade financeira */}
+          {/* Badge de Fonte de Saldo */}
           {fonteSaldo && (
             <TooltipProvider>
               <Tooltip>
@@ -157,7 +187,7 @@ export function BetFormHeader({
                   <Badge 
                     variant="outline" 
                     className={cn(
-                      "text-[10px] font-medium gap-1 border-0",
+                      "text-[10px] font-medium gap-1 border-0 shrink-0",
                       fonteSaldoConfig[fonteSaldo].bg,
                       fonteSaldoConfig[fonteSaldo].text
                     )}
@@ -174,7 +204,7 @@ export function BetFormHeader({
           )}
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Botão Importar */}
           {showImport && !isEditing && (
             <>
@@ -186,7 +216,7 @@ export function BetFormHeader({
                       size="sm"
                       onClick={onImportClick}
                       disabled={isPrintProcessing}
-                      className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                      className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-7 px-2"
                     >
                       {isPrintProcessing ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -194,7 +224,7 @@ export function BetFormHeader({
                         <Camera className="h-3.5 w-3.5" />
                       )}
                       {isPrintProcessing 
-                        ? (printProcessingPhase === "backup" ? "Alternativo..." : "Analisando...") 
+                        ? (printProcessingPhase === "backup" ? "Alt..." : "...") 
                         : "Importar"}
                     </Button>
                   </TooltipTrigger>
@@ -218,55 +248,9 @@ export function BetFormHeader({
           
           {/* Botão Fechar */}
           {showCloseButton && !embedded && onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
               <X className="h-4 w-4" />
             </Button>
-          )}
-        </div>
-      </div>
-      
-      {/* Linha 2: Estratégia (Contexto é auto-inferido internamente) */}
-      <div className="px-4 pb-3">
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">
-            Estratégia <span className="text-red-400">*</span>
-            {isEstrategiaFixed && (
-              <span className="ml-1 text-[10px] text-primary">(fixo)</span>
-            )}
-          </Label>
-          
-          {isEstrategiaFixed && lockedEstrategia ? (
-            <div className="h-8 flex items-center">
-              <Badge 
-                variant="secondary" 
-                className="text-xs font-medium bg-primary/10 text-primary border-primary/20"
-              >
-                {ESTRATEGIA_LABELS[lockedEstrategia]}
-              </Badge>
-            </div>
-          ) : (
-            <Select 
-              value={displayEstrategia || ""} 
-              onValueChange={(v) => onEstrategiaChange(v as ApostaEstrategia)}
-              disabled={isEstrategiaFixed}
-            >
-              <SelectTrigger className={cn(
-                "h-8 text-xs max-w-[280px]", 
-                !displayEstrategia && "border-red-500/50",
-                isEstrategiaFixed && "opacity-70 cursor-not-allowed"
-              )}>
-                <SelectValue placeholder="Selecione uma estratégia" />
-              </SelectTrigger>
-              <SelectContent>
-                {ESTRATEGIAS_LIST.map(e => (
-                  <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          
-          {!displayEstrategia && !isEstrategiaFixed && (
-            <p className="text-[10px] text-red-400 mt-0.5">Obrigatório</p>
           )}
         </div>
       </div>

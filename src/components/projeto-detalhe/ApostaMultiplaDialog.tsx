@@ -1214,7 +1214,7 @@ export function ApostaMultiplaDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent 
-          className={`max-w-2xl max-h-[90vh] overflow-y-auto ${isDragging ? 'ring-2 ring-primary ring-offset-2' : ''} ${embedded ? 'fixed inset-0 !max-w-none !max-h-none !translate-x-0 !translate-y-0 !left-0 !top-0 !rounded-none !border-0' : ''}`}
+          className={`max-w-2xl max-h-[100vh] overflow-y-auto ${isDragging ? 'ring-2 ring-primary ring-offset-2' : ''} ${embedded ? 'fixed inset-0 !max-w-none !max-h-none !translate-x-0 !translate-y-0 !left-0 !top-0 !rounded-none !border-0' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -1260,70 +1260,70 @@ export function ApostaMultiplaDialog({
             }
           />
 
-          <div className="space-y-3 py-3 px-4">
+          <div className="space-y-2 py-2 px-4">
 
-            {/* Bookmaker / Vínculo */}
-            <div className="space-y-1.5 max-w-lg mx-auto">
-              <Label className="text-xs">Casa / Vínculo *</Label>
-              <Select value={bookmakerId} onValueChange={setBookmakerId}>
-                <SelectTrigger className="h-9 items-center text-sm">
-                  <SelectValue placeholder="Selecione a casa..." />
-                </SelectTrigger>
-                <SelectContent className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]">
-                  {bookmakers.map((bk) => (
-                    <SelectItem key={bk.id} value={bk.id} className="py-2">
-                      <BookmakerSelectOption 
-                        bookmaker={{
-                          id: bk.id,
-                          nome: bk.nome,
-                          parceiro_nome: bk.parceiro_nome,
-                          moeda: bk.moeda,
-                          saldo_operavel: bk.saldo_operavel,
-                          saldo_disponivel: bk.saldo_atual,
-                          saldo_freebet: bk.saldo_freebet,
-                          saldo_bonus: bk.saldo_bonus,
-                          logo_url: bk.logo_url,
-                          bonus_rollover_started: bk.bonus_rollover_started,
-                        }}
-                      />
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Casa / Vínculo + Tipo de Múltipla na mesma linha */}
+            <div className="flex items-start gap-4 max-w-2xl mx-auto">
+              {/* Casa / Vínculo */}
+              <div className="space-y-1 flex-1 min-w-0 max-w-[480px]">
+                <Label className="text-xs">Casa / Vínculo *</Label>
+                <Select value={bookmakerId} onValueChange={setBookmakerId}>
+                  <SelectTrigger className="h-8 items-center text-xs">
+                    <SelectValue placeholder="Selecione a casa..." />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]">
+                    {bookmakers.map((bk) => (
+                      <SelectItem key={bk.id} value={bk.id} className="py-2">
+                        <BookmakerSelectOption 
+                          bookmaker={{
+                            id: bk.id,
+                            nome: bk.nome,
+                            parceiro_nome: bk.parceiro_nome,
+                            moeda: bk.moeda,
+                            saldo_operavel: bk.saldo_operavel,
+                            saldo_disponivel: bk.saldo_atual,
+                            saldo_freebet: bk.saldo_freebet,
+                            saldo_bonus: bk.saldo_bonus,
+                            logo_url: bk.logo_url,
+                            bonus_rollover_started: bk.bonus_rollover_started,
+                          }}
+                        />
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {bookmakerSaldo && (
+                  <SaldoBreakdownDisplay
+                    saldoReal={bookmakerSaldo.saldo}
+                    saldoFreebet={bookmakerSaldo.saldoFreebet}
+                    saldoBonus={bookmakerSaldo.saldoBonus}
+                    saldoOperavel={bookmakerSaldo.saldoOperavel}
+                    moeda={bookmakerSaldo.moeda}
+                  />
+                )}
+              </div>
 
-              {/* Saldos com breakdown visual - usando componente canônico */}
-              {bookmakerSaldo && (
-                <SaldoBreakdownDisplay
-                  saldoReal={bookmakerSaldo.saldo}
-                  saldoFreebet={bookmakerSaldo.saldoFreebet}
-                  saldoBonus={bookmakerSaldo.saldoBonus}
-                  saldoOperavel={bookmakerSaldo.saldoOperavel}
-                  moeda={bookmakerSaldo.moeda}
-                />
-              )}
-            </div>
-
-            {/* Tipo de Múltipla */}
-            <div className="space-y-1">
-              <Label className="text-xs">Tipo de Múltipla</Label>
-              <RadioGroup
-                value={tipoMultipla}
-                onValueChange={(v) => setTipoMultipla(v as "DUPLA" | "TRIPLA")}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="DUPLA" id="dupla" />
-                  <Label htmlFor="dupla" className="cursor-pointer text-sm">
-                    Dupla (2 seleções)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="TRIPLA" id="tripla" />
-                  <Label htmlFor="tripla" className="cursor-pointer text-sm">
-                    Tripla (3 seleções)
-                  </Label>
-                </div>
-              </RadioGroup>
+              {/* Tipo de Múltipla */}
+              <div className="space-y-1 shrink-0 pt-5">
+                <RadioGroup
+                  value={tipoMultipla}
+                  onValueChange={(v) => setTipoMultipla(v as "DUPLA" | "TRIPLA")}
+                  className="flex gap-3"
+                >
+                  <div className="flex items-center space-x-1.5">
+                    <RadioGroupItem value="DUPLA" id="dupla" />
+                    <Label htmlFor="dupla" className="cursor-pointer text-xs whitespace-nowrap">
+                      Dupla (2)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <RadioGroupItem value="TRIPLA" id="tripla" />
+                    <Label htmlFor="tripla" className="cursor-pointer text-xs whitespace-nowrap">
+                      Tripla (3)
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
             </div>
 
             {/* Toggle Usar Freebet */}
@@ -1355,7 +1355,7 @@ export function ApostaMultiplaDialog({
               )}
 
             {/* Seleções */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label className="text-xs">Seleções</Label>
               <div className={`grid gap-2 ${tipoMultipla === "TRIPLA" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"}`}>
                 {selecoes.map((selecao, index) => (
@@ -1446,34 +1446,34 @@ export function ApostaMultiplaDialog({
             </div>
 
             {/* Stake e Cálculos */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Stake (R$) *</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-0.5">
+                <Label className="text-xs">Stake ({bookmakerSaldo?.moeda || 'R$'}) *</Label>
                 <Input
                   type="number"
                   step="0.01"
                   placeholder="0.00"
                   value={stake}
                   onChange={(e) => setStake(e.target.value)}
-                  className="h-9"
+                  className="h-8 text-xs"
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <Label className="text-xs">Odd Final</Label>
                 <Input
                   value={oddFinal > 0 ? oddFinal.toFixed(3) : "-"}
                   disabled
-                  className="bg-muted/50 h-9"
+                  className="bg-muted/50 h-8 text-xs"
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <Label className="text-xs">Retorno Potencial</Label>
                 <Input
                   value={
                     retornoPotencial > 0 ? formatCurrency(retornoPotencial) : "-"
                   }
                   disabled
-                  className="bg-muted/50 h-9"
+                  className="bg-muted/50 h-8 text-xs"
                 />
               </div>
             </div>
@@ -1524,13 +1524,11 @@ export function ApostaMultiplaDialog({
               </div>
             )}
 
-            {/* Data da Aposta */}
-            <div className="space-y-1">
-              <Label className="text-xs">Data/Hora da Aposta</Label>
-              <DateTimePicker
-                value={dataAposta}
-                onChange={setDataAposta}
-              />
+            {/* Data/Hora - metadado discreto, registrada automaticamente */}
+            <div className="flex items-center justify-end">
+              <span className="text-[10px] text-muted-foreground">
+                Registrado em: {dataAposta ? new Date(dataAposta).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} (Horário de Brasília)
+              </span>
             </div>
 
             {/* Resultado - Calculado automaticamente ou manual */}
