@@ -606,12 +606,16 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     onDataChange?.();
   };
 
-  // Resolução rápida de apostas simples (sem pernas multi) - USA RPC ATÔMICA
+  // Resolução rápida de apostas simples E múltiplas (sem pernas surebet) - USA RPC ATÔMICA
   const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
     try {
      console.log('[ProjetoApostasTab] handleQuickResolve iniciado:', { apostaId, resultado });
      
-      const aposta = apostas.find(a => a.id === apostaId);
+      // Buscar em apostas simples OU múltiplas
+      const apostaSimples = apostas.find(a => a.id === apostaId);
+      const apostaMultipla = !apostaSimples ? apostasMultiplas.find(am => am.id === apostaId) : null;
+      const aposta = apostaSimples || apostaMultipla;
+      
      if (!aposta) {
        console.error('[ProjetoApostasTab] Aposta não encontrada no estado local:', apostaId);
        toast.error("Aposta não encontrada. Tente recarregar a página.");
@@ -619,7 +623,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
      }
 
       const stake = typeof aposta.stake === "number" ? aposta.stake : 0;
-      const odd = aposta.odd || 1;
+      // Para múltiplas, usar odd_final; para simples, usar odd
+      const odd = apostaMultipla ? (apostaMultipla.odd_final || 1) : ((aposta as any).odd || 1);
       
       // Calcular lucro usando função canônica
       const lucro = calcularImpactoResultado(stake, odd, resultado);
@@ -643,12 +648,20 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
      console.log('[ProjetoApostasTab] reliquidarAposta sucesso, atualizando estado local');
      
-      // 2. Atualizar estado local
-      setApostas(prev => prev.map(a => 
-        a.id === apostaId 
-          ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
-          : a
-      ));
+      // 2. Atualizar estado local — no array correto
+      if (apostaSimples) {
+        setApostas(prev => prev.map(a => 
+          a.id === apostaId 
+            ? { ...a, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
+            : a
+        ));
+      } else {
+        setApostasMultiplas(prev => prev.map(am => 
+          am.id === apostaId 
+            ? { ...am, resultado, lucro_prejuizo: lucro, status: "LIQUIDADA" }
+            : am
+        ));
+      }
 
       // 3. Invalidar cache de saldos
       invalidateSaldos(projetoId);
@@ -667,7 +680,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       console.error("Erro ao atualizar aposta:", error);
      toast.error(`Erro ao atualizar resultado: ${error.message || 'Erro desconhecido'}`);
     }
-  }, [apostas, onDataChange, projetoId, invalidateSaldos]);
+  }, [apostas, apostasMultiplas, onDataChange, projetoId, invalidateSaldos]);
 
   // Handler para excluir aposta
   const handleDeleteBet = useCallback(async () => {
