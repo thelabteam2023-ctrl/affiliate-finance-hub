@@ -928,10 +928,10 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     }
     
     // Validate mandatory fields
-    if (!nome || !cpf || !dataNascimento || !email || !telefone) {
+    if (!nome || !cpf) {
       toast({
         title: "Campos obrigatórios faltando",
-        description: "Por favor, preencha: Nome, CPF, Data Nascimento, Email e Telefone.",
+        description: "Por favor, preencha: Nome e CPF.",
         variant: "destructive",
       });
       return;
@@ -958,9 +958,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         workspace_id: workspaceId,
         nome,
         cpf: cpf.replace(/\D/g, ""),
-        email,
-        telefone: telefone.replace(/[^\d+]/g, ""),
-        data_nascimento: dataNascimento,
+        email: email || null,
+        telefone: telefone ? telefone.replace(/[^\d+]/g, "") : null,
+        data_nascimento: dataNascimento || null,
         endereco: endereco || null,
         cidade: cidade || null,
         cep: cep.replace(/\D/g, "") || null,
@@ -1497,7 +1497,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   <Button
                     type="button"
                     onClick={savePersonalData}
-                    disabled={loading || !nome || !cpf || !dataNascimento || !email || !telefone}
+                    disabled={loading || !nome || !cpf}
                     className="w-full"
                   >
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
