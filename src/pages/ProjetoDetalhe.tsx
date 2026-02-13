@@ -687,7 +687,7 @@ export default function ProjetoDetalhe() {
             </Card>
           </CountBreakdownTooltip>
 
-          {/* Volume em Apostas - Com breakdown por módulo */}
+          {/* Volume em Apostas - Com breakdown por moeda + consolidado */}
           <KpiBreakdownTooltip
             breakdown={kpiBreakdowns?.volume || null}
             formatValue={formatCurrency}
@@ -699,10 +699,44 @@ export default function ProjetoDetalhe() {
                 <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(projetoResultado?.totalStaked || 0)}</div>
-                <p className="text-[10px] md:text-xs text-muted-foreground">
-                  Total apostado
-                </p>
+                {(() => {
+                  const cb = kpiBreakdowns?.volume?.currencyBreakdown;
+                  const hasMulti = cb && cb.length > 1;
+                  const hasDiff = cb && cb.some(c => c.moeda !== (kpiBreakdowns?.volume?.currency || 'BRL'));
+                  const showBreakdown = hasMulti || hasDiff;
+
+                  if (showBreakdown && cb) {
+                    const formatMoeda = (valor: number, moeda: string) => {
+                      const simbolos: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£", USDT: "$", USDC: "$" };
+                      const s = simbolos[moeda] || moeda + " ";
+                      return `${s} ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    };
+                    return (
+                      <div className="space-y-1">
+                        {cb.map(item => (
+                          <div key={item.moeda} className="flex items-center gap-1.5">
+                            <span className="text-[10px] md:text-xs font-medium text-muted-foreground px-1 py-0 rounded bg-muted">{item.moeda}</span>
+                            <span className="text-sm md:text-base font-semibold">{formatMoeda(item.valor, item.moeda)}</span>
+                          </div>
+                        ))}
+                        <div className="border-t border-border pt-1 mt-1">
+                          <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(projetoResultado?.totalStaked || 0)}</div>
+                          <p className="text-[9px] md:text-[10px] text-muted-foreground">
+                            Consolidado em {kpiBreakdowns?.volume?.currency || 'BRL'}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <>
+                      <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(projetoResultado?.totalStaked || 0)}</div>
+                      <p className="text-[10px] md:text-xs text-muted-foreground">
+                        Total apostado
+                      </p>
+                    </>
+                  );
+                })()}
               </CardContent>
             </Card>
           </KpiBreakdownTooltip>
