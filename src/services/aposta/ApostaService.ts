@@ -402,7 +402,7 @@ export async function liquidarAposta(
     const { data, error } = await supabase.rpc('liquidar_aposta_v4', {
       p_aposta_id: input.id,
       p_resultado: input.resultado,
-      p_lucro_prejuizo: input.lucro_prejuizo ?? null,
+      p_lucro_prejuizo: (input.lucro_prejuizo != null && input.lucro_prejuizo !== 0) ? input.lucro_prejuizo : null,
     });
 
     if (error) {
