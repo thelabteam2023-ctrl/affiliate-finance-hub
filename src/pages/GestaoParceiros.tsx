@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import ParceiroDialog from "@/components/parceiros/ParceiroDialog";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
+import type { VinculoCriadoContext } from "@/components/bookmakers/BookmakerDialog";
+import { VinculoCriadoConfirmDialog } from "@/components/bookmakers/VinculoCriadoConfirmDialog";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { ParceiroListaSidebar } from "@/components/parceiros/ParceiroListaSidebar";
 import { ParceiroDetalhesPanel } from "@/components/parceiros/ParceiroDetalhesPanel";
@@ -108,6 +110,8 @@ export default function GestaoParceiros() {
   const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
   const [transacaoBookmaker, setTransacaoBookmaker] = useState<{ id: string; nome: string; saldo_atual: number; saldo_usd?: number; moeda: string } | null>(null);
   const [transacaoTipo, setTransacaoTipo] = useState<string>("deposito");
+  const [vinculoCriadoConfirmOpen, setVinculoCriadoConfirmOpen] = useState(false);
+  const [vinculoCriadoContext, setVinculoCriadoContext] = useState<VinculoCriadoContext | null>(null);
   // Persistência: Inicializa com o último parceiro selecionado do localStorage
   const [selectedParceiroDetalhes, setSelectedParceiroDetalhes] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -585,6 +589,26 @@ export default function GestaoParceiros() {
     setTransacaoDialogOpen(true);
   }, []);
 
+  const handleVinculoCreated = useCallback((context: VinculoCriadoContext) => {
+    // Close vinculo dialog and show confirm
+    handleVinculoDialogClose();
+    setVinculoCriadoContext(context);
+    setVinculoCriadoConfirmOpen(true);
+  }, [handleVinculoDialogClose]);
+
+  const handleConfirmDeposit = useCallback(() => {
+    if (!vinculoCriadoContext) return;
+    setVinculoCriadoConfirmOpen(false);
+    setTransacaoBookmaker({
+      id: vinculoCriadoContext.bookmakerId,
+      nome: vinculoCriadoContext.bookmakerNome,
+      saldo_atual: 0,
+      moeda: vinculoCriadoContext.moeda,
+    });
+    setTransacaoTipo("DEPOSITO");
+    setTransacaoDialogOpen(true);
+  }, [vinculoCriadoContext]);
+
   const handleTransacaoClose = useCallback(() => {
     setTransacaoDialogOpen(false);
     setTransacaoBookmaker(null);
@@ -766,11 +790,19 @@ export default function GestaoParceiros() {
           key={`vinculo-${vinculoDialogOpen}-${editingBookmaker?.id || 'none'}-${vinculoParceiroId || 'none'}-${vinculoBookmakerId || 'none'}`}
           open={vinculoDialogOpen}
           onClose={handleVinculoDialogClose}
+          onCreated={handleVinculoCreated}
           bookmaker={editingBookmaker}
           defaultParceiroId={vinculoParceiroId || undefined}
           defaultBookmakerId={vinculoBookmakerId || undefined}
           lockParceiro={!!vinculoParceiroId || !!editingBookmaker}
           lockBookmaker={!!vinculoBookmakerId || !!editingBookmaker}
+        />
+
+        <VinculoCriadoConfirmDialog
+          open={vinculoCriadoConfirmOpen}
+          onOpenChange={setVinculoCriadoConfirmOpen}
+          context={vinculoCriadoContext}
+          onConfirmDeposit={handleConfirmDeposit}
         />
 
         {transacaoBookmaker && (

@@ -14,6 +14,9 @@ import { Plus, Search, IdCard, Eye, EyeOff, Edit, Trash2, TrendingUp, TrendingDo
 import { EstatisticasTab } from "@/components/bookmakers/EstatisticasTab";
 import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
+import type { VinculoCriadoContext } from "@/components/bookmakers/BookmakerDialog";
+import { VinculoCriadoConfirmDialog } from "@/components/bookmakers/VinculoCriadoConfirmDialog";
+import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
 import CatalogoBookmakers from "@/components/bookmakers/CatalogoBookmakers";
@@ -83,6 +86,9 @@ export default function GestaoBookmakers() {
   const [limitadaPopoverOpen, setLimitadaPopoverOpen] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const [historicoProjetoDialog, setHistoricoProjetoDialog] = useState<{ open: boolean; bookmaker: Bookmaker | null }>({ open: false, bookmaker: null });
+  const [vinculoCriadoConfirmOpen, setVinculoCriadoConfirmOpen] = useState(false);
+  const [vinculoCriadoContext, setVinculoCriadoContext] = useState<VinculoCriadoContext | null>(null);
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   // ajustePostLimitacao state removed — now in ProjetoVinculosTab
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -311,6 +317,25 @@ export default function GestaoBookmakers() {
   const handleDialogClose = () => {
     setDialogOpen(false);
     setEditingBookmaker(null);
+    fetchBookmakers();
+  };
+
+  const handleVinculoCreated = (context: VinculoCriadoContext) => {
+    handleDialogClose();
+    setVinculoCriadoContext(context);
+    setVinculoCriadoConfirmOpen(true);
+  };
+
+  const handleConfirmDeposit = () => {
+    setVinculoCriadoConfirmOpen(false);
+    if (vinculoCriadoContext) {
+      setDepositDialogOpen(true);
+    }
+  };
+
+  const handleDepositDialogClose = () => {
+    setDepositDialogOpen(false);
+    setVinculoCriadoContext(null);
     fetchBookmakers();
   };
 
@@ -1176,8 +1201,29 @@ export default function GestaoBookmakers() {
       <BookmakerDialog
         open={dialogOpen}
         onClose={handleDialogClose}
+        onCreated={handleVinculoCreated}
         bookmaker={editingBookmaker}
       />
+
+      <VinculoCriadoConfirmDialog
+        open={vinculoCriadoConfirmOpen}
+        onOpenChange={setVinculoCriadoConfirmOpen}
+        context={vinculoCriadoContext}
+        onConfirmDeposit={handleConfirmDeposit}
+      />
+
+      {vinculoCriadoContext && (
+        <CaixaTransacaoDialog
+          open={depositDialogOpen}
+          onClose={handleDepositDialogClose}
+          onSuccess={handleDepositDialogClose}
+          defaultTipoTransacao="DEPOSITO"
+          defaultDestinoBookmakerId={vinculoCriadoContext.bookmakerId}
+          defaultDestinoParceiroId={vinculoCriadoContext.parceiroId}
+          defaultTipoMoeda="FIAT"
+          defaultMoeda={vinculoCriadoContext.moeda}
+        />
+      )}
 
       {selectedBookmaker && (
         <>
