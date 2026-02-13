@@ -42,6 +42,8 @@ interface UseProjetoResultadoProps {
   projetoId: string;
   dataInicio?: Date | null;
   dataFim?: Date | null;
+  /** Fallback: retorna taxa BRL para uma moeda (ex: USD -> 5.16). Usado quando cotacao_trabalho não está definida. */
+  getRateFallback?: (moeda: string) => number;
 }
 
 interface UseProjetoResultadoReturn {
@@ -96,7 +98,8 @@ export function useInvalidateProjetoResultado() {
 export function useProjetoResultado({ 
   projetoId, 
   dataInicio = null, 
-  dataFim = null 
+  dataFim = null,
+  getRateFallback 
 }: UseProjetoResultadoProps): UseProjetoResultadoReturn {
   const queryClient = useQueryClient();
 
@@ -115,15 +118,25 @@ export function useProjetoResultado({
         .single();
       
       const moedaConsolidacao = projetoData?.moeda_consolidacao || 'BRL';
-      // IMPORTANTE: Se não há cotação de trabalho, significa que deve usar cotação oficial (FastForex/PTAX)
-      // O valor 0 indica "usar fonte externa" - a camada de frontend resolve isso
-      const cotacaoTrabalho = projetoData?.cotacao_trabalho || 0;
+      // Se cotacao_trabalho não está definida, usar getRateFallback (cotação oficial da API)
+      let cotacaoTrabalho = projetoData?.cotacao_trabalho || 0;
+      
+      // CORREÇÃO: Quando cotacao_trabalho é 0/null, usar a taxa oficial da API via getRateFallback
+      // Isso evita o bug de tratar USD como 1:1 com BRL
+      const getEffectiveCotacao = (moedaOrigem: string): number => {
+        // Se temos cotação de trabalho válida, usar ela
+        if (cotacaoTrabalho > 0) return cotacaoTrabalho;
+        // Senão, usar a taxa oficial da API
+        if (getRateFallback) return getRateFallback(moedaOrigem);
+        // Último fallback: retornar 0 (convertToConsolidation tratará como "sem conversão")
+        return 0;
+      };
 
       // 1. Fetch lucro bruto das apostas (USANDO VALORES CONSOLIDADOS QUANDO DISPONÍVEIS)
-      const grossProfitFromBets = await fetchGrossProfitFromBets(projetoId, dataInicio, dataFim, moedaConsolidacao, cotacaoTrabalho);
+      const grossProfitFromBets = await fetchGrossProfitFromBets(projetoId, dataInicio, dataFim, moedaConsolidacao, cotacaoTrabalho, getEffectiveCotacao);
       
       // 2. Fetch volume apostado (stake total) (USANDO VALORES CONSOLIDADOS)
-      const totalStaked = await fetchTotalStaked(projetoId, dataInicio, dataFim, moedaConsolidacao, cotacaoTrabalho);
+      const totalStaked = await fetchTotalStaked(projetoId, dataInicio, dataFim, moedaConsolidacao, cotacaoTrabalho, getEffectiveCotacao);
       
       // 3. Fetch perdas operacionais por status
       const operationalLosses = await fetchOperationalLosses(projetoId, dataInicio, dataFim);
@@ -186,7 +199,8 @@ export function useProjetoResultado({
 // Funções auxiliares de fetch
 
 // Helper para converter valor para moeda de consolidação
-// IMPORTANTE: Se cotacao <= 0, retorna o valor original (sem conversão)
+// IMPORTANTE: cotacao é a taxa BRL da moedaOrigem (ex: USD=5.16, EUR=5.48)
+// Se cotacao <= 0, retorna o valor original (sem conversão)
 function convertToConsolidation(
   valor: number,
   moedaOrigem: string | null,
@@ -197,29 +211,26 @@ function convertToConsolidation(
   if (!moedaOrigem || moedaOrigem === moedaConsolidacao) return valor;
   
   // PROTEÇÃO: Se cotação inválida, retornar valor sem conversão
-  // Isso evita erros de divisão por zero e valores incorretos
   if (!cotacao || cotacao <= 0) {
-    console.warn('[convertToConsolidation] Cotação inválida:', cotacao, '- retornando valor original');
+    console.warn('[convertToConsolidation] Cotação inválida:', cotacao, 'para', moedaOrigem, '→', moedaConsolidacao, '- retornando valor original');
     return valor;
   }
   
-  // BRL -> USD
-  if (moedaOrigem === "BRL" && moedaConsolidacao === "USD") {
+  // Conversão genérica via pivot BRL:
+  // moedaOrigem → BRL: valor * cotacao (cotacao = taxa BRL da moeda origem)
+  // BRL → moedaConsolidacao: se consolidação é BRL, já está; se é outra, dividir
+  if (moedaConsolidacao === "BRL") {
+    // Qualquer moeda → BRL: valor * taxaBRL
+    return valor * cotacao;
+  }
+  
+  // BRL → outra moeda (ex: BRL → USD): valor / taxaBRL_destino
+  if (moedaOrigem === "BRL") {
     return valor / cotacao;
   }
-  // USD -> BRL
-  if (moedaOrigem === "USD" && moedaConsolidacao === "BRL") {
-    return valor * cotacao;
-  }
-  // Crypto -> USD (já está em USD)
-  if (["USDT", "USDC", "BTC", "ETH"].includes(moedaOrigem) && moedaConsolidacao === "USD") {
-    return valor;
-  }
-  // Crypto -> BRL
-  if (["USDT", "USDC", "BTC", "ETH"].includes(moedaOrigem) && moedaConsolidacao === "BRL") {
-    return valor * cotacao;
-  }
-  return valor;
+  
+  // Fallback: entre moedas não-BRL, a cotacao já é a taxa efetiva direta
+  return valor * cotacao;
 }
 
 async function fetchGrossProfitFromBets(
@@ -227,7 +238,8 @@ async function fetchGrossProfitFromBets(
   dataInicio: Date | null, 
   dataFim: Date | null,
   moedaConsolidacao: string,
-  cotacao: number
+  cotacao: number,
+  getEffectiveCotacao?: (moeda: string) => number
 ): Promise<number> {
   // Usar apostas_unificada como fonte única de verdade
   // PRIORIDADE: pl_consolidado > lucro_prejuizo convertido
@@ -271,8 +283,9 @@ async function fetchGrossProfitFromBets(
     if (moedaConsolidacao === 'BRL' && a.lucro_prejuizo_brl_referencia != null) {
       return acc + Number(a.lucro_prejuizo_brl_referencia);
     }
-    // 4. Converter com cotação de trabalho
-    return acc + convertToConsolidation(valorOriginal, moedaOrigem, moedaConsolidacao, cotacao);
+    // 4. Converter: usar cotação efetiva (trabalho ou API fallback)
+    const taxaEfetiva = (cotacao > 0) ? cotacao : (getEffectiveCotacao ? getEffectiveCotacao(moedaOrigem) : 0);
+    return acc + convertToConsolidation(valorOriginal, moedaOrigem, moedaConsolidacao, taxaEfetiva);
   }, 0) || 0;
 }
 
@@ -281,7 +294,8 @@ async function fetchTotalStaked(
   dataInicio: Date | null, 
   dataFim: Date | null,
   moedaConsolidacao: string,
-  cotacao: number
+  cotacao: number,
+  getEffectiveCotacao?: (moeda: string) => number
 ): Promise<number> {
   // Usar apostas_unificada como fonte única de verdade
   // PRIORIDADE: stake_consolidado > stake convertido
@@ -329,8 +343,9 @@ async function fetchTotalStaked(
     if (moedaConsolidacao === 'BRL' && a.valor_brl_referencia != null) {
       return acc + Number(a.valor_brl_referencia);
     }
-    // 4. Converter com cotação de trabalho
-    return acc + convertToConsolidation(valorOriginal, moedaOrigem, moedaConsolidacao, cotacao);
+    // 4. Converter: usar cotação efetiva (trabalho ou API fallback)
+    const taxaEfetiva = (cotacao > 0) ? cotacao : (getEffectiveCotacao ? getEffectiveCotacao(moedaOrigem) : 0);
+    return acc + convertToConsolidation(valorOriginal, moedaOrigem, moedaConsolidacao, taxaEfetiva);
   }, 0) || 0;
 }
 
