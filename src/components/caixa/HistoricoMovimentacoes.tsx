@@ -588,9 +588,20 @@ export function HistoricoMovimentacoes({
                           const diffMs = confirmacao.getTime() - solicitacao.getTime();
                           const diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24));
                           if (diffDias > 0) {
+                            // Count business days (exclude Sat=6, Sun=0)
+                            let diasUteis = 0;
+                            const cur = new Date(solicitacao);
+                            cur.setHours(0,0,0,0);
+                            const fim = new Date(confirmacao);
+                            fim.setHours(0,0,0,0);
+                            while (cur < fim) {
+                              cur.setDate(cur.getDate() + 1);
+                              const dow = cur.getDay();
+                              if (dow !== 0 && dow !== 6) diasUteis++;
+                            }
                             return (
                               <div className="text-[10px] text-muted-foreground">
-                                {diffDias} {diffDias === 1 ? 'dia' : 'dias'} de espera
+                                {diffDias} {diffDias === 1 ? 'dia' : 'dias'} de espera · {diasUteis} {diasUteis === 1 ? 'útil' : 'úteis'}
                               </div>
                             );
                           }
