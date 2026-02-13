@@ -137,8 +137,12 @@ export function DespesaAdministrativaDialog({
   }, [despesa, open]);
 
   // 🔒 VALIDAÇÃO DE SALDO INSUFICIENTE - Apenas para status CONFIRMADO
+  // Em modo edição, o valor original da despesa já foi debitado, então devolvemos ele ao saldo disponível
+  const isEditMode = Boolean(despesa?.id);
+  const valorOriginal = isEditMode && despesa?.status === "CONFIRMADO" ? (despesa?.valor || 0) : 0;
+  const saldoEfetivo = origemData.saldoDisponivel + valorOriginal;
   const isSaldoInsuficiente = formData.status === "CONFIRMADO" && formData.valor > 0 && (
-    Boolean(origemData.saldoInsuficiente) || origemData.saldoDisponivel < formData.valor
+    Boolean(origemData.saldoInsuficiente) && !isEditMode ? true : saldoEfetivo < formData.valor
   );
 
   const handleSubmit = async () => {
@@ -163,11 +167,12 @@ export function DespesaAdministrativaDialog({
 
     // 🔒 VALIDAÇÃO CENTRAL: Bloquear se saldo insuficiente para status CONFIRMADO (dupla verificação)
     if (formData.status === "CONFIRMADO") {
-      const saldoRealInsuficiente = Boolean(origemData.saldoInsuficiente) || (formData.valor > 0 && origemData.saldoDisponivel < formData.valor);
+      const saldoComCredito = origemData.saldoDisponivel + valorOriginal;
+      const saldoRealInsuficiente = saldoComCredito < formData.valor;
       if (saldoRealInsuficiente) {
         toast({
           title: "Transação bloqueada",
-          description: `Saldo insuficiente. Disponível: R$ ${origemData.saldoDisponivel.toFixed(2)} | Necessário: R$ ${formData.valor.toFixed(2)}`,
+          description: `Saldo insuficiente. Disponível: R$ ${saldoComCredito.toFixed(2)} | Necessário: R$ ${formData.valor.toFixed(2)}`,
           variant: "destructive",
         });
         return;
