@@ -60,6 +60,8 @@ import { DuploGreenStatisticsCard } from "./DuploGreenStatisticsCard";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { useCotacoes } from "@/hooks/useCotacoes";
+import { VolumeKPI } from "@/components/kpis/VolumeKPI";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { TabFiltersBar } from "./TabFiltersBar";
 import { useTabFilters } from "@/hooks/useTabFilters";
@@ -178,6 +180,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   
   // Hook de formatação de moeda do projeto
   const { formatCurrency, convertToConsolidation: convertFn, moedaConsolidacao: moedaConsol } = useProjetoCurrency(projetoId);
+  const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   
   // Hook global de logos de bookmakers (busca do catálogo)
   const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
@@ -507,6 +510,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
     const taxaAcerto = liquidadas > 0 ? (greens / liquidadas) * 100 : 0;
     const roi = totalStake > 0 ? (lucroTotal / totalStake) * 100 : 0;
 
+    // Breakdown de volume por moeda original
+    const volumePorMoeda = new Map<string, number>();
+    apostas.forEach(a => {
+      const moeda = a.moeda_operacao || "BRL";
+      const rawStake = a.forma_registro === "ARBITRAGEM" ? (a.stake_total || 0) : (a.stake || 0);
+      volumePorMoeda.set(moeda, (volumePorMoeda.get(moeda) || 0) + rawStake);
+    });
+    const currencyBreakdown = Array.from(volumePorMoeda.entries())
+      .map(([moeda, valor]) => ({ moeda, valor }))
+      .filter(item => Math.abs(item.valor) > 0.01);
+
     const porCasa: Record<string, { stake: number; lucro: number; count: number }> = {};
     apostas.forEach((a) => {
       const pernas = Array.isArray(a.pernas) ? a.pernas : [];
@@ -537,7 +551,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       porCasa[casa].count++;
     });
 
-    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa };
+    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown };
   }, [apostas, convertFn, moedaConsol]);
 
   // Interface para vínculos dentro de cada casa
@@ -776,16 +790,20 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Volume</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(metricas.totalStake)}</div>
-            <p className="text-xs text-muted-foreground">Total investido</p>
-          </CardContent>
-        </Card>
+        {(() => {
+          const volByCurrency: Record<string, number> = {};
+          metricas.currencyBreakdown.forEach(item => { volByCurrency[item.moeda] = item.valor; });
+          const rateDateStr = rateLastUpdate ? new Date(rateLastUpdate).toLocaleDateString('pt-BR') : undefined;
+          return (
+            <VolumeKPI
+              volumeByCurrency={volByCurrency}
+              consolidationCurrency={moedaConsol || 'BRL'}
+              getRate={getRate}
+              formatCurrency={formatCurrency}
+              rateDate={rateDateStr}
+            />
+          );
+        })()}
 
         <Card className={metricas.lucroTotal >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

@@ -42,6 +42,8 @@ import {
   ShieldAlert
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { useCotacoes } from "@/hooks/useCotacoes";
+import { VolumeKPI } from "@/components/kpis/VolumeKPI";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -142,6 +144,7 @@ export default function ProjetoDetalhe() {
   
   // Hook de formatação de moeda do projeto
   const { formatCurrency, formatChartAxis } = useProjetoCurrency(id);
+  const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   
   // Project tab preference (página inicial por projeto)
   const { defaultTab, loading: tabPreferenceLoading, isDefaultTab } = useProjectTabPreference(id);
@@ -687,59 +690,23 @@ export default function ProjetoDetalhe() {
             </Card>
           </CountBreakdownTooltip>
 
-          {/* Volume em Apostas - Com breakdown por moeda + consolidado */}
-          <KpiBreakdownTooltip
-            breakdown={kpiBreakdowns?.volume || null}
-            formatValue={formatCurrency}
-            title="Volume por Módulo"
-          >
-            <Card className="overflow-hidden cursor-help" style={{ contain: "layout paint" }}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium">Volume</CardTitle>
-                <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                {(() => {
-                  const cb = kpiBreakdowns?.volume?.currencyBreakdown;
-                  const hasMulti = cb && cb.length > 1;
-                  const hasDiff = cb && cb.some(c => c.moeda !== (kpiBreakdowns?.volume?.currency || 'BRL'));
-                  const showBreakdown = hasMulti || hasDiff;
-
-                  if (showBreakdown && cb) {
-                    const formatMoeda = (valor: number, moeda: string) => {
-                      const simbolos: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£", USDT: "$", USDC: "$" };
-                      const s = simbolos[moeda] || moeda + " ";
-                      return `${s} ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                    };
-                    return (
-                      <div className="space-y-1">
-                        {cb.map(item => (
-                          <div key={item.moeda} className="flex items-center gap-1.5">
-                            <span className="text-[10px] md:text-xs font-medium text-muted-foreground px-1 py-0 rounded bg-muted">{item.moeda}</span>
-                            <span className="text-sm md:text-base font-semibold">{formatMoeda(item.valor, item.moeda)}</span>
-                          </div>
-                        ))}
-                        <div className="border-t border-border pt-1 mt-1">
-                          <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(projetoResultado?.totalStaked || 0)}</div>
-                          <p className="text-[9px] md:text-[10px] text-muted-foreground">
-                            Consolidado em {kpiBreakdowns?.volume?.currency || 'BRL'}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return (
-                    <>
-                      <div className="text-lg md:text-2xl font-bold truncate">{formatCurrency(projetoResultado?.totalStaked || 0)}</div>
-                      <p className="text-[10px] md:text-xs text-muted-foreground">
-                        Total apostado
-                      </p>
-                    </>
-                  );
-                })()}
-              </CardContent>
-            </Card>
-          </KpiBreakdownTooltip>
+          {/* Volume em Apostas - Consolidado com tooltip multi-moeda */}
+          {(() => {
+            const cb = kpiBreakdowns?.volume?.currencyBreakdown || [];
+            const volByCurrency: Record<string, number> = {};
+            cb.forEach(item => { volByCurrency[item.moeda] = item.valor; });
+            const moeda = projetoResultado?.moedaConsolidacao || kpiBreakdowns?.volume?.currency || 'BRL';
+            const rateDateStr = rateLastUpdate ? new Date(rateLastUpdate).toLocaleDateString('pt-BR') : undefined;
+            return (
+              <VolumeKPI
+                volumeByCurrency={volByCurrency}
+                consolidationCurrency={moeda}
+                getRate={getRate}
+                formatCurrency={formatCurrency}
+                rateDate={rateDateStr}
+              />
+            );
+          })()}
 
           {/* Resultado/Lucro - Com breakdown dinâmico por módulo */}
           <KpiBreakdownTooltip

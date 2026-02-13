@@ -52,6 +52,8 @@ import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { useCotacoes } from "@/hooks/useCotacoes";
+import { VolumeKPI } from "@/components/kpis/VolumeKPI";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { reliquidarAposta, liquidarPernaSurebet, deletarAposta } from "@/services/aposta/ApostaService";
@@ -205,6 +207,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
 
   // Hook de formatação de moeda do projeto
   const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol, convertToConsolidation: convertFn } = useProjetoCurrency(projetoId);
+  const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   const currencySymbol = getSymbol();
   
   // DESACOPLAMENTO CALENDÁRIO: Dados separados para o calendário (sem filtro de período)
@@ -882,48 +885,21 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Volume</CardTitle>
-            <Calculator className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {(() => {
-              const cb = kpis.currencyBreakdown;
-              const hasMulti = cb.length > 1;
-              const hasDiff = cb.some(c => c.moeda !== (moedaConsolidacao || 'BRL'));
-              const showBreakdown = hasMulti || hasDiff;
-
-              if (showBreakdown) {
-                const fmtMoeda = (valor: number, moeda: string) => {
-                  const simbolos: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£", USDT: "$", USDC: "$" };
-                  const s = simbolos[moeda] || moeda + " ";
-                  return `${s} ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                };
-                return (
-                  <div className="space-y-1">
-                    {cb.map(item => (
-                      <div key={item.moeda} className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-medium text-muted-foreground px-1 py-0 rounded bg-muted">{item.moeda}</span>
-                        <span className="text-sm font-semibold">{fmtMoeda(item.valor, item.moeda)}</span>
-                      </div>
-                    ))}
-                    <div className="border-t border-border pt-1 mt-1">
-                      <div className="text-2xl font-bold">{formatCurrency(kpis.stakeTotal)}</div>
-                      <p className="text-[9px] text-muted-foreground">Consolidado em {moedaConsolidacao || 'BRL'}</p>
-                    </div>
-                  </div>
-                );
-              }
-              return (
-                <>
-                  <div className="text-2xl font-bold">{formatCurrency(kpis.stakeTotal)}</div>
-                  <p className="text-xs text-muted-foreground">Total investido</p>
-                </>
-              );
-            })()}
-          </CardContent>
-        </Card>
+        {(() => {
+          const volByCurrency: Record<string, number> = {};
+          kpis.currencyBreakdown.forEach(item => { volByCurrency[item.moeda] = item.valor; });
+          const rateDateStr = rateLastUpdate ? new Date(rateLastUpdate).toLocaleDateString('pt-BR') : undefined;
+          return (
+            <VolumeKPI
+              volumeByCurrency={volByCurrency}
+              consolidationCurrency={moedaConsolidacao || 'BRL'}
+              getRate={getRate}
+              formatCurrency={formatCurrency}
+              rateDate={rateDateStr}
+              icon={<Calculator className="h-4 w-4 text-muted-foreground" />}
+            />
+          );
+        })()}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
