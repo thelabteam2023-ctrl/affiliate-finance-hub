@@ -3,6 +3,7 @@ import { calcSurebetWindowHeight } from "@/lib/windowHelper";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { reliquidarAposta, liquidarPernaSurebet } from "@/services/aposta/ApostaService";
@@ -521,6 +522,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       .map(([moeda, valor]) => ({ moeda, valor }))
       .filter(item => Math.abs(item.valor) > 0.01);
 
+    // Breakdown de LUCRO por moeda original
+    const lucroPorMoedaMap = new Map<string, number>();
+    apostas.forEach(a => {
+      const moeda = a.moeda_operacao || "BRL";
+      const rawLucro = a.lucro_prejuizo ?? 0;
+      lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
+    });
+    const lucroPorMoeda = Array.from(lucroPorMoedaMap.entries())
+      .map(([moeda, valor]) => ({ moeda, valor }))
+      .filter(item => Math.abs(item.valor) > 0.01);
+
     const porCasa: Record<string, { stake: number; lucro: number; count: number }> = {};
     apostas.forEach((a) => {
       const pernas = Array.isArray(a.pernas) ? a.pernas : [];
@@ -551,7 +563,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       porCasa[casa].count++;
     });
 
-    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown };
+    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown, lucroPorMoeda };
   }, [apostas, convertFn, moedaConsol]);
 
   // Interface para vínculos dentro de cada casa
@@ -805,7 +817,13 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           );
         })()}
 
-        <Card className={metricas.lucroTotal >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
+        <LucroCurrencyTooltip
+          lucroPorMoeda={metricas.lucroPorMoeda || []}
+          totalConsolidado={metricas.lucroTotal}
+          moedaConsolidacao={moedaConsol || 'BRL'}
+          formatValue={formatCurrency}
+        >
+        <Card className={cn("cursor-help", metricas.lucroTotal >= 0 ? "border-emerald-500/20" : "border-red-500/20")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{metricas.lucroTotal >= 0 ? 'Lucro' : 'Prejuízo'}</CardTitle>
             <TrendingUp className={`h-4 w-4 ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
@@ -814,9 +832,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
             <div className={`text-2xl font-bold ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {formatCurrency(metricas.lucroTotal)}
             </div>
-            <p className="text-xs text-muted-foreground">Resultado liquidado</p>
+            <p className="text-xs text-muted-foreground">Resultado consolidado</p>
           </CardContent>
         </Card>
+        </LucroCurrencyTooltip>
 
         <Card className={metricas.roi >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

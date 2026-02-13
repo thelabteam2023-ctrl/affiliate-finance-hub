@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { reliquidarAposta } from "@/services/aposta/ApostaService";
@@ -425,6 +426,17 @@ export function ProjetoValueBetTab({
       .map(([moeda, valor]) => ({ moeda, valor }))
       .filter(item => Math.abs(item.valor) > 0.01);
 
+    // Breakdown de LUCRO por moeda original
+    const lucroPorMoedaMap = new Map<string, number>();
+    apostas.forEach(a => {
+      const moeda = a.moeda_operacao || "BRL";
+      const rawLucro = a.lucro_prejuizo ?? 0;
+      lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
+    });
+    const lucroPorMoeda = Array.from(lucroPorMoedaMap.entries())
+      .map(([moeda, valor]) => ({ moeda, valor }))
+      .filter(item => Math.abs(item.valor) > 0.01);
+
     const porCasa: Record<string, { stake: number; lucro: number; count: number }> = {};
     apostas.forEach(a => {
       const casa = a.bookmaker_nome || "Desconhecida";
@@ -434,7 +446,7 @@ export function ProjetoValueBetTab({
       porCasa[casa].count++;
     });
 
-    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown };
+    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown, lucroPorMoeda };
   }, [apostas, convertToConsolidationFn, moedaConsolidacaoVal]);
 
   // casaData agregado por CASA (não por vínculo) - Padrão unificado
@@ -725,7 +737,13 @@ export function ProjetoValueBetTab({
           );
         })()}
 
-        <Card className={metricas.lucroTotal >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
+        <LucroCurrencyTooltip
+          lucroPorMoeda={metricas.lucroPorMoeda || []}
+          totalConsolidado={metricas.lucroTotal}
+          moedaConsolidacao={moedaConsolidacaoVal || 'BRL'}
+          formatValue={formatCurrency}
+        >
+        <Card className={cn("cursor-help", metricas.lucroTotal >= 0 ? "border-emerald-500/20" : "border-red-500/20")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{metricas.lucroTotal >= 0 ? 'Lucro' : 'Prejuízo'}</CardTitle>
             <TrendingUp className={`h-4 w-4 ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
@@ -734,9 +752,10 @@ export function ProjetoValueBetTab({
             <div className={`text-2xl font-bold ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {formatCurrency(metricas.lucroTotal)}
             </div>
-            <p className="text-xs text-muted-foreground">Resultado liquidado</p>
+            <p className="text-xs text-muted-foreground">Resultado consolidado</p>
           </CardContent>
         </Card>
+        </LucroCurrencyTooltip>
 
         <Card className={metricas.roi >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
