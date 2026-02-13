@@ -62,7 +62,7 @@ interface ApostaUnificada {
 async function fetchApostasCalendarioFn(projetoId: string): Promise<ApostaUnificada[]> {
   const { data, error } = await supabase
     .from("apostas_unificada")
-    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, resultado, stake, stake_total, bookmaker_id`)
+    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, resultado, stake, stake_total, stake_consolidado, moeda_operacao, valor_brl_referencia, forma_registro, bookmaker_id`)
     .eq("projeto_id", projetoId)
     .eq("status", "LIQUIDADA")
     .is("cancelled_at", null)
@@ -70,24 +70,42 @@ async function fetchApostasCalendarioFn(projetoId: string): Promise<ApostaUnific
 
   if (error) throw error;
 
-  return (data || []).map((item: any) => ({
-    id: item.id,
-    data_aposta: item.data_aposta,
-    lucro_prejuizo: item.pl_consolidado ?? item.lucro_prejuizo,
-    pl_consolidado: item.pl_consolidado,
-    resultado: item.resultado,
-    stake: item.stake || 0,
-    stake_total: item.stake_total,
-    esporte: 'N/A',
-    bookmaker_id: item.bookmaker_id || 'unknown',
-    bookmaker_nome: '',
-    parceiro_nome: null,
-    logo_url: null,
-    forma_registro: null,
-    estrategia: null,
-    bonus_id: null,
-    pernas: undefined,
-  }));
+  return (data || []).map((item: any) => {
+    const moedaOp = item.moeda_operacao || 'BRL';
+    const rawStake = item.forma_registro === 'ARBITRAGEM' ? (item.stake_total || 0) : (item.stake || 0);
+    // Consolidated stake
+    let stake = rawStake;
+    if (item.stake_consolidado != null && item.stake_consolidado !== 0) {
+      stake = item.stake_consolidado;
+    } else if (moedaOp !== 'BRL' && item.valor_brl_referencia != null) {
+      stake = item.valor_brl_referencia;
+    }
+    // Consolidated lucro
+    let lucro = item.lucro_prejuizo || 0;
+    if (item.pl_consolidado != null) {
+      lucro = item.pl_consolidado;
+    } else if (moedaOp !== 'BRL' && item.lucro_prejuizo_brl_referencia != null) {
+      lucro = item.lucro_prejuizo_brl_referencia;
+    }
+    return {
+      id: item.id,
+      data_aposta: item.data_aposta,
+      lucro_prejuizo: lucro,
+      pl_consolidado: item.pl_consolidado,
+      resultado: item.resultado,
+      stake: stake,
+      stake_total: item.forma_registro === 'ARBITRAGEM' ? stake : item.stake_total,
+      esporte: 'N/A',
+      bookmaker_id: item.bookmaker_id || 'unknown',
+      bookmaker_nome: '',
+      parceiro_nome: null,
+      logo_url: null,
+      forma_registro: item.forma_registro,
+      estrategia: null,
+      bonus_id: null,
+      pernas: undefined,
+    };
+  });
 }
 
 async function fetchApostasFiltradas(
@@ -150,11 +168,27 @@ async function fetchApostasFiltradas(
 
   return (data || []).map((item: any) => {
     const bkInfo = bookmakerMap[item.bookmaker_id] || { nome: 'Desconhecida', parceiro_nome: null, logo_url: null };
-    const stake = item.forma_registro === 'ARBITRAGEM' ? item.stake_total : item.stake;
+    // Stake original (para arbitragem usa stake_total)
+    const rawStake = item.forma_registro === 'ARBITRAGEM' ? (item.stake_total || 0) : (item.stake || 0);
+    // Stake consolidado: priorizar stake_consolidado > valor_brl_referencia > raw
+    let consolidatedStake = rawStake;
+    const moedaOp = item.moeda_operacao || 'BRL';
+    if (item.stake_consolidado != null && item.stake_consolidado !== 0) {
+      consolidatedStake = item.stake_consolidado;
+    } else if (moedaOp !== 'BRL' && item.valor_brl_referencia != null) {
+      consolidatedStake = item.valor_brl_referencia;
+    }
+    // Lucro consolidado: priorizar pl_consolidado > lucro_prejuizo_brl_referencia > raw
+    let consolidatedLucro = item.lucro_prejuizo || 0;
+    if (item.pl_consolidado != null) {
+      consolidatedLucro = item.pl_consolidado;
+    } else if (moedaOp !== 'BRL' && item.lucro_prejuizo_brl_referencia != null) {
+      consolidatedLucro = item.lucro_prejuizo_brl_referencia;
+    }
     return {
       id: item.id, data_aposta: item.data_aposta,
-      lucro_prejuizo: item.lucro_prejuizo, pl_consolidado: item.pl_consolidado,
-      resultado: item.resultado, stake: stake || 0, stake_total: item.stake_total,
+      lucro_prejuizo: consolidatedLucro, pl_consolidado: item.pl_consolidado,
+      resultado: item.resultado, stake: consolidatedStake, stake_total: item.forma_registro === 'ARBITRAGEM' ? consolidatedStake : item.stake_total,
       esporte: item.esporte || item.estrategia || 'N/A',
       bookmaker_id: item.bookmaker_id || 'unknown',
       bookmaker_nome: bkInfo.nome, parceiro_nome: bkInfo.parceiro_nome, logo_url: bkInfo.logo_url,
@@ -323,7 +357,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       if (aposta.resultado === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
       if (aposta.resultado === "MEIO_RED") acc[aposta.esporte].meioReds++;
       // CRÍTICO: Usar pl_consolidado quando disponível para evitar inflação
-      acc[aposta.esporte].lucro += (aposta.pl_consolidado ?? aposta.lucro_prejuizo) || 0;
+      acc[aposta.esporte].lucro += (aposta.lucro_prejuizo) || 0;
       return acc;
     }, {});
 
@@ -362,12 +396,11 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   }, [esportesData, selectedEsporte]);
 
   // Preparar dados para VisaoGeralCharts
-  // CRÍTICO: Passa pl_consolidado para usar lucro correto (evitar inflação em surebets)
+  // CRÍTICO: stake e lucro já estão consolidados na moeda do projeto (feito em fetchApostasFiltradas)
   const apostasParaGraficos = useMemo(() => {
     return apostasUnificadas.map(a => ({
       data_aposta: a.data_aposta,
-      // CRÍTICO: Usar pl_consolidado quando disponível para evitar inflação
-      lucro_prejuizo: a.pl_consolidado ?? a.lucro_prejuizo,
+      lucro_prejuizo: a.lucro_prejuizo,
       stake: a.stake,
       stake_total: a.stake_total,
       bookmaker_nome: a.bookmaker_nome,
