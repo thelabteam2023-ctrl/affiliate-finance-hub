@@ -268,9 +268,8 @@ export function ApostaCard({
   // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
   
-  // Usa formatação do projeto se fornecida, senão usa a padrão local
+  // Sempre usa a moeda da aposta (moeda operacional da casa), nunca a do projeto
   const formatValue = (value: number) => {
-    if (formatCurrencyProp) return formatCurrencyProp(value);
     return defaultFormatCurrency(value, aposta.moeda || "BRL");
   };
   const config = ESTRATEGIA_CONFIG[estrategia] || ESTRATEGIA_CONFIG.NORMAL;

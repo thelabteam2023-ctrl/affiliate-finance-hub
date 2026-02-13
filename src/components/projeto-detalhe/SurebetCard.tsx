@@ -11,7 +11,9 @@ import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { SurebetRowActionsMenu, type SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { SurebetPernaResultPill } from "@/components/apostas/SurebetPernaResultPill";
-
+import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
+import { CurrencyBadge } from "@/components/ui/currency-display";
+import type { SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 // Estrutura de entrada individual (para múltiplas entradas)
 export interface SurebetPernaEntry {
   bookmaker_id: string;
@@ -195,6 +197,12 @@ function getSelecaoDisplay(perna: SurebetPerna): string {
   return selecao;
 }
 
+// Formata valor usando a moeda da perna (não a do projeto)
+function formatPernaValue(value: number, moeda?: string): string {
+  const currency = moeda || "BRL";
+  return formatCurrencyUtil(value, currency);
+}
+
 // Componente para exibir uma perna com layout de grid fixo
 function PernaItem({ 
   perna, 
@@ -274,7 +282,7 @@ function PernaItem({
           {/* Odd e Stake à direita - larguras fixas para alinhamento */}
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-sm sm:text-base font-medium whitespace-nowrap w-[60px] text-right tabular-nums">@{perna.odd.toFixed(2)}</span>
-            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap w-[80px] text-right tabular-nums">{formatValue(perna.stake)}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap w-[90px] text-right tabular-nums">{formatPernaValue(perna.stake, perna.moeda)}</span>
           </div>
           
           {/* Result pill per perna */}
@@ -336,7 +344,7 @@ function PernaItem({
           {/* Odd e Stake */}
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
-            <span className="text-xs text-muted-foreground">{formatValue(displayStake)}</span>
+            <span className="text-xs text-muted-foreground">{formatPernaValue(displayStake, perna.moeda)}</span>
           </div>
           
           {/* Chevron */}
@@ -367,7 +375,7 @@ function PernaItem({
               {/* Odd + Stake */}
               <div className="flex items-center gap-2 shrink-0">
                 <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
-                <span className="text-muted-foreground">{formatValue(entry.stake)}</span>
+                <span className="text-muted-foreground">{formatPernaValue(entry.stake, entry.moeda)}</span>
               </div>
             </div>
           ))}
@@ -385,6 +393,18 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   const formatValue = formatCurrency || defaultFormatCurrency;
   const isDuploGreen = surebet.estrategia === "DUPLO_GREEN";
   const isLiquidada = surebet.status === "LIQUIDADA";
+  
+  // Detectar moeda predominante das pernas (se todas iguais, usar essa; senão, usar formatValue do projeto)
+  const moedaPernas = (() => {
+    if (!surebet.pernas || surebet.pernas.length === 0) return null;
+    const moedas = new Set(surebet.pernas.map(p => p.moeda || "BRL"));
+    return moedas.size === 1 ? moedas.values().next().value : null;
+  })();
+  
+  // Formatter para totais do card: usa moeda das pernas se uniforme, senão projeto
+  const formatTotal = moedaPernas 
+    ? (v: number) => formatPernaValue(v, moedaPernas)
+    : formatValue;
   
   // Detectar contexto de bônus pela estratégia ou prop
   const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
@@ -527,7 +547,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
           
           <div className="flex items-center gap-3 shrink-0">
             <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-              Stake: {formatValue(surebet.stake_total)}
+              Stake: {formatTotal(surebet.stake_total)}
             </span>
             
             {lucroExibir !== null && lucroExibir !== undefined && (
@@ -537,7 +557,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                   lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
                   !isLiquidada && 'opacity-30'
                 )}>
-                  {formatValue(lucroExibir)}
+                  {formatTotal(lucroExibir)}
                 </span>
                 {roiExibir !== null && roiExibir !== undefined && (
                   <span className={cn(
