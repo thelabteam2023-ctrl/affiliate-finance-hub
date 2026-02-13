@@ -36,6 +36,7 @@ interface Perna {
   resultado?: string;
   odd?: number;
   selecao?: string;
+  moeda?: string;
 }
 
 interface ApostaBase {
@@ -70,6 +71,7 @@ interface CasaUsada {
   volume: number;
   lucro: number;
   roi: number;
+  moeda?: string;
   logo_url?: string | null;
   vinculos: VinculoDetalhe[];
 }
@@ -334,6 +336,13 @@ interface CasasMaisUtilizadasCardProps {
 }
 
 function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, formatCurrency, showScopeToggle }: CasasMaisUtilizadasCardProps) {
+  // Formata valor na moeda original da casa
+  const fmtMoedaOriginal = (valor: number, moeda?: string) => {
+    const m = moeda || "BRL";
+    const simbolos: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£", USDT: "$", USDC: "$" };
+    const s = simbolos[m] || m + " ";
+    return `${s} ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
   const [scope, setScope] = useState<"projeto" | "global">("projeto");
   
   const activeCasas = scope === "global" && casasGlobal ? casasGlobal : casas;
@@ -456,7 +465,7 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
                     {/* Qtd */}
                     <span className="text-center text-xs text-muted-foreground tabular-nums">{casa.apostas}</span>
                     {/* Volume */}
-                    <span className="text-right text-[11px] font-medium tabular-nums whitespace-nowrap">{formatCurrency(casa.volume)}</span>
+                    <span className="text-right text-[11px] font-medium tabular-nums whitespace-nowrap">{fmtMoedaOriginal(casa.volume, casa.moeda)}</span>
                     {/* ROI */}
                     <span className={`text-right text-xs font-semibold tabular-nums whitespace-nowrap ${roiColor}`}>
                       {casa.roi >= 0 ? '+' : ''}{casa.roi.toFixed(1)}%
@@ -480,10 +489,10 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
                   <span>Apostas:</span>
                   <span className="text-right font-medium text-foreground">{casa.apostas}</span>
                   <span>Volume:</span>
-                  <span className="text-right font-medium text-foreground">{formatCurrency(casa.volume)}</span>
+                  <span className="text-right font-medium text-foreground">{fmtMoedaOriginal(casa.volume, casa.moeda)}</span>
                   <span>Lucro:</span>
                   <span className={`text-right font-medium ${casa.lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
+                    {casa.lucro >= 0 ? '+' : ''}{fmtMoedaOriginal(casa.lucro, casa.moeda)}
                   </span>
                   <span>ROI:</span>
                   <span className={`text-right font-semibold ${roiColor}`}>{casa.roi.toFixed(2)}%</span>
@@ -502,7 +511,7 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
                     {casa.vinculos.slice(0, 5).map((v) => (
                       <div key={v.vinculo} className="grid grid-cols-[1fr_60px_60px] gap-x-2 items-center">
                         <span className="truncate">{v.vinculo}</span>
-                        <span className="text-right text-muted-foreground tabular-nums">{formatCurrency(v.volume)}</span>
+                        <span className="text-right text-muted-foreground tabular-nums">{fmtMoedaOriginal(v.volume, casa.moeda)}</span>
                         <span className={`text-right font-medium tabular-nums ${v.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                           {v.roi >= 0 ? '+' : ''}{v.roi.toFixed(1)}%
                         </span>
@@ -770,21 +779,18 @@ export function VisaoGeralCharts({
       apostas: number; 
       volume: number;
       lucro: number;
+      moeda: string;
       vinculos: Map<string, { apostas: number; volume: number; lucro: number }> 
     }>();
 
-    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, stake: number, lucro: number) => {
-      // Se tem parceiro_nome separado, usa diretamente
-      // Caso contrário, tenta extrair do nome completo (formato: "CASA - VÍNCULO")
+    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, stake: number, lucro: number, moeda: string) => {
       let casa: string;
       let vinculo: string;
       
       if (parceiroNome) {
-        // Parceiro fornecido separadamente - usa diretamente
         casa = bookmakerNome;
         vinculo = getFirstLastName(parceiroNome);
       } else {
-        // Tenta extrair do nome completo
         const separatorIdx = bookmakerNome.indexOf(" - ");
         if (separatorIdx > 0) {
           casa = bookmakerNome.substring(0, separatorIdx).trim();
@@ -797,14 +803,13 @@ export function VisaoGeralCharts({
       }
 
       if (!casaMap.has(casa)) {
-        casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, vinculos: new Map() });
+        casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, moeda, vinculos: new Map() });
       }
       const casaData = casaMap.get(casa)!;
       casaData.apostas += 1;
       casaData.volume += stake;
       casaData.lucro += lucro;
 
-      // Agregar por vínculo
       if (!casaData.vinculos.has(vinculo)) {
         casaData.vinculos.set(vinculo, { apostas: 0, volume: 0, lucro: 0 });
       }
@@ -815,22 +820,24 @@ export function VisaoGeralCharts({
     };
 
     apostas.forEach((a) => {
-      // Se tem pernas (aposta multi-pernas), itera sobre cada perna
+      const moedaOp = a.moeda_operacao || "BRL";
+      
       if (a.pernas && Array.isArray(a.pernas) && a.pernas.length > 0) {
         a.pernas.forEach((perna) => {
           const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
           const parceiroNome = perna.parceiro_nome;
           const pernaStake = typeof perna.stake === "number" ? perna.stake : 0;
           const pernaLucro = typeof perna.lucro_prejuizo === "number" ? perna.lucro_prejuizo : 0;
-          processEntry(nomeCompleto, parceiroNome, pernaStake, pernaLucro);
+          const pernaMoeda = perna.moeda || moedaOp;
+          processEntry(nomeCompleto, parceiroNome, pernaStake, pernaLucro, pernaMoeda);
         });
       } else {
-        // Aposta simples — usa bookmaker_nome e parceiro_nome
         const nomeCompleto = a.bookmaker_nome || "Desconhecida";
         const parceiroNome = a.parceiro_nome;
-        const stake = getConsolidatedStakeLocal(a);
-        const lucro = getConsolidatedLucroLocal(a);
-        processEntry(nomeCompleto, parceiroNome, stake, lucro);
+        // Use RAW stake (original currency), not consolidated
+        const rawStake = typeof a.stake_total === "number" ? a.stake_total : a.stake;
+        const rawLucro = a.lucro_prejuizo ?? 0;
+        processEntry(nomeCompleto, parceiroNome, rawStake, rawLucro, moedaOp);
       }
     });
 
@@ -871,6 +878,7 @@ export function VisaoGeralCharts({
         volume: data.volume,
         lucro: data.lucro,
         roi,
+        moeda: data.moeda,
         logo_url: findLogoForCasa(casa),
         vinculos: Array.from(data.vinculos.entries()).map(([vinculo, v]) => {
           const vinculoRoi = v.volume > 0 ? (v.lucro / v.volume) * 100 : 0;

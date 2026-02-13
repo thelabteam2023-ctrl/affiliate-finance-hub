@@ -786,6 +786,7 @@ export function ProjetoValueBetTab({
           <VisaoGeralCharts 
             apostas={apostas} 
             apostasCalendario={transformCalendarApostasForCharts(calendarApostas)}
+            logoMap={logoMap}
             isSingleDayPeriod={tabFilters.period === "1dia"}
             periodStart={dateRange?.start}
             periodEnd={dateRange?.end}
