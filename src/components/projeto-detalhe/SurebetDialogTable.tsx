@@ -49,6 +49,7 @@ import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { pernasToInserts } from "@/types/apostasPernas";
 import { type MoedaOperacao } from "@/types/apostasUnificada";
+import { convertCurrency, calcularStakesMultiCurrency, type GetEffectiveRateFn } from "@/utils/convertCurrency";
 import { useApostaRascunho, type ApostaRascunho } from "@/hooks/useApostaRascunho";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
@@ -193,47 +194,7 @@ function calcularStakeTotal(mainEntry: { stake: string }, additionalEntries?: Od
   return mainStake + additionalStakes;
 }
 
-// Cálculo de stakes para arbitragem N-pernas com lucro equalizado
-function calcularStakesNPernas(
-  odds: { oddMedia: number; stakeAtual: number; isReference: boolean }[],
-  arredondarFn: (value: number) => number
-): { stakes: number[]; isValid: boolean; lucroIgualado: number } {
-  const n = odds.length;
-  if (n < 2) {
-    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
-  }
-  
-  const todasOddsValidas = odds.every(o => o.oddMedia > 1);
-  if (!todasOddsValidas) {
-    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
-  }
-  
-  const refIndex = odds.findIndex(o => o.isReference);
-  if (refIndex === -1) {
-    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
-  }
-  
-  const refOdd = odds[refIndex].oddMedia;
-  const refStake = odds[refIndex].stakeAtual;
-  
-  if (refStake <= 0 || refOdd <= 1) {
-    return { stakes: odds.map(o => o.stakeAtual), isValid: false, lucroIgualado: 0 };
-  }
-  
-  // Retorno-alvo (se a perna de referência ganhar)
-  const targetReturn = refStake * refOdd;
-  
-  // Para igualar lucro em todas as pernas: stake[i] = targetReturn / odd[i]
-  const calculatedStakes = odds.map((o, i) => {
-    if (i === refIndex) return refStake;
-    return arredondarFn(targetReturn / o.oddMedia);
-  });
-  
-  const stakeTotal = calculatedStakes.reduce((a, b) => a + b, 0);
-  const lucroIgualado = targetReturn - stakeTotal;
-  
-  return { stakes: calculatedStakes, isValid: true, lucroIgualado };
-}
+// Nota: calcularStakesMultiCurrency em @/utils/convertCurrency substitui a lógica legada
 
 // ============================================
 // CONSTANTES
@@ -886,54 +847,45 @@ export function SurebetDialogTable({
     if (isEditing) return;
     if (profitDirectionActive) return;
     
-    const pernaData = odds.map(perna => ({
-      oddMedia: getOddMediaPerna(perna),
-      stakeAtual: getStakeTotalPerna(perna),
-      isReference: perna.isReference,
-      isManuallyEdited: perna.isManuallyEdited
-    }));
-    
-    const refIndex = pernaData.findIndex(p => p.isReference);
-    if (refIndex === -1) return;
-    
-    const refStake = pernaData[refIndex].stakeAtual;
-    const refOdd = pernaData[refIndex].oddMedia;
-    if (refStake <= 0 || refOdd <= 1) return;
-    
-    const validOddsCount = pernaData.filter(p => p.oddMedia > 1).length;
-    if (validOddsCount < odds.length) return;
-    
-    // Detectar moedas das pernas
+    // Detectar moedas das pernas via bookmaker selecionado
     const moedasPernas = odds.map(o => {
       const bk = bookmakerSaldos.find(b => b.id === o.bookmaker_id);
       return (bk?.moeda || "BRL") as string;
     });
-    const refMoeda = moedasPernas[refIndex];
-    const isMultiCurr = new Set(moedasPernas.filter(Boolean)).size > 1;
     
-    // Retorno-alvo na moeda da perna de referência
-    const targetReturn = refStake * refOdd;
+    const legs = odds.map((perna, i) => ({
+      oddMedia: getOddMediaPerna(perna),
+      moeda: moedasPernas[i],
+      stakeAtual: getStakeTotalPerna(perna),
+      isReference: perna.isReference,
+      isManuallyEdited: perna.isManuallyEdited,
+      isFromPrint: perna.stakeOrigem === "print",
+    }));
+    
+    const refIndex = legs.findIndex(l => l.isReference);
+    if (refIndex === -1) return;
+    if (legs[refIndex].stakeAtual <= 0 || legs[refIndex].oddMedia <= 1) return;
+    
+    const validOddsCount = legs.filter(l => l.oddMedia > 1).length;
+    if (validOddsCount < odds.length) return;
+    
+    // Usar o utilitário centralizado de conversão multi-moeda
+    const consolidation = (moedaConsolidacao as string) || "BRL";
+    const result = calcularStakesMultiCurrency(
+      legs,
+      getEffectiveRate as GetEffectiveRateFn,
+      arredondarStake,
+      consolidation
+    );
+    
+    if (!result.isValid) return;
     
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
       if (i === refIndex) return o;
       if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return o;
       
-      const oddI = pernaData[i].oddMedia;
-      if (oddI <= 1) return o;
-      
-      let calculatedStake: number;
-      
-      if (isMultiCurr && moedasPernas[i] !== refMoeda) {
-        // Converter targetReturn da moeda ref para moeda desta perna via BRL pivot
-        const refRateBRL = getEffectiveRate(refMoeda).rate; // moedaRef/BRL
-        const legRateBRL = getEffectiveRate(moedasPernas[i]).rate; // moedaLeg/BRL
-        const targetReturnInLegCurrency = (targetReturn * refRateBRL) / legRateBRL;
-        calculatedStake = arredondarStake(targetReturnInLegCurrency / oddI);
-      } else {
-        calculatedStake = arredondarStake(targetReturn / oddI);
-      }
-      
+      const calculatedStake = result.stakes[i];
       const currentStake = parseFloat(o.stake) || 0;
       
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
@@ -954,7 +906,8 @@ export function SurebetDialogTable({
     isEditing,
     profitDirectionActive,
     getEffectiveRate,
-    bookmakerSaldos
+    bookmakerSaldos,
+    moedaConsolidacao
   ]);
 
   // ============================================
@@ -970,6 +923,12 @@ export function SurebetDialogTable({
     
     if (validOddsCount !== odds.length) return null;
     
+    // Detectar moedas das pernas
+    const moedasPernas = odds.map(o => {
+      const bk = bookmakerSaldos.find(b => b.id === o.bookmaker_id);
+      return (bk?.moeda || "BRL") as string;
+    });
+    
     const refIndex = directedProfitLegs.find(i => {
       const stake = parseFloat(odds[i].stake);
       return !isNaN(stake) && stake > 0;
@@ -979,34 +938,54 @@ export function SurebetDialogTable({
     
     const refStake = parseFloat(odds[refIndex].stake) || 0;
     const refOdd = parsedOdds[refIndex];
+    const refMoeda = moedasPernas[refIndex];
     
     if (refStake <= 0 || refOdd <= 1) return null;
     
-    const retornoAlvo = refStake * refOdd;
+    // Retorno-alvo na moeda da referência
+    const retornoAlvoRefCurrency = refStake * refOdd;
     
-    // Calcular stakes para pernas D=true
+    // Calcular stakes para pernas D=true (converter para moeda de cada perna)
     const stakesDirected: { [key: number]: number } = {};
     for (const i of directedProfitLegs) {
       const oddI = parsedOdds[i];
       if (oddI > 1) {
-        stakesDirected[i] = retornoAlvo / oddI;
+        // Converter retorno-alvo para moeda desta perna
+        const retornoInLegCurrency = convertCurrency(retornoAlvoRefCurrency, refMoeda, moedasPernas[i], getEffectiveRate as GetEffectiveRateFn);
+        stakesDirected[i] = retornoInLegCurrency / oddI;
       }
     }
     
-    const somaStakesDirected = Object.values(stakesDirected).reduce((a, b) => a + b, 0);
+    // Para calcular stakes D=false, precisamos trabalhar na moeda da referência
+    // Converter stakes D=true para moeda ref para somar
+    const somaStakesDirectedRefCurrency = Object.entries(stakesDirected).reduce((acc, [idx, stake]) => {
+      const i = parseInt(idx);
+      return acc + convertCurrency(stake, moedasPernas[i], refMoeda, getEffectiveRate as GetEffectiveRateFn);
+    }, 0);
     
     // Índices das pernas não direcionadas (D=false)
     const undirectedIndices = odds.map((_, i) => i).filter(i => !directedProfitLegs.includes(i));
     
     if (undirectedIndices.length === 0) return null;
     
-    // Resolver sistema para pernas D=false (lucro = 0)
-    const sumInvOdds = undirectedIndices.reduce((acc, i) => acc + 1 / parsedOdds[i], 0);
+    // Para D=false: lucro = 0, ou seja, retorno = stake_total (tudo na moeda ref)
+    // stake_i_ref = stakeTotal_ref / odd_i_ajustada
+    // odd_i_ajustada considera conversão de moeda
+    const sumInvOddsAjustadas = undirectedIndices.reduce((acc, i) => {
+      // Odd ajustada: se a perna ganha, retorno na moeda ref = stake_na_moeda_perna * odd
+      // convertido para ref. Mas para a fórmula de inversão trabalhamos na moeda ref.
+      // stake_i_ref * odd_i_efetiva_ref = stakeTotal_ref
+      // odd_efetiva_ref = odd_i * (taxa_perna/taxa_ref)
+      const ratePerna = getEffectiveRate(moedasPernas[i]).rate;
+      const rateRef = getEffectiveRate(refMoeda).rate;
+      const oddEfetivaRef = parsedOdds[i] * (ratePerna / rateRef);
+      return acc + 1 / oddEfetivaRef;
+    }, 0);
     
-    if (sumInvOdds >= 1) return null;
+    if (sumInvOddsAjustadas >= 1) return null;
     
-    const S = (somaStakesDirected * sumInvOdds) / (1 - sumInvOdds);
-    const stakeTotal = somaStakesDirected + S;
+    const S_ref = (somaStakesDirectedRefCurrency * sumInvOddsAjustadas) / (1 - sumInvOddsAjustadas);
+    const stakeTotal_ref = somaStakesDirectedRefCurrency + S_ref;
     
     const newStakes: number[] = [];
     
@@ -1015,14 +994,21 @@ export function SurebetDialogTable({
       if (oddI <= 1) {
         newStakes.push(0);
       } else if (directedProfitLegs.includes(i)) {
-        newStakes.push(arredondarStake(stakesDirected[i] || retornoAlvo / oddI));
+        // Stake na moeda da perna
+        newStakes.push(arredondarStake(stakesDirected[i] || 0));
       } else {
-        newStakes.push(arredondarStake(stakeTotal / oddI));
+        // Calcular na moeda ref, depois converter para moeda da perna
+        const ratePerna = getEffectiveRate(moedasPernas[i]).rate;
+        const rateRef = getEffectiveRate(refMoeda).rate;
+        const oddEfetivaRef = oddI * (ratePerna / rateRef);
+        const stakeRefCurrency = stakeTotal_ref / oddEfetivaRef;
+        const stakeInLegCurrency = convertCurrency(stakeRefCurrency, refMoeda, moedasPernas[i], getEffectiveRate as GetEffectiveRateFn);
+        newStakes.push(arredondarStake(stakeInLegCurrency));
       }
     }
     
     return newStakes;
-  }, [odds.map(o => `${o.odd}|${o.stake}`).join(','), directedProfitLegs, arredondarAtivado, arredondarValor]);
+  }, [odds.map(o => `${o.odd}|${o.stake}|${o.bookmaker_id}`).join(','), directedProfitLegs, arredondarAtivado, arredondarValor, getEffectiveRate, bookmakerSaldos]);
   
   // Aplicar stakes calculadas quando há direcionamento
   useEffect(() => {
@@ -1071,7 +1057,7 @@ export function SurebetDialogTable({
     
     const moedasSelecionadas = odds.map(o => {
       const bk = bookmakerSaldos.find(b => b.id === o.bookmaker_id);
-      return bk?.moeda as SupportedCurrency;
+      return (bk?.moeda || "BRL") as SupportedCurrency;
     });
     
     const moedasUnicas = [...new Set(moedasSelecionadas.filter(Boolean))];
@@ -1080,23 +1066,27 @@ export function SurebetDialogTable({
       ? moedasUnicas[0] 
       : (moedaConsolidacao as SupportedCurrency) || "BRL";
     
-    // Converter stake para moeda de consolidação usando cotação de trabalho
+    // Registrar taxas usadas para tooltips
     const ratesUsed: Record<string, { rate: number; source: string }> = {};
     
     const convertToConsolidation = (valor: number, moeda: string): number => {
       if (!moeda || moeda === moedaDominante) return valor;
-      const origemInfo = getEffectiveRate(moeda);
-      const destinoInfo = getEffectiveRate(moedaDominante);
-      // Registrar as taxas usadas para tooltip
-      if (moeda !== "BRL") ratesUsed[moeda] = { rate: origemInfo.rate, source: origemInfo.source };
-      if (moedaDominante !== "BRL") ratesUsed[moedaDominante] = { rate: destinoInfo.rate, source: destinoInfo.source };
-      return (valor * origemInfo.rate) / destinoInfo.rate;
+      // Registrar taxas usadas para tooltip
+      if (moeda !== "BRL") {
+        const info = getEffectiveRate(moeda);
+        ratesUsed[moeda] = { rate: info.rate, source: info.source };
+      }
+      if (moedaDominante !== "BRL") {
+        const info = getEffectiveRate(moedaDominante);
+        ratesUsed[moedaDominante] = { rate: info.rate, source: info.source };
+      }
+      return convertCurrency(valor, moeda, moedaDominante, getEffectiveRate as GetEffectiveRateFn);
     };
     
-    // Stake total: se multi-currency, converter cada stake para moeda de consolidação
+    // Stake total SEMPRE na moeda de consolidação
     const stakeTotal = actualStakes.reduce((sum, stake, i) => {
       const moeda = moedasSelecionadas[i] || "BRL";
-      return sum + (isMultiCurrency ? convertToConsolidation(stake, moeda) : stake);
+      return sum + convertToConsolidation(stake, moeda);
     }, 0);
     
     // Calcular lucro por cenário
@@ -1109,7 +1099,7 @@ export function SurebetDialogTable({
       const lucroPernaMoeda = retorno - stakeNesseLado;
       
       // Lucro consolidado (para cálculos de ROI e totais)
-      const retornoConsolidado = isMultiCurrency ? convertToConsolidation(retorno, moedaPerna) : retorno;
+      const retornoConsolidado = convertToConsolidation(retorno, moedaPerna);
       const lucroConsolidado = retornoConsolidado - stakeTotal;
       const roi = stakeTotal > 0 ? (lucroConsolidado / stakeTotal) * 100 : 0;
       
