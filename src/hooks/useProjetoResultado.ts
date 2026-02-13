@@ -233,7 +233,7 @@ async function fetchGrossProfitFromBets(
   // PRIORIDADE: pl_consolidado > lucro_prejuizo convertido
   let query = supabase
     .from('apostas_unificada')
-    .select('lucro_prejuizo, pl_consolidado, moeda_operacao, consolidation_currency')
+    .select('lucro_prejuizo, pl_consolidado, moeda_operacao, consolidation_currency, lucro_prejuizo_brl_referencia')
     .eq('projeto_id', projetoId)
     .eq('status', 'LIQUIDADA');
   
@@ -256,14 +256,22 @@ async function fetchGrossProfitFromBets(
     return 0;
   }
 
-  return data?.reduce((acc, a) => {
-    // Se já temos o valor consolidado na moeda do projeto, usar ele
+  return data?.reduce((acc, a: any) => {
+    // 1. Se já temos o valor consolidado na moeda do projeto, usar ele
     if (a.pl_consolidado !== null && a.consolidation_currency === moedaConsolidacao) {
       return acc + Number(a.pl_consolidado);
     }
-    // Senão, converter lucro_prejuizo para moeda de consolidação
     const valorOriginal = Number(a.lucro_prejuizo || 0);
     const moedaOrigem = a.moeda_operacao || 'BRL';
+    // 2. Se mesma moeda, usar direto
+    if (moedaOrigem === moedaConsolidacao) {
+      return acc + valorOriginal;
+    }
+    // 3. Se consolidação é BRL e temos lucro_prejuizo_brl_referencia (snapshot), usar
+    if (moedaConsolidacao === 'BRL' && a.lucro_prejuizo_brl_referencia != null) {
+      return acc + Number(a.lucro_prejuizo_brl_referencia);
+    }
+    // 4. Converter com cotação de trabalho
     return acc + convertToConsolidation(valorOriginal, moedaOrigem, moedaConsolidacao, cotacao);
   }, 0) || 0;
 }
@@ -279,7 +287,7 @@ async function fetchTotalStaked(
   // PRIORIDADE: stake_consolidado > stake convertido
   let query = supabase
     .from('apostas_unificada')
-    .select('stake, stake_total, stake_consolidado, forma_registro, moeda_operacao, consolidation_currency')
+    .select('stake, stake_total, stake_consolidado, forma_registro, moeda_operacao, consolidation_currency, valor_brl_referencia')
     .eq('projeto_id', projetoId);
   
   // CRÍTICO: Usar timezone operacional (America/Sao_Paulo)
@@ -301,12 +309,11 @@ async function fetchTotalStaked(
     return 0;
   }
 
-  return data?.reduce((acc, a) => {
-    // Se já temos o valor consolidado na moeda do projeto, usar ele
+  return data?.reduce((acc, a: any) => {
+    // 1. Se já temos o valor consolidado na moeda do projeto, usar ele
     if (a.stake_consolidado !== null && a.consolidation_currency === moedaConsolidacao) {
       return acc + Number(a.stake_consolidado);
     }
-    // Senão, converter stake para moeda de consolidação
     let valorOriginal: number;
     if (a.forma_registro === 'ARBITRAGEM') {
       valorOriginal = Number(a.stake_total || 0);
@@ -314,6 +321,15 @@ async function fetchTotalStaked(
       valorOriginal = Number(a.stake || 0);
     }
     const moedaOrigem = a.moeda_operacao || 'BRL';
+    // 2. Se mesma moeda, usar direto
+    if (moedaOrigem === moedaConsolidacao) {
+      return acc + valorOriginal;
+    }
+    // 3. Se consolidação é BRL e temos valor_brl_referencia (snapshot), usar
+    if (moedaConsolidacao === 'BRL' && a.valor_brl_referencia != null) {
+      return acc + Number(a.valor_brl_referencia);
+    }
+    // 4. Converter com cotação de trabalho
     return acc + convertToConsolidation(valorOriginal, moedaOrigem, moedaConsolidacao, cotacao);
   }, 0) || 0;
 }
