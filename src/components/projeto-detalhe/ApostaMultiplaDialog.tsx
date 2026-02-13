@@ -1137,7 +1137,7 @@ export function ApostaMultiplaDialog({
           const liquidResult = await liquidarAposta({
             id: novaApostaId,
             resultado: resultadoFinal as any,
-            lucro_prejuizo: valorRetorno ? valorRetorno - stakeNum : undefined,
+            lucro_prejuizo: undefined, // Delegar cálculo à RPC (usa odd_final para múltiplas)
           });
           
           if (!liquidResult.success) {
