@@ -78,6 +78,8 @@ interface OrigemPagamentoSelectProps {
   onChange: (data: OrigemPagamentoData) => void;
   valorPagamento: number;
   disabled?: boolean;
+  /** Em modo edição, valor original já debitado que deve ser devolvido ao saldo para validação */
+  valorCreditoEdicao?: number;
 }
 
 export function OrigemPagamentoSelect({
@@ -85,7 +87,10 @@ export function OrigemPagamentoSelect({
   onChange,
   valorPagamento,
   disabled = false,
+  valorCreditoEdicao = 0,
 }: OrigemPagamentoSelectProps) {
+  // Valor efetivo para comparação de saldo: desconta o crédito virtual da edição
+  const valorEfetivo = Math.max(0, valorPagamento - valorCreditoEdicao);
   const [loading, setLoading] = useState(true);
   
   // Data
@@ -262,7 +267,7 @@ export function OrigemPagamentoSelect({
 
     return {
       saldoDisponivel,
-      saldoInsuficiente: valorPagamento > 0 && saldoDisponivel < valorPagamento,
+      saldoInsuficiente: valorEfetivo > 0 && saldoDisponivel < valorEfetivo,
     };
   };
 
@@ -376,7 +381,7 @@ export function OrigemPagamentoSelect({
   // Handle coin selection for Caixa Crypto
   const handleCoinChange = (coin: string) => {
     const saldoCrypto = getSaldoCaixaCryptoByCoin(coin);
-    const saldoInsuficiente = valorPagamento > 0 && saldoCrypto.saldoBRL < valorPagamento;
+    const saldoInsuficiente = valorEfetivo > 0 && saldoCrypto.saldoBRL < valorEfetivo;
 
     onChange({
       ...value,
@@ -396,7 +401,7 @@ export function OrigemPagamentoSelect({
       origemContaBancariaId: undefined,
       origemWalletId: undefined,
       saldoDisponivel: 0,
-      saldoInsuficiente: valorPagamento > 0,
+      saldoInsuficiente: valorEfetivo > 0,
     });
   };
 
@@ -407,7 +412,7 @@ export function OrigemPagamentoSelect({
       ...value,
       origemContaBancariaId: contaId,
       saldoDisponivel: saldo,
-      saldoInsuficiente: valorPagamento > 0 && saldo < valorPagamento,
+      saldoInsuficiente: valorEfetivo > 0 && saldo < valorEfetivo,
     });
   };
 
@@ -421,7 +426,7 @@ export function OrigemPagamentoSelect({
       coin: walletSaldo.coin,
       cotacao: cotacaoUSD,
       coinPriceUSD: walletSaldo.priceUSD,
-      saldoInsuficiente: valorPagamento > 0 && walletSaldo.saldoBRL < valorPagamento,
+      saldoInsuficiente: valorEfetivo > 0 && walletSaldo.saldoBRL < valorEfetivo,
     });
   };
 
@@ -450,8 +455,8 @@ export function OrigemPagamentoSelect({
   // Check if insufficient based on current selection
   const isInsuficiente = value.saldoInsuficiente || (
     value.origemTipo === "CAIXA_OPERACIONAL" 
-      ? (value.tipoMoeda === "FIAT" ? saldoCaixaFiat : (value.coin ? getSaldoCaixaCryptoByCoin(value.coin).saldoBRL : saldoCaixaCryptoTotal)) < valorPagamento
-      : value.saldoDisponivel < valorPagamento
+      ? (value.tipoMoeda === "FIAT" ? saldoCaixaFiat : (value.coin ? getSaldoCaixaCryptoByCoin(value.coin).saldoBRL : saldoCaixaCryptoTotal)) < valorEfetivo
+      : value.saldoDisponivel < valorEfetivo
   );
 
   if (loading) {
@@ -538,7 +543,7 @@ export function OrigemPagamentoSelect({
               >
                 <div className="flex flex-col items-center gap-1">
                   <span>FIAT (BRL)</span>
-                  <span className={`text-xs ${saldoCaixaFiat < valorPagamento && value.tipoMoeda === "FIAT" ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                  <span className={`text-xs ${saldoCaixaFiat < valorEfetivo && value.tipoMoeda === "FIAT" ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
                     {formatCurrency(saldoCaixaFiat)}
                   </span>
                 </div>
@@ -578,7 +583,7 @@ export function OrigemPagamentoSelect({
                 <SelectContent>
                   {saldosCaixaCrypto.map((crypto) => {
                     const saldoBRL = crypto.saldo_usd * cotacaoUSD;
-                    const insuficiente = saldoBRL < valorPagamento;
+                    const insuficiente = saldoBRL < valorEfetivo;
                     return (
                       <SelectItem key={crypto.coin} value={crypto.coin}>
                         <div className="flex items-center justify-between w-full gap-4">
@@ -603,16 +608,17 @@ export function OrigemPagamentoSelect({
           {/* Show selected balance for Caixa */}
           {value.tipoMoeda === "FIAT" && (
             <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
-              saldoCaixaFiat < valorPagamento && valorPagamento > 0
+              saldoCaixaFiat < valorEfetivo && valorEfetivo > 0
                 ? "bg-destructive/10 border border-destructive/30 text-destructive" 
                 : "bg-muted/50 text-muted-foreground"
             }`}>
-              {saldoCaixaFiat < valorPagamento && valorPagamento > 0 && (
+              {saldoCaixaFiat < valorEfetivo && valorEfetivo > 0 && (
                 <AlertTriangle className="h-4 w-4 shrink-0" />
               )}
               <span>
                 Saldo disponível: {formatCurrency(saldoCaixaFiat)}
-                {saldoCaixaFiat < valorPagamento && valorPagamento > 0 && (
+                {valorCreditoEdicao > 0 && <span className="ml-1">(+ {formatCurrency(valorCreditoEdicao)} crédito edição)</span>}
+                {saldoCaixaFiat < valorEfetivo && valorEfetivo > 0 && (
                   <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
                 )}
               </span>
@@ -623,17 +629,17 @@ export function OrigemPagamentoSelect({
             <div className="space-y-2">
               {/* Saldo disponível */}
               <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
-                getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorPagamento && valorPagamento > 0
+                getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorEfetivo && valorEfetivo > 0
                   ? "bg-destructive/10 border border-destructive/30 text-destructive" 
                   : "bg-muted/50 text-muted-foreground"
               }`}>
-                {getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorPagamento && valorPagamento > 0 && (
+                {getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorEfetivo && valorEfetivo > 0 && (
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                 )}
                 <span>
                   Saldo disponível: {formatCoin(getSaldoCaixaCryptoByCoin(value.coin).saldoCoin, value.coin)} 
                   {" "}≈ {formatCurrency(getSaldoCaixaCryptoByCoin(value.coin).saldoBRL)}
-                  {getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorPagamento && valorPagamento > 0 && (
+                  {getSaldoCaixaCryptoByCoin(value.coin).saldoBRL < valorEfetivo && valorEfetivo > 0 && (
                     <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
                   )}
                 </span>
@@ -747,7 +753,7 @@ export function OrigemPagamentoSelect({
                         <SelectItem key={c.id} value={c.id}>
                           <div className="flex items-center justify-between w-full gap-4">
                             <span>{c.banco} - {c.titular}</span>
-                            <span className={`text-xs ${saldo < valorPagamento ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                            <span className={`text-xs ${saldo < valorEfetivo ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
                               {formatCurrency(saldo)}
                             </span>
                           </div>
@@ -763,16 +769,16 @@ export function OrigemPagamentoSelect({
           {/* Show selected balance for Partner accounts */}
           {value.origemContaBancariaId && (
             <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
-              isInsuficiente && valorPagamento > 0
+              isInsuficiente && valorEfetivo > 0
                 ? "bg-destructive/10 border border-destructive/30 text-destructive" 
                 : "bg-muted/50 text-muted-foreground"
             }`}>
-              {isInsuficiente && valorPagamento > 0 && (
+              {isInsuficiente && valorEfetivo > 0 && (
                 <AlertTriangle className="h-4 w-4 shrink-0" />
               )}
               <span>
                 Saldo disponível: {formatCurrency(value.saldoDisponivel)}
-                {isInsuficiente && valorPagamento > 0 && (
+                {isInsuficiente && valorEfetivo > 0 && (
                   <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
                 )}
               </span>
@@ -877,7 +883,7 @@ export function OrigemPagamentoSelect({
                           <div className="flex items-center justify-between w-full gap-4">
                             <span>{w.exchange} - {w.endereco.slice(0, 8)}...</span>
                             <div className="flex flex-col items-end text-xs">
-                              <span className={walletSaldo.saldoBRL < valorPagamento ? "text-destructive font-semibold" : "text-muted-foreground"}>
+                              <span className={walletSaldo.saldoBRL < valorEfetivo ? "text-destructive font-semibold" : "text-muted-foreground"}>
                                 {formatCoin(walletSaldo.saldoCoin, walletSaldo.coin)}
                               </span>
                               <span className="text-muted-foreground/70">
@@ -897,16 +903,16 @@ export function OrigemPagamentoSelect({
           {/* Show selected balance for Partner wallets */}
           {value.origemWalletId && (
             <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
-              isInsuficiente && valorPagamento > 0
+              isInsuficiente && valorEfetivo > 0
                 ? "bg-destructive/10 border border-destructive/30 text-destructive" 
                 : "bg-muted/50 text-muted-foreground"
             }`}>
-              {isInsuficiente && valorPagamento > 0 && (
+              {isInsuficiente && valorEfetivo > 0 && (
                 <AlertTriangle className="h-4 w-4 shrink-0" />
               )}
               <span>
                 Saldo disponível: {formatCoin(getSaldoWalletParceiro(value.origemWalletId).saldoCoin, getSaldoWalletParceiro(value.origemWalletId).coin)} ≈ {formatCurrency(value.saldoDisponivel)}
-                {isInsuficiente && valorPagamento > 0 && (
+                {isInsuficiente && valorEfetivo > 0 && (
                   <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
                 )}
               </span>
