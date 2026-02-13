@@ -58,6 +58,9 @@ import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao }
 import { pernasToInserts } from "@/types/apostasPernas";
 import { useSurebetService, type SurebetPerna as SurebetPernaService } from "@/hooks/useSurebetService";
 import { useApostaRascunho, type RascunhoPernaData, type ApostaRascunho } from "@/hooks/useApostaRascunho";
+import { convertCurrency, calcularStakesMultiCurrency, type GetEffectiveRateFn } from "@/utils/convertCurrency";
+import { useCotacoes } from "@/hooks/useCotacoes";
+import { useQuery } from "@tanstack/react-query";
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
@@ -569,6 +572,55 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     gerarDadosConsolidacao,
   } = useProjetoConsolidacao({ projetoId });
   
+  
+  // ========== COTAÇÕES E TAXAS EFETIVAS ==========
+  const { getRate } = useCotacoes();
+  
+  // Buscar cotações de trabalho multi-moeda do projeto
+  const { data: workingRates } = useQuery({
+    queryKey: ["projeto-working-rates-dialog", projetoId],
+    queryFn: async () => {
+      if (!projetoId) return null;
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("cotacao_trabalho, cotacao_trabalho_eur, cotacao_trabalho_gbp, cotacao_trabalho_myr, cotacao_trabalho_mxn, cotacao_trabalho_ars, cotacao_trabalho_cop, fonte_cotacao")
+        .eq("id", projetoId)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!projetoId,
+    staleTime: 30_000,
+  });
+  
+  // Retorna a cotação efetiva (trabalho ou oficial) para uma moeda
+  const getEffectiveRate = useCallback((moeda: string): { rate: number; source: "TRABALHO" | "OFICIAL" } => {
+    const m = moeda.toUpperCase();
+    if (m === "BRL") return { rate: 1, source: "OFICIAL" };
+    
+    const usarTrabalho = workingRates?.fonte_cotacao === "TRABALHO";
+    
+    if (usarTrabalho && workingRates) {
+      const workRateMap: Record<string, number | null> = {
+        USD: workingRates.cotacao_trabalho,
+        EUR: workingRates.cotacao_trabalho_eur,
+        GBP: workingRates.cotacao_trabalho_gbp,
+        MYR: (workingRates as any).cotacao_trabalho_myr,
+        MXN: (workingRates as any).cotacao_trabalho_mxn,
+        ARS: (workingRates as any).cotacao_trabalho_ars,
+        COP: (workingRates as any).cotacao_trabalho_cop,
+      };
+      const key = ["USDT", "USDC"].includes(m) ? "USD" : m;
+      const workRate = workRateMap[key];
+      if (workRate && workRate > 0) {
+        return { rate: workRate, source: "TRABALHO" };
+      }
+    }
+    
+    // Fallback para cotação oficial
+    return { rate: getRate(moeda) || 1, source: "OFICIAL" };
+  }, [workingRates, getRate]);
+
   // ========== HOOK CANÔNICO DE SALDOS ==========
   // Esta é a ÚNICA fonte de verdade para saldos de bookmaker
   // CORRIGIDO: Incluir todas as casas quando em modo edição OU quando aba é bônus
@@ -1115,10 +1167,26 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     const newOdds = [...odds];
     newOdds[index] = { ...newOdds[index], [field]: value };
     
-    // Quando bookmaker muda, atualizar também a moeda
+    // REGRA CRÍTICA: Quando bookmaker muda, a moeda muda → invalidar cálculos
     if (field === "bookmaker_id" && typeof value === "string") {
       const selectedBk = bookmakerSaldos.find(b => b.id === value);
-      newOdds[index].moeda = (selectedBk?.moeda as SupportedCurrency) || "BRL";
+      const novaMoeda = (selectedBk?.moeda as SupportedCurrency) || "BRL";
+      const moedaAnterior = newOdds[index].moeda;
+      newOdds[index].moeda = novaMoeda;
+      
+      // Se a moeda mudou, invalidar TODAS as stakes calculadas (não-print)
+      if (novaMoeda !== moedaAnterior) {
+        newOdds.forEach((o, i) => {
+          if (i !== index && o.stakeOrigem !== "print") {
+            o.isManuallyEdited = false;
+            o.stakeOrigem = undefined;
+          }
+        });
+        if (!newOdds[index].isReference && newOdds[index].stakeOrigem !== "print") {
+          newOdds[index].isManuallyEdited = false;
+          newOdds[index].stakeOrigem = undefined;
+        }
+      }
     }
     
     // Se está definindo referência, remover das outras
@@ -1136,8 +1204,18 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       });
     }
     
-    // CORREÇÃO: Quando o usuário edita a stake de uma perna NÃO-referência,
-    // marcar como editado manualmente e origem "manual" para preservar o valor
+    // Quando a perna de referência muda stake ou odd, forçar recálculo das outras
+    if ((field === "stake" || field === "odd") && newOdds[index].isReference) {
+      newOdds.forEach((o, i) => {
+        if (i !== index && o.stakeOrigem !== "print") {
+          o.isManuallyEdited = false;
+          o.stakeOrigem = undefined;
+        }
+      });
+    }
+    
+    // Quando o usuário edita a stake de uma perna NÃO-referência,
+    // marcar como editado manualmente
     if (field === "stake" && !newOdds[index].isReference) {
       newOdds[index].isManuallyEdited = true;
       newOdds[index].stakeOrigem = "manual";
@@ -1269,71 +1347,49 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   };
 
   // Auto-preencher stakes baseado na posição de referência
-  // COMPORTAMENTO CORRIGIDO: Usa lógica DIFERENTE para modelos 1-2 e 1x2
-  // - Modelo 1-2: Cálculo binário sequencial
-  // - Modelo 1x2: Cálculo matricial global (3 pernas simultâneas)
+  // MOTOR MULTI-MOEDA: Usa calcularStakesMultiCurrency para converter entre moedas
   useEffect(() => {
-    // Não recalcular em modo edição
     if (isEditing) return;
     
-    // Preparar dados consolidados de cada perna
-    const pernaData = odds.map(perna => ({
+    // Preparar dados consolidados de cada perna COM moeda
+    const legs = odds.map(perna => ({
       oddMedia: getOddMediaPerna(perna),
+      moeda: perna.moeda as string,
       stakeAtual: getStakeTotalPerna(perna),
       isReference: perna.isReference,
-      isManuallyEdited: perna.isManuallyEdited
+      isManuallyEdited: perna.isManuallyEdited,
+      isFromPrint: perna.stakeOrigem === "print",
     }));
     
-    // Verificar se temos referência
-    const refIndex = pernaData.findIndex(p => p.isReference);
+    const refIndex = legs.findIndex(l => l.isReference);
     if (refIndex === -1) return;
+    if (legs[refIndex].stakeAtual <= 0 || legs[refIndex].oddMedia <= 1) return;
     
-    // Verificar se temos stake de referência válida
-    const refStake = pernaData[refIndex].stakeAtual;
-    const refOdd = pernaData[refIndex].oddMedia;
-    if (refStake <= 0 || refOdd <= 1) return;
-    
-    // Contar pernas com odd válida
-    const validOddsCount = pernaData.filter(p => p.oddMedia > 1).length;
-    
-    // Modelo 1x2: Precisa de exatamente 3 pernas válidas para calcular
-    // Modelo 1-2: Precisa de exatamente 2 pernas válidas
-    const numPernasEsperadas = modelo === "1-X-2" ? 3 : 2;
-    
-    // Para modelo 1x2, só recalcular quando TODAS as odds estiverem preenchidas
+    const validOddsCount = legs.filter(l => l.oddMedia > 1).length;
     if (modelo === "1-X-2" && validOddsCount < 3) return;
-    
-    // Para modelo 1-2, precisa de pelo menos 2 odds válidas
     if (modelo === "1-2" && validOddsCount < 2) return;
     
-    // Usar a função de cálculo correta conforme o modelo
-    const resultado = modelo === "1-X-2" 
-      ? calcularStakes1X2(pernaData, arredondarStake)
-      : calcularStakes12(pernaData, arredondarStake);
+    // Usar o utilitário centralizado de conversão multi-moeda
+    const consolidation = (moedaConsolidacao as string) || "BRL";
+    const result = calcularStakesMultiCurrency(
+      legs,
+      getEffectiveRate as GetEffectiveRateFn,
+      arredondarStake,
+      consolidation
+    );
     
-    if (!resultado.isValid) return;
+    if (!result.isValid) return;
     
-    // Verificar se precisa atualizar alguma stake
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
-      // Nunca modificar a referência
       if (i === refIndex) return o;
+      if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return o;
       
-      // REGRA DE PRECEDÊNCIA: Respeitar stakes de print e edição manual
-      // stakeOrigem === "print" → valor real, NUNCA sobrescrever
-      // stakeOrigem === "manual" → usuário editou, NUNCA sobrescrever
-      // isManuallyEdited também bloqueia (compatibilidade)
-      if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") {
-        return o;
-      }
-      
-      const calculatedStake = resultado.stakes[i];
+      const calculatedStake = result.stakes[i];
       const currentStake = parseFloat(o.stake) || 0;
       
-      // Só atualizar se o valor calculado for diferente do atual
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
         needsUpdate = true;
-        // Marcar origem como "referencia" para indicar que foi calculado automaticamente
         return { ...o, stake: calculatedStake.toFixed(2), stakeOrigem: "referencia" as StakeOrigem };
       }
       return o;
@@ -1343,18 +1399,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       setOdds(newOdds);
     }
   }, [
-    // Dependências: recalcular quando qualquer odd ou stake mudar (incluindo additionalEntries)
-    // CORREÇÃO: Incluir isManuallyEdited na chave para reagir a resets
-    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${(o.additionalEntries || []).map(ae => `${ae.odd}-${ae.stake}`).join('|')}`).join(','),
-    // Quando a referência mudar
+    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${o.moeda}-${o.stakeOrigem}-${(o.additionalEntries || []).map(ae => `${ae.odd}-${ae.stake}`).join('|')}`).join(','),
     odds.map(o => o.isReference).join(','),
-    // NOVO: Quando o modelo mudar
     modelo,
-    // Configurações de arredondamento
     arredondarAtivado,
     arredondarValor,
-    // Modo edição
-    isEditing
+    isEditing,
+    getEffectiveRate,
+    moedaConsolidacao
   ]);
 
   // Obter saldo operável da casa selecionada (usando dados canônicos)
@@ -1531,38 +1583,47 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     const minOddsRequired = is1X2Model ? 3 : 2;
     
     if (refStakeValue > 0 && refOdd > 1 && validOddsCount >= minOddsRequired) {
-      // Preparar dados para as funções de cálculo
-      const pernaData = parsedOdds.map((oddMedia, i) => ({
+      // Preparar dados para cálculo multi-moeda
+      const moedasPernas = odds.map(o => o.moeda as string);
+      const legs = parsedOdds.map((oddMedia, i) => ({
         oddMedia,
+        moeda: moedasPernas[i],
         stakeAtual: actualStakes[i],
-        isReference: i === refIndex
+        isReference: i === refIndex,
+        isManuallyEdited: false,
+        isFromPrint: false,
       }));
       
-      // Usar a função de cálculo correta conforme o modelo
-      // CRÍTICO: Modelo 1X2 SEMPRE usa calcularStakes1X2 com as 3 pernas
-      // Modelo 1-2 usa calcularStakes12 com apenas 2 pernas
-      const resultado = is1X2Model
-        ? calcularStakes1X2(pernaData, arredondarStake)
-        : calcularStakes12(pernaData.slice(0, 2), arredondarStake);
+      const consolidation = (moedaConsolidacao as string) || "BRL";
+      const resultado = calcularStakesMultiCurrency(
+        legs,
+        getEffectiveRate as GetEffectiveRateFn,
+        arredondarStake,
+        consolidation
+      );
       
       if (resultado.isValid) {
         suggestedStakes = resultado.stakes;
       } else {
-        // Fallback: fórmula básica (targetReturn / odd para cada perna)
         const targetReturn = refStakeValue * refOdd;
         suggestedStakes = parsedOdds.map((odd, i) => {
           if (i === refIndex) return refStakeValue;
-          if (odd > 1) {
-            return arredondarStake(targetReturn / odd);
-          }
+          if (odd > 1) return arredondarStake(targetReturn / odd);
           return 0;
         });
       }
     }
     
-    // StakeTotal = soma de todas as stakes consolidadas de cada perna
-    // NOTA: Só somamos se todas são da mesma moeda; caso contrário a soma não tem significado
-    const stakeTotal = isMultiCurrency ? 0 : actualStakes.reduce((a, b) => a + b, 0);
+    // StakeTotal consolidado na moeda de consolidação
+    let stakeTotal = 0;
+    if (isMultiCurrency) {
+      const consolidation = (moedaConsolidacao as string) || "BRL";
+      stakeTotal = actualStakes.reduce((sum, stake, i) => {
+        return sum + convertCurrency(stake, odds[i].moeda as string, consolidation, getEffectiveRate as GetEffectiveRateFn);
+      }, 0);
+    } else {
+      stakeTotal = actualStakes.reduce((a, b) => a + b, 0);
+    }
     
     // Calcular saldos disponíveis por posição para validação
     // REFATORADO: Considerar stakes de TODAS as entradas de cada perna
@@ -1623,17 +1684,25 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     );
     
     // Calcular cenários de retorno/lucro para CADA resultado possível
-    // REFATORADO: Usar odd média e stake total consolidados por perna
+    // Multi-moeda: converter retorno para moeda de consolidação antes de subtrair stakeTotal
+    const consolidation = (moedaConsolidacao as string) || "BRL";
     const scenarios = parsedOdds.map((odd, i) => {
       const stakeNesseLado = actualStakes[i];
-      const retorno = odd > 1 ? stakeNesseLado * odd : 0;
-      const lucro = retorno - stakeTotal;
+      const retornoNaMoedaDaPerna = odd > 1 ? stakeNesseLado * odd : 0;
+      // Converter retorno para moeda de consolidação
+      const retornoConsolidado = convertCurrency(
+        retornoNaMoedaDaPerna, 
+        odds[i].moeda as string, 
+        consolidation, 
+        getEffectiveRate as GetEffectiveRateFn
+      );
+      const lucro = retornoConsolidado - stakeTotal;
       const roi = stakeTotal > 0 ? (lucro / stakeTotal) * 100 : 0;
       return {
         selecao: odds[i].selecao,
         stake: stakeNesseLado,
         oddMedia: odd,
-        retorno,
+        retorno: retornoConsolidado,
         lucro,
         roi,
         isPositive: lucro >= 0,
@@ -1743,15 +1812,14 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       consolidatedPerPerna
     };
   }, [
-    // Dependências explícitas para garantir reatividade total
-    // REFATORADO: Incluir additionalEntries na chave de dependência
-    odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}|${o.isReference}|${JSON.stringify(o.additionalEntries || [])}`).join(','),
+    odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}|${o.isReference}|${o.moeda}|${JSON.stringify(o.additionalEntries || [])}`).join(','),
     bookmakerSaldos.map(b => `${b.id}|${b.saldo_operavel}`).join(','),
     arredondarAtivado,
     arredondarValor,
     registroValues.contexto_operacional,
-    // NOVO: Modelo afeta cálculo de stakes sugeridas
-    modelo
+    modelo,
+    getEffectiveRate,
+    moedaConsolidacao
   ]);
 
   // Análise de resultado REAL (quando resolvida - posições marcadas como GREEN/RED/VOID/MEIO_GREEN/MEIO_RED)
