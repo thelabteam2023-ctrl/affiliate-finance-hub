@@ -560,9 +560,25 @@ export function HistoricoMovimentacoes({
                       <div className="flex flex-col items-end">
                         <div className="font-medium text-blue-400">${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0.00'} USD</div>
                         <div className="text-xs text-muted-foreground">{transacao.qtd_coin} {transacao.coin}</div>
+                        {/* Mostrar valor recebido quando diferente do solicitado */}
+                        {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.valor_confirmado != null && Number(transacao.valor_confirmado) !== Number(transacao.qtd_coin) && (
+                          <div className="text-xs mt-0.5">
+                            <span className="text-muted-foreground">Recebido: </span>
+                            <span className="text-emerald-400 font-medium">{Number(transacao.valor_confirmado)} {transacao.coin}</span>
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <div className="font-medium">{formatCurrency(transacao.valor, transacao.moeda)}</div>
+                      <div className="flex flex-col items-end">
+                        <div className="font-medium">{formatCurrency(transacao.valor, transacao.moeda)}</div>
+                        {/* Mostrar valor recebido quando diferente do solicitado (FIAT) */}
+                        {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.valor_confirmado != null && Number(transacao.valor_confirmado) !== Number(transacao.valor) && (
+                          <div className="text-xs mt-0.5">
+                            <span className="text-muted-foreground">Recebido: </span>
+                            <span className="text-emerald-400 font-medium">{formatCurrency(Number(transacao.valor_confirmado), transacao.moeda)}</span>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                   {transacao.tipo_transacao === "SAQUE" && transacao.status !== "CONFIRMADO" && getStatusBadge(transacao.status)}
