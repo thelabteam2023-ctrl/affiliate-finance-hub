@@ -18,6 +18,7 @@ import { parseLocalDateTime } from "@/utils/dateUtils";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
 import { DashboardPeriodFilter, getDashboardDateRange } from "@/types/dashboardFilters";
 import { EditarDataTransacaoDialog } from "./EditarDataTransacaoDialog";
+import { EditarSaqueConfirmadoDialog } from "./EditarSaqueConfirmadoDialog";
 const PAGE_SIZE = 50;
 
 const getStatusBadge = (status: string) => {
@@ -213,7 +214,14 @@ export function HistoricoMovimentacoes({
   const [termoBusca, setTermoBusca] = useState("");
   const [editDateId, setEditDateId] = useState<string | null>(null);
   const [editDateValue, setEditDateValue] = useState<string>("");
-  
+  const [editConfirmado, setEditConfirmado] = useState<{
+    id: string;
+    dataConfirmacao: string;
+    valorConfirmado: number | null;
+    moeda: string;
+    tipoCrypto: boolean;
+    coin?: string;
+  } | null>(null);
   // Get all filtered transactions
   const transacoesFiltradas = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
   
@@ -565,8 +573,24 @@ export function HistoricoMovimentacoes({
                         <div className="text-xs text-muted-foreground">
                           Solicitado: {format(parseLocalDateTime(transacao.data_transacao), "dd/MM")}
                         </div>
-                        <div className="text-sm font-medium text-emerald-400">
-                          Recebido: {format(parseLocalDateTime(transacao.data_confirmacao), "dd/MM")}
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-medium text-emerald-400">
+                            Recebido: {format(parseLocalDateTime(transacao.data_confirmacao), "dd/MM")}
+                          </span>
+                          <button
+                            onClick={() => setEditConfirmado({
+                              id: transacao.id,
+                              dataConfirmacao: transacao.data_confirmacao,
+                              valorConfirmado: transacao.valor_confirmado ?? null,
+                              moeda: transacao.moeda,
+                              tipoCrypto: transacao.tipo_moeda === "CRYPTO",
+                              coin: transacao.coin || undefined,
+                            })}
+                            className="p-0.5 rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                            title="Editar recebimento"
+                          >
+                            <Pencil className="h-2.5 w-2.5" />
+                          </button>
                         </div>
                         {(() => {
                           const solicitacao = parseLocalDateTime(transacao.data_transacao);
@@ -636,6 +660,22 @@ export function HistoricoMovimentacoes({
           dataAtual={editDateValue}
           onSuccess={() => {
             // Dispatch event to refresh caixa data
+            window.dispatchEvent(new CustomEvent("lovable:caixa-data-changed"));
+          }}
+        />
+      )}
+
+      {editConfirmado && (
+        <EditarSaqueConfirmadoDialog
+          open={!!editConfirmado}
+          onClose={() => setEditConfirmado(null)}
+          transacaoId={editConfirmado.id}
+          dataConfirmacaoAtual={editConfirmado.dataConfirmacao}
+          valorConfirmadoAtual={editConfirmado.valorConfirmado}
+          moeda={editConfirmado.moeda}
+          tipoCrypto={editConfirmado.tipoCrypto}
+          coin={editConfirmado.coin}
+          onSuccess={() => {
             window.dispatchEvent(new CustomEvent("lovable:caixa-data-changed"));
           }}
         />
