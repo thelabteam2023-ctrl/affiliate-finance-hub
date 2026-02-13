@@ -1781,15 +1781,26 @@ export function SurebetDialogTable({
                       </td>
                     )}
                     
-                    {/* Lucro - exibido na moeda da perna */}
+                    {/* Lucro - sempre na moeda de consolidação */}
                     <td className="py-6 px-2 text-center">
                       {analysis.stakeTotal > 0 && scenario && (
-                        <span className={`font-medium ${lucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                          {lucro >= 0 ? "+" : ""}{analysis.isMultiCurrency 
-                            ? formatCurrency(scenario.lucroPernaMoeda, scenario.moeda as SupportedCurrency)
-                            : formatCurrency(lucro, analysis.moedaDominante)
-                          }
-                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className={`font-medium cursor-help ${lucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                                {lucro >= 0 ? "+" : ""}{formatCurrency(lucro, analysis.moedaDominante)}
+                              </span>
+                            </TooltipTrigger>
+                            {analysis.isMultiCurrency && scenario.moeda !== analysis.moedaDominante && (
+                              <TooltipContent side="top" className="text-xs">
+                                <div>Lucro na moeda original: {scenario.lucroPernaMoeda >= 0 ? "+" : ""}{formatCurrency(scenario.lucroPernaMoeda, scenario.moeda as SupportedCurrency)}</div>
+                                {Object.entries(analysis.ratesUsed).map(([m, info]) => (
+                                  <div key={m} className="text-muted-foreground">{m}/BRL: {info.rate.toFixed(4)} ({info.source === "TRABALHO" ? "Trabalho" : "Oficial"})</div>
+                                ))}
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </td>
                     
