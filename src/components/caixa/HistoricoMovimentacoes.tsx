@@ -6,7 +6,13 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil, FolderKanban, Users } from "lucide-react";
+import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil, FolderKanban, Users, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { format, startOfDay, endOfDay } from "date-fns";
@@ -568,29 +574,13 @@ export function HistoricoMovimentacoes({
                   <div className="flex items-center gap-1 text-right min-w-[100px]">
                     <div className="flex-1">
                     {/* Para saques confirmados, mostrar data de solicitação e confirmação */}
-                    {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.data_confirmacao ? (
+                   {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.data_confirmacao ? (
                       <div className="space-y-0.5">
                         <div className="text-xs text-muted-foreground">
                           Solicitado: {format(parseLocalDateTime(transacao.data_transacao), "dd/MM")}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium text-emerald-400">
-                            Recebido: {format(parseLocalDateTime(transacao.data_confirmacao), "dd/MM")}
-                          </span>
-                          <button
-                            onClick={() => setEditConfirmado({
-                              id: transacao.id,
-                              dataConfirmacao: transacao.data_confirmacao,
-                              valorConfirmado: transacao.valor_confirmado ?? null,
-                              moeda: transacao.moeda,
-                              tipoCrypto: transacao.tipo_moeda === "CRYPTO",
-                              coin: transacao.coin || undefined,
-                            })}
-                            className="p-0.5 rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
-                            title="Editar recebimento"
-                          >
-                            <Pencil className="h-2.5 w-2.5" />
-                          </button>
+                        <div className="text-sm font-medium text-emerald-400">
+                          Recebido: {format(parseLocalDateTime(transacao.data_confirmacao), "dd/MM")}
                         </div>
                         {(() => {
                           const solicitacao = parseLocalDateTime(transacao.data_transacao);
@@ -614,16 +604,49 @@ export function HistoricoMovimentacoes({
                       </>
                     )}
                     </div>
-                    <button
-                      onClick={() => {
-                        setEditDateId(transacao.id);
-                        setEditDateValue(transacao.data_transacao);
-                      }}
-                      className="p-1 rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
-                      title="Editar data"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
+                    {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.data_confirmacao ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="p-1 rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                            title="Editar"
+                          >
+                            <MoreVertical className="h-3.5 w-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => {
+                            setEditDateId(transacao.id);
+                            setEditDateValue(transacao.data_transacao);
+                          }}>
+                            <Pencil className="h-3.5 w-3.5 mr-2" />
+                            Editar data solicitação
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setEditConfirmado({
+                            id: transacao.id,
+                            dataConfirmacao: transacao.data_confirmacao,
+                            valorConfirmado: transacao.valor_confirmado ?? null,
+                            moeda: transacao.moeda,
+                            tipoCrypto: transacao.tipo_moeda === "CRYPTO",
+                            coin: transacao.coin || undefined,
+                          })}>
+                            <Pencil className="h-3.5 w-3.5 mr-2" />
+                            Editar recebimento
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setEditDateId(transacao.id);
+                          setEditDateValue(transacao.data_transacao);
+                        }}
+                        className="p-1 rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                        title="Editar data"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
