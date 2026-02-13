@@ -274,6 +274,16 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
         indicacaoId = indicacaoData?.id;
       }
 
+      // If editing and there are pending renewal days, add them to duration
+      const duracaoFinal = (parceria && !isRenewalMode && diasRenovacao > 0)
+        ? formData.duracao_dias + diasRenovacao
+        : formData.duracao_dias;
+      // Calculate data_fim_prevista based on data_inicio + duracao
+      const dataInicio = new Date(formData.data_inicio + "T12:00:00");
+      const dataFim = new Date(dataInicio);
+      dataFim.setDate(dataFim.getDate() + duracaoFinal);
+      const dataFimStr = `${dataFim.getFullYear()}-${String(dataFim.getMonth() + 1).padStart(2, '0')}-${String(dataFim.getDate()).padStart(2, '0')}`;
+
       const payload = {
         user_id: user.id,
         workspace_id: workspaceId,
@@ -281,8 +291,9 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
         indicacao_id: formData.origem_tipo === "INDICADOR" ? indicacaoId : null,
         fornecedor_id: formData.origem_tipo === "FORNECEDOR" ? formData.fornecedor_id : null,
         origem_tipo: formData.origem_tipo,
-        data_inicio: formData.data_inicio, // Already in YYYY-MM-DD format
-        duracao_dias: formData.duracao_dias,
+        data_inicio: formData.data_inicio,
+        duracao_dias: duracaoFinal,
+        data_fim_prevista: dataFimStr,
         valor_indicador: formData.origem_tipo === "INDICADOR" ? formData.valor_indicador : 0,
         valor_parceiro: formData.origem_tipo === "INDICADOR" 
           ? formData.valor_parceiro 
@@ -290,7 +301,7 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
             ? formData.valor_parceiro 
             : 0,
         valor_fornecedor: formData.origem_tipo === "FORNECEDOR" ? formData.valor_fornecedor : 0,
-        valor_comissao_indicador: formData.valor_indicador, // Keep for compatibility
+        valor_comissao_indicador: formData.valor_indicador,
         status: formData.status,
         elegivel_renovacao: formData.elegivel_renovacao,
         observacoes: formData.observacoes || null,
