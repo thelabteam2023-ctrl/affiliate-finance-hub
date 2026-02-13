@@ -804,6 +804,17 @@ export function SurebetDialogTable({
       });
     }
     
+    // Quando a perna de referência muda stake ou odd, forçar recálculo das outras
+    if ((field === "stake" || field === "odd") && newOdds[index].isReference) {
+      newOdds.forEach((o, i) => {
+        if (i !== index && o.stakeOrigem !== "print") {
+          o.isManuallyEdited = false;
+          o.stakeOrigem = undefined;
+        }
+      });
+    }
+    
+    // Quando uma perna NÃO-referência tem stake editado manualmente
     if (field === "stake" && !newOdds[index].isReference) {
       newOdds[index].isManuallyEdited = true;
       newOdds[index].stakeOrigem = "manual";
