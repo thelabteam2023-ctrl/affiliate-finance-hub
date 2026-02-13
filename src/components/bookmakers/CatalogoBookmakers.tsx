@@ -22,6 +22,9 @@ import {
 import BookmakerCatalogoDialog from "./BookmakerCatalogoDialog";
 import BookmakerAccessDialog from "./BookmakerAccessDialog";
 import BookmakerDialog from "./BookmakerDialog";
+import type { VinculoCriadoContext } from "./BookmakerDialog";
+import { VinculoCriadoConfirmDialog } from "./VinculoCriadoConfirmDialog";
+import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { useRole } from "@/hooks/useRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useActionAccess, useModuleAccess } from "@/hooks/useModuleAccess";
@@ -82,6 +85,9 @@ export default function CatalogoBookmakers() {
   const [selectedAccessBookmaker, setSelectedAccessBookmaker] = useState<BookmakerCatalogo | null>(null);
   const [vincularDialogOpen, setVincularDialogOpen] = useState(false);
   const [selectedVincularBookmaker, setSelectedVincularBookmaker] = useState<BookmakerCatalogo | null>(null);
+  const [vinculoCriadoConfirmOpen, setVinculoCriadoConfirmOpen] = useState(false);
+  const [vinculoCriadoContext, setVinculoCriadoContext] = useState<VinculoCriadoContext | null>(null);
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const { toast } = useToast();
   const { isOwnerOrAdmin } = useRole();
   const { isSystemOwner, user } = useAuth();
@@ -216,6 +222,25 @@ export default function CatalogoBookmakers() {
   const handleVincularClose = () => {
     setVincularDialogOpen(false);
     setSelectedVincularBookmaker(null);
+  };
+
+  const handleVinculoCreated = (context: VinculoCriadoContext) => {
+    handleVincularClose();
+    fetchBookmakers();
+    setVinculoCriadoContext(context);
+    setVinculoCriadoConfirmOpen(true);
+  };
+
+  const handleConfirmDeposit = () => {
+    setVinculoCriadoConfirmOpen(false);
+    if (vinculoCriadoContext) {
+      setDepositDialogOpen(true);
+    }
+  };
+
+  const handleDepositDialogClose = () => {
+    setDepositDialogOpen(false);
+    setVinculoCriadoContext(null);
   };
 
   // Helper to check if current user can edit/delete a specific bookmaker
@@ -1079,10 +1104,31 @@ export default function CatalogoBookmakers() {
       <BookmakerDialog
         open={vincularDialogOpen}
         onClose={handleVincularClose}
+        onCreated={handleVinculoCreated}
         bookmaker={null}
         defaultBookmakerId={selectedVincularBookmaker?.id}
         lockBookmaker={true}
       />
+
+      <VinculoCriadoConfirmDialog
+        open={vinculoCriadoConfirmOpen}
+        onOpenChange={setVinculoCriadoConfirmOpen}
+        context={vinculoCriadoContext}
+        onConfirmDeposit={handleConfirmDeposit}
+      />
+
+      {vinculoCriadoContext && (
+        <CaixaTransacaoDialog
+          open={depositDialogOpen}
+          onClose={handleDepositDialogClose}
+          onSuccess={handleDepositDialogClose}
+          defaultTipoTransacao="DEPOSITO"
+          defaultDestinoBookmakerId={vinculoCriadoContext.bookmakerId}
+          defaultDestinoParceiroId={vinculoCriadoContext.parceiroId}
+          defaultTipoMoeda="FIAT"
+          defaultMoeda={vinculoCriadoContext.moeda}
+        />
+      )}
     </div>
   );
 }

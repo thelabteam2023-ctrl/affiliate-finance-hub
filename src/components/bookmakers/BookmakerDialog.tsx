@@ -28,9 +28,18 @@ import { PasswordInput } from "@/components/parceiros/PasswordInput";
 import { FIAT_CURRENCIES, type FiatCurrency, CURRENCY_SYMBOLS } from "@/types/currency";
 import { useWorkspace } from "@/hooks/useWorkspace";
 
+export interface VinculoCriadoContext {
+  bookmakerId: string;
+  bookmakerNome: string;
+  parceiroId: string;
+  parceiroNome: string;
+  moeda: string;
+}
+
 interface BookmakerDialogProps {
   open: boolean;
   onClose: () => void;
+  onCreated?: (context: VinculoCriadoContext) => void;
   bookmaker: any | null;
   defaultParceiroId?: string;
   defaultBookmakerId?: string;
@@ -50,6 +59,7 @@ interface BookmakerCatalogo {
 export default function BookmakerDialog({ 
   open, 
   onClose, 
+  onCreated,
   bookmaker,
   defaultParceiroId,
   defaultBookmakerId,
@@ -369,11 +379,27 @@ export default function BookmakerDialog({
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data: insertedData, error } = await supabase
           .from("bookmakers")
-          .insert(bookmakerData);
+          .insert(bookmakerData)
+          .select("id")
+          .single();
 
         if (error) throw error;
+
+        // After successful creation, notify parent with context for "next best action"
+        if (onCreated && insertedData) {
+          const createdContext: VinculoCriadoContext = {
+            bookmakerId: insertedData.id,
+            bookmakerNome: selectedBookmaker?.nome || "",
+            parceiroId: parceiroId,
+            parceiroNome: parceiroNome,
+            moeda: moedaOperacional,
+          };
+          onClose();
+          onCreated(createdContext);
+          return; // Skip default toast — parent handles UX
+        }
       }
 
       const credentialsUpdated = bookmaker && !!loginPassword;
