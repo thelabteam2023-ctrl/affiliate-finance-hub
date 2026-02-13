@@ -70,7 +70,7 @@ export function FluxoColuna({
     <div
       ref={dropRef}
       className={cn(
-        "flex flex-col w-[340px] shrink-0 rounded-xl transition-all duration-200",
+        "flex flex-col w-[420px] shrink-0 rounded-xl transition-all duration-200",
         "bg-muted/20 border border-border/30",
         isDragOver && "ring-2 ring-primary/30 bg-muted/40"
       )}
