@@ -48,6 +48,12 @@ interface ApostaBase {
   bookmaker_id?: string | null;
   pernas?: Perna[] | null;
   forma_registro?: string;
+  // Campos multi-moeda
+  moeda_operacao?: string | null;
+  stake_consolidado?: number | null;
+  pl_consolidado?: number | null;
+  valor_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
 }
 
 interface VinculoDetalhe {
@@ -121,6 +127,10 @@ interface VisaoGeralChartsProps {
   formatChartAxis?: (value: number) => string;
   /** Habilita toggle de escopo global para o card de Casas */
   showScopeToggle?: boolean;
+  /** Função de conversão para moeda de consolidação */
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /** Moeda de consolidação do projeto */
+  moedaConsolidacao?: string;
 }
 
 // =====================================================
@@ -531,7 +541,9 @@ export function VisaoGeralCharts({
   periodEnd,
   formatCurrency,
   formatChartAxis,
-  showScopeToggle = false
+  showScopeToggle = false,
+  convertToConsolidation,
+  moedaConsolidacao,
 }: VisaoGeralChartsProps) {
   
   // DESACOPLAMENTO: O calendário usa seus próprios dados (sem filtro de período)
@@ -729,6 +741,27 @@ export function VisaoGeralCharts({
     });
   }, [apostas, isSingleDayPeriod, extrasMap, periodStart, periodEnd]);
 
+  // Helpers locais de consolidação para casas
+  const getConsolidatedStakeLocal = (a: ApostaBase): number => {
+    const rawStake = typeof a.stake_total === "number" ? a.stake_total : a.stake;
+    if (typeof a.stake_consolidado === "number" && a.stake_consolidado !== 0) return a.stake_consolidado;
+    const moedaOp = a.moeda_operacao || "BRL";
+    if (moedaConsolidacao && moedaOp === moedaConsolidacao) return rawStake;
+    if (moedaConsolidacao === "BRL" && typeof a.valor_brl_referencia === "number") return a.valor_brl_referencia;
+    if (convertToConsolidation && moedaOp !== (moedaConsolidacao || "BRL")) return convertToConsolidation(rawStake, moedaOp);
+    return rawStake;
+  };
+
+  const getConsolidatedLucroLocal = (a: ApostaBase): number => {
+    const rawLucro = a.lucro_prejuizo ?? 0;
+    if (typeof a.pl_consolidado === "number") return a.pl_consolidado;
+    const moedaOp = a.moeda_operacao || "BRL";
+    if (moedaConsolidacao && moedaOp === moedaConsolidacao) return rawLucro;
+    if (moedaConsolidacao === "BRL" && typeof a.lucro_prejuizo_brl_referencia === "number") return a.lucro_prejuizo_brl_referencia;
+    if (convertToConsolidation && moedaOp !== (moedaConsolidacao || "BRL")) return convertToConsolidation(rawLucro, moedaOp);
+    return rawLucro;
+  };
+
   // Casas mais utilizadas (por volume) — agrupa por CASA, com detalhamento por vínculo
   // Formato esperado: "PARIMATCH - RAFAEL GOMES" → Casa = "PARIMATCH", Vínculo = "RAFAEL GOMES"
   const casasData = useMemo((): CasaUsada[] => {
@@ -795,8 +828,9 @@ export function VisaoGeralCharts({
         // Aposta simples — usa bookmaker_nome e parceiro_nome
         const nomeCompleto = a.bookmaker_nome || "Desconhecida";
         const parceiroNome = a.parceiro_nome;
-        const lucro = a.lucro_prejuizo || 0;
-        processEntry(nomeCompleto, parceiroNome, getStake(a), lucro);
+        const stake = getConsolidatedStakeLocal(a);
+        const lucro = getConsolidatedLucroLocal(a);
+        processEntry(nomeCompleto, parceiroNome, stake, lucro);
       }
     });
 
@@ -850,7 +884,7 @@ export function VisaoGeralCharts({
         }).sort((a, b) => b.volume - a.volume),
       };
     });
-  }, [apostas, logoMap]);
+  }, [apostas, logoMap, convertToConsolidation, moedaConsolidacao]);
 
   // Badge usa o total do período filtrado
   const isPositive = isPositiveBadge;

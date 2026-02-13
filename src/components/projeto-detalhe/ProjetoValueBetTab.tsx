@@ -411,6 +411,17 @@ export function ProjetoValueBetTab({
     const taxaAcerto = liquidadas > 0 ? (greens / liquidadas) * 100 : 0;
     const roi = totalStake > 0 ? (lucroTotal / totalStake) * 100 : 0;
 
+    // Breakdown de volume por moeda original
+    const volumePorMoeda = new Map<string, number>();
+    apostas.forEach(a => {
+      const moeda = a.moeda_operacao || "BRL";
+      const rawStake = a.forma_registro === "ARBITRAGEM" ? (a.stake_total || 0) : (a.stake || 0);
+      volumePorMoeda.set(moeda, (volumePorMoeda.get(moeda) || 0) + rawStake);
+    });
+    const currencyBreakdown = Array.from(volumePorMoeda.entries())
+      .map(([moeda, valor]) => ({ moeda, valor }))
+      .filter(item => Math.abs(item.valor) > 0.01);
+
     const porCasa: Record<string, { stake: number; lucro: number; count: number }> = {};
     apostas.forEach(a => {
       const casa = a.bookmaker_nome || "Desconhecida";
@@ -420,7 +431,7 @@ export function ProjetoValueBetTab({
       porCasa[casa].count++;
     });
 
-    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa };
+    return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown };
   }, [apostas, convertToConsolidationFn, moedaConsolidacaoVal]);
 
   // casaData agregado por CASA (não por vínculo) - Padrão unificado
@@ -702,8 +713,40 @@ export function ProjetoValueBetTab({
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(metricas.totalStake)}</div>
-            <p className="text-xs text-muted-foreground">Total investido</p>
+            {(() => {
+              const cb = metricas.currencyBreakdown;
+              const hasMulti = cb.length > 1;
+              const hasDiff = cb.some(c => c.moeda !== (moedaConsolidacaoVal || 'BRL'));
+              const showBreakdown = hasMulti || hasDiff;
+
+              if (showBreakdown) {
+                const fmtMoeda = (valor: number, moeda: string) => {
+                  const simbolos: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£", USDT: "$", USDC: "$" };
+                  const s = simbolos[moeda] || moeda + " ";
+                  return `${s} ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                };
+                return (
+                  <div className="space-y-1">
+                    {cb.map(item => (
+                      <div key={item.moeda} className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-medium text-muted-foreground px-1 py-0 rounded bg-muted">{item.moeda}</span>
+                        <span className="text-sm font-semibold">{fmtMoeda(item.valor, item.moeda)}</span>
+                      </div>
+                    ))}
+                    <div className="border-t border-border pt-1 mt-1">
+                      <div className="text-2xl font-bold">{formatCurrency(metricas.totalStake)}</div>
+                      <p className="text-[9px] text-muted-foreground">Consolidado em {moedaConsolidacaoVal || 'BRL'}</p>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <>
+                  <div className="text-2xl font-bold">{formatCurrency(metricas.totalStake)}</div>
+                  <p className="text-xs text-muted-foreground">Total investido</p>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
 
@@ -746,7 +789,9 @@ export function ProjetoValueBetTab({
             isSingleDayPeriod={tabFilters.period === "1dia"}
             periodStart={dateRange?.start}
             periodEnd={dateRange?.end}
-            formatCurrency={formatCurrency} 
+            formatCurrency={formatCurrency}
+            convertToConsolidation={convertToConsolidationFn}
+            moedaConsolidacao={moedaConsolidacaoVal}
           />
           <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
         </>

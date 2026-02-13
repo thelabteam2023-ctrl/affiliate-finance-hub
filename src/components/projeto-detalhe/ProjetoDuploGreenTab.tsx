@@ -826,7 +826,9 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           isSingleDayPeriod={tabFilters.period === "1dia"} 
           periodStart={tabFilters.dateRange?.start}
           periodEnd={tabFilters.dateRange?.end}
-          formatCurrency={formatCurrency} 
+          formatCurrency={formatCurrency}
+          convertToConsolidation={convertFn}
+          moedaConsolidacao={moedaConsol}
         />
       )}
 

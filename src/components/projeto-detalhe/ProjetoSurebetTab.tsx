@@ -957,6 +957,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               periodStart={dateRange?.start}
               periodEnd={dateRange?.end}
               formatCurrency={formatCurrency}
+              convertToConsolidation={convertFn}
+              moedaConsolidacao={moedaConsolidacao}
             />
             <SurebetStatisticsCard surebets={surebets} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
           </div>
@@ -996,6 +998,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               periodStart={dateRange?.start}
               periodEnd={dateRange?.end}
               formatCurrency={formatCurrency}
+              convertToConsolidation={convertFn}
+              moedaConsolidacao={moedaConsolidacao}
             />
           </div>
         </div>
