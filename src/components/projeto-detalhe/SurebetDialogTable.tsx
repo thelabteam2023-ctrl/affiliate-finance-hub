@@ -45,6 +45,7 @@ import {
   formatCurrency
 } from "@/components/bookmakers/BookmakerSelectOption";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
+import { useCotacoes } from "@/hooks/useCotacoes";
 import { pernasToInserts } from "@/types/apostasPernas";
 import { type MoedaOperacao } from "@/types/apostasUnificada";
 import { useApostaRascunho, type ApostaRascunho } from "@/hooks/useApostaRascunho";
@@ -290,6 +291,7 @@ export function SurebetDialogTable({
   
   const { getSnapshotFields } = useCurrencySnapshot();
   const { moedaConsolidacao, cotacaoAtual, fonteCotacao } = useProjetoConsolidacao({ projetoId });
+  const { getRate } = useCotacoes();
   
   const isBonusContext = activeTab === 'bonus' || activeTab === 'bonus-operacoes';
   const { 
@@ -993,16 +995,37 @@ export function SurebetDialogTable({
     
     const moedasUnicas = [...new Set(moedasSelecionadas.filter(Boolean))];
     const isMultiCurrency = moedasUnicas.length > 1;
-    const moedaDominante: SupportedCurrency = moedasUnicas.length === 1 ? moedasUnicas[0] : "BRL";
+    const moedaDominante: SupportedCurrency = moedasUnicas.length === 1 
+      ? moedasUnicas[0] 
+      : (moedaConsolidacao as SupportedCurrency) || "BRL";
     
-    const stakeTotal = isMultiCurrency ? 0 : actualStakes.reduce((a, b) => a + b, 0);
+    // Converter stake para moeda de consolidação quando multi-currency
+    const convertToConsolidation = (valor: number, moeda: string): number => {
+      if (!moeda || moeda === moedaDominante) return valor;
+      const rateBRL_origem = moeda === "BRL" ? 1 : (getRate(moeda) || 1);
+      const rateBRL_destino = moedaDominante === "BRL" ? 1 : (getRate(moedaDominante) || 1);
+      return (valor * rateBRL_origem) / rateBRL_destino;
+    };
+    
+    // Stake total: se multi-currency, converter cada stake para moeda de consolidação
+    const stakeTotal = actualStakes.reduce((sum, stake, i) => {
+      const moeda = moedasSelecionadas[i] || "BRL";
+      return sum + (isMultiCurrency ? convertToConsolidation(stake, moeda) : stake);
+    }, 0);
     
     // Calcular lucro por cenário
     const scenarios = parsedOdds.map((odd, i) => {
       const stakeNesseLado = actualStakes[i];
+      const moedaPerna = moedasSelecionadas[i] || "BRL";
       const retorno = odd > 1 ? stakeNesseLado * odd : 0;
-      const lucro = retorno - stakeTotal;
-      const roi = stakeTotal > 0 ? (lucro / stakeTotal) * 100 : 0;
+      
+      // Lucro na moeda da perna (para exibição individual)
+      const lucroPernaMoeda = retorno - stakeNesseLado;
+      
+      // Lucro consolidado (para cálculos de ROI e totais)
+      const retornoConsolidado = isMultiCurrency ? convertToConsolidation(retorno, moedaPerna) : retorno;
+      const lucroConsolidado = retornoConsolidado - stakeTotal;
+      const roi = stakeTotal > 0 ? (lucroConsolidado / stakeTotal) * 100 : 0;
       
       const isDirected = directedProfitLegs.includes(i);
       
@@ -1011,9 +1034,11 @@ export function SurebetDialogTable({
         stake: stakeNesseLado,
         oddMedia: odd,
         retorno,
-        lucro,
+        lucro: lucroConsolidado,
+        lucroPernaMoeda,
+        moeda: moedaPerna,
         roi,
-        isPositive: lucro >= 0,
+        isPositive: lucroConsolidado >= 0,
         isDirected
       };
     });
@@ -1033,7 +1058,7 @@ export function SurebetDialogTable({
       suggestedStakes: actualStakes,
       hasDirectedProfit: directedProfitLegs.length > 0
     };
-  }, [odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}`).join(','), directedProfitLegs, directedStakes]);
+  }, [odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}`).join(','), directedProfitLegs, directedStakes, getRate, moedaConsolidacao, bookmakerSaldos]);
 
   const pernasCompletasCount = useMemo(() => {
     return odds.filter(entry => {
@@ -1680,11 +1705,14 @@ export function SurebetDialogTable({
                       </td>
                     )}
                     
-                    {/* Lucro */}
+                    {/* Lucro - exibido na moeda da perna */}
                     <td className="py-6 px-2 text-center">
-                      {analysis.stakeTotal > 0 && (
+                      {analysis.stakeTotal > 0 && scenario && (
                         <span className={`font-medium ${lucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                          {lucro >= 0 ? "+" : ""}{formatCurrency(lucro, analysis.moedaDominante)}
+                          {lucro >= 0 ? "+" : ""}{analysis.isMultiCurrency 
+                            ? formatCurrency(scenario.lucroPernaMoeda, scenario.moeda as SupportedCurrency)
+                            : formatCurrency(lucro, analysis.moedaDominante)
+                          }
                         </span>
                       )}
                     </td>
@@ -1836,7 +1864,9 @@ export function SurebetDialogTable({
         {/* Totais */}
         <div className="flex items-center gap-6">
           <div className="text-center">
-            <div className="text-[10px] text-muted-foreground uppercase">Lucro Total</div>
+            <div className="text-[10px] text-muted-foreground uppercase">
+              Lucro {analysis.isMultiCurrency ? `(${analysis.moedaDominante})` : "Garantido"}
+            </div>
             <div className={`text-lg font-bold ${analysis.minLucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
               {analysis.stakeTotal > 0 
                 ? `${analysis.minLucro >= 0 ? "+" : ""}${formatCurrency(analysis.minLucro, analysis.moedaDominante)}`
