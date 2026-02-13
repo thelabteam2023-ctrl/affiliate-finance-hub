@@ -11,6 +11,7 @@
  * - Preparado para OCR/importação de imagem
  */
 import { useState, useEffect, useMemo, useRef, useCallback, KeyboardEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
@@ -292,6 +293,52 @@ export function SurebetDialogTable({
   const { getSnapshotFields } = useCurrencySnapshot();
   const { moedaConsolidacao, cotacaoAtual, fonteCotacao } = useProjetoConsolidacao({ projetoId });
   const { getRate } = useCotacoes();
+  
+  // Buscar cotações de trabalho multi-moeda do projeto
+  const { data: workingRates } = useQuery({
+    queryKey: ["projeto-working-rates", projetoId],
+    queryFn: async () => {
+      if (!projetoId) return null;
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("cotacao_trabalho, cotacao_trabalho_eur, cotacao_trabalho_gbp, cotacao_trabalho_myr, cotacao_trabalho_mxn, cotacao_trabalho_ars, cotacao_trabalho_cop, fonte_cotacao")
+        .eq("id", projetoId)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!projetoId,
+    staleTime: 30_000,
+  });
+  
+  // Retorna a cotação efetiva (trabalho ou oficial) para uma moeda
+  const getEffectiveRate = useCallback((moeda: string): { rate: number; source: "TRABALHO" | "OFICIAL" } => {
+    const m = moeda.toUpperCase();
+    if (m === "BRL") return { rate: 1, source: "OFICIAL" };
+    
+    const usarTrabalho = workingRates?.fonte_cotacao === "TRABALHO";
+    
+    if (usarTrabalho && workingRates) {
+      const workRateMap: Record<string, number | null> = {
+        USD: workingRates.cotacao_trabalho,
+        EUR: workingRates.cotacao_trabalho_eur,
+        GBP: workingRates.cotacao_trabalho_gbp,
+        MYR: (workingRates as any).cotacao_trabalho_myr,
+        MXN: (workingRates as any).cotacao_trabalho_mxn,
+        ARS: (workingRates as any).cotacao_trabalho_ars,
+        COP: (workingRates as any).cotacao_trabalho_cop,
+      };
+      // Stablecoins usam taxa USD
+      const key = ["USDT", "USDC"].includes(m) ? "USD" : m;
+      const workRate = workRateMap[key];
+      if (workRate && workRate > 0) {
+        return { rate: workRate, source: "TRABALHO" };
+      }
+    }
+    
+    // Fallback para cotação oficial
+    return { rate: getRate(moeda) || 1, source: "OFICIAL" };
+  }, [workingRates, getRate]);
   
   const isBonusContext = activeTab === 'bonus' || activeTab === 'bonus-operacoes';
   const { 
@@ -999,12 +1046,17 @@ export function SurebetDialogTable({
       ? moedasUnicas[0] 
       : (moedaConsolidacao as SupportedCurrency) || "BRL";
     
-    // Converter stake para moeda de consolidação quando multi-currency
+    // Converter stake para moeda de consolidação usando cotação de trabalho
+    const ratesUsed: Record<string, { rate: number; source: string }> = {};
+    
     const convertToConsolidation = (valor: number, moeda: string): number => {
       if (!moeda || moeda === moedaDominante) return valor;
-      const rateBRL_origem = moeda === "BRL" ? 1 : (getRate(moeda) || 1);
-      const rateBRL_destino = moedaDominante === "BRL" ? 1 : (getRate(moedaDominante) || 1);
-      return (valor * rateBRL_origem) / rateBRL_destino;
+      const origemInfo = getEffectiveRate(moeda);
+      const destinoInfo = getEffectiveRate(moedaDominante);
+      // Registrar as taxas usadas para tooltip
+      if (moeda !== "BRL") ratesUsed[moeda] = { rate: origemInfo.rate, source: origemInfo.source };
+      if (moedaDominante !== "BRL") ratesUsed[moedaDominante] = { rate: destinoInfo.rate, source: destinoInfo.source };
+      return (valor * origemInfo.rate) / destinoInfo.rate;
     };
     
     // Stake total: se multi-currency, converter cada stake para moeda de consolidação
@@ -1056,9 +1108,10 @@ export function SurebetDialogTable({
       moedaDominante,
       validOddsCount,
       suggestedStakes: actualStakes,
-      hasDirectedProfit: directedProfitLegs.length > 0
+      hasDirectedProfit: directedProfitLegs.length > 0,
+      ratesUsed
     };
-  }, [odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}`).join(','), directedProfitLegs, directedStakes, getRate, moedaConsolidacao, bookmakerSaldos]);
+  }, [odds.map(o => `${o.bookmaker_id}|${o.odd}|${o.stake}`).join(','), directedProfitLegs, directedStakes, getEffectiveRate, moedaConsolidacao, bookmakerSaldos]);
 
   const pernasCompletasCount = useMemo(() => {
     return odds.filter(entry => {
@@ -1863,26 +1916,70 @@ export function SurebetDialogTable({
       <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-border/50">
         {/* Totais */}
         <div className="flex items-center gap-6">
-          <div className="text-center">
-            <div className="text-[10px] text-muted-foreground uppercase">
-              Lucro {analysis.isMultiCurrency ? `(${analysis.moedaDominante})` : "Garantido"}
-            </div>
-            <div className={`text-lg font-bold ${analysis.minLucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-              {analysis.stakeTotal > 0 
-                ? `${analysis.minLucro >= 0 ? "+" : ""}${formatCurrency(analysis.minLucro, analysis.moedaDominante)}`
-                : "—"
-              }
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-[10px] text-muted-foreground uppercase">Total Apostado</div>
-            <div className="text-lg font-bold text-primary">
-              {analysis.stakeTotal > 0 
-                ? formatCurrency(analysis.stakeTotal, analysis.moedaDominante)
-                : "—"
-              }
-            </div>
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-center cursor-help">
+                  <div className="text-[10px] text-muted-foreground uppercase">
+                    Lucro {analysis.isMultiCurrency ? `(${analysis.moedaDominante})` : "Garantido"}
+                  </div>
+                  <div className={`text-lg font-bold ${analysis.minLucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    {analysis.stakeTotal > 0 
+                      ? `${analysis.minLucro >= 0 ? "+" : ""}${formatCurrency(analysis.minLucro, analysis.moedaDominante)}`
+                      : "—"
+                    }
+                  </div>
+                </div>
+              </TooltipTrigger>
+              {analysis.isMultiCurrency && Object.keys(analysis.ratesUsed).length > 0 && (
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold">Cotações utilizadas:</div>
+                    {Object.entries(analysis.ratesUsed).map(([moeda, info]) => (
+                      <div key={moeda} className="flex items-center justify-between gap-3 text-xs">
+                        <span className="text-muted-foreground">{moeda}/BRL:</span>
+                        <span className="font-mono">{info.rate.toFixed(4)}</span>
+                        <Badge variant="outline" className="text-[9px] px-1 py-0">
+                          {info.source === "TRABALHO" ? "Trabalho" : "Oficial"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-center cursor-help">
+                  <div className="text-[10px] text-muted-foreground uppercase">Total Apostado</div>
+                  <div className="text-lg font-bold text-primary">
+                    {analysis.stakeTotal > 0 
+                      ? formatCurrency(analysis.stakeTotal, analysis.moedaDominante)
+                      : "—"
+                    }
+                  </div>
+                </div>
+              </TooltipTrigger>
+              {analysis.isMultiCurrency && Object.keys(analysis.ratesUsed).length > 0 && (
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold">Cotações utilizadas:</div>
+                    {Object.entries(analysis.ratesUsed).map(([moeda, info]) => (
+                      <div key={moeda} className="flex items-center justify-between gap-3 text-xs">
+                        <span className="text-muted-foreground">{moeda}/BRL:</span>
+                        <span className="font-mono">{info.rate.toFixed(4)}</span>
+                        <Badge variant="outline" className="text-[9px] px-1 py-0">
+                          {info.source === "TRABALHO" ? "Trabalho" : "Oficial"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Controles Simplificados */}
