@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 import {
@@ -630,8 +631,19 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     const currencyBreakdown = Array.from(volumePorMoeda.entries())
       .map(([moeda, valor]) => ({ moeda, valor }))
       .filter(item => Math.abs(item.valor) > 0.01);
+
+    // Breakdown de LUCRO por moeda original
+    const lucroPorMoedaMap = new Map<string, number>();
+    surebets.forEach(s => {
+      const moeda = s.moeda_operacao || "BRL";
+      const rawLucro = s.lucro_real || 0;
+      lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
+    });
+    const lucroPorMoeda = Array.from(lucroPorMoedaMap.entries())
+      .map(([moeda, valor]) => ({ moeda, valor }))
+      .filter(item => Math.abs(item.valor) > 0.01);
     
-    return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi, currencyBreakdown };
+    return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi, currencyBreakdown, lucroPorMoeda };
   }, [surebets, convertFn, moedaConsolidacao]);
 
   // KPIs FILTRADOS (para Operações) - Aplicam filtros dimensionais
@@ -901,7 +913,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           );
         })()}
 
-        <Card>
+        <LucroCurrencyTooltip
+          lucroPorMoeda={kpis.lucroPorMoeda || []}
+          totalConsolidado={kpis.lucroTotal}
+          moedaConsolidacao={moedaConsolidacao || 'BRL'}
+          formatValue={formatCurrency}
+        >
+        <Card className="cursor-help">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{kpis.lucroTotal >= 0 ? 'Lucro' : 'Prejuízo'}</CardTitle>
             {kpis.lucroTotal >= 0 ? (
@@ -914,9 +932,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             <div className={`text-2xl font-bold ${kpis.lucroTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
               {formatCurrency(kpis.lucroTotal)}
             </div>
-            <p className="text-xs text-muted-foreground">Resultado liquidado</p>
+            <p className="text-xs text-muted-foreground">Resultado consolidado</p>
           </CardContent>
         </Card>
+        </LucroCurrencyTooltip>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
