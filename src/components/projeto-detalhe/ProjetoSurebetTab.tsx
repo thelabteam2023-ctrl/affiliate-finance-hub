@@ -616,8 +616,19 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     const lucroTotal = surebets.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFn, moedaConsolidacao), 0);
     const stakeTotal = surebets.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
     const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
+
+    // Breakdown de volume por moeda original
+    const volumePorMoeda = new Map<string, number>();
+    surebets.forEach(s => {
+      const moeda = s.moeda_operacao || "BRL";
+      const rawStake = s.forma_registro === "ARBITRAGEM" ? (s.stake_total || 0) : (s.stake || s.stake_total || 0);
+      volumePorMoeda.set(moeda, (volumePorMoeda.get(moeda) || 0) + rawStake);
+    });
+    const currencyBreakdown = Array.from(volumePorMoeda.entries())
+      .map(([moeda, valor]) => ({ moeda, valor }))
+      .filter(item => Math.abs(item.valor) > 0.01);
     
-    return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
+    return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi, currencyBreakdown };
   }, [surebets, convertFn, moedaConsolidacao]);
 
   // KPIs FILTRADOS (para Operações) - Aplicam filtros dimensionais
@@ -877,8 +888,40 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             <Calculator className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(kpis.stakeTotal)}</div>
-            <p className="text-xs text-muted-foreground">Total investido</p>
+            {(() => {
+              const cb = kpis.currencyBreakdown;
+              const hasMulti = cb.length > 1;
+              const hasDiff = cb.some(c => c.moeda !== (moedaConsolidacao || 'BRL'));
+              const showBreakdown = hasMulti || hasDiff;
+
+              if (showBreakdown) {
+                const fmtMoeda = (valor: number, moeda: string) => {
+                  const simbolos: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£", USDT: "$", USDC: "$" };
+                  const s = simbolos[moeda] || moeda + " ";
+                  return `${s} ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                };
+                return (
+                  <div className="space-y-1">
+                    {cb.map(item => (
+                      <div key={item.moeda} className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-medium text-muted-foreground px-1 py-0 rounded bg-muted">{item.moeda}</span>
+                        <span className="text-sm font-semibold">{fmtMoeda(item.valor, item.moeda)}</span>
+                      </div>
+                    ))}
+                    <div className="border-t border-border pt-1 mt-1">
+                      <div className="text-2xl font-bold">{formatCurrency(kpis.stakeTotal)}</div>
+                      <p className="text-[9px] text-muted-foreground">Consolidado em {moedaConsolidacao || 'BRL'}</p>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <>
+                  <div className="text-2xl font-bold">{formatCurrency(kpis.stakeTotal)}</div>
+                  <p className="text-xs text-muted-foreground">Total investido</p>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
 
