@@ -892,16 +892,37 @@ export function SurebetDialogTable({
     const validOddsCount = pernaData.filter(p => p.oddMedia > 1).length;
     if (validOddsCount < odds.length) return;
     
-    const resultado = calcularStakesNPernas(pernaData, arredondarStake);
+    // Detectar moedas das pernas
+    const moedasPernas = odds.map(o => {
+      const bk = bookmakerSaldos.find(b => b.id === o.bookmaker_id);
+      return (bk?.moeda || "BRL") as string;
+    });
+    const refMoeda = moedasPernas[refIndex];
+    const isMultiCurr = new Set(moedasPernas.filter(Boolean)).size > 1;
     
-    if (!resultado.isValid) return;
+    // Retorno-alvo na moeda da perna de referência
+    const targetReturn = refStake * refOdd;
     
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
       if (i === refIndex) return o;
       if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return o;
       
-      const calculatedStake = resultado.stakes[i];
+      const oddI = pernaData[i].oddMedia;
+      if (oddI <= 1) return o;
+      
+      let calculatedStake: number;
+      
+      if (isMultiCurr && moedasPernas[i] !== refMoeda) {
+        // Converter targetReturn da moeda ref para moeda desta perna via BRL pivot
+        const refRateBRL = getEffectiveRate(refMoeda).rate; // moedaRef/BRL
+        const legRateBRL = getEffectiveRate(moedasPernas[i]).rate; // moedaLeg/BRL
+        const targetReturnInLegCurrency = (targetReturn * refRateBRL) / legRateBRL;
+        calculatedStake = arredondarStake(targetReturnInLegCurrency / oddI);
+      } else {
+        calculatedStake = arredondarStake(targetReturn / oddI);
+      }
+      
       const currentStake = parseFloat(o.stake) || 0;
       
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
@@ -915,12 +936,14 @@ export function SurebetDialogTable({
       setOdds(newOdds);
     }
   }, [
-    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}`).join(','),
+    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}`).join(','),
     odds.map(o => o.isReference).join(','),
     arredondarAtivado,
     arredondarValor,
     isEditing,
-    profitDirectionActive
+    profitDirectionActive,
+    getEffectiveRate,
+    bookmakerSaldos
   ]);
 
   // ============================================
