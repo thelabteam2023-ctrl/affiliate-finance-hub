@@ -46,6 +46,11 @@ interface ApostaUnificada {
   estrategia?: string | null;
   pl_consolidado?: number | null;
   bonus_id?: string | null;
+  // Multi-currency fields
+  moeda_operacao?: string | null;
+  stake_consolidado?: number | null;
+  valor_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
   pernas?: {
     bookmaker_id?: string;
     bookmaker_nome?: string;
@@ -193,6 +198,10 @@ async function fetchApostasFiltradas(
       bookmaker_id: item.bookmaker_id || 'unknown',
       bookmaker_nome: bkInfo.nome, parceiro_nome: bkInfo.parceiro_nome, logo_url: bkInfo.logo_url,
       forma_registro: item.forma_registro, estrategia: item.estrategia, bonus_id: item.bonus_id,
+      moeda_operacao: item.moeda_operacao,
+      stake_consolidado: item.stake_consolidado,
+      valor_brl_referencia: item.valor_brl_referencia,
+      lucro_prejuizo_brl_referencia: item.lucro_prejuizo_brl_referencia,
       pernas: item.forma_registro === 'ARBITRAGEM' ? pernasMap[item.id] || [] : undefined,
     };
   });
@@ -266,7 +275,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, formatChartAxis } = useProjetoCurrency(projetoId);
+  const { formatCurrency, formatChartAxis, convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
   
   // Hook global de logos
   const { logoMap: catalogLogoMap, getLogoUrl: getCatalogLogoUrl } = useBookmakerLogoMap();
@@ -408,6 +417,11 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       bookmaker_id: a.bookmaker_id,
       pernas: a.pernas,
       forma_registro: a.forma_registro ?? undefined,
+      moeda_operacao: a.moeda_operacao,
+      stake_consolidado: a.stake_consolidado,
+      pl_consolidado: a.pl_consolidado,
+      valor_brl_referencia: a.valor_brl_referencia,
+      lucro_prejuizo_brl_referencia: a.lucro_prejuizo_brl_referencia,
     }));
   }, [apostasUnificadas]);
 
@@ -490,6 +504,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         formatCurrency={formatCurrency}
         formatChartAxis={formatChartAxis}
         showScopeToggle={false}
+        convertToConsolidation={convertToConsolidation}
+        moedaConsolidacao={moedaConsolidacao}
       />
 
       {/* Performance por Casa - Componente com visões alternáveis */}
