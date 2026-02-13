@@ -334,6 +334,7 @@ export default function ProjetoDetalhe() {
     projetoId: id || '',
     dataInicio,
     dataFim,
+    getRateFallback: getRate,
   });
 
   // Hook para breakdowns dinâmicos dos KPIs por módulo
@@ -417,10 +418,17 @@ export default function ProjetoDetalhe() {
       const apostasNaoArbitragem = todasApostas.filter(a => a.forma_registro !== "ARBITRAGEM").length;
       const totalOperacoes = apostasNaoArbitragem + pernasCount;
       
-      // Calculate lucro from apostas (com conversão de moeda)
+      // Calculate lucro from apostas (com conversão de moeda via getRate)
       const lucroApostas = todasApostas.reduce((acc, a) => {
-        const lucro = a.lucro_prejuizo_brl_referencia ?? Number(a.lucro_prejuizo || 0);
-        return acc + lucro;
+        if (a.lucro_prejuizo_brl_referencia != null) {
+          return acc + Number(a.lucro_prejuizo_brl_referencia);
+        }
+        const lucroRaw = Number(a.lucro_prejuizo || 0);
+        const moedaOp = a.moeda_operacao || 'BRL';
+        if (moedaOp === 'BRL') return acc + lucroRaw;
+        // Converter usando taxa da API
+        const taxa = getRate(moedaOp);
+        return acc + (lucroRaw * taxa);
       }, 0);
       
       // Calculate lucro from cashback manual (é lucro!)
