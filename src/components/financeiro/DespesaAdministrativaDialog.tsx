@@ -740,6 +740,7 @@ export function DespesaAdministrativaDialog({
             value={origemData}
             onChange={setOrigemData}
             valorPagamento={formData.valor}
+            valorCreditoEdicao={valorOriginal}
           />
         </div>
 
