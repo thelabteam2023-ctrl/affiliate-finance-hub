@@ -55,6 +55,8 @@ import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { useCotacoes } from "@/hooks/useCotacoes";
+import { VolumeKPI } from "@/components/kpis/VolumeKPI";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { TabFiltersBar } from "./TabFiltersBar";
 import { useTabFilters } from "@/hooks/useTabFilters";
@@ -172,6 +174,7 @@ export function ProjetoValueBetTab({
   
   // Hook de formatação de moeda do projeto
   const { formatCurrency, getSymbol, convertToConsolidation: convertToConsolidationFn, moedaConsolidacao: moedaConsolidacaoVal } = useProjetoCurrency(projetoId);
+  const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   const currencySymbol = getSymbol();
 
   // Hook para invalidar cache de saldos
@@ -707,48 +710,20 @@ export function ProjetoValueBetTab({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Volume</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {(() => {
-              const cb = metricas.currencyBreakdown;
-              const hasMulti = cb.length > 1;
-              const hasDiff = cb.some(c => c.moeda !== (moedaConsolidacaoVal || 'BRL'));
-              const showBreakdown = hasMulti || hasDiff;
-
-              if (showBreakdown) {
-                const fmtMoeda = (valor: number, moeda: string) => {
-                  const simbolos: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£", USDT: "$", USDC: "$" };
-                  const s = simbolos[moeda] || moeda + " ";
-                  return `${s} ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                };
-                return (
-                  <div className="space-y-1">
-                    {cb.map(item => (
-                      <div key={item.moeda} className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-medium text-muted-foreground px-1 py-0 rounded bg-muted">{item.moeda}</span>
-                        <span className="text-sm font-semibold">{fmtMoeda(item.valor, item.moeda)}</span>
-                      </div>
-                    ))}
-                    <div className="border-t border-border pt-1 mt-1">
-                      <div className="text-2xl font-bold">{formatCurrency(metricas.totalStake)}</div>
-                      <p className="text-[9px] text-muted-foreground">Consolidado em {moedaConsolidacaoVal || 'BRL'}</p>
-                    </div>
-                  </div>
-                );
-              }
-              return (
-                <>
-                  <div className="text-2xl font-bold">{formatCurrency(metricas.totalStake)}</div>
-                  <p className="text-xs text-muted-foreground">Total investido</p>
-                </>
-              );
-            })()}
-          </CardContent>
-        </Card>
+        {(() => {
+          const volByCurrency: Record<string, number> = {};
+          metricas.currencyBreakdown.forEach(item => { volByCurrency[item.moeda] = item.valor; });
+          const rateDateStr = rateLastUpdate ? new Date(rateLastUpdate).toLocaleDateString('pt-BR') : undefined;
+          return (
+            <VolumeKPI
+              volumeByCurrency={volByCurrency}
+              consolidationCurrency={moedaConsolidacaoVal || 'BRL'}
+              getRate={getRate}
+              formatCurrency={formatCurrency}
+              rateDate={rateDateStr}
+            />
+          );
+        })()}
 
         <Card className={metricas.lucroTotal >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
