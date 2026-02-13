@@ -748,9 +748,29 @@ export function SurebetDialogTable({
     const newOdds = [...odds];
     newOdds[index] = { ...newOdds[index], [field]: value };
     
+    // REGRA CRÍTICA: Quando bookmaker muda, a moeda muda → invalidar cálculos
     if (field === "bookmaker_id" && typeof value === "string") {
       const selectedBk = bookmakerSaldos.find(b => b.id === value);
-      newOdds[index].moeda = (selectedBk?.moeda as SupportedCurrency) || "BRL";
+      const novaMoeda = (selectedBk?.moeda as SupportedCurrency) || "BRL";
+      const moedaAnterior = newOdds[index].moeda;
+      newOdds[index].moeda = novaMoeda;
+      
+      // Se a moeda mudou, invalidar TODAS as stakes calculadas (não-print)
+      // para forçar recálculo com a nova moeda
+      if (novaMoeda !== moedaAnterior) {
+        newOdds.forEach((o, i) => {
+          if (i !== index && o.stakeOrigem !== "print") {
+            o.isManuallyEdited = false;
+            o.stakeOrigem = undefined;
+          }
+        });
+        // Se a perna que mudou de moeda NÃO é referência e tinha stake manual,
+        // também invalidar para recalcular na nova moeda
+        if (!newOdds[index].isReference && newOdds[index].stakeOrigem !== "print") {
+          newOdds[index].isManuallyEdited = false;
+          newOdds[index].stakeOrigem = undefined;
+        }
+      }
     }
     
     if (field === "isReference" && value === true) {
@@ -847,15 +867,10 @@ export function SurebetDialogTable({
     if (isEditing) return;
     if (profitDirectionActive) return;
     
-    // Detectar moedas das pernas via bookmaker selecionado
-    const moedasPernas = odds.map(o => {
-      const bk = bookmakerSaldos.find(b => b.id === o.bookmaker_id);
-      return (bk?.moeda || "BRL") as string;
-    });
-    
-    const legs = odds.map((perna, i) => ({
+    // Usar moeda diretamente do OddEntry (já atualizada quando bookmaker muda)
+    const legs = odds.map((perna) => ({
       oddMedia: getOddMediaPerna(perna),
-      moeda: moedasPernas[i],
+      moeda: perna.moeda as string,
       stakeAtual: getStakeTotalPerna(perna),
       isReference: perna.isReference,
       isManuallyEdited: perna.isManuallyEdited,
@@ -899,7 +914,7 @@ export function SurebetDialogTable({
       setOdds(newOdds);
     }
   }, [
-    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}`).join(','),
+    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${o.moeda}-${o.stakeOrigem}`).join(','),
     odds.map(o => o.isReference).join(','),
     arredondarAtivado,
     arredondarValor,
@@ -923,11 +938,8 @@ export function SurebetDialogTable({
     
     if (validOddsCount !== odds.length) return null;
     
-    // Detectar moedas das pernas
-    const moedasPernas = odds.map(o => {
-      const bk = bookmakerSaldos.find(b => b.id === o.bookmaker_id);
-      return (bk?.moeda || "BRL") as string;
-    });
+    // Usar moeda diretamente do OddEntry (já sincronizada com bookmaker)
+    const moedasPernas = odds.map(o => o.moeda as string);
     
     const refIndex = directedProfitLegs.find(i => {
       const stake = parseFloat(odds[i].stake);
