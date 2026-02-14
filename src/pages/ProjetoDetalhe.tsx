@@ -343,6 +343,7 @@ export default function ProjetoDetalhe() {
     dataInicio,
     dataFim,
     moedaConsolidacao: projetoResultado?.moedaConsolidacao || 'BRL',
+    getRateFallback: getRate,
   });
 
   useEffect(() => {

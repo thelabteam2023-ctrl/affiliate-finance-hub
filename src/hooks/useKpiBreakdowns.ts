@@ -10,12 +10,15 @@ import {
   createKpiBreakdown 
 } from '@/types/moduleBreakdown';
 import { getOperationalDateRangeForQuery } from '@/utils/dateUtils';
+import { getConsolidatedStake, getConsolidatedLucro } from '@/utils/consolidatedValues';
 
 interface UseKpiBreakdownsProps {
   projetoId: string;
   dataInicio?: Date | null;
   dataFim?: Date | null;
   moedaConsolidacao?: string;
+  /** Fallback: retorna taxa BRL para uma moeda (ex: USD -> 5.16). Usado quando cotacao_trabalho não está definida. */
+  getRateFallback?: (moeda: string) => number;
 }
 
 interface UseKpiBreakdownsReturn {
@@ -85,8 +88,35 @@ async function fetchBreakdownsData(
   projetoId: string,
   dataInicio: Date | null,
   dataFim: Date | null,
-  moedaConsolidacao: string
+  moedaConsolidacao: string,
+  getRateFallback?: (moeda: string) => number
 ): Promise<ProjetoKpiBreakdowns> {
+  // Buscar cotação de trabalho do projeto
+  const { data: projetoData } = await supabase
+    .from('projetos')
+    .select('cotacao_trabalho, fonte_cotacao')
+    .eq('id', projetoId)
+    .single();
+
+  const cotacaoTrabalho = projetoData?.cotacao_trabalho || 0;
+
+  // Função para obter taxa efetiva (trabalho > API fallback)
+  const getEffectiveRate = (moedaOrigem: string): number => {
+    if (cotacaoTrabalho > 0) return cotacaoTrabalho;
+    if (getRateFallback) return getRateFallback(moedaOrigem);
+    return 0;
+  };
+
+  // Função de conversão para consolidação
+  const convertToConsolidation = (valor: number, moedaOrigem: string): number => {
+    if (!valor || moedaOrigem === moedaConsolidacao) return valor;
+    const taxa = getEffectiveRate(moedaOrigem);
+    if (!taxa || taxa <= 0) return valor;
+    if (moedaConsolidacao === 'BRL') return valor * taxa;
+    if (moedaOrigem === 'BRL') return valor / taxa;
+    return valor * taxa;
+  };
+
   // Fetch dados de todos os módulos em paralelo
   const [
     apostasData,
@@ -95,11 +125,11 @@ async function fetchBreakdownsData(
     ajustesData,
     cashbackData,
   ] = await Promise.all([
-    fetchApostasModuleData(projetoId, dataInicio, dataFim),
+    fetchApostasModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, convertToConsolidation),
     fetchGirosGratisModuleData(projetoId, dataInicio, dataFim),
     fetchPerdasModuleData(projetoId, dataInicio, dataFim),
     fetchAjustesModuleData(projetoId),
-    fetchCashbackModuleData(projetoId, dataInicio, dataFim),
+    fetchCashbackModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, convertToConsolidation),
   ]);
 
   // === BREAKDOWN APOSTAS (quantidade) ===
@@ -225,6 +255,7 @@ export function useKpiBreakdowns({
   dataInicio = null,
   dataFim = null,
   moedaConsolidacao = 'BRL',
+  getRateFallback,
 }: UseKpiBreakdownsProps): UseKpiBreakdownsReturn {
   const queryClient = useQueryClient();
 
@@ -241,7 +272,7 @@ export function useKpiBreakdowns({
       dataFim?.toISOString(),
       moedaConsolidacao
     ],
-    queryFn: () => fetchBreakdownsData(projetoId, dataInicio, dataFim, moedaConsolidacao),
+    queryFn: () => fetchBreakdownsData(projetoId, dataInicio, dataFim, moedaConsolidacao, getRateFallback),
     enabled: !!projetoId,
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
@@ -264,11 +295,13 @@ export function useKpiBreakdowns({
 async function fetchApostasModuleData(
   projetoId: string,
   dataInicio: Date | null,
-  dataFim: Date | null
+  dataFim: Date | null,
+  moedaConsolidacao: string,
+  convertToConsolidation: (valor: number, moedaOrigem: string) => number
 ): Promise<ModuleDataWithCurrency> {
   let query = supabase
     .from('apostas_unificada')
-    .select('stake, stake_total, lucro_prejuizo, resultado, forma_registro, status, moeda_operacao, consolidation_currency')
+    .select('stake, stake_total, lucro_prejuizo, resultado, forma_registro, status, moeda_operacao, consolidation_currency, pl_consolidado, stake_consolidado, lucro_prejuizo_brl_referencia, valor_brl_referencia')
     .eq('projeto_id', projetoId);
 
   // CRÍTICO: Usar timezone operacional (America/Sao_Paulo)
@@ -296,23 +329,34 @@ async function fetchApostasModuleData(
   const reds = apostas.filter(a => a.resultado === 'RED' || a.resultado === 'MEIO_RED').length;
   const countDetails = `${greens}G/${reds}R`;
 
+  // Volume CONSOLIDADO - usando a mesma lógica de useProjetoResultado
   const volume = apostas.reduce((acc, a) => {
-    const stake = a.forma_registro === 'ARBITRAGEM' ? Number(a.stake_total || 0) : Number(a.stake || 0);
-    return acc + stake;
+    return acc + getConsolidatedStake(
+      a as any,
+      convertToConsolidation,
+      moedaConsolidacao
+    );
   }, 0);
 
+  // Lucro CONSOLIDADO - usando a mesma lógica de useProjetoResultado
   const lucro = apostas
     .filter(a => a.status === 'LIQUIDADA')
-    .reduce((acc, a) => acc + Number(a.lucro_prejuizo || 0), 0);
+    .reduce((acc, a) => {
+      return acc + getConsolidatedLucro(
+        a as any,
+        convertToConsolidation,
+        moedaConsolidacao
+      );
+    }, 0);
 
-  // Agregação por moeda - volume
+  // Agregação por moeda ORIGINAL - para tooltip breakdown
   const volumeItems = apostas.map(a => ({
     valor: a.forma_registro === 'ARBITRAGEM' ? Number(a.stake_total || 0) : Number(a.stake || 0),
     moeda: a.moeda_operacao || 'BRL'
   }));
   const volumePorMoeda = agregarPorMoeda(volumeItems);
 
-  // Agregação por moeda - lucro
+  // Agregação por moeda ORIGINAL - para tooltip breakdown
   const lucroItems = apostas
     .filter(a => a.status === 'LIQUIDADA')
     .map(a => ({
@@ -523,7 +567,9 @@ async function fetchAjustesModuleData(projetoId: string): Promise<ModuleDataWith
 async function fetchCashbackModuleData(
   projetoId: string,
   dataInicio: Date | null,
-  dataFim: Date | null
+  dataFim: Date | null,
+  moedaConsolidacao: string,
+  convertToConsolidation: (valor: number, moedaOrigem: string) => number
 ): Promise<ModuleDataWithCurrency> {
   let query = supabase
     .from('cashback_manual')
@@ -550,9 +596,18 @@ async function fetchCashbackModuleData(
   const cashbacks = data || [];
   
   const count = cashbacks.length;
+  // Total CONSOLIDADO - aplicar conversão correta
   const total = cashbacks.reduce((acc, cb) => {
-    const valor = cb.valor_brl_referencia ?? Number(cb.valor || 0);
-    return acc + valor;
+    const moedaOp = cb.moeda_operacao || 'BRL';
+    const valorOriginal = Number(cb.valor || 0);
+    // Se mesma moeda, usar direto
+    if (moedaOp === moedaConsolidacao) return acc + valorOriginal;
+    // Se consolidação é BRL e temos valor_brl_referencia, usar
+    if (moedaConsolidacao === 'BRL' && cb.valor_brl_referencia != null) {
+      return acc + Number(cb.valor_brl_referencia);
+    }
+    // Converter via cotação oficial
+    return acc + convertToConsolidation(valorOriginal, moedaOp);
   }, 0);
 
   // Agregação por moeda original
