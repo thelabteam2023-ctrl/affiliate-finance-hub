@@ -152,7 +152,7 @@ export function OperationsHistoryModule({
         )}
       </CardHeader>
 
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 min-h-[200px]">
         {subTab === "abertas" ? (
           hasOpenContent ? (
             <ScrollArea className="pr-4" style={{ maxHeight }}>
