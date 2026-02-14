@@ -97,6 +97,7 @@ interface CasaPendenteConciliacao {
   saldo_atual: number;
   projeto_id: string | null;
   projeto_nome: string | null;
+  parceiro_nome: string | null;
   qtd_transacoes_pendentes: number;
   valor_total_pendente: number;
 }
@@ -958,12 +959,15 @@ export default function CentralOperacoes() {
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0 animate-pulse" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium truncate">{casa.bookmaker_nome}</p>
+                        <p className="text-xs font-medium truncate">
+                          {casa.bookmaker_nome}
+                          {casa.parceiro_nome && <span className="text-muted-foreground font-normal"> de {casa.parceiro_nome}</span>}
+                        </p>
                         <p className="text-[10px] text-muted-foreground truncate">
                           {casa.projeto_nome ? (
                             <span className="text-primary/80">{casa.projeto_nome}</span>
                           ) : (
-                            <span className="text-amber-600 italic">Sem vínculo</span>
+                            <span className="text-amber-600 italic">Nenhum projeto vinculado</span>
                           )}
                           <span className="mx-1">•</span>
                           {casa.qtd_transacoes_pendentes} {casa.qtd_transacoes_pendentes === 1 ? "transação" : "transações"}
