@@ -13,6 +13,7 @@ export interface BookmakerBonusStats {
   currency: string;
   total_bonus_count: number;
   total_bonus_value: number;
+  bonus_pending_count: number;
   bonus_credited_count: number;
   bonus_finalized_count: number;
   bonus_converted_count: number;
@@ -202,6 +203,7 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
 
     const totalBonusCount = bonuses.length;
     const totalBonusValue = bonuses.reduce((sum: number, b: any) => sum + Number(b.bonus_amount || 0), 0);
+    const pendingCount = bonuses.filter((b: any) => b.status === 'pending').length;
     const creditedCount = bonuses.filter((b: any) => b.status === 'credited' || b.status === 'finalized').length;
     const finalizedCount = bonuses.filter((b: any) => b.status === 'finalized').length;
     const convertedCount = bonuses.filter((b: any) =>
@@ -238,6 +240,7 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
       currency: data.currency,
       total_bonus_count: totalBonusCount,
       total_bonus_value: totalBonusValue,
+      bonus_pending_count: pendingCount,
       bonus_credited_count: creditedCount,
       bonus_finalized_count: finalizedCount,
       bonus_converted_count: convertedCount,

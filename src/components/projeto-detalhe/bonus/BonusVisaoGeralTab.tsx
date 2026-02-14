@@ -336,25 +336,32 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             </p>
             {(() => {
               const totalReceived = analyticsStats.reduce((sum, s) => sum + s.total_bonus_count, 0);
+              const pending = analyticsStats.reduce((sum, s) => sum + s.bonus_pending_count, 0);
               const inProgress = Math.max(0, analyticsStats.reduce((sum, s) => sum + s.bonus_credited_count - s.bonus_finalized_count, 0));
               const finalized = analyticsStats.reduce((sum, s) => sum + s.bonus_finalized_count, 0);
               const limited = analyticsSummary.status_breakdown.limitadas;
               return (
-                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-1.5">
                   <span className="text-[11px] text-muted-foreground">
                     <Gift className="inline h-3 w-3 mr-0.5" />
-                    Bônus recebidos: <span className="font-medium text-foreground">{totalReceived}</span>
+                    Recebidos: <span className="font-medium text-foreground">{totalReceived}</span>
                   </span>
-                  {inProgress > 0 && (
+                  {pending > 0 ? (
+                    <span className="text-[11px] text-muted-foreground">
+                      <Timer className="inline h-3 w-3 mr-0.5" />
+                      Pendentes: <span className="font-medium text-foreground">{pending}</span>
+                    </span>
+                  ) : <span />}
+                  {inProgress > 0 ? (
                     <span className="text-[11px] text-muted-foreground">
                       Em andamento: <span className="font-medium text-foreground">{inProgress}</span>
                     </span>
-                  )}
-                  {finalized > 0 && (
+                  ) : <span />}
+                  {finalized > 0 ? (
                     <span className="text-[11px] text-muted-foreground">
                       Finalizados: <span className="font-medium text-foreground">{finalized}</span>
                     </span>
-                  )}
+                  ) : <span />}
                   {limited > 0 && (
                     <span className="text-[11px] text-amber-500">
                       <AlertTriangle className="inline h-3 w-3 mr-0.5" />

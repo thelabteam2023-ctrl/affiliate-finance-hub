@@ -4,7 +4,8 @@ import {
   Building2, 
   BarChart3,
   Gift,
-  AlertTriangle
+  AlertTriangle,
+  Timer
 } from "lucide-react";
 import { ProjectBonusAnalyticsSummary as SummaryType, BookmakerBonusStats } from "@/hooks/useProjectBonusAnalytics";
 import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
@@ -29,10 +30,11 @@ export function ProjectBonusAnalyticsSummary({ summary, stats, projetoId }: Proj
   // Métricas de bônus agregadas
   const bonusMetrics = useMemo(() => {
     const totalReceived = stats.reduce((sum, s) => sum + s.total_bonus_count, 0);
+    const pending = stats.reduce((sum, s) => sum + s.bonus_pending_count, 0);
     const inProgress = stats.reduce((sum, s) => sum + s.bonus_credited_count - s.bonus_finalized_count, 0);
     const finalized = stats.reduce((sum, s) => sum + s.bonus_finalized_count, 0);
     const limited = summary.status_breakdown.limitadas;
-    return { totalReceived, inProgress: Math.max(0, inProgress), finalized, limited };
+    return { totalReceived, pending, inProgress: Math.max(0, inProgress), finalized, limited };
   }, [stats, summary.status_breakdown]);
 
   return (
@@ -49,21 +51,27 @@ export function ProjectBonusAnalyticsSummary({ summary, stats, projetoId }: Proj
               <p className="text-xs text-muted-foreground">
                 {summary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}
               </p>
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-1.5">
                 <span className="text-[11px] text-muted-foreground">
                   <Gift className="inline h-3 w-3 mr-0.5" />
-                  Bônus recebidos: <span className="font-medium text-foreground">{bonusMetrics.totalReceived}</span>
+                  Recebidos: <span className="font-medium text-foreground">{bonusMetrics.totalReceived}</span>
                 </span>
-                {bonusMetrics.inProgress > 0 && (
+                {bonusMetrics.pending > 0 ? (
+                  <span className="text-[11px] text-muted-foreground">
+                    <Timer className="inline h-3 w-3 mr-0.5" />
+                    Pendentes: <span className="font-medium text-foreground">{bonusMetrics.pending}</span>
+                  </span>
+                ) : <span />}
+                {bonusMetrics.inProgress > 0 ? (
                   <span className="text-[11px] text-muted-foreground">
                     Em andamento: <span className="font-medium text-foreground">{bonusMetrics.inProgress}</span>
                   </span>
-                )}
-                {bonusMetrics.finalized > 0 && (
+                ) : <span />}
+                {bonusMetrics.finalized > 0 ? (
                   <span className="text-[11px] text-muted-foreground">
                     Finalizados: <span className="font-medium text-foreground">{bonusMetrics.finalized}</span>
                   </span>
-                )}
+                ) : <span />}
                 {bonusMetrics.limited > 0 && (
                   <span className="text-[11px] text-amber-500">
                     <AlertTriangle className="inline h-3 w-3 mr-0.5" />
