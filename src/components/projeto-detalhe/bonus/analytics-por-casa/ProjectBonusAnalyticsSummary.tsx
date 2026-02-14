@@ -2,32 +2,22 @@ import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Building2, 
-  BarChart3
+  BarChart3,
+  Gift,
+  AlertTriangle
 } from "lucide-react";
-import { ProjectBonusAnalyticsSummary as SummaryType } from "@/hooks/useProjectBonusAnalytics";
+import { ProjectBonusAnalyticsSummary as SummaryType, BookmakerBonusStats } from "@/hooks/useProjectBonusAnalytics";
 import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 interface ProjectBonusAnalyticsSummaryProps {
   summary: SummaryType;
+  stats: BookmakerBonusStats[];
   projetoId: string;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  ativas: "Ativas",
-  concluidas: "Concluídas",
-  encerradas: "Encerradas",
-  pausadas: "Pausadas",
-  limitadas: "Limitadas",
-  bloqueadas: "Bloqueadas",
-};
-
-export function ProjectBonusAnalyticsSummary({ summary, projetoId }: ProjectBonusAnalyticsSummaryProps) {
+export function ProjectBonusAnalyticsSummary({ summary, stats, projetoId }: ProjectBonusAnalyticsSummaryProps) {
   const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
-
-  // Filtrar apenas status com valor > 0
-  const activeStatuses = Object.entries(summary.status_breakdown)
-    .filter(([, count]) => count > 0);
 
   // Consolidar volume total na moeda do projeto
   const totalVolumeConsolidated = useMemo(() => {
@@ -36,9 +26,18 @@ export function ProjectBonusAnalyticsSummary({ summary, projetoId }: ProjectBonu
     }, 0);
   }, [summary.volume_breakdown, convertToConsolidation]);
 
+  // Métricas de bônus agregadas
+  const bonusMetrics = useMemo(() => {
+    const totalReceived = stats.reduce((sum, s) => sum + s.total_bonus_count, 0);
+    const inProgress = stats.reduce((sum, s) => sum + s.bonus_credited_count - s.bonus_finalized_count, 0);
+    const finalized = stats.reduce((sum, s) => sum + s.bonus_finalized_count, 0);
+    const limited = summary.status_breakdown.limitadas;
+    return { totalReceived, inProgress: Math.max(0, inProgress), finalized, limited };
+  }, [stats, summary.status_breakdown]);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Card 1 — Histórico de Casas com Bônus */}
+      {/* Card 1 — Casas e Bônus */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
@@ -50,15 +49,28 @@ export function ProjectBonusAnalyticsSummary({ summary, projetoId }: ProjectBonu
               <p className="text-xs text-muted-foreground">
                 {summary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}
               </p>
-              {activeStatuses.length > 0 && (
-                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                  {activeStatuses.map(([key, count]) => (
-                    <span key={key} className="text-[11px] text-muted-foreground">
-                      {STATUS_LABELS[key] || key}: <span className="font-medium text-foreground">{count}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                <span className="text-[11px] text-muted-foreground">
+                  <Gift className="inline h-3 w-3 mr-0.5" />
+                  Bônus recebidos: <span className="font-medium text-foreground">{bonusMetrics.totalReceived}</span>
+                </span>
+                {bonusMetrics.inProgress > 0 && (
+                  <span className="text-[11px] text-muted-foreground">
+                    Em andamento: <span className="font-medium text-foreground">{bonusMetrics.inProgress}</span>
+                  </span>
+                )}
+                {bonusMetrics.finalized > 0 && (
+                  <span className="text-[11px] text-muted-foreground">
+                    Finalizados: <span className="font-medium text-foreground">{bonusMetrics.finalized}</span>
+                  </span>
+                )}
+                {bonusMetrics.limited > 0 && (
+                  <span className="text-[11px] text-amber-500">
+                    <AlertTriangle className="inline h-3 w-3 mr-0.5" />
+                    Limitadas: <span className="font-medium">{bonusMetrics.limited}</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
