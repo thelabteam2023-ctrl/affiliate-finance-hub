@@ -83,7 +83,7 @@ export function ProjectBonusAnalyticsTab({ projectId }: ProjectBonusAnalyticsTab
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <ProjectBonusAnalyticsSummary summary={summary} />
+      <ProjectBonusAnalyticsSummary summary={summary} projetoId={projectId} />
 
       {/* Ranking Section */}
       <Card>
