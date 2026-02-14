@@ -6,7 +6,7 @@ import { useProjectBonuses, ProjectBonus, bonusQueryKeys } from "@/hooks/useProj
 import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useProjectBonusAnalytics } from "@/hooks/useProjectBonusAnalytics";
-import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt, BarChart3 } from "lucide-react";
+import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt, BarChart3, Gift } from "lucide-react";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay } from "date-fns";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
@@ -52,7 +52,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
-  const { summary: analyticsSummary } = useProjectBonusAnalytics(projetoId);
+  const { summary: analyticsSummary, stats: analyticsStats } = useProjectBonusAnalytics(projetoId);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -335,17 +335,34 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               {analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}
             </p>
             {(() => {
-              const statuses = Object.entries(analyticsSummary.status_breakdown).filter(([, v]) => v > 0);
-              const labels: Record<string, string> = { ativas: "Ativas", concluidas: "Concluídas", encerradas: "Encerradas", pausadas: "Pausadas", limitadas: "Limitadas", bloqueadas: "Bloqueadas" };
-              return statuses.length > 0 ? (
-                <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
-                  {statuses.map(([k, v]) => (
-                    <span key={k} className="text-[11px] text-muted-foreground">
-                      {labels[k] || k}: <span className="font-medium text-foreground">{v}</span>
+              const totalReceived = analyticsStats.reduce((sum, s) => sum + s.total_bonus_count, 0);
+              const inProgress = Math.max(0, analyticsStats.reduce((sum, s) => sum + s.bonus_credited_count - s.bonus_finalized_count, 0));
+              const finalized = analyticsStats.reduce((sum, s) => sum + s.bonus_finalized_count, 0);
+              const limited = analyticsSummary.status_breakdown.limitadas;
+              return (
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                  <span className="text-[11px] text-muted-foreground">
+                    <Gift className="inline h-3 w-3 mr-0.5" />
+                    Bônus recebidos: <span className="font-medium text-foreground">{totalReceived}</span>
+                  </span>
+                  {inProgress > 0 && (
+                    <span className="text-[11px] text-muted-foreground">
+                      Em andamento: <span className="font-medium text-foreground">{inProgress}</span>
                     </span>
-                  ))}
+                  )}
+                  {finalized > 0 && (
+                    <span className="text-[11px] text-muted-foreground">
+                      Finalizados: <span className="font-medium text-foreground">{finalized}</span>
+                    </span>
+                  )}
+                  {limited > 0 && (
+                    <span className="text-[11px] text-amber-500">
+                      <AlertTriangle className="inline h-3 w-3 mr-0.5" />
+                      Limitadas: <span className="font-medium">{limited}</span>
+                    </span>
+                  )}
                 </div>
-              ) : null;
+              );
             })()}
           </CardContent>
         </Card>
