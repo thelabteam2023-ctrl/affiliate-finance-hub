@@ -1,15 +1,17 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Coins, TrendingUp, TrendingDown, Receipt } from "lucide-react";
+import { Building2, Coins, TrendingUp, TrendingDown, Receipt, BarChart3 } from "lucide-react";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { useProjectBonusAnalytics } from "@/hooks/useProjectBonusAnalytics";
 import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 import { subDays } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
 
 interface BonusSummaryCardsProps {
   projetoId: string;
@@ -20,6 +22,7 @@ interface BonusSummaryCardsProps {
 export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCardsProps) {
   const { bonuses, getSummary, loading: bonusesLoading } = useProjectBonuses({ projectId: projetoId });
   const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
+  const { summary: analyticsSummary } = useProjectBonusAnalytics(projetoId);
 
   const summary = getSummary();
 
@@ -188,23 +191,44 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
     <TooltipProvider>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Casas com Bônus</CardTitle>
+          <CardTitle className="text-sm font-medium">Histórico de Casas</CardTitle>
           <Building2 className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{summary.bookmakers_with_active_bonus}</div>
-          <p className="text-xs text-muted-foreground">Em modo bônus ativo</p>
+          <div className="text-2xl font-bold">{analyticsSummary.total_bookmakers}</div>
+          <p className="text-xs text-muted-foreground">
+            {analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}
+          </p>
+          {(() => {
+            const statuses = Object.entries(analyticsSummary.status_breakdown).filter(([, v]) => v > 0);
+            const labels: Record<string, string> = { ativas: "Ativas", concluidas: "Concluídas", encerradas: "Encerradas", pausadas: "Pausadas", limitadas: "Limitadas", bloqueadas: "Bloqueadas" };
+            return statuses.length > 0 ? (
+              <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
+                {statuses.map(([k, v]) => (
+                  <span key={k} className="text-[11px] text-muted-foreground">
+                    {labels[k] || k}: <span className="font-medium text-foreground">{v}</span>
+                  </span>
+                ))}
+              </div>
+            ) : null;
+          })()}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Bônus Ativo</CardTitle>
-          <Coins className="h-4 w-4 text-warning" />
+          <CardTitle className="text-sm font-medium">Volume Operado</CardTitle>
+          <BarChart3 className="h-4 w-4 text-blue-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(activeBonusTotalConsolidated)}</div>
-          <p className="text-xs text-muted-foreground">{summary.count_credited} bônus creditados</p>
+          <div className="flex items-center gap-1.5">
+            <div className="text-2xl font-bold truncate">{analyticsSummary.total_stake_display}</div>
+            <CurrencyBreakdownTooltip
+              breakdown={analyticsSummary.volume_breakdown}
+              moedaConsolidacao={analyticsSummary.moeda_consolidacao}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">Volume apostado em bônus</p>
         </CardContent>
       </Card>
 
