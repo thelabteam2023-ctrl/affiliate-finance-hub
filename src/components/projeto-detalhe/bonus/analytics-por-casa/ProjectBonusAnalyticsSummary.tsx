@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Building2, 
@@ -5,10 +6,11 @@ import {
 } from "lucide-react";
 import { ProjectBonusAnalyticsSummary as SummaryType } from "@/hooks/useProjectBonusAnalytics";
 import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
-import { formatCurrencyForDisplay } from "@/utils/consolidateCurrency";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 interface ProjectBonusAnalyticsSummaryProps {
   summary: SummaryType;
+  projetoId: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -20,10 +22,19 @@ const STATUS_LABELS: Record<string, string> = {
   bloqueadas: "Bloqueadas",
 };
 
-export function ProjectBonusAnalyticsSummary({ summary }: ProjectBonusAnalyticsSummaryProps) {
+export function ProjectBonusAnalyticsSummary({ summary, projetoId }: ProjectBonusAnalyticsSummaryProps) {
+  const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
+
   // Filtrar apenas status com valor > 0
   const activeStatuses = Object.entries(summary.status_breakdown)
     .filter(([, count]) => count > 0);
+
+  // Consolidar volume total na moeda do projeto
+  const totalVolumeConsolidated = useMemo(() => {
+    return summary.volume_breakdown.reduce((acc, item) => {
+      return acc + convertToConsolidation(item.valor, item.moeda);
+    }, 0);
+  }, [summary.volume_breakdown, convertToConsolidation]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -62,7 +73,7 @@ export function ProjectBonusAnalyticsSummary({ summary }: ProjectBonusAnalyticsS
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <p className="text-lg font-bold truncate">{summary.total_stake_display}</p>
+                <p className="text-lg font-bold truncate">{formatCurrency(totalVolumeConsolidated)}</p>
                 <CurrencyBreakdownTooltip
                   breakdown={summary.volume_breakdown}
                   moedaConsolidacao={summary.moeda_consolidacao}

@@ -222,7 +222,11 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-1.5">
-            <div className="text-2xl font-bold truncate">{analyticsSummary.total_stake_display}</div>
+            <div className="text-2xl font-bold truncate">
+              {formatCurrency(analyticsSummary.volume_breakdown.reduce((acc, item) => 
+                acc + convertToConsolidation(item.valor, item.moeda), 0
+              ))}
+            </div>
             <CurrencyBreakdownTooltip
               breakdown={analyticsSummary.volume_breakdown}
               moedaConsolidacao={analyticsSummary.moeda_consolidacao}
