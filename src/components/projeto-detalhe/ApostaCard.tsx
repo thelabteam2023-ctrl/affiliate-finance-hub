@@ -102,6 +102,13 @@ const ESTRATEGIA_CONFIG: Record<string, { label: string; icon: typeof Zap; color
     bgColor: "bg-purple-500/20",
     borderColor: "border-purple-500/30",
   },
+  PUNTER: {
+    label: "PUNTER",
+    icon: Target,
+    color: "text-blue-400",
+    bgColor: "bg-blue-500/20",
+    borderColor: "border-blue-500/30",
+  },
   FREEBET: {
     label: "FREEBET",
     icon: Gift,
@@ -109,8 +116,22 @@ const ESTRATEGIA_CONFIG: Record<string, { label: string; icon: typeof Zap; color
     bgColor: "bg-cyan-500/20",
     borderColor: "border-cyan-500/30",
   },
+  EXTRACAO_FREEBET: {
+    label: "EXT. FREEBET",
+    icon: Gift,
+    color: "text-cyan-400",
+    bgColor: "bg-cyan-500/20",
+    borderColor: "border-cyan-500/30",
+  },
   BONUS: {
     label: "BÔNUS",
+    icon: Coins,
+    color: "text-yellow-400",
+    bgColor: "bg-yellow-500/20",
+    borderColor: "border-yellow-500/30",
+  },
+  EXTRACAO_BONUS: {
+    label: "EXT. BÔNUS",
     icon: Coins,
     color: "text-yellow-400",
     bgColor: "bg-yellow-500/20",

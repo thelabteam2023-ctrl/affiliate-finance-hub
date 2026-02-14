@@ -1338,14 +1338,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               const parceiroNome = aposta.bookmaker?.parceiro?.nome;
               const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
               
-              // Determinar estratégia para o card
-              let estrategia: string = "NORMAL";
-              if (aposta.gerou_freebet) estrategia = "FREEBET";
-              else if (aposta.estrategia === "SUREBET") estrategia = "SUREBET";
-              else if (aposta.estrategia === "DUPLO_GREEN") estrategia = "DUPLO_GREEN";
-              else if (aposta.estrategia === "VALUEBET") estrategia = "VALUEBET";
-              else if (item.contexto === "FREEBET") estrategia = "FREEBET";
-              else if (item.contexto === "BONUS") estrategia = "BONUS";
+              // Determinar estratégia para o card - usar valor do banco diretamente
+              let estrategia: string = aposta.estrategia || "NORMAL";
+              if (aposta.gerou_freebet && estrategia === "NORMAL") estrategia = "FREEBET";
+              else if (item.contexto === "FREEBET" && estrategia === "NORMAL") estrategia = "FREEBET";
+              else if (item.contexto === "BONUS" && estrategia === "NORMAL") estrategia = "BONUS";
               
                // Preparar dados para ApostaCard - moeda ORIGINAL da aposta
                const apostaCardData = {
@@ -1389,14 +1386,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             const parceiroNomeMultipla = multipla.bookmaker?.parceiro?.nome;
             const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
             
-            // Determinar estratégia - mesma lógica do simples
-            let estrategiaMultipla: string = "NORMAL";
-            if (multipla.gerou_freebet) estrategiaMultipla = "FREEBET";
-            else if (multipla.estrategia === "SUREBET") estrategiaMultipla = "SUREBET";
-            else if (multipla.estrategia === "DUPLO_GREEN") estrategiaMultipla = "DUPLO_GREEN";
-            else if (multipla.estrategia === "VALUEBET") estrategiaMultipla = "VALUEBET";
-            else if (item.contexto === "FREEBET") estrategiaMultipla = "FREEBET";
-            else if (item.contexto === "BONUS") estrategiaMultipla = "BONUS";
+            // Determinar estratégia - usar valor do banco diretamente
+            let estrategiaMultipla: string = multipla.estrategia || "NORMAL";
+            if (multipla.gerou_freebet && estrategiaMultipla === "NORMAL") estrategiaMultipla = "FREEBET";
+            else if (item.contexto === "FREEBET" && estrategiaMultipla === "NORMAL") estrategiaMultipla = "FREEBET";
+            else if (item.contexto === "BONUS" && estrategiaMultipla === "NORMAL") estrategiaMultipla = "BONUS";
             
             // Preparar dados para ApostaCard (múltipla) - moeda ORIGINAL
              const multiplaCardData = {
