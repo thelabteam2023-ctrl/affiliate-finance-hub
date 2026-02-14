@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
-import { keepPreviousData } from "@tanstack/react-query";
 
 /**
  * Estatísticas de bônus por casa (bookmaker_catalogo_id) DENTRO DE UM PROJETO
@@ -298,7 +297,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
     enabled: !!projectId,
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
-    placeholderData: keepPreviousData,
+    placeholderData: (prev: any) => prev,
   });
 
   const stats = rawData?.stats ?? [];
