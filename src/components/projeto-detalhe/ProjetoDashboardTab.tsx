@@ -275,7 +275,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, formatChartAxis, convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  const { formatCurrency, formatChartAxis, convertToConsolidation, convertToConsolidationOficial, moedaConsolidacao } = useProjetoCurrency(projetoId);
   
   // Hook global de logos
   const { logoMap: catalogLogoMap, getLogoUrl: getCatalogLogoUrl } = useBookmakerLogoMap();
@@ -504,7 +504,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         formatCurrency={formatCurrency}
         formatChartAxis={formatChartAxis}
         showScopeToggle={false}
-        convertToConsolidation={convertToConsolidation}
+        convertToConsolidation={convertToConsolidationOficial}
         moedaConsolidacao={moedaConsolidacao}
       />
 

@@ -18,14 +18,14 @@ interface ProjectBonusAnalyticsSummaryProps {
 }
 
 export function ProjectBonusAnalyticsSummary({ summary, stats, projetoId }: ProjectBonusAnalyticsSummaryProps) {
-  const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidationOficial } = useProjetoCurrency(projetoId);
 
   // Consolidar volume total na moeda do projeto
   const totalVolumeConsolidated = useMemo(() => {
     return summary.volume_breakdown.reduce((acc, item) => {
-      return acc + convertToConsolidation(item.valor, item.moeda);
+      return acc + convertToConsolidationOficial(item.valor, item.moeda);
     }, 0);
-  }, [summary.volume_breakdown, convertToConsolidation]);
+  }, [summary.volume_breakdown, convertToConsolidationOficial]);
 
   // Métricas de bônus agregadas
   const bonusMetrics = useMemo(() => {

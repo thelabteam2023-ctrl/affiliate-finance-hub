@@ -174,7 +174,7 @@ export function ProjetoValueBetTab({
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, getSymbol, convertToConsolidation: convertToConsolidationFn, moedaConsolidacao: moedaConsolidacaoVal } = useProjetoCurrency(projetoId);
+  const { formatCurrency, getSymbol, convertToConsolidation: convertToConsolidationFn, convertToConsolidationOficial: convertToConsolidationOficialFn, moedaConsolidacao: moedaConsolidacaoVal } = useProjetoCurrency(projetoId);
   const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   const currencySymbol = getSymbol();
 
@@ -403,7 +403,7 @@ export function ProjetoValueBetTab({
   }, [apostas, onDataChange, projetoId, invalidateSaldos, hasActiveRolloverBonus, atualizarProgressoRollover]);
 
   const metricas = useMemo(() => {
-    const { convertToConsolidation, moedaConsolidacao } = { convertToConsolidation: convertToConsolidationFn, moedaConsolidacao: moedaConsolidacaoVal };
+    const { convertToConsolidation, moedaConsolidacao } = { convertToConsolidation: convertToConsolidationOficialFn, moedaConsolidacao: moedaConsolidacaoVal };
     
     const total = apostas.length;
     const totalStake = apostas.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
@@ -447,7 +447,7 @@ export function ProjetoValueBetTab({
     });
 
     return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown, lucroPorMoeda };
-  }, [apostas, convertToConsolidationFn, moedaConsolidacaoVal]);
+  }, [apostas, convertToConsolidationOficialFn, moedaConsolidacaoVal]);
 
   // casaData agregado por CASA (não por vínculo) - Padrão unificado
   const casaData = useMemo((): CasaAgregada[] => {
@@ -497,8 +497,8 @@ export function ProjetoValueBetTab({
 
     apostas.forEach((a) => {
       const bookmakerNome = a.bookmaker_nome || "Desconhecida";
-      const stake = getConsolidatedStake(a, convertToConsolidationFn, moedaConsolidacaoVal);
-      const lucro = getConsolidatedLucro(a, convertToConsolidationFn, moedaConsolidacaoVal);
+      const stake = getConsolidatedStake(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
+      const lucro = getConsolidatedLucro(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
       processEntry(bookmakerNome, a.operador_nome, stake, lucro);
     });
 
@@ -785,7 +785,7 @@ export function ProjetoValueBetTab({
             periodStart={dateRange?.start}
             periodEnd={dateRange?.end}
             formatCurrency={formatCurrency}
-            convertToConsolidation={convertToConsolidationFn}
+            convertToConsolidation={convertToConsolidationOficialFn}
             moedaConsolidacao={moedaConsolidacaoVal}
           />
           <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />

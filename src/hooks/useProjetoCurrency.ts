@@ -41,8 +41,13 @@ export interface ProjectCurrencyReturn {
    */
   formatChartAxis: (valor: number, options?: ChartAxisFormatOptions) => string;
   
-  // Conversão para moeda de consolidação
+  /** Conversão usando cotação ativa (Trabalho se configurada, senão Oficial).
+   *  Ideal para CALCULADORAS e FORMULÁRIOS. */
   convertToConsolidation: (valor: number, moedaOrigem: string) => number;
+  
+  /** Conversão usando SEMPRE a cotação oficial (FastForex), ignorando cotação de trabalho.
+   *  Ideal para KPIs, Dashboards e Relatórios analíticos. */
+  convertToConsolidationOficial: (valor: number, moedaOrigem: string) => number;
   
   // Utilitários
   getSymbol: () => string;
@@ -102,8 +107,8 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
   // Moeda atual do projeto
   const getMoeda = useCallback((): MoedaConsolidacao => moedaConsolidacao, [moedaConsolidacao]);
 
-  // Converter valor de qualquer moeda para a moeda de consolidação
-  const convertToConsolidation = useCallback((valor: number, moedaOrigem: string): number => {
+  // Função interna de conversão parametrizada pela cotação USD a usar
+  const _convert = useCallback((valor: number, moedaOrigem: string, cotacaoUsdToUse: number): number => {
     if (!valor || isNaN(valor)) return 0;
     if (moedaOrigem === moedaConsolidacao) {
       return valor;
@@ -111,12 +116,12 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
 
     // BRL -> USD
     if (moedaOrigem === "BRL" && moedaConsolidacao === "USD") {
-      return valor / cotacaoAtual;
+      return valor / cotacaoUsdToUse;
     }
 
     // USD -> BRL
     if (moedaOrigem === "USD" && moedaConsolidacao === "BRL") {
-      return valor * cotacaoAtual;
+      return valor * cotacaoUsdToUse;
     }
 
     // EUR -> moeda de consolidação
@@ -124,9 +129,7 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
       if (moedaConsolidacao === "BRL") {
         return valor * cotacaoEUR;
       }
-      // EUR -> USD: converter EUR para BRL primeiro, depois dividir pela cotação USD ativa
-      // CRÍTICO: Usar cotacaoAtual (que respeita fonte_cotacao TRABALHO) em vez de cotacaoUSD da API
-      return valor * (cotacaoEUR / cotacaoAtual);
+      return valor * (cotacaoEUR / cotacaoUsdToUse);
     }
 
     // GBP -> moeda de consolidação  
@@ -134,8 +137,7 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
       if (moedaConsolidacao === "BRL") {
         return valor * cotacaoGBP;
       }
-      // GBP -> USD: mesma lógica, usar cotacaoAtual
-      return valor * (cotacaoGBP / cotacaoAtual);
+      return valor * (cotacaoGBP / cotacaoUsdToUse);
     }
 
     // Crypto (USDT, USDC, etc - assumindo paridade 1:1 com USD)
@@ -143,11 +145,23 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
       if (moedaConsolidacao === "USD") {
         return valor; // Crypto já está em USD-equivalent
       }
-      return valor * cotacaoAtual; // Crypto -> BRL
+      return valor * cotacaoUsdToUse; // Crypto -> BRL
     }
 
     return valor;
-  }, [moedaConsolidacao, cotacaoAtual, cotacaoUSD, cotacaoEUR, cotacaoGBP]);
+  }, [moedaConsolidacao, cotacaoEUR, cotacaoGBP]);
+
+  // Converter usando cotação ativa (Trabalho se configurada, senão Oficial)
+  // Ideal para CALCULADORAS e FORMULÁRIOS
+  const convertToConsolidation = useCallback((valor: number, moedaOrigem: string): number => {
+    return _convert(valor, moedaOrigem, cotacaoAtual);
+  }, [_convert, cotacaoAtual]);
+
+  // Converter usando SEMPRE cotação oficial (FastForex)
+  // Ideal para KPIs, Dashboards e Relatórios
+  const convertToConsolidationOficial = useCallback((valor: number, moedaOrigem: string): number => {
+    return _convert(valor, moedaOrigem, cotacaoUSD);
+  }, [_convert, cotacaoUSD]);
 
   // Formatar valor NA MOEDA DO PROJETO
   const formatCurrency = useCallback((valor: number, options?: FormatOptions): string => {
@@ -266,6 +280,7 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
     formatCurrencyWithSign,
     formatChartAxis,
     convertToConsolidation,
+    convertToConsolidationOficial,
     getSymbol,
     getMoeda,
     isLoading: loadingConfig || loadingCotacao,

@@ -207,7 +207,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
 
   // Hook de formatação de moeda do projeto
-  const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol, convertToConsolidation: convertFn } = useProjetoCurrency(projetoId);
+  const { formatCurrency: projectFormatCurrency, moedaConsolidacao, getSymbol, convertToConsolidation: convertFn, convertToConsolidationOficial: convertFnOficial } = useProjetoCurrency(projetoId);
   const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   const currencySymbol = getSymbol();
   
@@ -617,8 +617,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     const liquidadas = surebets.filter(s => s.status === "LIQUIDADA").length;
     const greens = surebets.filter(s => s.resultado === "GREEN").length;
     const reds = surebets.filter(s => s.resultado === "RED").length;
-    const lucroTotal = surebets.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFn, moedaConsolidacao), 0);
-    const stakeTotal = surebets.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
+    const lucroTotal = surebets.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
+    const stakeTotal = surebets.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
     const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
 
     // Breakdown de volume por moeda original
@@ -644,7 +644,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       .filter(item => Math.abs(item.valor) > 0.01);
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi, currencyBreakdown, lucroPorMoeda };
-  }, [surebets, convertFn, moedaConsolidacao]);
+  }, [surebets, convertFnOficial, moedaConsolidacao]);
 
   // KPIs FILTRADOS (para Operações) - Aplicam filtros dimensionais
   const kpisOperacoes = useMemo(() => {
@@ -653,12 +653,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     const liquidadas = filteredSurebetsForOperacoes.filter(s => s.status === "LIQUIDADA").length;
     const greens = filteredSurebetsForOperacoes.filter(s => s.resultado === "GREEN").length;
     const reds = filteredSurebetsForOperacoes.filter(s => s.resultado === "RED").length;
-    const lucroTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFn, moedaConsolidacao), 0);
-    const stakeTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
+    const lucroTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
+    const stakeTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
     const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
-  }, [filteredSurebetsForOperacoes, convertFn, moedaConsolidacao]);
+  }, [filteredSurebetsForOperacoes, convertFnOficial, moedaConsolidacao]);
 
   // Alias para compatibilidade - o KPI de referência depende da sub-aba ativa
   // Mas para a Visão Geral sempre usamos kpisGlobal
@@ -995,7 +995,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               periodStart={dateRange?.start}
               periodEnd={dateRange?.end}
               formatCurrency={formatCurrency}
-              convertToConsolidation={convertFn}
+              convertToConsolidation={convertFnOficial}
               moedaConsolidacao={moedaConsolidacao}
             />
             <SurebetStatisticsCard surebets={surebets} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
@@ -1036,7 +1036,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               periodStart={dateRange?.start}
               periodEnd={dateRange?.end}
               formatCurrency={formatCurrency}
-              convertToConsolidation={convertFn}
+              convertToConsolidation={convertFnOficial}
               moedaConsolidacao={moedaConsolidacao}
             />
           </div>

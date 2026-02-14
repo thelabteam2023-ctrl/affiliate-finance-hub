@@ -21,7 +21,7 @@ interface BonusSummaryCardsProps {
 
 export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCardsProps) {
   const { bonuses, getSummary, loading: bonusesLoading } = useProjectBonuses({ projectId: projetoId });
-  const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidation, convertToConsolidationOficial } = useProjetoCurrency(projetoId);
   const { summary: analyticsSummary } = useProjectBonusAnalytics(projetoId);
 
   const summary = getSummary();
@@ -30,8 +30,8 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
   const activeBonusTotalConsolidated = useMemo(() => {
     return bonuses
       .filter((b) => b.status === "credited" && (b.saldo_atual || 0) > 0)
-      .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
-  }, [bonuses, convertToConsolidation]);
+      .reduce((acc, b) => acc + convertToConsolidationOficial(b.saldo_atual || 0, b.currency), 0);
+  }, [bonuses, convertToConsolidationOficial]);
 
   // Fetch apostas com bônus para calcular juice
   const { data: bonusBetsData = [], isLoading: betsLoading } = useQuery({
@@ -98,7 +98,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
     const eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
     
     const totalBonusCreditado = eligibleBonuses
-      .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
+      .reduce((acc, b) => acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency), 0);
     
     // Breakdown de bônus por moeda original
     const bonusPorMoedaMap: Record<string, number> = {};
@@ -113,12 +113,12 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
         return acc + bet.pl_consolidado;
       }
       const moedaOperacao = bet.moeda_operacao || "BRL";
-      return acc + convertToConsolidation(bet.lucro_prejuizo ?? 0, moedaOperacao);
+      return acc + convertToConsolidationOficial(bet.lucro_prejuizo ?? 0, moedaOperacao);
     }, 0);
 
     // Somar ajustes pós-limitação ao juice
     const juiceAjustes = ajustesPostLimitacao.reduce((acc, a) => {
-      return acc + convertToConsolidation(a.valor, a.moeda);
+      return acc + convertToConsolidationOficial(a.valor, a.moeda);
     }, 0);
 
     const totalJuice = juiceBets + juiceAjustes;
@@ -129,7 +129,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       : 0;
     
     return { totalBonusCreditado, totalJuice, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsData, ajustesPostLimitacao, convertToConsolidation]);
+  }, [bonuses, bonusBetsData, ajustesPostLimitacao, convertToConsolidationOficial]);
 
   const isLoading = bonusesLoading || betsLoading || ajustesLoading;
 
@@ -233,7 +233,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
           <div className="flex items-center gap-1.5">
             <div className="text-2xl font-bold truncate">
               {formatCurrency(analyticsSummary.volume_breakdown.reduce((acc, item) => 
-                acc + convertToConsolidation(item.valor, item.moeda), 0
+                acc + convertToConsolidationOficial(item.valor, item.moeda), 0
               ))}
             </div>
             <CurrencyBreakdownTooltip
