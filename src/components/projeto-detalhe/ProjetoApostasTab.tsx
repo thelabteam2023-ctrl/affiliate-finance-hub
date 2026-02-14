@@ -899,6 +899,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     // Apostas múltiplas
     apostasMultiplas.forEach(am => {
       const contexto = getApostaContexto(am, bookmakersComBonusAtivo);
+      const estrategiaMultipla = am.estrategia || inferEstrategiaLegado(am);
       
       // Filtro de casa (bookmaker)
       const matchesBookmaker = selectedBookmakerIds.length === 0 || 
@@ -908,12 +909,16 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       const matchesParceiro = selectedParceiroIds.length === 0 || 
         (am.bookmaker?.parceiro_id && selectedParceiroIds.includes(am.bookmaker.parceiro_id));
       
+      // Filtro de estratégia
+      const matchesEstrategia = selectedEstrategias.includes("all") || 
+        selectedEstrategias.includes(estrategiaMultipla as any);
+      
       const matchesStatus = statusFilter === "all" || am.status === statusFilter;
       const matchesResultado = resultadoFilter === "all" || am.resultado === resultadoFilter;
       const matchesContexto = contextoFilter === "all" || contexto === contextoFilter;
       const matchesTipo = tipoFilter === "todas" || tipoFilter === "multiplas";
       
-      if (matchesBookmaker && matchesParceiro && matchesStatus && matchesResultado && matchesContexto && matchesTipo) {
+      if (matchesBookmaker && matchesParceiro && matchesEstrategia && matchesStatus && matchesResultado && matchesContexto && matchesTipo) {
         result.push({
           tipo: "multipla",
           data: am,
