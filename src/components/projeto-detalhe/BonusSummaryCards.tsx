@@ -95,9 +95,18 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
 
   // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação
   const bonusPerformance = useMemo(() => {
-    const totalBonusCreditado = bonuses
-      .filter(b => b.status === "credited" || b.status === "finalized")
+    const eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
+    
+    const totalBonusCreditado = eligibleBonuses
       .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
+    
+    // Breakdown de bônus por moeda original
+    const bonusPorMoedaMap: Record<string, number> = {};
+    eligibleBonuses.forEach(b => {
+      const moeda = b.currency || "BRL";
+      bonusPorMoedaMap[moeda] = (bonusPorMoedaMap[moeda] || 0) + (b.bonus_amount || 0);
+    });
+    const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({ moeda, valor }));
     
     const juiceBets = bonusBetsData.reduce((acc, bet) => {
       if (bet.pl_consolidado != null) {
@@ -119,7 +128,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       ? (total / totalBonusCreditado) * 100 
       : 0;
     
-    return { totalBonusCreditado, totalJuice, total, performancePercent };
+    return { totalBonusCreditado, totalJuice, total, performancePercent, bonusPorMoeda };
   }, [bonuses, bonusBetsData, ajustesPostLimitacao, convertToConsolidation]);
 
   const isLoading = bonusesLoading || betsLoading || ajustesLoading;
@@ -277,9 +286,14 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
               {bonusPerformance.performancePercent.toFixed(1)}%
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Bônus: {formatCurrency(bonusPerformance.totalBonusCreditado)} | Juice: {formatCurrency(bonusPerformance.totalJuice)}
-          </p>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+            <span>Bônus: {formatCurrency(bonusPerformance.totalBonusCreditado)}</span>
+            <CurrencyBreakdownTooltip
+              breakdown={bonusPerformance.bonusPorMoeda}
+              moedaConsolidacao={analyticsSummary.moeda_consolidacao}
+            />
+            <span>| Juice: {formatCurrency(bonusPerformance.totalJuice)}</span>
+          </div>
         </CardContent>
       </Card>
     </TooltipProvider>

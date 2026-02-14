@@ -275,9 +275,18 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação
   // CRÍTICO: Converter TODOS os valores para moeda de consolidação do projeto
   const bonusPerformance = useMemo(() => {
-    const totalBonusCreditado = bonuses
-      .filter(b => b.status === "credited" || b.status === "finalized")
+    const eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
+    
+    const totalBonusCreditado = eligibleBonuses
       .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
+    
+    // Breakdown de bônus por moeda original
+    const bonusPorMoedaMap: Record<string, number> = {};
+    eligibleBonuses.forEach(b => {
+      const moeda = b.currency || "BRL";
+      bonusPorMoedaMap[moeda] = (bonusPorMoedaMap[moeda] || 0) + (b.bonus_amount || 0);
+    });
+    const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({ moeda, valor }));
     
     const juiceBets = bonusBetsData.reduce((acc, bet) => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
@@ -304,7 +313,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       ? ((total / totalBonusCreditado) * 100) 
       : 0;
     
-    return { totalBonusCreditado, totalJuice, total, performancePercent };
+    return { totalBonusCreditado, totalJuice, total, performancePercent, bonusPorMoeda };
   }, [bonuses, bonusBetsData, ajustesPostLimitacao, convertToConsolidation]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
@@ -432,9 +441,14 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                   {bonusPerformance.performancePercent.toFixed(1)}%
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Bônus: {formatCurrency(bonusPerformance.totalBonusCreditado)} | Juice: {formatCurrency(bonusPerformance.totalJuice)}
-              </p>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                <span>Bônus: {formatCurrency(bonusPerformance.totalBonusCreditado)}</span>
+                <CurrencyBreakdownTooltip
+                  breakdown={bonusPerformance.bonusPorMoeda}
+                  moedaConsolidacao={analyticsSummary.moeda_consolidacao}
+                />
+                <span>| Juice: {formatCurrency(bonusPerformance.totalJuice)}</span>
+              </div>
             </CardContent>
           </Card>
         </TooltipProvider>
