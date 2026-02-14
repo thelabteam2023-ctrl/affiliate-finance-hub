@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle, Clock, Lock } from "lucide-react";
+import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle, Clock, Lock, Search } from "lucide-react";
 import { BonusFormData, BonusStatus, ProjectBonus } from "@/hooks/useProjectBonuses";
 import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
@@ -125,7 +125,7 @@ export function BonusDialog({
   const [filledFromTemplate, setFilledFromTemplate] = useState(false);
   const [templatePercent, setTemplatePercent] = useState<number | null>(null);
   const [templateMaxValue, setTemplateMaxValue] = useState<number | null>(null);
-
+  const [bookmakerSearch, setBookmakerSearch] = useState("");
   const isEditMode = !!bonus;
 
   // Get the selected bookmaker to find its catalogo_id
@@ -369,56 +369,89 @@ export function BonusDialog({
                 <SelectValue placeholder="Selecione a casa" />
               </SelectTrigger>
               <SelectContent>
-                {bookmakers.map((bk) => {
-                  const moeda = bk.moeda || "BRL";
-                  const usaUsd = moeda === "USD" || moeda === "USDT";
-                  const currencySymbol = usaUsd
-                    ? "$"
-                    : moeda === "EUR"
-                      ? "€"
-                      : moeda === "GBP"
-                        ? "£"
-                        : "R$";
+                <div className="p-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar casa..."
+                      value={bookmakerSearch}
+                      onChange={(e) => setBookmakerSearch(e.target.value)}
+                      className="pl-8 h-8"
+                    />
+                  </div>
+                </div>
+                {bookmakers
+                  .filter((bk) => {
+                    if (!bookmakerSearch) return true;
+                    const search = bookmakerSearch.toLowerCase();
+                    return (
+                      bk.nome.toLowerCase().includes(search) ||
+                      bk.login_username?.toLowerCase().includes(search) ||
+                      bk.parceiro_nome?.toLowerCase().includes(search)
+                    );
+                  })
+                  .map((bk) => {
+                    const moeda = bk.moeda || "BRL";
+                    const usaUsd = moeda === "USD" || moeda === "USDT";
+                    const currencySymbol = usaUsd
+                      ? "$"
+                      : moeda === "EUR"
+                        ? "€"
+                        : moeda === "GBP"
+                          ? "£"
+                          : "R$";
 
-                  // saldo_atual agora vem da RPC canônica (saldo_real)
-                  const saldo = bk.saldo_atual ?? 0;
+                    const saldo = bk.saldo_atual ?? 0;
 
-                  return (
-                    <SelectItem key={bk.id} value={bk.id} className="py-2">
-                      <div className="flex items-center justify-between w-full gap-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          {bk.logo_url ? (
-                            <img
-                              src={bk.logo_url}
-                              alt={bk.nome}
-                              className="h-6 w-6 rounded object-contain bg-white shrink-0"
-                            />
-                          ) : (
-                            <Building2 className="h-6 w-6 shrink-0" />
-                          )}
-                          <div className="flex flex-col min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-semibold text-foreground truncate">{bk.nome}</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${usaUsd ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                {bk.moeda || "BRL"}
-                              </span>
-                            </div>
-                            {bk.parceiro_nome && (
-                              <span className="text-xs text-muted-foreground truncate">{getFirstLastName(bk.parceiro_nome)}</span>
+                    return (
+                      <SelectItem key={bk.id} value={bk.id} className="py-2">
+                        <div className="flex items-center justify-between w-full gap-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {bk.logo_url ? (
+                              <img
+                                src={bk.logo_url}
+                                alt={bk.nome}
+                                className="h-6 w-6 rounded object-contain bg-white shrink-0"
+                              />
+                            ) : (
+                              <Building2 className="h-6 w-6 shrink-0" />
                             )}
+                            <div className="flex flex-col min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-foreground truncate">{bk.nome}</span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${usaUsd ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                                  {bk.moeda || "BRL"}
+                                </span>
+                              </div>
+                              {bk.parceiro_nome && (
+                                <span className="text-xs text-muted-foreground truncate">{getFirstLastName(bk.parceiro_nome)}</span>
+                              )}
+                            </div>
                           </div>
+                          <span className="text-success font-semibold whitespace-nowrap shrink-0">
+                            {currencySymbol}{" "}
+                            {saldo.toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
                         </div>
-                        <span className="text-success font-semibold whitespace-nowrap shrink-0">
-                          {currencySymbol}{" "}
-                          {saldo.toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-                    </SelectItem>
+                      </SelectItem>
+                    );
+                  })}
+                {bookmakers.filter((bk) => {
+                  if (!bookmakerSearch) return true;
+                  const search = bookmakerSearch.toLowerCase();
+                  return (
+                    bk.nome.toLowerCase().includes(search) ||
+                    bk.login_username?.toLowerCase().includes(search) ||
+                    bk.parceiro_nome?.toLowerCase().includes(search)
                   );
-                })}
+                }).length === 0 && (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    Nenhuma casa encontrada
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>
