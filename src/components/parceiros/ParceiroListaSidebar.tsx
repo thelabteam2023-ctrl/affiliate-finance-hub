@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
-import { Search, User, Plus } from "lucide-react";
+import { Search, User, Plus, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -15,6 +17,7 @@ interface Parceiro {
   nome: string;
   cpf: string;
   status: string;
+  created_at?: string;
   resultado_por_moeda: SaldosPorMoeda;
   moedas_utilizadas: string[];
   has_parceria?: boolean;
@@ -46,16 +49,23 @@ export function ParceiroListaSidebar({
 }: ParceiroListaSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativo");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc"); // desc = mais recente primeiro
   const { canCreate } = useActionAccess();
 
   const filteredParceiros = useMemo(() => {
-    return parceiros.filter((p) => {
+    const filtered = parceiros.filter((p) => {
       const matchesSearch = p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.cpf.includes(searchTerm);
       const matchesStatus = statusFilter === "todos" || p.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [parceiros, searchTerm, statusFilter]);
+
+    return [...filtered].sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+    });
+  }, [parceiros, searchTerm, statusFilter, sortOrder]);
 
   // Convert SaldosPorMoeda to CurrencyEntry array
   const buildCurrencyEntries = (resultado: SaldosPorMoeda, moedasUtilizadas: string[]): CurrencyEntry[] => {
@@ -71,14 +81,35 @@ export function ParceiroListaSidebar({
     <div className="h-full max-h-full flex flex-col border-r border-border overflow-hidden">
       {/* Header: altura fixa, nunca comprime */}
       <div className="shrink-0 p-3 border-b border-border space-y-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar parceiro..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-9 text-sm"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar parceiro..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-9 text-sm"
+            />
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                onClick={() => setSortOrder(prev => prev === "desc" ? "asc" : "desc")}
+              >
+                {sortOrder === "desc" ? (
+                  <ArrowDown className="h-4 w-4" />
+                ) : (
+                  <ArrowUp className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {sortOrder === "desc" ? "Mais recente primeiro" : "Mais antigo primeiro"}
+            </TooltipContent>
+          </Tooltip>
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="h-9 text-sm">
