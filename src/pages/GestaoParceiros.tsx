@@ -28,6 +28,7 @@ import { ParceiroListaSidebar } from "@/components/parceiros/ParceiroListaSideba
 import { ParceiroDetalhesPanel } from "@/components/parceiros/ParceiroDetalhesPanel";
 import { formatCPF, maskCPFPartial } from "@/lib/validators";
 import { useParceiroFinanceiroCache } from "@/hooks/useParceiroFinanceiroCache";
+import { getGlobalBookmakersCache } from "@/hooks/useParceiroTabsCache";
 import { FIAT_CURRENCIES } from "@/types/currency";
 
 // ============== MULTI-CURRENCY TYPES ==============
@@ -104,6 +105,7 @@ export default function GestaoParceiros() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [parceiroToDelete, setParceiroToDelete] = useState<string | null>(null);
   const [vinculoDialogOpen, setVinculoDialogOpen] = useState(false);
+  const [bookmakerRefreshKey, setBookmakerRefreshKey] = useState(0);
   const [vinculoParceiroId, setVinculoParceiroId] = useState<string | null>(null);
   const [vinculoBookmakerId, setVinculoBookmakerId] = useState<string | null>(null);
   const [editingBookmaker, setEditingBookmaker] = useState<any | null>(null);
@@ -547,7 +549,11 @@ export default function GestaoParceiros() {
     fetchParceiros();
     if (parceiroId) {
       parceiroCache.invalidateCache(parceiroId);
+      // Invalidar cache de bookmakers para atualizar Casas Vinculadas/Disponíveis
+      getGlobalBookmakersCache().delete(parceiroId);
     }
+    // Incrementar key para forçar refresh da aba bookmakers
+    setBookmakerRefreshKey(prev => prev + 1);
   }, [vinculoParceiroId, editingBookmaker?.parceiro_id, parceiroCache]);
 
   const handleCreateVinculo = useCallback((parceiroId: string, bookmakerCatalogoId: string) => {
@@ -774,6 +780,7 @@ export default function GestaoParceiros() {
                 onEditParceiro={handleEditParceiro}
                 onDeleteParceiro={handleDeleteParceiroClick}
                 parceiroCache={parceiroCache}
+                bookmakerRefreshKey={bookmakerRefreshKey}
               />
             </div>
           </Card>

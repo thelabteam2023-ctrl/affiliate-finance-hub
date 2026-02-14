@@ -50,6 +50,7 @@ interface ParceiroDetalhesPanelProps {
   hasParceria?: boolean;
   diasRestantes?: number | null;
   parceiroCache: ParceiroCache;
+  bookmakerRefreshKey?: number;
 }
 
 // Memoizado para evitar re-renders desnecessários quando o parent re-renderiza
@@ -67,7 +68,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   parceiroStatus,
   hasParceria,
   diasRestantes,
-  parceiroCache
+  parceiroCache,
+  bookmakerRefreshKey,
 }: ParceiroDetalhesPanelProps) {
   const data = parceiroCache.resumoData;
   const loading = parceiroCache.resumoLoading;
@@ -945,6 +947,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                 diasRestantes={diasRestantes}
                 onCreateVinculo={onCreateVinculo}
                 onDataChange={handleBookmakersDataChange}
+                refreshKey={bookmakerRefreshKey}
               />
             </TabsContent>
           </div>

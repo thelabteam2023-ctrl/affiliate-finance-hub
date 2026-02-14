@@ -36,6 +36,7 @@ interface ParceiroBookmakersTabProps {
   diasRestantes?: number | null;
   onCreateVinculo?: (parceiroId: string, bookmakerId: string) => void;
   onDataChange?: () => void;
+  refreshKey?: number;
 }
 
 /**
@@ -54,7 +55,8 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
   parceiroId, 
   showSensitiveData, 
   onCreateVinculo, 
-  onDataChange 
+  onDataChange,
+  refreshKey,
 }: ParceiroBookmakersTabProps) {
   const [data, setData] = useState<BookmakersData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -157,24 +159,28 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
     }
   }, [parceiroId, data]);
 
-  // Effect: Carregar dados apenas quando parceiroId muda
+  // Effect: Carregar dados quando parceiroId muda ou refreshKey incrementa
   useEffect(() => {
     isMountedRef.current = true;
     
     const cache = getGlobalBookmakersCache();
     const cached = cache.get(parceiroId);
     
-    if (cached && lastFetchedIdRef.current !== parceiroId) {
-      setData(cached);
-      lastFetchedIdRef.current = parceiroId;
-    } else if (lastFetchedIdRef.current !== parceiroId) {
-      fetchData(false);
+    if (cached) {
+      if (lastFetchedIdRef.current !== parceiroId) {
+        setData(cached);
+        lastFetchedIdRef.current = parceiroId;
+      }
+    } else {
+      // Cache foi invalidado ou parceiroId mudou - recarregar
+      lastFetchedIdRef.current = null;
+      fetchData(true);
     }
     
     return () => {
       isMountedRef.current = false;
     };
-  }, [parceiroId]);
+  }, [parceiroId, refreshKey]);
 
   const handleRefresh = useCallback(() => {
     fetchData(true);
