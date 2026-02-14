@@ -448,9 +448,13 @@ export function ApostaCard({
                 <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" getLogoUrl={getLogoUrl} />
               </div>
             ) : hasSelecoes ? (
-              <p className="text-xs text-muted-foreground truncate uppercase flex-1 hidden sm:block">
-                {aposta.selecoes!.map(s => `${s.descricao} @${Number(s.odd).toFixed(2)}`).join(' + ')}
-              </p>
+              <div className="flex flex-col gap-0.5 flex-1 min-w-0 overflow-hidden">
+                {aposta.selecoes!.map((s, idx) => (
+                  <p key={idx} className="text-xs text-muted-foreground truncate uppercase">
+                    {s.descricao} @{Number(s.odd).toFixed(2)}
+                  </p>
+                ))}
+              </div>
             ) : null}
             
             {/* Odd + Stake à direita */}
