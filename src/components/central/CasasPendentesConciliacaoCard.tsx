@@ -19,6 +19,7 @@ interface CasaPendenteConciliacao {
   saldo_atual: number;
   projeto_id: string | null;
   projeto_nome: string | null;
+  parceiro_nome: string | null;
   qtd_transacoes_pendentes: number;
   valor_total_pendente: number;
 }
@@ -108,6 +109,7 @@ export function CasasPendentesConciliacaoCard({
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">
                         {casa.bookmaker_nome}
+                        {casa.parceiro_nome && <span className="text-muted-foreground font-normal text-sm"> de {casa.parceiro_nome}</span>}
                       </span>
                       <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 animate-pulse" />
                     </div>
@@ -115,7 +117,7 @@ export function CasasPendentesConciliacaoCard({
                       {casa.projeto_nome ? (
                         <span className="text-primary/80">{casa.projeto_nome}</span>
                       ) : (
-                        <span className="text-amber-600 italic">Sem vínculo com projetos</span>
+                        <span className="text-amber-600 italic">Nenhum projeto vinculado</span>
                       )}
                       <span className="mx-1.5">•</span>
                       <span>

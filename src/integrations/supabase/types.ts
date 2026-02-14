@@ -11665,6 +11665,7 @@ export type Database = {
           bookmaker_logo_url: string
           bookmaker_nome: string
           moeda: string
+          parceiro_nome: string
           projeto_id: string
           projeto_nome: string
           qtd_transacoes_pendentes: number
