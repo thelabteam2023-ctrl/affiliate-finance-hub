@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, bonusQueryKeys } from "@/hooks/useProjectBonuses";
 import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
-import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt } from "lucide-react";
+import { useProjectBonusAnalytics } from "@/hooks/useProjectBonusAnalytics";
+import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt, BarChart3 } from "lucide-react";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay } from "date-fns";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
@@ -15,6 +16,7 @@ import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger }
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { BonusResultadoLiquidoChart } from "./BonusResultadoLiquidoChart";
+import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
 
 interface DateRangeResult {
   start: Date;
@@ -50,6 +52,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
+  const { summary: analyticsSummary } = useProjectBonusAnalytics(projetoId);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -323,23 +326,44 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Casas com Bônus</CardTitle>
+            <CardTitle className="text-sm font-medium">Histórico de Casas</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary.bookmakers_with_active_bonus}</div>
-            <p className="text-xs text-muted-foreground">Em modo bônus ativo</p>
+            <div className="text-2xl font-bold">{analyticsSummary.total_bookmakers}</div>
+            <p className="text-xs text-muted-foreground">
+              {analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}
+            </p>
+            {(() => {
+              const statuses = Object.entries(analyticsSummary.status_breakdown).filter(([, v]) => v > 0);
+              const labels: Record<string, string> = { ativas: "Ativas", concluidas: "Concluídas", encerradas: "Encerradas", pausadas: "Pausadas", limitadas: "Limitadas", bloqueadas: "Bloqueadas" };
+              return statuses.length > 0 ? (
+                <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
+                  {statuses.map(([k, v]) => (
+                    <span key={k} className="text-[11px] text-muted-foreground">
+                      {labels[k] || k}: <span className="font-medium text-foreground">{v}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : null;
+            })()}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Bônus Ativo</CardTitle>
-            <Coins className="h-4 w-4 text-warning" />
+            <CardTitle className="text-sm font-medium">Volume Operado</CardTitle>
+            <BarChart3 className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(activeBonusTotalConsolidated)}</div>
-            <p className="text-xs text-muted-foreground">{summary.count_credited} bônus creditados</p>
+            <div className="flex items-center gap-1.5">
+              <div className="text-2xl font-bold truncate">{analyticsSummary.total_stake_display}</div>
+              <CurrencyBreakdownTooltip
+                breakdown={analyticsSummary.volume_breakdown}
+                moedaConsolidacao={analyticsSummary.moeda_consolidacao}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Volume apostado em bônus</p>
           </CardContent>
         </Card>
 
