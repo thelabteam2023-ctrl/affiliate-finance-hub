@@ -940,9 +940,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       const matchesParceiro = selectedParceiroIds.length === 0 || 
         sb.pernas?.some(p => p.bookmaker?.parceiro && selectedParceiroIds.includes((p.bookmaker.parceiro as any).id));
       
-      // Filtro de estratégia
+      // Filtro de estratégia - usar valor real do banco
+      const surebetEstrategia = sb.estrategia || "SUREBET";
       const matchesEstrategia = selectedEstrategias.includes("all") || 
-        selectedEstrategias.includes("SUREBET");
+        selectedEstrategias.includes(surebetEstrategia as any);
       
       const matchesStatus = statusFilter === "all" || sb.status === statusFilter;
       const matchesResultado = resultadoFilter === "all" || sb.resultado === resultadoFilter;
