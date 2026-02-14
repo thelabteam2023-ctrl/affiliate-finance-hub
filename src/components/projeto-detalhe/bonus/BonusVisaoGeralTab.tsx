@@ -51,7 +51,7 @@ interface BonusResultEntry {
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false, periodFilter }: BonusVisaoGeralTabProps) {
   const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
-  const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidation, convertToConsolidationOficial } = useProjetoCurrency(projetoId);
   const { summary: analyticsSummary, stats: analyticsStats } = useProjectBonusAnalytics(projetoId);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -224,8 +224,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const activeBonusTotalConsolidated = useMemo(() => {
     return bonuses
       .filter((b) => b.status === "credited" && (b.saldo_atual || 0) > 0)
-      .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
-  }, [bonuses, convertToConsolidation]);
+      .reduce((acc, b) => acc + convertToConsolidationOficial(b.saldo_atual || 0, b.currency), 0);
+  }, [bonuses, convertToConsolidationOficial]);
 
   // Fetch ajustes pós-limitação (financial_events com AJUSTE_POS_LIMITACAO)
   const { data: ajustesPostLimitacao = [] } = useQuery({
@@ -278,7 +278,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     const eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
     
     const totalBonusCreditado = eligibleBonuses
-      .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
+      .reduce((acc, b) => acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency), 0);
     
     // Breakdown de bônus por moeda original
     const bonusPorMoedaMap: Record<string, number> = {};
@@ -297,12 +297,12 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       }
       
       const moedaOperacao = bet.moeda_operacao || "BRL";
-      return acc + convertToConsolidation(bet.lucro_prejuizo ?? 0, moedaOperacao);
+      return acc + convertToConsolidationOficial(bet.lucro_prejuizo ?? 0, moedaOperacao);
     }, 0);
 
     // Somar ajustes pós-limitação ao juice
     const juiceAjustes = ajustesPostLimitacao.reduce((acc, a) => {
-      return acc + convertToConsolidation(a.valor, a.moeda);
+      return acc + convertToConsolidationOficial(a.valor, a.moeda);
     }, 0);
 
     const totalJuice = juiceBets + juiceAjustes;
@@ -314,7 +314,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       : 0;
     
     return { totalBonusCreditado, totalJuice, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsData, ajustesPostLimitacao, convertToConsolidation]);
+  }, [bonuses, bonusBetsData, ajustesPostLimitacao, convertToConsolidationOficial]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
@@ -386,7 +386,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             <div className="flex items-center gap-1.5">
               <div className="text-2xl font-bold truncate">
                 {formatCurrency(analyticsSummary.volume_breakdown.reduce((acc, item) => 
-                  acc + convertToConsolidation(item.valor, item.moeda), 0
+                  acc + convertToConsolidationOficial(item.valor, item.moeda), 0
                 ))}
               </div>
               <CurrencyBreakdownTooltip
@@ -463,7 +463,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         bonusBets={bonusBetsData}
         ajustesPostLimitacao={ajustesPostLimitacao}
         formatCurrency={formatCurrency}
-        convertToConsolidation={convertToConsolidation}
+        convertToConsolidation={convertToConsolidationOficial}
         isSingleDayPeriod={isSingleDayPeriod}
         dateRange={dateRange}
       />

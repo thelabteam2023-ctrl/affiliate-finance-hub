@@ -180,7 +180,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, convertToConsolidation: convertFn, moedaConsolidacao: moedaConsol } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidation: convertFn, convertToConsolidationOficial: convertFnOficial, moedaConsolidacao: moedaConsol } = useProjetoCurrency(projetoId);
   const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   
   // Hook global de logos de bookmakers (busca do catálogo)
@@ -502,8 +502,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       return Number.isFinite(value) ? value : 0;
     };
 
-    const totalStake = apostas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFn, moedaConsol), 0);
-    const lucroTotal = apostas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertFn, moedaConsol), 0);
+    const totalStake = apostas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFnOficial, moedaConsol), 0);
+    const lucroTotal = apostas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertFnOficial, moedaConsol), 0);
     const pendentes = apostas.filter((a) => !a.resultado || a.resultado === "PENDENTE").length;
     const greens = apostas.filter((a) => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
     const reds = apostas.filter((a) => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
@@ -558,13 +558,13 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
       // Aposta simples
       const casa = a.bookmaker_nome || "Desconhecida";
       if (!porCasa[casa]) porCasa[casa] = { stake: 0, lucro: 0, count: 0 };
-      porCasa[casa].stake += getConsolidatedStake(a, convertFn, moedaConsol);
-      porCasa[casa].lucro += getConsolidatedLucro(a, convertFn, moedaConsol);
+      porCasa[casa].stake += getConsolidatedStake(a, convertFnOficial, moedaConsol);
+      porCasa[casa].lucro += getConsolidatedLucro(a, convertFnOficial, moedaConsol);
       porCasa[casa].count++;
     });
 
     return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown, lucroPorMoeda };
-  }, [apostas, convertFn, moedaConsol]);
+  }, [apostas, convertFnOficial, moedaConsol]);
 
   // Interface para vínculos dentro de cada casa
   interface VinculoData {
@@ -864,7 +864,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           periodStart={tabFilters.dateRange?.start}
           periodEnd={tabFilters.dateRange?.end}
           formatCurrency={formatCurrency}
-          convertToConsolidation={convertFn}
+          convertToConsolidation={convertFnOficial}
           moedaConsolidacao={moedaConsol}
         />
       )}

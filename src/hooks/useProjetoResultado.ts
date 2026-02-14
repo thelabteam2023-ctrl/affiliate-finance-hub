@@ -118,15 +118,13 @@ export function useProjetoResultado({
         .single();
       
       const moedaConsolidacao = projetoData?.moeda_consolidacao || 'BRL';
-      // Se cotacao_trabalho não está definida, usar getRateFallback (cotação oficial da API)
-      let cotacaoTrabalho = projetoData?.cotacao_trabalho || 0;
+      // KPIs SEMPRE usam cotação oficial para análise neutra
+      // A cotação de trabalho é reservada para calculadoras e formulários
+      let cotacaoTrabalho = 0; // Ignorar cotação de trabalho para KPIs
       
-      // CORREÇÃO: Quando cotacao_trabalho é 0/null, usar a taxa oficial da API via getRateFallback
-      // Isso evita o bug de tratar USD como 1:1 com BRL
+      // CORREÇÃO: KPIs usam a taxa oficial da API via getRateFallback
       const getEffectiveCotacao = (moedaOrigem: string): number => {
-        // Se temos cotação de trabalho válida, usar ela
-        if (cotacaoTrabalho > 0) return cotacaoTrabalho;
-        // Senão, usar a taxa oficial da API
+        // Sempre usar a taxa oficial da API para KPIs
         if (getRateFallback) return getRateFallback(moedaOrigem);
         // Último fallback: retornar 0 (convertToConsolidation tratará como "sem conversão")
         return 0;
