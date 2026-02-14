@@ -114,12 +114,14 @@ export function BonusResultadoLiquidoChart({
             count: 0,
           };
         }
-        statsMap[id].total_bonus += b.bonus_amount || 0;
+        const rawAmount = b.bonus_amount || 0;
+        const consolidated = convertToConsolidation ? convertToConsolidation(rawAmount, b.currency || "BRL") : rawAmount;
+        statsMap[id].total_bonus += consolidated;
         statsMap[id].count += 1;
       });
     
     return Object.values(statsMap).sort((a, b) => b.total_bonus - a.total_bonus);
-  }, [bonuses, dateRange]);
+  }, [bonuses, dateRange, convertToConsolidation]);
 
   // Filtra bônus pelo bookmaker selecionado
   const filteredBonuses = useMemo(() => {
@@ -142,7 +144,9 @@ export function BonusResultadoLiquidoChart({
           if (bonusDate < dateRange.start || bonusDate > dateRange.end) return;
         }
         
-        bonusByDate[date] = (bonusByDate[date] || 0) + (b.bonus_amount || 0);
+        const rawAmount = b.bonus_amount || 0;
+        const consolidated = convertToConsolidation ? convertToConsolidation(rawAmount, b.currency || "BRL") : rawAmount;
+        bonusByDate[date] = (bonusByDate[date] || 0) + consolidated;
       });
 
     // Agrupa juice (P&L das apostas com bônus) por data
