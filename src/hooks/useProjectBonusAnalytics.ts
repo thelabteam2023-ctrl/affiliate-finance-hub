@@ -49,12 +49,31 @@ export interface BookmakerBonusStats {
   rollover_efficiency: number; // Lucro / Volume Apostado * 100
 }
 
+export interface BookmakerStatusBreakdown {
+  ativas: number;
+  concluidas: number;
+  encerradas: number;
+  pausadas: number;
+  limitadas: number;
+  bloqueadas: number;
+}
+
+export interface CurrencyVolumeBreakdown {
+  moeda: string;
+  valor: number;
+}
+
 export interface ProjectBonusAnalyticsSummary {
   total_bookmakers: number;
   total_bonus_count: number;
   primary_currency: string | 'MULTI';
   total_bonus_value_display: string;
   total_stake_display: string;
+  // New fields
+  status_breakdown: BookmakerStatusBreakdown;
+  volume_breakdown: CurrencyVolumeBreakdown[];
+  total_volume_consolidated: number;
+  moeda_consolidacao: string;
 }
 
 interface UseProjectBonusAnalyticsReturn {
@@ -67,6 +86,8 @@ interface UseProjectBonusAnalyticsReturn {
 
 export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnalyticsReturn {
   const [stats, setStats] = useState<BookmakerBonusStats[]>([]);
+  const [bookmakerStatuses, setBookmakerStatuses] = useState<Map<string, string>>(new Map());
+  const [moedaConsolidacaoProjeto, setMoedaConsolidacaoProjeto] = useState<string>('BRL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,6 +115,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
           bookmakers!project_bookmaker_link_bonuses_bookmaker_id_fkey (
             id,
             moeda,
+            status,
             bookmaker_catalogo_id,
             nome,
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (
@@ -124,6 +146,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
           id,
           bookmaker_id,
           stake,
+          stake_consolidado,
           resultado,
           status,
           bonus_id,
@@ -136,6 +159,13 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
         .eq("projeto_id", projectId)
         .in("bookmaker_id", bookmakerIds)
         .neq("status", "CANCELADA");
+
+      // 2b. Buscar moeda de consolidação do projeto
+      const { data: projetoData } = await supabase
+        .from("projetos")
+        .select("moeda_consolidacao")
+        .eq("id", projectId)
+        .single();
 
       if (betsError) throw betsError;
 
@@ -160,6 +190,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
         nome: string;
         logo_url: string | null;
         currency: string;
+        bookmakerStatuses: Set<string>;
         bookmakerIds: Set<string>;
         bonus: typeof bonusData;
         bets: typeof betsData;
@@ -180,6 +211,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
             nome: catalogoInfo?.nome || b.bookmakers?.nome || 'Casa Desconhecida',
             logo_url: catalogoInfo?.logo_url || null,
             currency,
+            bookmakerStatuses: new Set(),
             bookmakerIds: new Set(),
             bonus: [],
             bets: [],
@@ -191,6 +223,9 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
         const entry = catalogoMap.get(catalogoId)!;
         entry.bonus.push(b);
         entry.bookmakerIds.add(b.bookmaker_id);
+        if (b.bookmakers?.status) {
+          entry.bookmakerStatuses.add(b.bookmakers.status);
+        }
         entry.totalDeposits += Number(b.deposit_amount) || 0;
       });
 
@@ -291,6 +326,18 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
       // Ordenar por ROI decrescente
       statsArray.sort((a, b) => b.roi - a.roi);
 
+      // Coletar statuses individuais de bookmakers
+      const statusMap = new Map<string, string>();
+      catalogoMap.forEach((data) => {
+        // Each bonus has a bookmaker with a status
+        (data.bonus as any[]).forEach((b: any) => {
+          if (b.bookmaker_id && b.bookmakers?.status) {
+            statusMap.set(b.bookmaker_id, b.bookmakers.status);
+          }
+        });
+      });
+      setBookmakerStatuses(statusMap);
+      setMoedaConsolidacaoProjeto(projetoData?.moeda_consolidacao || 'BRL');
       setStats(statsArray);
     } catch (err) {
       console.error("Error fetching project bonus analytics:", err);
@@ -306,6 +353,10 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
   }, [fetchAnalytics]);
 
   const summary = useMemo((): ProjectBonusAnalyticsSummary => {
+    const emptyBreakdown: BookmakerStatusBreakdown = {
+      ativas: 0, concluidas: 0, encerradas: 0, pausadas: 0, limitadas: 0, bloqueadas: 0,
+    };
+
     if (stats.length === 0) {
       return {
         total_bookmakers: 0,
@@ -313,6 +364,10 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
         primary_currency: 'BRL',
         total_bonus_value_display: 'R$ 0',
         total_stake_display: 'R$ 0',
+        status_breakdown: emptyBreakdown,
+        volume_breakdown: [],
+        total_volume_consolidated: 0,
+        moeda_consolidacao: moedaConsolidacaoProjeto,
       };
     }
 
@@ -328,6 +383,18 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
     
     let totalBonusValueDisplay: string;
     let totalStakeDisplay: string;
+    
+    // Volume breakdown by currency
+    const volumeByCurrency: Record<string, number> = {};
+    stats.forEach(s => {
+      volumeByCurrency[s.currency] = (volumeByCurrency[s.currency] || 0) + s.total_stake;
+    });
+    const volumeBreakdown: CurrencyVolumeBreakdown[] = Object.entries(volumeByCurrency)
+      .map(([moeda, valor]) => ({ moeda, valor }))
+      .filter(item => Math.abs(item.valor) >= 0.01);
+
+    // Total volume consolidated (use stake_consolidado when available, otherwise raw sum)
+    const totalVolumeConsolidated = stats.reduce((sum, s) => sum + s.total_stake, 0);
     
     if (isMultiCurrency) {
       const byCurrency: Record<string, { bonus: number; stake: number }> = {};
@@ -353,14 +420,38 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
       totalStakeDisplay = formatValue(totalStake, currency);
     }
 
+    // Status breakdown from bookmaker instances
+    const statusBreakdown: BookmakerStatusBreakdown = { ...emptyBreakdown };
+    const statusMapping: Record<string, keyof BookmakerStatusBreakdown> = {
+      'ativo': 'ativas',
+      'limitada': 'limitadas',
+      'encerrada': 'encerradas',
+      'bloqueada': 'bloqueadas',
+      'pausada': 'pausadas',
+    };
+    
+    bookmakerStatuses.forEach((status) => {
+      const key = statusMapping[status.toLowerCase()];
+      if (key) {
+        statusBreakdown[key]++;
+      } else {
+        // Treat unknown statuses as "concluidas" if finalized, otherwise ativas
+        statusBreakdown.ativas++;
+      }
+    });
+
     return {
-      total_bookmakers: stats.length,
+      total_bookmakers: bookmakerStatuses.size,
       total_bonus_count: totalBonusCount,
       primary_currency: isMultiCurrency ? 'MULTI' : (currencies[0] || 'BRL'),
       total_bonus_value_display: totalBonusValueDisplay,
       total_stake_display: totalStakeDisplay,
+      status_breakdown: statusBreakdown,
+      volume_breakdown: volumeBreakdown,
+      total_volume_consolidated: totalVolumeConsolidated,
+      moeda_consolidacao: moedaConsolidacaoProjeto,
     };
-  }, [stats]);
+  }, [stats, bookmakerStatuses, moedaConsolidacaoProjeto]);
 
   return {
     stats,
