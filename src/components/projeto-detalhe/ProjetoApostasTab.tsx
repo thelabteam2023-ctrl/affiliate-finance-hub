@@ -140,6 +140,8 @@ interface Aposta {
 
 interface ApostaMultipla {
   id: string;
+  evento?: string | null;
+  esporte?: string | null;
   tipo_multipla: string;
   stake: number;
   odd_final: number;
@@ -474,7 +476,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          id, data_aposta, stake, odd_final, lucro_prejuizo, valor_retorno,
+          id, data_aposta, evento, esporte, stake, odd_final, lucro_prejuizo, valor_retorno,
           status, resultado, observacoes, bookmaker_id, estrategia,
           tipo_freebet, gerou_freebet, valor_freebet_gerada, is_bonus_bet,
           contexto_operacional, forma_registro, selecoes, tipo_multipla, retorno_potencial,
@@ -1387,19 +1389,20 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             const parceiroNomeMultipla = multipla.bookmaker?.parceiro?.nome;
             const logoUrlMultipla = multipla.bookmaker?.bookmakers_catalogo?.logo_url;
             
-            // Determinar estratégia
+            // Determinar estratégia - mesma lógica do simples
             let estrategiaMultipla: string = "NORMAL";
             if (multipla.gerou_freebet) estrategiaMultipla = "FREEBET";
             else if (multipla.estrategia === "SUREBET") estrategiaMultipla = "SUREBET";
             else if (multipla.estrategia === "DUPLO_GREEN") estrategiaMultipla = "DUPLO_GREEN";
+            else if (multipla.estrategia === "VALUEBET") estrategiaMultipla = "VALUEBET";
             else if (item.contexto === "FREEBET") estrategiaMultipla = "FREEBET";
             else if (item.contexto === "BONUS") estrategiaMultipla = "BONUS";
             
             // Preparar dados para ApostaCard (múltipla) - moeda ORIGINAL
              const multiplaCardData = {
                id: multipla.id,
-               evento: `Múltipla ${multipla.tipo_multipla}`,
-               esporte: `${multipla.selecoes.length} seleções`,
+               evento: (multipla as any).evento || '',
+               esporte: (multipla as any).esporte || '',
                odd_final: multipla.odd_final,
                stake: multipla.stake,
                data_aposta: multipla.data_aposta,
