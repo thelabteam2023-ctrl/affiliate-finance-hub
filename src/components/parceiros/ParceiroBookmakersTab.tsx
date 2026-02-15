@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { getCurrencySymbol } from "@/types/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -211,15 +212,14 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
   const handleCreateVinculo = (bookmakerId: string) => { onCreateVinculo?.(parceiroId, bookmakerId); };
 
   // Usar saldo_atual para todas as moedas (normalizado no banco)
-  const isUSDMoeda = (moeda: string) => moeda === "USD" || moeda === "USDT";
   const getSaldoCorreto = (bm: BookmakerVinculado) => bm.saldo_atual || 0;
 
-  const formatCurrency = (value: number, moeda: string = "BRL") => {
-    const symbol = isUSDMoeda(moeda) ? "$" : "R$";
+  const formatCurrencyLocal = (value: number, moeda: string = "BRL") => {
+    const symbol = getCurrencySymbol(moeda);
     return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value).replace(/^/, `${symbol} `);
   };
 
-  const maskCurrency = (value: number, moeda: string = "BRL") => showSensitiveData ? formatCurrency(value, moeda) : (isUSDMoeda(moeda) ? "$ ••••" : "R$ ••••");
+  const maskCurrency = (value: number, moeda: string = "BRL") => showSensitiveData ? formatCurrencyLocal(value, moeda) : `${getCurrencySymbol(moeda)} ••••`;
 
   const decryptPassword = (encrypted: string) => { if (!encrypted) return ""; try { return atob(encrypted); } catch { return encrypted; } };
 
@@ -314,7 +314,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
                       )}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Badge variant="outline" className={`text-[8px] px-1 py-0 h-3.5 ${isUSDMoeda(bm.moeda) ? "border-amber-500/50 text-amber-500" : "border-emerald-500/50 text-emerald-500"}`}>{isUSDMoeda(bm.moeda) ? "USD" : "BRL"}</Badge>
+                      <Badge variant="outline" className={`text-[8px] px-1 py-0 h-3.5 ${bm.moeda === "BRL" ? "border-emerald-500/50 text-emerald-500" : "border-amber-500/50 text-amber-500"}`}>{bm.moeda || "BRL"}</Badge>
                       <span className="text-[10px] font-medium">{maskCurrency(getSaldoCorreto(bm), bm.moeda)}</span>
                     </div>
                   </div>
