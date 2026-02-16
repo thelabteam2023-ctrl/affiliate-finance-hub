@@ -34,20 +34,37 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
   }, [bonuses, convertToConsolidationOficial]);
 
   // Fetch apostas com bônus para calcular juice
+  // INCLUI: apostas com bonus_id OU estratégia EXTRACAO_BONUS (mesmo sem bonus_id)
   const { data: bonusBetsData = [], isLoading: betsLoading } = useQuery({
     queryKey: ["bonus-bets-summary", projetoId],
     queryFn: async () => {
       const startDate = subDays(new Date(), 365).toISOString();
+      const startDateStr = startDate.split('T')[0];
       
-      const { data, error } = await supabase
+      // Query 1: apostas vinculadas via bonus_id
+      const queryBonusId = supabase
         .from("apostas_unificada")
         .select("id, pl_consolidado, lucro_prejuizo, moeda_operacao")
         .eq("projeto_id", projetoId)
-        .gte("data_aposta", startDate.split('T')[0])
+        .gte("data_aposta", startDateStr)
         .not("bonus_id", "is", null);
 
-      if (error) throw error;
-      return data || [];
+      // Query 2: apostas com estratégia EXTRACAO_BONUS (mesmo sem bonus_id)
+      const queryEstrategia = supabase
+        .from("apostas_unificada")
+        .select("id, pl_consolidado, lucro_prejuizo, moeda_operacao")
+        .eq("projeto_id", projetoId)
+        .gte("data_aposta", startDateStr)
+        .eq("estrategia", "EXTRACAO_BONUS");
+
+      const [resBonusId, resEstrategia] = await Promise.all([queryBonusId, queryEstrategia]);
+      
+      if (resBonusId.error) throw resBonusId.error;
+      if (resEstrategia.error) throw resEstrategia.error;
+
+      // Combinar removendo duplicados por id
+      const allBets = [...(resBonusId.data || []), ...(resEstrategia.data || [])];
+      return Array.from(new Map(allBets.map(b => [b.id, b])).values());
     },
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
