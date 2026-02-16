@@ -82,10 +82,13 @@ import {
   Globe,
   Lock,
   TrendingDown,
+  ArrowUpDown,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
 import { SaldoOperavelDisplay } from "@/components/ui/saldo-operavel-display";
+
+type VinculoSortMode = "alpha" | "newest" | "oldest";
 
 interface ProjetoVinculosTabProps {
   projetoId: string;
@@ -152,6 +155,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [selectedCasas, setSelectedCasas] = useState<string[]>([]);
   const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
   const [ajusteVinculo, setAjusteVinculo] = useState<Vinculo | null>(null);
+  const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
 
@@ -366,6 +370,27 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     
     return matchesSearch && matchesBonusFilter && matchesCasaFilter && matchesParceiroFilter;
   });
+
+  // Aplicar ordenação
+  const sortedVinculos = useMemo(() => {
+    const sorted = [...filteredVinculos];
+    if (sortMode === "newest") {
+      sorted.sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      });
+    } else if (sortMode === "oldest") {
+      sorted.sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateA - dateB;
+      });
+    } else {
+      sorted.sort((a, b) => a.nome.localeCompare(b.nome));
+    }
+    return sorted;
+  }, [filteredVinculos, sortMode]);
 
   const toggleSelection = (id: string) => {
     setSelectedIds((prev) =>
@@ -628,12 +653,35 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             className="pl-10"
           />
         </div>
+
+        {/* Sort toggle */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 shrink-0"
+                onClick={() => {
+                  setSortMode(prev => 
+                    prev === "alpha" ? "newest" : prev === "newest" ? "oldest" : "alpha"
+                  );
+                }}
+              >
+                <ArrowUpDown className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{sortMode === "alpha" ? "A-Z (Alfabético)" : sortMode === "newest" ? "Mais recente primeiro" : "Mais antigo primeiro"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Lista de Vínculos Ativos — scroll interno (anti-regressão) */}
       <div className="relative">
         <ScrollArea className="h-[520px] pr-2">
-          {filteredVinculos.length === 0 ? (
+          {sortedVinculos.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-10">
@@ -656,7 +704,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         </Card>
       ) : viewMode === "cards" ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredVinculos.map((vinculo) => (
+          {sortedVinculos.map((vinculo) => (
             <Card key={vinculo.id} className="relative group">
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
@@ -870,7 +918,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         <Card>
           <CardContent className="p-0">
             <div className="divide-y divide-border">
-              {filteredVinculos.map((vinculo) => (
+              {sortedVinculos.map((vinculo) => (
                 <div
                   key={vinculo.id}
                   className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"

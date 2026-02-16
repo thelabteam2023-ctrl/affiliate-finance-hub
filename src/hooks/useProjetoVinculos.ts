@@ -32,6 +32,7 @@ export interface Vinculo {
   logo_url?: string | null;
   totalApostas: number;
   has_pending_transactions: boolean;
+  created_at: string | null;
 }
 
 export interface BookmakerDisponivel {
@@ -126,6 +127,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
         login_username: string; 
         login_password_encrypted: string | null;
         bookmaker_catalogo_id: string | null;
+        created_at: string | null;
       }> = {};
       let apostasCount: Record<string, number> = {};
 
@@ -133,7 +135,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
         // Buscar credenciais e status das bookmakers
         const { data: bookmarkersDetails } = await supabase
           .from("bookmakers")
-          .select("id, status, login_username, login_password_encrypted, bookmaker_catalogo_id")
+          .select("id, status, login_username, login_password_encrypted, bookmaker_catalogo_id, created_at")
           .in("id", bookmakerIds);
 
         if (bookmarkersDetails) {
@@ -142,7 +144,8 @@ export function useProjetoVinculos(projetoId: string | undefined) {
               status: b.status,
               login_username: b.login_username,
               login_password_encrypted: b.login_password_encrypted,
-              bookmaker_catalogo_id: b.bookmaker_catalogo_id
+              bookmaker_catalogo_id: b.bookmaker_catalogo_id,
+              created_at: b.created_at || null,
             };
           });
         }
@@ -170,7 +173,8 @@ export function useProjetoVinculos(projetoId: string | undefined) {
           status: "ativo",
           login_username: "",
           login_password_encrypted: null,
-          bookmaker_catalogo_id: null
+          bookmaker_catalogo_id: null,
+          created_at: null
         };
 
         return {
@@ -193,6 +197,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
           logo_url: s.logo_url || null,
           totalApostas: apostasCount[s.id] || 0,
           has_pending_transactions: Boolean(s.has_pending_transactions),
+          created_at: creds.created_at,
         };
       });
     },
