@@ -558,6 +558,18 @@ export function VisaoGeralCharts({
   // DESACOPLAMENTO: O calendário usa seus próprios dados (sem filtro de período)
   // Se apostasCalendario não for fornecido, usa apostas como fallback
   const calendarData = apostasCalendario ?? apostas;
+
+  // Helper de consolidação multi-moeda — usado em periodTotal, evolução e calendário
+  const consolidateLucro = (a: ApostaBase): number => {
+    const rawLucro = a.lucro_prejuizo ?? 0;
+    if (typeof a.pl_consolidado === "number") return a.pl_consolidado;
+    const moedaOp = a.moeda_operacao || "BRL";
+    if (moedaConsolidacao && moedaOp === moedaConsolidacao) return rawLucro;
+    if (moedaConsolidacao === "BRL" && typeof a.lucro_prejuizo_brl_referencia === "number") return a.lucro_prejuizo_brl_referencia;
+    if (convertToConsolidation && moedaOp !== (moedaConsolidacao || "BRL")) return convertToConsolidation(rawLucro, moedaOp);
+    return rawLucro;
+  };
+
   // Fallback para formatChartAxis se não fornecido - usa versão compacta do formatCurrency
   const axisFormatter = formatChartAxis || ((v: number) => {
     const absVal = Math.abs(v);
@@ -579,7 +591,7 @@ export function VisaoGeralCharts({
     // apostas já vem filtrada pelo período selecionado (mês atual, anterior, ano, etc.)
     // CRÍTICO: Usar consolidação multi-moeda para não somar EUR + USD brutos
     apostas.forEach((a) => {
-      total += getConsolidatedLucroLocal(a);
+      total += consolidateLucro(a);
     });
 
     // Extras: filtrar pelo período selecionado (periodStart/periodEnd)
@@ -619,7 +631,7 @@ export function VisaoGeralCharts({
       let acumulado = 0;
       return sorted.map((a, index) => {
         // CRÍTICO: Usar consolidação multi-moeda
-        const impacto = getConsolidatedLucroLocal(a);
+        const impacto = consolidateLucro(a);
         acumulado += impacto;
         const date = parseLocalDateTime(a.data_aposta);
         const dataFormatada = format(date, "dd/MM", { locale: ptBR });
@@ -655,7 +667,7 @@ export function VisaoGeralCharts({
       const date = parseLocalDateTime(a.data_aposta);
       const dataFormatada = format(date, "dd/MM", { locale: ptBR });
       // CRÍTICO: Usar consolidação multi-moeda
-      const impacto = getConsolidatedLucroLocal(a);
+      const impacto = consolidateLucro(a);
       
       const existing = dailyMap.get(dateKey);
       if (existing) {
@@ -760,15 +772,7 @@ export function VisaoGeralCharts({
     return rawStake;
   };
 
-  const getConsolidatedLucroLocal = (a: ApostaBase): number => {
-    const rawLucro = a.lucro_prejuizo ?? 0;
-    if (typeof a.pl_consolidado === "number") return a.pl_consolidado;
-    const moedaOp = a.moeda_operacao || "BRL";
-    if (moedaConsolidacao && moedaOp === moedaConsolidacao) return rawLucro;
-    if (moedaConsolidacao === "BRL" && typeof a.lucro_prejuizo_brl_referencia === "number") return a.lucro_prejuizo_brl_referencia;
-    if (convertToConsolidation && moedaOp !== (moedaConsolidacao || "BRL")) return convertToConsolidation(rawLucro, moedaOp);
-    return rawLucro;
-  };
+  const getConsolidatedLucroLocal = consolidateLucro;
 
   // Casas mais utilizadas (por volume) — agrupa por CASA, com detalhamento por vínculo
   // Formato esperado: "PARIMATCH - RAFAEL GOMES" → Casa = "PARIMATCH", Vínculo = "RAFAEL GOMES"
@@ -938,7 +942,7 @@ export function VisaoGeralCharts({
                       apostas={calendarData.map(a => ({
                         data_aposta: a.data_aposta,
                         resultado: null,
-                        lucro_prejuizo: getConsolidatedLucroLocal(a)
+                        lucro_prejuizo: consolidateLucro(a)
                       }))} 
                       extrasLucro={extrasLucro}
                       titulo="Calendário de Lucros"
@@ -1001,7 +1005,7 @@ export function VisaoGeralCharts({
                       apostas={calendarData.map(a => ({
                         data_aposta: a.data_aposta,
                         resultado: null,
-                        lucro_prejuizo: getConsolidatedLucroLocal(a)
+                        lucro_prejuizo: consolidateLucro(a)
                       }))} 
                       extrasLucro={extrasLucro}
                       titulo="Calendário de Lucros"
