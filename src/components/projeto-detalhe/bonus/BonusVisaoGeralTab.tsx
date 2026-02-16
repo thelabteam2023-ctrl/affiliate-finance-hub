@@ -275,7 +275,18 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação
   // CRÍTICO: Converter TODOS os valores para moeda de consolidação do projeto
   const bonusPerformance = useMemo(() => {
-    const eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
+    // Filtrar bônus por período (usar credited_at como data de competência)
+    let eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
+    
+    if (dateRange?.start || dateRange?.end) {
+      eligibleBonuses = eligibleBonuses.filter(b => {
+        const creditDate = b.credited_at ? new Date(b.credited_at) : null;
+        if (!creditDate) return true; // Sem data, incluir por segurança
+        if (dateRange.start && creditDate < startOfDay(dateRange.start)) return false;
+        if (dateRange.end && creditDate > dateRange.end) return false;
+        return true;
+      });
+    }
     
     const totalBonusCreditado = eligibleBonuses
       .reduce((acc, b) => acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency), 0);
@@ -300,8 +311,18 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       return acc + convertToConsolidationOficial(bet.lucro_prejuizo ?? 0, moedaOperacao);
     }, 0);
 
-    // Somar ajustes pós-limitação ao juice
-    const juiceAjustes = ajustesPostLimitacao.reduce((acc, a) => {
+    // Somar ajustes pós-limitação ao juice - FILTRAR POR PERÍODO
+    let filteredAjustes = ajustesPostLimitacao;
+    if (dateRange?.start || dateRange?.end) {
+      filteredAjustes = ajustesPostLimitacao.filter(a => {
+        const ajusteDate = new Date(a.data_operacional);
+        if (dateRange.start && ajusteDate < startOfDay(dateRange.start)) return false;
+        if (dateRange.end && ajusteDate > dateRange.end) return false;
+        return true;
+      });
+    }
+    
+    const juiceAjustes = filteredAjustes.reduce((acc, a) => {
       return acc + convertToConsolidationOficial(a.valor, a.moeda);
     }, 0);
 
@@ -314,7 +335,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       : 0;
     
     return { totalBonusCreditado, totalJuice, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsData, ajustesPostLimitacao, convertToConsolidationOficial]);
+  }, [bonuses, bonusBetsData, ajustesPostLimitacao, convertToConsolidationOficial, dateRange]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
