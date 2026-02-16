@@ -140,7 +140,7 @@ export function useProjetoResultado({
       const operationalLosses = await fetchOperationalLosses(projetoId, dataInicio, dataFim);
       
       // 4. Fetch dados de capital (saldo bookmakers, depósitos, saques)
-      const capitalData = await fetchCapitalData(projetoId, moedaConsolidacao, cotacaoTrabalho);
+      const capitalData = await fetchCapitalData(projetoId, moedaConsolidacao, cotacaoTrabalho, getEffectiveCotacao);
       
       // 5. Fetch ajustes de conciliação
       const ajustesConciliacao = await fetchConciliacaoAdjustments(projetoId);
@@ -149,7 +149,7 @@ export function useProjetoResultado({
       const lucroGirosGratis = await fetchLucroGirosGratis(projetoId, dataInicio, dataFim);
       
       // 7. Fetch lucro de cashback (sempre >= 0) - inclui automático + manual
-      const lucroCashback = await fetchLucroCashback(projetoId, dataInicio, dataFim, moedaConsolidacao, cotacaoTrabalho);
+      const lucroCashback = await fetchLucroCashback(projetoId, dataInicio, dataFim, moedaConsolidacao, cotacaoTrabalho, getEffectiveCotacao);
       
       // 8. Calcular lucro líquido (fonte única de verdade)
       // net_profit = gross_profit_from_bets + lucro_giros_gratis + lucro_cashback - operational_losses_confirmed + ajustes_conciliacao
@@ -197,38 +197,45 @@ export function useProjetoResultado({
 // Funções auxiliares de fetch
 
 // Helper para converter valor para moeda de consolidação
-// IMPORTANTE: cotacao é a taxa BRL da moedaOrigem (ex: USD=5.16, EUR=5.48)
-// Se cotacao <= 0, retorna o valor original (sem conversão)
+// IMPORTANTE: cotacaoOrigem é a taxa BRL da moedaOrigem (ex: EUR=5.48)
+// cotacaoConsolidacao é a taxa BRL da moedaConsolidacao (ex: USD=5.16)
+// Se cotacaoOrigem <= 0, retorna o valor original (sem conversão)
 function convertToConsolidation(
   valor: number,
   moedaOrigem: string | null,
   moedaConsolidacao: string,
-  cotacao: number
+  cotacaoOrigem: number,
+  cotacaoConsolidacao?: number
 ): number {
   if (!valor) return 0;
   if (!moedaOrigem || moedaOrigem === moedaConsolidacao) return valor;
   
   // PROTEÇÃO: Se cotação inválida, retornar valor sem conversão
-  if (!cotacao || cotacao <= 0) {
-    console.warn('[convertToConsolidation] Cotação inválida:', cotacao, 'para', moedaOrigem, '→', moedaConsolidacao, '- retornando valor original');
+  if (!cotacaoOrigem || cotacaoOrigem <= 0) {
+    console.warn('[convertToConsolidation] Cotação inválida:', cotacaoOrigem, 'para', moedaOrigem, '→', moedaConsolidacao, '- retornando valor original');
     return valor;
   }
   
-  // Conversão genérica via pivot BRL:
-  // moedaOrigem → BRL: valor * cotacao (cotacao = taxa BRL da moeda origem)
-  // BRL → moedaConsolidacao: se consolidação é BRL, já está; se é outra, dividir
+  // Conversão via pivot BRL:
+  // Fórmula universal: (valor * taxaBRL_origem) / taxaBRL_consolidacao
   if (moedaConsolidacao === "BRL") {
     // Qualquer moeda → BRL: valor * taxaBRL
-    return valor * cotacao;
+    return valor * cotacaoOrigem;
   }
   
-  // BRL → outra moeda (ex: BRL → USD): valor / taxaBRL_destino
   if (moedaOrigem === "BRL") {
-    return valor / cotacao;
+    // BRL → outra moeda: valor / taxaBRL_destino
+    const rateConsolidacao = cotacaoConsolidacao || cotacaoOrigem;
+    return valor / rateConsolidacao;
   }
   
-  // Fallback: entre moedas não-BRL, a cotacao já é a taxa efetiva direta
-  return valor * cotacao;
+  // Não-BRL → Não-BRL (ex: EUR → USD): pivot via BRL
+  // (valor * taxaBRL_EUR) / taxaBRL_USD
+  if (!cotacaoConsolidacao || cotacaoConsolidacao <= 0) {
+    console.warn('[convertToConsolidation] Cotação de consolidação ausente para pivot:', moedaOrigem, '→', moedaConsolidacao);
+    return valor;
+  }
+  return (valor * cotacaoOrigem) / cotacaoConsolidacao;
 }
 
 async function fetchGrossProfitFromBets(
@@ -281,9 +288,10 @@ async function fetchGrossProfitFromBets(
     if (moedaConsolidacao === 'BRL' && a.lucro_prejuizo_brl_referencia != null) {
       return acc + Number(a.lucro_prejuizo_brl_referencia);
     }
-    // 4. Converter: usar cotação efetiva (trabalho ou API fallback)
-    const taxaEfetiva = (cotacao > 0) ? cotacao : (getEffectiveCotacao ? getEffectiveCotacao(moedaOrigem) : 0);
-    return acc + convertToConsolidation(valorOriginal, moedaOrigem, moedaConsolidacao, taxaEfetiva);
+    // 4. Converter via pivot BRL: precisamos da taxa da moeda ORIGEM e da moeda CONSOLIDAÇÃO
+    const taxaOrigem = (cotacao > 0) ? cotacao : (getEffectiveCotacao ? getEffectiveCotacao(moedaOrigem) : 0);
+    const taxaConsolidacao = (getEffectiveCotacao && moedaConsolidacao !== 'BRL') ? getEffectiveCotacao(moedaConsolidacao) : undefined;
+    return acc + convertToConsolidation(valorOriginal, moedaOrigem, moedaConsolidacao, taxaOrigem, taxaConsolidacao);
   }, 0) || 0;
 }
 
@@ -341,9 +349,10 @@ async function fetchTotalStaked(
     if (moedaConsolidacao === 'BRL' && a.valor_brl_referencia != null) {
       return acc + Number(a.valor_brl_referencia);
     }
-    // 4. Converter: usar cotação efetiva (trabalho ou API fallback)
-    const taxaEfetiva = (cotacao > 0) ? cotacao : (getEffectiveCotacao ? getEffectiveCotacao(moedaOrigem) : 0);
-    return acc + convertToConsolidation(valorOriginal, moedaOrigem, moedaConsolidacao, taxaEfetiva);
+    // 4. Converter via pivot BRL: precisamos da taxa da moeda ORIGEM e da moeda CONSOLIDAÇÃO
+    const taxaOrigem = (cotacao > 0) ? cotacao : (getEffectiveCotacao ? getEffectiveCotacao(moedaOrigem) : 0);
+    const taxaConsolidacao = (getEffectiveCotacao && moedaConsolidacao !== 'BRL') ? getEffectiveCotacao(moedaConsolidacao) : undefined;
+    return acc + convertToConsolidation(valorOriginal, moedaOrigem, moedaConsolidacao, taxaOrigem, taxaConsolidacao);
   }, 0) || 0;
 }
 
@@ -474,7 +483,8 @@ async function fetchLucroCashback(
   dataInicio: Date | null,
   dataFim: Date | null,
   moedaConsolidacao: string,
-  cotacao: number
+  cotacao: number,
+  getEffectiveCotacao?: (moeda: string) => number
 ): Promise<number> {
   // Buscar apenas cashback manual
   let query = supabase
@@ -509,15 +519,18 @@ async function fetchLucroCashback(
       return acc + Math.max(0, Number(cb.valor_brl_referencia));
     }
     
-    // Converter para moeda de consolidação
-    return acc + Math.max(0, convertToConsolidation(valor, moeda, moedaConsolidacao, cotacao));
+    // Converter para moeda de consolidação (com pivot se necessário)
+    const taxaOrigem = (cotacao > 0) ? cotacao : (getEffectiveCotacao ? getEffectiveCotacao(moeda) : 0);
+    const taxaConsolidacao = (getEffectiveCotacao && moedaConsolidacao !== 'BRL') ? getEffectiveCotacao(moedaConsolidacao) : undefined;
+    return acc + Math.max(0, convertToConsolidation(valor, moeda, moedaConsolidacao, taxaOrigem, taxaConsolidacao));
   }, 0) || 0;
 }
 
 async function fetchCapitalData(
   projetoId: string,
   moedaConsolidacao: string,
-  cotacao: number
+  cotacao: number,
+  getEffectiveCotacao?: (moeda: string) => number
 ): Promise<{
   saldoBookmakers: number;
   saldoIrrecuperavel: number;
@@ -533,11 +546,18 @@ async function fetchCapitalData(
     console.error("[fetchCapitalData] Erro na RPC get_bookmaker_saldos:", rpcError);
   }
 
+  // Helper local para conversão com pivot
+  const convertLocal = (valor: number, moedaOrigem: string) => {
+    const taxaOrigem = (cotacao > 0) ? cotacao : (getEffectiveCotacao ? getEffectiveCotacao(moedaOrigem) : 0);
+    const taxaConsolidacao = (getEffectiveCotacao && moedaConsolidacao !== 'BRL') ? getEffectiveCotacao(moedaConsolidacao) : undefined;
+    return convertToConsolidation(valor, moedaOrigem, moedaConsolidacao, taxaOrigem, taxaConsolidacao);
+  };
+
   // Usar saldo_operavel que já inclui real + freebet + bonus - em_aposta
   // Converter para moeda de consolidação do projeto
   const saldoBookmakers = rpcData?.reduce((acc: number, b: any) => {
     const moedaOrigem = b.moeda || 'BRL';
-    return acc + convertToConsolidation(Number(b.saldo_operavel || 0), moedaOrigem, moedaConsolidacao, cotacao);
+    return acc + convertLocal(Number(b.saldo_operavel || 0), moedaOrigem);
   }, 0) || 0;
   
   // Buscar saldo irrecuperável separadamente (não está na RPC)
@@ -548,7 +568,7 @@ async function fetchCapitalData(
 
   const saldoIrrecuperavel = bookmarkersIrrec?.reduce((acc, b) => {
     const moedaOrigem = b.moeda || 'BRL';
-    return acc + convertToConsolidation(Number(b.saldo_irrecuperavel || 0), moedaOrigem, moedaConsolidacao, cotacao);
+    return acc + convertLocal(Number(b.saldo_irrecuperavel || 0), moedaOrigem);
   }, 0) || 0;
 
   // Buscar histórico de bookmakers do projeto
@@ -571,7 +591,7 @@ async function fetchCapitalData(
     ?.filter(d => historicalIds.has(d.destino_bookmaker_id))
     .reduce((acc, d) => {
       const moedaOrigem = d.moeda || 'BRL';
-      return acc + convertToConsolidation(Number(d.valor), moedaOrigem, moedaConsolidacao, cotacao);
+      return acc + convertLocal(Number(d.valor), moedaOrigem);
     }, 0) || 0;
 
   // Saques - com moeda para conversão
@@ -586,7 +606,7 @@ async function fetchCapitalData(
     ?.filter(s => historicalIds.has(s.origem_bookmaker_id))
     .reduce((acc, s) => {
       const moedaOrigem = s.moeda || 'BRL';
-      return acc + convertToConsolidation(Number(s.valor), moedaOrigem, moedaConsolidacao, cotacao);
+      return acc + convertLocal(Number(s.valor), moedaOrigem);
     }, 0) || 0;
 
   return {
