@@ -288,32 +288,16 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     });
     const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({ moeda, valor }));
     
-    // DEBUG: Auditoria do cálculo de juice
-    const debugByMoeda: Record<string, { count: number; rawSum: number; convertedSum: number }> = {};
-    let skippedCount = 0;
-    
     const juiceBets = bonusBetsData.reduce((acc, bet) => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
-      if (!isBonusBet) {
-        skippedCount++;
-        return acc;
-      }
+      if (!isBonusBet) return acc;
       
       if (bet.pl_consolidado != null) {
         return acc + bet.pl_consolidado;
       }
       
       const moedaOperacao = bet.moeda_operacao || "BRL";
-      const converted = convertToConsolidationOficial(bet.lucro_prejuizo ?? 0, moedaOperacao);
-      
-      if (!debugByMoeda[moedaOperacao]) {
-        debugByMoeda[moedaOperacao] = { count: 0, rawSum: 0, convertedSum: 0 };
-      }
-      debugByMoeda[moedaOperacao].count++;
-      debugByMoeda[moedaOperacao].rawSum += bet.lucro_prejuizo ?? 0;
-      debugByMoeda[moedaOperacao].convertedSum += converted;
-      
-      return acc + converted;
+      return acc + convertToConsolidationOficial(bet.lucro_prejuizo ?? 0, moedaOperacao);
     }, 0);
 
     // Somar ajustes pós-limitação ao juice
@@ -322,16 +306,6 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     }, 0);
 
     const totalJuice = juiceBets + juiceAjustes;
-    
-    console.log("[BonusPerformance AUDIT]", {
-      totalBets: bonusBetsData.length,
-      skippedCount,
-      juiceBets,
-      juiceAjustes,
-      totalJuice,
-      debugByMoeda,
-      ajustesCount: ajustesPostLimitacao.length,
-    });
     
     const total = totalBonusCreditado + totalJuice;
     
