@@ -938,7 +938,7 @@ export function VisaoGeralCharts({
                       apostas={calendarData.map(a => ({
                         data_aposta: a.data_aposta,
                         resultado: null,
-                        lucro_prejuizo: a.lucro_prejuizo
+                        lucro_prejuizo: getConsolidatedLucroLocal(a)
                       }))} 
                       extrasLucro={extrasLucro}
                       titulo="Calendário de Lucros"
@@ -1001,7 +1001,7 @@ export function VisaoGeralCharts({
                       apostas={calendarData.map(a => ({
                         data_aposta: a.data_aposta,
                         resultado: null,
-                        lucro_prejuizo: a.lucro_prejuizo
+                        lucro_prejuizo: getConsolidatedLucroLocal(a)
                       }))} 
                       extrasLucro={extrasLucro}
                       titulo="Calendário de Lucros"
