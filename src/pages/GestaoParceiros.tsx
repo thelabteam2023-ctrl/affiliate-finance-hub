@@ -112,6 +112,7 @@ export default function GestaoParceiros() {
   const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
   const [transacaoBookmaker, setTransacaoBookmaker] = useState<{ id: string; nome: string; saldo_atual: number; saldo_usd?: number; moeda: string } | null>(null);
   const [transacaoTipo, setTransacaoTipo] = useState<string>("deposito");
+  const [transacaoEntryPoint, setTransacaoEntryPoint] = useState<string | undefined>(undefined);
   const [vinculoCriadoConfirmOpen, setVinculoCriadoConfirmOpen] = useState(false);
   const [vinculoCriadoContext, setVinculoCriadoContext] = useState<VinculoCriadoContext | null>(null);
   // Persistência: Inicializa com o último parceiro selecionado do localStorage
@@ -592,6 +593,7 @@ export default function GestaoParceiros() {
       moeda,
     });
     setTransacaoTipo(tipo === "deposito" ? "DEPOSITO" : "SAQUE");
+    setTransacaoEntryPoint(undefined);
     setTransacaoDialogOpen(true);
   }, []);
 
@@ -612,12 +614,14 @@ export default function GestaoParceiros() {
       moeda: vinculoCriadoContext.moeda,
     });
     setTransacaoTipo("DEPOSITO");
+    setTransacaoEntryPoint("affiliate_deposit");
     setTransacaoDialogOpen(true);
   }, [vinculoCriadoContext]);
 
   const handleTransacaoClose = useCallback(() => {
     setTransacaoDialogOpen(false);
     setTransacaoBookmaker(null);
+    setTransacaoEntryPoint(undefined);
     if (selectedParceiroDetalhes) {
       parceiroCache.invalidateCache(selectedParceiroDetalhes);
     }
@@ -825,6 +829,7 @@ export default function GestaoParceiros() {
             defaultDestinoParceiroId={transacaoTipo === "SAQUE" ? selectedParceiroDetalhes || undefined : undefined}
             defaultTipoMoeda="FIAT"
             defaultMoeda={transacaoBookmaker.moeda || "BRL"}
+            entryPoint={transacaoEntryPoint}
           />
         )}
 

@@ -90,6 +90,8 @@ interface CaixaTransacaoDialogProps {
   defaultTipoMoeda?: "FIAT" | "CRYPTO";
   defaultMoeda?: string;
   defaultCoin?: string;
+  /** Entry point identifier for guided focus sequences */
+  entryPoint?: string;
 }
 
 interface ContaBancaria {
@@ -157,6 +159,7 @@ export function CaixaTransacaoDialog({
   defaultTipoMoeda,
   defaultMoeda,
   defaultCoin,
+  entryPoint,
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
@@ -199,6 +202,11 @@ export function CaixaTransacaoDialog({
   const contaBancariaSelectRef = useRef<HTMLButtonElement>(null);
   const walletCryptoSelectRef = useRef<HTMLButtonElement>(null);
   const bookmakerSelectRef = useRef<BookmakerSelectRef>(null);
+  const tipoMoedaSelectRef = useRef<HTMLButtonElement>(null);
+
+  // Guided focus sequence state for affiliate deposit flow
+  const affiliateFocusActiveRef = useRef<boolean>(false);
+  const affiliateFocusStepRef = useRef<number>(0);
 
   // Track previous values to detect changes (origemParceiroId and origemWalletId tracked after their declarations)
   const prevTipoMoeda = useRef<string>(tipoMoeda);
@@ -1149,6 +1157,86 @@ export function CaixaTransacaoDialog({
     prevDestinoBookmakerId.current = destinoBookmakerId;
   }, [destinoBookmakerId, tipoMoeda, tipoTransacao]);
 
+  // ====== GUIDED FOCUS SEQUENCE FOR AFFILIATE DEPOSIT FLOW ======
+  // Activated only when entryPoint === "affiliate_deposit"
+  // Sequence: Tipo de Moeda → Moeda/Coin → Wallet → Qtd Coins
+  useEffect(() => {
+    if (!open || entryPoint !== "affiliate_deposit") return;
+    if (tipoTransacao !== "DEPOSITO") return;
+    
+    // Start guided focus after defaults are applied
+    const timer = setTimeout(() => {
+      affiliateFocusActiveRef.current = true;
+      affiliateFocusStepRef.current = 1;
+      // Step 1: Open Tipo de Moeda selector
+      if (tipoMoedaSelectRef.current) {
+        tipoMoedaSelectRef.current.focus();
+        tipoMoedaSelectRef.current.click();
+      }
+    }, 400);
+    
+    return () => {
+      clearTimeout(timer);
+      affiliateFocusActiveRef.current = false;
+      affiliateFocusStepRef.current = 0;
+    };
+  }, [open, entryPoint, tipoTransacao]);
+
+  // Affiliate focus step 2: After tipoMoeda changes, open coin/moeda selector
+  useEffect(() => {
+    if (!affiliateFocusActiveRef.current || affiliateFocusStepRef.current !== 1) return;
+    if (!tipoMoeda) return;
+    
+    affiliateFocusStepRef.current = 2;
+    setTimeout(() => {
+      if (tipoMoeda === "CRYPTO" && coinSelectRef.current) {
+        coinSelectRef.current.focus();
+        coinSelectRef.current.click();
+      } else if (tipoMoeda === "FIAT" && moedaFiatSelectRef.current) {
+        moedaFiatSelectRef.current.focus();
+        moedaFiatSelectRef.current.click();
+      }
+    }, 200);
+  }, [tipoMoeda]);
+
+  // Affiliate focus step 3: After coin/moeda selected, open wallet/conta selector
+  useEffect(() => {
+    if (!affiliateFocusActiveRef.current || affiliateFocusStepRef.current !== 2) return;
+    const hasMoedaOrCoin = (tipoMoeda === "CRYPTO" && coin) || (tipoMoeda === "FIAT" && moeda);
+    if (!hasMoedaOrCoin) return;
+    
+    affiliateFocusStepRef.current = 3;
+    setTimeout(() => {
+      if (tipoMoeda === "CRYPTO" && walletCryptoSelectRef.current) {
+        walletCryptoSelectRef.current.focus();
+        walletCryptoSelectRef.current.click();
+      } else if (tipoMoeda === "FIAT" && contaBancariaSelectRef.current) {
+        contaBancariaSelectRef.current.focus();
+        contaBancariaSelectRef.current.click();
+      }
+    }, 200);
+  }, [coin, moeda, tipoMoeda]);
+
+  // Affiliate focus step 4: After wallet/conta selected, focus qty/valor input
+  useEffect(() => {
+    if (!affiliateFocusActiveRef.current || affiliateFocusStepRef.current !== 3) return;
+    const hasWalletOrConta = (tipoMoeda === "CRYPTO" && origemWalletId) || (tipoMoeda === "FIAT" && origemContaId);
+    if (!hasWalletOrConta) return;
+    
+    affiliateFocusStepRef.current = 4;
+    affiliateFocusActiveRef.current = false;
+    
+    if (tipoMoeda === "CRYPTO" && qtdCoinInputRef.current) {
+      setTimeout(() => {
+        qtdCoinInputRef.current?.focus();
+      }, 200);
+    } else if (tipoMoeda === "FIAT" && valorFiatInputRef.current) {
+      setTimeout(() => {
+        valorFiatInputRef.current?.focus();
+      }, 200);
+    }
+  }, [origemWalletId, origemContaId, tipoMoeda]);
+
   // Buscar dados da bookmaker selecionada e atualizar o array local
   useEffect(() => {
     const fetchSelectedBookmaker = async () => {
@@ -1430,6 +1518,10 @@ export function CaixaTransacaoDialog({
     prevDestinoWalletId.current = "";
     prevDestinoContaId.current = "";
     prevOrigemBookmakerId.current = "";
+    
+    // Reset affiliate guided focus
+    affiliateFocusActiveRef.current = false;
+    affiliateFocusStepRef.current = 0;
   };
 
   const getSaldoAtual = (tipo: string, id?: string): number => {
@@ -3892,7 +3984,7 @@ export function CaixaTransacaoDialog({
               <div className="space-y-2">
                 <Label className="text-center block">Tipo de Moeda</Label>
                 <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
-                  <SelectTrigger>
+                  <SelectTrigger ref={tipoMoedaSelectRef}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -4014,7 +4106,7 @@ export function CaixaTransacaoDialog({
                 <div className="space-y-2">
                   <Label className="text-center block">Tipo de Moeda</Label>
                   <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
-                    <SelectTrigger>
+                    <SelectTrigger ref={tipoMoedaSelectRef}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -4164,7 +4256,7 @@ export function CaixaTransacaoDialog({
             <div className="space-y-2">
               <Label>Tipo de Moeda</Label>
               <Select value={tipoMoeda} onValueChange={setTipoMoeda}>
-                <SelectTrigger>
+                <SelectTrigger ref={tipoMoedaSelectRef}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
