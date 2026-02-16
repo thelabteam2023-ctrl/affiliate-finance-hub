@@ -439,7 +439,8 @@ export function CaixaTransacaoDialog({
     prevCoin.current = coin;
     
     // Auto-focus para próximo passo (se não estiver no fluxo de SAQUE CRYPTO que já tem bookmaker)
-    if (tipoTransacao === "DEPOSITO" && coin && parceiroSelectRef.current) {
+    // Não abrir parceiro durante fluxo guiado de affiliate_deposit (o fluxo cuida da sequência)
+    if (tipoTransacao === "DEPOSITO" && coin && parceiroSelectRef.current && !affiliateFocusActiveRef.current) {
       setTimeout(() => {
         parceiroSelectRef.current?.open();
       }, 100);
@@ -472,7 +473,8 @@ export function CaixaTransacaoDialog({
     prevMoeda.current = moeda;
     
     // Auto-focus para próximo passo (apenas se parceiro não está preenchido)
-    if ((tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") && moeda && parceiroSelectRef.current) {
+    // Não abrir parceiro durante fluxo guiado de affiliate_deposit
+    if ((tipoTransacao === "DEPOSITO" || tipoTransacao === "SAQUE") && moeda && parceiroSelectRef.current && !affiliateFocusActiveRef.current) {
       setTimeout(() => {
         parceiroSelectRef.current?.open();
       }, 100);
