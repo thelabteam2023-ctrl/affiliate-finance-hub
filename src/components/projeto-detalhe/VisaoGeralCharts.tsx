@@ -577,10 +577,9 @@ export function VisaoGeralCharts({
     let total = 0;
 
     // apostas já vem filtrada pelo período selecionado (mês atual, anterior, ano, etc.)
+    // CRÍTICO: Usar consolidação multi-moeda para não somar EUR + USD brutos
     apostas.forEach((a) => {
-      if (a.lucro_prejuizo != null) {
-        total += a.lucro_prejuizo;
-      }
+      total += getConsolidatedLucroLocal(a);
     });
 
     // Extras: filtrar pelo período selecionado (periodStart/periodEnd)
@@ -619,8 +618,8 @@ export function VisaoGeralCharts({
     if (isSingleDayPeriod) {
       let acumulado = 0;
       return sorted.map((a, index) => {
-        // Usa lucro_prejuizo diretamente (já vem corrigido com pl_consolidado aplicado)
-        const impacto = a.lucro_prejuizo ?? 0;
+        // CRÍTICO: Usar consolidação multi-moeda
+        const impacto = getConsolidatedLucroLocal(a);
         acumulado += impacto;
         const date = parseLocalDateTime(a.data_aposta);
         const dataFormatada = format(date, "dd/MM", { locale: ptBR });
@@ -655,8 +654,8 @@ export function VisaoGeralCharts({
       const dateKey = extractLocalDateKey(a.data_aposta);
       const date = parseLocalDateTime(a.data_aposta);
       const dataFormatada = format(date, "dd/MM", { locale: ptBR });
-      // Usa lucro_prejuizo diretamente (já vem corrigido do ProjetoDashboardTab com pl_consolidado aplicado)
-      const impacto = a.lucro_prejuizo ?? 0;
+      // CRÍTICO: Usar consolidação multi-moeda
+      const impacto = getConsolidatedLucroLocal(a);
       
       const existing = dailyMap.get(dateKey);
       if (existing) {

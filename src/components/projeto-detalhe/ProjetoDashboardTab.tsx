@@ -365,8 +365,16 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       if (aposta.resultado === "RED") acc[aposta.esporte].reds++;
       if (aposta.resultado === "MEIO_GREEN") acc[aposta.esporte].meioGreens++;
       if (aposta.resultado === "MEIO_RED") acc[aposta.esporte].meioReds++;
-      // CRÍTICO: Usar pl_consolidado quando disponível para evitar inflação
-      acc[aposta.esporte].lucro += (aposta.lucro_prejuizo) || 0;
+      // CRÍTICO: Converter para moeda de consolidação do projeto
+      const moedaOp = aposta.moeda_operacao || 'BRL';
+      const rawLucro = aposta.lucro_prejuizo || 0;
+      let lucroConsolidado = rawLucro;
+      if (aposta.pl_consolidado != null) {
+        lucroConsolidado = aposta.pl_consolidado;
+      } else if (moedaOp !== moedaConsolidacao) {
+        lucroConsolidado = convertToConsolidationOficial(rawLucro, moedaOp);
+      }
+      acc[aposta.esporte].lucro += lucroConsolidado;
       return acc;
     }, {});
 
