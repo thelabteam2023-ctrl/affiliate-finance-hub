@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Receipt, TrendingUp, TrendingDown, AreaChart as AreaChartIcon, Activity, Filter, X } from "lucide-react";
+import { Receipt, TrendingUp, TrendingDown, AreaChart as AreaChartIcon, Activity, Filter, X, Calendar } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ProjectBonus } from "@/hooks/useProjectBonuses";
+import { CalendarioLucros } from "../CalendarioLucros";
 
 interface BonusBetData {
   id: string;
@@ -91,6 +93,7 @@ export function BonusResultadoLiquidoChart({
 }: BonusResultadoLiquidoChartProps) {
   const [chartMode, setChartMode] = useState<ChartMode>("resultado");
   const [selectedBookmaker, setSelectedBookmaker] = useState<string | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Calcula estatísticas por bookmaker (para filtro e breakdown)
   const bookmakerStats = useMemo(() => {
@@ -244,6 +247,15 @@ export function BonusResultadoLiquidoChart({
       : 0;
 
     return { totalBonus, totalJuice, resultadoLiquido, diasOperados, ultimoAcumulado, performancePercent };
+  }, [chartData]);
+
+  // Dados para o calendário: resultado líquido diário (bônus + juice)
+  const calendarApostas = useMemo(() => {
+    return chartData.map(d => ({
+      data_aposta: d.data + "T12:00:00",
+      resultado: d.resultado_dia >= 0 ? "GREEN" as const : "RED" as const,
+      lucro_prejuizo: d.resultado_dia,
+    }));
   }, [chartData]);
 
   // Cores
@@ -539,22 +551,42 @@ export function BonusResultadoLiquidoChart({
             </p>
           </div>
           
-          {/* Toggle de modos */}
-          <ToggleGroup 
-            type="single" 
-            value={chartMode} 
-            onValueChange={(value) => value && setChartMode(value as ChartMode)}
-            className="justify-start"
-          >
-            <ToggleGroupItem value="resultado" aria-label="Resultado Líquido" className="h-8 px-2.5 text-xs gap-1">
-              <AreaChartIcon className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Resultado</span>
-            </ToggleGroupItem>
-            <ToggleGroupItem value="bonus_juice" aria-label="Bônus vs Juice" className="h-8 px-2.5 text-xs gap-1">
-              <Activity className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Bônus vs Juice</span>
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <div className="flex items-center gap-2">
+            {/* Calendário */}
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <CalendarioLucros 
+                  apostas={calendarApostas}
+                  titulo="Resultado Líquido de Bônus"
+                  accentColor="amber"
+                  compact
+                  formatCurrency={formatCurrency}
+                />
+              </PopoverContent>
+            </Popover>
+            
+            {/* Toggle de modos */}
+            <ToggleGroup 
+              type="single" 
+              value={chartMode} 
+              onValueChange={(value) => value && setChartMode(value as ChartMode)}
+              className="justify-start"
+            >
+              <ToggleGroupItem value="resultado" aria-label="Resultado Líquido" className="h-8 px-2.5 text-xs gap-1">
+                <AreaChartIcon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Resultado</span>
+              </ToggleGroupItem>
+              <ToggleGroupItem value="bonus_juice" aria-label="Bônus vs Juice" className="h-8 px-2.5 text-xs gap-1">
+                <Activity className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Bônus vs Juice</span>
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </div>
         
         {/* KPIs dinâmicos */}
