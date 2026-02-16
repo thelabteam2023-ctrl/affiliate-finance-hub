@@ -376,6 +376,7 @@ export function BonusDialog({
                       placeholder="Buscar casa..."
                       value={bookmakerSearch}
                       onChange={(e) => setBookmakerSearch(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
                       className="pl-8 h-8"
                     />
                   </div>
