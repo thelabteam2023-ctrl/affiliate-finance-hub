@@ -655,27 +655,23 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         </div>
 
         {/* Sort toggle */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 shrink-0"
-                onClick={() => {
-                  setSortMode(prev => 
-                    prev === "alpha" ? "newest" : prev === "newest" ? "oldest" : "alpha"
-                  );
-                }}
-              >
-                <ArrowUpDown className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{sortMode === "alpha" ? "A-Z (Alfabético)" : sortMode === "newest" ? "Mais recente primeiro" : "Mais antigo primeiro"}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => {
+              setSortMode(prev => 
+                prev === "alpha" ? "newest" : prev === "newest" ? "oldest" : "alpha"
+              );
+            }}
+          >
+            <ArrowUpDown className="h-4 w-4" />
+          </Button>
+          <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+            {sortMode === "alpha" ? "A-Z" : sortMode === "newest" ? "Recentes" : "Antigos"}
+          </span>
+        </div>
       </div>
 
       {/* Lista de Vínculos Ativos — scroll interno (anti-regressão) */}
