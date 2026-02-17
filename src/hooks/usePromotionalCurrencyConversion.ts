@@ -46,7 +46,7 @@ export function usePromotionalCurrencyConversion(projetoId: string) {
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const { cotacaoUSD, loading: cotacaoLoading } = useCotacoes();
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, loading: cotacaoLoading } = useCotacoes();
 
   // Fetch project configuration
   useEffect(() => {
@@ -128,7 +128,7 @@ export function usePromotionalCurrencyConversion(projetoId: string) {
       disponivel,
       fonte,
     };
-  }, [projectConfig, cotacaoUSD, loading, cotacaoLoading]);
+  }, [projectConfig, cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, loading, cotacaoLoading]);
 
   /**
    * Converte um valor para a moeda de consolidação do projeto
@@ -156,27 +156,39 @@ export function usePromotionalCurrencyConversion(projetoId: string) {
     }
 
     // Se cotação não disponível, retornar valor original
-    // IMPORTANTE: Não "inventar" conversão - manter transparência
     if (!disponivel || cotacaoAtual <= 0) {
       console.warn(`[converterParaConsolidacao] Cotação indisponível para converter ${moedaOrigem} -> ${moedaConsolidacao}`);
       return valor;
     }
 
-    // Conversões suportadas
-    if (moedaOrigemNormalizada === "USD" && moedaDestinoNormalizada === "BRL") {
-      // USD -> BRL: multiplicar pela taxa
-      return valor * cotacaoAtual;
-    }
+    // ===================================================================
+    // FÓRMULA PIVOT BRL UNIVERSAL
+    // Converter qualquer moeda -> BRL primeiro, depois BRL -> consolidação
+    // ===================================================================
+    
+    // Mapa de cotações para BRL
+    const getCotacaoBRL = (moeda: string): number | null => {
+      if (moeda === "BRL") return 1;
+      if (moeda === "USD") return cotacaoUSD;
+      if (moeda === "EUR") return cotacaoEUR;
+      if (moeda === "GBP") return cotacaoGBP;
+      if (moeda === "MYR") return cotacaoMYR;
+      if (moeda === "MXN") return cotacaoMXN;
+      return null;
+    };
 
-    if (moedaOrigemNormalizada === "BRL" && moedaDestinoNormalizada === "USD") {
-      // BRL -> USD: dividir pela taxa
-      return valor / cotacaoAtual;
+    const taxaOrigemBRL = getCotacaoBRL(moedaOrigemNormalizada);
+    const taxaDestinoBRL = getCotacaoBRL(moedaDestinoNormalizada);
+
+    if (taxaOrigemBRL && taxaOrigemBRL > 0 && taxaDestinoBRL && taxaDestinoBRL > 0) {
+      // Fórmula Pivot: (valor * taxa_BRL_origem) / taxa_BRL_destino
+      return (valor * taxaOrigemBRL) / taxaDestinoBRL;
     }
 
     // Conversão não suportada - retornar original
     console.warn(`[converterParaConsolidacao] Conversão não suportada: ${moedaOrigem} -> ${moedaConsolidacao}`);
     return valor;
-  }, [config]);
+  }, [config, cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN]);
 
   /**
    * Converte um valor com resultado detalhado

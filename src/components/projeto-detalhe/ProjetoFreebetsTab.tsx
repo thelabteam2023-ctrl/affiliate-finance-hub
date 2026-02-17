@@ -104,6 +104,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   
   // Freebet dialog state
   const [freebetDialogOpen, setFreebetDialogOpen] = useState(false);
+  const [freebetRefreshTrigger, setFreebetRefreshTrigger] = useState(0);
   const [preselectedBookmakerId, setPreselectedBookmakerId] = useState<string | undefined>();
   
   // View mode for "Por Casa" tab
@@ -381,6 +382,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
 
   const handleFreebetSuccess = () => {
     fetchData();
+    setFreebetRefreshTrigger(prev => prev + 1);
     onDataChange?.();
   };
 
@@ -655,6 +657,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
             formatCurrency={formatCurrency}
             dateRange={dateRange}
             onAddFreebet={handleAddFreebet}
+            refreshTrigger={freebetRefreshTrigger}
           />
         )}
         {activeNavTab === "por-casa" && (
