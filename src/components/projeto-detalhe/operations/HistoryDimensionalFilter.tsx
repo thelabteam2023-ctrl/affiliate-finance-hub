@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { RESULTADO_FILTER_OPTIONS, type ResultadoFilter } from "@/hooks/useTabFilters";
 import {
   Popover,
   PopoverContent,
@@ -15,7 +16,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { Building2, Users, ChevronDown, Check, X } from "lucide-react";
+import { Building2, Users, ChevronDown, Check, X, CircleDot } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,6 +35,7 @@ interface ParceiroOption {
 export interface HistoryDimensionalFilterState {
   bookmakerIds: string[];
   parceiroIds: string[];
+  resultados: ResultadoFilter[];
 }
 
 interface HistoryDimensionalFilterProps {
@@ -60,6 +62,7 @@ export function HistoryDimensionalFilter({
   const [parceiros, setParceiros] = useState<ParceiroOption[]>([]);
   const [bookmakerOpen, setBookmakerOpen] = useState(false);
   const [parceiroOpen, setParceiroOpen] = useState(false);
+  const [resultadoOpen, setResultadoOpen] = useState(false);
 
   // Buscar bookmakers e parceiros do projeto
   useEffect(() => {
@@ -108,11 +111,18 @@ export function HistoryDimensionalFilter({
     onChange({ ...value, parceiroIds: newIds });
   };
 
-  const clearAll = () => {
-    onChange({ bookmakerIds: [], parceiroIds: [] });
+  const toggleResultado = (resultado: ResultadoFilter) => {
+    const newResultados = value.resultados.includes(resultado)
+      ? value.resultados.filter(r => r !== resultado)
+      : [...value.resultados, resultado];
+    onChange({ ...value, resultados: newResultados });
   };
 
-  const activeCount = (value.bookmakerIds.length > 0 ? 1 : 0) + (value.parceiroIds.length > 0 ? 1 : 0);
+  const clearAll = () => {
+    onChange({ bookmakerIds: [], parceiroIds: [], resultados: [] });
+  };
+
+  const activeCount = (value.bookmakerIds.length > 0 ? 1 : 0) + (value.parceiroIds.length > 0 ? 1 : 0) + (value.resultados.length > 0 ? 1 : 0);
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
@@ -249,6 +259,65 @@ export function HistoryDimensionalFilter({
         </Popover>
       )}
 
+      {/* Resultado Filter */}
+      <Popover open={resultadoOpen} onOpenChange={setResultadoOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant={value.resultados.length > 0 ? "secondary" : "outline"}
+            size="sm"
+            className="h-8 text-xs"
+          >
+            <CircleDot className="h-3.5 w-3.5 mr-1" />
+            Resultado
+            {value.resultados.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-4 min-w-4 px-1 text-[10px]">
+                {value.resultados.length}
+              </Badge>
+            )}
+            <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-48 p-0" align="start">
+          <Command>
+            <CommandList>
+              <CommandGroup>
+                {RESULTADO_FILTER_OPTIONS.map((opt) => {
+                  const isSelected = value.resultados.includes(opt.value);
+                  return (
+                    <CommandItem key={opt.value} onSelect={() => toggleResultado(opt.value)}>
+                      <div
+                        className={cn(
+                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                          isSelected
+                            ? "bg-primary text-primary-foreground"
+                            : "opacity-50 [&_svg]:invisible"
+                        )}
+                      >
+                        <Check className="h-3 w-3" />
+                      </div>
+                      <span className={opt.color}>{opt.label}</span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+              {value.resultados.length > 0 && (
+                <>
+                  <CommandSeparator />
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => onChange({ ...value, resultados: [] })}
+                      className="justify-center text-center text-xs text-muted-foreground"
+                    >
+                      Limpar seleção
+                    </CommandItem>
+                  </CommandGroup>
+                </>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
       {/* Limpar todos */}
       {activeCount > 0 && (
         <Button
@@ -272,6 +341,7 @@ export function useHistoryDimensionalFilter() {
   const [state, setState] = useState<HistoryDimensionalFilterState>({
     bookmakerIds: [],
     parceiroIds: [],
+    resultados: [],
   });
 
   return { dimensionalFilter: state, setDimensionalFilter: setState };

@@ -22,6 +22,16 @@ import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, sta
 // Tipos de filtros - PADRÃO CONTÁBIL
 export type StandardPeriodFilter = "1dia" | "7dias" | "mes_atual" | "mes_anterior" | "ano" | "custom";
 export type EstrategiaFilter = "all" | "PUNTER" | "SUREBET" | "VALUEBET" | "DUPLO_GREEN" | "EXTRACAO_FREEBET" | "EXTRACAO_BONUS";
+export type ResultadoFilter = "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID" | "PENDENTE";
+
+export const RESULTADO_FILTER_OPTIONS: { value: ResultadoFilter; label: string; color: string }[] = [
+  { value: "GREEN", label: "Green", color: "text-emerald-400" },
+  { value: "RED", label: "Red", color: "text-red-400" },
+  { value: "MEIO_GREEN", label: "Meio Green", color: "text-emerald-300" },
+  { value: "MEIO_RED", label: "Meio Red", color: "text-red-300" },
+  { value: "VOID", label: "Void", color: "text-muted-foreground" },
+  { value: "PENDENTE", label: "Pendente", color: "text-yellow-400" },
+];
 
 export interface DateRangeResult {
   start: Date;
@@ -34,6 +44,7 @@ export interface TabFiltersState {
   bookmakerIds: string[];
   parceiroIds: string[];
   estrategias: EstrategiaFilter[];
+  resultados: ResultadoFilter[];
   dateRange: DateRangeResult | null;
 }
 
@@ -128,6 +139,7 @@ export function useTabFilters({
   const [bookmakerIds, setBookmakerIdsState] = useState<string[]>([]);
   const [parceiroIds, setParceiroIdsState] = useState<string[]>([]);
   const [estrategias, setEstrategiasState] = useState<EstrategiaFilter[]>(["all"]);
+  const [resultados, setResultadosState] = useState<ResultadoFilter[]>([]);
 
   // Carregar estado salvo (apenas se persist=true)
   useEffect(() => {
@@ -189,6 +201,19 @@ export function useTabFilters({
     setEstrategiasState(e);
   }, []);
 
+  const setResultados = useCallback((r: ResultadoFilter[]) => {
+    setResultadosState(r);
+  }, []);
+
+  const toggleResultado = useCallback((resultado: ResultadoFilter) => {
+    setResultadosState(prev => {
+      if (prev.includes(resultado)) {
+        return prev.filter(r => r !== resultado);
+      }
+      return [...prev, resultado];
+    });
+  }, []);
+
   // Toggles
   const toggleBookmaker = useCallback((id: string) => {
     setBookmakerIdsState(prev =>
@@ -222,6 +247,7 @@ export function useTabFilters({
     setBookmakerIdsState([]);
     setParceiroIdsState([]);
     setEstrategiasState(["all"]);
+    setResultadosState([]);
   }, [defaultPeriod]);
 
   // Contagem de filtros ativos
@@ -230,9 +256,10 @@ export function useTabFilters({
     if (bookmakerIds.length > 0) count++;
     if (parceiroIds.length > 0) count++;
     if (!estrategias.includes("all")) count++;
+    if (resultados.length > 0) count++;
     if (period === "custom") count++;
     return count;
-  }, [bookmakerIds, parceiroIds, estrategias, period]);
+  }, [bookmakerIds, parceiroIds, estrategias, resultados, period]);
 
   return {
     // Identificação
@@ -244,6 +271,7 @@ export function useTabFilters({
     customDateRange,
     bookmakerIds,
     parceiroIds,
+    resultados,
     estrategias,
     dateRange,
     
@@ -253,11 +281,13 @@ export function useTabFilters({
     setBookmakerIds,
     setParceiroIds,
     setEstrategias,
+    setResultados,
     
     // Helpers
     toggleBookmaker,
     toggleParceiro,
     toggleEstrategia,
+    toggleResultado,
     clearFilters,
     activeFiltersCount,
     

@@ -882,7 +882,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       
       // Filtros internos restantes
       const matchesStatus = statusFilter === "all" || aposta.status === statusFilter;
-      const matchesResultado = resultadoFilter === "all" || aposta.resultado === resultadoFilter;
+      const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(aposta.resultado as any);
       const matchesContexto = contextoFilter === "all" || contexto === contextoFilter;
       const matchesTipo = tipoFilter === "todas" || tipoFilter === "simples";
       
@@ -914,7 +914,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         selectedEstrategias.includes(estrategiaMultipla as any);
       
       const matchesStatus = statusFilter === "all" || am.status === statusFilter;
-      const matchesResultado = resultadoFilter === "all" || am.resultado === resultadoFilter;
+      const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(am.resultado as any);
       const matchesContexto = contextoFilter === "all" || contexto === contextoFilter;
       const matchesTipo = tipoFilter === "todas" || tipoFilter === "multiplas";
       
@@ -946,7 +946,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         selectedEstrategias.includes(surebetEstrategia as any);
       
       const matchesStatus = statusFilter === "all" || sb.status === statusFilter;
-      const matchesResultado = resultadoFilter === "all" || sb.resultado === resultadoFilter;
+      const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(sb.resultado as any);
       const matchesContexto = contextoFilter === "all" || contexto === contextoFilter;
       const matchesTipo = tipoFilter === "todas" || tipoFilter === "surebets";
       
@@ -962,7 +962,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     
     // Ordenar por data
     return result.sort((a, b) => parseLocalDateTime(b.data_aposta).getTime() - parseLocalDateTime(a.data_aposta).getTime());
-  }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.estrategias, statusFilter, resultadoFilter, contextoFilter, tipoFilter]);
+  }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.estrategias, tabFilters.resultados, statusFilter, contextoFilter, tipoFilter]);
 
   // Helper para verificar se um item está pendente
   const isItemPendente = (item: ApostaUnificada): boolean => {
@@ -1264,6 +1264,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
             projetoId={projetoId}
             filters={tabFilters}
             showEstrategiaFilter={true}
+            showResultadoFilter={true}
           />
         </CardContent>
       </Card>

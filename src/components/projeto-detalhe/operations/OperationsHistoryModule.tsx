@@ -147,6 +147,7 @@ export function OperationsHistoryModule({
               showPeriodFilter={true}
               showBookmakerFilter={true}
               showParceiroFilter={true}
+              showResultadoFilter={true}
             />
           </div>
         )}

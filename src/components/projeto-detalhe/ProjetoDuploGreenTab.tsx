@@ -734,8 +734,9 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   
   const apostasFiltradas = useMemo(() => apostasListaAtual.filter(a => {
     const matchesSearch = a.evento.toLowerCase().includes(searchTerm.toLowerCase()) || a.esporte.toLowerCase().includes(searchTerm.toLowerCase()) || a.selecao.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch && (resultadoFilter === "all" || a.resultado === resultadoFilter);
-  }), [apostasListaAtual, searchTerm, resultadoFilter]);
+    const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
+    return matchesSearch && matchesResultado;
+  }), [apostasListaAtual, searchTerm, tabFilters.resultados]);
   
   // Ordenar casaData conforme filtro selecionado
   const casaDataSorted = useMemo(() => {
@@ -959,6 +960,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
             projetoId={projetoId}
             filters={tabFilters}
             showEstrategiaFilter={false}
+            showResultadoFilter={true}
             className="pb-3 border-b border-border/50"
           />
         </CardContent>

@@ -25,7 +25,8 @@ import {
   X, 
   Filter,
   ChevronDown,
-  Check
+  Check,
+  CircleDot,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -35,6 +36,7 @@ import {
   type TabFiltersReturn,
   type StandardPeriodFilter,
   type EstrategiaFilter,
+  RESULTADO_FILTER_OPTIONS,
 } from "@/hooks/useTabFilters";
 
 interface TabFiltersBarProps {
@@ -45,6 +47,7 @@ interface TabFiltersBarProps {
   showPeriodFilter?: boolean;
   showBookmakerFilter?: boolean;
   showParceiroFilter?: boolean;
+  showResultadoFilter?: boolean;
   className?: string;
 }
 
@@ -89,6 +92,7 @@ export function TabFiltersBar({
   showPeriodFilter = true,
   showBookmakerFilter = true,
   showParceiroFilter = true,
+  showResultadoFilter = false,
   className,
 }: TabFiltersBarProps) {
   const [bookmakers, setBookmakers] = useState<BookmakerOption[]>([]);
@@ -97,6 +101,7 @@ export function TabFiltersBar({
   const [bookmakerOpen, setBookmakerOpen] = useState(false);
   const [parceiroOpen, setParceiroOpen] = useState(false);
   const [estrategiaOpen, setEstrategiaOpen] = useState(false);
+  const [resultadoOpen, setResultadoOpen] = useState(false);
 
   // Buscar bookmakers e parceiros do projeto
   useEffect(() => {
@@ -414,7 +419,70 @@ export function TabFiltersBar({
         </Popover>
       )}
 
-      {/* Limpar todos os filtros */}
+      {/* Resultado Filter */}
+      {showResultadoFilter && (
+        <Popover open={resultadoOpen} onOpenChange={setResultadoOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant={filters.resultados.length > 0 ? "secondary" : "outline"}
+              size="sm"
+              className="h-8 text-xs"
+            >
+              <CircleDot className="h-3.5 w-3.5 mr-1" />
+              Resultado
+              {filters.resultados.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-4 min-w-4 px-1 text-[10px]">
+                  {filters.resultados.length}
+                </Badge>
+              )}
+              <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-0" align="start">
+            <Command>
+              <CommandList>
+                <CommandGroup>
+                  {RESULTADO_FILTER_OPTIONS.map((opt) => {
+                    const isSelected = filters.resultados.includes(opt.value);
+                    return (
+                      <CommandItem
+                        key={opt.value}
+                        onSelect={() => filters.toggleResultado(opt.value)}
+                      >
+                        <div
+                          className={cn(
+                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "opacity-50 [&_svg]:invisible"
+                          )}
+                        >
+                          <Check className="h-3 w-3" />
+                        </div>
+                        <span className={opt.color}>{opt.label}</span>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+                {filters.resultados.length > 0 && (
+                  <>
+                    <CommandSeparator />
+                    <CommandGroup>
+                      <CommandItem
+                        onSelect={() => filters.setResultados([])}
+                        className="justify-center text-center text-xs text-muted-foreground"
+                      >
+                        Limpar seleção
+                      </CommandItem>
+                    </CommandGroup>
+                  </>
+                )}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      )}
+
       {filters.activeFiltersCount > 0 && (
         <Button
           variant="ghost"
