@@ -1162,12 +1162,13 @@ export function CaixaTransacaoDialog({
     prevDestinoBookmakerId.current = destinoBookmakerId;
   }, [destinoBookmakerId, tipoMoeda, tipoTransacao]);
 
-  // ====== GUIDED FOCUS SEQUENCE FOR AFFILIATE DEPOSIT FLOW ======
+  // ====== GUIDED FOCUS SEQUENCE FOR AFFILIATE FLOWS ======
   // Activated only when entryPoint === "affiliate_deposit"
-  // Sequence: Tipo de Moeda → Moeda/Coin → Wallet → Qtd Coins
+  // DEPOSITO sequence: Tipo de Moeda → Moeda/Coin → Wallet/Conta (origem) → Valor
+  // SAQUE sequence: Tipo de Moeda → Moeda/Coin → Wallet/Conta (destino) → Valor
   useEffect(() => {
     if (!open || entryPoint !== "affiliate_deposit") return;
-    if (tipoTransacao !== "DEPOSITO") return;
+    if (tipoTransacao !== "DEPOSITO" && tipoTransacao !== "SAQUE") return;
     
     // Start guided focus after defaults are applied
     const timer = setTimeout(() => {
@@ -1222,10 +1223,15 @@ export function CaixaTransacaoDialog({
     }, 200);
   }, [coin, moeda, tipoMoeda]);
 
-  // Affiliate focus step 4: After wallet/conta selected, focus qty/valor input
+  // Affiliate focus step 4: After wallet/conta selected, focus valor input
+  // For DEPOSITO: watches origemWalletId/origemContaId
+  // For SAQUE: watches destinoWalletId/destinoContaId (bookmaker already pre-filled, skip it)
   useEffect(() => {
     if (!affiliateFocusActiveRef.current || affiliateFocusStepRef.current !== 3) return;
-    const hasWalletOrConta = (tipoMoeda === "CRYPTO" && origemWalletId) || (tipoMoeda === "FIAT" && origemContaId);
+    
+    const hasWalletOrConta = tipoTransacao === "SAQUE"
+      ? (tipoMoeda === "CRYPTO" && destinoWalletId) || (tipoMoeda === "FIAT" && destinoContaId)
+      : (tipoMoeda === "CRYPTO" && origemWalletId) || (tipoMoeda === "FIAT" && origemContaId);
     if (!hasWalletOrConta) return;
     
     affiliateFocusStepRef.current = 4;
@@ -1240,7 +1246,7 @@ export function CaixaTransacaoDialog({
         valorFiatInputRef.current?.focus();
       }, 200);
     }
-  }, [origemWalletId, origemContaId, tipoMoeda]);
+  }, [origemWalletId, origemContaId, destinoWalletId, destinoContaId, tipoMoeda, tipoTransacao]);
 
   // Buscar dados da bookmaker selecionada e atualizar o array local
   useEffect(() => {
