@@ -1127,9 +1127,16 @@ export function CaixaTransacaoDialog({
     if (!destinoWalletId || destinoWalletId === prevDestinoWalletId.current) return;
     
     // Se o fluxo guiado de afiliado está ativo ou já completou, o bookmaker já está pré-preenchido
-    // Não abrir o BookmakerSelect nesse caso
+    // Pular BookmakerSelect e focar direto no campo Valor
     if (entryPoint === "affiliate_deposit" && origemBookmakerId) {
       prevDestinoWalletId.current = destinoWalletId;
+      setTimeout(() => {
+        if (qtdCoinInputRef.current) {
+          qtdCoinInputRef.current.focus();
+        } else if (valorFiatInputRef.current) {
+          valorFiatInputRef.current.focus();
+        }
+      }, 200);
       return;
     }
     
