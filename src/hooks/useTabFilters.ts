@@ -33,6 +33,9 @@ export const RESULTADO_FILTER_OPTIONS: { value: ResultadoFilter; label: string; 
   { value: "PENDENTE", label: "Pendente", color: "text-yellow-400" },
 ];
 
+/** Opções de resultado para histórico (sem Pendente, pois são resultados já consumados) */
+export const RESULTADO_FILTER_OPTIONS_HISTORY = RESULTADO_FILTER_OPTIONS.filter(o => o.value !== "PENDENTE");
+
 export interface DateRangeResult {
   start: Date;
   end: Date;

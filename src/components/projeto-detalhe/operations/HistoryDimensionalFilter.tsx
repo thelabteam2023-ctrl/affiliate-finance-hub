@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RESULTADO_FILTER_OPTIONS, type ResultadoFilter } from "@/hooks/useTabFilters";
+import { RESULTADO_FILTER_OPTIONS_HISTORY, type ResultadoFilter } from "@/hooks/useTabFilters";
 import {
   Popover,
   PopoverContent,
@@ -281,7 +281,7 @@ export function HistoryDimensionalFilter({
           <Command>
             <CommandList>
               <CommandGroup>
-                {RESULTADO_FILTER_OPTIONS.map((opt) => {
+                {RESULTADO_FILTER_OPTIONS_HISTORY.map((opt) => {
                   const isSelected = value.resultados.includes(opt.value);
                   return (
                     <CommandItem key={opt.value} onSelect={() => toggleResultado(opt.value)}>
