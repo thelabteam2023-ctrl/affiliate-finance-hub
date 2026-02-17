@@ -61,6 +61,7 @@ import {
   formatCurrency as formatCurrencyCanonical,
   getCurrencyTextColor 
 } from "@/components/bookmakers/BookmakerSelectOption";
+import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 // reliquidarAposta already imported at line 5
 // updateBookmakerBalance REMOVIDO - Motor v7 usa exclusivamente RPCs de liquidação
 import { useImportMultiplaBetPrint } from "@/hooks/useImportMultiplaBetPrint";
@@ -1443,26 +1444,21 @@ export function ApostaMultiplaDialog({
                       return <SelectValue placeholder="Selecione a casa..." />;
                     })()}
                   </SelectTrigger>
-                  <SelectContent className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]">
-                    {bookmakers.map((bk) => (
-                      <SelectItem key={bk.id} value={bk.id} className="py-2">
-                        <BookmakerSelectOption 
-                          bookmaker={{
-                            id: bk.id,
-                            nome: bk.nome,
-                            parceiro_nome: bk.parceiro_nome,
-                            moeda: bk.moeda,
-                            saldo_operavel: bk.saldo_operavel,
-                            saldo_disponivel: bk.saldo_atual,
-                            saldo_freebet: bk.saldo_freebet,
-                            saldo_bonus: bk.saldo_bonus,
-                            logo_url: bk.logo_url,
-                            bonus_rollover_started: bk.bonus_rollover_started,
-                          }}
-                        />
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  <BookmakerSearchableSelectContent
+                    bookmakers={bookmakers.map(bk => ({
+                      id: bk.id,
+                      nome: bk.nome,
+                      parceiro_nome: bk.parceiro_nome,
+                      moeda: bk.moeda,
+                      saldo_operavel: bk.saldo_operavel,
+                      saldo_disponivel: bk.saldo_atual,
+                      saldo_freebet: bk.saldo_freebet,
+                      saldo_bonus: bk.saldo_bonus,
+                      logo_url: bk.logo_url,
+                      bonus_rollover_started: bk.bonus_rollover_started,
+                    }))}
+                    className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]"
+                  />
                 </Select>
                 {bookmakerSaldo && (
                   <SaldoBreakdownDisplay

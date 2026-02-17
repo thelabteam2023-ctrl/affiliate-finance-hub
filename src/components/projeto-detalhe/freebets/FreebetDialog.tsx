@@ -37,6 +37,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BookmakerSelectOption } from "@/components/bookmakers/BookmakerSelectOption";
+import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 import { useWorkspace } from "@/hooks/useWorkspace";
 
 const formSchema = z.object({
@@ -274,13 +275,7 @@ export function FreebetDialog({
                         <span className="text-muted-foreground">Selecione uma casa</span>
                       )}
                     </SelectTrigger>
-                    <SelectContent>
-                      {bookmakers.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          <BookmakerSelectOption bookmaker={b} />
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                    <BookmakerSearchableSelectContent bookmakers={bookmakers} />
                   </Select>
                   <FormMessage />
                 </FormItem>
