@@ -1121,9 +1121,17 @@ export function CaixaTransacaoDialog({
   }, [destinoParceiroId, tipoTransacao, tipoMoeda, walletsCrypto, coin]);
 
   // SAQUE CRYPTO: quando wallet (destino) é selecionada, abre o BookmakerSelect (origem)
+  // SKIP when affiliate guided flow is active (bookmaker already pre-filled)
   useEffect(() => {
     if (tipoTransacao !== "SAQUE" || tipoMoeda !== "CRYPTO") return;
     if (!destinoWalletId || destinoWalletId === prevDestinoWalletId.current) return;
+    
+    // Se o fluxo guiado de afiliado está ativo ou já completou, o bookmaker já está pré-preenchido
+    // Não abrir o BookmakerSelect nesse caso
+    if (entryPoint === "affiliate_deposit" && origemBookmakerId) {
+      prevDestinoWalletId.current = destinoWalletId;
+      return;
+    }
     
     // Abrir BookmakerSelect para selecionar a origem
     if (bookmakerSelectRef.current) {
@@ -1133,7 +1141,7 @@ export function CaixaTransacaoDialog({
     }
     
     prevDestinoWalletId.current = destinoWalletId;
-  }, [destinoWalletId, tipoTransacao, tipoMoeda]);
+  }, [destinoWalletId, tipoTransacao, tipoMoeda, entryPoint, origemBookmakerId]);
 
   // Auto-focus CRYPTO DEPÓSITO: quando wallet de origem é selecionada, abre o select Bookmaker (destino)
   useEffect(() => {
