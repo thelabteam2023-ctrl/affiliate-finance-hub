@@ -142,6 +142,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     moeda: string;
     saldoAtual: number;
     parceiroId: string | null;
+    tipo: "DEPOSITO" | "SAQUE";
   } | null>(null);
   const [statusPopoverId, setStatusPopoverId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
@@ -878,13 +879,34 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                             moeda: vinculo.moeda,
                             saldoAtual: vinculo.saldo_real,
                             parceiroId: vinculo.parceiro_id,
+                            tipo: "DEPOSITO",
                           });
                           setTransacaoDialogOpen(true);
                         }}
-                        title="Nova Transação"
+                        title="Depositar"
                       >
                         <ArrowRightLeft className="mr-2 h-4 w-4" />
-                        Transação
+                        Depósito
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setTransacaoContext({
+                            bookmarkerId: vinculo.id,
+                            bookmakerNome: vinculo.nome,
+                            moeda: vinculo.moeda,
+                            saldoAtual: vinculo.saldo_real,
+                            parceiroId: vinculo.parceiro_id,
+                            tipo: "SAQUE",
+                          });
+                          setTransacaoDialogOpen(true);
+                        }}
+                        title="Sacar"
+                      >
+                        <Wallet className="mr-2 h-4 w-4" />
+                        Saque
                       </Button>
                       <Button
                         variant="outline"
@@ -1089,7 +1111,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      title="Nova Transação"
+                      title="Depositar"
                       onClick={() => {
                         setTransacaoContext({
                           bookmarkerId: vinculo.id,
@@ -1097,11 +1119,31 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                           moeda: vinculo.moeda,
                           saldoAtual: vinculo.saldo_real,
                           parceiroId: vinculo.parceiro_id,
+                          tipo: "DEPOSITO",
                         });
                         setTransacaoDialogOpen(true);
                       }}
                     >
                       <ArrowRightLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title="Sacar"
+                      onClick={() => {
+                        setTransacaoContext({
+                          bookmarkerId: vinculo.id,
+                          bookmakerNome: vinculo.nome,
+                          moeda: vinculo.moeda,
+                          saldoAtual: vinculo.saldo_real,
+                          parceiroId: vinculo.parceiro_id,
+                          tipo: "SAQUE",
+                        });
+                        setTransacaoDialogOpen(true);
+                      }}
+                    >
+                      <Wallet className="h-4 w-4" />
                     </Button>
                     <Popover 
                       open={statusPopoverId === vinculo.id} 
@@ -1349,9 +1391,11 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           await new Promise(resolve => setTimeout(resolve, 300));
           invalidateVinculos();
         }}
-        defaultTipoTransacao={transacaoContext ? "DEPOSITO" : undefined}
-        defaultDestinoBookmakerId={transacaoContext?.bookmarkerId}
-        defaultOrigemParceiroId={transacaoContext?.parceiroId || undefined}
+        defaultTipoTransacao={transacaoContext?.tipo}
+        defaultDestinoBookmakerId={transacaoContext?.tipo === "DEPOSITO" ? transacaoContext?.bookmarkerId : undefined}
+        defaultOrigemBookmakerId={transacaoContext?.tipo === "SAQUE" ? transacaoContext?.bookmarkerId : undefined}
+        defaultOrigemParceiroId={transacaoContext?.tipo === "DEPOSITO" ? (transacaoContext?.parceiroId || undefined) : undefined}
+        defaultDestinoParceiroId={transacaoContext?.tipo === "SAQUE" ? (transacaoContext?.parceiroId || undefined) : undefined}
         defaultTipoMoeda="FIAT"
         defaultMoeda={transacaoContext?.moeda || "BRL"}
         entryPoint={transacaoContext ? "affiliate_deposit" : undefined}
