@@ -206,10 +206,15 @@ export function CaixaTransacaoDialog({
   const walletCryptoSelectRef = useRef<HTMLButtonElement>(null);
   const bookmakerSelectRef = useRef<BookmakerSelectRef>(null);
   const tipoMoedaSelectRef = useRef<HTMLButtonElement>(null);
+  const parceiroDestinoSelectRef = useRef<ParceiroSelectRef>(null);
 
   // Guided focus sequence state for affiliate deposit flow
   const affiliateFocusActiveRef = useRef<boolean>(false);
   const affiliateFocusStepRef = useRef<number>(0);
+
+  // Guided focus sequence state for Parceiro→Parceiro transfer flow
+  const transferFocusActiveRef = useRef<boolean>(false);
+  const transferFocusStepRef = useRef<number>(0);
 
   // Track previous values to detect changes (origemParceiroId and origemWalletId tracked after their declarations)
   const prevTipoMoeda = useRef<string>(tipoMoeda);
@@ -1263,6 +1268,115 @@ export function CaixaTransacaoDialog({
     }
   }, [origemWalletId, origemContaId, destinoWalletId, destinoContaId, tipoMoeda, tipoTransacao]);
 
+  // ====== GUIDED FOCUS SEQUENCE FOR PARCEIRO→PARCEIRO TRANSFER ======
+  // Activated when fluxoTransferencia changes to PARCEIRO_PARCEIRO
+  // Sequence: Tipo de Moeda → Moeda/Coin → Qtd Coins (CRYPTO) → Parceiro origem → Wallet/Conta origem → Parceiro destino
+  useEffect(() => {
+    if (tipoTransacao !== "TRANSFERENCIA" || fluxoTransferencia !== "PARCEIRO_PARCEIRO") {
+      transferFocusActiveRef.current = false;
+      transferFocusStepRef.current = 0;
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      transferFocusActiveRef.current = true;
+      transferFocusStepRef.current = 1;
+      if (tipoMoedaSelectRef.current) {
+        tipoMoedaSelectRef.current.focus();
+        tipoMoedaSelectRef.current.click();
+      }
+    }, 300);
+    
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [fluxoTransferencia, tipoTransacao]);
+
+  // Transfer focus step 2: After tipoMoeda changes, open coin/moeda selector
+  useEffect(() => {
+    if (!transferFocusActiveRef.current || transferFocusStepRef.current !== 1) return;
+    if (!tipoMoeda) return;
+    
+    transferFocusStepRef.current = 2;
+    setTimeout(() => {
+      if (tipoMoeda === "CRYPTO" && coinSelectRef.current) {
+        coinSelectRef.current.focus();
+        coinSelectRef.current.click();
+      } else if (tipoMoeda === "FIAT" && moedaFiatSelectRef.current) {
+        moedaFiatSelectRef.current.focus();
+        moedaFiatSelectRef.current.click();
+      }
+    }, 200);
+  }, [tipoMoeda]);
+
+  // Transfer focus step 3: After coin/moeda selected
+  // CRYPTO: focus qtdCoin input | FIAT: skip to parceiro origem
+  useEffect(() => {
+    if (!transferFocusActiveRef.current || transferFocusStepRef.current !== 2) return;
+    const hasMoedaOrCoin = (tipoMoeda === "CRYPTO" && coin) || (tipoMoeda === "FIAT" && moeda);
+    if (!hasMoedaOrCoin) return;
+    
+    if (tipoMoeda === "CRYPTO") {
+      // Focus qtd coins input
+      transferFocusStepRef.current = 3;
+      setTimeout(() => {
+        qtdCoinInputRef.current?.focus();
+      }, 200);
+    } else {
+      // FIAT: skip to parceiro origem (step 4)
+      transferFocusStepRef.current = 4;
+      setTimeout(() => {
+        parceiroSelectRef.current?.open();
+      }, 200);
+    }
+  }, [coin, moeda, tipoMoeda]);
+
+  // Transfer focus step 4 (CRYPTO only): After user fills qtdCoin, move to parceiro origem
+  // We watch for qtdCoin blur via a separate handler (see below)
+
+  // Transfer focus step 5: After parceiro origem selected, open wallet/conta origem
+  useEffect(() => {
+    if (!transferFocusActiveRef.current) return;
+    if (transferFocusStepRef.current !== 4 && transferFocusStepRef.current !== 3) return;
+    // For CRYPTO step 3 means qtdCoin was focused, parceiro comes after blur
+    // For FIAT step 4 is parceiro
+    if (!origemParceiroId) return;
+    
+    transferFocusStepRef.current = 5;
+    setTimeout(() => {
+      if (tipoMoeda === "CRYPTO" && walletCryptoSelectRef.current) {
+        walletCryptoSelectRef.current.focus();
+        walletCryptoSelectRef.current.click();
+      } else if (tipoMoeda === "FIAT" && contaBancariaSelectRef.current) {
+        contaBancariaSelectRef.current.focus();
+        contaBancariaSelectRef.current.click();
+      }
+    }, 200);
+  }, [origemParceiroId, tipoMoeda]);
+
+  // Transfer focus step 6: After wallet/conta origem selected, open parceiro destino
+  useEffect(() => {
+    if (!transferFocusActiveRef.current || transferFocusStepRef.current !== 5) return;
+    const hasOrigemWalletOrConta = (tipoMoeda === "CRYPTO" && origemWalletId) || (tipoMoeda === "FIAT" && origemContaId);
+    if (!hasOrigemWalletOrConta) return;
+    
+    transferFocusStepRef.current = 6;
+    transferFocusActiveRef.current = false; // End guided focus
+    setTimeout(() => {
+      parceiroDestinoSelectRef.current?.open();
+    }, 200);
+  }, [origemWalletId, origemContaId, tipoMoeda]);
+
+  // Handler for qtdCoin blur to advance transfer focus to parceiro
+  const handleQtdCoinBlurTransferFocus = () => {
+    if (transferFocusActiveRef.current && transferFocusStepRef.current === 3 && qtdCoin) {
+      transferFocusStepRef.current = 4;
+      setTimeout(() => {
+        parceiroSelectRef.current?.open();
+      }, 200);
+    }
+  };
+
   // Buscar dados da bookmaker selecionada e atualizar o array local
   useEffect(() => {
     const fetchSelectedBookmaker = async () => {
@@ -1548,6 +1662,9 @@ export function CaixaTransacaoDialog({
     // Reset affiliate guided focus
     affiliateFocusActiveRef.current = false;
     affiliateFocusStepRef.current = 0;
+    // Reset transfer guided focus
+    transferFocusActiveRef.current = false;
+    transferFocusStepRef.current = 0;
   };
 
   const getSaldoAtual = (tipo: string, id?: string): number => {
@@ -2892,6 +3009,7 @@ export function CaixaTransacaoDialog({
             <div className="space-y-2">
               <Label>Parceiro (com saldo em {moeda})</Label>
               <ParceiroSelect
+                ref={parceiroSelectRef}
                 value={origemParceiroId}
                 onValueChange={(value) => {
                   setOrigemParceiroId(value);
@@ -2913,7 +3031,7 @@ export function CaixaTransacaoDialog({
                     setOrigemContaId(value);
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger ref={contaBancariaSelectRef}>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -2979,6 +3097,7 @@ export function CaixaTransacaoDialog({
             <div className="space-y-2">
               <Label>Parceiro (com saldo em {coin})</Label>
               <ParceiroSelect
+                ref={parceiroSelectRef}
                 value={origemParceiroId}
                 onValueChange={(value) => {
                   setOrigemParceiroId(value);
@@ -3000,7 +3119,7 @@ export function CaixaTransacaoDialog({
                     setOrigemWalletId(value);
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger ref={walletCryptoSelectRef}>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -3472,6 +3591,7 @@ export function CaixaTransacaoDialog({
             <div className="space-y-2">
               <Label>Parceiro</Label>
               <ParceiroSelect
+                ref={parceiroDestinoSelectRef}
                 value={destinoParceiroId}
                 onValueChange={(value) => {
                   setDestinoParceiroId(value);
@@ -3541,6 +3661,7 @@ export function CaixaTransacaoDialog({
             <div className="space-y-2">
               <Label>Parceiro</Label>
               <ParceiroSelect
+                ref={parceiroDestinoSelectRef}
                 value={destinoParceiroId}
                 onValueChange={(value) => {
                   setDestinoParceiroId(value);
@@ -4255,6 +4376,7 @@ export function CaixaTransacaoDialog({
                       step="0.00000001"
                       value={qtdCoin}
                       onChange={(e) => setQtdCoin(e.target.value)}
+                      onBlur={handleQtdCoinBlurTransferFocus}
                       placeholder="0.00000000"
                     />
                   </div>
