@@ -92,6 +92,8 @@ interface CaixaTransacaoDialogProps {
   defaultCoin?: string;
   /** Entry point identifier for guided focus sequences */
   entryPoint?: string;
+  /** Restrict which transaction types are shown in the selector */
+  allowedTipoTransacao?: string[];
 }
 
 interface ContaBancaria {
@@ -160,6 +162,7 @@ export function CaixaTransacaoDialog({
   defaultMoeda,
   defaultCoin,
   entryPoint,
+  allowedTipoTransacao,
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
@@ -3901,10 +3904,18 @@ export function CaixaTransacaoDialog({
                 <SelectValue placeholder="Selecione o tipo de transação" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TRANSFERENCIA">TRANSFERÊNCIA</SelectItem>
-                <SelectItem value="DEPOSITO">DEPÓSITO</SelectItem>
-                <SelectItem value="SAQUE">SAQUE</SelectItem>
-                <SelectItem value="APORTE_FINANCEIRO">APORTE & LIQUIDAÇÃO</SelectItem>
+                {(!allowedTipoTransacao || allowedTipoTransacao.includes("TRANSFERENCIA")) && (
+                  <SelectItem value="TRANSFERENCIA">TRANSFERÊNCIA</SelectItem>
+                )}
+                {(!allowedTipoTransacao || allowedTipoTransacao.includes("DEPOSITO")) && (
+                  <SelectItem value="DEPOSITO">DEPÓSITO</SelectItem>
+                )}
+                {(!allowedTipoTransacao || allowedTipoTransacao.includes("SAQUE")) && (
+                  <SelectItem value="SAQUE">SAQUE</SelectItem>
+                )}
+                {(!allowedTipoTransacao || allowedTipoTransacao.includes("APORTE_FINANCEIRO")) && (
+                  <SelectItem value="APORTE_FINANCEIRO">APORTE & LIQUIDAÇÃO</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>

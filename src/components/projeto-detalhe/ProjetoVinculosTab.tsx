@@ -136,6 +136,13 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [addDialogSearchTerm, setAddDialogSearchTerm] = useState("");
   const [showOnlyWithBalance, setShowOnlyWithBalance] = useState(false);
   const [transacaoDialogOpen, setTransacaoDialogOpen] = useState(false);
+  const [transacaoContext, setTransacaoContext] = useState<{
+    bookmarkerId: string;
+    bookmakerNome: string;
+    moeda: string;
+    saldoAtual: number;
+    parceiroId: string | null;
+  } | null>(null);
   const [statusPopoverId, setStatusPopoverId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
@@ -864,7 +871,16 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         variant="outline"
                         size="sm"
                         className="flex-1"
-                        onClick={() => setTransacaoDialogOpen(true)}
+                        onClick={() => {
+                          setTransacaoContext({
+                            bookmarkerId: vinculo.id,
+                            bookmakerNome: vinculo.nome,
+                            moeda: vinculo.moeda,
+                            saldoAtual: vinculo.saldo_real,
+                            parceiroId: vinculo.parceiro_id,
+                          });
+                          setTransacaoDialogOpen(true);
+                        }}
                         title="Nova Transação"
                       >
                         <ArrowRightLeft className="mr-2 h-4 w-4" />
@@ -1074,7 +1090,16 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       size="icon"
                       className="h-8 w-8"
                       title="Nova Transação"
-                      onClick={() => setTransacaoDialogOpen(true)}
+                      onClick={() => {
+                        setTransacaoContext({
+                          bookmarkerId: vinculo.id,
+                          bookmakerNome: vinculo.nome,
+                          moeda: vinculo.moeda,
+                          saldoAtual: vinculo.saldo_real,
+                          parceiroId: vinculo.parceiro_id,
+                        });
+                        setTransacaoDialogOpen(true);
+                      }}
                     >
                       <ArrowRightLeft className="h-4 w-4" />
                     </Button>
@@ -1313,13 +1338,24 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       {/* Dialog Nova Transação */}
       <CaixaTransacaoDialog
         open={transacaoDialogOpen}
-        onClose={() => setTransacaoDialogOpen(false)}
+        onClose={() => {
+          setTransacaoDialogOpen(false);
+          setTransacaoContext(null);
+        }}
         onSuccess={async () => {
           setTransacaoDialogOpen(false);
+          setTransacaoContext(null);
           // Delay para garantir que o trigger do banco tenha atualizado os saldos
           await new Promise(resolve => setTimeout(resolve, 300));
           invalidateVinculos();
         }}
+        defaultTipoTransacao={transacaoContext ? "DEPOSITO" : undefined}
+        defaultDestinoBookmakerId={transacaoContext?.bookmarkerId}
+        defaultOrigemParceiroId={transacaoContext?.parceiroId || undefined}
+        defaultTipoMoeda="FIAT"
+        defaultMoeda={transacaoContext?.moeda || "BRL"}
+        entryPoint={transacaoContext ? "affiliate_deposit" : undefined}
+        allowedTipoTransacao={transacaoContext ? ["DEPOSITO", "SAQUE"] : undefined}
       />
 
       {/* Bonus History Drawer */}
