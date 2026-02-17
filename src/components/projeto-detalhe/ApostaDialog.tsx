@@ -63,6 +63,7 @@ import {
   getCurrencyTextColor,
   getCurrencySymbol 
 } from "@/components/bookmakers/BookmakerSelectOption";
+import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 import { reliquidarAposta, deletarAposta } from "@/services/aposta";
 // MOTOR FINANCEIRO v9.5: updateBookmakerBalance REMOVIDO - saldos são atualizados exclusivamente via trigger
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
@@ -2937,32 +2938,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                               placeholder="Selecione"
                             />
                           </SelectTrigger>
-                          <SelectContent className="max-w-[400px]">
-                            {bookmakers.length === 0 ? (
-                              <div className="p-3 text-center text-sm text-muted-foreground">
-                                Nenhuma bookmaker com saldo disponível
-                              </div>
-                            ) : (
-                              bookmakers.map((bk) => (
-                                <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
-                                  <BookmakerSelectOption 
-                                    bookmaker={{
-                                      id: bk.id,
-                                      nome: bk.nome,
-                                      parceiro_nome: bk.parceiro_nome,
-                                      moeda: bk.moeda,
-                                      saldo_operavel: bk.saldo_operavel,
-                                      saldo_disponivel: bk.saldo_disponivel,
-                                      saldo_freebet: bk.saldo_freebet,
-                                      saldo_bonus: bk.saldo_bonus,
-                                      logo_url: bk.logo_url,
-                                      bonus_rollover_started: bk.bonus_rollover_started,
-                                    }}
-                                  />
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
+                          <BookmakerSearchableSelectContent
+                            bookmakers={bookmakers}
+                            itemClassName="max-w-full"
+                          />
                         </Select>
                         
                         {/* Metadados fixos abaixo do select - altura fixa para evitar layout jumps */}
@@ -3218,32 +3197,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                       placeholder="Selecione"
                                     />
                                   </SelectTrigger>
-                                  <SelectContent className="max-w-[400px]">
-                                    {bookmakers.length === 0 ? (
-                                      <div className="p-3 text-center text-sm text-muted-foreground">
-                                        Nenhuma bookmaker disponível
-                                      </div>
-                                    ) : (
-                                      bookmakers.map((bk) => (
-                                        <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
-                                          <BookmakerSelectOption
-                                            bookmaker={{
-                                              id: bk.id,
-                                              nome: bk.nome,
-                                              parceiro_nome: bk.parceiro_nome,
-                                              moeda: bk.moeda,
-                                              saldo_operavel: bk.saldo_operavel,
-                                              saldo_disponivel: bk.saldo_disponivel,
-                                              saldo_freebet: bk.saldo_freebet,
-                                              saldo_bonus: bk.saldo_bonus,
-                                              logo_url: bk.logo_url,
-                                              bonus_rollover_started: bk.bonus_rollover_started,
-                                            }}
-                                          />
-                                        </SelectItem>
-                                      ))
-                                    )}
-                                  </SelectContent>
+                                  <BookmakerSearchableSelectContent
+                                    bookmakers={bookmakers}
+                                    itemClassName="max-w-full"
+                                    emptyMessage="Nenhuma bookmaker disponível"
+                                  />
                                 </Select>
                                 {/* Detalhes abaixo do select */}
                                 {/* Metadados fixos - altura fixa para evitar layout jumps */}
@@ -3467,26 +3425,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                       placeholder="Selecione"
                                     />
                                   </SelectTrigger>
-                                  <SelectContent className="max-w-[400px]">
-                                    {bookmakers.map((bk) => (
-                                      <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
-                                        <BookmakerSelectOption
-                                          bookmaker={{
-                                            id: bk.id,
-                                            nome: bk.nome,
-                                            parceiro_nome: bk.parceiro_nome,
-                                            moeda: bk.moeda,
-                                            saldo_operavel: bk.saldo_operavel,
-                                            saldo_disponivel: bk.saldo_disponivel,
-                                            saldo_freebet: bk.saldo_freebet,
-                                            saldo_bonus: bk.saldo_bonus,
-                                            logo_url: bk.logo_url,
-                                            bonus_rollover_started: bk.bonus_rollover_started,
-                                          }}
-                                        />
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
+                                  <BookmakerSearchableSelectContent
+                                    bookmakers={bookmakers}
+                                    itemClassName="max-w-full"
+                                  />
                                 </Select>
                                 {/* Metadados fixos - altura fixa para evitar layout jumps */}
                                 <BookmakerMetaRow 
@@ -3591,26 +3533,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                       placeholder="Selecione"
                                     />
                                   </SelectTrigger>
-                                  <SelectContent className="max-w-[400px]">
-                                    {bookmakers.map((bk) => (
-                                      <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
-                                        <BookmakerSelectOption
-                                          bookmaker={{
-                                            id: bk.id,
-                                            nome: bk.nome,
-                                            parceiro_nome: bk.parceiro_nome,
-                                            moeda: bk.moeda,
-                                            saldo_operavel: bk.saldo_operavel,
-                                            saldo_disponivel: bk.saldo_disponivel,
-                                            saldo_freebet: bk.saldo_freebet,
-                                            saldo_bonus: bk.saldo_bonus,
-                                            logo_url: bk.logo_url,
-                                            bonus_rollover_started: bk.bonus_rollover_started,
-                                          }}
-                                        />
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
+                                  <BookmakerSearchableSelectContent
+                                    bookmakers={bookmakers}
+                                    itemClassName="max-w-full"
+                                  />
                                 </Select>
                                 {/* Metadados fixos - altura fixa para evitar layout jumps */}
                                 <BookmakerMetaRow 
@@ -3952,32 +3878,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                   placeholder="Selecione"
                                 />
                               </SelectTrigger>
-                              <SelectContent className="max-w-[400px]">
-                                {bookmakers.length === 0 ? (
-                                  <div className="p-3 text-center text-sm text-muted-foreground">
-                                    Nenhuma bookmaker com saldo disponível
-                                  </div>
-                                ) : (
-                                  bookmakers.map((bk) => (
-                                    <SelectItem key={bk.id} value={bk.id} className="max-w-full py-2">
-                                      <BookmakerSelectOption 
-                                        bookmaker={{
-                                          id: bk.id,
-                                          nome: bk.nome,
-                                          parceiro_nome: bk.parceiro_nome,
-                                          moeda: bk.moeda,
-                                          saldo_operavel: bk.saldo_operavel,
-                                          saldo_disponivel: bk.saldo_disponivel,
-                                          saldo_freebet: bk.saldo_freebet,
-                                          saldo_bonus: bk.saldo_bonus,
-                                          logo_url: bk.logo_url,
-                                          bonus_rollover_started: bk.bonus_rollover_started,
-                                        }}
-                                      />
-                                    </SelectItem>
-                                  ))
-                                )}
-                              </SelectContent>
+                              <BookmakerSearchableSelectContent
+                                bookmakers={bookmakers}
+                                itemClassName="max-w-full"
+                              />
                             </Select>
                             
                             {/* Metadados fixos abaixo do select - altura fixa para evitar layout jumps */}

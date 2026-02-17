@@ -25,6 +25,7 @@ import { GiroDisponivelComBookmaker, GiroDisponivelFormData } from "@/types/giro
 import { format } from "date-fns";
 import { useBookmakerSaldosQuery } from "@/hooks/useBookmakerSaldosQuery";
 import { BookmakerSelectOption } from "@/components/bookmakers/BookmakerSelectOption";
+import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 
 type FormMode = "rapido" | "completo";
 
@@ -253,13 +254,7 @@ export function GiroDisponivelDialog({
                   <span className="text-muted-foreground">Selecione a casa</span>
                 )}
               </SelectTrigger>
-              <SelectContent>
-                {bookmakers.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    <BookmakerSelectOption bookmaker={b} />
-                  </SelectItem>
-                ))}
-              </SelectContent>
+                <BookmakerSearchableSelectContent bookmakers={bookmakers} />
             </Select>
           </div>
 

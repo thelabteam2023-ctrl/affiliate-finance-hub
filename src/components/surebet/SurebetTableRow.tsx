@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Plus, Check } from 'lucide-react';
 import { BookmakerSelectOption, BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
+import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { getFirstLastName } from '@/lib/utils';
@@ -219,26 +220,10 @@ export function SurebetTableRow({
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="max-w-[300px]">
-                {bookmakers.map(bk => (
-                  <SelectItem key={bk.id} value={bk.id}>
-                    <BookmakerSelectOption
-                      bookmaker={{
-                        id: bk.id,
-                        nome: bk.nome,
-                        parceiro_nome: bk.parceiro_nome,
-                        moeda: bk.moeda,
-                        saldo_operavel: bk.saldo_operavel,
-                        saldo_disponivel: bk.saldo_disponivel,
-                        saldo_freebet: bk.saldo_freebet,
-                        saldo_bonus: bk.saldo_bonus,
-                        logo_url: bk.logo_url,
-                        bonus_rollover_started: bk.bonus_rollover_started,
-                      }}
-                    />
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              <BookmakerSearchableSelectContent
+                bookmakers={bookmakers}
+                className="max-w-[300px]"
+              />
             </Select>
             {/* Metadados fixos - altura fixa para evitar layout jumps */}
             <BookmakerMetaRow 
