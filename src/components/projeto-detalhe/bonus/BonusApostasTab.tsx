@@ -563,9 +563,10 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
       aposta.selecao.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || aposta.status === statusFilter;
     const matchesResultado = resultadoFilter === "all" || aposta.resultado === resultadoFilter;
+    const matchesDimResultado = dimensionalFilter.resultados.length === 0 || dimensionalFilter.resultados.includes(aposta.resultado as any);
     const matchesTipo = tipoFilter === "todas" || tipoFilter === "simples";
     const matchesDim = matchesDimensionalFilter(aposta.bookmaker_id, aposta.bookmaker?.parceiro_id);
-    return matchesSearch && matchesStatus && matchesResultado && matchesTipo && matchesDim;
+    return matchesSearch && matchesStatus && matchesResultado && matchesDimResultado && matchesTipo && matchesDim;
   });
 
   // Filter multiplas
@@ -575,9 +576,10 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
     );
     const matchesStatus = statusFilter === "all" || am.status === statusFilter;
     const matchesResultado = resultadoFilter === "all" || am.resultado === resultadoFilter;
+    const matchesDimResultado = dimensionalFilter.resultados.length === 0 || dimensionalFilter.resultados.includes(am.resultado as any);
     const matchesTipo = tipoFilter === "todas" || tipoFilter === "multiplas";
     const matchesDim = matchesDimensionalFilter(am.bookmaker_id, am.bookmaker?.parceiro_id);
-    return (searchTerm === "" || matchesSearch) && matchesStatus && matchesResultado && matchesTipo && matchesDim;
+    return (searchTerm === "" || matchesSearch) && matchesStatus && matchesResultado && matchesDimResultado && matchesTipo && matchesDim;
   });
 
   // Filter surebets
@@ -588,12 +590,13 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
       sb.modelo.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || sb.status === statusFilter;
     const matchesResultado = resultadoFilter === "all" || sb.resultado === resultadoFilter;
+    const matchesDimResultado = dimensionalFilter.resultados.length === 0 || dimensionalFilter.resultados.includes(sb.resultado as any);
     const matchesTipo = tipoFilter === "todas" || tipoFilter === "surebets";
     // Surebets: match if ANY perna matches the dimensional filter
     const matchesDim = dimensionalFilter.bookmakerIds.length === 0 && dimensionalFilter.parceiroIds.length === 0
       ? true
       : (sb.pernas || []).some(p => matchesDimensionalFilter(p.bookmaker_id, undefined));
-    return matchesSearch && matchesStatus && matchesResultado && matchesTipo && matchesDim;
+    return matchesSearch && matchesStatus && matchesResultado && matchesDimResultado && matchesTipo && matchesDim;
   });
 
   // Unify and sort

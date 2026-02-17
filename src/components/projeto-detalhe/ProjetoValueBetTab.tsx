@@ -610,10 +610,10 @@ export function ProjetoValueBetTab({
         (a.evento || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (a.esporte || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (a.selecao || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesResultado = resultadoFilter === "all" || a.resultado === resultadoFilter;
+      const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
       return matchesSearch && matchesResultado;
     });
-  }, [apostasListaAtual, searchTerm, resultadoFilter]);
+  }, [apostasListaAtual, searchTerm, tabFilters.resultados]);
 
   // formatCurrency agora vem do useProjetoCurrency
 
@@ -860,6 +860,7 @@ export function ProjetoValueBetTab({
           projetoId={projetoId}
           filters={tabFilters}
           showEstrategiaFilter={false}
+          showResultadoFilter={true}
           className="pb-3 border-b border-border/50"
         />
       </CardContent>

@@ -155,11 +155,11 @@ export function FreebetExtracaoView({
     (ap) => ap.status === "LIQUIDADA" && ap.resultado !== "PENDENTE"
   );
   const apostasHistorico = useMemo(() => {
-    const { bookmakerIds, parceiroIds } = dimensionalFilter;
-    if (bookmakerIds.length === 0 && parceiroIds.length === 0) return apostasHistoricoRaw;
+    const { bookmakerIds, parceiroIds, resultados } = dimensionalFilter;
+    if (bookmakerIds.length === 0 && parceiroIds.length === 0 && resultados.length === 0) return apostasHistoricoRaw;
     return apostasHistoricoRaw.filter(ap => {
       if (bookmakerIds.length > 0 && !bookmakerIds.includes(ap.bookmaker_id)) return false;
-      // Para parceiro, precisamos resolver via bookmaker - usamos bookmaker_id para match indireto
+      if (resultados.length > 0 && !resultados.includes(ap.resultado as any)) return false;
       return true;
     });
   }, [apostasHistoricoRaw, dimensionalFilter]);

@@ -573,10 +573,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   // FILTRO PARA OPERAÇÕES: Aplica filtros dimensionais (Casa/Parceiro)
   // Este filtro afeta APENAS a sub-aba "Operações"
   const filteredSurebetsForOperacoes = useMemo(() => {
-    const { bookmakerIds, parceiroIds } = tabFilters;
+    const { bookmakerIds, parceiroIds, resultados } = tabFilters;
     
     // Se nenhum filtro dimensional ativo, retorna tudo
-    if (bookmakerIds.length === 0 && parceiroIds.length === 0) {
+    if (bookmakerIds.length === 0 && parceiroIds.length === 0 && resultados.length === 0) {
       return surebets;
     }
     
@@ -584,7 +584,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
       // Filtro por bookmaker
       if (bookmakerIds.length > 0) {
         const surebetBookmakerIds = (surebet.pernas || []).map(p => p.bookmaker_id).filter(Boolean);
-        // Também verificar bookmaker_id para apostas simples
         if (surebet.bookmaker_id) surebetBookmakerIds.push(surebet.bookmaker_id);
         
         const hasMatchingBookmaker = surebetBookmakerIds.some(id => bookmakerIds.includes(id!));
@@ -604,10 +603,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
         
         if (matchingBookmakers.length === 0) return false;
       }
+
+      // Filtro por resultado
+      if (resultados.length > 0) {
+        if (!surebet.resultado || !resultados.includes(surebet.resultado as any)) return false;
+      }
       
       return true;
     });
-  }, [surebets, tabFilters.bookmakerIds, tabFilters.parceiroIds, bookmakers]);
+  }, [surebets, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
 
   // KPIs GLOBAIS (para Visão Geral) - NUNCA filtrados por Casa/Parceiro
   // Usa `surebets` diretamente (já filtrado por data no fetch)
@@ -1131,6 +1135,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
             filters={tabFilters}
             showEstrategiaFilter={false}
             showPeriodFilter={false}
+            showResultadoFilter={true}
             className="pb-3 border-b border-border/50"
           />
         </CardContent>
