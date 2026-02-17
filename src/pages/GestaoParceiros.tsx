@@ -593,7 +593,7 @@ export default function GestaoParceiros() {
       moeda,
     });
     setTransacaoTipo(tipo === "deposito" ? "DEPOSITO" : "SAQUE");
-    setTransacaoEntryPoint(undefined);
+    setTransacaoEntryPoint("affiliate_deposit");
     setTransacaoDialogOpen(true);
   }, []);
 
