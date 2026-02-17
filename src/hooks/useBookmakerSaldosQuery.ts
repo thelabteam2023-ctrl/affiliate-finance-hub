@@ -100,9 +100,9 @@ export function useBookmakerSaldosQuery({
       );
     },
     enabled: enabled && !!projetoId,
-    staleTime: 10 * 1000, // 10 segundos - dados de saldo mudam frequentemente
+    staleTime: 5 * 1000, // 5 segundos - saldos podem mudar a qualquer momento (bônus, apostas)
     refetchOnWindowFocus: true,
-    refetchOnMount: true
+    refetchOnMount: 'always' // SEMPRE refetch ao montar - garante dados frescos ao abrir dialogs
   });
 }
 
