@@ -206,6 +206,8 @@ export function FreebetDialog({
         }
       } else {
         // Create new freebet - always with status LIBERADA
+        // CRÍTICO: Persistir moeda_operacao da bookmaker selecionada
+        const moedaOperacao = selectedBookmaker?.moeda || "BRL";
         const { error } = await supabase
           .from("freebets_recebidas")
           .insert({
@@ -221,6 +223,7 @@ export function FreebetDialog({
             workspace_id: workspaceId,
             utilizada: false,
             tem_rollover: data.tem_rollover || false,
+            moeda_operacao: moedaOperacao,
           });
 
         if (error) throw error;

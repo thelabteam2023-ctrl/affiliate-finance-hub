@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,10 +34,18 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useFreebetEstoque, FreebetRecebidaCompleta, BookmakerEstoque, EstoqueMetrics } from "@/hooks/useFreebetEstoque";
 import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
+import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
+
+/** Formata valor na moeda nativa da freebet (não na consolidação) */
+function formatNativeCurrency(valor: number, moeda: string): string {
+  const symbol = CURRENCY_SYMBOLS[moeda as SupportedCurrency] || moeda;
+  return `${symbol} ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 interface FreebetEstoqueViewProps {
   projetoId: string;
   formatCurrency: (value: number) => string;
+  refreshTrigger?: number;
   dateRange: { start: Date; end: Date } | null;
   onAddFreebet?: (bookmakerId?: string) => void;
 }
@@ -107,16 +115,23 @@ function getExpirationBadge(diasParaExpirar: number | null) {
   return null;
 }
 
-export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAddFreebet }: FreebetEstoqueViewProps) {
+export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAddFreebet, refreshTrigger }: FreebetEstoqueViewProps) {
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
   const [freebetToDelete, setFreebetToDelete] = useState<FreebetRecebidaCompleta | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const { freebets, bookmakersEstoque, metrics, loading, deleteFreebet } = useFreebetEstoque({
+  const { freebets, bookmakersEstoque, metrics, loading, deleteFreebet, refresh } = useFreebetEstoque({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
   });
+
+  // Re-fetch when refreshTrigger changes (e.g. after adding a freebet)
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      refresh();
+    }
+  }, [refreshTrigger, refresh]);
 
   const handleDeleteFreebet = async () => {
     if (!freebetToDelete) return;
@@ -442,7 +457,7 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                         </div>
                       </td>
                       <td className="p-3 text-right font-medium text-amber-400">
-                        {formatCurrency(fb.valor)}
+                        {formatNativeCurrency(fb.valor, fb.moeda)}
                       </td>
                       <td className="p-3 max-w-[150px] truncate" title={fb.motivo}>
                         {fb.motivo}
