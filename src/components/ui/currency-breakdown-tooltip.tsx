@@ -11,6 +11,8 @@ interface CurrencyBreakdownTooltipProps {
   breakdown: CurrencyBreakdownItem[];
   moedaConsolidacao: string;
   className?: string;
+  /** If provided, wraps children as the trigger instead of showing the Info icon */
+  children?: React.ReactNode;
 }
 
 // Helper para formatar valor com símbolo da moeda
@@ -36,7 +38,8 @@ export const formatarPorMoeda = (valor: number, moeda: string): string => {
 export function CurrencyBreakdownTooltip({ 
   breakdown, 
   moedaConsolidacao,
-  className 
+  className,
+  children
 }: CurrencyBreakdownTooltipProps) {
   // Não mostrar se não há dados ou apenas uma moeda igual à consolidação
   const hasMultipleCurrencies = breakdown.length > 1;
@@ -50,7 +53,11 @@ export function CurrencyBreakdownTooltip({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Info className={`h-3 w-3 text-muted-foreground cursor-help ${className || ""}`} />
+          {children ? (
+            <div className={`cursor-help ${className || ""}`}>{children}</div>
+          ) : (
+            <Info className={`h-3 w-3 text-muted-foreground cursor-help ${className || ""}`} />
+          )}
         </TooltipTrigger>
         <TooltipContent side="bottom" className="max-w-xs">
           <div className="space-y-1.5">
