@@ -1342,7 +1342,7 @@ export function SurebetModalRoot({
           />
 
           {/* CONTENT */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+          <div className="overflow-y-auto p-4 space-y-3 min-h-0">
             {/* Operação parcial warning */}
             {analysis.isOperacaoParcial && !isEditing && (
               <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
