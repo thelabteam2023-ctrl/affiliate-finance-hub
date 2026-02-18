@@ -32,7 +32,7 @@ export function SurebetTableFooter({
   onImport
 }: SurebetTableFooterProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-border/50">
+    <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-border/50">
       {/* Totais */}
       <div className="flex items-center gap-6">
         <div className="text-center">
