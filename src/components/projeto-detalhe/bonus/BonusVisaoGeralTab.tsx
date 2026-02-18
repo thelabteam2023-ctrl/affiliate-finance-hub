@@ -409,17 +409,16 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             <BarChart3 className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-1.5">
+            <CurrencyBreakdownTooltip
+              breakdown={analyticsSummary.volume_breakdown}
+              moedaConsolidacao={analyticsSummary.moeda_consolidacao}
+            >
               <div className="text-2xl font-bold truncate">
                 {formatCurrency(analyticsSummary.volume_breakdown.reduce((acc, item) => 
                   acc + convertToConsolidationOficial(item.valor, item.moeda), 0
                 ))}
               </div>
-              <CurrencyBreakdownTooltip
-                breakdown={analyticsSummary.volume_breakdown}
-                moedaConsolidacao={analyticsSummary.moeda_consolidacao}
-              />
-            </div>
+            </CurrencyBreakdownTooltip>
             <p className="text-xs text-muted-foreground">Volume apostado em bônus</p>
           </CardContent>
         </Card>
