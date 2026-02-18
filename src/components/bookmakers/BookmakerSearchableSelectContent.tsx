@@ -1,8 +1,9 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { SelectContent, SelectItem } from "@/components/ui/select";
 import { BookmakerSelectOption, type BookmakerOptionData } from "./BookmakerSelectOption";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useExchangeRatesSafe } from "@/contexts/ExchangeRatesContext";
 
 /** Aceita parceiro_nome como opcional para compatibilidade com BookmakerOption */
 type BookmakerInput = Omit<BookmakerOptionData, 'parceiro_nome'> & { parceiro_nome?: string | null };
@@ -19,6 +20,7 @@ interface BookmakerSearchableSelectContentProps {
 /**
  * SelectContent com busca condicional para bookmakers.
  * Mostra campo de busca apenas quando há mais de 7 itens.
+ * Ordena por saldo operável convertido para BRL (moeda pivot) decrescente.
  * 
  * Usa e.stopPropagation() no onKeyDown do input para evitar
  * que o Radix Select capture as teclas (typeahead).
@@ -32,6 +34,7 @@ export function BookmakerSearchableSelectContent({
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const showSearch = bookmakers.length > SEARCH_THRESHOLD;
+  const rates = useExchangeRatesSafe();
 
   // Reset search when list changes (e.g., dialog reopen)
   useEffect(() => {
@@ -46,14 +49,24 @@ export function BookmakerSearchableSelectContent({
     }
   }, [showSearch]);
 
+  // Ordenar por saldo operável convertido para BRL (moeda pivot) - maior primeiro
+  const sorted = useMemo(() => {
+    const convertToBRL = rates?.convertToBRL;
+    return [...bookmakers].sort((a, b) => {
+      const aVal = convertToBRL ? convertToBRL(a.saldo_operavel, a.moeda) : a.saldo_operavel;
+      const bVal = convertToBRL ? convertToBRL(b.saldo_operavel, b.moeda) : b.saldo_operavel;
+      return bVal - aVal;
+    });
+  }, [bookmakers, rates?.convertToBRL]);
+
   const filtered = showSearch && search.trim()
-    ? bookmakers.filter((bk) => {
+    ? sorted.filter((bk) => {
         const term = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const nome = bk.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const parceiro = (bk.parceiro_nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         return nome.includes(term) || parceiro.includes(term);
       })
-    : bookmakers;
+    : sorted;
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     // Impedir que o Select capture teclas do input de busca
