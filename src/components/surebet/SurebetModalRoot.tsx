@@ -177,7 +177,7 @@ export function SurebetModalRoot({
   const [mercado, setMercado] = useState("");
   const [dataAposta, setDataAposta] = useState("");
   
-  const [modeloTipo, setModeloTipo] = useState<"2" | "3" | "4+">("2");
+  const [modeloTipo, setModeloTipo] = useState<"2" | "3" | "4+">("3");
   const [numPernasCustom, setNumPernasCustom] = useState<number>(4);
   
   const numPernas = useMemo(() => {
@@ -363,8 +363,8 @@ export function SurebetModalRoot({
       initializeLegPrints(numPernasRascunho);
     } else {
       // Novo formulário
-      resetToNewForm(2);
-      setModeloTipo("2");
+      resetToNewForm(3);
+      setModeloTipo("3");
       
       // Se a aba tiver estratégia fixa, pré-selecionar automaticamente
       // Em "apostas-livres" ou "apostas", o usuário deve escolher manualmente
@@ -1303,7 +1303,7 @@ export function SurebetModalRoot({
     <>
       {/* Painel Fullscreen - Ocupa 100% da janela */}
       <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in-0 duration-200">
-        <div className="relative w-full h-full flex flex-col overflow-hidden max-h-screen">
+        <div className="relative w-full flex flex-col overflow-hidden max-h-screen" style={{ height: '100vh' }}>
           {/* Hidden file input */}
           <input
             type="file"
@@ -1342,7 +1342,7 @@ export function SurebetModalRoot({
           />
 
           {/* CONTENT */}
-          <div className="overflow-y-auto p-4 space-y-3 min-h-0">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
             {/* Operação parcial warning */}
             {analysis.isOperacaoParcial && !isEditing && (
               <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
