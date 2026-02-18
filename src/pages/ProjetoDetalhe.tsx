@@ -149,9 +149,19 @@ export default function ProjetoDetalhe() {
   // Project tab preference (página inicial por projeto)
   const { defaultTab, loading: tabPreferenceLoading, isDefaultTab } = useProjectTabPreference(id);
   const hasAppliedDefaultTab = useRef(false);
+  const previousProjectId = useRef<string | undefined>(undefined);
   
   // KPIs sempre mostram dados completos (sem filtro de período - cada aba usa seu próprio)
   const [activeTab, setActiveTab] = useState("apostas");
+  
+  // Reset tab state when project changes (direct navigation between projects)
+  useEffect(() => {
+    if (previousProjectId.current !== undefined && previousProjectId.current !== id) {
+      hasAppliedDefaultTab.current = false;
+      setActiveTab("apostas"); // Reset to default while loading preference
+    }
+    previousProjectId.current = id;
+  }, [id]);
   
   // Refresh trigger - incrementado toda vez que uma aposta/bonus é criado
   const [refreshTrigger, setRefreshTrigger] = useState(0);
