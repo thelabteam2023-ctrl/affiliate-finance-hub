@@ -25,6 +25,12 @@ export function useProjectTabPreference(projectId: string | undefined): UseProje
   const [preference, setPreference] = useState<ProjectTabPreference | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Reset state immediately when projectId changes
+  useEffect(() => {
+    setPreference(null);
+    setLoading(true);
+  }, [projectId]);
+
   const loadPreference = useCallback(async () => {
     if (!user || !projectId) {
       setPreference(null);
