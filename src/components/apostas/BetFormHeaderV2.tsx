@@ -1,10 +1,9 @@
 /**
  * BetFormHeaderV2 - Header unificado para formulários de apostas (versão definitiva)
  * 
- * Estrutura de 3 linhas fixas:
- * - Linha 1: Título + Importar
- * - Linha 2: Estratégia + Contexto (centralizados)
- * - Linha 3: Esporte | Evento | Mercado | Data/Hora (grid de 4 colunas)
+ * Estrutura de 2 linhas fixas:
+ * - Linha 1: Título + Estratégia inline + Importar
+ * - Linha 2: Esporte | Evento | Mercado | Data/Hora (grid de 4 colunas)
  * 
  * Altura fixa idêntica para Aposta Simples e Arbitragem.
  */
@@ -57,9 +56,7 @@ interface GameFields {
   onEventoChange: (value: string) => void;
   onMercadoChange: (value: string) => void;
   onDataApostaChange: (value: string) => void;
-  /** Lista ordenada de esportes (opcional, usa padrão se não fornecida) */
   esportesList?: string[];
-  /** Campos que precisam de revisão (OCR) */
   fieldsNeedingReview?: {
     esporte?: boolean;
     evento?: boolean;
@@ -69,36 +66,22 @@ interface GameFields {
 }
 
 interface BetFormHeaderV2Props {
-  /** Tipo do formulário */
   formType: BetFormType;
-  /** Valores atuais */
   estrategia: ApostaEstrategia | null;
   contexto: ContextoOperacional;
-  /** Callbacks */
   onEstrategiaChange: (value: ApostaEstrategia) => void;
   onContextoChange: (value: ContextoOperacional) => void;
-  /** Estado de edição (desabilita alteração de estratégia/contexto quando em abas fixas) */
   isEditing?: boolean;
-  /** Aba ativa (para determinar se estratégia é fixa) */
   activeTab?: string;
-  /** Estratégia locked (definida pela aba) */
   lockedEstrategia?: ApostaEstrategia | null;
-  
-  /** Campos do jogo (Linha 3) */
   gameFields: GameFields;
-  
-  /** Importar - Configuração */
   showImport?: boolean;
   onImportClick?: () => void;
   isPrintProcessing?: boolean;
   printProcessingPhase?: string;
   fileInputRef?: RefObject<HTMLInputElement>;
   onFileSelect?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  
-  /** Badge extra (ex: número de pernas para arbitragem) */
   extraBadge?: React.ReactNode;
-  
-  /** Botão de fechar (para modais embedded) */
   showCloseButton?: boolean;
   onClose?: () => void;
   embedded?: boolean;
@@ -164,16 +147,53 @@ export function BetFormHeaderV2({
 
   return (
     <div className="border-b border-border/50 bg-muted/20 shrink-0">
-      {/* ========== LINHA 1: Título + Importar ========== */}
+      {/* ========== LINHA 1: Título + Estratégia inline + Importar ========== */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/30">
-        <div className="flex items-center gap-3">
-          <Icon className={cn("h-5 w-5", config.iconColor)} />
-          <h2 className="font-semibold text-base">{title}</h2>
+        <div className="flex items-center gap-3 min-w-0">
+          <Icon className={cn("h-5 w-5 shrink-0", config.iconColor)} />
+          <h2 className="font-semibold text-base whitespace-nowrap">{title}</h2>
           {extraBadge}
+          
+          {/* Estratégia inline */}
+          <div className="flex items-center gap-1.5 ml-1">
+            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+              Estratégia<span className="text-destructive ml-0.5">*</span>
+              {isEstrategiaFixed && (
+                <span className="ml-1 text-[10px] text-primary">(fixo)</span>
+              )}
+            </span>
+            
+            {isEstrategiaFixed && lockedEstrategia ? (
+              <Badge 
+                variant="secondary" 
+                className="text-xs font-medium bg-primary/10 text-primary border-primary/20"
+              >
+                {ESTRATEGIA_LABELS[lockedEstrategia]}
+              </Badge>
+            ) : (
+              <Select 
+                value={displayEstrategia || ""} 
+                onValueChange={(v) => onEstrategiaChange(v as ApostaEstrategia)}
+                disabled={isEstrategiaFixed}
+              >
+                <SelectTrigger className={cn(
+                  "h-7 text-xs w-[160px]", 
+                  !displayEstrategia && "border-destructive/50",
+                  isEstrategiaFixed && "opacity-70 cursor-not-allowed"
+                )}>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ESTRATEGIAS_LIST.map(e => (
+                    <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Botão Importar */}
           {showImport && !isEditing && (
             <>
               <TooltipProvider>
@@ -214,7 +234,6 @@ export function BetFormHeaderV2({
             </>
           )}
           
-          {/* Botão Fechar */}
           {showCloseButton && !embedded && onClose && (
             <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
               <X className="h-4 w-4" />
@@ -223,52 +242,7 @@ export function BetFormHeaderV2({
         </div>
       </div>
       
-      {/* ========== LINHA 2: Estratégia (Contexto é auto-inferido internamente) ========== */}
-      <div className="px-4 py-2.5 border-b border-border/30">
-        <div className="flex justify-center">
-          {/* Estratégia */}
-          <div className="text-center w-full max-w-[320px]">
-            <Label className="text-xs text-muted-foreground block mb-1">
-              Estratégia <span className="text-destructive">*</span>
-              {isEstrategiaFixed && (
-                <span className="ml-1 text-[10px] text-primary">(fixo)</span>
-              )}
-            </Label>
-            
-            {isEstrategiaFixed && lockedEstrategia ? (
-              <div className="h-8 flex items-center justify-center">
-                <Badge 
-                  variant="secondary" 
-                  className="text-xs font-medium bg-primary/10 text-primary border-primary/20"
-                >
-                  {ESTRATEGIA_LABELS[lockedEstrategia]}
-                </Badge>
-              </div>
-            ) : (
-              <Select 
-                value={displayEstrategia || ""} 
-                onValueChange={(v) => onEstrategiaChange(v as ApostaEstrategia)}
-                disabled={isEstrategiaFixed}
-              >
-                <SelectTrigger className={cn(
-                  "h-8 text-xs text-center [&>span]:text-center [&>span]:w-full", 
-                  !displayEstrategia && "border-destructive/50",
-                  isEstrategiaFixed && "opacity-70 cursor-not-allowed"
-                )}>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ESTRATEGIAS_LIST.map(e => (
-                    <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      {/* ========== LINHA 3: Esporte | Evento | Mercado | Data/Hora ========== */}
+      {/* ========== LINHA 2: Esporte | Evento | Mercado | Data/Hora ========== */}
       <div className="px-4 py-2.5">
         <div className="grid grid-cols-4 gap-3">
           {/* Esporte */}
