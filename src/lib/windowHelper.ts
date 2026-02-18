@@ -10,7 +10,7 @@ export interface WindowOpenParams {
   estrategia?: string;
 }
 
-const DEFAULT_WINDOW_FEATURES = 'width=640,height=560,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+const DEFAULT_WINDOW_FEATURES = 'width=640,height=520,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no';
 
 /**
  * Calcula altura ideal da janela de Surebet baseada na quantidade de pernas.
