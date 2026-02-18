@@ -443,13 +443,11 @@ export function SaldosParceirosSheet() {
           const walletTotal = items.reduce((sum, s) => sum + s.saldo_usd, 0);
           return (
             <div key={walletName}>
-              {/* Wallet header - only show if multiple wallets */}
-              {walletNames.length > 1 && (
-                <div className={`flex items-center justify-between py-1 ${wIdx > 0 ? "mt-1.5 border-t border-border/20 pt-1.5" : ""}`}>
-                  <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wide">{walletName}</span>
-                  <span className="text-[11px] font-mono text-muted-foreground/60 tabular-nums">{formatCurrency(walletTotal, "USD")}</span>
-                </div>
-              )}
+              {/* Wallet header */}
+              <div className={`flex items-center justify-between py-1 ${wIdx > 0 ? "mt-1.5 border-t border-border/20 pt-1.5" : ""}`}>
+                <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wide">{walletName}</span>
+                <span className="text-[11px] font-mono text-muted-foreground/60 tabular-nums">{formatCurrency(walletTotal, "USD")}</span>
+              </div>
               {items.map((s, idx) => (
                 <div key={idx} className="flex justify-between items-start gap-4 py-0.5">
                   <div className="flex flex-col gap-0">
