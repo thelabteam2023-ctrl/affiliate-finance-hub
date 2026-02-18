@@ -17,7 +17,7 @@ const DEFAULT_WINDOW_FEATURES = 'width=780,height=900,menubar=no,toolbar=no,loca
  * Base fixa (header + campos + resumo + footer) + altura por perna.
  */
 export function calcSurebetWindowHeight(numPernas: number): number {
-  const BASE_HEIGHT = 560; // header + fields + summary + footer + padding (increased to always show summary)
+  const BASE_HEIGHT = 510; // header (2 lines now) + game fields + model tabs + summary + footer + padding
   const HEIGHT_PER_LEG = 80; // each leg row height
   const calculated = BASE_HEIGHT + (HEIGHT_PER_LEG * numPernas);
   // Cap at screen height
@@ -31,7 +31,7 @@ const SUREBET_WINDOW_FEATURES = 'width=780,menubar=no,toolbar=no,location=no,sta
  * Abre o formulário de Surebet em uma nova janela.
  */
 export function openSurebetWindow(params: WindowOpenParams & { numPernas?: number }) {
-  const { projetoId, id, activeTab = 'surebet', numPernas = 2 } = params;
+  const { projetoId, id, activeTab = 'surebet', numPernas = 3 } = params;
   const surebetId = id || 'novo';
   const url = `/janela/surebet/${surebetId}?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab)}`;
   const height = calcSurebetWindowHeight(numPernas);
