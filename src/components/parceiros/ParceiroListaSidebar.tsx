@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, User, Plus, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, User, Plus, Clock, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
@@ -99,11 +99,7 @@ export function ParceiroListaSidebar({
                 className="h-9 w-9 shrink-0"
                 onClick={() => setSortOrder(prev => prev === "desc" ? "asc" : "desc")}
               >
-                {sortOrder === "desc" ? (
-                  <ArrowDown className="h-4 w-4" />
-                ) : (
-                  <ArrowUp className="h-4 w-4" />
-                )}
+                <Clock className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
