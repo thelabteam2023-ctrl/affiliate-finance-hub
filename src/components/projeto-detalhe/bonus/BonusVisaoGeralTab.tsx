@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, Fragment } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -385,15 +385,15 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                     ...(limited > 0 ? [{ label: "Limitadas", value: limited, isWarning: true, icon: <AlertTriangle className="h-3 w-3" /> }] : []),
                   ];
                   return (
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                    <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-xs">
                       {items.map((item) => (
-                        <div key={item.label} className={`flex items-center gap-1 ${'isWarning' in item && item.isWarning ? "col-span-2" : ""}`}>
-                          <span className={`flex items-center gap-0.5 ${'isWarning' in item && item.isWarning ? "text-amber-500" : "text-muted-foreground"}`}>
+                        <Fragment key={item.label}>
+                          <span className={`flex items-center justify-end gap-0.5 ${'isWarning' in item && item.isWarning ? "text-amber-500" : "text-muted-foreground"}`}>
                             {'icon' in item && item.icon}
                             {item.label}
                           </span>
-                          <span className={`font-semibold tabular-nums ${'isWarning' in item && item.isWarning ? "text-amber-500" : "text-foreground"}`}>{item.value}</span>
-                        </div>
+                          <span className={`font-semibold tabular-nums text-right min-w-[2ch] ${'isWarning' in item && item.isWarning ? "text-amber-500" : "text-foreground"}`}>{item.value}</span>
+                        </Fragment>
                       ))}
                     </div>
                   );
