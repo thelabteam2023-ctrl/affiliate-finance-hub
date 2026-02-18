@@ -221,23 +221,34 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
           <Building2 className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{analyticsSummary.total_bookmakers}</div>
-          <p className="text-xs text-muted-foreground">
-            {analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}
-          </p>
-          {(() => {
-            const statuses = Object.entries(analyticsSummary.status_breakdown).filter(([, v]) => v > 0);
-            const labels: Record<string, string> = { ativas: "Ativas", concluidas: "Concluídas", encerradas: "Encerradas", pausadas: "Pausadas", limitadas: "Limitadas", bloqueadas: "Bloqueadas" };
-            return statuses.length > 0 ? (
-              <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
-                {statuses.map(([k, v]) => (
-                  <span key={k} className="text-[11px] text-muted-foreground">
-                    {labels[k] || k}: <span className="font-medium text-foreground">{v}</span>
-                  </span>
-                ))}
+          <TooltipUI>
+            <TooltipTrigger asChild>
+              <div className="cursor-help">
+                <div className="text-2xl font-bold">{analyticsSummary.total_bookmakers}</div>
+                <p className="text-xs text-muted-foreground">
+                  {analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}
+                </p>
               </div>
-            ) : null;
-          })()}
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="p-3">
+              {(() => {
+                const statuses = Object.entries(analyticsSummary.status_breakdown).filter(([, v]) => v > 0);
+                const labels: Record<string, string> = { ativas: "Ativas", concluidas: "Concluídas", encerradas: "Encerradas", pausadas: "Pausadas", limitadas: "Limitadas", bloqueadas: "Bloqueadas" };
+                return statuses.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                    {statuses.map(([k, v]) => (
+                      <div key={k} className="flex items-center justify-between gap-2">
+                        <span className={`text-muted-foreground ${k === "limitadas" ? "text-amber-500" : ""}`}>{labels[k] || k}</span>
+                        <span className={`font-semibold tabular-nums ${k === "limitadas" ? "text-amber-500" : "text-foreground"}`}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Sem detalhes</span>
+                );
+              })()}
+            </TooltipContent>
+          </TooltipUI>
         </CardContent>
       </Card>
 
