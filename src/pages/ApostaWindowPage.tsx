@@ -181,31 +181,6 @@ export default function ApostaWindowPage() {
 
   return (
     <div className="bg-background overflow-x-hidden">
-      {/* Header */}
-      <header className="shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-12 items-center justify-between px-3 sm:px-4">
-          <div className="flex items-center gap-2 min-w-0">
-            <Target className="h-5 w-5 text-blue-500 flex-shrink-0" />
-            <h1 className="text-sm sm:text-base font-semibold truncate">
-              {isEditing ? "Editar Aposta" : "Nova Aposta"}
-            </h1>
-            {saveCount > 0 && (
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                {saveCount} salva(s)
-              </span>
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClose}
-            className="h-8 w-8 p-0 flex-shrink-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </header>
-
       {/* Conteúdo */}
       <div className="p-2 sm:p-4">
         <ApostaDialog
