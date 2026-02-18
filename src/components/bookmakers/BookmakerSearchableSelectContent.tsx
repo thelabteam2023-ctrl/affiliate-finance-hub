@@ -74,7 +74,7 @@ export function BookmakerSearchableSelectContent({
   }, []);
 
   return (
-    <SelectContent className={cn("min-w-[280px] w-[var(--radix-select-trigger-width)] max-w-[400px] z-50", className)} position="popper" sideOffset={4}>
+    <SelectContent className={cn("min-w-[280px] w-[var(--radix-select-trigger-width)] z-50", className)} position="popper" sideOffset={4}>
       {showSearch && (
         <div className="px-2 pt-2 pb-1 sticky top-0 bg-popover z-10">
           <div className="relative">
