@@ -148,20 +148,11 @@ export default function ProjetoDetalhe() {
   
   // Project tab preference (página inicial por projeto)
   const { defaultTab, loading: tabPreferenceLoading, isDefaultTab } = useProjectTabPreference(id);
-  const hasAppliedDefaultTab = useRef(false);
-  const previousProjectId = useRef<string | undefined>(undefined);
+  // Track which project ID had its default tab applied (prevents stale application)
+  const appliedDefaultTabForProject = useRef<string | null>(null);
   
   // KPIs sempre mostram dados completos (sem filtro de período - cada aba usa seu próprio)
   const [activeTab, setActiveTab] = useState("apostas");
-  
-  // Reset tab state when project changes (direct navigation between projects)
-  useEffect(() => {
-    if (previousProjectId.current !== undefined && previousProjectId.current !== id) {
-      hasAppliedDefaultTab.current = false;
-      setActiveTab("apostas"); // Reset to default while loading preference
-    }
-    previousProjectId.current = id;
-  }, [id]);
   
   // Refresh trigger - incrementado toda vez que uma aposta/bonus é criado
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -301,25 +292,25 @@ export default function ProjetoDetalhe() {
 
   // Apply default tab preference when project loads or changes
   useEffect(() => {
-    if (
-      !tabPreferenceLoading && 
-      !modulesLoading && 
-      !hasAppliedDefaultTab.current
-    ) {
-      hasAppliedDefaultTab.current = true;
-      
-      if (defaultTab) {
-        // Verify the default tab is still valid (module might have been deactivated)
-        if (isValidTab(defaultTab)) {
-          setActiveTab(defaultTab);
-        } else {
-          // Fallback: show toast and use default tab
-          toast.info("Página inicial indisponível", {
-            description: `"${getTabLabel(defaultTab)}" não está mais disponível. Você pode definir outra página inicial.`,
-          });
-        }
+    if (!id || tabPreferenceLoading || modulesLoading) return;
+    
+    // Skip if we already applied the default tab for THIS specific project
+    if (appliedDefaultTabForProject.current === id) return;
+    
+    // Mark as applied for this project
+    appliedDefaultTabForProject.current = id;
+    
+    if (defaultTab) {
+      if (isValidTab(defaultTab)) {
+        setActiveTab(defaultTab);
+      } else {
+        setActiveTab("apostas");
+        toast.info("Página inicial indisponível", {
+          description: `"${getTabLabel(defaultTab)}" não está mais disponível. Você pode definir outra página inicial.`,
+        });
       }
-      // If no defaultTab, keep "apostas" (already set by reset effect)
+    } else {
+      setActiveTab("apostas");
     }
   }, [id, defaultTab, tabPreferenceLoading, modulesLoading, modulesError, isModuleActive]);
   
