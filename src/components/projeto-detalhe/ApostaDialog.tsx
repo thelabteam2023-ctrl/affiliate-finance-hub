@@ -2820,13 +2820,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     return (
       <>
         <div 
-          className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in-0 duration-200"
+          className="z-50 bg-background flex flex-col animate-in fade-in-0 duration-200 min-h-screen"
           ref={dialogContentRef}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <div className="relative w-full h-full flex flex-col overflow-hidden">
+          <div className="relative w-full flex flex-col overflow-hidden">
             {/* Hidden file input */}
             <input
               type="file"
@@ -2843,7 +2843,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             <BetFormHeaderV2 {...headerProps} />
 
             {/* CONTENT - com scroll e padding interno */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="p-4">
               <div className="grid gap-5">
                 {renderPrintStatusIndicators()}
 
