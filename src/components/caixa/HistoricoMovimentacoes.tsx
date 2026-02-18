@@ -346,9 +346,12 @@ export function HistoricoMovimentacoes({
             {/* Tipo filter */}
             <div className="flex items-center">
               <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                <SelectTrigger className={`h-8 text-xs gap-1 whitespace-nowrap flex-nowrap flex items-center ${filtroTipo !== "TODOS" ? "bg-secondary border-secondary" : "border-border/50"}`}>
-                  <Filter className="h-3.5 w-3.5 shrink-0" />
-                  <span className="shrink-0">Tipo:</span> <SelectValue />
+                <SelectTrigger className={`h-8 text-xs gap-1 whitespace-nowrap ${filtroTipo !== "TODOS" ? "bg-secondary border-secondary" : "border-border/50"}`}>
+                  <span className="inline-flex items-center gap-1 shrink-0">
+                    <Filter className="h-3.5 w-3.5 shrink-0" />
+                    <span>Tipo:</span>
+                  </span>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="TODOS">Todos</SelectItem>
