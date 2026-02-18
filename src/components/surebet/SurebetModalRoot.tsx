@@ -186,7 +186,16 @@ export function SurebetModalRoot({
     return numPernasCustom;
   }, [modeloTipo, numPernasCustom]);
   
-  // Window size is fixed at 3-leg height on open; no dynamic resize needed
+  // Redimensionar janela apenas para 4+ pernas (2 e 3 mantêm tamanho fixo)
+  useEffect(() => {
+    if (!embedded || !open || numPernas <= 3) return;
+    try {
+      const targetHeight = calcSurebetWindowHeight(numPernas);
+      window.resizeTo(window.outerWidth, targetHeight);
+    } catch {
+      // Silently ignore if resize not supported
+    }
+  }, [numPernas, embedded, open]);
   const [odds, setOdds] = useState<OddEntry[]>(() => 
     getDefaultSelecoes(2).map((sel, i) => ({
       bookmaker_id: "",
