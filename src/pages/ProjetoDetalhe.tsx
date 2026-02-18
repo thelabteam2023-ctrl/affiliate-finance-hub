@@ -299,27 +299,29 @@ export default function ProjetoDetalhe() {
     return false;
   };
 
-  // Apply default tab preference on initial load
+  // Apply default tab preference when project loads or changes
   useEffect(() => {
     if (
       !tabPreferenceLoading && 
       !modulesLoading && 
-      !hasAppliedDefaultTab.current && 
-      defaultTab
+      !hasAppliedDefaultTab.current
     ) {
       hasAppliedDefaultTab.current = true;
       
-      // Verify the default tab is still valid (module might have been deactivated)
-      if (isValidTab(defaultTab)) {
-        setActiveTab(defaultTab);
-      } else {
-        // Fallback: show toast and use default tab
-        toast.info("Página inicial indisponível", {
-          description: `"${getTabLabel(defaultTab)}" não está mais disponível. Você pode definir outra página inicial.`,
-        });
+      if (defaultTab) {
+        // Verify the default tab is still valid (module might have been deactivated)
+        if (isValidTab(defaultTab)) {
+          setActiveTab(defaultTab);
+        } else {
+          // Fallback: show toast and use default tab
+          toast.info("Página inicial indisponível", {
+            description: `"${getTabLabel(defaultTab)}" não está mais disponível. Você pode definir outra página inicial.`,
+          });
+        }
       }
+      // If no defaultTab, keep "apostas" (already set by reset effect)
     }
-  }, [defaultTab, tabPreferenceLoading, modulesLoading, modulesError, isModuleActive]);
+  }, [id, defaultTab, tabPreferenceLoading, modulesLoading, modulesError, isModuleActive]);
   
   // Função centralizada para disparar refresh em todas as abas
   const triggerGlobalRefresh = () => {
