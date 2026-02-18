@@ -17,7 +17,7 @@ const DEFAULT_WINDOW_FEATURES = 'width=680,height=720,menubar=no,toolbar=no,loca
  * Base fixa (header + campos + resumo + footer) + altura por perna.
  */
 export function calcSurebetWindowHeight(numPernas: number): number {
-  const BASE_HEIGHT = 510; // header (2 lines now) + game fields + model tabs + summary + footer + padding
+  const BASE_HEIGHT = 490; // header (2 lines now) + game fields + model tabs + summary + footer + padding (tighter spacing)
   const HEIGHT_PER_LEG = 80; // each leg row height
   const calculated = BASE_HEIGHT + (HEIGHT_PER_LEG * numPernas);
   // Cap at screen height
