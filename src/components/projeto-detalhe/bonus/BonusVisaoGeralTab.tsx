@@ -371,7 +371,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               const finalized = analyticsStats.reduce((sum, s) => sum + s.bonus_finalized_count, 0);
               const limited = analyticsSummary.status_breakdown.limitadas;
               return (
-                <div className="grid grid-cols-3 gap-x-3 gap-y-1 mt-2">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2">
                   <span className="text-xs text-muted-foreground">
                     <Gift className="inline h-3 w-3 mr-0.5" />
                     Recebidos: <span className="font-semibold text-foreground">{totalReceived}</span>
@@ -380,18 +380,18 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                     <Timer className="inline h-3 w-3 mr-0.5" />
                     Pendentes: <span className="font-semibold text-foreground">{pending}</span>
                   </span>
-                  {limited > 0 ? (
-                    <span className="text-xs text-amber-500">
-                      <AlertTriangle className="inline h-3 w-3 mr-0.5" />
-                      Limitadas: <span className="font-semibold">{limited}</span>
-                    </span>
-                  ) : <span />}
                   <span className="text-xs text-muted-foreground">
                     Em andamento: <span className="font-semibold text-foreground">{inProgress}</span>
                   </span>
                   <span className="text-xs text-muted-foreground">
                     Finalizados: <span className="font-semibold text-foreground">{finalized}</span>
                   </span>
+                  {limited > 0 && (
+                    <span className="text-xs text-amber-500 col-span-2">
+                      <AlertTriangle className="inline h-3 w-3 mr-0.5" />
+                      Limitadas: <span className="font-semibold">{limited}</span>
+                    </span>
+                  )}
                 </div>
               );
             })()}
