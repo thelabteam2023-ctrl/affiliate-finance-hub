@@ -237,7 +237,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
                 return statuses.length > 0 ? (
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                     {statuses.map(([k, v]) => (
-                      <div key={k} className="flex items-center justify-between gap-2">
+                      <div key={k} className="flex items-center gap-1">
                         <span className={`text-muted-foreground ${k === "limitadas" ? "text-amber-500" : ""}`}>{labels[k] || k}</span>
                         <span className={`font-semibold tabular-nums ${k === "limitadas" ? "text-amber-500" : "text-foreground"}`}>{v}</span>
                       </div>

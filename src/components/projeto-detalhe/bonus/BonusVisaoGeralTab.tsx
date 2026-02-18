@@ -387,7 +387,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                   return (
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                       {items.map((item) => (
-                        <div key={item.label} className={`flex items-center justify-between gap-2 ${'isWarning' in item && item.isWarning ? "col-span-2" : ""}`}>
+                        <div key={item.label} className={`flex items-center gap-1 ${'isWarning' in item && item.isWarning ? "col-span-2" : ""}`}>
                           <span className={`flex items-center gap-0.5 ${'isWarning' in item && item.isWarning ? "text-amber-500" : "text-muted-foreground"}`}>
                             {'icon' in item && item.icon}
                             {item.label}
