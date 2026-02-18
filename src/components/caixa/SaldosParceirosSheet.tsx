@@ -455,7 +455,7 @@ export function SaldosParceirosSheet() {
               {/* Wallet header: address + total */}
               <div className={`py-1 ${wIdx > 0 ? "mt-2 border-t border-border/30 pt-2" : ""}`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-muted-foreground/80 font-mono" title={wallet.endereco}>
+                  <span className="text-[12px] font-semibold text-foreground/90 font-mono tracking-wide" title={wallet.endereco}>
                     {truncateAddr(wallet.endereco) || wallet.exchange}
                   </span>
                   <span className="text-[11px] font-mono text-muted-foreground/60 tabular-nums">{formatCurrency(walletTotal, "USD")}</span>
