@@ -83,6 +83,7 @@ interface ParceiroSaldoAgrupado {
     saldo_usd: number; 
     saldo_locked_usd: number;
     exchange: string;
+    endereco: string;
   }>;
   saldos_bookmakers: Array<{ 
     nome: string; 
@@ -265,6 +266,7 @@ export function SaldosParceirosSheet() {
           saldo_usd: saldoUsdAtualizado,
           saldo_locked_usd: saldoLockedUsd,
           exchange: wallet.exchange || "Wallet",
+          endereco: wallet.endereco || "",
         });
         parceiro.total_crypto_usd += saldoUsdAtualizado;
         parceiro.total_crypto_locked_usd += saldoLockedUsd;
@@ -418,15 +420,20 @@ export function SaldosParceirosSheet() {
   const CryptoHoverContent = ({ saldos, totalLocked }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number }) => {
     const [ascending, setAscending] = useState(false);
 
-    // Group by wallet/exchange
-    const grouped = saldos.reduce<Record<string, typeof saldos>>((acc, s) => {
-      const key = s.exchange || "Wallet";
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(s);
+    const truncateAddr = (addr: string) => {
+      if (!addr || addr.length <= 12) return addr || "—";
+      return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    };
+
+    // Group by endereco (unique wallet address)
+    const grouped = saldos.reduce<Record<string, { exchange: string; endereco: string; items: typeof saldos }>>((acc, s) => {
+      const key = s.endereco || s.exchange || "Wallet";
+      if (!acc[key]) acc[key] = { exchange: s.exchange, endereco: s.endereco, items: [] };
+      acc[key].items.push(s);
       return acc;
     }, {});
 
-    const walletNames = Object.keys(grouped).sort();
+    const walletKeys = Object.keys(grouped).sort();
 
     return (
       <div className="space-y-1.5">
@@ -438,15 +445,22 @@ export function SaldosParceirosSheet() {
             <ArrowUpDown className="h-3 w-3" />
           </button>
         </div>
-        {walletNames.map((walletName, wIdx) => {
-          const items = [...grouped[walletName]].sort((a, b) => ascending ? a.saldo_usd - b.saldo_usd : b.saldo_usd - a.saldo_usd);
+        {walletKeys.map((wKey, wIdx) => {
+          const wallet = grouped[wKey];
+          const items = [...wallet.items].sort((a, b) => ascending ? a.saldo_usd - b.saldo_usd : b.saldo_usd - a.saldo_usd);
           const walletTotal = items.reduce((sum, s) => sum + s.saldo_usd, 0);
+          const coins = items.map(s => s.coin).join(", ");
           return (
-            <div key={walletName}>
-              {/* Wallet header */}
-              <div className={`flex items-center justify-between py-1 ${wIdx > 0 ? "mt-1.5 border-t border-border/20 pt-1.5" : ""}`}>
-                <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wide">{walletName}</span>
-                <span className="text-[11px] font-mono text-muted-foreground/60 tabular-nums">{formatCurrency(walletTotal, "USD")}</span>
+            <div key={wKey}>
+              {/* Wallet header: address + total */}
+              <div className={`py-1 ${wIdx > 0 ? "mt-2 border-t border-border/30 pt-2" : ""}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-muted-foreground/80 font-mono" title={wallet.endereco}>
+                    {truncateAddr(wallet.endereco) || wallet.exchange}
+                  </span>
+                  <span className="text-[11px] font-mono text-muted-foreground/60 tabular-nums">{formatCurrency(walletTotal, "USD")}</span>
+                </div>
+                <span className="text-[10px] text-muted-foreground/50">{coins}</span>
               </div>
               {items.map((s, idx) => (
                 <div key={idx} className="flex justify-between items-start gap-4 py-0.5">
