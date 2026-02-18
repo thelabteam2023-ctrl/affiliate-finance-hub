@@ -186,16 +186,7 @@ export function SurebetModalRoot({
     return numPernasCustom;
   }, [modeloTipo, numPernasCustom]);
   
-  // Redimensionar janela dinamicamente quando número de pernas muda (modo embedded/popup)
-  useEffect(() => {
-    if (!embedded || !open) return;
-    try {
-      const targetHeight = calcSurebetWindowHeight(numPernas);
-      window.resizeTo(window.outerWidth, targetHeight);
-    } catch {
-      // Silently ignore if resize not supported
-    }
-  }, [numPernas, embedded, open]);
+  // Window size is fixed at 3-leg height on open; no dynamic resize needed
   const [odds, setOdds] = useState<OddEntry[]>(() => 
     getDefaultSelecoes(2).map((sel, i) => ({
       bookmaker_id: "",
