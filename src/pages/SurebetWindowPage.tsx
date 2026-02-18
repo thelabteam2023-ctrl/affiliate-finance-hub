@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SurebetModalRoot, type SurebetActionType } from "@/components/surebet/SurebetModalRoot";
@@ -7,6 +7,7 @@ import { Loader2, AlertTriangle, FileText, CheckCircle2, Trash2 } from "lucide-r
 import { toast } from "sonner";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useApostaRascunho, type ApostaRascunho } from "@/hooks/useApostaRascunho";
+import { useResizeWindowToContent } from "@/hooks/useResizeWindowToContent";
 /**
  * Página standalone para o formulário de Surebet.
  * Rota: /janela/surebet/novo?projetoId=...&tab=...&rascunhoId=...
@@ -242,19 +243,23 @@ export default function SurebetWindowPage() {
     );
   }
   
+  const contentRef = useResizeWindowToContent([formKey, loading]);
+
   return (
-    <SurebetModalRoot
-      key={formKey}
-      open={true}
-      onOpenChange={(open) => {
-        if (!open) handleClose();
-      }}
-      projetoId={projetoId}
-      surebet={surebet}
-      rascunho={rascunhoCarregado}
-      activeTab={activeTab}
-      onSuccess={handleSuccess}
-      embedded={true}
-    />
+    <div ref={contentRef} className="bg-background">
+      <SurebetModalRoot
+        key={formKey}
+        open={true}
+        onOpenChange={(open) => {
+          if (!open) handleClose();
+        }}
+        projetoId={projetoId}
+        surebet={surebet}
+        rascunho={rascunhoCarregado}
+        activeTab={activeTab}
+        onSuccess={handleSuccess}
+        embedded={true}
+      />
+    </div>
   );
 }

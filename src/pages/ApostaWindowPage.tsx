@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ApostaDialog, type ApostaActionType } from '@/components/projeto-detalhe/ApostaDialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, CheckCircle2, X, Target, Trash2 } from 'lucide-react';
+import { useResizeWindowToContent } from '@/hooks/useResizeWindowToContent';
 import { toast } from 'sonner';
 
 // Debug: Confirm this file is loading in standalone window
@@ -179,22 +180,22 @@ export default function ApostaWindowPage() {
     );
   }
 
+  // Auto-resize window to fit content
+  const contentRef = useResizeWindowToContent([formKey, loading]);
+
   return (
-    <div className="bg-background overflow-x-hidden">
-      {/* Conteúdo */}
-      <div className="p-2 sm:p-4">
-        <ApostaDialog
-          key={formKey}
-          open={true}
-          onOpenChange={(open) => !open && handleClose()}
-          aposta={aposta}
-          projetoId={projetoId}
-          onSuccess={handleSuccess}
-          defaultEstrategia={estrategia as any}
-          activeTab={activeTab}
-          embedded={true}
-        />
-      </div>
+    <div ref={contentRef} className="bg-background">
+      <ApostaDialog
+        key={formKey}
+        open={true}
+        onOpenChange={(open) => !open && handleClose()}
+        aposta={aposta}
+        projetoId={projetoId}
+        onSuccess={handleSuccess}
+        defaultEstrategia={estrategia as any}
+        activeTab={activeTab}
+        embedded={true}
+      />
     </div>
   );
 }
