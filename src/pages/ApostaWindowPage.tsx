@@ -180,9 +180,9 @@ export default function ApostaWindowPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="h-screen bg-background overflow-x-hidden flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-12 items-center justify-between px-3 sm:px-4">
           <div className="flex items-center gap-2 min-w-0">
             <Target className="h-5 w-5 text-blue-500 flex-shrink-0" />
@@ -207,7 +207,7 @@ export default function ApostaWindowPage() {
       </header>
 
       {/* Conteúdo */}
-      <div className="p-2 sm:p-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 sm:p-4">
         <ApostaDialog
           key={formKey}
           open={true}
