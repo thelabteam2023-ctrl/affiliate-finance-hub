@@ -351,6 +351,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       )}
 
       {/* KPIs with hierarchy - Saldo Operável is primary */}
+      <TooltipProvider>
       <div className="grid gap-4 md:grid-cols-4">
         <SaldoOperavelCard projetoId={projetoId} />
 
@@ -360,43 +361,45 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyticsSummary.total_bookmakers}</div>
-            <p className="text-xs text-muted-foreground">
-              {analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}
-            </p>
-            {(() => {
-              const totalReceived = analyticsStats.reduce((sum, s) => sum + s.total_bonus_count, 0);
-              const pending = analyticsStats.reduce((sum, s) => sum + s.bonus_pending_count, 0);
-              const inProgress = Math.max(0, analyticsStats.reduce((sum, s) => sum + s.bonus_credited_count - s.bonus_finalized_count, 0));
-              const finalized = analyticsStats.reduce((sum, s) => sum + s.bonus_finalized_count, 0);
-              const limited = analyticsSummary.status_breakdown.limitadas;
-              return (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3">
-                  <div className="flex flex-col">
-                    <span className="text-[11px] text-muted-foreground flex items-center gap-0.5"><Gift className="h-3 w-3" /> Recebidos</span>
-                    <span className="text-sm font-semibold text-foreground">{totalReceived}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] text-muted-foreground flex items-center gap-0.5"><Timer className="h-3 w-3" /> Pendentes</span>
-                    <span className="text-sm font-semibold text-foreground">{pending}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] text-muted-foreground">Em andamento</span>
-                    <span className="text-sm font-semibold text-foreground">{inProgress}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] text-muted-foreground">Finalizados</span>
-                    <span className="text-sm font-semibold text-foreground">{finalized}</span>
-                  </div>
-                  {limited > 0 && (
-                    <div className="flex flex-col col-span-2">
-                      <span className="text-[11px] text-amber-500 flex items-center gap-0.5"><AlertTriangle className="h-3 w-3" /> Limitadas</span>
-                      <span className="text-sm font-semibold text-amber-500">{limited}</span>
-                    </div>
-                  )}
+            <TooltipUI>
+              <TooltipTrigger asChild>
+                <div className="cursor-help">
+                  <div className="text-2xl font-bold">{analyticsSummary.total_bookmakers}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}
+                  </p>
                 </div>
-              );
-            })()}
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="p-3">
+                {(() => {
+                  const totalReceived = analyticsStats.reduce((sum, s) => sum + s.total_bonus_count, 0);
+                  const pending = analyticsStats.reduce((sum, s) => sum + s.bonus_pending_count, 0);
+                  const inProgress = Math.max(0, analyticsStats.reduce((sum, s) => sum + s.bonus_credited_count - s.bonus_finalized_count, 0));
+                  const finalized = analyticsStats.reduce((sum, s) => sum + s.bonus_finalized_count, 0);
+                  const limited = analyticsSummary.status_breakdown.limitadas;
+                  const items = [
+                    { label: "Recebidos", value: totalReceived, icon: <Gift className="h-3 w-3" /> },
+                    { label: "Pendentes", value: pending, icon: <Timer className="h-3 w-3" /> },
+                    { label: "Em andamento", value: inProgress },
+                    { label: "Finalizados", value: finalized },
+                    ...(limited > 0 ? [{ label: "Limitadas", value: limited, isWarning: true, icon: <AlertTriangle className="h-3 w-3" /> }] : []),
+                  ];
+                  return (
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                      {items.map((item) => (
+                        <div key={item.label} className={`flex items-center justify-between gap-2 ${'isWarning' in item && item.isWarning ? "col-span-2" : ""}`}>
+                          <span className={`flex items-center gap-0.5 ${'isWarning' in item && item.isWarning ? "text-amber-500" : "text-muted-foreground"}`}>
+                            {'icon' in item && item.icon}
+                            {item.label}
+                          </span>
+                          <span className={`font-semibold tabular-nums ${'isWarning' in item && item.isWarning ? "text-amber-500" : "text-foreground"}`}>{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </TooltipContent>
+            </TooltipUI>
           </CardContent>
         </Card>
 
@@ -422,7 +425,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         </Card>
 
         {/* Nova KPI: Performance de Bônus com % */}
-        <TooltipProvider>
+        
           <Card className={bonusPerformance.total >= 0 ? "border-primary/30 bg-primary/5" : "border-destructive/30 bg-destructive/5"}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1.5">
@@ -474,8 +477,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               </div>
             </CardContent>
           </Card>
-        </TooltipProvider>
+        
       </div>
+      </TooltipProvider>
 
       {/* Filtro de período - abaixo dos KPIs */}
       {periodFilter}
