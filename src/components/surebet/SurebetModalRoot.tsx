@@ -1302,8 +1302,8 @@ export function SurebetModalRoot({
   return (
     <>
       {/* Painel Fullscreen - Ocupa 100% da janela */}
-      <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in-0 duration-200">
-        <div className="relative w-full flex flex-col overflow-hidden max-h-screen" style={{ height: '100vh' }}>
+      <div className="z-50 bg-background flex flex-col animate-in fade-in-0 duration-200 min-h-screen">
+        <div className="relative w-full flex flex-col overflow-hidden">
           {/* Hidden file input */}
           <input
             type="file"
@@ -1342,7 +1342,7 @@ export function SurebetModalRoot({
           />
 
           {/* CONTENT */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+          <div className="p-4 space-y-3">
             {/* Operação parcial warning */}
             {analysis.isOperacaoParcial && !isEditing && (
               <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
