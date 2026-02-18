@@ -2820,7 +2820,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     return (
       <>
         <div 
-          className="z-50 bg-background flex flex-col animate-in fade-in-0 duration-200 min-h-screen"
+          className="z-50 bg-background flex flex-col animate-in fade-in-0 duration-200"
           ref={dialogContentRef}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
