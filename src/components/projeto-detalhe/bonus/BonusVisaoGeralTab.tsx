@@ -371,26 +371,28 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               const finalized = analyticsStats.reduce((sum, s) => sum + s.bonus_finalized_count, 0);
               const limited = analyticsSummary.status_breakdown.limitadas;
               return (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2">
-                  <span className="text-xs text-muted-foreground">
-                    <Gift className="inline h-3 w-3 mr-0.5" />
-                    Recebidos: <span className="font-semibold text-foreground">{totalReceived}</span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    <Timer className="inline h-3 w-3 mr-0.5" />
-                    Pendentes: <span className="font-semibold text-foreground">{pending}</span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Em andamento: <span className="font-semibold text-foreground">{inProgress}</span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Finalizados: <span className="font-semibold text-foreground">{finalized}</span>
-                  </span>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3">
+                  <div className="flex flex-col">
+                    <span className="text-[11px] text-muted-foreground flex items-center gap-0.5"><Gift className="h-3 w-3" /> Recebidos</span>
+                    <span className="text-sm font-semibold text-foreground">{totalReceived}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] text-muted-foreground flex items-center gap-0.5"><Timer className="h-3 w-3" /> Pendentes</span>
+                    <span className="text-sm font-semibold text-foreground">{pending}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] text-muted-foreground">Em andamento</span>
+                    <span className="text-sm font-semibold text-foreground">{inProgress}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] text-muted-foreground">Finalizados</span>
+                    <span className="text-sm font-semibold text-foreground">{finalized}</span>
+                  </div>
                   {limited > 0 && (
-                    <span className="text-xs text-amber-500 col-span-2">
-                      <AlertTriangle className="inline h-3 w-3 mr-0.5" />
-                      Limitadas: <span className="font-semibold">{limited}</span>
-                    </span>
+                    <div className="flex flex-col col-span-2">
+                      <span className="text-[11px] text-amber-500 flex items-center gap-0.5"><AlertTriangle className="h-3 w-3" /> Limitadas</span>
+                      <span className="text-sm font-semibold text-amber-500">{limited}</span>
+                    </div>
                   )}
                 </div>
               );
