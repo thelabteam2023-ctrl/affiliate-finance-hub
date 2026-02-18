@@ -417,38 +417,60 @@ export function SaldosParceirosSheet() {
 
   const CryptoHoverContent = ({ saldos, totalLocked }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number }) => {
     const [ascending, setAscending] = useState(false);
-    const sorted = [...saldos].sort((a, b) => ascending ? a.saldo_usd - b.saldo_usd : b.saldo_usd - a.saldo_usd);
+
+    // Group by wallet/exchange
+    const grouped = saldos.reduce<Record<string, typeof saldos>>((acc, s) => {
+      const key = s.exchange || "Wallet";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(s);
+      return acc;
+    }, {});
+
+    const walletNames = Object.keys(grouped).sort();
+
     return (
       <div className="space-y-1.5">
         <div className="flex items-center justify-between pb-1 mb-0.5 border-b border-border/30">
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
-            Saldo por Moeda
+            Saldo por Carteira
           </p>
           <button onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors">
             <ArrowUpDown className="h-3 w-3" />
           </button>
         </div>
-        {sorted.map((s, idx) => (
-          <div key={idx} className="flex justify-between items-start gap-4 py-0.5">
-            <div className="flex flex-col gap-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[13px] font-semibold text-foreground leading-tight">{s.coin}</span>
-                <span className="text-[11px] text-muted-foreground/60 leading-tight">• {s.exchange}</span>
-              </div>
-              <span className="text-[11px] text-muted-foreground/50 font-mono tabular-nums leading-tight">
-                {s.saldo_coin.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {s.coin}
-              </span>
-            </div>
-            <div className="flex flex-col items-end gap-0">
-              <span className="text-[13px] font-mono font-medium text-chart-2 whitespace-nowrap tabular-nums leading-tight">{formatCurrency(s.saldo_usd, "USD")}</span>
-              {s.saldo_locked_usd > 0 && (
-                <span className="text-[11px] font-mono text-chart-3/80 whitespace-nowrap tabular-nums leading-tight">
-                  -{formatCurrency(s.saldo_locked_usd, "USD")} trânsito
-                </span>
+        {walletNames.map((walletName, wIdx) => {
+          const items = [...grouped[walletName]].sort((a, b) => ascending ? a.saldo_usd - b.saldo_usd : b.saldo_usd - a.saldo_usd);
+          const walletTotal = items.reduce((sum, s) => sum + s.saldo_usd, 0);
+          return (
+            <div key={walletName}>
+              {/* Wallet header - only show if multiple wallets */}
+              {walletNames.length > 1 && (
+                <div className={`flex items-center justify-between py-1 ${wIdx > 0 ? "mt-1.5 border-t border-border/20 pt-1.5" : ""}`}>
+                  <span className="text-[11px] font-medium text-muted-foreground/80 uppercase tracking-wide">{walletName}</span>
+                  <span className="text-[11px] font-mono text-muted-foreground/60 tabular-nums">{formatCurrency(walletTotal, "USD")}</span>
+                </div>
               )}
+              {items.map((s, idx) => (
+                <div key={idx} className="flex justify-between items-start gap-4 py-0.5">
+                  <div className="flex flex-col gap-0">
+                    <span className="text-[13px] font-semibold text-foreground leading-tight">{s.coin}</span>
+                    <span className="text-[11px] text-muted-foreground/50 font-mono tabular-nums leading-tight">
+                      {s.saldo_coin.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {s.coin}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end gap-0">
+                    <span className="text-[13px] font-mono font-medium text-chart-2 whitespace-nowrap tabular-nums leading-tight">{formatCurrency(s.saldo_usd, "USD")}</span>
+                    {s.saldo_locked_usd > 0 && (
+                      <span className="text-[11px] font-mono text-chart-3/80 whitespace-nowrap tabular-nums leading-tight">
+                        -{formatCurrency(s.saldo_locked_usd, "USD")} trânsito
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        ))}
+          );
+        })}
         {totalLocked > 0 && (
           <div className="pt-1.5 mt-1 border-t border-border/30 flex justify-between items-center">
             <span className="text-[11px] text-chart-3/80 font-medium">⏳ Em Trânsito</span>
