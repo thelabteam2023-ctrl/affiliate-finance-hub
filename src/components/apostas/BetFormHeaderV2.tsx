@@ -149,19 +149,17 @@ export function BetFormHeaderV2({
     <div className="border-b border-border/50 bg-muted/20 shrink-0">
       {/* ========== LINHA 1: Título + Estratégia inline + Importar ========== */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/30">
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <Icon className={cn("h-5 w-5 shrink-0", config.iconColor)} />
           <h2 className="font-semibold text-base whitespace-nowrap">{title}</h2>
           {extraBadge}
+        </div>
           
-          {/* Estratégia inline */}
-          <div className="flex items-center gap-1.5 ml-1">
-            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-              Estratégia<span className="text-destructive ml-0.5">*</span>
-              {isEstrategiaFixed && (
-                <span className="ml-1 text-[10px] text-primary">(fixo)</span>
-              )}
-            </span>
+        {/* Estratégia centralizada */}
+        <div className="flex items-center gap-1.5 justify-center flex-1">
+          <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+            Estratégia<span className="text-destructive ml-0.5">*</span>
+          </span>
             
             {isEstrategiaFixed && lockedEstrategia ? (
               <Badge 
@@ -191,9 +189,8 @@ export function BetFormHeaderV2({
               </Select>
             )}
           </div>
-        </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 justify-end">
           {showImport && !isEditing && (
             <>
               <TooltipProvider>
