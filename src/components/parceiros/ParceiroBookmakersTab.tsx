@@ -291,7 +291,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
                 <div className="text-center py-6 text-muted-foreground text-xs"><AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />Nenhuma casa vinculada</div>
               ) : displayedVinculados.map((bm) => (
                 <div key={bm.id} className="flex items-center gap-2 p-2 border border-border rounded-lg hover:bg-muted/20">
-                  {bm.logo_url ? <img src={bm.logo_url} alt={bm.nome} className="h-10 w-10 rounded object-contain bg-white p-0.5 shrink-0" /> : <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0"><Building2 className="h-5 w-5 text-muted-foreground" /></div>}
+                  {bm.logo_url ? <img src={bm.logo_url} alt={bm.nome} className="h-10 w-10 rounded object-contain p-0.5 shrink-0" /> : <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0"><Building2 className="h-5 w-5 text-muted-foreground" /></div>}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-xs font-medium truncate">{bm.nome}</p>
@@ -374,7 +374,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
                 <div className="text-center py-6 text-muted-foreground text-xs"><AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />Nenhuma casa disponível</div>
               ) : filteredDisponiveis.map((bm) => (
                 <div key={bm.id} className="flex items-center gap-2 p-2 border border-border rounded-lg hover:bg-muted/20">
-                  {bm.logo_url ? <img src={bm.logo_url} alt={bm.nome} className="h-10 w-10 rounded object-contain bg-white p-0.5 shrink-0" /> : <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0"><Building2 className="h-5 w-5 text-muted-foreground" /></div>}
+                  {bm.logo_url ? <img src={bm.logo_url} alt={bm.nome} className="h-10 w-10 rounded object-contain p-0.5 shrink-0" /> : <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0"><Building2 className="h-5 w-5 text-muted-foreground" /></div>}
                   <div className="flex-1 min-w-0"><p className="text-xs font-medium truncate">{bm.nome}</p></div>
                   <Tooltip><TooltipTrigger asChild><Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleCreateVinculo(bm.id)}><Plus className="h-3.5 w-3.5" /></Button></TooltipTrigger><TooltipContent><p>Vincular casa</p></TooltipContent></Tooltip>
                 </div>
