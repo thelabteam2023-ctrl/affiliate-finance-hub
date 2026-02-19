@@ -213,7 +213,7 @@ function SolicitacaoRow({
                   <span className="w-7 shrink-0">Para</span>
                   <span>: {solicitacao.executor?.full_name ?? '—'}</span>
                 </div>
-                <div className="flex items-center gap-1 pl-4">
+                <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {formatDistanceToNow(new Date(solicitacao.created_at), {
                     addSuffix: true,
