@@ -641,7 +641,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                 <img
                                   src={bm.logo_url}
                                   alt={bm.bookmaker_nome}
-                                  className="h-10 w-10 rounded object-contain bg-white p-0.5 shrink-0"
+                                  className="h-10 w-10 rounded object-contain p-0.5 shrink-0"
                                 />
                               ) : (
                                 <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
