@@ -1,7 +1,9 @@
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import {
   Dialog,
   DialogContent,
@@ -24,28 +26,32 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import * as SelectPrimitive from '@radix-ui/react-select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useCriarSolicitacao } from '@/hooks/useSolicitacoes';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
-import {
-  SOLICITACAO_TIPO_LABELS,
-  SOLICITACAO_PRIORIDADE_LABELS,
-} from '@/types/solicitacoes';
-import type { SolicitacaoTipo, SolicitacaoPrioridade } from '@/types/solicitacoes';
-import { ClipboardList, Loader2, Search } from 'lucide-react';
+import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
+import type { SolicitacaoTipo } from '@/types/solicitacoes';
+import { CalendarIcon, ClipboardList, Loader2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const schema = z.object({
   titulo: z.string().min(5, 'Título deve ter pelo menos 5 caracteres').max(200),
   descricao: z.string().min(10, 'Descreva a solicitação com pelo menos 10 caracteres'),
   tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'transferencia', 'outros'] as const),
-  prioridade: z.enum(['baixa', 'media', 'alta', 'urgente'] as const),
+  prazo: z.date({ required_error: 'Selecione o prazo limite' }),
   executor_id: z.string().min(1, 'Selecione o responsável pela execução'),
-  bookmaker_id: z.string().optional(),
+  bookmaker_ids: z.array(z.string()).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -63,7 +69,7 @@ interface Props {
   };
 }
 
-/** Dropdown genérico com busca — não depende de dados financeiros */
+/** Dropdown genérico com busca */
 function SearchableSelectContent({
   items,
   emptyMessage = 'Nenhum item encontrado',
@@ -76,18 +82,13 @@ function SearchableSelectContent({
   const [search, setSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setSearch('');
-  }, [items.length]);
-
+  useEffect(() => { setSearch(''); }, [items.length]);
   useEffect(() => {
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(timer);
   }, []);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    e.stopPropagation();
-  }, []);
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => { e.stopPropagation(); }, []);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return items;
@@ -126,7 +127,6 @@ function SearchableSelectContent({
             />
           </div>
         </div>
-
         <SelectPrimitive.Viewport className="p-1 max-h-64 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="p-3 text-center text-sm text-muted-foreground">
@@ -135,23 +135,18 @@ function SearchableSelectContent({
           ) : (
             filtered.map((item) => (
               <SelectItem key={item.id} value={item.id} className="py-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full">
                   {item.logo_url ? (
                     <img
                       src={item.logo_url}
                       alt={item.label}
-                      className="h-5 w-5 rounded object-contain flex-shrink-0"
+                      className="h-4 w-4 rounded object-contain flex-shrink-0"
                       onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                     />
                   ) : (
-                    <div className="h-5 w-5 rounded bg-muted flex-shrink-0" />
+                    <div className="h-4 w-4 rounded bg-muted flex-shrink-0" />
                   )}
-                  <div className="flex flex-col">
-                    <span>{item.label}</span>
-                    {item.sublabel && (
-                      <span className="text-xs text-muted-foreground">{item.sublabel}</span>
-                    )}
-                  </div>
+                  <span className="truncate">{item.label}</span>
                 </div>
               </SelectItem>
             ))
@@ -159,6 +154,123 @@ function SearchableSelectContent({
         </SelectPrimitive.Viewport>
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
+  );
+}
+
+/** Multi-select de bookmakers com checkboxes */
+function BookmakerMultiSelect({
+  items,
+  value,
+  onChange,
+  loading,
+}: {
+  items: { id: string; label: string; logo_url?: string }[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+  loading: boolean;
+}) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return items;
+    const term = search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return items.filter((item) =>
+      item.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(term),
+    );
+  }, [items, search]);
+
+  const toggle = (id: string) => {
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+  };
+
+  const label = useMemo(() => {
+    if (value.length === 0) return null;
+    if (value.length === 1) {
+      const bm = items.find((i) => i.id === value[0]);
+      return bm?.label ?? '1 selecionada';
+    }
+    return `${value.length} bookmakers selecionadas`;
+  }, [value, items]);
+
+  if (loading) return <Skeleton className="h-9 w-full" />;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          className={cn(
+            'w-full h-9 px-3 justify-between font-normal border-input',
+            !label && 'text-muted-foreground',
+          )}
+        >
+          <span className="truncate text-sm">{label ?? 'Selecionar bookmakers...'}</span>
+          <span className="ml-2 text-muted-foreground text-xs shrink-0">▼</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] p-0 z-[9999]"
+        align="start"
+        sideOffset={4}
+      >
+        <div className="px-2 pt-2 pb-2 border-b border-border">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar bookmaker..."
+              className="w-full h-8 pl-7 pr-2 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+        </div>
+        <div className="max-h-60 overflow-y-auto p-1">
+          {filtered.length === 0 ? (
+            <p className="p-3 text-center text-sm text-muted-foreground">
+              {search.trim() ? 'Nenhum resultado' : 'Nenhuma bookmaker ativa'}
+            </p>
+          ) : (
+            filtered.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => toggle(item.id)}
+                className="flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer hover:bg-accent text-sm"
+              >
+                <Checkbox
+                  checked={value.includes(item.id)}
+                  onCheckedChange={() => toggle(item.id)}
+                  className="pointer-events-none"
+                />
+                {item.logo_url ? (
+                  <img
+                    src={item.logo_url}
+                    alt={item.label}
+                    className="h-4 w-4 rounded object-contain flex-shrink-0"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="h-4 w-4 rounded bg-muted flex-shrink-0" />
+                )}
+                <span className="truncate">{item.label}</span>
+              </div>
+            ))
+          )}
+        </div>
+        {value.length > 0 && (
+          <div className="border-t border-border px-2 py-1.5">
+            <button
+              onClick={() => onChange([])}
+              className="text-xs text-muted-foreground hover:text-foreground w-full text-left"
+            >
+              Limpar seleção ({value.length})
+            </button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -173,15 +285,14 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       titulo: contextoInicial?.titulo || '',
       descricao: '',
       tipo: contextoInicial?.tipo || 'outros',
-      prioridade: 'media',
+      prazo: undefined,
       executor_id: '',
-      bookmaker_id: '',
+      bookmaker_ids: [],
     },
   });
 
   const tipoSelecionado = form.watch('tipo');
 
-  // Listas formatadas para o SearchableSelectContent
   const bookmakerItems = useMemo(
     () =>
       workspaceBookmakers.map((bm) => ({
@@ -206,18 +317,19 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       ...(contextoInicial?.contexto_metadata ?? {}),
     };
 
-    if (data.tipo === 'abertura_conta' && data.bookmaker_id) {
-      const bm = workspaceBookmakers.find((b) => b.id === data.bookmaker_id);
-      metadata['bookmaker_id'] = data.bookmaker_id;
-      if (bm) metadata['bookmaker_nome'] = bm.nome;
+    if (data.tipo === 'abertura_conta' && data.bookmaker_ids?.length) {
+      const selectedBms = workspaceBookmakers.filter((b) => data.bookmaker_ids!.includes(b.id));
+      metadata['bookmaker_ids'] = data.bookmaker_ids;
+      metadata['bookmaker_nomes'] = selectedBms.map((b) => b.nome).join(', ');
     }
 
     await criar({
       titulo: data.titulo,
       descricao: data.descricao,
       tipo: data.tipo,
-      prioridade: data.prioridade,
+      prazo: data.prazo.toISOString(),
       executor_id: data.executor_id,
+      bookmaker_ids: data.tipo === 'abertura_conta' ? (data.bookmaker_ids ?? []) : [],
       bookmaker_id: contextoInicial?.bookmaker_id,
       projeto_id: contextoInicial?.projeto_id,
       parceiro_id: contextoInicial?.parceiro_id,
@@ -238,7 +350,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Título */}
             <FormField
               control={form.control}
@@ -254,7 +366,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
               )}
             />
 
-            {/* Tipo + Prioridade */}
+            {/* Tipo + Prazo */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -264,7 +376,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                     <FormLabel>Tipo *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="[&>span]:w-full [&>span]:text-center">
                           <SelectValue placeholder="Selecione o tipo" />
                         </SelectTrigger>
                       </FormControl>
@@ -283,66 +395,62 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                 )}
               />
 
+              {/* Prazo limite (substitui Prioridade) */}
               <FormField
                 control={form.control}
-                name="prioridade"
+                name="prazo"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prioridade *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a prioridade" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(Object.entries(SOLICITACAO_PRIORIDADE_LABELS) as [SolicitacaoPrioridade, string][]).map(
-                          ([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ),
-                        )}
-                      </SelectContent>
-                    </Select>
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Prazo Limite *</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              'w-full h-9 px-3 justify-center font-normal border-input gap-2',
+                              !field.value && 'text-muted-foreground',
+                            )}
+                          >
+                            <CalendarIcon className="h-4 w-4 shrink-0" />
+                            {field.value
+                              ? format(field.value, 'dd/MM/yyyy', { locale: ptBR })
+                              : 'Selecionar data'}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="center">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          initialFocus
+                          locale={ptBR}
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            {/* Bookmaker — apenas quando tipo = abertura_conta */}
+            {/* Bookmakers — multi-select, apenas quando tipo = abertura_conta */}
             {tipoSelecionado === 'abertura_conta' && (
               <FormField
                 control={form.control}
-                name="bookmaker_id"
+                name="bookmaker_ids"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bookmaker *</FormLabel>
-                    {bookmakersLoading ? (
-                      <Skeleton className="h-10 w-full" />
-                    ) : (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Qual bookmaker deve ser aberto?" />
-                          </SelectTrigger>
-                        </FormControl>
-                        {bookmakerItems.length === 0 ? (
-                          <SelectContent>
-                            <div className="p-3 text-center text-sm text-muted-foreground">
-                              Nenhuma bookmaker ativa neste workspace
-                            </div>
-                          </SelectContent>
-                        ) : (
-                          <SearchableSelectContent
-                            items={bookmakerItems}
-                            placeholder="Buscar bookmaker..."
-                            emptyMessage="Nenhuma bookmaker ativa neste workspace"
-                          />
-                        )}
-                      </Select>
-                    )}
+                    <FormLabel>Bookmakers *</FormLabel>
+                    <BookmakerMultiSelect
+                      items={bookmakerItems}
+                      value={field.value ?? []}
+                      onChange={field.onChange}
+                      loading={bookmakersLoading}
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -357,11 +465,11 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                 <FormItem>
                   <FormLabel>Responsável pela Execução *</FormLabel>
                   {membersLoading ? (
-                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-9 w-full" />
                   ) : (
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-9 [&>span]:w-full [&>span]:text-center">
                           <SelectValue placeholder="Quem vai executar esta solicitação?" />
                         </SelectTrigger>
                       </FormControl>
@@ -387,7 +495,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                   <FormControl>
                     <Textarea
                       placeholder="Detalhe o que precisa ser feito, incluindo todas as informações necessárias para execução..."
-                      className="min-h-[120px]"
+                      className="min-h-[100px]"
                       {...field}
                     />
                   </FormControl>
@@ -408,7 +516,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
               </div>
             )}
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-1">
               <Button
                 type="button"
                 variant="outline"

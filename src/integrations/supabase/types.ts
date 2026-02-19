@@ -7746,6 +7746,7 @@ export type Database = {
       solicitacoes: {
         Row: {
           bookmaker_id: string | null
+          bookmaker_ids: string[] | null
           concluida_at: string | null
           contexto_metadata: Json | null
           created_at: string
@@ -7754,6 +7755,7 @@ export type Database = {
           id: string
           observadores: string[] | null
           parceiro_id: string | null
+          prazo: string | null
           prioridade: Database["public"]["Enums"]["solicitacao_prioridade"]
           projeto_id: string | null
           recusa_motivo: string | null
@@ -7767,6 +7769,7 @@ export type Database = {
         }
         Insert: {
           bookmaker_id?: string | null
+          bookmaker_ids?: string[] | null
           concluida_at?: string | null
           contexto_metadata?: Json | null
           created_at?: string
@@ -7775,6 +7778,7 @@ export type Database = {
           id?: string
           observadores?: string[] | null
           parceiro_id?: string | null
+          prazo?: string | null
           prioridade?: Database["public"]["Enums"]["solicitacao_prioridade"]
           projeto_id?: string | null
           recusa_motivo?: string | null
@@ -7788,6 +7792,7 @@ export type Database = {
         }
         Update: {
           bookmaker_id?: string | null
+          bookmaker_ids?: string[] | null
           concluida_at?: string | null
           contexto_metadata?: Json | null
           created_at?: string
@@ -7796,6 +7801,7 @@ export type Database = {
           id?: string
           observadores?: string[] | null
           parceiro_id?: string | null
+          prazo?: string | null
           prioridade?: Database["public"]["Enums"]["solicitacao_prioridade"]
           projeto_id?: string | null
           recusa_motivo?: string | null
