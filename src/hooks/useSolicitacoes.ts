@@ -182,6 +182,70 @@ export function useEditarDescricaoSolicitacao() {
   });
 }
 
+// ---- Editar solicitação completa (apenas requerente) ----
+export function useEditarSolicitacao() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      descricao,
+      tipo,
+      prazo,
+      executor_id,
+      bookmaker_ids,
+      bookmaker_nomes,
+      bookmaker_ids_originais,
+      contexto_metadata,
+    }: {
+      id: string;
+      descricao: string;
+      tipo: string;
+      prazo?: string | null;
+      executor_id: string;
+      bookmaker_ids?: string[];
+      bookmaker_nomes?: string;
+      bookmaker_ids_originais?: string[];
+      contexto_metadata?: Record<string, unknown> | null;
+    }) => {
+      // Calcula as casas novas (adicionadas nesta edição)
+      const novas = bookmaker_ids?.filter(
+        (id) => !(bookmaker_ids_originais ?? []).includes(id),
+      ) ?? [];
+
+      const meta: Record<string, unknown> = {
+        ...(contexto_metadata ?? {}),
+      };
+      if (bookmaker_ids?.length) {
+        meta['bookmaker_ids'] = bookmaker_ids;
+        meta['bookmaker_nomes'] = bookmaker_nomes ?? '';
+      }
+      if (novas.length) {
+        meta['bookmaker_ids_novos'] = novas;
+      } else {
+        delete meta['bookmaker_ids_novos'];
+      }
+
+      const { error } = await solicitacoesTable()
+        .update({
+          descricao,
+          tipo,
+          prazo: prazo ?? null,
+          executor_id,
+          contexto_metadata: meta,
+          descricao_editada_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      toast.success('Solicitação atualizada!');
+    },
+    onError: () => toast.error('Erro ao editar solicitação'),
+  });
+}
+
 // ---- Excluir (apenas admin/owner) ----
 export function useExcluirSolicitacao() {
   const queryClient = useQueryClient();
