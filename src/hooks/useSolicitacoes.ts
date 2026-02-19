@@ -162,3 +162,24 @@ export function useAtualizarStatusSolicitacao() {
     onError: () => toast.error('Erro ao atualizar status'),
   });
 }
+
+// ---- Excluir (apenas admin/owner) ----
+export function useExcluirSolicitacao() {
+  const queryClient = useQueryClient();
+  const { workspaceId } = useAuth();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await solicitacoesTable()
+        .delete()
+        .eq('id', id)
+        .eq('workspace_id', workspaceId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      toast.success('Solicitação excluída');
+    },
+    onError: () => toast.error('Erro ao excluir solicitação'),
+  });
+}

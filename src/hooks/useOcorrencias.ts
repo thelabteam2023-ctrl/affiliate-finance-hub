@@ -382,3 +382,26 @@ export function useAtualizarExecutorOcorrencia() {
     onError: () => toast.error('Erro ao atualizar executor'),
   });
 }
+
+// ============================================================
+// MUTATION: excluir ocorrência (apenas owner/admin)
+// ============================================================
+export function useExcluirOcorrencia() {
+  const { workspaceId } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await ocorrenciasTable()
+        .delete()
+        .eq('id', id)
+        .eq('workspace_id', workspaceId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
+      toast.success('Ocorrência excluída');
+    },
+    onError: () => toast.error('Erro ao excluir ocorrência'),
+  });
+}
