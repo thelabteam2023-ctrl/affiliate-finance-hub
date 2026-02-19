@@ -452,8 +452,13 @@ export function SaldosParceirosSheet() {
           const coins = items.map(s => s.coin).join(", ");
           return (
             <div key={wKey}>
-              {/* Wallet header: address + total */}
+              {/* Wallet header: exchange name + address + total */}
               <div className={`py-1 ${wIdx > 0 ? "mt-2 border-t border-border/30 pt-2" : ""}`}>
+                {wallet.exchange && wallet.exchange !== "Wallet" && (
+                  <span className="text-[11px] font-semibold text-primary/80 uppercase tracking-wider">
+                    {wallet.exchange.split(/[-\s]/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
+                  </span>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-[12px] font-semibold text-foreground/90 font-mono tracking-wide" title={wallet.endereco}>
                     {truncateAddr(wallet.endereco) || wallet.exchange}
