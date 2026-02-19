@@ -200,37 +200,37 @@ function SolicitacaoRow({
                 <StatusBadge status={solicitacao.status} />
               </div>
 
-              {/* Casas — 3 por linha, novas destacadas */}
+              {/* Casas — label na primeira linha, badges abaixo em grupos de 3 */}
               {bookmakerRows.length > 0 && (
-                <div className="mt-1.5 space-y-1">
-                  {bookmakerRows.map((row, rowIdx) => (
-                    <div key={rowIdx} className="flex items-center gap-1.5">
-                      {rowIdx === 0 ? (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
-                          <ClipboardList className="h-3 w-3" />
-                          <span>Casas:</span>
-                        </span>
-                      ) : (
-                        /* Espaçador para alinhar com "Casas:" na linha 0 */
-                        <span className="shrink-0" style={{ width: '3.5rem' }} />
-                      )}
-                      {row.map(({ nome, isNova }) => (
-                        <Badge
-                          key={nome}
-                          variant="outline"
-                          className={cn(
-                            'text-xs px-1.5 py-0 h-5',
-                            isNova
-                              ? 'border-primary text-primary bg-primary/10 font-semibold'
-                              : 'border-primary/40 text-primary/80 font-normal',
-                          )}
-                        >
-                          {nome}
-                          {isNova && <span className="ml-1 text-[8px] font-bold uppercase tracking-wide opacity-70">new</span>}
-                        </Badge>
-                      ))}
-                    </div>
-                  ))}
+                <div className="mt-1.5">
+                  {/* Label */}
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <ClipboardList className="h-3 w-3 shrink-0" />
+                    Casas:
+                  </span>
+                  {/* Linhas de badges */}
+                  <div className="mt-1 space-y-1 pl-0.5">
+                    {bookmakerRows.map((row, rowIdx) => (
+                      <div key={rowIdx} className="grid grid-cols-3 gap-1">
+                        {row.map(({ nome, isNova }) => (
+                          <Badge
+                            key={nome}
+                            variant="outline"
+                            className={cn(
+                              'text-xs px-1.5 py-0 h-5 truncate block w-full text-center',
+                              isNova
+                                ? 'border-primary text-primary bg-primary/10 font-semibold'
+                                : 'border-primary/40 text-primary/80 font-normal',
+                            )}
+                            title={nome}
+                          >
+                            {nome}
+                            {isNova && <span className="ml-1 text-[8px] font-bold uppercase tracking-wide opacity-70">new</span>}
+                          </Badge>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
