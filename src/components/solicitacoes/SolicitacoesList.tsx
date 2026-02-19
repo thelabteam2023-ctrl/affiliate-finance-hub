@@ -208,7 +208,7 @@ function SolicitacaoRow({
                   <span className="w-7 shrink-0">Por</span>
                   <span>: {solicitacao.requerente?.full_name ?? '—'}</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className={cn('flex items-center gap-1', isExecutor && 'text-primary font-medium')}>
                   <User className="h-3 w-3 shrink-0" />
                   <span className="w-7 shrink-0">Para</span>
                   <span>: {solicitacao.executor?.full_name ?? '—'}</span>
