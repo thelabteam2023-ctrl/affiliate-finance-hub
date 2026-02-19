@@ -25,8 +25,8 @@ export function useSolicitacoes(filtros?: {
       let query = solicitacoesTable()
         .select(`
           *,
-          requerente:profiles!solicitacoes_requerente_id_fkey(id, full_name, avatar_url),
-          executor:profiles!solicitacoes_executor_id_fkey(id, full_name, avatar_url),
+          requerente:profiles!solicitacoes_requerente_id_fkey(id, full_name),
+          executor:profiles!solicitacoes_executor_id_fkey(id, full_name),
           bookmaker:bookmakers(id, nome),
           projeto:projetos(id, nome),
           parceiro:parceiros(id, nome)
