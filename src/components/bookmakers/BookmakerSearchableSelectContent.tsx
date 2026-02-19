@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { SelectContent, SelectItem } from "@/components/ui/select";
+import * as SelectPrimitive from "@radix-ui/react-select";
+import { SelectItem, SelectScrollUpButton, SelectScrollDownButton } from "@/components/ui/select";
 import { BookmakerSelectOption, type BookmakerOptionData } from "./BookmakerSelectOption";
-import { Search } from "lucide-react";
+import { Search, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExchangeRatesSafe } from "@/contexts/ExchangeRatesContext";
 
@@ -74,35 +75,53 @@ export function BookmakerSearchableSelectContent({
   }, []);
 
   return (
-    <SelectContent className={cn("min-w-[280px] w-[var(--radix-select-trigger-width)] z-50", className)} position="popper" sideOffset={4}>
-      {showSearch && (
-        <div className="px-2 pt-2 pb-2 sticky top-0 bg-popover z-20 border-b border-border shadow-md" style={{ backdropFilter: 'none', backgroundColor: 'hsl(var(--popover))' }}>
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Buscar casa..."
-              className="w-full h-8 pl-7 pr-2 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            />
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        className={cn(
+          "relative z-[9999] max-h-96 min-w-[8rem] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          "min-w-[280px] w-[var(--radix-select-trigger-width)]",
+          className,
+        )}
+        position="popper"
+        sideOffset={4}
+      >
+        {/* Search input OUTSIDE viewport so it stays fixed */}
+        {showSearch && (
+          <div className="px-2 pt-2 pb-2 bg-popover border-b border-border shadow-md">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Buscar casa..."
+                className="w-full h-8 pl-7 pr-2 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {filtered.length === 0 ? (
-        <div className="p-3 text-center text-sm text-muted-foreground">
-          {search.trim() ? "Nenhuma casa encontrada" : emptyMessage}
-        </div>
-      ) : (
-        filtered.map((bk) => (
-          <SelectItem key={bk.id} value={bk.id} className={cn("py-2", itemClassName)}>
-            <BookmakerSelectOption bookmaker={{ ...bk, parceiro_nome: bk.parceiro_nome ?? null }} />
-          </SelectItem>
-        ))
-      )}
-    </SelectContent>
+        <SelectScrollUpButton />
+        <SelectPrimitive.Viewport
+          className="p-1 h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+        >
+          {filtered.length === 0 ? (
+            <div className="p-3 text-center text-sm text-muted-foreground">
+              {search.trim() ? "Nenhuma casa encontrada" : emptyMessage}
+            </div>
+          ) : (
+            filtered.map((bk) => (
+              <SelectItem key={bk.id} value={bk.id} className={cn("py-2", itemClassName)}>
+                <BookmakerSelectOption bookmaker={{ ...bk, parceiro_nome: bk.parceiro_nome ?? null }} />
+              </SelectItem>
+            ))
+          )}
+        </SelectPrimitive.Viewport>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
   );
 }
