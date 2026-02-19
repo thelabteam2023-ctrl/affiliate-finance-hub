@@ -465,7 +465,7 @@ export function SaldosParceirosSheet() {
                   </span>
                   <span className="text-[11px] font-mono text-muted-foreground/60 tabular-nums">{formatCurrency(walletTotal, "USD")}</span>
                 </div>
-                <span className="text-[10px] text-muted-foreground/50">{coins}</span>
+                
               </div>
               {items.map((s, idx) => (
                 <div key={idx} className="flex justify-between items-start gap-4 py-0.5">
