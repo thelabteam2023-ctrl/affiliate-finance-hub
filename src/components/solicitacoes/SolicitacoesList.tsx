@@ -54,8 +54,8 @@ function formatCountdown(secondsLeft: number): string {
   const m = Math.floor((secondsLeft % 3600) / 60);
   const s = secondsLeft % 60;
   if (d > 0) return `${d}d ${h}h ${m}m`;
-  if (h > 0) return `${h}h ${m}m ${s}s`;
-  return `${m}m ${s}s`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 }
 
 // ---- Prazo badge (componente com hooks no topo) ----
