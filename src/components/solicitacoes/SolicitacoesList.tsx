@@ -43,6 +43,7 @@ import {
   CalendarClock,
   Timer,
   Trash2,
+  FileText,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -56,7 +57,7 @@ function formatCountdown(secondsLeft: number): string {
   return '< 1h';
 }
 
-// ---- Prazo badge (componente com hooks no topo) ----
+// ---- Prazo badge ----
 function PrazoBadge({ prazo }: { prazo: string }) {
   const date = new Date(prazo);
   const vencido = isPast(date);
@@ -69,11 +70,11 @@ function PrazoBadge({ prazo }: { prazo: string }) {
     if (vencido) return;
     const tick = () => setSecondsLeft(differenceInSeconds(date, new Date()));
     tick();
-    const id = setInterval(tick, 1000);
+    const id = setInterval(tick, 60000); // atualiza a cada minuto
     return () => clearInterval(id);
   }, [prazo]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isUrgent = !vencido && secondsLeft < 86400; // menos de 1 dia
+  const isUrgent = !vencido && secondsLeft < 86400;
   const countdown = vencido ? 'Vencido' : formatCountdown(secondsLeft);
 
   return (
@@ -130,10 +131,12 @@ function SolicitacaoRow({
   solicitacao,
   currentUserId,
   isAdmin,
+  numero,
 }: {
   solicitacao: Solicitacao;
   currentUserId: string;
   isAdmin: boolean;
+  numero: number;
 }) {
   const { mutate: atualizar } = useAtualizarStatusSolicitacao();
   const { mutate: excluir, isPending: excluindo } = useExcluirSolicitacao();
@@ -144,10 +147,8 @@ function SolicitacaoRow({
   const podeAtualizar = isExecutor || isRequerente;
   const temAcoes = (podeAtualizar && proximosStatus.length > 0) || isAdmin;
 
-  // prazo: may come as unknown field since types.ts may not reflect new column yet
   const prazo = (solicitacao as unknown as { prazo?: string | null }).prazo;
 
-  // bookmaker names from contexto_metadata
   const bookmakerNomes: string[] = (() => {
     const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
     if (!meta) return [];
@@ -161,20 +162,27 @@ function SolicitacaoRow({
   return (
     <>
       <Card className="border-border/50 hover:border-border transition-colors">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-4">
+        <CardContent className="p-3">
+          <div className="flex items-start gap-3">
+            {/* Número da fila */}
+            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-0.5">
+              <span className="text-xs font-bold text-muted-foreground">{numero}</span>
+            </div>
+
+            {/* Conteúdo principal */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="font-semibold text-sm">{SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}</span>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap mt-1">
+              {/* Tipo como badge + prazo + status */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary" className="text-xs font-medium">
+                  {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
+                </Badge>
                 {prazo && <PrazoBadge prazo={prazo} />}
                 <StatusBadge status={solicitacao.status} />
               </div>
 
-              {/* Bookmakers listadas */}
+              {/* Bookmakers */}
               {bookmakerNomes.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                   <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
                     <ClipboardList className="h-3 w-3" />
                     Casas:
@@ -191,7 +199,8 @@ function SolicitacaoRow({
                 </div>
               )}
 
-              <div className="flex flex-col gap-0.5 mt-2 text-xs text-muted-foreground">
+              {/* Por / Para */}
+              <div className="flex flex-col gap-0.5 mt-1.5 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <User className="h-3 w-3 shrink-0" />
                   <span className="w-7 shrink-0">Por</span>
@@ -210,17 +219,28 @@ function SolicitacaoRow({
                   <span>: {solicitacao.executor?.full_name ?? '—'}</span>
                 </div>
               </div>
-              {solicitacao.descricao && (
-                <p className="text-xs text-foreground mt-1.5 line-clamp-2">
-                  {solicitacao.descricao}
-                </p>
-              )}
             </div>
 
+            {/* Painel de descrição lateral */}
+            {solicitacao.descricao && (
+              <div className="w-44 shrink-0 self-stretch">
+                <div className="h-full rounded-md border border-border/60 bg-muted/30 p-2 flex flex-col gap-1">
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium uppercase tracking-wide">
+                    <FileText className="h-3 w-3" />
+                    Descrição
+                  </span>
+                  <p className="text-xs text-foreground leading-relaxed line-clamp-4 flex-1">
+                    {solicitacao.descricao}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Ações */}
             {temAcoes && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -262,7 +282,7 @@ function SolicitacaoRow({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir solicitação?</AlertDialogTitle>
             <AlertDialogDescription>
-              A solicitação <strong>"{solicitacao.titulo}"</strong> será excluída permanentemente.
+              A solicitação <strong>"{SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}"</strong> será excluída permanentemente.
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -299,12 +319,22 @@ export function SolicitacoesList({ filtros, emptyMessage }: Props) {
   const { isOwnerOrAdmin } = useRole();
   const { data: solicitacoes = [], isLoading } = useSolicitacoes(filtros);
 
+  // Ordenar por prazo crescente (mais urgente primeiro)
+  const ordenadas = [...solicitacoes].sort((a, b) => {
+    const prazoA = (a as unknown as { prazo?: string | null }).prazo;
+    const prazoB = (b as unknown as { prazo?: string | null }).prazo;
+    if (!prazoA && !prazoB) return 0;
+    if (!prazoA) return 1;
+    if (!prazoB) return -1;
+    return new Date(prazoA).getTime() - new Date(prazoB).getTime();
+  });
+
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        {[...Array(3)].map((_, i) => (
+      <div className="grid grid-cols-2 gap-3">
+        {[...Array(4)].map((_, i) => (
           <Card key={i} className="border-border/50">
-            <CardContent className="p-4">
+            <CardContent className="p-3">
               <div className="animate-pulse space-y-2">
                 <div className="h-4 bg-muted rounded w-3/4" />
                 <div className="h-3 bg-muted rounded w-1/2" />
@@ -316,7 +346,7 @@ export function SolicitacoesList({ filtros, emptyMessage }: Props) {
     );
   }
 
-  if (!solicitacoes.length) {
+  if (!ordenadas.length) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <ClipboardList className="h-12 w-12 text-muted-foreground/40 mb-3" />
@@ -328,13 +358,14 @@ export function SolicitacoesList({ filtros, emptyMessage }: Props) {
   }
 
   return (
-    <div className="space-y-3">
-      {solicitacoes.map((s) => (
+    <div className="grid grid-cols-2 gap-3">
+      {ordenadas.map((s, idx) => (
         <SolicitacaoRow
           key={s.id}
           solicitacao={s}
           currentUserId={user?.id ?? ''}
           isAdmin={isOwnerOrAdmin}
+          numero={idx + 1}
         />
       ))}
     </div>
