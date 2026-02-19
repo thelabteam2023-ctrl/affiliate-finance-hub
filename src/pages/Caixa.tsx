@@ -161,6 +161,7 @@ export default function Caixa() {
   const [bookmakers, setBookmakers] = useState<{ [key: string]: { nome: string; status: string; parceiro_id?: string; projeto_id?: string } }>({});
   const [operadoresMap, setOperadoresMap] = useState<{ [key: string]: string }>({});
   const [projetos, setProjetos] = useState<Array<{ id: string; nome: string }>>([]);
+  const [despesasAdminGrupoMap, setDespesasAdminGrupoMap] = useState<{ [descricao: string]: { grupo: string; categoria: string } }>({});
 
   const fetchData = async () => {
     try {
@@ -243,6 +244,18 @@ export default function Caixa() {
       const operadoresLookup: { [key: string]: string } = {};
       operadoresData?.forEach(op => operadoresLookup[op.id] = op.nome);
       setOperadoresMap(operadoresLookup);
+
+      // Fetch despesas administrativas grupo para lookup no histórico
+      const { data: despAdminData } = await supabase
+        .from("despesas_administrativas")
+        .select("id, grupo, descricao, categoria");
+      const despAdminMap: { [descricao: string]: { grupo: string; categoria: string } } = {};
+      despAdminData?.forEach(d => {
+        if (d.descricao) {
+          despAdminMap[d.descricao.trim().toLowerCase()] = { grupo: d.grupo || "OUTROS", categoria: d.categoria || "" };
+        }
+      });
+      setDespesasAdminGrupoMap(despAdminMap);
 
       // Fetch FIAT balances (view já filtra por workspace via get_current_workspace())
       const { data: saldosFiatData, error: fiatError } = await supabase
@@ -589,7 +602,7 @@ export default function Caixa() {
     return info.primary;
   };
 
-  const getDestinoInfo = (transacao: Transacao): { primary: string; secondary?: string } => {
+  const getDestinoInfo = (transacao: Transacao): { primary: string; secondary?: string; badgeLabel?: string; badgeColor?: string; BadgeIcon?: any } => {
     // Para APORTE_FINANCEIRO, verificamos o fluxo pela direção
     if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
       // Se destino é CAIXA_OPERACIONAL, é um aporte (Investidor → Caixa)
@@ -702,21 +715,38 @@ export default function Caixa() {
       };
     }
     
-    // Despesas administrativas - mostrar grupo/finalidade
+    // Despesas administrativas - mostrar grupo/finalidade com badge
     if (transacao.tipo_transacao === "DESPESA_ADMINISTRATIVA") {
-      // Extrair categoria da descrição: "Despesa administrativa - CATEGORIA: detalhe"
-      const match = transacao.descricao?.match(/^Despesa administrativa\s*-\s*(.+?)(?::\s*(.+))?$/i);
-      if (match) {
-        const categoriaRaw = match[1].trim();
-        const detalhe = match[2]?.trim();
-        const grupo = getGrupoFromCategoria(categoriaRaw);
-        const grupoInfo = getGrupoInfo(grupo);
-        return { 
-          primary: grupoInfo.label,
-          secondary: detalhe || categoriaRaw,
-        };
+      // Extrair detalhe da descrição: "Despesa administrativa - CATEGORIA: detalhe" ou "Despesa administrativa - : detalhe"
+      const match = transacao.descricao?.match(/^Despesa administrativa\s*-\s*(?:.*?)(?::\s*(.+))?$/i);
+      const detalhe = match?.[1]?.trim();
+      
+      // Buscar grupo pela descrição no mapa de despesas administrativas
+      let grupoKey = "OUTROS";
+      if (detalhe) {
+        const lookupKey = detalhe.trim().toLowerCase();
+        if (despesasAdminGrupoMap[lookupKey]) {
+          grupoKey = despesasAdminGrupoMap[lookupKey].grupo;
+        }
       }
-      return { primary: "Despesa Externa" };
+      // Fallback: tentar extrair categoria do formato "Despesa administrativa - CATEGORIA: detalhe"
+      if (grupoKey === "OUTROS") {
+        const catMatch = transacao.descricao?.match(/^Despesa administrativa\s*-\s*([^:]+?)(?::\s*.+)?$/i);
+        if (catMatch) {
+          const categoriaRaw = catMatch[1].trim();
+          if (categoriaRaw) {
+            grupoKey = getGrupoFromCategoria(categoriaRaw);
+          }
+        }
+      }
+      
+      const grupoInfo = getGrupoInfo(grupoKey);
+      return { 
+        primary: detalhe || "Despesa",
+        badgeLabel: grupoInfo.label,
+        badgeColor: grupoInfo.color,
+        BadgeIcon: grupoInfo.icon,
+      };
     }
 
     // Outros sem destino definido
