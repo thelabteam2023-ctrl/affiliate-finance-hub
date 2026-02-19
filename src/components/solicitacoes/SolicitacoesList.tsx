@@ -199,37 +199,37 @@ function SolicitacaoRow({
                 </div>
               )}
 
-              {/* Por / Para */}
+              {/* Por / Para / Tempo */}
               <div className="flex flex-col gap-0.5 mt-1.5 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <User className="h-3 w-3 shrink-0" />
                   <span className="w-7 shrink-0">Por</span>
                   <span>: {solicitacao.requerente?.full_name ?? '—'}</span>
-                  <span className="flex items-center gap-1 ml-3">
-                    <Clock className="h-3 w-3" />
-                    {formatDistanceToNow(new Date(solicitacao.created_at), {
-                      addSuffix: true,
-                      locale: ptBR,
-                    })}
-                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <User className="h-3 w-3 shrink-0" />
                   <span className="w-7 shrink-0">Para</span>
                   <span>: {solicitacao.executor?.full_name ?? '—'}</span>
                 </div>
+                <div className="flex items-center gap-1 pl-4">
+                  <Clock className="h-3 w-3" />
+                  {formatDistanceToNow(new Date(solicitacao.created_at), {
+                    addSuffix: true,
+                    locale: ptBR,
+                  })}
+                </div>
               </div>
             </div>
 
             {/* Painel de descrição lateral */}
             {solicitacao.descricao && (
-              <div className="w-44 shrink-0 self-stretch">
+              <div className="w-80 shrink-0 self-stretch">
                 <div className="h-full rounded-md border border-border/60 bg-muted/30 p-2 flex flex-col gap-1">
                   <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium uppercase tracking-wide">
                     <FileText className="h-3 w-3" />
                     Descrição
                   </span>
-                  <p className="text-xs text-foreground leading-relaxed line-clamp-4 flex-1">
+                  <p className="text-xs text-foreground leading-relaxed line-clamp-8 flex-1">
                     {solicitacao.descricao}
                   </p>
                 </div>
