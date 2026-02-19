@@ -7878,6 +7878,27 @@ export type Database = {
             referencedColumns: ["bookmaker_id"]
           },
           {
+            foreignKeyName: "solicitacoes_executor_id_fkey"
+            columns: ["executor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_executor_id_fkey"
+            columns: ["executor_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_executor_id_fkey"
+            columns: ["executor_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_last_login"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "solicitacoes_parceiro_id_fkey"
             columns: ["parceiro_id"]
             isOneToOne: false
@@ -7932,6 +7953,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projetos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_requerente_id_fkey"
+            columns: ["requerente_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_requerente_id_fkey"
+            columns: ["requerente_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_requerente_id_fkey"
+            columns: ["requerente_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_last_login"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "solicitacoes_workspace_id_fkey"
