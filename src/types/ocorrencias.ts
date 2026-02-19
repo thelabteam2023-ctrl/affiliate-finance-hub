@@ -102,7 +102,7 @@ export const TIPO_LABELS: Record<OcorrenciaTipo, string> = {
   financeiro: 'Financeiro',
   kyc: 'KYC',
   bloqueio_bancario: 'Bloqueio Bancário',
-  bloqueio_contas: 'Bloqueio de Contas',
+  bloqueio_contas: 'Bloqueio de Sportbooks',
 };
 
 export const PRIORIDADE_LABELS: Record<OcorrenciaPrioridade, string> = {
