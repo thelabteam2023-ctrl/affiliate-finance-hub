@@ -73,6 +73,8 @@ interface Transacao {
   operador_id: string | null;
   // Snapshot imutável do projeto no momento da transação
   projeto_id_snapshot: string | null;
+  ajuste_direcao: string | null;
+  ajuste_motivo: string | null;
 }
 
 interface SaldoFiat {
@@ -462,6 +464,7 @@ export default function Caixa() {
       DESPESA_ADMINISTRATIVA: "Despesa Admin.",
       PAGTO_OPERADOR: "Pagto. Operador",
       AJUSTE_MANUAL: "Ajuste Manual",
+      AJUSTE_SALDO: "Ajuste Saldo",
       RENOVACAO_PARCERIA: "Renovação Parceria",
       BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
     };
@@ -494,6 +497,7 @@ export default function Caixa() {
       DESPESA_ADMINISTRATIVA: "bg-red-500/20 text-red-400 border-red-500/30",
       PAGTO_OPERADOR: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
       AJUSTE_MANUAL: "bg-amber-600/20 text-amber-500 border-amber-600/30",
+      AJUSTE_SALDO: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
       RENOVACAO_PARCERIA: "bg-teal-500/20 text-teal-400 border-teal-500/30",
       BONIFICACAO_ESTRATEGICA: "bg-violet-500/20 text-violet-400 border-violet-500/30",
     };
@@ -531,6 +535,16 @@ export default function Caixa() {
     
     if (transacao.tipo_transacao === "LIQUIDACAO") {
       return { primary: "Caixa Operacional" };
+    }
+    
+    // AJUSTE_SALDO: origem é a bookmaker ajustada
+    if (transacao.tipo_transacao === "AJUSTE_SALDO" && transacao.origem_bookmaker_id) {
+      const bookmaker = bookmakers[transacao.origem_bookmaker_id];
+      const parceiroNome = bookmaker?.parceiro_id ? parceiros[bookmaker.parceiro_id] : undefined;
+      return { 
+        primary: bookmaker?.nome || "Bookmaker",
+        secondary: parceiroNome
+      };
     }
     
     if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
@@ -676,6 +690,15 @@ export default function Caixa() {
       if (indicadorMatch) {
         return { primary: indicadorMatch[1].trim() };
       }
+    }
+    
+    // AJUSTE_SALDO: destino é "Conciliação" com motivo
+    if (transacao.tipo_transacao === "AJUSTE_SALDO") {
+      const motivo = transacao.ajuste_motivo;
+      return { 
+        primary: transacao.ajuste_direcao === "SAIDA" ? "Saída (Conciliação)" : "Entrada (Conciliação)",
+        secondary: motivo || undefined
+      };
     }
     
     // Despesas administrativas - destino externo
