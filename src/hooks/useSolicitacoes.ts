@@ -163,6 +163,25 @@ export function useAtualizarStatusSolicitacao() {
   });
 }
 
+// ---- Editar descrição (apenas requerente) ----
+export function useEditarDescricaoSolicitacao() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, descricao }: { id: string; descricao: string }) => {
+      const { error } = await solicitacoesTable()
+        .update({ descricao, descricao_editada_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      toast.success('Descrição atualizada!');
+    },
+    onError: () => toast.error('Erro ao editar descrição'),
+  });
+}
+
 // ---- Excluir (apenas admin/owner) ----
 export function useExcluirSolicitacao() {
   const queryClient = useQueryClient();

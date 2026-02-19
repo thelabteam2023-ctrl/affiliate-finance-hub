@@ -20,8 +20,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { useSolicitacoes, useAtualizarStatusSolicitacao, useExcluirSolicitacao } from '@/hooks/useSolicitacoes';
+import { useSolicitacoes, useAtualizarStatusSolicitacao, useExcluirSolicitacao, useEditarDescricaoSolicitacao } from '@/hooks/useSolicitacoes';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
 import {
@@ -43,6 +51,7 @@ import {
   Timer,
   Trash2,
   FileText,
+  Pencil,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -123,14 +132,19 @@ function SolicitacaoRow({
 }) {
   const { mutate: atualizar } = useAtualizarStatusSolicitacao();
   const { mutate: excluir, isPending: excluindo } = useExcluirSolicitacao();
+  const { mutate: editarDescricao, isPending: editando } = useEditarDescricaoSolicitacao();
   const [confirmExcluir, setConfirmExcluir] = useState(false);
+  const [editarOpen, setEditarOpen] = useState(false);
+  const [novaDescricao, setNovaDescricao] = useState(solicitacao.descricao ?? '');
+
   const proximosStatus = SOLICITACAO_STATUS_FLOW[solicitacao.status];
-  const isExecutor = solicitacao.executor_id === currentUserId;
   const isRequerente = solicitacao.requerente_id === currentUserId;
+  const isExecutor = solicitacao.executor_id === currentUserId;
   const podeAtualizar = isExecutor || isRequerente;
-  const temAcoes = (podeAtualizar && proximosStatus.length > 0) || isAdmin;
+  const temAcoes = (podeAtualizar && proximosStatus.length > 0) || isRequerente || isAdmin;
 
   const prazo = (solicitacao as unknown as { prazo?: string | null }).prazo;
+  const foiEditada = !!(solicitacao as unknown as { descricao_editada_at?: string | null }).descricao_editada_at;
 
   const bookmakerNomes: string[] = (() => {
     const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
@@ -141,6 +155,14 @@ function SolicitacaoRow({
     }
     return [];
   })();
+
+  const handleSalvarEdicao = () => {
+    if (!novaDescricao.trim()) return;
+    editarDescricao(
+      { id: solicitacao.id, descricao: novaDescricao.trim() },
+      { onSuccess: () => setEditarOpen(false) },
+    );
+  };
 
   return (
     <>
@@ -154,7 +176,6 @@ function SolicitacaoRow({
 
             {/* Conteúdo principal */}
             <div className="flex-1 min-w-0">
-              {/* Tipo como badge + prazo + status */}
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="secondary" className="text-xs font-medium">
                   {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
@@ -163,7 +184,6 @@ function SolicitacaoRow({
                 <StatusBadge status={solicitacao.status} />
               </div>
 
-              {/* Bookmakers */}
               {bookmakerNomes.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                   <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
@@ -182,7 +202,6 @@ function SolicitacaoRow({
                 </div>
               )}
 
-              {/* Por / Para / Tempo */}
               <div className="flex flex-col gap-0.5 mt-1.5 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <User className="h-3 w-3 shrink-0" />
@@ -208,10 +227,17 @@ function SolicitacaoRow({
             {solicitacao.descricao && (
               <div className="w-80 shrink-0 self-stretch">
                 <div className="h-full rounded-md border border-border/60 bg-muted/30 p-2 flex flex-col gap-1">
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium uppercase tracking-wide">
-                    <FileText className="h-3 w-3" />
-                    Descrição
-                  </span>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium uppercase tracking-wide">
+                      <FileText className="h-3 w-3" />
+                      Descrição
+                    </span>
+                    {foiEditada && (
+                      <Badge variant="outline" className="text-[9px] h-4 px-1 text-muted-foreground border-muted-foreground/40 font-normal">
+                        editada
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-xs text-foreground leading-relaxed line-clamp-8 flex-1">
                     {solicitacao.descricao}
                   </p>
@@ -228,8 +254,15 @@ function SolicitacaoRow({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {isRequerente && (
+                    <DropdownMenuItem onClick={() => { setNovaDescricao(solicitacao.descricao ?? ''); setEditarOpen(true); }}>
+                      <Pencil className="h-3.5 w-3.5 mr-2" />
+                      Editar descrição
+                    </DropdownMenuItem>
+                  )}
                   {podeAtualizar && proximosStatus.length > 0 && (
                     <>
+                      {isRequerente && <DropdownMenuSeparator />}
                       {proximosStatus.map((s) => (
                         <DropdownMenuItem
                           key={s}
@@ -243,7 +276,7 @@ function SolicitacaoRow({
                   )}
                   {isAdmin && (
                     <>
-                      {podeAtualizar && proximosStatus.length > 0 && <DropdownMenuSeparator />}
+                      {(isRequerente || (podeAtualizar && proximosStatus.length > 0)) && <DropdownMenuSeparator />}
                       <DropdownMenuItem
                         onClick={() => setConfirmExcluir(true)}
                         className="text-destructive focus:text-destructive"
@@ -260,6 +293,32 @@ function SolicitacaoRow({
         </CardContent>
       </Card>
 
+      {/* Dialog editar descrição */}
+      <Dialog open={editarOpen} onOpenChange={setEditarOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-4 w-4 text-primary" />
+              Editar Descrição
+            </DialogTitle>
+          </DialogHeader>
+          <Textarea
+            value={novaDescricao}
+            onChange={(e) => setNovaDescricao(e.target.value)}
+            rows={6}
+            placeholder="Descreva o que precisa ser feito..."
+            className="resize-none"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditarOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSalvarEdicao} disabled={editando || !novaDescricao.trim()}>
+              {editando ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog confirmar exclusão */}
       <AlertDialog open={confirmExcluir} onOpenChange={setConfirmExcluir}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -285,6 +344,7 @@ function SolicitacaoRow({
     </>
   );
 }
+
 
 // ---- Main component ----
 interface Props {
