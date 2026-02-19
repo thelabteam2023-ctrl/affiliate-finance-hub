@@ -14,6 +14,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
+import { SolicitacoesModule } from "@/components/solicitacoes/SolicitacoesModule";
 import { useOcorrenciasKpis } from "@/hooks/useOcorrencias";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
@@ -300,7 +301,7 @@ export default function CentralOperacoes() {
   const [selectedPagamentoOperador, setSelectedPagamentoOperador] = useState<PagamentoOperadorPendente | null>(null);
   const [pagamentoParticipacaoOpen, setPagamentoParticipacaoOpen] = useState(false);
   const [selectedParticipacao, setSelectedParticipacao] = useState<ParticipacaoPendente | null>(null);
-  const [mainTab, setMainTab] = useState<'financeiro' | 'ocorrencias' | 'alertas'>('financeiro');
+  const [mainTab, setMainTab] = useState<'financeiro' | 'ocorrencias' | 'solicitacoes' | 'alertas'>('financeiro');
   const navigate = useNavigate();
 
   const { alertas: alertasCiclos, refetch: refetchCiclos } = useCicloAlertas();
@@ -1809,13 +1810,15 @@ export default function CentralOperacoes() {
             {isOperator ? "Central de Ações de Projetos" : "Central de Operações"}
           </h1>
           <p className="text-muted-foreground">
-            {mainTab === 'financeiro'
-              ? (hasAnyAlerts
-                  ? (isOperator ? "Ações pendentes nos seus projetos" : "Ações que demandam atenção imediata")
-                  : "Todas as operações estão em dia")
-              : mainTab === 'ocorrencias'
-              ? 'Incidentes e solicitações operacionais'
-              : 'Alertas automáticos do sistema'}
+          {mainTab === 'financeiro'
+            ? (hasAnyAlerts
+                ? (isOperator ? "Ações pendentes nos seus projetos" : "Ações que demandam atenção imediata")
+                : "Todas as operações estão em dia")
+            : mainTab === 'ocorrencias'
+            ? 'Incidentes e problemas operacionais'
+            : mainTab === 'solicitacoes'
+            ? 'Tarefas delegadas e solicitações'
+            : 'Alertas automáticos do sistema'}
           </p>
         </div>
         {mainTab === 'financeiro' && (
@@ -1838,6 +1841,7 @@ export default function CentralOperacoes() {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="solicitacoes">Solicitações</TabsTrigger>
           <TabsTrigger value="alertas" disabled className="opacity-50">
             Alertas
             <span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span>
@@ -1874,6 +1878,11 @@ export default function CentralOperacoes() {
         {/* ABA: OCORRÊNCIAS */}
         <TabsContent value="ocorrencias" className="mt-4">
           <OcorrenciasModule />
+        </TabsContent>
+
+        {/* ABA: SOLICITAÇÕES */}
+        <TabsContent value="solicitacoes" className="mt-4">
+          <SolicitacoesModule />
         </TabsContent>
 
         {/* ABA: ALERTAS (reservado) */}

@@ -7743,6 +7743,199 @@ export type Database = {
           },
         ]
       }
+      solicitacoes: {
+        Row: {
+          bookmaker_id: string | null
+          concluida_at: string | null
+          contexto_metadata: Json | null
+          created_at: string
+          descricao: string
+          executor_id: string
+          id: string
+          observadores: string[] | null
+          parceiro_id: string | null
+          prioridade: Database["public"]["Enums"]["solicitacao_prioridade"]
+          projeto_id: string | null
+          recusa_motivo: string | null
+          recusada_at: string | null
+          requerente_id: string
+          status: Database["public"]["Enums"]["solicitacao_status"]
+          tipo: Database["public"]["Enums"]["solicitacao_tipo"]
+          titulo: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          bookmaker_id?: string | null
+          concluida_at?: string | null
+          contexto_metadata?: Json | null
+          created_at?: string
+          descricao: string
+          executor_id: string
+          id?: string
+          observadores?: string[] | null
+          parceiro_id?: string | null
+          prioridade?: Database["public"]["Enums"]["solicitacao_prioridade"]
+          projeto_id?: string | null
+          recusa_motivo?: string | null
+          recusada_at?: string | null
+          requerente_id: string
+          status?: Database["public"]["Enums"]["solicitacao_status"]
+          tipo?: Database["public"]["Enums"]["solicitacao_tipo"]
+          titulo: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          bookmaker_id?: string | null
+          concluida_at?: string | null
+          contexto_metadata?: Json | null
+          created_at?: string
+          descricao?: string
+          executor_id?: string
+          id?: string
+          observadores?: string[] | null
+          parceiro_id?: string | null
+          prioridade?: Database["public"]["Enums"]["solicitacao_prioridade"]
+          projeto_id?: string | null
+          recusa_motivo?: string | null
+          recusada_at?: string | null
+          requerente_id?: string
+          status?: Database["public"]["Enums"]["solicitacao_status"]
+          tipo?: Database["public"]["Enums"]["solicitacao_tipo"]
+          titulo?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitacoes_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_operavel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_status_operacional"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_financial_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stablecoin_correction_log: {
         Row: {
           cash_ledger_id: string
@@ -12692,6 +12885,13 @@ export type Database = {
         | "bloqueio_bancario"
         | "bloqueio_contas"
       parceria_status: "ATIVA" | "EM_ENCERRAMENTO" | "ENCERRADA" | "RENOVADA"
+      solicitacao_prioridade: "baixa" | "media" | "alta" | "urgente"
+      solicitacao_status: "pendente" | "em_execucao" | "concluida" | "recusada"
+      solicitacao_tipo:
+        | "abertura_conta"
+        | "verificacao_kyc"
+        | "transferencia"
+        | "outros"
       subscription_status:
         | "active"
         | "trialing"
@@ -12898,6 +13098,14 @@ export const Constants = {
         "bloqueio_contas",
       ],
       parceria_status: ["ATIVA", "EM_ENCERRAMENTO", "ENCERRADA", "RENOVADA"],
+      solicitacao_prioridade: ["baixa", "media", "alta", "urgente"],
+      solicitacao_status: ["pendente", "em_execucao", "concluida", "recusada"],
+      solicitacao_tipo: [
+        "abertura_conta",
+        "verificacao_kyc",
+        "transferencia",
+        "outros",
+      ],
       subscription_status: [
         "active",
         "trialing",

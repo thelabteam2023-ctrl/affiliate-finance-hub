@@ -1,0 +1,157 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+import type { Solicitacao, SolicitacaoStatus } from '@/types/solicitacoes';
+
+const QUERY_KEY = 'solicitacoes';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const solicitacoesTable = () => (supabase as any).from('solicitacoes');
+
+// ---- Fetch ----
+export function useSolicitacoes(filtros?: {
+  status?: SolicitacaoStatus[];
+  tipo?: string[];
+  executor_id?: string;
+  requerente_id?: string;
+}) {
+  const { user, workspaceId } = useAuth();
+
+  return useQuery({
+    queryKey: [QUERY_KEY, workspaceId, filtros],
+    enabled: !!user && !!workspaceId,
+    queryFn: async () => {
+      let query = solicitacoesTable()
+        .select(`
+          *,
+          requerente:profiles!solicitacoes_requerente_id_fkey(id, full_name, avatar_url),
+          executor:profiles!solicitacoes_executor_id_fkey(id, full_name, avatar_url),
+          bookmaker:bookmakers(id, nome),
+          projeto:projetos(id, nome),
+          parceiro:parceiros(id, nome)
+        `)
+        .eq('workspace_id', workspaceId!)
+        .order('created_at', { ascending: false });
+
+      if (filtros?.status?.length) query = query.in('status', filtros.status);
+      if (filtros?.tipo?.length) query = query.in('tipo', filtros.tipo);
+      if (filtros?.executor_id) query = query.eq('executor_id', filtros.executor_id);
+      if (filtros?.requerente_id) query = query.eq('requerente_id', filtros.requerente_id);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data ?? []) as Solicitacao[];
+    },
+  });
+}
+
+export function useSolicitacoesKpis() {
+  const { user, workspaceId } = useAuth();
+
+  return useQuery({
+    queryKey: [QUERY_KEY, 'kpis', workspaceId],
+    enabled: !!user && !!workspaceId,
+    queryFn: async () => {
+      const { data, error } = await solicitacoesTable()
+        .select('status, prioridade')
+        .eq('workspace_id', workspaceId!)
+        .in('status', ['pendente', 'em_execucao']);
+
+      if (error) throw error;
+      const rows = (data ?? []) as { status: string; prioridade: string }[];
+
+      return {
+        pendentes: rows.filter((r) => r.status === 'pendente').length,
+        em_execucao: rows.filter((r) => r.status === 'em_execucao').length,
+        urgentes: rows.filter((r) => r.prioridade === 'urgente').length,
+        total_abertas: rows.length,
+      };
+    },
+  });
+}
+
+// ---- Mutations ----
+export function useCriarSolicitacao() {
+  const queryClient = useQueryClient();
+  const { user, workspaceId } = useAuth();
+
+  return useMutation({
+    mutationFn: async (payload: {
+      titulo: string;
+      descricao: string;
+      tipo: string;
+      prioridade: string;
+      executor_id: string;
+      bookmaker_id?: string;
+      projeto_id?: string;
+      parceiro_id?: string;
+      contexto_metadata?: Record<string, unknown>;
+    }) => {
+      if (!user || !workspaceId) throw new Error('Não autenticado');
+
+      const { data, error } = await solicitacoesTable()
+        .insert({
+          workspace_id: workspaceId,
+          requerente_id: user.id,
+          titulo: payload.titulo,
+          descricao: payload.descricao,
+          tipo: payload.tipo,
+          prioridade: payload.prioridade,
+          executor_id: payload.executor_id,
+          bookmaker_id: payload.bookmaker_id ?? null,
+          projeto_id: payload.projeto_id ?? null,
+          parceiro_id: payload.parceiro_id ?? null,
+          contexto_metadata: payload.contexto_metadata ?? null,
+          status: 'pendente',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Solicitacao;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      toast.success('Solicitação criada com sucesso!');
+    },
+    onError: (err) => {
+      console.error(err);
+      toast.error('Erro ao criar solicitação');
+    },
+  });
+}
+
+export function useAtualizarStatusSolicitacao() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      status,
+      recusa_motivo,
+    }: {
+      id: string;
+      status: SolicitacaoStatus;
+      recusa_motivo?: string;
+    }) => {
+      const updates: Record<string, unknown> = { status };
+      if (status === 'concluida') updates.concluida_at = new Date().toISOString();
+      if (status === 'recusada') {
+        updates.recusada_at = new Date().toISOString();
+        if (recusa_motivo) updates.recusa_motivo = recusa_motivo;
+      }
+
+      const { error } = await solicitacoesTable()
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      toast.success('Status atualizado!');
+    },
+    onError: () => toast.error('Erro ao atualizar status'),
+  });
+}
