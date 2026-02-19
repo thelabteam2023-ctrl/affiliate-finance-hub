@@ -227,7 +227,7 @@ function BookmakerMultiSelect({
             />
           </div>
         </div>
-        <div className="max-h-60 overflow-y-auto p-1">
+        <div className="max-h-60 overflow-y-auto p-1" onWheel={(e) => e.stopPropagation()}>
           {filtered.length === 0 ? (
             <p className="p-3 text-center text-sm text-muted-foreground">
               {search.trim() ? 'Nenhum resultado' : 'Nenhuma bookmaker ativa'}
