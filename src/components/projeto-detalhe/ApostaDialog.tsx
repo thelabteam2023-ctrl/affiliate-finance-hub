@@ -433,6 +433,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const bookmakers = useMemo((): Bookmaker[] => {
     return bookmakerSaldos
       .filter(bk => !bk.has_pending_transactions) // Bloquear casas não conciliadas
+      .filter(bk => bk.saldo_operavel >= 0.50) // Mostrar apenas casas com saldo disponível
       .map(bk => ({
         id: bk.id,
         nome: bk.nome,
