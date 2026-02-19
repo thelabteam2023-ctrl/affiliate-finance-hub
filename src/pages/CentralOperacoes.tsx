@@ -11,7 +11,10 @@
  * - admin_event: Alertas críticos, configurações (owner/admin)
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
+import { useOcorrenciasKpis } from "@/hooks/useOcorrencias";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { getFirstLastName } from "@/lib/utils";
@@ -297,11 +300,13 @@ export default function CentralOperacoes() {
   const [selectedPagamentoOperador, setSelectedPagamentoOperador] = useState<PagamentoOperadorPendente | null>(null);
   const [pagamentoParticipacaoOpen, setPagamentoParticipacaoOpen] = useState(false);
   const [selectedParticipacao, setSelectedParticipacao] = useState<ParticipacaoPendente | null>(null);
+  const [mainTab, setMainTab] = useState<'financeiro' | 'ocorrencias' | 'alertas'>('financeiro');
   const navigate = useNavigate();
 
   const { alertas: alertasCiclos, refetch: refetchCiclos } = useCicloAlertas();
   const { role, isOperator } = useRole();
   const { user, workspaceId } = useAuth();
+  const { data: kpisOcorrencias } = useOcorrenciasKpis();
 
   // Domínios permitidos para o role atual
   const allowedDomains = useMemo(() => {
@@ -1804,42 +1809,82 @@ export default function CentralOperacoes() {
             {isOperator ? "Central de Ações de Projetos" : "Central de Operações"}
           </h1>
           <p className="text-muted-foreground">
-            {hasAnyAlerts 
-              ? (isOperator ? "Ações pendentes nos seus projetos" : "Ações que demandam atenção imediata")
-              : "Todas as operações estão em dia"}
+            {mainTab === 'financeiro'
+              ? (hasAnyAlerts
+                  ? (isOperator ? "Ações pendentes nos seus projetos" : "Ações que demandam atenção imediata")
+                  : "Todas as operações estão em dia")
+              : mainTab === 'ocorrencias'
+              ? 'Incidentes e solicitações operacionais'
+              : 'Alertas automáticos do sistema'}
           </p>
         </div>
-        <Button variant="outline" onClick={() => { fetchData(true); refetchCiclos(); }} disabled={refreshing}>
-          {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          <span className="ml-2">Atualizar</span>
-        </Button>
+        {mainTab === 'financeiro' && (
+          <Button variant="outline" onClick={() => { fetchData(true); refetchCiclos(); }} disabled={refreshing}>
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            <span className="ml-2">Atualizar</span>
+          </Button>
+        )}
       </div>
 
-      {/* Empty State */}
-      {!hasAnyAlerts && (
-        <Card className="border-emerald-500/30 bg-emerald-500/5">
-          <CardContent className="pt-6">
-            <div className="text-center py-16">
-              <div className="mx-auto h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
-                <CheckCircle2 className="h-8 w-8 text-emerald-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-emerald-400">Nenhuma pendência</h3>
-              <p className="text-muted-foreground mt-2">
-                Todas as operações estão em dia! 🎉
-              </p>
+      {/* Tabs principais */}
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
+        <TabsList>
+          <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+          <TabsTrigger value="ocorrencias" className="relative">
+            Ocorrências
+            {(kpisOcorrencias?.urgentes ?? 0) > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                {kpisOcorrencias!.urgentes}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="alertas" disabled className="opacity-50">
+            Alertas
+            <span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ABA: FINANCEIRO (conteúdo atual) */}
+        <TabsContent value="financeiro" className="mt-4 space-y-4">
+          {/* Empty State */}
+          {!hasAnyAlerts && (
+            <Card className="border-emerald-500/30 bg-emerald-500/5">
+              <CardContent className="pt-6">
+                <div className="text-center py-16">
+                  <div className="mx-auto h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
+                    <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-emerald-400">Nenhuma pendência</h3>
+                  <p className="text-muted-foreground mt-2">
+                    Todas as operações estão em dia! 🎉
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Alert Cards Grid - 3 columns */}
+          {hasAnyAlerts && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {alertCards.map((card) => card.component)}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </TabsContent>
 
-      {/* Alert Cards Grid - 3 columns */}
-      {hasAnyAlerts && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {alertCards.map((card) => card.component)}
-        </div>
-      )}
+        {/* ABA: OCORRÊNCIAS */}
+        <TabsContent value="ocorrencias" className="mt-4">
+          <OcorrenciasModule />
+        </TabsContent>
 
-      {/* Dialogs */}
+        {/* ABA: ALERTAS (reservado) */}
+        <TabsContent value="alertas" className="mt-4">
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <p className="text-muted-foreground">Em breve: Alertas automáticos do sistema.</p>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialogs do módulo Financeiro */}
       {selectedEntrega && (
         <EntregaConciliacaoDialog
           open={conciliacaoOpen}

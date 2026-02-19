@@ -4865,6 +4865,323 @@ export type Database = {
           },
         ]
       }
+      ocorrencias: {
+        Row: {
+          aposta_id: string | null
+          bookmaker_id: string | null
+          cancelled_at: string | null
+          contexto_metadata: Json | null
+          created_at: string
+          descricao: string
+          executor_id: string
+          id: string
+          parceiro_id: string | null
+          prioridade: Database["public"]["Enums"]["ocorrencia_prioridade"]
+          projeto_id: string | null
+          requerente_id: string
+          resolved_at: string | null
+          sla_alerta_em: string | null
+          sla_horas: number | null
+          sla_violado: boolean
+          status: Database["public"]["Enums"]["ocorrencia_status"]
+          tipo: Database["public"]["Enums"]["ocorrencia_tipo"]
+          titulo: string
+          updated_at: string
+          wallet_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          aposta_id?: string | null
+          bookmaker_id?: string | null
+          cancelled_at?: string | null
+          contexto_metadata?: Json | null
+          created_at?: string
+          descricao: string
+          executor_id: string
+          id?: string
+          parceiro_id?: string | null
+          prioridade?: Database["public"]["Enums"]["ocorrencia_prioridade"]
+          projeto_id?: string | null
+          requerente_id: string
+          resolved_at?: string | null
+          sla_alerta_em?: string | null
+          sla_horas?: number | null
+          sla_violado?: boolean
+          status?: Database["public"]["Enums"]["ocorrencia_status"]
+          tipo?: Database["public"]["Enums"]["ocorrencia_tipo"]
+          titulo: string
+          updated_at?: string
+          wallet_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          aposta_id?: string | null
+          bookmaker_id?: string | null
+          cancelled_at?: string | null
+          contexto_metadata?: Json | null
+          created_at?: string
+          descricao?: string
+          executor_id?: string
+          id?: string
+          parceiro_id?: string | null
+          prioridade?: Database["public"]["Enums"]["ocorrencia_prioridade"]
+          projeto_id?: string | null
+          requerente_id?: string
+          resolved_at?: string | null
+          sla_alerta_em?: string | null
+          sla_horas?: number | null
+          sla_violado?: boolean
+          status?: Database["public"]["Enums"]["ocorrencia_status"]
+          tipo?: Database["public"]["Enums"]["ocorrencia_tipo"]
+          titulo?: string
+          updated_at?: string
+          wallet_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocorrencias_aposta_id_fkey"
+            columns: ["aposta_id"]
+            isOneToOne: false
+            referencedRelation: "apostas_unificada"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_operavel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_status_operacional"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_financial_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ocorrencias_eventos: {
+        Row: {
+          anexos: Json | null
+          autor_id: string
+          conteudo: string | null
+          created_at: string
+          id: string
+          ocorrencia_id: string
+          tipo: Database["public"]["Enums"]["ocorrencia_evento_tipo"]
+          valor_anterior: string | null
+          valor_novo: string | null
+          workspace_id: string
+        }
+        Insert: {
+          anexos?: Json | null
+          autor_id: string
+          conteudo?: string | null
+          created_at?: string
+          id?: string
+          ocorrencia_id: string
+          tipo: Database["public"]["Enums"]["ocorrencia_evento_tipo"]
+          valor_anterior?: string | null
+          valor_novo?: string | null
+          workspace_id: string
+        }
+        Update: {
+          anexos?: Json | null
+          autor_id?: string
+          conteudo?: string | null
+          created_at?: string
+          id?: string
+          ocorrencia_id?: string
+          tipo?: Database["public"]["Enums"]["ocorrencia_evento_tipo"]
+          valor_anterior?: string | null
+          valor_novo?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocorrencias_eventos_ocorrencia_id_fkey"
+            columns: ["ocorrencia_id"]
+            isOneToOne: false
+            referencedRelation: "ocorrencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ocorrencias_observadores: {
+        Row: {
+          added_at: string
+          added_by: string
+          id: string
+          ocorrencia_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by: string
+          id?: string
+          ocorrencia_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          id?: string
+          ocorrencia_id?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocorrencias_observadores_ocorrencia_id_fkey"
+            columns: ["ocorrencia_id"]
+            isOneToOne: false
+            referencedRelation: "ocorrencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ocorrencias_sla_config: {
+        Row: {
+          created_at: string
+          id: string
+          sla_alta_horas: number
+          sla_baixa_horas: number
+          sla_media_horas: number
+          sla_urgente_horas: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sla_alta_horas?: number
+          sla_baixa_horas?: number
+          sla_media_horas?: number
+          sla_urgente_horas?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sla_alta_horas?: number
+          sla_baixa_horas?: number
+          sla_media_horas?: number
+          sla_urgente_horas?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       operador_projetos: {
         Row: {
           base_calculo: string | null
@@ -11903,6 +12220,10 @@ export type Database = {
         Returns: boolean
       }
       is_system_owner: { Args: { _user_id: string }; Returns: boolean }
+      is_workspace_member_active: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       is_workspace_owner_or_admin: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
@@ -12346,6 +12667,31 @@ export type Database = {
         | "WORKSPACE_PRIVATE"
       crypto_transit_status: "PENDING" | "CONFIRMED" | "FAILED" | "REVERSED"
       indicador_status: "ATIVO" | "TOP_VIP" | "EM_OBSERVACAO" | "INATIVO"
+      ocorrencia_evento_tipo:
+        | "criacao"
+        | "comentario"
+        | "anexo"
+        | "status_alterado"
+        | "executor_alterado"
+        | "observador_adicionado"
+        | "observador_removido"
+        | "prioridade_alterada"
+        | "vinculo_adicionado"
+      ocorrencia_prioridade: "baixa" | "media" | "alta" | "urgente"
+      ocorrencia_status:
+        | "aberto"
+        | "em_andamento"
+        | "aguardando_terceiro"
+        | "resolvido"
+        | "cancelado"
+      ocorrencia_tipo:
+        | "saque_atrasado"
+        | "deposito_nao_creditado"
+        | "financeiro"
+        | "bug_sistema"
+        | "afiliado"
+        | "compliance"
+        | "outros"
       parceria_status: "ATIVA" | "EM_ENCERRAMENTO" | "ENCERRADA" | "RENOVADA"
       subscription_status:
         | "active"
@@ -12525,6 +12871,34 @@ export const Constants = {
       ],
       crypto_transit_status: ["PENDING", "CONFIRMED", "FAILED", "REVERSED"],
       indicador_status: ["ATIVO", "TOP_VIP", "EM_OBSERVACAO", "INATIVO"],
+      ocorrencia_evento_tipo: [
+        "criacao",
+        "comentario",
+        "anexo",
+        "status_alterado",
+        "executor_alterado",
+        "observador_adicionado",
+        "observador_removido",
+        "prioridade_alterada",
+        "vinculo_adicionado",
+      ],
+      ocorrencia_prioridade: ["baixa", "media", "alta", "urgente"],
+      ocorrencia_status: [
+        "aberto",
+        "em_andamento",
+        "aguardando_terceiro",
+        "resolvido",
+        "cancelado",
+      ],
+      ocorrencia_tipo: [
+        "saque_atrasado",
+        "deposito_nao_creditado",
+        "financeiro",
+        "bug_sistema",
+        "afiliado",
+        "compliance",
+        "outros",
+      ],
       parceria_status: ["ATIVA", "EM_ENCERRAMENTO", "ENCERRADA", "RENOVADA"],
       subscription_status: [
         "active",
