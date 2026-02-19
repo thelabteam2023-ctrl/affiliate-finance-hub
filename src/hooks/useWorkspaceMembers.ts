@@ -12,36 +12,23 @@ interface WorkspaceMemberProfile {
 }
 
 async function fetchMembersWithProfiles(workspaceId: string): Promise<WorkspaceMemberProfile[]> {
-  // Passo 1: buscar membros ativos
-  const { data: members, error } = await (supabase as any)
+  // Busca membros ativos com perfis em uma única query (JOIN via select aninhado)
+  const { data, error } = await (supabase as any)
     .from('workspace_members')
-    .select('user_id, role')
+    .select('user_id, role, profiles:user_id(full_name, email, avatar_url)')
     .eq('workspace_id', workspaceId)
     .eq('is_active', true);
 
   if (error) throw error;
-  if (!members || members.length === 0) return [];
+  if (!data || data.length === 0) return [];
 
-  const userIds = members.map((m: any) => m.user_id);
-
-  // Passo 2: buscar perfis — usando a chave de service para garantir leitura
-  const { data: profiles } = await (supabase as any)
-    .from('profiles')
-    .select('id, full_name, email, avatar_url')
-    .in('id', userIds);
-
-  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
-
-  return members.map((m: any) => {
-    const profile: any = profileMap.get(m.user_id);
-    return {
-      user_id: m.user_id,
-      full_name: profile?.full_name ?? null,
-      email: profile?.email ?? null,
-      avatar_url: profile?.avatar_url ?? null,
-      role: m.role,
-    };
-  });
+  return data.map((m: any) => ({
+    user_id: m.user_id,
+    full_name: m.profiles?.full_name ?? null,
+    email: m.profiles?.email ?? null,
+    avatar_url: m.profiles?.avatar_url ?? null,
+    role: m.role,
+  }));
 }
 
 export function useWorkspaceMembers() {
