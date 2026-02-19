@@ -10,9 +10,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { useSolicitacoes, useAtualizarStatusSolicitacao } from '@/hooks/useSolicitacoes';
+import { useSolicitacoes, useAtualizarStatusSolicitacao, useExcluirSolicitacao } from '@/hooks/useSolicitacoes';
 import { useAuth } from '@/hooks/useAuth';
+import { useRole } from '@/hooks/useRole';
 import {
   SOLICITACAO_TIPO_LABELS,
   SOLICITACAO_STATUS_LABELS,
@@ -31,6 +42,7 @@ import {
   User,
   CalendarClock,
   Timer,
+  Trash2,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -119,15 +131,20 @@ function StatusBadge({ status }: { status: SolicitacaoStatus }) {
 function SolicitacaoRow({
   solicitacao,
   currentUserId,
+  isAdmin,
 }: {
   solicitacao: Solicitacao;
   currentUserId: string;
+  isAdmin: boolean;
 }) {
   const { mutate: atualizar } = useAtualizarStatusSolicitacao();
+  const { mutate: excluir, isPending: excluindo } = useExcluirSolicitacao();
+  const [confirmExcluir, setConfirmExcluir] = useState(false);
   const proximosStatus = SOLICITACAO_STATUS_FLOW[solicitacao.status];
   const isExecutor = solicitacao.executor_id === currentUserId;
   const isRequerente = solicitacao.requerente_id === currentUserId;
   const podeAtualizar = isExecutor || isRequerente;
+  const temAcoes = (podeAtualizar && proximosStatus.length > 0) || isAdmin;
 
   // prazo: may come as unknown field since types.ts may not reflect new column yet
   const prazo = (solicitacao as unknown as { prazo?: string | null }).prazo;
@@ -144,90 +161,128 @@ function SolicitacaoRow({
   })();
 
   return (
-    <Card className="border-border/50 hover:border-border transition-colors">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="font-medium text-sm truncate">{solicitacao.titulo}</span>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap mt-1.5">
-              <Badge variant="secondary" className="text-xs">
-                {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
-              </Badge>
-              {prazo && <PrazoBadge prazo={prazo} />}
-              <StatusBadge status={solicitacao.status} />
-            </div>
-
-            {/* Bookmakers listadas */}
-            {bookmakerNomes.length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
-                  <ClipboardList className="h-3 w-3" />
-                  Casas:
-                </span>
-                {bookmakerNomes.map((nome) => (
-                  <Badge
-                    key={nome}
-                    variant="outline"
-                    className="text-xs px-1.5 py-0 h-5 font-normal border-primary/40 text-primary/80"
-                  >
-                    {nome}
-                  </Badge>
-                ))}
+    <>
+      <Card className="border-border/50 hover:border-border transition-colors">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <span className="font-medium text-sm truncate">{solicitacao.titulo}</span>
               </div>
-            )}
+              <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                <Badge variant="secondary" className="text-xs">
+                  {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
+                </Badge>
+                {prazo && <PrazoBadge prazo={prazo} />}
+                <StatusBadge status={solicitacao.status} />
+              </div>
 
-            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
-              <span className="flex items-center gap-1">
-                <User className="h-3 w-3" />
-                Por: {solicitacao.requerente?.full_name ?? '—'}
-              </span>
-              <span className="flex items-center gap-1">
-                <User className="h-3 w-3" />
-                Para: {solicitacao.executor?.full_name ?? '—'}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {formatDistanceToNow(new Date(solicitacao.created_at), {
-                  addSuffix: true,
-                  locale: ptBR,
-                })}
-              </span>
+              {/* Bookmakers listadas */}
+              {bookmakerNomes.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
+                    <ClipboardList className="h-3 w-3" />
+                    Casas:
+                  </span>
+                  {bookmakerNomes.map((nome) => (
+                    <Badge
+                      key={nome}
+                      variant="outline"
+                      className="text-xs px-1.5 py-0 h-5 font-normal border-primary/40 text-primary/80"
+                    >
+                      {nome}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+                <span className="flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  Por: {solicitacao.requerente?.full_name ?? '—'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  Para: {solicitacao.executor?.full_name ?? '—'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatDistanceToNow(new Date(solicitacao.created_at), {
+                    addSuffix: true,
+                    locale: ptBR,
+                  })}
+                </span>
+              </div>
+              {solicitacao.descricao && (
+                <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">
+                  {solicitacao.descricao}
+                </p>
+              )}
             </div>
-            {solicitacao.descricao && (
-              <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">
-                {solicitacao.descricao}
-              </p>
+
+            {temAcoes && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {podeAtualizar && proximosStatus.length > 0 && (
+                    <>
+                      {proximosStatus.map((s) => (
+                        <DropdownMenuItem
+                          key={s}
+                          onClick={() => atualizar({ id: solicitacao.id, status: s })}
+                          className={s === 'recusada' ? 'text-destructive focus:text-destructive' : ''}
+                        >
+                          {SOLICITACAO_STATUS_LABELS[s]}
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
+                  {isAdmin && (
+                    <>
+                      {podeAtualizar && proximosStatus.length > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuItem
+                        onClick={() => setConfirmExcluir(true)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        Excluir solicitação
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
+        </CardContent>
+      </Card>
 
-          {podeAtualizar && proximosStatus.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuSeparator />
-                {proximosStatus.map((s) => (
-                  <DropdownMenuItem
-                    key={s}
-                    onClick={() => atualizar({ id: solicitacao.id, status: s })}
-                    className={
-                      s === 'recusada' ? 'text-destructive focus:text-destructive' : ''
-                    }
-                  >
-                    {SOLICITACAO_STATUS_LABELS[s]}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      <AlertDialog open={confirmExcluir} onOpenChange={setConfirmExcluir}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir solicitação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A solicitação <strong>"{solicitacao.titulo}"</strong> será excluída permanentemente.
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => excluir(solicitacao.id)}
+              disabled={excluindo}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -244,6 +299,7 @@ interface Props {
 
 export function SolicitacoesList({ filtros, emptyMessage }: Props) {
   const { user } = useAuth();
+  const { isOwnerOrAdmin } = useRole();
   const { data: solicitacoes = [], isLoading } = useSolicitacoes(filtros);
 
   if (isLoading) {
@@ -277,7 +333,12 @@ export function SolicitacoesList({ filtros, emptyMessage }: Props) {
   return (
     <div className="space-y-3">
       {solicitacoes.map((s) => (
-        <SolicitacaoRow key={s.id} solicitacao={s} currentUserId={user?.id ?? ''} />
+        <SolicitacaoRow
+          key={s.id}
+          solicitacao={s}
+          currentUserId={user?.id ?? ''}
+          isAdmin={isOwnerOrAdmin}
+        />
       ))}
     </div>
   );
