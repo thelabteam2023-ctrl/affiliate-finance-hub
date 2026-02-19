@@ -54,17 +54,18 @@ export function useSolicitacoesKpis() {
     enabled: !!user && !!workspaceId,
     queryFn: async () => {
       const { data, error } = await solicitacoesTable()
-        .select('status, prioridade')
+        .select('status, prazo')
         .eq('workspace_id', workspaceId!)
         .in('status', ['pendente', 'em_execucao']);
 
       if (error) throw error;
-      const rows = (data ?? []) as { status: string; prioridade: string }[];
+      const rows = (data ?? []) as { status: string; prazo?: string | null }[];
+      const now = new Date();
 
       return {
         pendentes: rows.filter((r) => r.status === 'pendente').length,
         em_execucao: rows.filter((r) => r.status === 'em_execucao').length,
-        urgentes: rows.filter((r) => r.prioridade === 'urgente').length,
+        urgentes: rows.filter((r) => r.prazo && new Date(r.prazo) < now).length,
         total_abertas: rows.length,
       };
     },
