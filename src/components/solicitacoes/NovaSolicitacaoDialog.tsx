@@ -69,7 +69,7 @@ function SearchableSelectContent({
   emptyMessage = 'Nenhum item encontrado',
   placeholder = 'Buscar...',
 }: {
-  items: { id: string; label: string; sublabel?: string }[];
+  items: { id: string; label: string; sublabel?: string; logo_url?: string }[];
   emptyMessage?: string;
   placeholder?: string;
 }) {
@@ -112,7 +112,6 @@ function SearchableSelectContent({
         position="popper"
         sideOffset={4}
       >
-        {/* Search input fixo fora do viewport */}
         <div className="px-2 pt-2 pb-2 bg-popover border-b border-border">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
@@ -136,11 +135,23 @@ function SearchableSelectContent({
           ) : (
             filtered.map((item) => (
               <SelectItem key={item.id} value={item.id} className="py-2">
-                <div className="flex flex-col">
-                  <span>{item.label}</span>
-                  {item.sublabel && (
-                    <span className="text-xs text-muted-foreground">{item.sublabel}</span>
+                <div className="flex items-center gap-2">
+                  {item.logo_url ? (
+                    <img
+                      src={item.logo_url}
+                      alt={item.label}
+                      className="h-5 w-5 rounded object-contain flex-shrink-0"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="h-5 w-5 rounded bg-muted flex-shrink-0" />
                   )}
+                  <div className="flex flex-col">
+                    <span>{item.label}</span>
+                    {item.sublabel && (
+                      <span className="text-xs text-muted-foreground">{item.sublabel}</span>
+                    )}
+                  </div>
                 </div>
               </SelectItem>
             ))
@@ -176,7 +187,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       workspaceBookmakers.map((bm) => ({
         id: bm.id,
         label: bm.nome,
-        sublabel: bm.instance_identifier ?? undefined,
+        logo_url: bm.logo_url ?? undefined,
       })),
     [workspaceBookmakers],
   );
@@ -221,7 +232,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5 text-blue-400" />
+            <ClipboardList className="h-5 w-5 text-primary" />
             Nova Solicitação
           </DialogTitle>
         </DialogHeader>
