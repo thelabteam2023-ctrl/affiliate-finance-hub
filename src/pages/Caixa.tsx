@@ -701,7 +701,14 @@ export default function Caixa() {
       };
     }
     
-    // Despesas administrativas - destino externo
+    // Despesas administrativas - mostrar finalidade da descrição
+    if (transacao.tipo_transacao === "DESPESA_ADMINISTRATIVA") {
+      return { 
+        primary: transacao.descricao || "Despesa Externa",
+      };
+    }
+
+    // Outros sem destino definido
     if (!transacao.destino_tipo) {
       return { primary: "Despesa Externa" };
     }
