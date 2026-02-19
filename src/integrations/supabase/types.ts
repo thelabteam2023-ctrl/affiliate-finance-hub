@@ -12685,13 +12685,12 @@ export type Database = {
         | "resolvido"
         | "cancelado"
       ocorrencia_tipo:
-        | "saque_atrasado"
-        | "deposito_nao_creditado"
+        | "saques"
+        | "depositos"
         | "financeiro"
-        | "bug_sistema"
-        | "afiliado"
-        | "compliance"
-        | "outros"
+        | "kyc"
+        | "bloqueio_bancario"
+        | "bloqueio_contas"
       parceria_status: "ATIVA" | "EM_ENCERRAMENTO" | "ENCERRADA" | "RENOVADA"
       subscription_status:
         | "active"
@@ -12891,13 +12890,12 @@ export const Constants = {
         "cancelado",
       ],
       ocorrencia_tipo: [
-        "saque_atrasado",
-        "deposito_nao_creditado",
+        "saques",
+        "depositos",
         "financeiro",
-        "bug_sistema",
-        "afiliado",
-        "compliance",
-        "outros",
+        "kyc",
+        "bloqueio_bancario",
+        "bloqueio_contas",
       ],
       parceria_status: ["ATIVA", "EM_ENCERRAMENTO", "ENCERRADA", "RENOVADA"],
       subscription_status: [
