@@ -165,12 +165,12 @@ function SolicitacaoRow({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="font-medium text-sm truncate">{solicitacao.titulo}</span>
+                <span className="font-semibold text-sm">{SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}</span>
               </div>
-              <div className="flex items-center gap-2 flex-wrap mt-1.5">
-                <Badge variant="secondary" className="text-xs">
-                  {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
-                </Badge>
+              {solicitacao.titulo && (
+                <p className="text-xs text-muted-foreground mb-1 truncate">{solicitacao.titulo}</p>
+              )}
+              <div className="flex items-center gap-2 flex-wrap mt-1">
                 {prazo && <PrazoBadge prazo={prazo} />}
                 <StatusBadge status={solicitacao.status} />
               </div>
