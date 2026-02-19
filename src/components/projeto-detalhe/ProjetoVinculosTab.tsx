@@ -717,7 +717,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       <img
                         src={vinculo.logo_url}
                         alt={vinculo.nome}
-                        className="h-10 w-10 rounded-lg object-contain bg-white p-1"
+                        className="h-10 w-10 rounded-lg object-contain p-1"
                       />
                     ) : (
                       <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -962,7 +962,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     <img
                       src={vinculo.logo_url}
                       alt={vinculo.nome}
-                      className="h-10 w-10 rounded-lg object-contain bg-white p-1 flex-shrink-0"
+                      className="h-10 w-10 rounded-lg object-contain p-1 flex-shrink-0"
                     />
                   ) : (
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -1321,7 +1321,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         <img
                           src={item.logo_url}
                           alt={item.nome}
-                          className="h-8 w-8 rounded object-contain bg-white p-0.5"
+                          className="h-8 w-8 rounded object-contain p-0.5"
                         />
                       ) : (
                         <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
