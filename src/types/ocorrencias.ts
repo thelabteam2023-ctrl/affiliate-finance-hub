@@ -3,13 +3,12 @@
 // ============================================================
 
 export type OcorrenciaTipo =
-  | 'saque_atrasado'
-  | 'deposito_nao_creditado'
+  | 'saques'
+  | 'depositos'
   | 'financeiro'
-  | 'bug_sistema'
-  | 'afiliado'
-  | 'compliance'
-  | 'outros';
+  | 'kyc'
+  | 'bloqueio_bancario'
+  | 'bloqueio_contas';
 
 export type OcorrenciaPrioridade = 'baixa' | 'media' | 'alta' | 'urgente';
 
@@ -98,13 +97,12 @@ export interface OcorrenciaObservador {
 // Labels e cores
 
 export const TIPO_LABELS: Record<OcorrenciaTipo, string> = {
-  saque_atrasado: 'Saque Atrasado',
-  deposito_nao_creditado: 'Depósito Não Creditado',
+  saques: 'Saques',
+  depositos: 'Depósitos',
   financeiro: 'Financeiro',
-  bug_sistema: 'Bug Sistema',
-  afiliado: 'Afiliado',
-  compliance: 'Compliance',
-  outros: 'Outros',
+  kyc: 'KYC',
+  bloqueio_bancario: 'Bloqueio Bancário',
+  bloqueio_contas: 'Bloqueio de Contas',
 };
 
 export const PRIORIDADE_LABELS: Record<OcorrenciaPrioridade, string> = {
