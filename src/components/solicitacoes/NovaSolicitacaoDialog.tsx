@@ -2,8 +2,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import {
   Dialog,
   DialogContent,
@@ -26,30 +24,30 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import * as SelectPrimitive from '@radix-ui/react-select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { useCriarSolicitacao } from '@/hooks/useSolicitacoes';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
 import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
 import type { SolicitacaoTipo } from '@/types/solicitacoes';
-import { CalendarIcon, ClipboardList, Loader2, Search } from 'lucide-react';
+import { ClipboardList, Loader2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const schema = z.object({
   titulo: z.string().min(5, 'Título deve ter pelo menos 5 caracteres').max(200),
   descricao: z.string().min(10, 'Descreva a solicitação com pelo menos 10 caracteres'),
   tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'transferencia', 'outros'] as const),
-  prazo: z.date({ required_error: 'Selecione o prazo limite' }),
+  prazo: z.string().min(1, 'Selecione o prazo limite'),
   executor_id: z.string().min(1, 'Selecione o responsável pela execução'),
   bookmaker_ids: z.array(z.string()).optional(),
 });
@@ -327,7 +325,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       titulo: data.titulo,
       descricao: data.descricao,
       tipo: data.tipo,
-      prazo: data.prazo.toISOString(),
+      prazo: data.prazo,
       executor_id: data.executor_id,
       bookmaker_ids: data.tipo === 'abertura_conta' ? (data.bookmaker_ids ?? []) : [],
       bookmaker_id: contextoInicial?.bookmaker_id,
@@ -402,35 +400,15 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Prazo Limite *</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              'w-full h-9 px-3 justify-center font-normal border-input gap-2',
-                              !field.value && 'text-muted-foreground',
-                            )}
-                          >
-                            <CalendarIcon className="h-4 w-4 shrink-0" />
-                            {field.value
-                              ? format(field.value, 'dd/MM/yyyy', { locale: ptBR })
-                              : 'Selecionar data'}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 z-[9999]" align="center">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          initialFocus
-                          locale={ptBR}
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <DateTimePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Selecionar data e hora"
+                        fromYear={new Date().getFullYear()}
+                        toYear={new Date().getFullYear() + 3}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

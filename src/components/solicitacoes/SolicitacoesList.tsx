@@ -1,4 +1,4 @@
-import { formatDistanceToNow, format, isPast } from 'date-fns';
+import { format, isPast, differenceInSeconds, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,27 +30,73 @@ import {
   Clock,
   User,
   CalendarClock,
+  Timer,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-// ---- Prazo badge ----
-function PrazoBadge({ prazo }: { prazo?: string | null }) {
-  if (!prazo) return null;
+// ---- Helpers ----
+function formatCountdown(secondsLeft: number): string {
+  if (secondsLeft <= 0) return 'Vencido';
+  const d = Math.floor(secondsLeft / 86400);
+  const h = Math.floor((secondsLeft % 86400) / 3600);
+  const m = Math.floor((secondsLeft % 3600) / 60);
+  const s = secondsLeft % 60;
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  return `${m}m ${s}s`;
+}
+
+// ---- Prazo badge (componente com hooks no topo) ----
+function PrazoBadge({ prazo }: { prazo: string }) {
   const date = new Date(prazo);
   const vencido = isPast(date);
+
+  const [secondsLeft, setSecondsLeft] = useState<number>(
+    () => differenceInSeconds(date, new Date()),
+  );
+
+  useEffect(() => {
+    if (vencido) return;
+    const tick = () => setSecondsLeft(differenceInSeconds(date, new Date()));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [prazo]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isUrgent = !vencido && secondsLeft < 86400; // menos de 1 dia
+  const countdown = vencido ? 'Vencido' : formatCountdown(secondsLeft);
+
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        'gap-1 text-xs',
-        vencido
-          ? 'text-red-400 border-red-400/50'
-          : 'text-muted-foreground border-muted-foreground/50',
-      )}
-    >
-      <CalendarClock className="h-3 w-3" />
-      {vencido ? 'Vencido · ' : 'Prazo · '}
-      {format(date, 'dd/MM/yyyy', { locale: ptBR })}
-    </Badge>
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <Badge
+        variant="outline"
+        className={cn(
+          'gap-1 text-xs',
+          vencido
+            ? 'text-red-400 border-red-400/50'
+            : isUrgent
+            ? 'text-orange-400 border-orange-400/50'
+            : 'text-muted-foreground border-muted-foreground/50',
+        )}
+      >
+        <CalendarClock className="h-3 w-3" />
+        {format(date, "dd/MM 'às' HH:mm", { locale: ptBR })}
+      </Badge>
+      <Badge
+        variant="outline"
+        className={cn(
+          'gap-1 text-xs font-mono',
+          vencido
+            ? 'text-red-400 border-red-400/50'
+            : isUrgent
+            ? 'text-orange-400 border-orange-400/50'
+            : 'text-emerald-400 border-emerald-400/50',
+        )}
+      >
+        <Timer className="h-3 w-3" />
+        {countdown}
+      </Badge>
+    </div>
   );
 }
 
@@ -98,7 +144,7 @@ function SolicitacaoRow({
               <Badge variant="secondary" className="text-xs">
                 {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
               </Badge>
-              <PrazoBadge prazo={prazo} />
+              {prazo && <PrazoBadge prazo={prazo} />}
               <StatusBadge status={solicitacao.status} />
             </div>
             <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
