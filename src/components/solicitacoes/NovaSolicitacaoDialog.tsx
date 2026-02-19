@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,14 @@ import {
 } from '@/types/solicitacoes';
 import type { SolicitacaoTipo, SolicitacaoPrioridade } from '@/types/solicitacoes';
 import { ClipboardList, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+
+interface BookmakerOption {
+  id: string;
+  nome: string;
+  instance_identifier?: string | null;
+}
 
 const schema = z.object({
   titulo: z.string().min(5, 'Título deve ter pelo menos 5 caracteres').max(200),
@@ -40,6 +49,7 @@ const schema = z.object({
   tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'transferencia', 'outros'] as const),
   prioridade: z.enum(['baixa', 'media', 'alta', 'urgente'] as const),
   executor_id: z.string().min(1, 'Selecione o responsável pela execução'),
+  bookmaker_catalogo_id: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -60,6 +70,8 @@ interface Props {
 export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: Props) {
   const { mutateAsync: criar, isPending } = useCriarSolicitacao();
   const { data: members = [] } = useWorkspaceMembers();
+  const { workspaceId } = useAuth();
+  const [bookmakers, setBookmakers] = useState<BookmakerOption[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -69,10 +81,40 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       tipo: contextoInicial?.tipo || 'outros',
       prioridade: 'media',
       executor_id: '',
+      bookmaker_catalogo_id: '',
     },
   });
 
+  const tipoSelecionado = form.watch('tipo');
+
+  // Busca bookmakers do catálogo disponíveis para o workspace
+  useEffect(() => {
+    if (tipoSelecionado !== 'abertura_conta' || !workspaceId) return;
+
+    const fetchBookmakers = async () => {
+      // Busca casas do catálogo que o workspace tem acesso
+      const { data } = await (supabase as any)
+        .from('bookmakers_catalogo')
+        .select('id, nome')
+        .eq('status', 'ativo')
+        .order('nome');
+      setBookmakers(data ?? []);
+    };
+
+    fetchBookmakers();
+  }, [tipoSelecionado, workspaceId]);
+
   const onSubmit = async (data: FormData) => {
+    const metadata: Record<string, unknown> = {
+      ...(contextoInicial?.contexto_metadata ?? {}),
+    };
+
+    if (data.tipo === 'abertura_conta' && data.bookmaker_catalogo_id) {
+      const bm = bookmakers.find((b) => b.id === data.bookmaker_catalogo_id);
+      metadata['bookmaker_catalogo_id'] = data.bookmaker_catalogo_id;
+      if (bm) metadata['bookmaker_nome'] = bm.nome;
+    }
+
     await criar({
       titulo: data.titulo,
       descricao: data.descricao,
@@ -82,7 +124,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       bookmaker_id: contextoInicial?.bookmaker_id,
       projeto_id: contextoInicial?.projeto_id,
       parceiro_id: contextoInicial?.parceiro_id,
-      contexto_metadata: contextoInicial?.contexto_metadata,
+      contexto_metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
     });
     onOpenChange(false);
     form.reset();
@@ -171,6 +213,39 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                 )}
               />
             </div>
+
+            {/* Bookmaker – aparece apenas quando tipo = abertura_conta */}
+            {tipoSelecionado === 'abertura_conta' && (
+              <FormField
+                control={form.control}
+                name="bookmaker_catalogo_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bookmaker *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Qual bookmaker deve ser aberto?" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {bookmakers.length === 0 && (
+                          <SelectItem value="_loading" disabled>
+                            Carregando...
+                          </SelectItem>
+                        )}
+                        {bookmakers.map((bm) => (
+                          <SelectItem key={bm.id} value={bm.id}>
+                            {bm.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Executor */}
             <FormField

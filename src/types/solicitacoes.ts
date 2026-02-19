@@ -47,7 +47,7 @@ export interface Solicitacao {
 // Labels e cores
 
 export const SOLICITACAO_TIPO_LABELS: Record<SolicitacaoTipo, string> = {
-  abertura_conta: 'Abertura de Conta',
+  abertura_conta: 'Abertura de Bookmaker',
   verificacao_kyc: 'Verificação KYC',
   transferencia: 'Transferência / Movimentação',
   outros: 'Outros',
