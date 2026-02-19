@@ -38,6 +38,7 @@ interface ConciliacaoVinculoDialogProps {
     bookmaker_status: string;
   } | null;
   projetoId: string;
+  projetoNome?: string;
   workspaceId: string | null;
   onConciliado: () => void;
 }
@@ -47,6 +48,7 @@ export function ConciliacaoVinculoDialog({
   onOpenChange,
   vinculo,
   projetoId,
+  projetoNome,
   workspaceId,
   onConciliado,
 }: ConciliacaoVinculoDialogProps) {
@@ -101,7 +103,7 @@ export function ConciliacaoVinculoDialog({
         moeda: vinculo.moeda,
         workspaceId: workspaceId,
         userId: user.id,
-        descricao: `Ajuste de conciliação manual. Projeto ID: ${projetoId}`,
+        descricao: `Ajuste de conciliação manual. Projeto: ${projetoNome || projetoId}`,
         motivo: observacoes.trim(),
       });
 
@@ -160,7 +162,7 @@ export function ConciliacaoVinculoDialog({
           moeda: vinculo.moeda,
           workspaceId: workspaceId,
           userId: user.id,
-          descricao: `Conciliação na liberação do vínculo. Projeto ID: ${projetoId}`,
+          descricao: `Conciliação na liberação do vínculo. Projeto: ${projetoNome || projetoId}`,
           motivo: observacoes.trim(),
         });
 

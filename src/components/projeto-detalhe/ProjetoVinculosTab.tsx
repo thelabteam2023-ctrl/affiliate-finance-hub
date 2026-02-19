@@ -190,17 +190,20 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     setBonusDrawerOpen(true);
   };
 
+  const [projetoNome, setProjetoNome] = useState<string>("");
+
   const fetchCotacaoTrabalho = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("projetos")
         .select(
-          "cotacao_trabalho, cotacao_trabalho_eur, cotacao_trabalho_gbp, cotacao_trabalho_myr, cotacao_trabalho_mxn, cotacao_trabalho_ars, cotacao_trabalho_cop"
+          "nome, cotacao_trabalho, cotacao_trabalho_eur, cotacao_trabalho_gbp, cotacao_trabalho_myr, cotacao_trabalho_mxn, cotacao_trabalho_ars, cotacao_trabalho_cop"
         )
         .eq("id", projetoId)
         .single();
 
       if (error) throw error;
+      setProjetoNome(data?.nome || "");
       setCotacaoTrabalho(data?.cotacao_trabalho != null ? Number(data.cotacao_trabalho) : null);
       setCotacaoTrabalhoEur(data?.cotacao_trabalho_eur != null ? Number(data.cotacao_trabalho_eur) : null);
       setCotacaoTrabalhoGbp(data?.cotacao_trabalho_gbp != null ? Number(data.cotacao_trabalho_gbp) : null);
@@ -1455,6 +1458,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           bookmaker_status: vinculoParaConciliar.bookmaker_status
         } : null}
         projetoId={projetoId}
+        projetoNome={projetoNome}
         workspaceId={workspaceId}
         onConciliado={() => {
           invalidateVinculos();
