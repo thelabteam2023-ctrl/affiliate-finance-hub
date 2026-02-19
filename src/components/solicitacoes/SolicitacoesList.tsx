@@ -196,25 +196,27 @@ function SolicitacaoRow({
                 </div>
               )}
 
-              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
-                <span className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  Por: {solicitacao.requerente?.full_name ?? '—'}
-                </span>
+              <div className="flex flex-col gap-0.5 mt-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Por: {solicitacao.requerente?.full_name ?? '—'}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {formatDistanceToNow(new Date(solicitacao.created_at), {
+                      addSuffix: true,
+                      locale: ptBR,
+                    })}
+                  </span>
+                </div>
                 <span className="flex items-center gap-1">
                   <User className="h-3 w-3" />
                   Para: {solicitacao.executor?.full_name ?? '—'}
                 </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(solicitacao.created_at), {
-                    addSuffix: true,
-                    locale: ptBR,
-                  })}
-                </span>
               </div>
               {solicitacao.descricao && (
-                <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">
+                <p className="text-xs text-foreground mt-1.5 line-clamp-2">
                   {solicitacao.descricao}
                 </p>
               )}
