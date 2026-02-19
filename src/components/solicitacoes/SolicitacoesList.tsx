@@ -132,6 +132,17 @@ function SolicitacaoRow({
   // prazo: may come as unknown field since types.ts may not reflect new column yet
   const prazo = (solicitacao as unknown as { prazo?: string | null }).prazo;
 
+  // bookmaker names from contexto_metadata
+  const bookmakerNomes: string[] = (() => {
+    const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
+    if (!meta) return [];
+    const nomes = meta['bookmaker_nomes'];
+    if (typeof nomes === 'string' && nomes.trim()) {
+      return nomes.split(',').map((n) => n.trim()).filter(Boolean);
+    }
+    return [];
+  })();
+
   return (
     <Card className="border-border/50 hover:border-border transition-colors">
       <CardContent className="p-4">
@@ -147,6 +158,26 @@ function SolicitacaoRow({
               {prazo && <PrazoBadge prazo={prazo} />}
               <StatusBadge status={solicitacao.status} />
             </div>
+
+            {/* Bookmakers listadas */}
+            {bookmakerNomes.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
+                  <ClipboardList className="h-3 w-3" />
+                  Casas:
+                </span>
+                {bookmakerNomes.map((nome) => (
+                  <Badge
+                    key={nome}
+                    variant="outline"
+                    className="text-xs px-1.5 py-0 h-5 font-normal border-primary/40 text-primary/80"
+                  >
+                    {nome}
+                  </Badge>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1">
                 <User className="h-3 w-3" />
