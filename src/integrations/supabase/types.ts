@@ -12382,6 +12382,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_workspace_members_with_profiles: {
+        Args: { _workspace_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          role: string
+          user_id: string
+        }[]
+      }
       get_workspace_usage: { Args: { workspace_uuid: string }; Returns: Json }
       has_permission: {
         Args: {
