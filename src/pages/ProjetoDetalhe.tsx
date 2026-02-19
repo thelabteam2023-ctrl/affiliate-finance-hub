@@ -150,9 +150,19 @@ export default function ProjetoDetalhe() {
   const { defaultTab, loading: tabPreferenceLoading, isDefaultTab } = useProjectTabPreference(id);
   // Track which project ID had its default tab applied (prevents stale application)
   const appliedDefaultTabForProject = useRef<string | null>(null);
+  const lastProjectId = useRef<string | undefined>(undefined);
   
   // KPIs sempre mostram dados completos (sem filtro de período - cada aba usa seu próprio)
   const [activeTab, setActiveTab] = useState("apostas");
+  
+  // CRITICAL: Reset state synchronously during render when project ID changes.
+  // useEffect runs AFTER render, so the hook's loading state would still be stale
+  // on the first render after id changes, causing the wrong tab to be applied.
+  if (id !== lastProjectId.current) {
+    lastProjectId.current = id;
+    appliedDefaultTabForProject.current = null;
+    setActiveTab("apostas"); // Reset immediately to prevent stale tab from showing
+  }
   
   // Refresh trigger - incrementado toda vez que uma aposta/bonus é criado
   const [refreshTrigger, setRefreshTrigger] = useState(0);
