@@ -272,6 +272,7 @@ export default function Financeiro() {
 
   // Parâmetros da URL para filtro e aba inicial
   const tabFromUrl = searchParams.get("tab");
+  const [activeFinanceiroTab, setActiveFinanceiroTab] = useState(tabFromUrl || "overview");
   const investidorFiltroId = searchParams.get("investidor");
 
   // SEGURANÇA: Refetch quando workspace muda
@@ -1124,7 +1125,7 @@ export default function Financeiro() {
       />
 
       {/* Tabs */}
-      <Tabs defaultValue={tabFromUrl || "overview"} className="space-y-6">
+      <Tabs value={activeFinanceiroTab} onValueChange={setActiveFinanceiroTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
