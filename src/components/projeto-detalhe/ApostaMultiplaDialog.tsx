@@ -162,8 +162,10 @@ export function ApostaMultiplaDialog({
   const invalidateSaldos = useInvalidateBookmakerSaldos();
   
   // Mapear saldos canônicos para formato local (retrocompatibilidade)
-  const bookmakers = useMemo((): Bookmaker[] => {
-    return bookmakerSaldos.map(bk => ({
+   const bookmakers = useMemo((): Bookmaker[] => {
+    return bookmakerSaldos
+      .filter(bk => bk.saldo_operavel >= 0.50) // Mostrar apenas casas com saldo disponível
+      .map(bk => ({
       id: bk.id,
       nome: bk.nome,
       parceiro_id: bk.parceiro_id,
