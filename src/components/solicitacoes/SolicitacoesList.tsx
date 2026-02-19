@@ -51,11 +51,9 @@ function formatCountdown(secondsLeft: number): string {
   if (secondsLeft <= 0) return 'Vencido';
   const d = Math.floor(secondsLeft / 86400);
   const h = Math.floor((secondsLeft % 86400) / 3600);
-  const m = Math.floor((secondsLeft % 3600) / 60);
-  const s = secondsLeft % 60;
-  if (d > 0) return `${d}d ${h}h ${m}m`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h`;
+  return '< 1h';
 }
 
 // ---- Prazo badge (componente com hooks no topo) ----
@@ -197,12 +195,11 @@ function SolicitacaoRow({
               )}
 
               <div className="flex flex-col gap-0.5 mt-2 text-xs text-muted-foreground">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    Por: {solicitacao.requerente?.full_name ?? '—'}
-                  </span>
-                  <span className="flex items-center gap-1">
+                <div className="flex items-center gap-1">
+                  <User className="h-3 w-3 shrink-0" />
+                  <span className="w-7 shrink-0">Por</span>
+                  <span>: {solicitacao.requerente?.full_name ?? '—'}</span>
+                  <span className="flex items-center gap-1 ml-3">
                     <Clock className="h-3 w-3" />
                     {formatDistanceToNow(new Date(solicitacao.created_at), {
                       addSuffix: true,
@@ -210,10 +207,11 @@ function SolicitacaoRow({
                     })}
                   </span>
                 </div>
-                <span className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  Para: {solicitacao.executor?.full_name ?? '—'}
-                </span>
+                <div className="flex items-center gap-1">
+                  <User className="h-3 w-3 shrink-0" />
+                  <span className="w-7 shrink-0">Para</span>
+                  <span>: {solicitacao.executor?.full_name ?? '—'}</span>
+                </div>
               </div>
               {solicitacao.descricao && (
                 <p className="text-xs text-foreground mt-1.5 line-clamp-2">
