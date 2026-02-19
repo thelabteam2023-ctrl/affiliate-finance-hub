@@ -72,6 +72,9 @@ interface WalletDetalhe {
 interface LabelInfo {
   primary: string;
   secondary?: string;
+  badgeLabel?: string;
+  badgeColor?: string;
+  BadgeIcon?: any;
 }
 
 interface HistoricoMovimentacoesProps {
@@ -530,12 +533,24 @@ export function HistoricoMovimentacoes({
                               {logoUrl && (
                                 <img src={logoUrl} alt={bookmakerNome || ''} className="h-5 w-5 rounded object-contain bg-background" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                               )}
-                              <div className="flex flex-col">
-                                <span className="text-sm text-muted-foreground">{destinoInfo.primary}</span>
-                                {destinoInfo.secondary && (
-                                  <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
-                                )}
-                              </div>
+                              {destinoInfo.badgeLabel ? (
+                                <div className="flex flex-col gap-1">
+                                  <Badge variant="outline" className={`w-fit text-[11px] ${destinoInfo.badgeColor || ''}`}>
+                                    {destinoInfo.BadgeIcon && <destinoInfo.BadgeIcon className="h-3 w-3 mr-1" />}
+                                    {destinoInfo.badgeLabel}
+                                  </Badge>
+                                  {destinoInfo.primary && (
+                                    <span className="text-xs text-muted-foreground/70">: {destinoInfo.primary}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-muted-foreground">{destinoInfo.primary}</span>
+                                  {destinoInfo.secondary && (
+                                    <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           );
                         })()}

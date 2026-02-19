@@ -9,6 +9,9 @@ import type { PendingTransaction } from "@/hooks/usePendingTransactions";
 interface LabelInfo {
   primary: string;
   secondary?: string;
+  badgeLabel?: string;
+  badgeColor?: string;
+  BadgeIcon?: any;
 }
 
 interface CaixaTabsContainerProps {
