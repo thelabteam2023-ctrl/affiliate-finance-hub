@@ -400,7 +400,7 @@ export function ConfirmarSaqueDialog({
       setLoading(true);
 
       const updateData: any = {
-        status: "RECUSADO",
+        status: "CANCELADO",
       };
 
       if (observacoes.trim()) {
