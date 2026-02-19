@@ -8,6 +8,7 @@ import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { CAIXA_DATA_CHANGED_EVENT } from "@/hooks/useInvalidateCaixaData";
 import { CASH_REAL_TYPES } from "@/lib/cashOperationalTypes";
+import { getGrupoFromCategoria, getGrupoInfo } from "@/lib/despesaGrupos";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
 import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal } from "lucide-react";
@@ -701,11 +702,21 @@ export default function Caixa() {
       };
     }
     
-    // Despesas administrativas - mostrar finalidade da descrição
+    // Despesas administrativas - mostrar grupo/finalidade
     if (transacao.tipo_transacao === "DESPESA_ADMINISTRATIVA") {
-      return { 
-        primary: transacao.descricao || "Despesa Externa",
-      };
+      // Extrair categoria da descrição: "Despesa administrativa - CATEGORIA: detalhe"
+      const match = transacao.descricao?.match(/^Despesa administrativa\s*-\s*(.+?)(?::\s*(.+))?$/i);
+      if (match) {
+        const categoriaRaw = match[1].trim();
+        const detalhe = match[2]?.trim();
+        const grupo = getGrupoFromCategoria(categoriaRaw);
+        const grupoInfo = getGrupoInfo(grupo);
+        return { 
+          primary: grupoInfo.label,
+          secondary: detalhe || categoriaRaw,
+        };
+      }
+      return { primary: "Despesa Externa" };
     }
 
     // Outros sem destino definido
