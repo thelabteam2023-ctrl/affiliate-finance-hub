@@ -40,7 +40,11 @@ export function useSolicitacoes(filtros?: {
       if (filtros?.requerente_id) query = query.eq('requerente_id', filtros.requerente_id);
 
       const { data, error } = await query;
-      if (error) throw error;
+      console.log('[useSolicitacoes] resultado:', { data, error, workspaceId, filtros });
+      if (error) {
+        console.error('[useSolicitacoes] ERRO:', error);
+        throw error;
+      }
       return (data ?? []) as Solicitacao[];
     },
   });
