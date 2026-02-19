@@ -1,4 +1,4 @@
-import { format, isPast, differenceInSeconds, formatDistanceToNow } from 'date-fns';
+import { isPast, differenceInSeconds, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,6 @@ import {
   XCircle,
   Clock,
   User,
-  CalendarClock,
   Timer,
   Trash2,
   FileText,
@@ -78,36 +77,20 @@ function PrazoBadge({ prazo }: { prazo: string }) {
   const countdown = vencido ? 'Vencido' : formatCountdown(secondsLeft);
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      <Badge
-        variant="outline"
-        className={cn(
-          'gap-1 text-xs',
-          vencido
-            ? 'text-red-400 border-red-400/50'
-            : isUrgent
-            ? 'text-orange-400 border-orange-400/50'
-            : 'text-muted-foreground border-muted-foreground/50',
-        )}
-      >
-        <CalendarClock className="h-3 w-3" />
-        {format(date, "dd/MM 'às' HH:mm", { locale: ptBR })}
-      </Badge>
-      <Badge
-        variant="outline"
-        className={cn(
-          'gap-1 text-xs font-mono',
-          vencido
-            ? 'text-red-400 border-red-400/50'
-            : isUrgent
-            ? 'text-orange-400 border-orange-400/50'
-            : 'text-emerald-400 border-emerald-400/50',
-        )}
-      >
-        <Timer className="h-3 w-3" />
-        {countdown}
-      </Badge>
-    </div>
+    <Badge
+      variant="outline"
+      className={cn(
+        'gap-1 text-xs font-mono',
+        vencido
+          ? 'text-red-400 border-red-400/50'
+          : isUrgent
+          ? 'text-orange-400 border-orange-400/50'
+          : 'text-emerald-400 border-emerald-400/50',
+      )}
+    >
+      <Timer className="h-3 w-3" />
+      {countdown}
+    </Badge>
   );
 }
 
