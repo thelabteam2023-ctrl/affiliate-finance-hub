@@ -36,6 +36,7 @@ export interface Solicitacao {
   updated_at: string;
   concluida_at?: string | null;
   recusada_at?: string | null;
+  descricao_editada_at?: string | null;
   // Joins
   requerente?: { id: string; full_name: string; avatar_url?: string };
   executor?: { id: string; full_name: string; avatar_url?: string };

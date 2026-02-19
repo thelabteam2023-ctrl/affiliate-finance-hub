@@ -7751,6 +7751,7 @@ export type Database = {
           contexto_metadata: Json | null
           created_at: string
           descricao: string
+          descricao_editada_at: string | null
           executor_id: string
           id: string
           observadores: string[] | null
@@ -7774,6 +7775,7 @@ export type Database = {
           contexto_metadata?: Json | null
           created_at?: string
           descricao: string
+          descricao_editada_at?: string | null
           executor_id: string
           id?: string
           observadores?: string[] | null
@@ -7797,6 +7799,7 @@ export type Database = {
           contexto_metadata?: Json | null
           created_at?: string
           descricao?: string
+          descricao_editada_at?: string | null
           executor_id?: string
           id?: string
           observadores?: string[] | null
