@@ -20,16 +20,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { useSolicitacoes, useAtualizarStatusSolicitacao, useExcluirSolicitacao, useEditarDescricaoSolicitacao } from '@/hooks/useSolicitacoes';
+import { useSolicitacoes, useAtualizarStatusSolicitacao, useExcluirSolicitacao } from '@/hooks/useSolicitacoes';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
 import {
@@ -54,6 +46,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { EditarSolicitacaoDialog } from './EditarSolicitacaoDialog';
 
 // ---- Helpers ----
 function formatCountdown(secondsLeft: number): string {
@@ -78,7 +71,7 @@ function PrazoBadge({ prazo }: { prazo: string }) {
     if (vencido) return;
     const tick = () => setSecondsLeft(differenceInSeconds(date, new Date()));
     tick();
-    const id = setInterval(tick, 60000); // atualiza a cada minuto
+    const id = setInterval(tick, 60000);
     return () => clearInterval(id);
   }, [prazo]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -91,7 +84,7 @@ function PrazoBadge({ prazo }: { prazo: string }) {
       className={cn(
         'gap-1 text-xs font-mono',
         vencido
-          ? 'text-red-400 border-red-400/50'
+          ? 'text-destructive border-destructive/50'
           : isUrgent
           ? 'text-orange-400 border-orange-400/50'
           : 'text-emerald-400 border-emerald-400/50',
@@ -132,10 +125,8 @@ function SolicitacaoRow({
 }) {
   const { mutate: atualizar } = useAtualizarStatusSolicitacao();
   const { mutate: excluir, isPending: excluindo } = useExcluirSolicitacao();
-  const { mutate: editarDescricao, isPending: editando } = useEditarDescricaoSolicitacao();
   const [confirmExcluir, setConfirmExcluir] = useState(false);
   const [editarOpen, setEditarOpen] = useState(false);
-  const [novaDescricao, setNovaDescricao] = useState(solicitacao.descricao ?? '');
 
   const proximosStatus = SOLICITACAO_STATUS_FLOW[solicitacao.status];
   const isRequerente = solicitacao.requerente_id === currentUserId;
@@ -146,8 +137,10 @@ function SolicitacaoRow({
   const prazo = (solicitacao as unknown as { prazo?: string | null }).prazo;
   const foiEditada = !!(solicitacao as unknown as { descricao_editada_at?: string | null }).descricao_editada_at;
 
+  const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
+
+  // Nomes de todas as casas
   const bookmakerNomes: string[] = (() => {
-    const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
     if (!meta) return [];
     const nomes = meta['bookmaker_nomes'];
     if (typeof nomes === 'string' && nomes.trim()) {
@@ -156,13 +149,35 @@ function SolicitacaoRow({
     return [];
   })();
 
-  const handleSalvarEdicao = () => {
-    if (!novaDescricao.trim()) return;
-    editarDescricao(
-      { id: solicitacao.id, descricao: novaDescricao.trim() },
-      { onSuccess: () => setEditarOpen(false) },
-    );
-  };
+  // IDs das casas novas adicionadas na última edição
+  const bookmakerIdsNovos: string[] = (() => {
+    if (!meta) return [];
+    const novos = meta['bookmaker_ids_novos'];
+    if (Array.isArray(novos)) return novos as string[];
+    return [];
+  })();
+
+  // IDs de todas as casas (para cruzar com nomes)
+  const bookmakerIds: string[] = (() => {
+    if (!meta) return [];
+    const ids = meta['bookmaker_ids'];
+    if (Array.isArray(ids)) return ids as string[];
+    return [];
+  })();
+
+  // Lista plana com flag isNova
+  const bookmakerFlatList: { nome: string; isNova: boolean }[] = bookmakerNomes.map((nome, i) => ({
+    nome,
+    isNova: bookmakerIdsNovos.length > 0 && bookmakerIds[i] != null
+      ? bookmakerIdsNovos.includes(bookmakerIds[i])
+      : false,
+  }));
+
+  // Agrupa em linhas de 3
+  const bookmakerRows: { nome: string; isNova: boolean }[][] = [];
+  for (let i = 0; i < bookmakerFlatList.length; i += 3) {
+    bookmakerRows.push(bookmakerFlatList.slice(i, i + 3));
+  }
 
   return (
     <>
@@ -184,20 +199,36 @@ function SolicitacaoRow({
                 <StatusBadge status={solicitacao.status} />
               </div>
 
-              {bookmakerNomes.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
-                    <ClipboardList className="h-3 w-3" />
-                    Casas:
-                  </span>
-                  {bookmakerNomes.map((nome) => (
-                    <Badge
-                      key={nome}
-                      variant="outline"
-                      className="text-xs px-1.5 py-0 h-5 font-normal border-primary/40 text-primary/80"
-                    >
-                      {nome}
-                    </Badge>
+              {/* Casas — 3 por linha, novas destacadas */}
+              {bookmakerRows.length > 0 && (
+                <div className="mt-1.5 space-y-1">
+                  {bookmakerRows.map((row, rowIdx) => (
+                    <div key={rowIdx} className="flex items-center gap-1.5">
+                      {rowIdx === 0 ? (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
+                          <ClipboardList className="h-3 w-3" />
+                          <span>Casas:</span>
+                        </span>
+                      ) : (
+                        /* Espaçador para alinhar com "Casas:" na linha 0 */
+                        <span className="shrink-0" style={{ width: '3.5rem' }} />
+                      )}
+                      {row.map(({ nome, isNova }) => (
+                        <Badge
+                          key={nome}
+                          variant="outline"
+                          className={cn(
+                            'text-xs px-1.5 py-0 h-5',
+                            isNova
+                              ? 'border-primary text-primary bg-primary/10 font-semibold'
+                              : 'border-primary/40 text-primary/80 font-normal',
+                          )}
+                        >
+                          {nome}
+                          {isNova && <span className="ml-1 text-[8px] font-bold uppercase tracking-wide opacity-70">new</span>}
+                        </Badge>
+                      ))}
+                    </div>
                   ))}
                 </div>
               )}
@@ -255,9 +286,9 @@ function SolicitacaoRow({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {isRequerente && (
-                    <DropdownMenuItem onClick={() => { setNovaDescricao(solicitacao.descricao ?? ''); setEditarOpen(true); }}>
+                    <DropdownMenuItem onClick={() => setEditarOpen(true)}>
                       <Pencil className="h-3.5 w-3.5 mr-2" />
-                      Editar descrição
+                      Editar solicitação
                     </DropdownMenuItem>
                   )}
                   {podeAtualizar && proximosStatus.length > 0 && (
@@ -293,30 +324,12 @@ function SolicitacaoRow({
         </CardContent>
       </Card>
 
-      {/* Dialog editar descrição */}
-      <Dialog open={editarOpen} onOpenChange={setEditarOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pencil className="h-4 w-4 text-primary" />
-              Editar Descrição
-            </DialogTitle>
-          </DialogHeader>
-          <Textarea
-            value={novaDescricao}
-            onChange={(e) => setNovaDescricao(e.target.value)}
-            rows={6}
-            placeholder="Descreva o que precisa ser feito..."
-            className="resize-none"
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditarOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSalvarEdicao} disabled={editando || !novaDescricao.trim()}>
-              {editando ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dialog editar solicitação completa */}
+      <EditarSolicitacaoDialog
+        solicitacao={solicitacao}
+        open={editarOpen}
+        onOpenChange={setEditarOpen}
+      />
 
       {/* Dialog confirmar exclusão */}
       <AlertDialog open={confirmExcluir} onOpenChange={setConfirmExcluir}>
