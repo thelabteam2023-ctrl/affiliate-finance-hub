@@ -167,9 +167,6 @@ function SolicitacaoRow({
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span className="font-semibold text-sm">{SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}</span>
               </div>
-              {solicitacao.titulo && (
-                <p className="text-xs text-muted-foreground mb-1 truncate">{solicitacao.titulo}</p>
-              )}
               <div className="flex items-center gap-2 flex-wrap mt-1">
                 {prazo && <PrazoBadge prazo={prazo} />}
                 <StatusBadge status={solicitacao.status} />

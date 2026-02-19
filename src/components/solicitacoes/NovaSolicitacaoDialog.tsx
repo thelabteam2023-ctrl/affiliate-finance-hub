@@ -44,7 +44,6 @@ import { ClipboardList, Loader2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const schema = z.object({
-  titulo: z.string().min(5, 'Título deve ter pelo menos 5 caracteres').max(200),
   descricao: z.string().min(10, 'Descreva a solicitação com pelo menos 10 caracteres'),
   tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'transferencia', 'outros'] as const),
   prazo: z.string().min(1, 'Selecione o prazo limite'),
@@ -280,7 +279,6 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      titulo: contextoInicial?.titulo || '',
       descricao: '',
       tipo: contextoInicial?.tipo || 'outros',
       prazo: undefined,
@@ -321,8 +319,11 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       metadata['bookmaker_nomes'] = selectedBms.map((b) => b.nome).join(', ');
     }
 
+    // Usar o label do tipo como título
+    const tituloGerado = SOLICITACAO_TIPO_LABELS[data.tipo];
+
     await criar({
-      titulo: data.titulo,
+      titulo: tituloGerado,
       descricao: data.descricao,
       tipo: data.tipo,
       prazo: data.prazo,
@@ -349,21 +350,6 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Título */}
-            <FormField
-              control={form.control}
-              name="titulo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Título *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Descreva brevemente a solicitação..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             {/* Tipo + Prazo */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
