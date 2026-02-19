@@ -65,7 +65,7 @@ export function SolicitacoesModule() {
             <Zap className="h-8 w-8 text-red-400 flex-shrink-0" />
             <div>
               <p className="text-2xl font-bold">{kpis?.urgentes ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Urgentes</p>
+              <p className="text-xs text-muted-foreground">Prazo Vencido</p>
             </div>
           </CardContent>
         </Card>

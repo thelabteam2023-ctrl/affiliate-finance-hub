@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,8 +16,6 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   SOLICITACAO_TIPO_LABELS,
   SOLICITACAO_STATUS_LABELS,
-  SOLICITACAO_PRIORIDADE_LABELS,
-  SOLICITACAO_PRIORIDADE_COLORS,
   SOLICITACAO_STATUS_COLORS,
   SOLICITACAO_STATUS_FLOW,
 } from '@/types/solicitacoes';
@@ -32,29 +29,33 @@ import {
   XCircle,
   Clock,
   User,
-  Activity,
-  TrendingUp,
-  Zap,
+  CalendarClock,
 } from 'lucide-react';
 
-// ---- Badges ----
-function PrioridadeBadge({ prioridade }: { prioridade: Solicitacao['prioridade'] }) {
-  const icons = {
-    baixa: <Circle className="h-3 w-3" />,
-    media: <Activity className="h-3 w-3" />,
-    alta: <TrendingUp className="h-3 w-3" />,
-    urgente: <Zap className="h-3 w-3" />,
-  };
+// ---- Prazo badge ----
+function PrazoBadge({ prazo }: { prazo?: string | null }) {
+  if (!prazo) return null;
+  const date = new Date(prazo);
+  const vencido = isPast(date);
   return (
-    <Badge variant="outline" className={cn('gap-1 text-xs', SOLICITACAO_PRIORIDADE_COLORS[prioridade])}>
-      {icons[prioridade]}
-      {SOLICITACAO_PRIORIDADE_LABELS[prioridade]}
+    <Badge
+      variant="outline"
+      className={cn(
+        'gap-1 text-xs',
+        vencido
+          ? 'text-red-400 border-red-400/50'
+          : 'text-muted-foreground border-muted-foreground/50',
+      )}
+    >
+      <CalendarClock className="h-3 w-3" />
+      {vencido ? 'Vencido · ' : 'Prazo · '}
+      {format(date, 'dd/MM/yyyy', { locale: ptBR })}
     </Badge>
   );
 }
 
 function StatusBadge({ status }: { status: SolicitacaoStatus }) {
-  const icons = {
+  const icons: Record<SolicitacaoStatus, React.ReactNode> = {
     pendente: <Circle className="h-3 w-3" />,
     em_execucao: <PlayCircle className="h-3 w-3" />,
     concluida: <CheckCircle2 className="h-3 w-3" />,
@@ -82,6 +83,9 @@ function SolicitacaoRow({
   const isRequerente = solicitacao.requerente_id === currentUserId;
   const podeAtualizar = isExecutor || isRequerente;
 
+  // prazo: may come as unknown field since types.ts may not reflect new column yet
+  const prazo = (solicitacao as unknown as { prazo?: string | null }).prazo;
+
   return (
     <Card className="border-border/50 hover:border-border transition-colors">
       <CardContent className="p-4">
@@ -94,7 +98,7 @@ function SolicitacaoRow({
               <Badge variant="secondary" className="text-xs">
                 {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
               </Badge>
-              <PrioridadeBadge prioridade={solicitacao.prioridade} />
+              <PrazoBadge prazo={prazo} />
               <StatusBadge status={solicitacao.status} />
             </div>
             <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
