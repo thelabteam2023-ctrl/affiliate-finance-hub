@@ -43,37 +43,16 @@ import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
 import type { SolicitacaoTipo } from '@/types/solicitacoes';
 import { KycBookmakerSelect } from './KycBookmakerSelect';
 import type { OperationalBookmakerOption } from '@/hooks/useOperationalBookmakers';
-import { ClipboardList, Loader2, Search, X, ArrowRight, MoveRight } from 'lucide-react';
+import { useParceiroContas } from '@/hooks/useParceiroContas';
+import type { ContaOuWallet } from '@/hooks/useParceiroContas';
+import { supabase } from '@/integrations/supabase/client';
+import { ClipboardList, Loader2, Search, X, MoveRight, Landmark, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// ---- Tipos para o bloco de Transferência ----
-const PLATAFORMA_LABELS: Record<string, string> = {
-  bookmaker: 'Bookmaker',
-  exchange: 'Exchange',
-  wallet: 'Wallet',
-  banco: 'Banco',
-};
-
+// ---- Schema do formulário ----
 const MOEDAS_TRANSFERENCIA = [
   'BRL', 'USD', 'EUR', 'USDT', 'BTC', 'ETH', 'PIX', 'Outro',
 ];
-
-interface TransferenciaBloco {
-  dono: string;
-  plataforma: string;
-  conta: string;
-}
-
-const transferenciaSchema = z.object({
-  origem_dono: z.string().min(1, 'Informe o dono da origem'),
-  origem_plataforma: z.string().min(1, 'Selecione a plataforma de origem'),
-  origem_conta: z.string().min(1, 'Informe a conta/wallet de origem'),
-  destino_dono: z.string().min(1, 'Informe o dono do destino'),
-  destino_plataforma: z.string().min(1, 'Selecione a plataforma de destino'),
-  destino_conta: z.string().min(1, 'Informe a conta/wallet de destino'),
-  transferencia_valor: z.string().min(1, 'Informe o valor'),
-  transferencia_moeda: z.string().min(1, 'Selecione a moeda'),
-});
 
 const schema = z.object({
   descricao: z.string().min(10, 'Descreva a solicitação com pelo menos 10 caracteres'),
@@ -82,33 +61,23 @@ const schema = z.object({
   executor_ids: z.array(z.string()).min(1, 'Selecione ao menos um responsável'),
   bookmaker_ids: z.array(z.string()).optional(),
   kyc_bookmaker_id: z.string().optional(),
-  // Transferência
-  origem_dono: z.string().optional(),
-  origem_plataforma: z.string().optional(),
-  origem_conta: z.string().optional(),
-  destino_dono: z.string().optional(),
-  destino_plataforma: z.string().optional(),
-  destino_conta: z.string().optional(),
+  // Transferência — IDs reais (contas bancárias / wallets)
+  origem_parceiro_id: z.string().optional(),
+  origem_conta_id: z.string().optional(),
+  destino_parceiro_id: z.string().optional(),
+  destino_conta_id: z.string().optional(),
   transferencia_valor: z.string().optional(),
   transferencia_moeda: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.tipo === 'transferencia') {
-    if (!data.origem_dono?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe o dono da origem', path: ['origem_dono'] });
-    if (!data.origem_plataforma?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione a plataforma', path: ['origem_plataforma'] });
-    if (!data.origem_conta?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe a conta/wallet', path: ['origem_conta'] });
-    if (!data.destino_dono?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe o dono do destino', path: ['destino_dono'] });
-    if (!data.destino_plataforma?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione a plataforma', path: ['destino_plataforma'] });
-    if (!data.destino_conta?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe a conta/wallet', path: ['destino_conta'] });
+    if (!data.origem_parceiro_id) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione o parceiro de origem', path: ['origem_parceiro_id'] });
+    if (!data.origem_conta_id) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione a conta/wallet de origem', path: ['origem_conta_id'] });
+    if (!data.destino_parceiro_id) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione o parceiro de destino', path: ['destino_parceiro_id'] });
+    if (!data.destino_conta_id) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione a conta/wallet de destino', path: ['destino_conta_id'] });
     if (!data.transferencia_valor?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe o valor', path: ['transferencia_valor'] });
     if (!data.transferencia_moeda?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione a moeda', path: ['transferencia_moeda'] });
-    // Origem e destino não podem ser iguais
-    if (
-      data.origem_dono?.trim() && data.origem_conta?.trim() &&
-      data.destino_dono?.trim() && data.destino_conta?.trim() &&
-      data.origem_dono.trim().toLowerCase() === data.destino_dono.trim().toLowerCase() &&
-      data.origem_conta.trim().toLowerCase() === data.destino_conta.trim().toLowerCase()
-    ) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Origem e destino não podem ser iguais', path: ['destino_conta'] });
+    if (data.origem_conta_id && data.destino_conta_id && data.origem_conta_id === data.destino_conta_id) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Origem e destino não podem ser iguais', path: ['destino_conta_id'] });
     }
   }
 });
@@ -400,18 +369,40 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
   const tipoSelecionado = form.watch('tipo');
 
   // Watch campos de transferência para o preview automático
-  const origemDono = form.watch('origem_dono');
-  const origemConta = form.watch('origem_conta');
-  const destinoDono = form.watch('destino_dono');
-  const destinoConta = form.watch('destino_conta');
+  const origemParceiroId = form.watch('origem_parceiro_id');
+  const origemContaId = form.watch('origem_conta_id');
+  const destinoParceiroId = form.watch('destino_parceiro_id');
+  const destinoContaId = form.watch('destino_conta_id');
   const transferenciaValor = form.watch('transferencia_valor');
   const transferenciaMoeda = form.watch('transferencia_moeda');
 
+  // Estado dos parceiros para select (carregados do DB)
+  const [parceiros, setParceiros] = useState<{ id: string; nome: string }[]>([]);
+  useEffect(() => {
+    if (tipoSelecionado !== 'transferencia') return;
+    supabase.from('parceiros').select('id, nome').eq('status', 'ativo').order('nome')
+      .then(({ data }) => setParceiros(data ?? []));
+  }, [tipoSelecionado]);
+
+  // Contas/wallets por parceiro
+  const { data: origemContas = [], isLoading: origemContasLoading } = useParceiroContas(
+    tipoSelecionado === 'transferencia' ? (origemParceiroId ?? null) : null
+  );
+  const { data: destinoContas = [], isLoading: destinoContasLoading } = useParceiroContas(
+    tipoSelecionado === 'transferencia' ? (destinoParceiroId ?? null) : null
+  );
+
+  // Labels para o preview
+  const origemParceiroNome = parceiros.find(p => p.id === origemParceiroId)?.nome ?? '';
+  const destinoParceiroNome = parceiros.find(p => p.id === destinoParceiroId)?.nome ?? '';
+  const origemContaLabel = origemContas.find(c => c.id === origemContaId)?.label ?? '';
+  const destinoContaLabel = destinoContas.find(c => c.id === destinoContaId)?.label ?? '';
+
   const transferenciaResumo = useMemo(() => {
     if (tipoSelecionado !== 'transferencia') return null;
-    if (!transferenciaValor || !transferenciaMoeda || !origemConta || !origemDono || !destinoConta || !destinoDono) return null;
-    return `Transferir ${transferenciaValor} ${transferenciaMoeda} de ${origemConta} (${origemDono}) para ${destinoConta} (${destinoDono})`;
-  }, [tipoSelecionado, transferenciaValor, transferenciaMoeda, origemConta, origemDono, destinoConta, destinoDono]);
+    if (!transferenciaValor || !transferenciaMoeda || !origemContaLabel || !origemParceiroNome || !destinoContaLabel || !destinoParceiroNome) return null;
+    return `Transferir ${transferenciaValor} ${transferenciaMoeda} de ${origemContaLabel} (${origemParceiroNome}) para ${destinoContaLabel} (${destinoParceiroNome})`;
+  }, [tipoSelecionado, transferenciaValor, transferenciaMoeda, origemContaLabel, origemParceiroNome, destinoContaLabel, destinoParceiroNome]);
 
   const bookmakerItems = useMemo(
     () =>
@@ -451,14 +442,30 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       metadata['kyc_projeto_nome'] = kycBookmakerData.projeto_nome ?? null;
     }
 
-    // Transferência: armazena blocos de origem/destino
+    // Transferência: armazena blocos de origem/destino com dados reais
     if (data.tipo === 'transferencia') {
+      const origemContaDados = origemContas.find(c => c.id === data.origem_conta_id);
+      const destinoContaDados = destinoContas.find(c => c.id === data.destino_conta_id);
+      const origemParcNome = parceiros.find(p => p.id === data.origem_parceiro_id)?.nome ?? '';
+      const destinoParcNome = parceiros.find(p => p.id === data.destino_parceiro_id)?.nome ?? '';
       metadata['transferencia'] = {
-        origem: { dono: data.origem_dono, plataforma: data.origem_plataforma, conta: data.origem_conta },
-        destino: { dono: data.destino_dono, plataforma: data.destino_plataforma, conta: data.destino_conta },
+        origem: {
+          parceiro_id: data.origem_parceiro_id,
+          parceiro_nome: origemParcNome,
+          conta_id: data.origem_conta_id,
+          conta_label: origemContaDados?.label ?? '',
+          tipo: origemContaDados?.tipo ?? '',
+        },
+        destino: {
+          parceiro_id: data.destino_parceiro_id,
+          parceiro_nome: destinoParcNome,
+          conta_id: data.destino_conta_id,
+          conta_label: destinoContaDados?.label ?? '',
+          tipo: destinoContaDados?.tipo ?? '',
+        },
         valor: data.transferencia_valor,
         moeda: data.transferencia_moeda,
-        resumo: `Transferir ${data.transferencia_valor} ${data.transferencia_moeda} de ${data.origem_conta} (${data.origem_dono}) para ${data.destino_conta} (${data.destino_dono})`,
+        resumo: `Transferir ${data.transferencia_valor} ${data.transferencia_moeda} de ${origemContaDados?.label ?? ''} (${origemParcNome}) para ${destinoContaDados?.label ?? ''} (${destinoParcNome})`,
       };
     }
 
@@ -635,34 +642,28 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                     {/* Origem */}
                     <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide text-center">Origem</p>
+                      {/* Parceiro Origem */}
                       <FormField
                         control={form.control}
-                        name="origem_dono"
+                        name="origem_parceiro_id"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs">Dono da conta *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: Daniel" className="h-8 text-sm" {...field} />
-                            </FormControl>
-                            <FormMessage className="text-[10px]" />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="origem_plataforma"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Plataforma *</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                            <FormLabel className="text-xs">Parceiro *</FormLabel>
+                            <Select
+                              onValueChange={(v) => {
+                                field.onChange(v);
+                                form.setValue('origem_conta_id', '');
+                              }}
+                              value={field.value ?? ''}
+                            >
                               <FormControl>
                                 <SelectTrigger className="h-8 text-sm">
-                                  <SelectValue placeholder="Selecionar..." />
+                                  <SelectValue placeholder="Selecionar parceiro..." />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {Object.entries(PLATAFORMA_LABELS).map(([v, l]) => (
-                                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                                {parceiros.map(p => (
+                                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -670,15 +671,52 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                           </FormItem>
                         )}
                       />
+                      {/* Conta/Wallet Origem */}
                       <FormField
                         control={form.control}
-                        name="origem_conta"
+                        name="origem_conta_id"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-xs">Conta / Wallet *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: Bet365 – Conta X" className="h-8 text-sm" {...field} />
-                            </FormControl>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value ?? ''}
+                              disabled={!origemParceiroId}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="h-8 text-sm">
+                                  {origemContasLoading
+                                    ? <span className="text-muted-foreground text-xs">Carregando...</span>
+                                    : <SelectValue placeholder={origemParceiroId ? 'Selecionar conta...' : 'Selecione o parceiro'} />
+                                  }
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {origemContas.length === 0 && (
+                                  <p className="px-3 py-2 text-xs text-muted-foreground">Nenhuma conta cadastrada</p>
+                                )}
+                                {origemContas.filter(c => c.tipo === 'banco').length > 0 && (
+                                  <>
+                                    <div className="px-2 py-1 flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wide font-semibold">
+                                      <Landmark className="h-3 w-3" /> Contas Bancárias
+                                    </div>
+                                    {origemContas.filter(c => c.tipo === 'banco').map(c => (
+                                      <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                                    ))}
+                                  </>
+                                )}
+                                {origemContas.filter(c => c.tipo === 'wallet').length > 0 && (
+                                  <>
+                                    <div className="px-2 py-1 flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wide font-semibold mt-1">
+                                      <Wallet className="h-3 w-3" /> Wallets Crypto
+                                    </div>
+                                    {origemContas.filter(c => c.tipo === 'wallet').map(c => (
+                                      <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                                    ))}
+                                  </>
+                                )}
+                              </SelectContent>
+                            </Select>
                             <FormMessage className="text-[10px]" />
                           </FormItem>
                         )}
@@ -695,34 +733,28 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                     {/* Destino */}
                     <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide text-center">Destino</p>
+                      {/* Parceiro Destino */}
                       <FormField
                         control={form.control}
-                        name="destino_dono"
+                        name="destino_parceiro_id"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs">Dono da conta *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: Marcio" className="h-8 text-sm" {...field} />
-                            </FormControl>
-                            <FormMessage className="text-[10px]" />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="destino_plataforma"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Plataforma *</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                            <FormLabel className="text-xs">Parceiro *</FormLabel>
+                            <Select
+                              onValueChange={(v) => {
+                                field.onChange(v);
+                                form.setValue('destino_conta_id', '');
+                              }}
+                              value={field.value ?? ''}
+                            >
                               <FormControl>
                                 <SelectTrigger className="h-8 text-sm">
-                                  <SelectValue placeholder="Selecionar..." />
+                                  <SelectValue placeholder="Selecionar parceiro..." />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {Object.entries(PLATAFORMA_LABELS).map(([v, l]) => (
-                                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                                {parceiros.map(p => (
+                                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -730,15 +762,52 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                           </FormItem>
                         )}
                       />
+                      {/* Conta/Wallet Destino */}
                       <FormField
                         control={form.control}
-                        name="destino_conta"
+                        name="destino_conta_id"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-xs">Conta / Wallet *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: Wallet USDT – Y" className="h-8 text-sm" {...field} />
-                            </FormControl>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value ?? ''}
+                              disabled={!destinoParceiroId}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="h-8 text-sm">
+                                  {destinoContasLoading
+                                    ? <span className="text-muted-foreground text-xs">Carregando...</span>
+                                    : <SelectValue placeholder={destinoParceiroId ? 'Selecionar conta...' : 'Selecione o parceiro'} />
+                                  }
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {destinoContas.length === 0 && (
+                                  <p className="px-3 py-2 text-xs text-muted-foreground">Nenhuma conta cadastrada</p>
+                                )}
+                                {destinoContas.filter(c => c.tipo === 'banco').length > 0 && (
+                                  <>
+                                    <div className="px-2 py-1 flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wide font-semibold">
+                                      <Landmark className="h-3 w-3" /> Contas Bancárias
+                                    </div>
+                                    {destinoContas.filter(c => c.tipo === 'banco').map(c => (
+                                      <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                                    ))}
+                                  </>
+                                )}
+                                {destinoContas.filter(c => c.tipo === 'wallet').length > 0 && (
+                                  <>
+                                    <div className="px-2 py-1 flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wide font-semibold mt-1">
+                                      <Wallet className="h-3 w-3" /> Wallets Crypto
+                                    </div>
+                                    {destinoContas.filter(c => c.tipo === 'wallet').map(c => (
+                                      <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                                    ))}
+                                  </>
+                                )}
+                              </SelectContent>
+                            </Select>
                             <FormMessage className="text-[10px]" />
                           </FormItem>
                         )}
