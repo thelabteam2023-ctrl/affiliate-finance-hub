@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +37,7 @@ export default function GestaoBancos() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signOut } = useAuth();
+  const { workspaceId } = useWorkspace();
 
   useEffect(() => {
     checkAuth();
@@ -136,11 +138,13 @@ export default function GestaoBancos() {
         if (error) throw error;
         toast({ title: "Banco atualizado com sucesso" });
       } else {
+        if (!workspaceId) throw new Error("Workspace não definido");
         const { error } = await supabase.from("bancos").insert({
           codigo,
           nome,
           user_id: user.id,
           is_system: false,
+          workspace_id: workspaceId,
         });
 
         if (error) throw error;

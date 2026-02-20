@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface Banco {
   id: string;
@@ -52,6 +53,7 @@ export function BancoSelect({ value, onValueChange, disabled }: BancoSelectProps
   const [nome, setNome] = useState("");
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { workspaceId } = useWorkspace();
 
   useEffect(() => {
     fetchBancos();
@@ -70,11 +72,13 @@ export function BancoSelect({ value, onValueChange, disabled }: BancoSelectProps
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      if (!workspaceId) throw new Error("Workspace não definido");
       const { data, error } = await supabase.from("bancos").insert({
         codigo,
         nome,
         user_id: user.id,
         is_system: false,
+        workspace_id: workspaceId,
       }).select().single();
 
       if (error) throw error;
