@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, LogOut, LayoutGrid, List, Percent } from "lucide-react";
+import { Plus, Search, Edit, Trash2, LogOut, LayoutGrid, List, Percent, DollarSign } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,14 +24,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+type TaxaTipo = "percentual" | "fixo" | null;
+
 interface Banco {
   id: string;
   codigo: string;
   nome: string;
   is_system: boolean;
-  taxa_percentual: number | null;
-  taxa_incidencia: string | null;
+  taxa_deposito_tipo: TaxaTipo;
+  taxa_deposito_valor: number | null;
+  taxa_saque_tipo: TaxaTipo;
+  taxa_saque_valor: number | null;
+  taxa_moeda: string | null;
 }
+
+const MOEDAS = [
+  { value: "BRL", label: "BRL" },
+  { value: "USD", label: "USD" },
+  { value: "EUR", label: "EUR" },
+  { value: "GBP", label: "GBP" },
+  { value: "MXN", label: "MXN" },
+  { value: "MYR", label: "MYR" },
+  { value: "ARS", label: "ARS" },
+  { value: "COP", label: "COP" },
+];
 
 export default function GestaoBancos() {
   const [bancos, setBancos] = useState<Banco[]>([]);
@@ -41,8 +57,14 @@ export default function GestaoBancos() {
   const [editingBanco, setEditingBanco] = useState<Banco | null>(null);
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
-  const [taxaPercentual, setTaxaPercentual] = useState("");
-  const [taxaIncidencia, setTaxaIncidencia] = useState<string>("");
+  // Deposit fee
+  const [taxaDepositoTipo, setTaxaDepositoTipo] = useState<string>("");
+  const [taxaDepositoValor, setTaxaDepositoValor] = useState("");
+  // Withdrawal fee
+  const [taxaSaqueTipo, setTaxaSaqueTipo] = useState<string>("");
+  const [taxaSaqueValor, setTaxaSaqueValor] = useState("");
+  // Currency for fixed fees
+  const [taxaMoeda, setTaxaMoeda] = useState("BRL");
   const [saving, setSaving] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const navigate = useNavigate();
@@ -57,9 +79,7 @@ export default function GestaoBancos() {
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-    }
+    if (!session) navigate("/auth");
   };
 
   const fetchBancos = async () => {
@@ -68,15 +88,22 @@ export default function GestaoBancos() {
         .from("bancos")
         .select("*")
         .order("nome");
-
       if (error) throw error;
-      setBancos(data || []);
+      setBancos(
+        (data || []).map((b: any) => ({
+          id: b.id,
+          codigo: b.codigo,
+          nome: b.nome,
+          is_system: b.is_system ?? false,
+          taxa_deposito_tipo: b.taxa_deposito_tipo as TaxaTipo,
+          taxa_deposito_valor: b.taxa_deposito_valor,
+          taxa_saque_tipo: b.taxa_saque_tipo as TaxaTipo,
+          taxa_saque_valor: b.taxa_saque_valor,
+          taxa_moeda: b.taxa_moeda,
+        }))
+      );
     } catch (error: any) {
-      toast({
-        title: "Erro ao carregar bancos",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao carregar bancos", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -89,48 +116,33 @@ export default function GestaoBancos() {
 
   const handleDelete = async (id: string, isSystem: boolean) => {
     if (isSystem) {
-      toast({
-        title: "Ação não permitida",
-        description: "Bancos do sistema não podem ser excluídos.",
-        variant: "destructive",
-      });
+      toast({ title: "Ação não permitida", description: "Bancos do sistema não podem ser excluídos.", variant: "destructive" });
       return;
     }
-
     if (!confirm("Tem certeza que deseja excluir este banco?")) return;
-
     try {
       const { error } = await supabase.from("bancos").delete().eq("id", id);
       if (error) throw error;
-
-      toast({
-        title: "Banco excluído",
-        description: "O banco foi removido com sucesso.",
-      });
+      toast({ title: "Banco excluído", description: "O banco foi removido com sucesso." });
       fetchBancos();
     } catch (error: any) {
-      toast({
-        title: "Erro ao excluir banco",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao excluir banco", description: error.message, variant: "destructive" });
     }
   };
 
   const handleEdit = (banco: Banco) => {
     if (banco.is_system) {
-      toast({
-        title: "Ação não permitida",
-        description: "Bancos do sistema não podem ser editados.",
-        variant: "destructive",
-      });
+      toast({ title: "Ação não permitida", description: "Bancos do sistema não podem ser editados.", variant: "destructive" });
       return;
     }
     setEditingBanco(banco);
     setCodigo(banco.codigo);
     setNome(banco.nome);
-    setTaxaPercentual(banco.taxa_percentual != null ? String(banco.taxa_percentual) : "");
-    setTaxaIncidencia(banco.taxa_incidencia ?? "");
+    setTaxaDepositoTipo(banco.taxa_deposito_tipo ?? "");
+    setTaxaDepositoValor(banco.taxa_deposito_valor != null ? String(banco.taxa_deposito_valor) : "");
+    setTaxaSaqueTipo(banco.taxa_saque_tipo ?? "");
+    setTaxaSaqueValor(banco.taxa_saque_valor != null ? String(banco.taxa_saque_valor) : "");
+    setTaxaMoeda(banco.taxa_moeda ?? "BRL");
     setDialogOpen(true);
   };
 
@@ -138,15 +150,21 @@ export default function GestaoBancos() {
     e.preventDefault();
     setSaving(true);
 
-    // Validate: if one taxa field is filled, the other must be too
-    const hasTaxa = taxaPercentual !== "";
-    const hasIncidencia = taxaIncidencia !== "";
-    if (hasTaxa !== hasIncidencia) {
-      toast({
-        title: "Campos de taxa incompletos",
-        description: "Preencha tanto a porcentagem quanto o momento de cobrança, ou deixe ambos em branco.",
-        variant: "destructive",
-      });
+    // Validate: if tipo is set, valor must be set too
+    if (taxaDepositoTipo && !taxaDepositoValor) {
+      toast({ title: "Taxa de depósito incompleta", description: "Informe o valor da taxa de depósito.", variant: "destructive" });
+      setSaving(false);
+      return;
+    }
+    if (taxaSaqueTipo && !taxaSaqueValor) {
+      toast({ title: "Taxa de saque incompleta", description: "Informe o valor da taxa de saque.", variant: "destructive" });
+      setSaving(false);
+      return;
+    }
+    // Validate: se tem valor fixo em qualquer lado, moeda é obrigatória
+    const hasFixo = taxaDepositoTipo === "fixo" || taxaSaqueTipo === "fixo";
+    if (hasFixo && !taxaMoeda) {
+      toast({ title: "Moeda da taxa fixa necessária", description: "Selecione a moeda para taxas com valor fixo.", variant: "destructive" });
       setSaving(false);
       return;
     }
@@ -158,16 +176,15 @@ export default function GestaoBancos() {
       const payload: any = {
         codigo,
         nome,
-        taxa_percentual: taxaPercentual !== "" ? parseFloat(taxaPercentual) : null,
-        taxa_incidencia: hasIncidencia ? taxaIncidencia : null,
+        taxa_deposito_tipo: taxaDepositoTipo || null,
+        taxa_deposito_valor: taxaDepositoValor ? parseFloat(taxaDepositoValor) : null,
+        taxa_saque_tipo: taxaSaqueTipo || null,
+        taxa_saque_valor: taxaSaqueValor ? parseFloat(taxaSaqueValor) : null,
+        taxa_moeda: hasFixo ? taxaMoeda : null,
       };
 
       if (editingBanco) {
-        const { error } = await supabase
-          .from("bancos")
-          .update(payload)
-          .eq("id", editingBanco.id);
-
+        const { error } = await supabase.from("bancos").update(payload).eq("id", editingBanco.id);
         if (error) throw error;
         toast({ title: "Banco atualizado com sucesso" });
       } else {
@@ -178,18 +195,13 @@ export default function GestaoBancos() {
           is_system: false,
           workspace_id: workspaceId,
         });
-
         if (error) throw error;
         toast({ title: "Banco criado com sucesso" });
       }
 
       handleDialogClose();
     } catch (error: any) {
-      toast({
-        title: "Erro ao salvar banco",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao salvar banco", description: error.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -200,8 +212,11 @@ export default function GestaoBancos() {
     setEditingBanco(null);
     setCodigo("");
     setNome("");
-    setTaxaPercentual("");
-    setTaxaIncidencia("");
+    setTaxaDepositoTipo("");
+    setTaxaDepositoValor("");
+    setTaxaSaqueTipo("");
+    setTaxaSaqueValor("");
+    setTaxaMoeda("BRL");
     fetchBancos();
   };
 
@@ -211,11 +226,80 @@ export default function GestaoBancos() {
       banco.codigo.includes(searchTerm)
   );
 
-  const taxaLabel = (banco: Banco) => {
-    if (!banco.taxa_percentual) return null;
-    const quando = banco.taxa_incidencia === "deposito" ? "no depósito" : "no saque";
-    return `${banco.taxa_percentual}% ${quando}`;
+  const formatTaxaLabel = (tipo: TaxaTipo, valor: number | null, moeda: string | null, label: string) => {
+    if (!tipo || valor == null) return null;
+    if (tipo === "percentual") return `${valor}% ${label}`;
+    return `${moeda ?? "BRL"} ${valor} ${label}`;
   };
+
+  const getTaxaBadges = (banco: Banco) => {
+    const badges: string[] = [];
+    const dep = formatTaxaLabel(banco.taxa_deposito_tipo, banco.taxa_deposito_valor, banco.taxa_moeda, "no depósito");
+    const saq = formatTaxaLabel(banco.taxa_saque_tipo, banco.taxa_saque_valor, banco.taxa_moeda, "no saque");
+    if (dep) badges.push(dep);
+    if (saq) badges.push(saq);
+    return badges;
+  };
+
+  // Taxa field section component
+  const TaxaSection = ({
+    label,
+    tipo,
+    setTipo,
+    valor,
+    setValor,
+  }: {
+    label: string;
+    tipo: string;
+    setTipo: (v: string) => void;
+    valor: string;
+    setValor: (v: string) => void;
+  }) => (
+    <div className="space-y-2">
+      <p className="text-sm font-medium text-foreground">{label}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="text-xs text-muted-foreground">Tipo de cobrança</Label>
+          <Select value={tipo} onValueChange={setTipo} disabled={saving}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sem taxa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem taxa</SelectItem>
+              <SelectItem value="percentual">Percentual (%)</SelectItem>
+              <SelectItem value="fixo">Valor fixo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">
+            {tipo === "percentual" ? "Percentual (%)" : tipo === "fixo" ? "Valor fixo" : "Valor"}
+          </Label>
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+            placeholder={tipo === "percentual" ? "Ex: 5.00" : "Ex: 5.00"}
+            disabled={saving || !tipo || tipo === "none"}
+          />
+        </div>
+      </div>
+      {tipo && tipo !== "none" && valor && (
+        <p className="text-xs text-muted-foreground">
+          Será cobrado{" "}
+          {tipo === "percentual"
+            ? <><strong>{valor}%</strong> sobre o valor</>
+            : <><strong>{taxaMoeda} {valor}</strong> fixo</>
+          }{" "}
+          {label.toLowerCase()}.
+        </p>
+      )}
+    </div>
+  );
+
+  const hasFixo = taxaDepositoTipo === "fixo" || taxaSaqueTipo === "fixo";
 
   if (loading) {
     return (
@@ -280,111 +364,119 @@ export default function GestaoBancos() {
           </Card>
         ) : viewMode === "cards" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredBancos.map((banco) => (
-              <Card key={banco.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-xl">{banco.nome}</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Código: {banco.codigo}
-                      </p>
+            {filteredBancos.map((banco) => {
+              const taxaBadges = getTaxaBadges(banco);
+              return (
+                <Card key={banco.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-xl">{banco.nome}</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Código: {banco.codigo}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1 items-end">
+                        {banco.is_system && (
+                          <Badge variant="secondary">Sistema</Badge>
+                        )}
+                        {taxaBadges.map((badge, i) => (
+                          <Badge key={i} variant="outline" className="text-xs gap-1">
+                            {banco.taxa_deposito_tipo === "fixo" || banco.taxa_saque_tipo === "fixo"
+                              ? <DollarSign className="h-3 w-3" />
+                              : <Percent className="h-3 w-3" />
+                            }
+                            {badge}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-1 items-end">
-                      {banco.is_system && (
-                        <Badge variant="secondary">Sistema</Badge>
-                      )}
-                      {taxaLabel(banco) && (
-                        <Badge variant="outline" className="text-xs gap-1">
-                          <Percent className="h-3 w-3" />
-                          {taxaLabel(banco)}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {!banco.is_system && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => handleEdit(banco)}
-                      >
-                        <Edit className="mr-1 h-4 w-4" />
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-destructive hover:text-destructive"
-                        onClick={() => handleDelete(banco.id, banco.is_system)}
-                      >
-                        <Trash2 className="mr-1 h-4 w-4" />
-                        Excluir
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                  </CardHeader>
+                  <CardContent>
+                    {!banco.is_system && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleEdit(banco)}
+                        >
+                          <Edit className="mr-1 h-4 w-4" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(banco.id, banco.is_system)}
+                        >
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          Excluir
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <Card>
             <CardContent className="p-0">
               <div className="space-y-1">
-                {filteredBancos.map((banco, index) => (
-                  <div
-                    key={banco.id}
-                    className={`p-4 hover:bg-accent/5 transition-colors ${
-                      index !== filteredBancos.length - 1 ? "border-b border-border/50" : ""
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3">
-                          <div>
-                            <h3 className="font-medium text-base">{banco.nome}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Código: {banco.codigo}
-                            </p>
+                {filteredBancos.map((banco, index) => {
+                  const taxaBadges = getTaxaBadges(banco);
+                  return (
+                    <div
+                      key={banco.id}
+                      className={`p-4 hover:bg-accent/5 transition-colors ${
+                        index !== filteredBancos.length - 1 ? "border-b border-border/50" : ""
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <div>
+                              <h3 className="font-medium text-base">{banco.nome}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Código: {banco.codigo}
+                              </p>
+                            </div>
+                            {banco.is_system && (
+                              <Badge variant="secondary" className="ml-2">
+                                Sistema
+                              </Badge>
+                            )}
+                            {taxaBadges.map((badge, i) => (
+                              <Badge key={i} variant="outline" className="text-xs gap-1">
+                                {banco.taxa_deposito_tipo === "fixo" || banco.taxa_saque_tipo === "fixo"
+                                  ? <DollarSign className="h-3 w-3" />
+                                  : <Percent className="h-3 w-3" />
+                                }
+                                {badge}
+                              </Badge>
+                            ))}
                           </div>
-                          {banco.is_system && (
-                            <Badge variant="secondary" className="ml-2">
-                              Sistema
-                            </Badge>
-                          )}
-                          {taxaLabel(banco) && (
-                            <Badge variant="outline" className="text-xs gap-1">
-                              <Percent className="h-3 w-3" />
-                              {taxaLabel(banco)}
-                            </Badge>
-                          )}
                         </div>
+                        {!banco.is_system && (
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(banco)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(banco.id, banco.is_system)}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                      {!banco.is_system && (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(banco)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(banco.id, banco.is_system)}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -393,13 +485,14 @@ export default function GestaoBancos() {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {editingBanco ? "Editar Banco" : "Novo Banco"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Basic info */}
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label htmlFor="codigo">Código *</Label>
@@ -425,59 +518,60 @@ export default function GestaoBancos() {
               </div>
             </div>
 
-            {/* Taxa section */}
-            <div className="border border-border rounded-lg p-4 space-y-3">
-              <p className="text-sm font-medium flex items-center gap-2">
-                <Percent className="h-4 w-4 text-muted-foreground" />
-                Taxa de cobrança <span className="text-muted-foreground font-normal">(opcional)</span>
+            {/* Fee section */}
+            <div className="border border-border rounded-lg p-4 space-y-4">
+              <p className="text-sm font-semibold flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                Taxas de cobrança{" "}
+                <span className="text-muted-foreground font-normal">(opcional)</span>
               </p>
-              <div className="grid grid-cols-2 gap-3">
+
+              <TaxaSection
+                label="Taxa no Depósito (ao receber)"
+                tipo={taxaDepositoTipo}
+                setTipo={(v) => {
+                  setTaxaDepositoTipo(v === "none" ? "" : v);
+                  if (v === "none") setTaxaDepositoValor("");
+                }}
+                valor={taxaDepositoValor}
+                setValor={setTaxaDepositoValor}
+              />
+
+              <div className="border-t border-border/50" />
+
+              <TaxaSection
+                label="Taxa no Saque (ao enviar)"
+                tipo={taxaSaqueTipo}
+                setTipo={(v) => {
+                  setTaxaSaqueTipo(v === "none" ? "" : v);
+                  if (v === "none") setTaxaSaqueValor("");
+                }}
+                valor={taxaSaqueValor}
+                setValor={setTaxaSaqueValor}
+              />
+
+              {/* Moeda (shown only when there's a fixed fee) */}
+              {hasFixo && (
                 <div>
-                  <Label htmlFor="taxa_percentual">Percentual (%)</Label>
-                  <Input
-                    id="taxa_percentual"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={taxaPercentual}
-                    onChange={(e) => setTaxaPercentual(e.target.value)}
-                    placeholder="Ex: 5.00"
-                    disabled={saving}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="taxa_incidencia">Quando é cobrada</Label>
-                  <Select
-                    value={taxaIncidencia}
-                    onValueChange={setTaxaIncidencia}
-                    disabled={saving}
-                  >
-                    <SelectTrigger id="taxa_incidencia">
-                      <SelectValue placeholder="Selecione..." />
+                  <Label>Moeda das taxas fixas</Label>
+                  <Select value={taxaMoeda} onValueChange={setTaxaMoeda} disabled={saving}>
+                    <SelectTrigger>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="deposito">Ao receber (depósito)</SelectItem>
-                      <SelectItem value="saque">Ao enviar (saque)</SelectItem>
+                      {MOEDAS.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              {taxaPercentual && taxaIncidencia && (
-                <p className="text-xs text-muted-foreground">
-                  Uma taxa de <strong>{taxaPercentual}%</strong> será cobrada{" "}
-                  {taxaIncidencia === "deposito" ? "ao receber transações (depósito)" : "ao enviar transações (saque)"}.
-                </p>
               )}
             </div>
 
             <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDialogClose}
-                disabled={saving}
-              >
+              <Button type="button" variant="outline" onClick={handleDialogClose} disabled={saving}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={saving}>
