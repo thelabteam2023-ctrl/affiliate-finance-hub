@@ -96,12 +96,22 @@ interface CaixaTransacaoDialogProps {
   allowedTipoTransacao?: string[];
 }
 
+interface BancoTaxa {
+  taxa_deposito_tipo: "percentual" | "fixo" | null;
+  taxa_deposito_valor: number | null;
+  taxa_saque_tipo: "percentual" | "fixo" | null;
+  taxa_saque_valor: number | null;
+  taxa_moeda: string | null;
+}
+
 interface ContaBancaria {
   id: string;
   banco: string;
   titular: string;
   parceiro_id: string;
   moeda: string;
+  banco_id: string | null;
+  bancoTaxa?: BancoTaxa | null;
 }
 
 interface WalletCrypto {
@@ -648,6 +658,18 @@ export function CaixaTransacaoDialog({
   const [showNoWalletAlert, setShowNoWalletAlert] = useState(false);
   const [alertParceiroId, setAlertParceiroId] = useState<string>("");
   const [alertTipo, setAlertTipo] = useState<"FIAT" | "CRYPTO">("FIAT");
+
+  // Taxa bancária: alerta antes de confirmar + dados para lançamento automático
+  const [showTaxaBancariaAlert, setShowTaxaBancariaAlert] = useState(false);
+  const [pendingTransactionData, setPendingTransactionData] = useState<any>(null);
+  const [taxaBancariaInfo, setTaxaBancariaInfo] = useState<{
+    nomeBanco: string;
+    tipo: "percentual" | "fixo";
+    valor: number;
+    moeda: string;
+    valorCalculado: number;
+    tipoTransacao: "deposito" | "saque";
+  } | null>(null);
   
   // ParceiroDialog state
   const [parceiroDialogOpen, setParceiroDialogOpen] = useState(false);
@@ -1443,7 +1465,9 @@ export function CaixaTransacaoDialog({
           titular, 
           parceiro_id, 
           moeda,
-          parceiros!inner(workspace_id)
+          banco_id,
+          parceiros!inner(workspace_id),
+          bancos(taxa_deposito_tipo, taxa_deposito_valor, taxa_saque_tipo, taxa_saque_valor, taxa_moeda)
         `)
         .eq("parceiros.workspace_id", workspaceId)
         .order("banco");
@@ -1463,12 +1487,20 @@ export function CaixaTransacaoDialog({
         .order("exchange");
 
       // Mapear para remover o campo parceiros aninhado
-      setContasBancarias((contas || []).map(c => ({
+      setContasBancarias((contas || []).map((c: any) => ({
         id: c.id,
         banco: c.banco,
         titular: c.titular,
         parceiro_id: c.parceiro_id,
-        moeda: c.moeda
+        moeda: c.moeda,
+        banco_id: c.banco_id ?? null,
+        bancoTaxa: c.bancos ? {
+          taxa_deposito_tipo: c.bancos.taxa_deposito_tipo ?? null,
+          taxa_deposito_valor: c.bancos.taxa_deposito_valor ?? null,
+          taxa_saque_tipo: c.bancos.taxa_saque_tipo ?? null,
+          taxa_saque_valor: c.bancos.taxa_saque_valor ?? null,
+          taxa_moeda: c.bancos.taxa_moeda ?? null,
+        } : null,
       })));
       
       setWalletsCrypto((wallets || []).map(w => ({
@@ -2441,6 +2473,52 @@ export function CaixaTransacaoDialog({
         }
       }
 
+      // =========================================================================
+      // TAXA BANCÁRIA: Verificar se a conta bancária selecionada tem taxa configurada
+      // Se sim, exibir AlertDialog e interromper o submit para confirmação
+      // =========================================================================
+      const contaComTaxa = (() => {
+        // Para DEPOSITO: origem é conta bancária (origemContaId)
+        if (tipoTransacao === "DEPOSITO" && origemContaId && tipoMoeda === "FIAT") {
+          return contasBancarias.find(c => c.id === origemContaId);
+        }
+        // Para SAQUE: destino é conta bancária (destinoContaId)
+        if (tipoTransacao === "SAQUE" && destinoContaId && tipoMoeda === "FIAT") {
+          return contasBancarias.find(c => c.id === destinoContaId);
+        }
+        return undefined;
+      })();
+
+      const tipoOp = tipoTransacao === "DEPOSITO" ? "deposito" : "saque";
+      const taxaTipo = tipoOp === "deposito"
+        ? contaComTaxa?.bancoTaxa?.taxa_deposito_tipo
+        : contaComTaxa?.bancoTaxa?.taxa_saque_tipo;
+      const taxaValor = tipoOp === "deposito"
+        ? contaComTaxa?.bancoTaxa?.taxa_deposito_valor
+        : contaComTaxa?.bancoTaxa?.taxa_saque_valor;
+
+      if (contaComTaxa && taxaTipo && taxaValor != null) {
+        const valorTransacao = parseFloat(valor);
+        const taxaMoedaConfig = contaComTaxa.bancoTaxa?.taxa_moeda ?? contaComTaxa.moeda ?? "BRL";
+        const valorCalculado = taxaTipo === "percentual"
+          ? (valorTransacao * taxaValor) / 100
+          : taxaValor;
+
+        // Salvar dados pendentes e exibir alerta
+        setPendingTransactionData({ transactionData, isTransacaoCryptoDeWallet, temConversaoMoeda });
+        setTaxaBancariaInfo({
+          nomeBanco: contaComTaxa.banco,
+          tipo: taxaTipo,
+          valor: taxaValor,
+          moeda: taxaMoedaConfig,
+          valorCalculado,
+          tipoTransacao: tipoOp,
+        });
+        setShowTaxaBancariaAlert(true);
+        setLoading(false);
+        return;
+      }
+
       const { data: insertedData, error } = await supabase
         .from("cash_ledger")
         .insert([transactionData])
@@ -2512,6 +2590,108 @@ export function CaixaTransacaoDialog({
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =========================================================================
+  // CONFIRMAR TRANSAÇÃO COM TAXA BANCÁRIA
+  // Chamado pelo AlertDialog quando o usuário confirma ciente da taxa
+  // Executa o insert da transação principal + lançamento automático da taxa
+  // =========================================================================
+  const handleConfirmComTaxa = async (registrarTaxa: boolean) => {
+    setShowTaxaBancariaAlert(false);
+    if (!pendingTransactionData || !taxaBancariaInfo || !workspaceId) return;
+
+    setLoading(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Usuário não autenticado");
+
+      const { transactionData, isTransacaoCryptoDeWallet, temConversaoMoeda } = pendingTransactionData;
+
+      // 1. Inserir transação principal
+      const { data: insertedData, error } = await supabase
+        .from("cash_ledger")
+        .insert([transactionData])
+        .select("id")
+        .single();
+
+      if (error) throw error;
+
+      // 2. Se o usuário confirmou que a taxa foi cobrada, registrar lançamento automático
+      if (registrarTaxa) {
+        const taxaData: any = {
+          user_id: userData.user.id,
+          workspace_id: workspaceId,
+          tipo_transacao: "AJUSTE",
+          tipo_moeda: "FIAT",
+          moeda: taxaBancariaInfo.moeda,
+          valor: taxaBancariaInfo.valorCalculado,
+          descricao: `Taxa bancária — ${taxaBancariaInfo.nomeBanco} (${taxaBancariaInfo.tipo === "percentual" ? `${taxaBancariaInfo.valor}%` : `${taxaBancariaInfo.moeda} ${taxaBancariaInfo.valor} fixo`} ${taxaBancariaInfo.tipoTransacao === "deposito" ? "no depósito" : "no saque"})`,
+          status: "CONFIRMADO",
+          ajuste_direcao: "SAIDA",
+          ajuste_motivo: "taxa_bancaria",
+          data_transacao: transactionData.data_transacao,
+          impacta_caixa_operacional: true,
+          referencia_transacao_id: insertedData?.id ?? null,
+          // Origem: mesma conta bancária da transação
+          origem_tipo: taxaBancariaInfo.tipoTransacao === "deposito" ? transactionData.origem_tipo : transactionData.destino_tipo,
+          origem_conta_bancaria_id: taxaBancariaInfo.tipoTransacao === "deposito"
+            ? transactionData.origem_conta_bancaria_id
+            : transactionData.destino_conta_bancaria_id,
+          origem_parceiro_id: taxaBancariaInfo.tipoTransacao === "deposito"
+            ? transactionData.origem_parceiro_id
+            : transactionData.destino_parceiro_id,
+          moeda_origem: taxaBancariaInfo.moeda,
+          valor_origem: taxaBancariaInfo.valorCalculado,
+        };
+
+        const { error: taxaError } = await supabase
+          .from("cash_ledger")
+          .insert([taxaData]);
+
+        if (taxaError) {
+          console.error("Erro ao registrar taxa bancária:", taxaError);
+          toast({
+            title: "Transação registrada, mas erro na taxa",
+            description: "A transação foi salva, porém o lançamento automático da taxa falhou. Registre manualmente.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Transação + taxa bancária registradas",
+            description: `Lançamento de ${taxaBancariaInfo.moeda} ${taxaBancariaInfo.valorCalculado.toFixed(2)} (taxa ${taxaBancariaInfo.nomeBanco}) registrado automaticamente.`,
+          });
+        }
+      } else {
+        // Usuário confirmou que NÃO houve cobrança de taxa
+        const mensagemSucesso = tipoTransacao === "SAQUE"
+          ? "Saque solicitado! Aguardando confirmação de recebimento."
+          : (tipoTransacao === "DEPOSITO" && temConversaoMoeda)
+            ? "Depósito registrado! Aguardando confirmação do valor creditado na aba Conciliação."
+            : "Transação registrada com sucesso";
+
+        toast({ title: "Sucesso", description: mensagemSucesso });
+      }
+
+      // Se for SAQUE, atualizar status do bookmaker
+      if (tipoTransacao === "SAQUE" && origemBookmakerId) {
+        await supabase
+          .from("bookmakers")
+          .update({ status: "SAQUE_PENDENTE" })
+          .eq("id", origemBookmakerId);
+      }
+
+      setPendingTransactionData(null);
+      setTaxaBancariaInfo(null);
+      resetForm();
+      dispatchCaixaDataChanged();
+      onSuccess();
+    } catch (error: any) {
+      console.error("Erro ao registrar transação com taxa:", error);
+      toast({ title: "Erro ao registrar transação", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -5003,7 +5183,69 @@ export function CaixaTransacaoDialog({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        
+
+        {/* AlertDialog para taxa bancária */}
+        <AlertDialog open={showTaxaBancariaAlert} onOpenChange={(open) => {
+          if (!open) {
+            setShowTaxaBancariaAlert(false);
+            setPendingTransactionData(null);
+            setTaxaBancariaInfo(null);
+          }
+        }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Taxa bancária detectada</AlertDialogTitle>
+              <AlertDialogDescription>
+                {taxaBancariaInfo && (
+                  <span className="space-y-3 flex flex-col">
+                    <span>
+                      O banco <strong>{taxaBancariaInfo.nomeBanco}</strong> cobra uma taxa{" "}
+                      {taxaBancariaInfo.tipoTransacao === "deposito" ? "ao receber (depósito)" : "ao enviar (saque)"}:
+                    </span>
+                    <span className="rounded-md border border-border bg-muted/50 p-3 text-sm space-y-1 flex flex-col mt-2">
+                      <span className="flex justify-between">
+                        <span className="text-muted-foreground">Tipo:</span>
+                        <span className="font-medium">
+                          {taxaBancariaInfo.tipo === "percentual"
+                            ? `${taxaBancariaInfo.valor}% sobre o valor`
+                            : `${taxaBancariaInfo.moeda} ${taxaBancariaInfo.valor} fixo`}
+                        </span>
+                      </span>
+                      <span className="flex justify-between">
+                        <span className="text-muted-foreground">Valor da taxa nesta transação:</span>
+                        <span className="font-bold text-foreground">
+                          {taxaBancariaInfo.moeda} {taxaBancariaInfo.valorCalculado.toFixed(2)}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground text-xs mt-2">
+                      Esta taxa foi cobrada nesta transação?
+                    </span>
+                  </span>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <AlertDialogCancel onClick={() => {
+                setShowTaxaBancariaAlert(false);
+                setPendingTransactionData(null);
+                setTaxaBancariaInfo(null);
+              }}>
+                Cancelar transação
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-muted text-foreground hover:bg-muted/80 border border-border"
+                onClick={() => handleConfirmComTaxa(false)}
+              >
+                Não foi cobrada
+              </AlertDialogAction>
+              <AlertDialogAction onClick={() => handleConfirmComTaxa(true)}>
+                Sim, foi cobrada — registrar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* ParceiroDialog for editing partner */}
         <ParceiroDialog
           open={parceiroDialogOpen}
