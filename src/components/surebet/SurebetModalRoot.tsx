@@ -24,7 +24,7 @@ import { useApostaRascunho, type ApostaRascunho, type RascunhoPernaData } from "
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 import { useSurebetCalculator, type OddEntry, type OddFormEntry } from "@/hooks/useSurebetCalculator";
 import { pernasToInserts } from "@/types/apostasPernas";
-import type { SurebetEngineConfig } from "@/utils/surebetCurrencyEngine";
+import { type SurebetEngineConfig, convertViaBRL } from "@/utils/surebetCurrencyEngine";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -161,7 +161,7 @@ export function SurebetModalRoot({
   const { getSnapshotFields } = useCurrencySnapshot();
   const {
     moedaConsolidacao,
-    cotacaoAtual: cotacaoTrabalho,
+    cotacaoTrabalho, // valor raw da cotação de trabalho (null se não configurada)
   } = useProjetoConsolidacao({ projetoId });
   const { getRate: getCotacaoRate } = useCotacoes();
   
@@ -276,19 +276,31 @@ export function SurebetModalRoot({
   // ============================================
 
   // Construir engineConfig com taxas BRL corretas (Trabalho > PTAX > fallback)
-  const engineConfig = useMemo((): import("@/utils/surebetCurrencyEngine").SurebetEngineConfig => ({
-    consolidationCurrency: (moedaConsolidacao || "BRL") as SupportedCurrency,
-    brlRates: {
-      BRL: 1,
-      USD: getCotacaoRate("USD"),
-      EUR: getCotacaoRate("EUR"),
-      GBP: getCotacaoRate("GBP"),
-      MXN: getCotacaoRate("MXN"),
-      MYR: getCotacaoRate("MYR"),
-      ARS: getCotacaoRate("ARS"),
-      COP: getCotacaoRate("COP"),
-    },
-  }), [moedaConsolidacao, getCotacaoRate]);
+  // REGRA DE PRIORIDADE:
+  //   1️⃣ Cotação Trabalho (cotacaoTrabalho — configurada manualmente no projeto, USD→BRL)
+  //   2️⃣ PTAX / Oficial do Context (getCotacaoRate — FastForex/banco)
+  //   3️⃣ Fallback hardcoded (dentro do próprio engine)
+  // A cotação de trabalho é por USD (par USD/BRL). Para outras moedas, sempre usa getCotacaoRate.
+  const engineConfig = useMemo((): import("@/utils/surebetCurrencyEngine").SurebetEngineConfig => {
+    const consolidation = (moedaConsolidacao || "BRL") as SupportedCurrency;
+    
+    // Taxa USD→BRL: prioriza cotação de Trabalho configurada no projeto
+    const usdBrl = cotacaoTrabalho ?? getCotacaoRate("USD");
+    
+    return {
+      consolidationCurrency: consolidation,
+      brlRates: {
+        BRL: 1,
+        USD: usdBrl,
+        EUR: getCotacaoRate("EUR"),
+        GBP: getCotacaoRate("GBP"),
+        MXN: getCotacaoRate("MXN"),
+        MYR: getCotacaoRate("MYR"),
+        ARS: getCotacaoRate("ARS"),
+        COP: getCotacaoRate("COP"),
+      },
+    };
+  }, [moedaConsolidacao, cotacaoTrabalho, getCotacaoRate]);
 
   const { analysis, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
     odds,
@@ -733,6 +745,18 @@ export function SurebetModalRoot({
   // AUTO-CÁLCULO DE STAKES
   // ============================================
 
+  /**
+   * AUTO-CÁLCULO DE STAKES — Motor Multi-Moeda
+   *
+   * FLUXO CORRETO (usando surebetCurrencyEngine):
+   *   1. retorno-alvo = refStake × refOdd          (moeda da referência)
+   *   2. retornoAlvoConv = retornoAlvo → consolidation (pivot BRL)
+   *   3. Para cada perna não-referência:
+   *        retornoNaPerna = retornoAlvoConv → moeda da perna (pivot BRL)
+   *        stakeCalculada = retornoNaPerna / odd
+   *
+   * Resultado: stakes balanceadas mesmo com moedas diferentes por perna.
+   */
   useEffect(() => {
     if (isEditing) return;
     
@@ -740,31 +764,42 @@ export function SurebetModalRoot({
     const hasCustomDirection = directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
     if (hasCustomDirection) return;
     
-    const pernaData = odds.map(perna => ({
-      oddMedia: getOddMediaPerna(perna),
-      stakeAtual: getStakeTotalPerna(perna),
-      isReference: perna.isReference,
-      isManuallyEdited: perna.isManuallyEdited
-    }));
-    
-    const refIndex = pernaData.findIndex(p => p.isReference);
+    const refIndex = odds.findIndex(o => o.isReference);
     if (refIndex === -1) return;
     
-    const refStake = pernaData[refIndex].stakeAtual;
-    const refOdd = pernaData[refIndex].oddMedia;
+    const refEntry = odds[refIndex];
+    const refStake = getStakeTotalPerna(refEntry);
+    const refOdd = getOddMediaPerna(refEntry);
+    
     if (refStake <= 0 || refOdd <= 1) return;
     
-    const validOddsCount = pernaData.filter(p => p.oddMedia > 1).length;
+    const validOddsCount = odds.filter(o => getOddMediaPerna(o) > 1).length;
     if (validOddsCount < odds.length) return;
     
-    const targetReturn = refStake * refOdd;
+    const { brlRates, consolidationCurrency } = engineConfig;
+    const refMoeda = (bookmakerSaldos.find(b => b.id === refEntry.bookmaker_id)?.moeda || refEntry.moeda || "BRL") as SupportedCurrency;
+    
+    // Passo 1: retorno-alvo na moeda da referência
+    const targetReturnRef = refStake * refOdd;
+    
+    // Passo 2: converter retorno-alvo para moeda de consolidação
+    const targetReturnConsolidated = convertViaBRL(targetReturnRef, refMoeda, consolidationCurrency, brlRates);
     
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
       if (i === refIndex) return o;
       if (o.isManuallyEdited || o.stakeOrigem === "print" || o.stakeOrigem === "manual") return o;
       
-      const calculatedStake = arredondarStake(targetReturn / pernaData[i].oddMedia);
+      const oddMedia = getOddMediaPerna(o);
+      if (oddMedia <= 1) return o;
+      
+      const legMoeda = (bookmakerSaldos.find(b => b.id === o.bookmaker_id)?.moeda || o.moeda || "BRL") as SupportedCurrency;
+      
+      // Passo 3: converter retorno-alvo da consolidação para moeda da perna
+      const targetReturnInLegCurrency = convertViaBRL(targetReturnConsolidated, consolidationCurrency, legMoeda, brlRates);
+      
+      // Passo 4: stake = retorno-alvo na moeda da perna / odd
+      const calculatedStake = arredondarStake(targetReturnInLegCurrency / oddMedia);
       const currentStake = parseFloat(o.stake) || 0;
       
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
@@ -776,12 +811,14 @@ export function SurebetModalRoot({
     
     if (needsUpdate) setOdds(newOdds);
   }, [
-    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}`).join(','),
+    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}`).join(','),
     odds.map(o => o.isReference).join(','),
     arredondarAtivado,
     arredondarValor,
     isEditing,
-    directedProfitLegs
+    directedProfitLegs,
+    engineConfig,
+    bookmakerSaldos,
   ]);
 
   // ============================================
@@ -944,7 +981,20 @@ export function SurebetModalRoot({
         
         if (todasComResultado) {
           statusAposta = 'LIQUIDADA';
-          lucroRealTotal = pernasToSave.reduce((acc, p) => acc + (p.lucro_prejuizo || 0), 0);
+          
+          // CRÍTICO: converter lucro de cada perna para moeda de consolidação antes de somar
+          // Evita mistura de moedas nominais (ex: USD + EUR → USD)
+          lucroRealTotal = pernasToSave.reduce((acc, p) => {
+            const lucroLocal = p.lucro_prejuizo || 0;
+            const lucroConsolidado = convertViaBRL(
+              lucroLocal,
+              p.moeda,
+              engineConfig.consolidationCurrency,
+              engineConfig.brlRates
+            );
+            return acc + lucroConsolidado;
+          }, 0);
+          
           roiReal = analysis.stakeTotal > 0 ? (lucroRealTotal / analysis.stakeTotal) * 100 : 0;
           
           if (todasVoid) {
