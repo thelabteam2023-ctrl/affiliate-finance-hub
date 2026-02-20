@@ -221,13 +221,6 @@ export function KycBookmakerSelect({
                   >
                     Todos os parceiros
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => { setFilterParceiro(AVULSO_VALUE); setParceiroOpen(false); setSearchParceiro(''); }}
-                    className={cn('w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent italic', filterParceiro === AVULSO_VALUE && 'bg-accent')}
-                  >
-                    Sem parceiro
-                  </button>
                   {parceiros
                     .filter(([, nome]) => !searchParceiro.trim() || nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(searchParceiro.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')))
                     .map(([id, nome]) => (
@@ -285,13 +278,6 @@ export function KycBookmakerSelect({
                     className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent text-muted-foreground italic"
                   >
                     Todos os projetos
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setFilterProjeto(AVULSO_VALUE); setProjetoOpen(false); setSearchProjeto(''); }}
-                    className={cn('w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent italic', filterProjeto === AVULSO_VALUE && 'bg-accent')}
-                  >
-                    Sem projeto
                   </button>
                   {projetos
                     .filter(([, nome]) => !searchProjeto.trim() || nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(searchProjeto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')))
