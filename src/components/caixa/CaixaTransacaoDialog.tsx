@@ -2477,19 +2477,32 @@ export function CaixaTransacaoDialog({
       // TAXA BANCÁRIA: Verificar se a conta bancária selecionada tem taxa configurada
       // Se sim, exibir AlertDialog e interromper o submit para confirmação
       // =========================================================================
+      // Determina se o banco está recebendo dinheiro (depósito na perspectiva do banco)
+      // Casos onde o banco RECEBE:
+      //   1. DEPOSITO (Parceiro/Conta → Bookmaker): conta bancária é a origem — o banco envia, mas cobra "taxa de saque"
+      //   2. SAQUE de Bookmaker → Banco (origemTipo=BOOKMAKER, destinoTipo=PARCEIRO_CONTA): banco RECEBE → taxa de depósito
+      // Casos onde o banco ENVIA:
+      //   (futuros fluxos de saída do banco)
       const contaComTaxa = (() => {
-        // Para DEPOSITO: origem é conta bancária (origemContaId)
+        // DEPOSITO (Parceiro→Bookmaker): conta bancária é a origem → taxa de saque do banco
         if (tipoTransacao === "DEPOSITO" && origemContaId && tipoMoeda === "FIAT") {
           return contasBancarias.find(c => c.id === origemContaId);
         }
-        // Para SAQUE: destino é conta bancária (destinoContaId)
+        // SAQUE (Bookmaker→Banco): destino é conta bancária — o banco RECEBE → taxa de depósito/recebimento
+        // origemTipo=BOOKMAKER identifica este fluxo específico
         if (tipoTransacao === "SAQUE" && destinoContaId && tipoMoeda === "FIAT") {
           return contasBancarias.find(c => c.id === destinoContaId);
         }
         return undefined;
       })();
 
-      const tipoOp = tipoTransacao === "DEPOSITO" ? "deposito" : "saque";
+      // tipoOp define qual configuração de taxa do banco aplicar:
+      // - DEPOSITO normal: banco envia → usa taxa_saque do banco
+      // - SAQUE Bookmaker→Banco: banco recebe → usa taxa_deposito do banco
+      const tipoOp = tipoTransacao === "DEPOSITO" ? "saque" :
+        // SAQUE com origem em bookmaker → banco está recebendo → taxa de depósito
+        (tipoTransacao === "SAQUE" && origemTipo === "BOOKMAKER") ? "deposito" : "saque";
+
       const taxaTipo = tipoOp === "deposito"
         ? contaComTaxa?.bancoTaxa?.taxa_deposito_tipo
         : contaComTaxa?.bancoTaxa?.taxa_saque_tipo;
@@ -2622,6 +2635,10 @@ export function CaixaTransacaoDialog({
 
       // 2. Se o usuário confirmou que a taxa foi cobrada, registrar lançamento automático
       if (registrarTaxa) {
+        // Determina de qual lado da transação vem a conta bancária cobrada:
+        // - "saque" (banco enviou): conta está na ORIGEM da transação (DEPOSITO normal)
+        // - "deposito" (banco recebeu): conta está no DESTINO da transação (SAQUE Bookmaker→Banco)
+        const contaNoDestino = taxaBancariaInfo.tipoTransacao === "deposito";
         const taxaData: any = {
           user_id: userData.user.id,
           workspace_id: workspaceId,
@@ -2629,21 +2646,21 @@ export function CaixaTransacaoDialog({
           tipo_moeda: "FIAT",
           moeda: taxaBancariaInfo.moeda,
           valor: taxaBancariaInfo.valorCalculado,
-          descricao: `Taxa bancária — ${taxaBancariaInfo.nomeBanco} (${taxaBancariaInfo.tipo === "percentual" ? `${taxaBancariaInfo.valor}%` : `${taxaBancariaInfo.moeda} ${taxaBancariaInfo.valor} fixo`} ${taxaBancariaInfo.tipoTransacao === "deposito" ? "no depósito" : "no saque"})`,
+          descricao: `Taxa bancária — ${taxaBancariaInfo.nomeBanco} (${taxaBancariaInfo.tipo === "percentual" ? `${taxaBancariaInfo.valor}%` : `${taxaBancariaInfo.moeda} ${taxaBancariaInfo.valor} fixo`} ${contaNoDestino ? "no recebimento" : "no envio"})`,
           status: "CONFIRMADO",
           ajuste_direcao: "SAIDA",
           ajuste_motivo: "taxa_bancaria",
           data_transacao: transactionData.data_transacao,
           impacta_caixa_operacional: true,
           referencia_transacao_id: insertedData?.id ?? null,
-          // Origem: mesma conta bancária da transação
-          origem_tipo: taxaBancariaInfo.tipoTransacao === "deposito" ? transactionData.origem_tipo : transactionData.destino_tipo,
-          origem_conta_bancaria_id: taxaBancariaInfo.tipoTransacao === "deposito"
-            ? transactionData.origem_conta_bancaria_id
-            : transactionData.destino_conta_bancaria_id,
-          origem_parceiro_id: taxaBancariaInfo.tipoTransacao === "deposito"
-            ? transactionData.origem_parceiro_id
-            : transactionData.destino_parceiro_id,
+          // Sempre debitado da conta bancária envolvida
+          origem_tipo: contaNoDestino ? transactionData.destino_tipo : transactionData.origem_tipo,
+          origem_conta_bancaria_id: contaNoDestino
+            ? transactionData.destino_conta_bancaria_id
+            : transactionData.origem_conta_bancaria_id,
+          origem_parceiro_id: contaNoDestino
+            ? transactionData.destino_parceiro_id
+            : transactionData.origem_parceiro_id,
           moeda_origem: taxaBancariaInfo.moeda,
           valor_origem: taxaBancariaInfo.valorCalculado,
         };
