@@ -193,6 +193,8 @@ export function useEditarSolicitacao() {
       tipo,
       prazo,
       executor_id,
+      executor_ids,
+      executor_nomes,
       bookmaker_ids,
       bookmaker_nomes,
       bookmaker_ids_originais,
@@ -203,6 +205,8 @@ export function useEditarSolicitacao() {
       tipo: string;
       prazo?: string | null;
       executor_id: string;
+      executor_ids?: string[];
+      executor_nomes?: string[];
       bookmaker_ids?: string[];
       bookmaker_nomes?: string;
       bookmaker_ids_originais?: string[];
@@ -224,6 +228,11 @@ export function useEditarSolicitacao() {
         meta['bookmaker_ids_novos'] = novas;
       } else {
         delete meta['bookmaker_ids_novos'];
+      }
+      // Salva múltiplos executores no metadata
+      if (executor_ids?.length) {
+        meta['executor_ids'] = executor_ids;
+        meta['executor_nomes'] = executor_nomes ?? [];
       }
 
       const { error } = await solicitacoesTable()

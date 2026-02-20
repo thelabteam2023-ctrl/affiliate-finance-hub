@@ -155,7 +155,26 @@ function SolicitacaoRow({
 
   const proximosStatus = SOLICITACAO_STATUS_FLOW[solicitacao.status];
   const isRequerente = solicitacao.requerente_id === currentUserId;
-  const isExecutor = solicitacao.executor_id === currentUserId;
+
+  // Suporte a múltiplos executores via metadata
+  const executorIds: string[] = (() => {
+    const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
+    if (meta) {
+      const ids = meta['executor_ids'];
+      if (Array.isArray(ids) && ids.length > 0) return ids as string[];
+    }
+    return solicitacao.executor_id ? [solicitacao.executor_id] : [];
+  })();
+  const executorNomes: string[] = (() => {
+    const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
+    if (meta) {
+      const nomes = meta['executor_nomes'];
+      if (Array.isArray(nomes) && nomes.length > 0) return nomes as string[];
+    }
+    return solicitacao.executor?.full_name ? [solicitacao.executor.full_name] : ['—'];
+  })();
+
+  const isExecutor = executorIds.includes(currentUserId);
   const podeAtualizar = isExecutor || isRequerente;
   const temAcoes = (podeAtualizar && proximosStatus.length > 0) || isRequerente || isAdmin;
 
@@ -296,10 +315,23 @@ function SolicitacaoRow({
                   <span className="w-7 shrink-0">Por</span>
                   <span>: {solicitacao.requerente?.full_name ?? '—'}</span>
                 </div>
-                <div className={cn('flex items-center gap-1', isExecutor && 'text-primary font-medium')}>
-                  <User className="h-3 w-3 shrink-0" />
+                <div className={cn('flex items-start gap-1', isExecutor && 'text-primary font-medium')}>
+                  <User className="h-3 w-3 shrink-0 mt-0.5" />
                   <span className="w-7 shrink-0">Para</span>
-                  <span>: {solicitacao.executor?.full_name ?? '—'}</span>
+                  <span className="flex-1">
+                    {': '}
+                    {executorNomes.length === 1
+                      ? executorNomes[0]
+                      : executorNomes.map((nome, i) => (
+                          <span key={i} className={cn(
+                            'inline-block',
+                            executorIds[i] === currentUserId && 'text-primary font-medium',
+                          )}>
+                            {nome}{i < executorNomes.length - 1 ? ', ' : ''}
+                          </span>
+                        ))
+                    }
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
