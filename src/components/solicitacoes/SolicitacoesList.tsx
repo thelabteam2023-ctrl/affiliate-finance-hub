@@ -244,6 +244,7 @@ function SolicitacaoRow({
                   {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
                 </Badge>
                 {prazo && <PrazoBadge prazo={prazo} />}
+                <StatusBadge status={solicitacao.status} />
               </div>
 
               {/* Casas — 2 visíveis + tooltip com restantes */}
@@ -335,7 +336,6 @@ function SolicitacaoRow({
                     locale: ptBR,
                   })}
                 </div>
-                <StatusBadge status={solicitacao.status} />
               </div>
             </div>
 
@@ -472,7 +472,7 @@ export function SolicitacoesList({ filtros, emptyMessage }: Props) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {[...Array(4)].map((_, i) => (
           <Card key={i} className="border-border/50">
             <CardContent className="p-3">
@@ -499,7 +499,7 @@ export function SolicitacoesList({ filtros, emptyMessage }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 gap-3">
       {ordenadas.map((s, idx) => (
         <SolicitacaoRow
           key={s.id}
