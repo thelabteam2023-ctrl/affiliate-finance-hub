@@ -43,8 +43,37 @@ import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
 import type { SolicitacaoTipo } from '@/types/solicitacoes';
 import { KycBookmakerSelect } from './KycBookmakerSelect';
 import type { OperationalBookmakerOption } from '@/hooks/useOperationalBookmakers';
-import { ClipboardList, Loader2, Search, X } from 'lucide-react';
+import { ClipboardList, Loader2, Search, X, ArrowRight, MoveRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// ---- Tipos para o bloco de Transferência ----
+const PLATAFORMA_LABELS: Record<string, string> = {
+  bookmaker: 'Bookmaker',
+  exchange: 'Exchange',
+  wallet: 'Wallet',
+  banco: 'Banco',
+};
+
+const MOEDAS_TRANSFERENCIA = [
+  'BRL', 'USD', 'EUR', 'USDT', 'BTC', 'ETH', 'PIX', 'Outro',
+];
+
+interface TransferenciaBloco {
+  dono: string;
+  plataforma: string;
+  conta: string;
+}
+
+const transferenciaSchema = z.object({
+  origem_dono: z.string().min(1, 'Informe o dono da origem'),
+  origem_plataforma: z.string().min(1, 'Selecione a plataforma de origem'),
+  origem_conta: z.string().min(1, 'Informe a conta/wallet de origem'),
+  destino_dono: z.string().min(1, 'Informe o dono do destino'),
+  destino_plataforma: z.string().min(1, 'Selecione a plataforma de destino'),
+  destino_conta: z.string().min(1, 'Informe a conta/wallet de destino'),
+  transferencia_valor: z.string().min(1, 'Informe o valor'),
+  transferencia_moeda: z.string().min(1, 'Selecione a moeda'),
+});
 
 const schema = z.object({
   descricao: z.string().min(10, 'Descreva a solicitação com pelo menos 10 caracteres'),
@@ -53,6 +82,35 @@ const schema = z.object({
   executor_ids: z.array(z.string()).min(1, 'Selecione ao menos um responsável'),
   bookmaker_ids: z.array(z.string()).optional(),
   kyc_bookmaker_id: z.string().optional(),
+  // Transferência
+  origem_dono: z.string().optional(),
+  origem_plataforma: z.string().optional(),
+  origem_conta: z.string().optional(),
+  destino_dono: z.string().optional(),
+  destino_plataforma: z.string().optional(),
+  destino_conta: z.string().optional(),
+  transferencia_valor: z.string().optional(),
+  transferencia_moeda: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.tipo === 'transferencia') {
+    if (!data.origem_dono?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe o dono da origem', path: ['origem_dono'] });
+    if (!data.origem_plataforma?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione a plataforma', path: ['origem_plataforma'] });
+    if (!data.origem_conta?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe a conta/wallet', path: ['origem_conta'] });
+    if (!data.destino_dono?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe o dono do destino', path: ['destino_dono'] });
+    if (!data.destino_plataforma?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione a plataforma', path: ['destino_plataforma'] });
+    if (!data.destino_conta?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe a conta/wallet', path: ['destino_conta'] });
+    if (!data.transferencia_valor?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe o valor', path: ['transferencia_valor'] });
+    if (!data.transferencia_moeda?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione a moeda', path: ['transferencia_moeda'] });
+    // Origem e destino não podem ser iguais
+    if (
+      data.origem_dono?.trim() && data.origem_conta?.trim() &&
+      data.destino_dono?.trim() && data.destino_conta?.trim() &&
+      data.origem_dono.trim().toLowerCase() === data.destino_dono.trim().toLowerCase() &&
+      data.origem_conta.trim().toLowerCase() === data.destino_conta.trim().toLowerCase()
+    ) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Origem e destino não podem ser iguais', path: ['destino_conta'] });
+    }
+  }
 });
 
 type FormData = z.infer<typeof schema>;
@@ -341,6 +399,20 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
 
   const tipoSelecionado = form.watch('tipo');
 
+  // Watch campos de transferência para o preview automático
+  const origemDono = form.watch('origem_dono');
+  const origemConta = form.watch('origem_conta');
+  const destinoDono = form.watch('destino_dono');
+  const destinoConta = form.watch('destino_conta');
+  const transferenciaValor = form.watch('transferencia_valor');
+  const transferenciaMoeda = form.watch('transferencia_moeda');
+
+  const transferenciaResumo = useMemo(() => {
+    if (tipoSelecionado !== 'transferencia') return null;
+    if (!transferenciaValor || !transferenciaMoeda || !origemConta || !origemDono || !destinoConta || !destinoDono) return null;
+    return `Transferir ${transferenciaValor} ${transferenciaMoeda} de ${origemConta} (${origemDono}) para ${destinoConta} (${destinoDono})`;
+  }, [tipoSelecionado, transferenciaValor, transferenciaMoeda, origemConta, origemDono, destinoConta, destinoDono]);
+
   const bookmakerItems = useMemo(
     () =>
       workspaceBookmakers.map((bm) => ({
@@ -377,6 +449,17 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       metadata['kyc_bookmaker_nome'] = kycBookmakerData.nome;
       metadata['kyc_parceiro_nome'] = kycBookmakerData.parceiro_nome ?? null;
       metadata['kyc_projeto_nome'] = kycBookmakerData.projeto_nome ?? null;
+    }
+
+    // Transferência: armazena blocos de origem/destino
+    if (data.tipo === 'transferencia') {
+      metadata['transferencia'] = {
+        origem: { dono: data.origem_dono, plataforma: data.origem_plataforma, conta: data.origem_conta },
+        destino: { dono: data.destino_dono, plataforma: data.destino_plataforma, conta: data.destino_conta },
+        valor: data.transferencia_valor,
+        moeda: data.transferencia_moeda,
+        resumo: `Transferir ${data.transferencia_valor} ${data.transferencia_moeda} de ${data.origem_conta} (${data.origem_dono}) para ${data.destino_conta} (${data.destino_dono})`,
+      };
     }
 
     // Armazena múltiplos executores no metadata
@@ -544,6 +627,197 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                   )}
                 />
               </div>
+            ) : tipoSelecionado === 'transferencia' ? (
+              <>
+                {/* ─── Bloco Transferência: Origem | → | Destino ─── */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-start">
+                    {/* Origem */}
+                    <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide text-center">Origem</p>
+                      <FormField
+                        control={form.control}
+                        name="origem_dono"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Dono da conta *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: Daniel" className="h-8 text-sm" {...field} />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="origem_plataforma"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Plataforma *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                              <FormControl>
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue placeholder="Selecionar..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {Object.entries(PLATAFORMA_LABELS).map(([v, l]) => (
+                                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="origem_conta"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Conta / Wallet *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: Bet365 – Conta X" className="h-8 text-sm" {...field} />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Seta central */}
+                    <div className="flex items-center justify-center pt-10">
+                      <div className="flex flex-col items-center gap-1">
+                        <MoveRight className="h-6 w-6 text-primary" />
+                      </div>
+                    </div>
+
+                    {/* Destino */}
+                    <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide text-center">Destino</p>
+                      <FormField
+                        control={form.control}
+                        name="destino_dono"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Dono da conta *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: Marcio" className="h-8 text-sm" {...field} />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="destino_plataforma"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Plataforma *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                              <FormControl>
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue placeholder="Selecionar..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {Object.entries(PLATAFORMA_LABELS).map(([v, l]) => (
+                                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="destino_conta"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Conta / Wallet *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: Wallet USDT – Y" className="h-8 text-sm" {...field} />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Transferência: Valor + Moeda */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={form.control}
+                      name="transferencia_valor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Valor *</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: 1000"
+                              type="text"
+                              inputMode="decimal"
+                              className="h-8 text-sm"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="transferencia_moeda"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Moeda *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                            <FormControl>
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue placeholder="Selecionar..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {MOEDAS_TRANSFERENCIA.map((m) => (
+                                <SelectItem key={m} value={m}>{m}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Preview automático */}
+                  {transferenciaResumo && (
+                    <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 flex items-center gap-2">
+                      <MoveRight className="h-4 w-4 text-primary shrink-0" />
+                      <p className="text-sm text-foreground font-medium">{transferenciaResumo}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Responsáveis para transferência */}
+                <FormField
+                  control={form.control}
+                  name="executor_ids"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="block text-center">Responsáveis pela Execução *</FormLabel>
+                      <MemberMultiSelect
+                        items={memberItems}
+                        value={field.value}
+                        onChange={field.onChange}
+                        loading={membersLoading}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
             ) : (
               <>
                 {/* Responsáveis — multi-select (outros tipos) */}
