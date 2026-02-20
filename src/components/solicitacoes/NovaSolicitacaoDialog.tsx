@@ -40,6 +40,8 @@ import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
 import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
 import type { SolicitacaoTipo } from '@/types/solicitacoes';
+import { KycBookmakerSelect } from './KycBookmakerSelect';
+import type { OperationalBookmakerOption } from '@/hooks/useOperationalBookmakers';
 import { ClipboardList, Loader2, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,6 +51,7 @@ const schema = z.object({
   prazo: z.string().min(1, 'Selecione o prazo limite'),
   executor_ids: z.array(z.string()).min(1, 'Selecione ao menos um responsável'),
   bookmaker_ids: z.array(z.string()).optional(),
+  kyc_bookmaker_id: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -321,6 +324,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
   const { mutateAsync: criar, isPending } = useCriarSolicitacao();
   const { data: members = [], isLoading: membersLoading } = useWorkspaceMembers();
   const { data: workspaceBookmakers = [], isLoading: bookmakersLoading } = useWorkspaceBookmakers();
+  const [kycBookmakerData, setKycBookmakerData] = useState<OperationalBookmakerOption | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -330,6 +334,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       prazo: undefined,
       executor_ids: [],
       bookmaker_ids: [],
+      kyc_bookmaker_id: '',
     },
   });
 
@@ -365,6 +370,14 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       metadata['bookmaker_nomes'] = selectedBms.map((b) => b.nome).join(', ');
     }
 
+    // KYC: armazena detalhes da conta selecionada no metadata
+    if (data.tipo === 'verificacao_kyc' && data.kyc_bookmaker_id && kycBookmakerData) {
+      metadata['kyc_bookmaker_id'] = data.kyc_bookmaker_id;
+      metadata['kyc_bookmaker_nome'] = kycBookmakerData.nome;
+      metadata['kyc_parceiro_nome'] = kycBookmakerData.parceiro_nome ?? null;
+      metadata['kyc_projeto_nome'] = kycBookmakerData.projeto_nome ?? null;
+    }
+
     // Armazena múltiplos executores no metadata
     const executorNomes = data.executor_ids.map(
       (id) => members.find((m) => m.user_id === id)?.full_name || id,
@@ -383,13 +396,16 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       prazo: data.prazo,
       executor_id: data.executor_ids[0],
       bookmaker_ids: data.tipo === 'abertura_conta' ? (data.bookmaker_ids ?? []) : [],
-      bookmaker_id: contextoInicial?.bookmaker_id,
-      projeto_id: contextoInicial?.projeto_id,
-      parceiro_id: contextoInicial?.parceiro_id,
+      bookmaker_id: data.tipo === 'verificacao_kyc'
+        ? (data.kyc_bookmaker_id || contextoInicial?.bookmaker_id)
+        : contextoInicial?.bookmaker_id,
+      projeto_id: kycBookmakerData?.projeto_id ?? contextoInicial?.projeto_id,
+      parceiro_id: kycBookmakerData?.parceiro_id ?? contextoInicial?.parceiro_id,
       contexto_metadata: metadata,
     });
     onOpenChange(false);
     form.reset();
+    setKycBookmakerData(null);
   };
 
   return (
@@ -467,6 +483,28 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                       value={field.value ?? []}
                       onChange={field.onChange}
                       loading={bookmakersLoading}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Bookmaker KYC — seleção de conta operacional com filtros */}
+            {tipoSelecionado === 'verificacao_kyc' && (
+              <FormField
+                control={form.control}
+                name="kyc_bookmaker_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Conta exigindo KYC *</FormLabel>
+                    <KycBookmakerSelect
+                      value={field.value ?? ''}
+                      onValueChange={(id, data) => {
+                        field.onChange(id);
+                        setKycBookmakerData(data);
+                      }}
+                      error={!!form.formState.errors.kyc_bookmaker_id}
                     />
                     <FormMessage />
                   </FormItem>
