@@ -231,8 +231,9 @@ function SolicitacaoRow({
     <>
       <Card className="border-border/50 hover:border-border transition-colors">
         <CardContent className="p-3">
-          <div className="flex flex-col gap-3">
-          <div className="flex items-start gap-3">
+          <div className="flex items-stretch gap-0">
+            {/* Bloco esquerdo: número + conteúdo */}
+            <div className="flex items-start gap-3 flex-1 min-w-0">
             {/* Número da fila */}
             <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-0.5">
               <span className="text-xs font-bold text-muted-foreground">{numero}</span>
@@ -339,11 +340,26 @@ function SolicitacaoRow({
                 </div>
               </div>
             </div>
+            </div>{/* fim bloco esquerdo */}
 
-            {/* Painel de descrição lateral */}
+            {/* Linha divisória vertical — aparece só se houver descrição */}
             {solicitacao.descricao && (
-              <div className="mx-auto w-full max-w-2xl">
-                <div className="rounded-md border border-border/60 bg-muted/30 p-3 flex flex-col gap-1">
+              <div className="flex items-center self-stretch px-4">
+                <div
+                  className="w-px"
+                  style={{
+                    height: '75%',
+                    alignSelf: 'center',
+                    background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.08), transparent)',
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Bloco direito: Descrição */}
+            {solicitacao.descricao && (
+              <div className="flex flex-col justify-center min-w-0 w-72 shrink-0">
+                <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium uppercase tracking-wide">
                       <FileText className="h-3 w-3" />
@@ -355,7 +371,7 @@ function SolicitacaoRow({
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-foreground leading-relaxed line-clamp-8 flex-1">
+                  <p className="text-xs text-foreground leading-relaxed line-clamp-8">
                     {solicitacao.descricao}
                   </p>
                 </div>
@@ -364,6 +380,7 @@ function SolicitacaoRow({
 
             {/* Ações */}
             {temAcoes && (
+              <div className="flex-shrink-0 ml-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0">
@@ -405,8 +422,8 @@ function SolicitacaoRow({
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
             )}
-          </div>
           </div>
         </CardContent>
       </Card>
