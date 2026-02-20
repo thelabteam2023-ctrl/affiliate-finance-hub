@@ -244,7 +244,6 @@ function SolicitacaoRow({
                   {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
                 </Badge>
                 {prazo && <PrazoBadge prazo={prazo} />}
-                <StatusBadge status={solicitacao.status} />
               </div>
 
               {/* Casas — 2 visíveis + tooltip com restantes */}
@@ -336,6 +335,7 @@ function SolicitacaoRow({
                     locale: ptBR,
                   })}
                 </div>
+                <StatusBadge status={solicitacao.status} />
               </div>
             </div>
 
