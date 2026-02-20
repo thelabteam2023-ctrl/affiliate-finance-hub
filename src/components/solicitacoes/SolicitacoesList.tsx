@@ -210,46 +210,47 @@ function SolicitacaoRow({
                     Casas:
                   </span>
                   {bookmakerFlatList.slice(0, 2).map(({ nome, isNova }) => (
-                    <Badge
+                    <span
                       key={nome}
-                      variant="outline"
-                      className={cn(
-                        'text-xs px-1.5 py-0 h-5 max-w-[110px] truncate',
-                        isNova
-                          ? 'border-primary text-primary bg-primary/10 font-semibold'
-                          : 'border-primary/40 text-primary/80 font-normal',
-                      )}
                       title={nome}
+                      className={cn(
+                        'inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-sm border max-w-[110px] truncate tracking-wide',
+                        isNova
+                          ? 'border-primary/60 text-primary bg-primary/10'
+                          : 'border-accent-foreground/20 text-accent-foreground bg-accent/30',
+                      )}
                     >
                       {nome}
-                      {isNova && <span className="ml-1 text-[8px] font-bold uppercase tracking-wide opacity-70">new</span>}
-                    </Badge>
+                      {isNova && <span className="text-[8px] font-black uppercase tracking-widest opacity-60">new</span>}
+                    </span>
                   ))}
                   {bookmakerFlatList.length > 2 && (
-                    <TooltipProvider delayDuration={100}>
+                    <TooltipProvider delayDuration={0}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Badge
-                            variant="outline"
-                            className="text-xs px-1.5 py-0 h-5 cursor-pointer border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                          <span
+                            className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-sm border cursor-pointer border-muted-foreground/30 text-muted-foreground bg-muted/40 hover:border-accent-foreground/40 hover:text-accent-foreground transition-colors tracking-wide select-none"
                           >
                             +{bookmakerFlatList.length - 2} mais
-                          </Badge>
+                          </span>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-[220px]">
-                          <div className="flex flex-wrap gap-1 p-0.5">
+                        <TooltipContent side="bottom" className="max-w-[260px] p-2" forceMount={undefined}>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">
+                            Casas restantes
+                          </p>
+                          <div className="flex flex-wrap gap-1">
                             {bookmakerFlatList.slice(2).map(({ nome, isNova }) => (
                               <span
                                 key={nome}
                                 className={cn(
-                                  'text-xs px-1.5 py-0.5 rounded border',
+                                  'inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-sm border tracking-wide',
                                   isNova
-                                    ? 'border-primary text-primary bg-primary/10 font-semibold'
-                                    : 'border-border text-foreground',
+                                    ? 'border-primary/60 text-primary bg-primary/10'
+                                    : 'border-border/60 text-foreground bg-muted/30',
                                 )}
                               >
                                 {nome}
-                                {isNova && <span className="ml-1 text-[8px] font-bold uppercase opacity-70">new</span>}
+                                {isNova && <span className="text-[8px] font-black uppercase opacity-60">new</span>}
                               </span>
                             ))}
                           </div>
