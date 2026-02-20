@@ -420,7 +420,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" style={{ fontFamily: "'Syne', sans-serif" }}>
             {/* Tipo + Prazo — grid alinhado */}
             <div className="grid grid-cols-2 gap-4 items-start">
               <FormField
@@ -428,7 +428,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                 name="tipo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tipo *</FormLabel>
+                    <FormLabel className="block text-center">Tipo *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -455,7 +455,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                 name="prazo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Prazo Limite *</FormLabel>
+                    <FormLabel className="block text-center">Prazo Limite *</FormLabel>
                     <FormControl>
                       <DateTimePicker
                         value={field.value}
@@ -479,7 +479,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                   name="bookmaker_ids"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Bookmakers *</FormLabel>
+                      <FormLabel className="block text-center">Bookmakers *</FormLabel>
                       <BookmakerMultiSelect
                         items={bookmakerItems}
                         value={field.value ?? []}
@@ -495,7 +495,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                   name="executor_ids"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Responsáveis pela Execução *</FormLabel>
+                      <FormLabel className="block text-center">Responsáveis pela Execução *</FormLabel>
                       <MemberMultiSelect
                         items={memberItems}
                         value={field.value}
@@ -537,7 +537,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                   name="executor_ids"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Responsáveis pela Execução *</FormLabel>
+                      <FormLabel className="block text-center">Responsáveis pela Execução *</FormLabel>
                       <MemberMultiSelect
                         items={memberItems}
                         value={field.value}
