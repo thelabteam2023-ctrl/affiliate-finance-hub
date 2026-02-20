@@ -738,6 +738,8 @@ export type Database = {
           id: string
           is_system: boolean | null
           nome: string
+          taxa_incidencia: string | null
+          taxa_percentual: number | null
           updated_at: string | null
           user_id: string | null
           workspace_id: string | null
@@ -748,6 +750,8 @@ export type Database = {
           id?: string
           is_system?: boolean | null
           nome: string
+          taxa_incidencia?: string | null
+          taxa_percentual?: number | null
           updated_at?: string | null
           user_id?: string | null
           workspace_id?: string | null
@@ -758,6 +762,8 @@ export type Database = {
           id?: string
           is_system?: boolean | null
           nome?: string
+          taxa_incidencia?: string | null
+          taxa_percentual?: number | null
           updated_at?: string | null
           user_id?: string | null
           workspace_id?: string | null

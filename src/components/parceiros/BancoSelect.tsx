@@ -71,25 +71,24 @@ export function BancoSelect({ value, onValueChange, disabled }: BancoSelectProps
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
-
       if (!workspaceId) throw new Error("Workspace não definido");
+
       const { data, error } = await supabase.from("bancos").insert({
         codigo,
         nome,
         user_id: user.id,
         is_system: false,
         workspace_id: workspaceId,
+        // taxa fields omitted here — can be configured later in Gestão de Bancos
       }).select().single();
 
       if (error) throw error;
       
       toast({ title: "Banco criado com sucesso" });
       
-      // Refresh list and select new banco
       await fetchBancos();
       onValueChange(data.id);
       
-      // Reset form
       setCodigo("");
       setNome("");
       setDialogOpen(false);
