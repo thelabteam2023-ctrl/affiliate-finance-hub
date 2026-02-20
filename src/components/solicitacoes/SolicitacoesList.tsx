@@ -180,7 +180,13 @@ function SolicitacaoRow({
       : false,
   }));
 
-
+  // Largura dinâmica da tooltip baseada no nome mais longo do overflow
+  const overflowNomes = bookmakerFlatList.slice(2);
+  const maxNomeLen = overflowNomes.reduce((max, { nome }) => Math.max(max, nome.length), 0);
+  // ~7.5px por char (font-bold text-[11px]) + px-2 (16px) + NEW badge (28px) + gap + border
+  const badgeMinWidth = Math.max(80, maxNomeLen * 7.5 + 44);
+  // 2 colunas + gap(4px) + padding lateral(16px)
+  const tooltipWidth = Math.round(badgeMinWidth * 2 + 4 + 16);
 
   return (
     <>
@@ -224,33 +230,37 @@ function SolicitacaoRow({
                       {isNova && <span className="text-[8px] font-black uppercase tracking-widest opacity-60">new</span>}
                     </span>
                   ))}
-                  {bookmakerFlatList.length > 2 && (
+                  {overflowNomes.length > 0 && (
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span
                             className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-sm border cursor-pointer border-muted-foreground/30 text-muted-foreground bg-muted/40 hover:border-accent-foreground/40 hover:text-accent-foreground transition-colors tracking-wide select-none"
                           >
-                            +{bookmakerFlatList.length - 2} mais
+                            +{overflowNomes.length} mais
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="p-2 w-56">
+                        <TooltipContent
+                          side="bottom"
+                          className="p-2"
+                          style={{ width: `${tooltipWidth}px` }}
+                        >
                           <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">
                             Casas restantes
                           </p>
                           <div className="grid grid-cols-2 gap-1">
-                            {bookmakerFlatList.slice(2).map(({ nome, isNova }) => (
+                            {overflowNomes.map(({ nome, isNova }) => (
                               <span
                                 key={nome}
                                 className={cn(
-                                  'inline-flex items-center justify-center gap-1 text-[11px] font-bold px-2 py-1 rounded-sm border tracking-wide truncate',
+                                  'inline-flex items-center justify-between gap-1 text-[11px] font-bold px-2 py-1 rounded-sm border tracking-wide w-full',
                                   isNova
                                     ? 'border-primary/60 text-primary bg-primary/10'
                                     : 'border-border/60 text-foreground bg-muted/30',
                                 )}
-                                title={nome}
+                                style={{ minWidth: `${badgeMinWidth}px` }}
                               >
-                                <span className="truncate">{nome}</span>
+                                <span className="flex-1 text-left">{nome}</span>
                                 {isNova && <span className="text-[8px] font-black uppercase opacity-60 shrink-0">new</span>}
                               </span>
                             ))}
