@@ -233,7 +233,7 @@ function SolicitacaoRow({
         <CardContent className="p-3">
           <div className="flex items-stretch gap-0">
             {/* Bloco esquerdo: número + conteúdo */}
-            <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className="flex items-start gap-3 min-w-0">
             {/* Número da fila */}
             <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-0.5">
               <span className="text-xs font-bold text-muted-foreground">{numero}</span>
@@ -380,7 +380,7 @@ function SolicitacaoRow({
 
             {/* Ações */}
             {temAcoes && (
-              <div className="flex-shrink-0 ml-2">
+              <div className="flex-shrink-0 ml-auto pl-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0">
