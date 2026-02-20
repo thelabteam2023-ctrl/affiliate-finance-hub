@@ -269,7 +269,7 @@ function BookmakerMultiSelect({
   onChange,
   loading,
 }: {
-  items: { id: string; label: string; logo_url?: string; verificacao?: string }[];
+  items: { id: string; label: string; logo_url?: string; status?: string }[];
   value: string[];
   onChange: (ids: string[]) => void;
   loading: boolean;
@@ -281,9 +281,9 @@ function BookmakerMultiSelect({
   const filtered = useMemo(() => {
     let list = items;
     if (regFilter === 'REGULAMENTADA') {
-      list = list.filter((i) => i.verificacao === 'REGULAMENTADA');
+      list = list.filter((i) => i.status === 'REGULAMENTADA');
     } else if (regFilter === 'NAO_REGULAMENTADA') {
-      list = list.filter((i) => i.verificacao !== 'REGULAMENTADA');
+      list = list.filter((i) => i.status === 'NAO_REGULAMENTADA');
     }
     if (!search.trim()) return list;
     const term = search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -393,7 +393,7 @@ function BookmakerMultiSelect({
                   <div className="h-4 w-4 rounded bg-muted flex-shrink-0" />
                 )}
                 <span className="truncate flex-1">{item.label}</span>
-                {item.verificacao === 'REGULAMENTADA' && (
+                {item.status === 'REGULAMENTADA' && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-medium shrink-0">
                     REG
                   </span>
@@ -519,7 +519,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
         id: bm.id,
         label: bm.nome,
         logo_url: bm.logo_url ?? undefined,
-        verificacao: bm.verificacao ?? undefined,
+        status: bm.status ?? undefined,
       })),
     [workspaceBookmakers],
   );
