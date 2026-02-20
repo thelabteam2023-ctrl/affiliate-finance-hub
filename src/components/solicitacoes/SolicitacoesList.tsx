@@ -337,6 +337,9 @@ function SolicitacaoRow({
                     addSuffix: true,
                     locale: ptBR,
                   })}
+                  {foiEditada && (
+                    <span className="text-[10px] text-muted-foreground/60 italic">· editada</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -360,17 +363,10 @@ function SolicitacaoRow({
             {solicitacao.descricao && (
               <div className="flex flex-col justify-center min-w-0 w-[360px] shrink-0">
                 <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium uppercase tracking-wide">
-                      <FileText className="h-3 w-3" />
-                      Descrição
-                    </span>
-                    {foiEditada && (
-                      <Badge variant="outline" className="text-[9px] h-4 px-1 text-muted-foreground border-muted-foreground/40 font-normal">
-                        editada
-                      </Badge>
-                    )}
-                  </div>
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium uppercase tracking-wide">
+                    <FileText className="h-3 w-3" />
+                    Descrição
+                  </span>
                   <p className="text-xs text-foreground leading-relaxed line-clamp-8 whitespace-pre-wrap">
                     {solicitacao.descricao}
                   </p>
