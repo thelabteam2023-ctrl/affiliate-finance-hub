@@ -256,7 +256,7 @@ function SolicitacaoRow({
                     <span
                       key={nome}
                       title={nome}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-sm border tracking-wide border-accent-foreground/25 text-accent-foreground bg-accent/40"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-sm border tracking-wide border-emerald-500/30 text-emerald-400 bg-emerald-500/10"
                     >
                       {isNova && (
                         <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
@@ -286,12 +286,7 @@ function SolicitacaoRow({
                             {overflowNomes.map(({ nome, isNova }) => (
                               <span
                                 key={nome}
-                                className={cn(
-                                  'inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-sm border tracking-wide w-full',
-                                  isNova
-                                    ? 'border-primary/60 text-primary bg-primary/10'
-                                    : 'border-accent-foreground/25 text-accent-foreground bg-accent/40',
-                                )}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-sm border tracking-wide w-full border-emerald-500/30 text-emerald-400 bg-emerald-500/10"
                                 style={{ minWidth: `${badgeMinWidth}px` }}
                               >
                                 {isNova && (
