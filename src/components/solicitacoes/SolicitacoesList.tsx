@@ -256,15 +256,12 @@ function SolicitacaoRow({
                     <span
                       key={nome}
                       title={nome}
-                      className={cn(
-                        'inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-sm border max-w-[110px] truncate tracking-wide',
-                        isNova
-                          ? 'border-primary/60 text-primary bg-primary/10'
-                          : 'border-accent-foreground/20 text-accent-foreground bg-accent/30',
-                      )}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-sm border tracking-wide border-accent-foreground/25 text-accent-foreground bg-accent/40"
                     >
+                      {isNova && (
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                      )}
                       {nome}
-                      {isNova && <span className="text-[8px] font-black uppercase tracking-widest opacity-60">new</span>}
                     </span>
                   ))}
                   {overflowNomes.length > 0 && (
@@ -290,15 +287,17 @@ function SolicitacaoRow({
                               <span
                                 key={nome}
                                 className={cn(
-                                  'inline-flex items-center justify-between gap-1 text-[11px] font-bold px-2 py-1 rounded-sm border tracking-wide w-full',
+                                  'inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-sm border tracking-wide w-full',
                                   isNova
                                     ? 'border-primary/60 text-primary bg-primary/10'
-                                    : 'border-border/60 text-foreground bg-muted/30',
+                                    : 'border-accent-foreground/25 text-accent-foreground bg-accent/40',
                                 )}
                                 style={{ minWidth: `${badgeMinWidth}px` }}
                               >
+                                {isNova && (
+                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                                )}
                                 <span className="flex-1 text-left">{nome}</span>
-                                {isNova && <span className="text-[8px] font-black uppercase opacity-60 shrink-0">new</span>}
                               </span>
                             ))}
                           </div>
