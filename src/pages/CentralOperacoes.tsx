@@ -301,7 +301,15 @@ export default function CentralOperacoes() {
   const [selectedPagamentoOperador, setSelectedPagamentoOperador] = useState<PagamentoOperadorPendente | null>(null);
   const [pagamentoParticipacaoOpen, setPagamentoParticipacaoOpen] = useState(false);
   const [selectedParticipacao, setSelectedParticipacao] = useState<ParticipacaoPendente | null>(null);
-  const [mainTab, setMainTab] = useState<'financeiro' | 'ocorrencias' | 'solicitacoes' | 'alertas'>('financeiro');
+  const [mainTab, setMainTabState] = useState<'financeiro' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
+    const saved = localStorage.getItem('central-operacoes-main-tab');
+    if (saved === 'financeiro' || saved === 'ocorrencias' || saved === 'solicitacoes' || saved === 'alertas') return saved;
+    return 'financeiro';
+  });
+  const setMainTab = (tab: 'financeiro' | 'ocorrencias' | 'solicitacoes' | 'alertas') => {
+    setMainTabState(tab);
+    localStorage.setItem('central-operacoes-main-tab', tab);
+  };
   const navigate = useNavigate();
 
   const { alertas: alertasCiclos, refetch: refetchCiclos } = useCicloAlertas();
