@@ -221,7 +221,7 @@ export default function Auth() {
           password: validation.data.password,
           options: {
             data: {
-              full_name: validation.data.fullName,
+              full_name: validation.data.fullName.toUpperCase(),
             },
             emailRedirectTo: `${window.location.origin}/parceiros`,
           },

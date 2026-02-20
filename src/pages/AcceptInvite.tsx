@@ -184,7 +184,7 @@ export default function AcceptInvite() {
         email,
         password,
         options: {
-          data: { full_name: fullName },
+          data: { full_name: fullName.toUpperCase() },
           emailRedirectTo: `${window.location.origin}/accept-invite?token=${token}`,
         },
       });
