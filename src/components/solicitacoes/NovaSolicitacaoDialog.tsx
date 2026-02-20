@@ -260,28 +260,37 @@ function MemberMultiSelect({
   );
 }
 
-/** Multi-select de bookmakers com checkboxes */
+type RegFilter = 'todas' | 'REGULAMENTADA' | 'NAO_REGULAMENTADA';
+
+/** Multi-select de bookmakers com checkboxes e filtro de regulamentação */
 function BookmakerMultiSelect({
   items,
   value,
   onChange,
   loading,
 }: {
-  items: { id: string; label: string; logo_url?: string }[];
+  items: { id: string; label: string; logo_url?: string; verificacao?: string }[];
   value: string[];
   onChange: (ids: string[]) => void;
   loading: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
+  const [regFilter, setRegFilter] = useState<RegFilter>('todas');
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return items;
+    let list = items;
+    if (regFilter === 'REGULAMENTADA') {
+      list = list.filter((i) => i.verificacao === 'REGULAMENTADA');
+    } else if (regFilter === 'NAO_REGULAMENTADA') {
+      list = list.filter((i) => i.verificacao !== 'REGULAMENTADA');
+    }
+    if (!search.trim()) return list;
     const term = search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    return items.filter((item) =>
+    return list.filter((item) =>
       item.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(term),
     );
-  }, [items, search]);
+  }, [items, search, regFilter]);
 
   const toggle = (id: string) => {
     onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
@@ -297,6 +306,12 @@ function BookmakerMultiSelect({
   }, [value, items]);
 
   if (loading) return <Skeleton className="h-9 w-full" />;
+
+  const regOptions: { value: RegFilter; label: string }[] = [
+    { value: 'todas', label: 'Todas' },
+    { value: 'REGULAMENTADA', label: 'Regulamentadas' },
+    { value: 'NAO_REGULAMENTADA', label: 'Não Regulamentadas' },
+  ];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -319,7 +334,8 @@ function BookmakerMultiSelect({
         align="start"
         sideOffset={4}
       >
-        <div className="px-2 pt-2 pb-2 border-b border-border">
+        {/* Busca */}
+        <div className="px-2 pt-2 pb-2 border-b border-border space-y-2">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <input
@@ -330,11 +346,29 @@ function BookmakerMultiSelect({
               className="w-full h-8 pl-7 pr-2 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
+          {/* Filtro de regulamentação */}
+          <div className="flex gap-1">
+            {regOptions.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setRegFilter(opt.value)}
+                className={cn(
+                  'flex-1 text-xs px-2 py-1 rounded-md border transition-colors',
+                  regFilter === opt.value
+                    ? 'bg-primary text-primary-foreground border-primary font-medium'
+                    : 'bg-transparent text-muted-foreground border-border hover:bg-accent',
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="max-h-60 overflow-y-auto p-1" onWheel={(e) => e.stopPropagation()}>
           {filtered.length === 0 ? (
             <p className="p-3 text-center text-sm text-muted-foreground">
-              {search.trim() ? 'Nenhum resultado' : 'Nenhuma bookmaker ativa'}
+              {search.trim() || regFilter !== 'todas' ? 'Nenhum resultado' : 'Nenhuma bookmaker ativa'}
             </p>
           ) : (
             filtered.map((item) => (
@@ -358,7 +392,12 @@ function BookmakerMultiSelect({
                 ) : (
                   <div className="h-4 w-4 rounded bg-muted flex-shrink-0" />
                 )}
-                <span className="truncate">{item.label}</span>
+                <span className="truncate flex-1">{item.label}</span>
+                {item.verificacao === 'REGULAMENTADA' && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-medium shrink-0">
+                    REG
+                  </span>
+                )}
               </div>
             ))
           )}
@@ -480,6 +519,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
         id: bm.id,
         label: bm.nome,
         logo_url: bm.logo_url ?? undefined,
+        verificacao: bm.verificacao ?? undefined,
       })),
     [workspaceBookmakers],
   );
