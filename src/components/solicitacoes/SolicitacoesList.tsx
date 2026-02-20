@@ -234,23 +234,24 @@ function SolicitacaoRow({
                             +{bookmakerFlatList.length - 2} mais
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-[260px] p-2" forceMount={undefined}>
+                        <TooltipContent side="bottom" className="p-2 w-56">
                           <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">
                             Casas restantes
                           </p>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="grid grid-cols-2 gap-1">
                             {bookmakerFlatList.slice(2).map(({ nome, isNova }) => (
                               <span
                                 key={nome}
                                 className={cn(
-                                  'inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-sm border tracking-wide',
+                                  'inline-flex items-center justify-center gap-1 text-[11px] font-bold px-2 py-1 rounded-sm border tracking-wide truncate',
                                   isNova
                                     ? 'border-primary/60 text-primary bg-primary/10'
                                     : 'border-border/60 text-foreground bg-muted/30',
                                 )}
+                                title={nome}
                               >
-                                {nome}
-                                {isNova && <span className="text-[8px] font-black uppercase opacity-60">new</span>}
+                                <span className="truncate">{nome}</span>
+                                {isNova && <span className="text-[8px] font-black uppercase opacity-60 shrink-0">new</span>}
                               </span>
                             ))}
                           </div>
