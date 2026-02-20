@@ -19,10 +19,12 @@ import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos } from "@/hooks/u
 import { deletarAposta, liquidarPernaSurebet } from "@/services/aposta";
 import { useCurrencySnapshot, type SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
+import { useCotacoes } from "@/hooks/useCotacoes";
 import { useApostaRascunho, type ApostaRascunho, type RascunhoPernaData } from "@/hooks/useApostaRascunho";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 import { useSurebetCalculator, type OddEntry, type OddFormEntry } from "@/hooks/useSurebetCalculator";
 import { pernasToInserts } from "@/types/apostasPernas";
+import type { SurebetEngineConfig } from "@/utils/surebetCurrencyEngine";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,7 +159,11 @@ export function SurebetModalRoot({
   const { criarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
   
   const { getSnapshotFields } = useCurrencySnapshot();
-  const { moedaConsolidacao } = useProjetoConsolidacao({ projetoId });
+  const {
+    moedaConsolidacao,
+    cotacaoAtual: cotacaoTrabalho,
+  } = useProjetoConsolidacao({ projetoId });
+  const { getRate: getCotacaoRate } = useCotacoes();
   
   const { data: bookmakerSaldos = [], isLoading: saldosLoading } = useBookmakerSaldosQuery({
     projetoId,
@@ -269,13 +275,29 @@ export function SurebetModalRoot({
   // CALCULATOR HOOK
   // ============================================
 
+  // Construir engineConfig com taxas BRL corretas (Trabalho > PTAX > fallback)
+  const engineConfig = useMemo((): import("@/utils/surebetCurrencyEngine").SurebetEngineConfig => ({
+    consolidationCurrency: (moedaConsolidacao || "BRL") as SupportedCurrency,
+    brlRates: {
+      BRL: 1,
+      USD: getCotacaoRate("USD"),
+      EUR: getCotacaoRate("EUR"),
+      GBP: getCotacaoRate("GBP"),
+      MXN: getCotacaoRate("MXN"),
+      MYR: getCotacaoRate("MYR"),
+      ARS: getCotacaoRate("ARS"),
+      COP: getCotacaoRate("COP"),
+    },
+  }), [moedaConsolidacao, getCotacaoRate]);
+
   const { analysis, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
     odds,
     directedProfitLegs,
     numPernas,
     arredondarAtivado,
     arredondarValor,
-    bookmakerSaldos: bookmakerSaldos.map(b => ({ id: b.id, moeda: b.moeda }))
+    bookmakerSaldos: bookmakerSaldos.map(b => ({ id: b.id, moeda: b.moeda })),
+    engineConfig,
   });
 
   // ============================================
