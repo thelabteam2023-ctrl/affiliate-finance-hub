@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, LogOut, LayoutGrid, List } from "lucide-react";
+import { Plus, Search, Edit, Trash2, LogOut, LayoutGrid, List, Percent } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,12 +16,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Banco {
   id: string;
   codigo: string;
   nome: string;
   is_system: boolean;
+  taxa_percentual: number | null;
+  taxa_incidencia: string | null;
 }
 
 export default function GestaoBancos() {
@@ -32,6 +41,8 @@ export default function GestaoBancos() {
   const [editingBanco, setEditingBanco] = useState<Banco | null>(null);
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
+  const [taxaPercentual, setTaxaPercentual] = useState("");
+  const [taxaIncidencia, setTaxaIncidencia] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const navigate = useNavigate();
@@ -118,6 +129,8 @@ export default function GestaoBancos() {
     setEditingBanco(banco);
     setCodigo(banco.codigo);
     setNome(banco.nome);
+    setTaxaPercentual(banco.taxa_percentual != null ? String(banco.taxa_percentual) : "");
+    setTaxaIncidencia(banco.taxa_incidencia ?? "");
     setDialogOpen(true);
   };
 
@@ -125,14 +138,34 @@ export default function GestaoBancos() {
     e.preventDefault();
     setSaving(true);
 
+    // Validate: if one taxa field is filled, the other must be too
+    const hasTaxa = taxaPercentual !== "";
+    const hasIncidencia = taxaIncidencia !== "";
+    if (hasTaxa !== hasIncidencia) {
+      toast({
+        title: "Campos de taxa incompletos",
+        description: "Preencha tanto a porcentagem quanto o momento de cobrança, ou deixe ambos em branco.",
+        variant: "destructive",
+      });
+      setSaving(false);
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      const payload: any = {
+        codigo,
+        nome,
+        taxa_percentual: taxaPercentual !== "" ? parseFloat(taxaPercentual) : null,
+        taxa_incidencia: hasIncidencia ? taxaIncidencia : null,
+      };
+
       if (editingBanco) {
         const { error } = await supabase
           .from("bancos")
-          .update({ codigo, nome })
+          .update(payload)
           .eq("id", editingBanco.id);
 
         if (error) throw error;
@@ -140,8 +173,7 @@ export default function GestaoBancos() {
       } else {
         if (!workspaceId) throw new Error("Workspace não definido");
         const { error } = await supabase.from("bancos").insert({
-          codigo,
-          nome,
+          ...payload,
           user_id: user.id,
           is_system: false,
           workspace_id: workspaceId,
@@ -168,6 +200,8 @@ export default function GestaoBancos() {
     setEditingBanco(null);
     setCodigo("");
     setNome("");
+    setTaxaPercentual("");
+    setTaxaIncidencia("");
     fetchBancos();
   };
 
@@ -176,6 +210,12 @@ export default function GestaoBancos() {
       banco.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       banco.codigo.includes(searchTerm)
   );
+
+  const taxaLabel = (banco: Banco) => {
+    if (!banco.taxa_percentual) return null;
+    const quando = banco.taxa_incidencia === "deposito" ? "no depósito" : "no saque";
+    return `${banco.taxa_percentual}% ${quando}`;
+  };
 
   if (loading) {
     return (
@@ -250,9 +290,17 @@ export default function GestaoBancos() {
                         Código: {banco.codigo}
                       </p>
                     </div>
-                    {banco.is_system && (
-                      <Badge variant="secondary">Sistema</Badge>
-                    )}
+                    <div className="flex flex-col gap-1 items-end">
+                      {banco.is_system && (
+                        <Badge variant="secondary">Sistema</Badge>
+                      )}
+                      {taxaLabel(banco) && (
+                        <Badge variant="outline" className="text-xs gap-1">
+                          <Percent className="h-3 w-3" />
+                          {taxaLabel(banco)}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -270,7 +318,7 @@ export default function GestaoBancos() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-red-600 hover:text-red-700"
+                        className="flex-1 text-destructive hover:text-destructive"
                         onClick={() => handleDelete(banco.id, banco.is_system)}
                       >
                         <Trash2 className="mr-1 h-4 w-4" />
@@ -307,6 +355,12 @@ export default function GestaoBancos() {
                               Sistema
                             </Badge>
                           )}
+                          {taxaLabel(banco) && (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              <Percent className="h-3 w-3" />
+                              {taxaLabel(banco)}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       {!banco.is_system && (
@@ -322,7 +376,7 @@ export default function GestaoBancos() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(banco.id, banco.is_system)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -346,28 +400,77 @@ export default function GestaoBancos() {
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="codigo">Código *</Label>
-              <Input
-                id="codigo"
-                value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
-                placeholder="000"
-                required
-                disabled={saving}
-              />
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label htmlFor="codigo">Código *</Label>
+                <Input
+                  id="codigo"
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value)}
+                  placeholder="000"
+                  required
+                  disabled={saving}
+                />
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="nome">Nome *</Label>
+                <Input
+                  id="nome"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="Nome do banco"
+                  required
+                  disabled={saving}
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="nome">Nome *</Label>
-              <Input
-                id="nome"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Nome do banco"
-                required
-                disabled={saving}
-              />
+
+            {/* Taxa section */}
+            <div className="border border-border rounded-lg p-4 space-y-3">
+              <p className="text-sm font-medium flex items-center gap-2">
+                <Percent className="h-4 w-4 text-muted-foreground" />
+                Taxa de cobrança <span className="text-muted-foreground font-normal">(opcional)</span>
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="taxa_percentual">Percentual (%)</Label>
+                  <Input
+                    id="taxa_percentual"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={taxaPercentual}
+                    onChange={(e) => setTaxaPercentual(e.target.value)}
+                    placeholder="Ex: 5.00"
+                    disabled={saving}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="taxa_incidencia">Quando é cobrada</Label>
+                  <Select
+                    value={taxaIncidencia}
+                    onValueChange={setTaxaIncidencia}
+                    disabled={saving}
+                  >
+                    <SelectTrigger id="taxa_incidencia">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="deposito">Ao receber (depósito)</SelectItem>
+                      <SelectItem value="saque">Ao enviar (saque)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {taxaPercentual && taxaIncidencia && (
+                <p className="text-xs text-muted-foreground">
+                  Uma taxa de <strong>{taxaPercentual}%</strong> será cobrada{" "}
+                  {taxaIncidencia === "deposito" ? "ao receber transações (depósito)" : "ao enviar transações (saque)"}.
+                </p>
+              )}
             </div>
+
             <div className="flex justify-end gap-3">
               <Button
                 type="button"
