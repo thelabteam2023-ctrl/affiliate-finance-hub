@@ -99,21 +99,18 @@ function PrazoBadge({ prazo }: { prazo: string }) {
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <Badge
-            variant="outline"
-            className={cn(
-              'gap-1 text-xs font-mono cursor-default',
-              vencido
-                ? 'text-destructive border-destructive/50'
-                : isUrgent
-                ? 'text-orange-400 border-orange-400/50'
-                : 'text-emerald-400 border-emerald-400/50',
-            )}
-          >
-            <Timer className="h-3 w-3" />
-            {countdown}
-          </Badge>
+        <TooltipTrigger
+          className={cn(
+            'inline-flex items-center gap-1 rounded-md border px-2.5 py-0.5 text-xs font-mono font-semibold transition-colors cursor-default',
+            vencido
+              ? 'text-destructive border-destructive/50'
+              : isUrgent
+              ? 'text-orange-400 border-orange-400/50'
+              : 'text-emerald-400 border-emerald-400/50',
+          )}
+        >
+          <Timer className="h-3 w-3" />
+          {countdown}
         </TooltipTrigger>
         <TooltipContent side="bottom" className="max-w-[240px] text-center text-xs">
           {tooltipText}
