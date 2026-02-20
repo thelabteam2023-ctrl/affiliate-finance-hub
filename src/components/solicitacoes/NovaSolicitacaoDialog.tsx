@@ -556,12 +556,13 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
               control={form.control}
               name="descricao"
               render={({ field }) => (
-                <FormItem className="flex flex-col items-center">
-                  <FormLabel className="block text-center w-full">Descrição *</FormLabel>
-                  <FormControl className="w-full">
+                <FormItem>
+                  <FormLabel className="block text-center">Descrição *</FormLabel>
+                  <FormControl>
                     <Textarea
                       placeholder="Detalhe o que precisa ser feito, incluindo todas as informações necessárias para execução..."
-                      className="min-h-[180px] w-full text-center"
+                      className="w-full resize-none"
+                      style={{ minHeight: '180px' }}
                       {...field}
                     />
                   </FormControl>
