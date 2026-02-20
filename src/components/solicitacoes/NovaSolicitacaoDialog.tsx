@@ -646,30 +646,55 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                       <FormField
                         control={form.control}
                         name="origem_parceiro_id"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Parceiro *</FormLabel>
-                            <Select
-                              onValueChange={(v) => {
-                                field.onChange(v);
-                                form.setValue('origem_conta_id', '');
-                              }}
-                              value={field.value ?? ''}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="h-8 text-sm">
-                                  <SelectValue placeholder="Selecionar parceiro..." />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {parceiros.map(p => (
-                                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage className="text-[10px]" />
-                          </FormItem>
-                        )}
+                        render={({ field }) => {
+                          const [searchOrigem, setSearchOrigem] = useState('');
+                          const filteredOrigem = parceiros.filter(p =>
+                            getFirstLastName(p.nome).toLowerCase().includes(searchOrigem.toLowerCase())
+                          );
+                          return (
+                            <FormItem>
+                              <FormLabel className="text-xs">Parceiro *</FormLabel>
+                              <Select
+                                onValueChange={(v) => {
+                                  field.onChange(v);
+                                  form.setValue('origem_conta_id', '');
+                                }}
+                                value={field.value ?? ''}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-8 text-sm">
+                                    <SelectValue placeholder="Selecionar parceiro...">
+                                      {field.value ? getFirstLastName(parceiros.find(p => p.id === field.value)?.nome ?? '') : null}
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="z-[9999]">
+                                  <div className="px-2 pt-2 pb-1 border-b border-border sticky top-0 bg-popover z-10">
+                                    <div className="relative">
+                                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                      <input
+                                        type="text"
+                                        value={searchOrigem}
+                                        onChange={e => setSearchOrigem(e.target.value)}
+                                        placeholder="Buscar parceiro..."
+                                        className="w-full h-7 pl-7 pr-2 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                        onKeyDown={e => e.stopPropagation()}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="max-h-48 overflow-y-auto">
+                                    {filteredOrigem.length === 0 ? (
+                                      <p className="px-3 py-2 text-xs text-muted-foreground">Nenhum parceiro encontrado</p>
+                                    ) : filteredOrigem.map(p => (
+                                      <SelectItem key={p.id} value={p.id}>{getFirstLastName(p.nome)}</SelectItem>
+                                    ))}
+                                  </div>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage className="text-[10px]" />
+                            </FormItem>
+                          );
+                        }}
                       />
                       {/* Conta/Wallet Origem */}
                       <FormField
@@ -737,30 +762,55 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                       <FormField
                         control={form.control}
                         name="destino_parceiro_id"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Parceiro *</FormLabel>
-                            <Select
-                              onValueChange={(v) => {
-                                field.onChange(v);
-                                form.setValue('destino_conta_id', '');
-                              }}
-                              value={field.value ?? ''}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="h-8 text-sm">
-                                  <SelectValue placeholder="Selecionar parceiro..." />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {parceiros.map(p => (
-                                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage className="text-[10px]" />
-                          </FormItem>
-                        )}
+                        render={({ field }) => {
+                          const [searchDestino, setSearchDestino] = useState('');
+                          const filteredDestino = parceiros.filter(p =>
+                            getFirstLastName(p.nome).toLowerCase().includes(searchDestino.toLowerCase())
+                          );
+                          return (
+                            <FormItem>
+                              <FormLabel className="text-xs">Parceiro *</FormLabel>
+                              <Select
+                                onValueChange={(v) => {
+                                  field.onChange(v);
+                                  form.setValue('destino_conta_id', '');
+                                }}
+                                value={field.value ?? ''}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-8 text-sm">
+                                    <SelectValue placeholder="Selecionar parceiro...">
+                                      {field.value ? getFirstLastName(parceiros.find(p => p.id === field.value)?.nome ?? '') : null}
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="z-[9999]">
+                                  <div className="px-2 pt-2 pb-1 border-b border-border sticky top-0 bg-popover z-10">
+                                    <div className="relative">
+                                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                      <input
+                                        type="text"
+                                        value={searchDestino}
+                                        onChange={e => setSearchDestino(e.target.value)}
+                                        placeholder="Buscar parceiro..."
+                                        className="w-full h-7 pl-7 pr-2 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                        onKeyDown={e => e.stopPropagation()}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="max-h-48 overflow-y-auto">
+                                    {filteredDestino.length === 0 ? (
+                                      <p className="px-3 py-2 text-xs text-muted-foreground">Nenhum parceiro encontrado</p>
+                                    ) : filteredDestino.map(p => (
+                                      <SelectItem key={p.id} value={p.id}>{getFirstLastName(p.nome)}</SelectItem>
+                                    ))}
+                                  </div>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage className="text-[10px]" />
+                            </FormItem>
+                          );
+                        }}
                       />
                       {/* Conta/Wallet Destino */}
                       <FormField
