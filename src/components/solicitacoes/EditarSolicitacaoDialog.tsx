@@ -80,6 +80,17 @@ function MemberMultiSelect({
     onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
   };
 
+  const allSelected = items.length > 0 && items.every((i) => value.includes(i.id));
+  const someSelected = value.length > 0 && !allSelected;
+
+  const toggleAll = () => {
+    if (allSelected) {
+      onChange([]);
+    } else {
+      onChange(items.map((i) => i.id));
+    }
+  };
+
   const selectedLabels = useMemo(
     () => value.map((id) => items.find((i) => i.id === id)?.label).filter(Boolean) as string[],
     [value, items],
@@ -127,6 +138,20 @@ function MemberMultiSelect({
               />
             </div>
           </div>
+          {!search.trim() && items.length > 0 && (
+            <div
+              onClick={toggleAll}
+              className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-accent text-sm border-b border-border"
+            >
+              <Checkbox
+                checked={allSelected}
+                data-state={someSelected ? 'indeterminate' : allSelected ? 'checked' : 'unchecked'}
+                onCheckedChange={toggleAll}
+                className="pointer-events-none"
+              />
+              <span className="font-medium text-foreground">Selecionar todos</span>
+            </div>
+          )}
           <div className="max-h-60 overflow-y-auto p-1" onWheel={(e) => e.stopPropagation()}>
             {filtered.length === 0 ? (
               <p className="p-3 text-center text-sm text-muted-foreground">
