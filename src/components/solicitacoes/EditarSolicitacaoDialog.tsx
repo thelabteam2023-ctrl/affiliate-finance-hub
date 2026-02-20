@@ -1,4 +1,5 @@
 import { useForm } from 'react-hook-form';
+import { getFirstLastName } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState, useCallback, useEffect, useMemo } from 'react';
@@ -391,7 +392,7 @@ export function EditarSolicitacaoDialog({ solicitacao, open, onOpenChange }: Pro
     () =>
       members.map((m) => ({
         id: m.user_id,
-        label: m.full_name || m.email || m.user_id,
+        label: m.full_name ? getFirstLastName(m.full_name) : (m.email || m.user_id),
       })),
     [members],
   );

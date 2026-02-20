@@ -1,4 +1,5 @@
 import { useForm, Controller } from 'react-hook-form';
+import { getFirstLastName } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
@@ -354,7 +355,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
     () =>
       members.map((m) => ({
         id: m.user_id,
-        label: m.full_name || m.email || m.user_id,
+        label: m.full_name ? getFirstLastName(m.full_name) : (m.email || m.user_id),
       })),
     [members],
   );
