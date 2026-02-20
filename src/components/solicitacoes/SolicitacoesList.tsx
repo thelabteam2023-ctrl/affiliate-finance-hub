@@ -1,4 +1,5 @@
 import { isPast, differenceInSeconds, formatDistanceToNow } from 'date-fns';
+import { getFirstLastName } from '@/lib/utils';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -169,9 +170,10 @@ function SolicitacaoRow({
     const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
     if (meta) {
       const nomes = meta['executor_nomes'];
-      if (Array.isArray(nomes) && nomes.length > 0) return nomes as string[];
+      if (Array.isArray(nomes) && nomes.length > 0)
+        return (nomes as string[]).map((n) => getFirstLastName(n));
     }
-    return solicitacao.executor?.full_name ? [solicitacao.executor.full_name] : ['—'];
+    return solicitacao.executor?.full_name ? [getFirstLastName(solicitacao.executor.full_name)] : ['—'];
   })();
 
   const isExecutor = executorIds.includes(currentUserId);
