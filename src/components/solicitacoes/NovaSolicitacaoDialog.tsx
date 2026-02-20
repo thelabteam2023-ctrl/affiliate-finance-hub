@@ -393,11 +393,6 @@ function BookmakerMultiSelect({
                   <div className="h-4 w-4 rounded bg-muted flex-shrink-0" />
                 )}
                 <span className="truncate flex-1">{item.label}</span>
-                {item.status === 'REGULAMENTADA' && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-medium shrink-0">
-                    REG
-                  </span>
-                )}
               </div>
             ))
           )}
