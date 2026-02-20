@@ -471,65 +471,85 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
               />
             </div>
 
-            {/* Bookmakers — multi-select, apenas quando tipo = abertura_conta */}
-            {tipoSelecionado === 'abertura_conta' && (
-              <FormField
-                control={form.control}
-                name="bookmaker_ids"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bookmakers *</FormLabel>
-                    <BookmakerMultiSelect
-                      items={bookmakerItems}
-                      value={field.value ?? []}
-                      onChange={field.onChange}
-                      loading={bookmakersLoading}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Bookmaker KYC — seleção de conta operacional com filtros */}
-            {tipoSelecionado === 'verificacao_kyc' && (
-              <FormField
-                control={form.control}
-                name="kyc_bookmaker_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Conta exigindo KYC *</FormLabel>
-                    <KycBookmakerSelect
-                      value={field.value ?? ''}
-                      onValueChange={(id, data) => {
-                        field.onChange(id);
-                        setKycBookmakerData(data);
-                      }}
-                      error={!!form.formState.errors.kyc_bookmaker_id}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Responsáveis — multi-select */}
-            <FormField
-              control={form.control}
-              name="executor_ids"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Responsáveis pela Execução *</FormLabel>
-                  <MemberMultiSelect
-                    items={memberItems}
-                    value={field.value}
-                    onChange={field.onChange}
-                    loading={membersLoading}
+            {/* Bookmakers + Responsáveis na mesma linha quando tipo = abertura_conta */}
+            {tipoSelecionado === 'abertura_conta' ? (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="bookmaker_ids"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bookmakers *</FormLabel>
+                      <BookmakerMultiSelect
+                        items={bookmakerItems}
+                        value={field.value ?? []}
+                        onChange={field.onChange}
+                        loading={bookmakersLoading}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="executor_ids"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Responsáveis pela Execução *</FormLabel>
+                      <MemberMultiSelect
+                        items={memberItems}
+                        value={field.value}
+                        onChange={field.onChange}
+                        loading={membersLoading}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            ) : (
+              <>
+                {/* Bookmaker KYC — seleção de conta operacional com filtros */}
+                {tipoSelecionado === 'verificacao_kyc' && (
+                  <FormField
+                    control={form.control}
+                    name="kyc_bookmaker_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Conta exigindo KYC *</FormLabel>
+                        <KycBookmakerSelect
+                          value={field.value ?? ''}
+                          onValueChange={(id, data) => {
+                            field.onChange(id);
+                            setKycBookmakerData(data);
+                          }}
+                          error={!!form.formState.errors.kyc_bookmaker_id}
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                )}
+
+                {/* Responsáveis — multi-select */}
+                <FormField
+                  control={form.control}
+                  name="executor_ids"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Responsáveis pela Execução *</FormLabel>
+                      <MemberMultiSelect
+                        items={memberItems}
+                        value={field.value}
+                        onChange={field.onChange}
+                        loading={membersLoading}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
 
             {/* Descrição */}
             <FormField
