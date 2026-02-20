@@ -740,6 +740,7 @@ export type Database = {
           nome: string
           updated_at: string | null
           user_id: string | null
+          workspace_id: string | null
         }
         Insert: {
           codigo: string
@@ -749,6 +750,7 @@ export type Database = {
           nome: string
           updated_at?: string | null
           user_id?: string | null
+          workspace_id?: string | null
         }
         Update: {
           codigo?: string
@@ -758,8 +760,17 @@ export type Database = {
           nome?: string
           updated_at?: string | null
           user_id?: string | null
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bancos_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       billing_events: {
         Row: {
@@ -12465,6 +12476,10 @@ export type Database = {
       }
       is_active_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      is_active_workspace_member_for_bancos: {
+        Args: { _workspace_id: string }
         Returns: boolean
       }
       is_master: { Args: { _user_id: string }; Returns: boolean }
