@@ -507,31 +507,46 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                   )}
                 />
               </div>
+            ) : tipoSelecionado === 'verificacao_kyc' ? (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="kyc_bookmaker_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="block text-center">Conta exigindo KYC *</FormLabel>
+                      <KycBookmakerSelect
+                        value={field.value ?? ''}
+                        onValueChange={(id, data) => {
+                          field.onChange(id);
+                          setKycBookmakerData(data);
+                        }}
+                        error={!!form.formState.errors.kyc_bookmaker_id}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="executor_ids"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="block text-center">Responsáveis pela Execução *</FormLabel>
+                      <MemberMultiSelect
+                        items={memberItems}
+                        value={field.value}
+                        onChange={field.onChange}
+                        loading={membersLoading}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             ) : (
               <>
-                {/* Bookmaker KYC — seleção de conta operacional com filtros */}
-                {tipoSelecionado === 'verificacao_kyc' && (
-                  <FormField
-                    control={form.control}
-                    name="kyc_bookmaker_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Conta exigindo KYC *</FormLabel>
-                        <KycBookmakerSelect
-                          value={field.value ?? ''}
-                          onValueChange={(id, data) => {
-                            field.onChange(id);
-                            setKycBookmakerData(data);
-                          }}
-                          error={!!form.formState.errors.kyc_bookmaker_id}
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                {/* Responsáveis — multi-select */}
+                {/* Responsáveis — multi-select (outros tipos) */}
                 <FormField
                   control={form.control}
                   name="executor_ids"
