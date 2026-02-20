@@ -371,7 +371,7 @@ function SolicitacaoRow({
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-foreground leading-relaxed line-clamp-8">
+                  <p className="text-xs text-foreground leading-relaxed line-clamp-8 whitespace-pre-wrap">
                     {solicitacao.descricao}
                   </p>
                 </div>
