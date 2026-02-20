@@ -45,6 +45,12 @@ import {
   FileText,
   Pencil,
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useEffect, useState } from 'react';
 import { EditarSolicitacaoDialog } from './EditarSolicitacaoDialog';
 
@@ -174,11 +180,7 @@ function SolicitacaoRow({
       : false,
   }));
 
-  // Agrupa em linhas de 3
-  const bookmakerRows: { nome: string; isNova: boolean }[][] = [];
-  for (let i = 0; i < bookmakerFlatList.length; i += 3) {
-    bookmakerRows.push(bookmakerFlatList.slice(i, i + 3));
-  }
+
 
   return (
     <>
@@ -200,37 +202,61 @@ function SolicitacaoRow({
                 <StatusBadge status={solicitacao.status} />
               </div>
 
-              {/* Casas — label na primeira linha, badges abaixo em grupos de 3 */}
-              {bookmakerRows.length > 0 && (
-                <div className="mt-1.5">
-                  {/* Label */}
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+              {/* Casas — 2 visíveis + tooltip com restantes */}
+              {bookmakerFlatList.length > 0 && (
+                <div className="mt-1.5 flex items-center gap-1 flex-wrap">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
                     <ClipboardList className="h-3 w-3 shrink-0" />
                     Casas:
                   </span>
-                  {/* Linhas de badges */}
-                  <div className="mt-1 space-y-1 pl-0.5">
-                    {bookmakerRows.map((row, rowIdx) => (
-                      <div key={rowIdx} className="grid grid-cols-3 gap-1">
-                        {row.map(({ nome, isNova }) => (
+                  {bookmakerFlatList.slice(0, 2).map(({ nome, isNova }) => (
+                    <Badge
+                      key={nome}
+                      variant="outline"
+                      className={cn(
+                        'text-xs px-1.5 py-0 h-5 max-w-[110px] truncate',
+                        isNova
+                          ? 'border-primary text-primary bg-primary/10 font-semibold'
+                          : 'border-primary/40 text-primary/80 font-normal',
+                      )}
+                      title={nome}
+                    >
+                      {nome}
+                      {isNova && <span className="ml-1 text-[8px] font-bold uppercase tracking-wide opacity-70">new</span>}
+                    </Badge>
+                  ))}
+                  {bookmakerFlatList.length > 2 && (
+                    <TooltipProvider delayDuration={100}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <Badge
-                            key={nome}
                             variant="outline"
-                            className={cn(
-                              'text-xs px-1.5 py-0 h-5 truncate block w-full text-center',
-                              isNova
-                                ? 'border-primary text-primary bg-primary/10 font-semibold'
-                                : 'border-primary/40 text-primary/80 font-normal',
-                            )}
-                            title={nome}
+                            className="text-xs px-1.5 py-0 h-5 cursor-pointer border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                           >
-                            {nome}
-                            {isNova && <span className="ml-1 text-[8px] font-bold uppercase tracking-wide opacity-70">new</span>}
+                            +{bookmakerFlatList.length - 2} mais
                           </Badge>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[220px]">
+                          <div className="flex flex-wrap gap-1 p-0.5">
+                            {bookmakerFlatList.slice(2).map(({ nome, isNova }) => (
+                              <span
+                                key={nome}
+                                className={cn(
+                                  'text-xs px-1.5 py-0.5 rounded border',
+                                  isNova
+                                    ? 'border-primary text-primary bg-primary/10 font-semibold'
+                                    : 'border-border text-foreground',
+                                )}
+                              >
+                                {nome}
+                                {isNova && <span className="ml-1 text-[8px] font-bold uppercase opacity-70">new</span>}
+                              </span>
+                            ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </div>
               )}
 
