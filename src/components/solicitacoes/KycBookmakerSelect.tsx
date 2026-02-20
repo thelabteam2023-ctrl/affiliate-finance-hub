@@ -1,18 +1,11 @@
-import { useState, useMemo } from 'react';
-import { Building2, User, FolderOpen, Search, X, Check } from 'lucide-react';
+import { useState, useMemo, useRef } from 'react';
+import { Building2, User, FolderOpen, Search, X, Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useOperationalBookmakers } from '@/hooks/useOperationalBookmakers';
 import type { OperationalBookmakerOption } from '@/hooks/useOperationalBookmakers';
@@ -38,6 +31,10 @@ export function KycBookmakerSelect({
   const [search, setSearch] = useState('');
   const [filterParceiro, setFilterParceiro] = useState('');
   const [filterProjeto, setFilterProjeto] = useState('');
+  const [parceiroOpen, setParceiroOpen] = useState(false);
+  const [projetoOpen, setProjetoOpen] = useState(false);
+  const [searchParceiro, setSearchParceiro] = useState('');
+  const [searchProjeto, setSearchProjeto] = useState('');
 
   // Listas únicas para os filtros
   const parceiros = useMemo(() => {
@@ -182,37 +179,135 @@ export function KycBookmakerSelect({
 
           {/* Filtros Parceiro + Projeto em linha */}
           <div className="grid grid-cols-2 gap-2">
-            <Select value={filterParceiro} onValueChange={setFilterParceiro}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Filtrar parceiro..." />
-              </SelectTrigger>
-              <SelectContent className="z-[10000]">
-                <SelectItem value={AVULSO_VALUE} className="text-xs italic text-muted-foreground">
-                  Sem parceiro
-                </SelectItem>
-                {parceiros.map(([id, nome]) => (
-                  <SelectItem key={id} value={id} className="text-xs">
-                    {nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Filtro Parceiro com busca */}
+            <Popover open={parceiroOpen} onOpenChange={(v) => { setParceiroOpen(v); if (!v) setSearchParceiro(''); }}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex items-center justify-between w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground hover:bg-accent/50 transition-colors',
+                    !filterParceiro && 'text-muted-foreground',
+                  )}
+                >
+                  <span className="truncate">
+                    {filterParceiro === AVULSO_VALUE
+                      ? 'Sem parceiro'
+                      : filterParceiro
+                      ? (parceiros.find(([id]) => id === filterParceiro)?.[1] ?? 'Parceiro')
+                      : 'Filtrar parceiro...'}
+                  </span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 ml-1" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-52 p-0 z-[10000] bg-popover border border-border shadow-lg" align="start" sideOffset={4}>
+                <div className="p-1.5 border-b border-border">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      value={searchParceiro}
+                      onChange={(e) => setSearchParceiro(e.target.value)}
+                      placeholder="Buscar parceiro..."
+                      autoFocus
+                      className="w-full h-7 pl-6 pr-2 text-xs rounded border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                </div>
+                <div className="max-h-48 overflow-y-auto p-1">
+                  <button
+                    type="button"
+                    onClick={() => { setFilterParceiro(''); setParceiroOpen(false); setSearchParceiro(''); }}
+                    className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent text-muted-foreground italic"
+                  >
+                    Todos os parceiros
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setFilterParceiro(AVULSO_VALUE); setParceiroOpen(false); setSearchParceiro(''); }}
+                    className={cn('w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent italic', filterParceiro === AVULSO_VALUE && 'bg-accent')}
+                  >
+                    Sem parceiro
+                  </button>
+                  {parceiros
+                    .filter(([, nome]) => !searchParceiro.trim() || nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(searchParceiro.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')))
+                    .map(([id, nome]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => { setFilterParceiro(id); setParceiroOpen(false); setSearchParceiro(''); }}
+                        className={cn('w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent truncate', filterParceiro === id && 'bg-accent font-medium')}
+                      >
+                        {nome}
+                      </button>
+                    ))}
+                </div>
+              </PopoverContent>
+            </Popover>
 
-            <Select value={filterProjeto} onValueChange={setFilterProjeto}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Filtrar projeto..." />
-              </SelectTrigger>
-              <SelectContent className="z-[10000]">
-                <SelectItem value={AVULSO_VALUE} className="text-xs italic text-muted-foreground">
-                  Sem projeto
-                </SelectItem>
-                {projetos.map(([id, nome]) => (
-                  <SelectItem key={id} value={id} className="text-xs">
-                    {nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Filtro Projeto com busca */}
+            <Popover open={projetoOpen} onOpenChange={(v) => { setProjetoOpen(v); if (!v) setSearchProjeto(''); }}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex items-center justify-between w-full h-8 px-2.5 text-xs rounded-md border border-border bg-background text-foreground hover:bg-accent/50 transition-colors',
+                    !filterProjeto && 'text-muted-foreground',
+                  )}
+                >
+                  <span className="truncate">
+                    {filterProjeto === AVULSO_VALUE
+                      ? 'Sem projeto'
+                      : filterProjeto
+                      ? (projetos.find(([id]) => id === filterProjeto)?.[1] ?? 'Projeto')
+                      : 'Filtrar projeto...'}
+                  </span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 ml-1" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-52 p-0 z-[10000] bg-popover border border-border shadow-lg" align="start" sideOffset={4}>
+                <div className="p-1.5 border-b border-border">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      value={searchProjeto}
+                      onChange={(e) => setSearchProjeto(e.target.value)}
+                      placeholder="Buscar projeto..."
+                      autoFocus
+                      className="w-full h-7 pl-6 pr-2 text-xs rounded border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                </div>
+                <div className="max-h-48 overflow-y-auto p-1">
+                  <button
+                    type="button"
+                    onClick={() => { setFilterProjeto(''); setProjetoOpen(false); setSearchProjeto(''); }}
+                    className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent text-muted-foreground italic"
+                  >
+                    Todos os projetos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setFilterProjeto(AVULSO_VALUE); setProjetoOpen(false); setSearchProjeto(''); }}
+                    className={cn('w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent italic', filterProjeto === AVULSO_VALUE && 'bg-accent')}
+                  >
+                    Sem projeto
+                  </button>
+                  {projetos
+                    .filter(([, nome]) => !searchProjeto.trim() || nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(searchProjeto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')))
+                    .map(([id, nome]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => { setFilterProjeto(id); setProjetoOpen(false); setSearchProjeto(''); }}
+                        className={cn('w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent truncate', filterProjeto === id && 'bg-accent font-medium')}
+                      >
+                        {nome}
+                      </button>
+                    ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Limpar filtros */}
