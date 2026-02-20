@@ -231,6 +231,7 @@ function SolicitacaoRow({
     <>
       <Card className="border-border/50 hover:border-border transition-colors">
         <CardContent className="p-3">
+          <div className="flex flex-col gap-3">
           <div className="flex items-start gap-3">
             {/* Número da fila */}
             <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-0.5">
@@ -341,8 +342,8 @@ function SolicitacaoRow({
 
             {/* Painel de descrição lateral */}
             {solicitacao.descricao && (
-              <div className="w-80 shrink-0 self-stretch">
-                <div className="h-full rounded-md border border-border/60 bg-muted/30 p-2 flex flex-col gap-1">
+              <div className="mx-auto w-full max-w-2xl">
+                <div className="rounded-md border border-border/60 bg-muted/30 p-3 flex flex-col gap-1">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium uppercase tracking-wide">
                       <FileText className="h-3 w-3" />
@@ -405,6 +406,7 @@ function SolicitacaoRow({
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
+          </div>
           </div>
         </CardContent>
       </Card>
