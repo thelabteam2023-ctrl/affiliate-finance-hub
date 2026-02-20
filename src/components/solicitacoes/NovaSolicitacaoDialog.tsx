@@ -811,6 +811,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide text-center">
                         {subtipoTransferencia === 'necessidade' ? '📋 Conta de Destino' : 'Destino'}
                       </p>
+                      <div className="grid grid-cols-2 gap-3">
                       <FormField
                         control={form.control}
                         name="destino_parceiro_id"
@@ -884,6 +885,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                           </FormItem>
                         )}
                       />
+                      </div>
                     </div>
                   </div>
 
