@@ -85,23 +85,44 @@ function PrazoBadge({ prazo }: { prazo: string }) {
   const isUrgent = !vencido && secondsLeft < 86400;
   const countdown = vencido ? 'Vencido' : formatCountdown(secondsLeft);
 
+  const dataFormatada = date.toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+
+  const tooltipText = vencido
+    ? `Prazo vencido em ${dataFormatada}`
+    : isUrgent
+    ? `Atenção! Resta ${countdown} para finalizar esta demanda. Prazo: ${dataFormatada}`
+    : `Resta ${countdown} para finalizar esta demanda. Prazo: ${dataFormatada}`;
+
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        'gap-1 text-xs font-mono',
-        vencido
-          ? 'text-destructive border-destructive/50'
-          : isUrgent
-          ? 'text-orange-400 border-orange-400/50'
-          : 'text-emerald-400 border-emerald-400/50',
-      )}
-    >
-      <Timer className="h-3 w-3" />
-      {countdown}
-    </Badge>
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge
+            variant="outline"
+            className={cn(
+              'gap-1 text-xs font-mono cursor-default',
+              vencido
+                ? 'text-destructive border-destructive/50'
+                : isUrgent
+                ? 'text-orange-400 border-orange-400/50'
+                : 'text-emerald-400 border-emerald-400/50',
+            )}
+          >
+            <Timer className="h-3 w-3" />
+            {countdown}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-[240px] text-center text-xs">
+          {tooltipText}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
+
 
 function StatusBadge({ status }: { status: SolicitacaoStatus }) {
   const icons: Record<SolicitacaoStatus, React.ReactNode> = {
