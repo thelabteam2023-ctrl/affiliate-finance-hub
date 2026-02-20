@@ -412,10 +412,10 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
     tipoSelecionado === 'transferencia' ? (destinoParceiroId ?? null) : null
   );
 
-  // Moeda derivada sempre da conta de destino
+  // Moeda derivada sempre da conta de destino; lista vazia até conta ser selecionada
   const moedaOptions = useMemo(() => {
     const conta = destinoContas.find(c => c.id === destinoContaId);
-    if (!conta) return MOEDAS_TRANSFERENCIA;
+    if (!conta) return [];  // nenhuma opção até selecionar a conta
     if (conta.tipo === 'banco') return [(conta as import('@/hooks/useParceiroContas').ContaBancaria).moeda];
     if (conta.tipo === 'wallet') return (conta as import('@/hooks/useParceiroContas').WalletCrypto).moedas;
     return MOEDAS_TRANSFERENCIA;
@@ -913,7 +913,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                               <span className="ml-1 text-[10px] text-primary font-normal">(automático)</span>
                             )}
                           </FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={moedaOptions.length === 1}>
+                          <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={!destinoContaId || moedaOptions.length === 1}>
                             <FormControl>
                               <SelectTrigger className="h-8 text-sm">
                                 <SelectValue placeholder={destinoContaId ? 'Selecionar...' : 'Selecione a conta primeiro'} />
