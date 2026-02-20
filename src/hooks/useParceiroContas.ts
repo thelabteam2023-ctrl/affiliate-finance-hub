@@ -44,17 +44,21 @@ export function useParceiroContas(parceiroId: string | null) {
           .order('network'),
       ]);
 
-      const contas: ContaBancaria[] = (contasRes.data ?? []).map((c: any) => ({
-        id: c.id,
-        tipo: 'banco',
-        banco: c.banco,
-        agencia: c.agencia,
-        conta: c.conta,
-        titular: c.titular,
-        moeda: c.moeda,
-        pix_key: c.pix_key,
-        label: `${c.banco}${c.conta ? ` – ${c.conta}` : ''} (${c.moeda})`,
-      }));
+      const contas: ContaBancaria[] = (contasRes.data ?? []).map((c: any) => {
+        const nomeDisplay = c.banco?.trim() || c.titular || 'Conta';
+        const contaDisplay = c.conta && c.conta.trim().length > 2 ? ` – ${c.conta}` : '';
+        return {
+          id: c.id,
+          tipo: 'banco',
+          banco: c.banco,
+          agencia: c.agencia,
+          conta: c.conta,
+          titular: c.titular,
+          moeda: c.moeda,
+          pix_key: c.pix_key,
+          label: `${nomeDisplay}${contaDisplay} (${c.moeda})`,
+        };
+      });
 
       const wallets: WalletCrypto[] = (walletsRes.data ?? []).map((w: any) => ({
         id: w.id,
