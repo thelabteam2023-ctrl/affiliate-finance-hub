@@ -116,7 +116,10 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   const [searchTerm, setSearchTerm] = useState("");
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  const openPanel = useCallback(() => setIsPanelOpen(true), []);
+  const openPanel = useCallback(() => {
+    console.log("[SaldoOperavelCard] openPanel called, setting isPanelOpen to true");
+    setIsPanelOpen(true);
+  }, []);
   const closePanel = useCallback(() => {
     setIsPanelOpen(false);
     setSearchTerm("");
@@ -192,8 +195,70 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   const hasBonus = saldoBonus > 0;
   const casasComRollover = casasComSaldo.filter(c => c.hasRollover).length;
 
-  // Conteúdo do detalhamento por casa
-  const CasasBreakdown = () => (
+  // Inline trigger for compact variant
+  const compactTrigger = (
+    <div
+      className="px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 flex flex-col items-center justify-center text-center cursor-pointer group"
+      onClick={openPanel}
+    >
+      <div className="flex items-center justify-center gap-2">
+        <Wallet className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium font-bold text-primary">
+          {formatCurrency(saldoOperavel)}
+        </span>
+        {hasCasas && (
+          <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform group-hover:text-primary" />
+        )}
+      </div>
+    </div>
+  );
+
+  // Inline trigger for default variant
+  const defaultTrigger = (
+    <div
+      className="flex flex-col items-center justify-center text-center cursor-pointer group"
+      onClick={openPanel}
+    >
+      <div className="flex items-center justify-center gap-2">
+        <span className="text-lg md:text-2xl font-bold text-primary">
+          {formatCurrency(saldoOperavel)}
+        </span>
+        {casasComRollover > 0 && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Gift className="h-4 w-4 text-amber-500" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">{casasComRollover} casa{casasComRollover !== 1 ? 's' : ''} com rollover ativo</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+        {hasCasas && (
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:text-primary" />
+        )}
+      </div>
+      {saldoOperavel > 0 && (
+        <span className="text-xs text-muted-foreground">
+          {conversaoVisual.label} {conversaoVisual.valor.toLocaleString("pt-BR", { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+          })}
+        </span>
+      )}
+    </div>
+  );
+
+  const subtitleText = (
+    <p className="text-[10px] md:text-xs text-muted-foreground mt-1 text-center">
+      {totalCasas} casa{totalCasas !== 1 ? 's' : ''}
+      {casasComRollover > 0 && ` • ${casasComRollover} com rollover`}
+    </p>
+  );
+
+  // Casas breakdown content (inline, not a component)
+  const casasBreakdownContent = (
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2 pb-2 border-b border-border/50">
@@ -327,64 +392,10 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     </div>
   );
 
-  // Trigger content
-  const TriggerContent = ({ isCompact = false }: { isCompact?: boolean }) => (
-    <div 
-      className={cn(
-        "flex flex-col items-center justify-center text-center cursor-pointer group",
-        isCompact && "px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20"
-      )}
-      onClick={openPanel}
-    >
-      <div className="flex items-center justify-center gap-2">
-        {isCompact && <Wallet className="h-4 w-4 text-primary" />}
-        <span className={cn(
-          "font-bold text-primary",
-          isCompact ? "text-sm font-medium" : "text-lg md:text-2xl"
-        )}>
-          {formatCurrency(saldoOperavel)}
-        </span>
-        {casasComRollover > 0 && !isCompact && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Gift className="h-4 w-4 text-amber-500" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">{casasComRollover} casa{casasComRollover !== 1 ? 's' : ''} com rollover ativo</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-        {hasCasas && (
-          <ChevronDown className={cn(
-            "h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:text-primary",
-            isCompact && "h-3 w-3"
-          )} />
-        )}
-      </div>
-      {!isCompact && saldoOperavel > 0 && (
-        <span className="text-xs text-muted-foreground">
-          {conversaoVisual.label} {conversaoVisual.valor.toLocaleString("pt-BR", { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
-          })}
-        </span>
-      )}
-    </div>
-  );
-
-  const SubtitleText = () => (
-    <p className="text-[10px] md:text-xs text-muted-foreground mt-1 text-center">
-      {totalCasas} casa{totalCasas !== 1 ? 's' : ''}
-      {casasComRollover > 0 && ` • ${casasComRollover} com rollover`}
-    </p>
-  );
-
   // Overlay panel (shared across all variants)
   const overlayPanel = (
     <SaldoOverlayPanel isOpen={isPanelOpen} onClose={closePanel}>
-      <CasasBreakdown />
+      {casasBreakdownContent}
     </SaldoOverlayPanel>
   );
 
@@ -392,7 +403,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   if (variant === "compact") {
     return (
       <>
-        <TriggerContent isCompact />
+        {compactTrigger}
         {overlayPanel}
       </>
     );
@@ -415,8 +426,8 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           </Badge>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center p-2 pt-0 md:p-3 md:pt-0">
-          <TriggerContent />
-          <SubtitleText />
+          {defaultTrigger}
+          {subtitleText}
         </CardContent>
       </Card>
       {overlayPanel}
