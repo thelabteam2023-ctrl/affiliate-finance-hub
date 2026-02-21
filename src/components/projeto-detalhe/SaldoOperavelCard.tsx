@@ -334,7 +334,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         "flex flex-col items-center justify-center text-center cursor-pointer group",
         isCompact && "px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20"
       )}
-      onClick={hasCasas ? openPanel : undefined}
+      onClick={openPanel}
     >
       <div className="flex items-center justify-center gap-2">
         {isCompact && <Wallet className="h-4 w-4 text-primary" />}
