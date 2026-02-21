@@ -733,7 +733,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const apostasListaAtual = apostasSubTab === "abertas" ? apostasAbertas : apostasHistorico;
   
   const apostasFiltradas = useMemo(() => apostasListaAtual.filter(a => {
-    const matchesSearch = a.evento.toLowerCase().includes(searchTerm.toLowerCase()) || a.esporte.toLowerCase().includes(searchTerm.toLowerCase()) || a.selecao.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = a.evento.toLowerCase().includes(searchTerm.toLowerCase()) || a.esporte.toLowerCase().includes(searchTerm.toLowerCase()) || a.selecao.toLowerCase().includes(searchTerm.toLowerCase()) || (a.bookmaker_nome || '').toLowerCase().includes(searchTerm.toLowerCase()) || (a.pernas || []).some((p: any) => (p?.bookmaker_nome || '').toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
     return matchesSearch && matchesResultado;
   }), [apostasListaAtual, searchTerm, tabFilters.resultados]);

@@ -1000,9 +1000,14 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       const evento = ('evento' in d ? d.evento : '') || '';
       const esporte = ('esporte' in d ? d.esporte : '') || '';
       const selecao = ('selecao' in d ? d.selecao : '') || '';
+      const bookmakerNome = ('bookmaker_nome' in d ? (d as any).bookmaker_nome : '') || '';
+      const pernas = ('pernas' in d ? (d as any).pernas : null);
+      const matchesPernas = Array.isArray(pernas) && pernas.some((p: any) => (p?.bookmaker_nome || '').toLowerCase().includes(term));
       return evento.toLowerCase().includes(term) || 
              esporte.toLowerCase().includes(term) || 
-             selecao.toLowerCase().includes(term);
+             selecao.toLowerCase().includes(term) ||
+             bookmakerNome.toLowerCase().includes(term) ||
+             matchesPernas;
     });
   }, [apostasSubTab, apostasAbertasList, apostasHistoricoList, searchTerm]);
 

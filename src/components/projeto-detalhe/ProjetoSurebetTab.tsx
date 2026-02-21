@@ -833,11 +833,16 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     const lista = operacoesSubTab === "abertas" ? surebetsAbertas : surebetsHistorico;
     if (!searchTerm.trim()) return lista;
     const term = searchTerm.toLowerCase();
-    return lista.filter(s => 
-      (s.evento || '').toLowerCase().includes(term) ||
-      (s.esporte || '').toLowerCase().includes(term) ||
-      (s.modelo || '').toLowerCase().includes(term)
-    );
+    return lista.filter(s => {
+      const matchesBasic = (s.evento || '').toLowerCase().includes(term) ||
+        (s.esporte || '').toLowerCase().includes(term) ||
+        (s.modelo || '').toLowerCase().includes(term);
+      if (matchesBasic) return true;
+      // Busca por nome de casa (bookmaker) - simples ou pernas
+      if ((s.bookmaker_nome || '').toLowerCase().includes(term)) return true;
+      if (s.pernas?.some(p => (p.bookmaker_nome || '').toLowerCase().includes(term))) return true;
+      return false;
+    });
   }, [operacoesSubTab, surebetsAbertas, surebetsHistorico, searchTerm]);
 
   // Navigation handlers
