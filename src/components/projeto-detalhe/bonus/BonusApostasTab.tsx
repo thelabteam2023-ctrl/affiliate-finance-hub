@@ -1047,6 +1047,8 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}
+              searchQuery={searchTerm}
+              onSearchChange={setSearchTerm}
             />
           </div>
           <div className="flex flex-wrap items-center gap-4">

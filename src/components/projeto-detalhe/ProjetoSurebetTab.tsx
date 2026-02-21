@@ -219,6 +219,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   
   // Sub-abas Abertas/Histórico - usa tipo padronizado
   const [operacoesSubTab, setOperacoesSubTab] = useState<HistorySubTab>("abertas");
+  const [searchTerm, setSearchTerm] = useState("");
   
   // Ordenação Por Casa
   const [porCasaSort, setPorCasaSort] = useState<SortField>("volume");
@@ -827,8 +828,17 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     }
   }, [loading, surebetsAbertas.length, surebetsHistorico.length]);
   
-  // Lista baseada na sub-aba selecionada
-  const surebetsListaAtual = operacoesSubTab === "abertas" ? surebetsAbertas : surebetsHistorico;
+  // Lista baseada na sub-aba selecionada + busca por texto
+  const surebetsListaAtual = useMemo(() => {
+    const lista = operacoesSubTab === "abertas" ? surebetsAbertas : surebetsHistorico;
+    if (!searchTerm.trim()) return lista;
+    const term = searchTerm.toLowerCase();
+    return lista.filter(s => 
+      (s.evento || '').toLowerCase().includes(term) ||
+      (s.esporte || '').toLowerCase().includes(term) ||
+      (s.modelo || '').toLowerCase().includes(term)
+    );
+  }, [operacoesSubTab, surebetsAbertas, surebetsHistorico, searchTerm]);
 
   // Navigation handlers
   const handleModeToggle = () => {
@@ -1087,6 +1097,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}
+              searchQuery={searchTerm}
+              onSearchChange={setSearchTerm}
               extraActions={
                 <ExportMenu
                   getData={() => surebetsListaAtual.map(s => 

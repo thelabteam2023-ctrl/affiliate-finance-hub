@@ -829,6 +829,8 @@ export function ProjetoValueBetTab({
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}
+              searchQuery={searchTerm}
+              onSearchChange={setSearchTerm}
               extraActions={
                 <ExportMenu
                   getData={() => apostasFiltradas.map(a => transformApostaToExport({
