@@ -36,6 +36,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ConfirmacaoSenhaDialog } from "@/components/ui/confirmacao-senha-dialog";
 import {
   Gift,
   Plus,
@@ -217,7 +218,9 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [captchaDialogOpen, setCaptchaDialogOpen] = useState(false);
   const [bonusToDelete, setBonusToDelete] = useState<string | null>(null);
+  const [bonusToDeleteIsCredited, setBonusToDeleteIsCredited] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const handleSubmit = async (data: BonusFormData): Promise<boolean> => {
@@ -233,13 +236,25 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     setDialogOpen(true);
   };
 
+  const handleRequestDelete = (bonusId: string, isCredited: boolean) => {
+    setBonusToDelete(bonusId);
+    setBonusToDeleteIsCredited(isCredited);
+    if (isCredited) {
+      setCaptchaDialogOpen(true);
+    } else {
+      setDeleteDialogOpen(true);
+    }
+  };
+
   const handleDelete = async () => {
     if (!bonusToDelete) return;
     setDeleting(true);
     await deleteBonus(bonusToDelete);
     setDeleting(false);
     setDeleteDialogOpen(false);
+    setCaptchaDialogOpen(false);
     setBonusToDelete(null);
+    setBonusToDeleteIsCredited(false);
   };
 
   const summary = getSummary();
@@ -591,10 +606,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => {
-                              setBonusToDelete(bonus.id);
-                              setDeleteDialogOpen(true);
-                            }}
+                            onClick={() => handleRequestDelete(bonus.id, bonus.status === "credited")}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -627,7 +639,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
         onSubmit={handleSubmit}
       />
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation - Simple (non-credited) */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -648,6 +660,17 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete Confirmation - CAPTCHA (credited bonus, impacts balance) */}
+      <ConfirmacaoSenhaDialog
+        open={captchaDialogOpen}
+        onOpenChange={setCaptchaDialogOpen}
+        onConfirm={handleDelete}
+        title="Excluir Bônus Creditado"
+        description="Este bônus já foi creditado no saldo. A exclusão irá estornar o valor automaticamente. Digite o código para confirmar."
+        confirmLabel={deleting ? "Excluindo..." : "Excluir e Estornar"}
+        variant="danger"
+      />
     </div>
   );
 }
