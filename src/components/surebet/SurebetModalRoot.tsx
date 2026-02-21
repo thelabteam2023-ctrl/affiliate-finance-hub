@@ -242,9 +242,11 @@ export function SurebetModalRoot({
   } = useSurebetPrintImport();
 
   // Bookmakers disponíveis (base - sem ajuste intra-form)
+  // Em modo edição, incluir TODOS os bookmakers para que os já selecionados nas pernas apareçam
   const bookmakersDisponiveis = useMemo(() => {
+    if (isEditing) return bookmakerSaldos;
     return bookmakerSaldos.filter((bk) => bk.saldo_operavel >= 0.50);
-  }, [bookmakerSaldos]);
+  }, [bookmakerSaldos, isEditing]);
 
   /**
    * Retorna bookmakers com saldos ajustados para uma perna específica.
