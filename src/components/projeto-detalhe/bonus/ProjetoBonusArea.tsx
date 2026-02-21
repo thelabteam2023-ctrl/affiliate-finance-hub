@@ -101,7 +101,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
         {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} dateRange={dateRange} isSingleDayPeriod={isSingleDayPeriod} periodFilter={periodFilterComponent} />}
-        {activeTab !== "visao-geral" && periodFilterComponent}
+        {activeTab === "bookmakers" && periodFilterComponent}
         {activeTab === "bookmakers" && <BonusBookmakersTab projetoId={projetoId} />}
         {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} dateRange={dateRange} />}
       </div>
