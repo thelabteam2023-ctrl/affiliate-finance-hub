@@ -375,8 +375,8 @@ export default function ProjetoDetalhe() {
       return;
     }
     setTopBarContent(
-      <div className="flex items-center justify-center flex-1 min-w-0 py-1">
-        {/* All project context centered */}
+      <div className="relative flex items-center justify-center flex-1 min-w-0 py-1">
+        {/* CENTER: Project context */}
         <div className="flex items-center gap-2 min-w-0">
           <Button variant="ghost" size="icon" className="flex-shrink-0 h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => navigate("/projetos")}>
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -395,9 +395,6 @@ export default function ProjetoDetalhe() {
                 Crypto
               </Badge>
             )}
-            <Badge className={`${getStatusColor(projeto.status)} text-[10px] px-1.5 py-0`}>
-              {getStatusLabel(projeto.status)}
-            </Badge>
             {diasCiclo !== null && (
               <>
                 <span className="text-muted-foreground/40 hidden md:inline">•</span>
@@ -408,39 +405,39 @@ export default function ProjetoDetalhe() {
               </>
             )}
           </div>
+        </div>
 
-          {/* Actions inline */}
-          <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => { if (id) toggleFavorite(id); }}
-                  >
-                    <Star 
-                      className={`h-3.5 w-3.5 transition-colors ${
-                        id && isFavorite(id) 
-                          ? "fill-amber-400 text-amber-400" 
-                          : "text-muted-foreground hover:text-amber-400"
-                      }`} 
-                    />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{id && isFavorite(id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            {canEdit('projetos', 'projetos.edit') && (
-              <Button variant="ghost" size="sm" className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground" onClick={() => setEditDialogOpen(true)}>
-                <Edit className="mr-1 h-3 w-3" />
-                Editar
-              </Button>
-            )}
-          </div>
+        {/* RIGHT: Actions (absolute to not affect centering) */}
+        <div className="absolute right-0 flex items-center gap-1 flex-shrink-0">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => { if (id) toggleFavorite(id); }}
+                >
+                  <Star 
+                    className={`h-3.5 w-3.5 transition-colors ${
+                      id && isFavorite(id) 
+                        ? "fill-amber-400 text-amber-400" 
+                        : "text-muted-foreground hover:text-amber-400"
+                    }`} 
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{id && isFavorite(id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {canEdit('projetos', 'projetos.edit') && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground" onClick={() => setEditDialogOpen(true)}>
+              <Edit className="mr-1 h-3 w-3" />
+              Editar
+            </Button>
+          )}
         </div>
       </div>
     );
