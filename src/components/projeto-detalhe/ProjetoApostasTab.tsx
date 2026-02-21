@@ -304,6 +304,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas" | "surebets">("todas");
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [apostasSubTab, setApostasSubTab] = useState<HistorySubTab>("abertas");
+  const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMultiplaOpen, setDialogMultiplaOpen] = useState(false);
   const [dialogSurebetOpen, setDialogSurebetOpen] = useState(false);
@@ -989,8 +990,21 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     }
   }, [loading, apostasAbertasList.length, apostasHistoricoList.length]);
   
-  // Lista final baseada na sub-aba selecionada
-  const apostasUnificadas = apostasSubTab === "abertas" ? apostasAbertasList : apostasHistoricoList;
+  // Lista final baseada na sub-aba selecionada + busca por texto
+  const apostasUnificadas = useMemo(() => {
+    const lista = apostasSubTab === "abertas" ? apostasAbertasList : apostasHistoricoList;
+    if (!searchTerm.trim()) return lista;
+    const term = searchTerm.toLowerCase();
+    return lista.filter(u => {
+      const d = u.data;
+      const evento = ('evento' in d ? d.evento : '') || '';
+      const esporte = ('esporte' in d ? d.esporte : '') || '';
+      const selecao = ('selecao' in d ? d.selecao : '') || '';
+      return evento.toLowerCase().includes(term) || 
+             esporte.toLowerCase().includes(term) || 
+             selecao.toLowerCase().includes(term);
+    });
+  }, [apostasSubTab, apostasAbertasList, apostasHistoricoList, searchTerm]);
 
   // Contadores por contexto
   const contadores = useMemo(() => {
@@ -1198,6 +1212,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}
+              searchQuery={searchTerm}
+              onSearchChange={setSearchTerm}
               extraActions={
                 <ExportMenu
                   getData={() => apostasUnificadas.map(u => {
