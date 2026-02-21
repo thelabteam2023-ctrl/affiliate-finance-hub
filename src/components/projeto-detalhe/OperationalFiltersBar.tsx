@@ -48,6 +48,7 @@ interface BookmakerOption {
   id: string;
   nome: string;
   parceiroNome?: string;
+  instanceIdentifier?: string | null;
 }
 
 interface ParceiroOption {
@@ -104,7 +105,7 @@ export function OperationalFiltersBar({
       // Buscar bookmakers
       const { data: bkData } = await supabase
         .from("bookmakers")
-        .select("id, nome, parceiro:parceiros(id, nome)")
+        .select("id, nome, instance_identifier, parceiro:parceiros(id, nome)")
         .eq("projeto_id", projetoId)
         .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
 
@@ -113,6 +114,7 @@ export function OperationalFiltersBar({
           id: bk.id,
           nome: bk.nome,
           parceiroNome: bk.parceiro?.nome,
+          instanceIdentifier: bk.instance_identifier,
         }));
         setBookmakers(bkOptions);
 
@@ -154,7 +156,8 @@ export function OperationalFiltersBar({
     if (filters.bookmakerIds.length === 0) return "Casas";
     if (filters.bookmakerIds.length === 1) {
       const bk = bookmakers.find(b => b.id === filters.bookmakerIds[0]);
-      return bk?.nome || "1 casa";
+      const label = bk ? (bk.instanceIdentifier ? `${bk.nome} (${bk.instanceIdentifier})` : bk.nome) : "1 casa";
+      return label;
     }
     return `${filters.bookmakerIds.length} casas`;
   }, [filters.bookmakerIds, bookmakers]);
@@ -298,7 +301,12 @@ export function OperationalFiltersBar({
                         {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm truncate">{bk.nome}</div>
+                        <div className="text-sm truncate">
+                          {bk.nome}
+                          {bk.instanceIdentifier && (
+                            <span className="text-primary/80 ml-1 text-xs normal-case">({bk.instanceIdentifier})</span>
+                          )}
+                        </div>
                         {bk.parceiroNome && (
                           <div className="text-xs text-muted-foreground truncate">
                             {bk.parceiroNome}
