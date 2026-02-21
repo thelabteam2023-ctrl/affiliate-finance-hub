@@ -455,29 +455,31 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="ativos" className="space-y-4">
-        {/* KPIs - Grid reorganizada: Painel de Relacionamentos (2 cols) + Saldo Operável + Delta Cambial */}
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {/* Painel de Relacionamentos - ocupa 2 colunas */}
+      <TabsContent value="ativos" className="space-y-3">
+        {/* KPIs - Faixa compacta horizontal */}
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch">
+          {/* Relacionamentos compacto */}
           <ContasNoProjetoCard 
             projetoId={projetoId} 
             hasForeignCurrency={consolidatedTotals.hasForeignCurrency} 
           />
 
-          {/* Card Saldo Operável */}
-          <SaldoOperavelCard projetoId={projetoId} />
+          {/* Saldo Operável - mantém destaque mas compacto */}
+          <div className="flex-shrink-0">
+            <SaldoOperavelCard projetoId={projetoId} />
+          </div>
 
-          {/* Delta Cambial - aparece apenas se houver moeda estrangeira */}
+          {/* Cotações compactas */}
           {consolidatedTotals.hasForeignCurrency && (
             <DeltaCambialCard
               projetoId={projetoId}
               cotacaoTrabalho={cotacaoTrabalho}
               cotacaoTrabalhoEur={cotacaoTrabalhoEur}
               cotacaoTrabalhoGbp={cotacaoTrabalhoGbp}
-               cotacaoTrabalhoMyr={cotacaoTrabalhoMyr}
-               cotacaoTrabalhoMxn={cotacaoTrabalhoMxn}
-               cotacaoTrabalhoArs={cotacaoTrabalhoArs}
-               cotacaoTrabalhoCop={cotacaoTrabalhoCop}
+              cotacaoTrabalhoMyr={cotacaoTrabalhoMyr}
+              cotacaoTrabalhoMxn={cotacaoTrabalhoMxn}
+              cotacaoTrabalhoArs={cotacaoTrabalhoArs}
+              cotacaoTrabalhoCop={cotacaoTrabalhoCop}
               onCotacaoUpdated={fetchCotacaoTrabalho}
             />
           )}

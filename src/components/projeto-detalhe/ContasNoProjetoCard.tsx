@@ -1,47 +1,17 @@
 /**
- * Painel de Relacionamentos do Projeto
+ * Painel de Relacionamentos do Projeto - Versão Compacta
  * 
- * Este card substitui os antigos cards separados e consolida:
- * - Contas no Projeto
- * - Parceiros Únicos  
- * - Bônus Creditados (como indicadores)
- * 
- * ESTRUTURA:
- * 
- * BLOCO A — Estado Atual:
- * - Contas ativas / limitadas
- * - Parceiros ativos
- * 
- * BLOCO B — Histórico do Projeto (não regressivo):
- * - Contas já utilizadas
- * - Contas já limitadas
- * - Parceiros únicos que já passaram
- * 
- * BLOCO C — Indicadores Operacionais:
- * - Casas com bônus
- * - Contas com bônus
- * - Parceiros com contas vinculadas
+ * Exibe KPIs inline horizontais: Contas | Limitadas | Parceiros
+ * Com popover sob demanda para histórico e indicadores operacionais.
  */
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { 
   Link2, 
   History, 
   AlertTriangle, 
@@ -50,35 +20,85 @@ import {
   Building2,
   TrendingUp,
   Globe,
-  HelpCircle,
   Info,
-  ChevronDown,
-  ChevronUp
+  X
 } from "lucide-react";
 import { useProjetoHistoricoContas } from "@/hooks/useProjetoHistoricoContas";
+import { createPortal } from "react-dom";
 
 interface ContasNoProjetoCardProps {
   projetoId: string;
   hasForeignCurrency?: boolean;
 }
 
+/** Overlay centralizado para detalhes do Painel de Relacionamentos */
+function RelacionamentosOverlay({
+  isOpen,
+  onClose,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => {
+      document.body.style.overflow = orig;
+      document.removeEventListener("keydown", handler);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9998] flex items-center justify-center"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ background: "rgba(0,0,0,0.45)" }}
+    >
+      <div
+        className="relative bg-background border border-border rounded-xl shadow-2xl flex flex-col"
+        style={{ width: "min(560px, 90vw)", maxHeight: "80vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 h-7 w-7 z-10"
+          onClick={onClose}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+        <div className="overflow-y-auto p-5 pr-10">
+          {children}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export function ContasNoProjetoCard({ projetoId, hasForeignCurrency = false }: ContasNoProjetoCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  
+  const [isOpen, setIsOpen] = useState(false);
+  const openPanel = useCallback(() => setIsOpen(true), []);
+  const closePanel = useCallback(() => setIsOpen(false), []);
+
   const {
-    // BLOCO A
     contasAtuais,
     contasAtivas,
     contasLimitadas,
     parceirosAtivos,
-    // BLOCO B
     historicoTotalContas,
     historicoContasLimitadas,
     historicoParceirosUnicos,
     historicoContasLista,
     historicoContasLimitadasLista,
     historicoParceirosLista,
-    // BLOCO C
     casasComBonus,
     contasComBonus,
     parceirosComContasVinculadas,
@@ -90,46 +110,72 @@ export function ContasNoProjetoCard({ projetoId, hasForeignCurrency = false }: C
 
   if (isLoading) {
     return (
-      <Card className="col-span-2">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <Skeleton className="h-4 w-36" />
-          <Skeleton className="h-4 w-4" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
-          </div>
-          <Skeleton className="h-px w-full" />
-          <Skeleton className="h-12" />
-          <Skeleton className="h-px w-full" />
-          <Skeleton className="h-8" />
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border/50 bg-card">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-16" />
+      </div>
     );
   }
 
   return (
-    <TooltipProvider delayDuration={200}>
-      <Card className="col-span-2">
-        <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            Painel de Relacionamentos
-          </CardTitle>
-          {hasForeignCurrency && (
-            <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-400">
-              <Globe className="h-2.5 w-2.5 mr-1" />
-              Multi-moeda
-            </Badge>
-          )}
-        </CardHeader>
+    <>
+      {/* Compact inline strip */}
+      <div 
+        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50 bg-card cursor-pointer hover:bg-muted/30 transition-colors group"
+        onClick={openPanel}
+      >
+        <Building2 className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
         
-        <CardContent className="space-y-4">
-          {/* ============ BLOCO A — Estado Atual ============ */}
+        {hasForeignCurrency && (
+          <Badge variant="outline" className="text-[9px] px-1 py-0 border-blue-500/30 text-blue-400 flex-shrink-0">
+            <Globe className="h-2.5 w-2.5 mr-0.5" />
+            Multi
+          </Badge>
+        )}
+
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-muted-foreground">Contas</span>
+          <span className="font-semibold text-foreground">{contasAtuais}</span>
+        </div>
+
+        <span className="text-border">|</span>
+
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-muted-foreground">Limitadas</span>
+          <span className={`font-semibold ${contasLimitadas > 0 ? 'text-yellow-400' : 'text-foreground'}`}>
+            {contasLimitadas}
+          </span>
+        </div>
+
+        <span className="text-border">|</span>
+
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-muted-foreground">Parceiros</span>
+          <span className="font-semibold text-foreground">{parceirosAtivos}</span>
+        </div>
+
+        <Info className="h-3 w-3 text-muted-foreground/50 ml-auto group-hover:text-muted-foreground transition-colors flex-shrink-0" />
+      </div>
+
+      {/* Overlay panel with full details */}
+      <RelacionamentosOverlay isOpen={isOpen} onClose={closePanel}>
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold">Painel de Relacionamentos</h3>
+            {hasForeignCurrency && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-400">
+                <Globe className="h-2.5 w-2.5 mr-1" />
+                Multi-moeda
+              </Badge>
+            )}
+          </div>
+
+          {/* Estado Atual */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Contas */}
-            <div className="flex flex-col items-center justify-center text-center space-y-1">
+            <div className="flex flex-col items-center justify-center text-center space-y-1 p-3 rounded-lg bg-muted/20">
               <div className="flex items-center gap-1.5">
                 <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground">Contas</span>
@@ -141,9 +187,7 @@ export function ContasNoProjetoCard({ projetoId, hasForeignCurrency = false }: C
                 <span className="text-yellow-400">{contasLimitadas} limitadas</span>
               </div>
             </div>
-            
-            {/* Parceiros */}
-            <div className="flex flex-col items-center justify-center text-center space-y-1">
+            <div className="flex flex-col items-center justify-center text-center space-y-1 p-3 rounded-lg bg-muted/20">
               <div className="flex items-center gap-1.5">
                 <Users className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground">Parceiros</span>
@@ -153,264 +197,99 @@ export function ContasNoProjetoCard({ projetoId, hasForeignCurrency = false }: C
             </div>
           </div>
 
-          {/* Collapsible para Histórico e Operacional */}
-          <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-            <CollapsibleTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full h-7 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30"
-              >
-                {isExpanded ? (
-                  <>
-                    <ChevronUp className="h-3.5 w-3.5 mr-1" />
-                    Mostrar menos
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-3.5 w-3.5 mr-1" />
-                    Mostrar mais
-                  </>
-                )}
-              </Button>
-            </CollapsibleTrigger>
-            
-            <CollapsibleContent className="space-y-4 pt-2">
-              <Separator className="bg-border/50" />
+          <Separator className="bg-border/50" />
 
-              {/* ============ BLOCO B — Histórico do Projeto ============ */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-center gap-1.5">
-                  <History className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">Histórico</span>
-                </div>
-                
-                <div className="flex flex-wrap justify-center gap-2">
-                  {/* Contas já utilizadas - com tooltip */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge 
-                        variant="outline" 
-                        className="text-[10px] px-2 py-0.5 bg-muted/30 border-muted-foreground/20 text-muted-foreground font-normal cursor-pointer hover:bg-muted/50 transition-colors"
-                      >
-                        {historicoTotalContas} contas já utilizadas
-                        <Info className="h-2.5 w-2.5 ml-1 opacity-50" />
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs p-0">
-                      <div className="p-2 border-b border-border/50">
-                        <p className="text-xs font-medium">Histórico de contas</p>
-                        <p className="text-[10px] text-muted-foreground">Todas as contas que já passaram pelo projeto</p>
-                      </div>
-                      <ScrollArea className="max-h-48">
-                        <div className="p-2 space-y-1">
-                          {historicoContasLista.length > 0 ? (
-                            historicoContasLista.map((conta) => (
-                              <div key={conta.id} className="flex items-center justify-between text-[10px] py-0.5">
-                                <span className="font-medium">{conta.nome}</span>
-                                <span className="text-muted-foreground ml-2">
-                                  {conta.parceiroNome ? `— ${conta.parceiroNome}` : ""}
-                                </span>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-[10px] text-muted-foreground italic">Nenhum histórico</p>
-                          )}
-                        </div>
-                      </ScrollArea>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  {/* Contas já limitadas - com tooltip */}
-                  {historicoContasLimitadas > 0 && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Badge 
-                          variant="outline" 
-                          className="text-[10px] px-2 py-0.5 bg-destructive/10 border-destructive/20 text-destructive/80 font-normal cursor-pointer hover:bg-destructive/20 transition-colors"
-                        >
-                          <AlertTriangle className="h-2.5 w-2.5 mr-1" />
-                          {historicoContasLimitadas} já foram limitadas
-                          <Info className="h-2.5 w-2.5 ml-1 opacity-50" />
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="max-w-xs p-0">
-                        <div className="p-2 border-b border-border/50">
-                          <p className="text-xs font-medium">Contas que já foram limitadas</p>
-                          <p className="text-[10px] text-muted-foreground">Histórico de limitações no projeto</p>
-                        </div>
-                        <ScrollArea className="max-h-48">
-                          <div className="p-2 space-y-1">
-                            {historicoContasLimitadasLista.length > 0 ? (
-                              historicoContasLimitadasLista.map((conta) => (
-                                <div key={conta.id} className="flex items-center justify-between text-[10px] py-0.5">
-                                  <span className="font-medium text-destructive/80">{conta.nome}</span>
-                                  <span className="text-muted-foreground ml-2">
-                                    {conta.parceiroNome ? `— ${conta.parceiroNome}` : ""}
-                                  </span>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-[10px] text-muted-foreground italic">Nenhuma conta limitada</p>
+          {/* Histórico */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5">
+              <History className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Histórico</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-muted/30 border-muted-foreground/20 text-muted-foreground font-normal">
+                {historicoTotalContas} contas já utilizadas
+              </Badge>
+              {historicoContasLimitadas > 0 && (
+                <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-destructive/10 border-destructive/20 text-destructive/80 font-normal">
+                  <AlertTriangle className="h-2.5 w-2.5 mr-1" />
+                  {historicoContasLimitadas} já foram limitadas
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-muted/30 border-muted-foreground/20 text-muted-foreground font-normal">
+                {historicoParceirosUnicos} parceiros únicos
+              </Badge>
+            </div>
+            <p className="text-[10px] text-muted-foreground/70 italic">
+              Estes contadores nunca diminuem — representam o passado operacional do projeto.
+            </p>
+          </div>
+
+          <Separator className="bg-border/50" />
+
+          {/* Operacional */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Operacional</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-col items-center justify-center gap-1 bg-muted/20 rounded-md px-2 py-2">
+                <Gift className="h-3.5 w-3.5 text-primary" />
+                <div className="text-sm font-semibold">{casasComBonus}</div>
+                <div className="text-[10px] text-muted-foreground leading-tight text-center">casas c/ bônus</div>
+              </div>
+              <div className="flex flex-col items-center justify-center gap-1 bg-muted/20 rounded-md px-2 py-2">
+                <Link2 className="h-3.5 w-3.5 text-primary" />
+                <div className="text-sm font-semibold">{contasComBonus}</div>
+                <div className="text-[10px] text-muted-foreground leading-tight text-center">contas c/ bônus</div>
+              </div>
+              <div className="flex flex-col items-center justify-center gap-1 bg-muted/20 rounded-md px-2 py-2">
+                <Users className="h-3.5 w-3.5 text-accent-foreground" />
+                <div className="text-sm font-semibold">{parceirosComContasVinculadas}</div>
+                <div className="text-[10px] text-muted-foreground leading-tight text-center">parceiros ativos</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Listas detalhadas */}
+          {(historicoContasLista.length > 0 || parceirosAtivosLista.length > 0) && (
+            <>
+              <Separator className="bg-border/50" />
+              <div className="grid grid-cols-2 gap-4">
+                {historicoContasLista.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-medium text-muted-foreground">Contas no projeto</span>
+                    <ScrollArea className="max-h-32">
+                      <div className="space-y-0.5">
+                        {historicoContasLista.slice(0, 20).map((conta) => (
+                          <div key={conta.id} className="flex items-center justify-between text-[10px] py-0.5">
+                            <span className="font-medium truncate">{conta.nome}</span>
+                            {conta.parceiroNome && (
+                              <span className="text-muted-foreground ml-1 truncate">— {conta.parceiroNome}</span>
                             )}
                           </div>
-                        </ScrollArea>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  
-                  {/* Parceiros únicos - com tooltip */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge 
-                        variant="outline" 
-                        className="text-[10px] px-2 py-0.5 bg-muted/30 border-muted-foreground/20 text-muted-foreground font-normal cursor-pointer hover:bg-muted/50 transition-colors"
-                      >
-                        {historicoParceirosUnicos} parceiros únicos
-                        <Info className="h-2.5 w-2.5 ml-1 opacity-50" />
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs p-0">
-                      <div className="p-2 border-b border-border/50">
-                        <p className="text-xs font-medium">Parceiros que já passaram pelo projeto</p>
-                        <p className="text-[10px] text-muted-foreground">Total de contas por parceiro</p>
+                        ))}
                       </div>
-                      <ScrollArea className="max-h-48">
-                        <div className="p-2 space-y-1">
-                          {historicoParceirosLista.length > 0 ? (
-                            historicoParceirosLista.map((parceiro) => (
-                              <div key={parceiro.id} className="flex items-center justify-between text-[10px] py-0.5">
-                                <span className="font-medium">{parceiro.nome}</span>
-                                <span className="text-muted-foreground ml-2">
-                                  — {parceiro.totalContas} conta{parceiro.totalContas !== 1 ? "s" : ""}
-                                </span>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-[10px] text-muted-foreground italic">Nenhum parceiro</p>
-                          )}
-                        </div>
-                      </ScrollArea>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                
-                <p className="text-[10px] text-muted-foreground/70 italic text-center">
-                  Estes contadores nunca diminuem — representam o passado operacional do projeto.
-                </p>
+                    </ScrollArea>
+                  </div>
+                )}
+                {parceirosAtivosLista.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-medium text-muted-foreground">Parceiros</span>
+                    <ScrollArea className="max-h-32">
+                      <div className="space-y-0.5">
+                        {parceirosAtivosLista.map((p) => (
+                          <div key={p.id} className="text-[10px] py-0.5 font-medium">{p.nome}</div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
               </div>
-
-              <Separator className="bg-border/50" />
-
-              {/* ============ BLOCO C — Indicadores Operacionais ============ */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-center gap-1.5">
-                  <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">Operacional</span>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-2">
-                  {/* Casas com bônus */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex flex-col items-center justify-center gap-1 bg-muted/20 rounded-md px-2 py-2 cursor-pointer hover:bg-muted/30 transition-colors">
-                        <Gift className="h-3.5 w-3.5 text-primary" />
-                        <div className="text-sm font-semibold text-center">{casasComBonus}</div>
-                        <div className="text-[10px] text-muted-foreground leading-tight text-center">casas c/ bônus</div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs p-0">
-                      <div className="p-2 border-b border-border/50">
-                        <p className="text-xs font-medium">Casas com bônus ativo</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          Quantidade de casas de apostas que possuem pelo menos uma conta neste projeto com saldo de bônus ou freebet ativo.
-                        </p>
-                      </div>
-                      {casasComBonusLista.length > 0 && (
-                        <ScrollArea className="max-h-32">
-                          <div className="p-2 space-y-1">
-                            {casasComBonusLista.map((casa) => (
-                              <div key={casa.id} className="text-[10px] py-0.5 font-medium">
-                                {casa.nome}
-                              </div>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  {/* Contas com bônus */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex flex-col items-center justify-center gap-1 bg-muted/20 rounded-md px-2 py-2 cursor-pointer hover:bg-muted/30 transition-colors">
-                        <Link2 className="h-3.5 w-3.5 text-primary" />
-                        <div className="text-sm font-semibold text-center">{contasComBonus}</div>
-                        <div className="text-[10px] text-muted-foreground leading-tight text-center">contas c/ bônus</div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs p-0">
-                      <div className="p-2 border-b border-border/50">
-                        <p className="text-xs font-medium">Contas com bônus ativo</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          Quantidade de contas individuais que possuem bônus, freebet ou crédito promocional ativo, mesmo dentro da mesma casa.
-                        </p>
-                      </div>
-                      {contasComBonusLista.length > 0 && (
-                        <ScrollArea className="max-h-32">
-                          <div className="p-2 space-y-1">
-                            {contasComBonusLista.map((conta) => (
-                              <div key={conta.id} className="flex items-center justify-between text-[10px] py-0.5">
-                                <span className="font-medium">{conta.nome}</span>
-                                {conta.parceiroNome && (
-                                  <span className="text-muted-foreground ml-2">— {conta.parceiroNome}</span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  {/* Parceiros ativos */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex flex-col items-center justify-center gap-1 bg-muted/20 rounded-md px-2 py-2 cursor-pointer hover:bg-muted/30 transition-colors">
-                        <Users className="h-3.5 w-3.5 text-accent-foreground" />
-                        <div className="text-sm font-semibold text-center">{parceirosComContasVinculadas}</div>
-                        <div className="text-[10px] text-muted-foreground leading-tight text-center">parceiros ativos</div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs p-0">
-                      <div className="p-2 border-b border-border/50">
-                        <p className="text-xs font-medium">Parceiros ativos</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          Número de parceiros que atualmente possuem pelo menos uma conta vinculada ao projeto.
-                        </p>
-                      </div>
-                      {parceirosAtivosLista.length > 0 && (
-                        <ScrollArea className="max-h-32">
-                          <div className="p-2 space-y-1">
-                            {parceirosAtivosLista.map((parceiro) => (
-                              <div key={parceiro.id} className="flex items-center justify-between text-[10px] py-0.5">
-                                <span className="font-medium">{parceiro.nome}</span>
-                                <span className="text-muted-foreground ml-2">
-                                  — {parceiro.totalContas} conta{parceiro.totalContas !== 1 ? "s" : ""}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </CardContent>
-      </Card>
-    </TooltipProvider>
+            </>
+          )}
+        </div>
+      </RelacionamentosOverlay>
+    </>
   );
 }

@@ -402,10 +402,10 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   return (
     <>
       <Card className="border-primary/30 bg-primary/5">
-        <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-2 p-3 md:p-6">
-          <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5">
+        <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-1 p-2 md:p-3">
+          <CardTitle className="text-xs font-medium flex items-center gap-1.5">
             Saldo Operável
-            <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
+            <Wallet className="h-3.5 w-3.5 text-primary" />
           </CardTitle>
           <Badge 
             variant="outline" 
@@ -414,7 +414,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
             {moedaConsolidacao}
           </Badge>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center p-3 pt-0 md:p-6 md:pt-0">
+        <CardContent className="flex flex-col items-center justify-center p-2 pt-0 md:p-3 md:pt-0">
           <TriggerContent />
           <SubtitleText />
         </CardContent>
