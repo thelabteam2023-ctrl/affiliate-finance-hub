@@ -84,7 +84,9 @@ export function BookmakerSearchableSelectContent({
           className,
         )}
         position="popper"
+        side="bottom"
         sideOffset={4}
+        avoidCollisions={true}
       >
         {/* Search input OUTSIDE viewport so it stays fixed */}
         {showSearch && (
