@@ -251,40 +251,19 @@ export function ContasNoProjetoCard({ projetoId, hasForeignCurrency = false }: C
             </div>
           </div>
 
-          {/* Listas detalhadas */}
-          {(historicoContasLista.length > 0 || parceirosAtivosLista.length > 0) && (
+          {/* Histórico de parceiros */}
+          {historicoParceirosLista.length > 0 && (
             <>
               <Separator className="bg-border/50" />
-              <div className="grid grid-cols-2 gap-4">
-                {historicoContasLista.length > 0 && (
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-medium text-muted-foreground">Contas no projeto</span>
-                    <ScrollArea className="max-h-32">
-                      <div className="space-y-0.5">
-                        {historicoContasLista.slice(0, 20).map((conta) => (
-                          <div key={conta.id} className="flex items-center justify-between text-[10px] py-0.5">
-                            <span className="font-medium truncate">{conta.nome}</span>
-                            {conta.parceiroNome && (
-                              <span className="text-muted-foreground ml-1 truncate">— {conta.parceiroNome}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-medium text-muted-foreground">Parceiros que passaram pelo projeto</span>
+                <ScrollArea className="max-h-32">
+                  <div className="space-y-0.5">
+                    {historicoParceirosLista.map((p) => (
+                      <div key={p.id} className="text-[10px] py-0.5 font-medium">{p.nome}</div>
+                    ))}
                   </div>
-                )}
-                {parceirosAtivosLista.length > 0 && (
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-medium text-muted-foreground">Parceiros</span>
-                    <ScrollArea className="max-h-32">
-                      <div className="space-y-0.5">
-                        {parceirosAtivosLista.map((p) => (
-                          <div key={p.id} className="text-[10px] py-0.5 font-medium">{p.nome}</div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                )}
+                </ScrollArea>
               </div>
             </>
           )}
