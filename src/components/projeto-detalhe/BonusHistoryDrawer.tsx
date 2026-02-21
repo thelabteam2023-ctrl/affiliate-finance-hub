@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ConfirmacaoSenhaDialog } from "@/components/ui/confirmacao-senha-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -147,8 +148,20 @@ export function BonusHistoryDrawer({
   onFinalizeBonus,
 }: BonusHistoryDrawerProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [captchaDialogOpen, setCaptchaDialogOpen] = useState(false);
   const [bonusToDelete, setBonusToDelete] = useState<string | null>(null);
+  const [bonusToDeleteIsCredited, setBonusToDeleteIsCredited] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const handleRequestDelete = (bonusId: string, isCredited: boolean) => {
+    setBonusToDelete(bonusId);
+    setBonusToDeleteIsCredited(isCredited);
+    if (isCredited) {
+      setCaptchaDialogOpen(true);
+    } else {
+      setDeleteDialogOpen(true);
+    }
+  };
 
   const handleDelete = async () => {
     if (!bonusToDelete) return;
@@ -156,7 +169,9 @@ export function BonusHistoryDrawer({
     await onDeleteBonus(bonusToDelete);
     setDeleting(false);
     setDeleteDialogOpen(false);
+    setCaptchaDialogOpen(false);
     setBonusToDelete(null);
+    setBonusToDeleteIsCredited(false);
   };
 
   // Separate active and historical bonuses
@@ -327,10 +342,7 @@ export function BonusHistoryDrawer({
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => {
-                                setBonusToDelete(bonus.id);
-                                setDeleteDialogOpen(true);
-                              }}
+                              onClick={() => handleRequestDelete(bonus.id, bonus.status === "credited")}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -404,10 +416,7 @@ export function BonusHistoryDrawer({
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => {
-                                setBonusToDelete(bonus.id);
-                                setDeleteDialogOpen(true);
-                              }}
+                              onClick={() => handleRequestDelete(bonus.id, bonus.status === "credited")}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -423,7 +432,7 @@ export function BonusHistoryDrawer({
         </SheetContent>
       </Sheet>
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation - Simple (non-credited) */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -444,6 +453,17 @@ export function BonusHistoryDrawer({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete Confirmation - CAPTCHA (credited bonus, impacts balance) */}
+      <ConfirmacaoSenhaDialog
+        open={captchaDialogOpen}
+        onOpenChange={setCaptchaDialogOpen}
+        onConfirm={handleDelete}
+        title="Excluir Bônus Creditado"
+        description="Este bônus já foi creditado no saldo. A exclusão irá estornar o valor automaticamente. Digite o código para confirmar."
+        confirmLabel={deleting ? "Excluindo..." : "Excluir e Estornar"}
+        variant="danger"
+      />
     </>
   );
 }
