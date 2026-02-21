@@ -1,5 +1,4 @@
-import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +9,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   TrendingUp,
   TrendingDown,
   Minus,
@@ -24,14 +18,13 @@ import {
   Check,
   X,
   DollarSign,
-  ChevronDown,
-  ChevronUp,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 import { useCotacoes, CotacaoSourceInfo } from "@/hooks/useCotacoes";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { createPortal } from "react-dom";
 
 interface DeltaCambialCardProps {
   projetoId: string;
@@ -45,11 +38,6 @@ interface DeltaCambialCardProps {
   onCotacaoUpdated?: () => void;
 }
 
-/**
- * Configuração de moedas
- * Nova hierarquia: FastForex (primário) → PTAX (fallback USD/EUR/GBP) → Trabalho
- * Todas as moedas usam FastForex como fonte primária unificada
- */
 const CURRENCY_CONFIG = {
   USD: { symbol: "$", label: "Dólar", field: "cotacao_trabalho", default: 5.30, primary: true, hasPtaxFallback: true },
   EUR: { symbol: "€", label: "Euro", field: "cotacao_trabalho_eur", default: 6.10, primary: true, hasPtaxFallback: true },
@@ -61,6 +49,56 @@ const CURRENCY_CONFIG = {
 } as const;
 
 type CurrencyKey = keyof typeof CURRENCY_CONFIG;
+
+/** Overlay for secondary currencies and editing */
+function CotacoesOverlay({
+  isOpen,
+  onClose,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => {
+      document.body.style.overflow = orig;
+      document.removeEventListener("keydown", handler);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9998] flex items-center justify-center"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ background: "rgba(0,0,0,0.45)" }}
+    >
+      <div
+        className="relative bg-background border border-border rounded-xl shadow-2xl flex flex-col"
+        style={{ width: "min(640px, 90vw)", maxHeight: "80vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 h-7 w-7 z-10"
+          onClick={onClose}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+        <div className="overflow-y-auto p-5 pr-10">{children}</div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 export function DeltaCambialCard({
   projetoId,
@@ -77,9 +115,11 @@ export function DeltaCambialCard({
   const [editingCurrency, setEditingCurrency] = useState<CurrencyKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
-  const [showSecondary, setShowSecondary] = useState(false);
+  const [isOverlayOpen, setIsOverlayOpen] = useState(false);
 
-  // Valores de trabalho para cada moeda (fonte secundária/comparação)
+  const openOverlay = useCallback(() => setIsOverlayOpen(true), []);
+  const closeOverlay = useCallback(() => { setIsOverlayOpen(false); setEditingCurrency(null); }, []);
+
   const workRates: Record<CurrencyKey, number> = {
     USD: cotacaoTrabalho ?? CURRENCY_CONFIG.USD.default,
     EUR: cotacaoTrabalhoEur ?? CURRENCY_CONFIG.EUR.default,
@@ -90,7 +130,6 @@ export function DeltaCambialCard({
     COP: cotacaoTrabalhoCop ?? CURRENCY_CONFIG.COP.default,
   };
 
-  // Cotações oficiais (PTAX ou FastForex)
   const officialRates: Record<CurrencyKey, number> = {
     USD: rates.USDBRL,
     EUR: rates.EURBRL,
@@ -101,7 +140,6 @@ export function DeltaCambialCard({
     COP: rates.COPBRL,
   };
 
-  // Mapear sources para cada moeda
   const sourceMap: Record<CurrencyKey, CotacaoSourceInfo> = {
     USD: sources.usd,
     EUR: sources.eur,
@@ -112,19 +150,12 @@ export function DeltaCambialCard({
     COP: sources.cop,
   };
 
-  /**
-   * Calcular deltas: SEMPRE compara fonte oficial vs trabalho
-   * Nunca trabalho vs trabalho
-   */
   const deltas = useMemo(() => {
     const result: Record<CurrencyKey, number> = {} as Record<CurrencyKey, number>;
     (Object.keys(CURRENCY_CONFIG) as CurrencyKey[]).forEach(key => {
       const official = officialRates[key];
       const work = workRates[key];
       const sourceInfo = sourceMap[key];
-      
-      // Só calcula delta se a fonte oficial estiver disponível
-      // Se estiver em fallback, o delta é 0 (evita comparar trabalho vs trabalho)
       if (sourceInfo.isOfficial && official && work) {
         result[key] = ((official - work) / work) * 100;
       } else {
@@ -134,15 +165,10 @@ export function DeltaCambialCard({
     return result;
   }, [officialRates, workRates, sourceMap]);
 
-  // Classificação do delta
   const getDeltaClassification = (delta: number) => {
     const deltaAbs = Math.abs(delta);
-    if (deltaAbs < 1) {
-      return { color: "text-muted-foreground", bgColor: "bg-muted/50" };
-    }
-    if (deltaAbs < 3) {
-      return { color: "text-primary", bgColor: "bg-primary/10" };
-    }
+    if (deltaAbs < 1) return { color: "text-muted-foreground", bgColor: "bg-muted/50" };
+    if (deltaAbs < 3) return { color: "text-primary", bgColor: "bg-primary/10" };
     return { color: "text-destructive", bgColor: "bg-destructive/10" };
   };
 
@@ -151,187 +177,124 @@ export function DeltaCambialCard({
     setEditingCurrency(currency);
   };
 
-  const handleCancelEdit = () => {
-    setEditingCurrency(null);
-    setEditValue("");
-  };
+  const handleCancelEdit = () => { setEditingCurrency(null); setEditValue(""); };
 
   const handleSaveEdit = async () => {
     if (!editingCurrency) return;
-    
     const newValue = parseFloat(editValue.replace(",", "."));
-    if (isNaN(newValue) || newValue <= 0) {
-      toast.error("Cotação inválida");
-      return;
-    }
-
+    if (isNaN(newValue) || newValue <= 0) { toast.error("Cotação inválida"); return; }
     try {
       setSaving(true);
       const field = CURRENCY_CONFIG[editingCurrency].field;
-      const { error } = await supabase
-        .from("projetos")
-        .update({ [field]: newValue })
-        .eq("id", projetoId);
-
+      const { error } = await supabase.from("projetos").update({ [field]: newValue }).eq("id", projetoId);
       if (error) throw error;
-
       toast.success(`Cotação de trabalho ${editingCurrency} atualizada`);
       setEditingCurrency(null);
       await Promise.resolve(onCotacaoUpdated?.());
     } catch (error: any) {
       toast.error("Erro ao atualizar cotação: " + error.message);
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleUseOfficial = async (currency: CurrencyKey) => {
-    const officialValue = officialRates[currency];
-    
     try {
       setSaving(true);
       const field = CURRENCY_CONFIG[currency].field;
-      const { error } = await supabase
-        .from("projetos")
-        .update({ [field]: officialValue })
-        .eq("id", projetoId);
-
+      const { error } = await supabase.from("projetos").update({ [field]: officialRates[currency] }).eq("id", projetoId);
       if (error) throw error;
-
-      const sourceLabel = sourceMap[currency].label;
-      toast.success(`Cotação ${currency} sincronizada com ${sourceLabel}`);
+      toast.success(`Cotação ${currency} sincronizada`);
       await Promise.resolve(onCotacaoUpdated?.());
     } catch (error: any) {
       toast.error("Erro ao atualizar cotação: " + error.message);
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  // Separar moedas principais e secundárias
-  const primaryCurrencies = (Object.keys(CURRENCY_CONFIG) as CurrencyKey[]).filter(
-    key => CURRENCY_CONFIG[key].primary
-  );
-  const secondaryCurrencies = (Object.keys(CURRENCY_CONFIG) as CurrencyKey[]).filter(
-    key => !CURRENCY_CONFIG[key].primary
-  );
+  const primaryCurrencies = (Object.keys(CURRENCY_CONFIG) as CurrencyKey[]).filter(k => CURRENCY_CONFIG[k].primary);
+  const secondaryCurrencies = (Object.keys(CURRENCY_CONFIG) as CurrencyKey[]).filter(k => !CURRENCY_CONFIG[k].primary);
 
-  const renderCurrencyCard = (key: CurrencyKey, compact = false) => {
+  const renderCompactCurrency = (key: CurrencyKey) => {
     const config = CURRENCY_CONFIG[key];
     const official = officialRates[key];
     const work = workRates[key];
     const delta = deltas[key];
     const sourceInfo = sourceMap[key];
+    const isFallback = sourceInfo?.isFallback ?? true;
+    const displayValue = isFallback ? work : official;
+    const decimals = displayValue < 0.1 ? 4 : 2;
+    const classification = getDeltaClassification(delta);
+    const DeltaIcon = delta > 0 ? TrendingUp : delta < 0 ? TrendingDown : Minus;
+
+    return (
+      <TooltipProvider key={key}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex flex-col items-center gap-0.5 cursor-help">
+              <span className="text-[9px] text-muted-foreground font-medium">{config.symbol} {key}</span>
+              <span className="text-xs font-mono font-bold text-foreground">
+                {cotacaoLoading ? "..." : displayValue.toFixed(decimals)}
+              </span>
+              {!isFallback ? (
+                <Badge variant="outline" className={`${classification.bgColor} ${classification.color} font-mono text-[8px] px-1 py-0`}>
+                  <DeltaIcon className="h-2 w-2 mr-0.5" />
+                  {delta > 0 ? "+" : ""}{delta.toFixed(1)}%
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 font-mono text-[8px] px-1 py-0">
+                  <AlertTriangle className="h-2 w-2 mr-0.5" />
+                  FB
+                </Badge>
+              )}
+              <div className="text-[8px] text-muted-foreground">
+                Trab. {work.toFixed(decimals)}
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="text-xs max-w-[200px]">
+            <p className="font-medium">{config.label}</p>
+            <p>Oficial: R$ {official.toFixed(4)}</p>
+            <p>Trabalho: R$ {work.toFixed(4)}</p>
+            <p>Δ = {delta > 0 ? "+" : ""}{delta.toFixed(2)}%</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
+  const renderFullCurrencyCard = (key: CurrencyKey) => {
+    const config = CURRENCY_CONFIG[key];
+    const official = officialRates[key];
+    const work = workRates[key];
+    const delta = deltas[key];
+    const sourceInfo = sourceMap[key];
+    const isFallback = sourceInfo?.isFallback ?? true;
+    const isPtaxFallback = sourceInfo?.isPtaxFallback ?? false;
+    const isOfficialAvailable = sourceInfo?.isOfficial ?? false;
+    const displayValue = isFallback ? work : official;
+    const decimals = displayValue < 0.1 ? 4 : 2;
     const classification = getDeltaClassification(delta);
     const DeltaIcon = delta > 0 ? TrendingUp : delta < 0 ? TrendingDown : Minus;
     const isEditing = editingCurrency === key;
-    
-    // Verificar se está usando fonte oficial ou fallback
-    const isOfficialAvailable = sourceInfo?.isOfficial ?? false;
-    const isFallback = sourceInfo?.isFallback ?? true;
-    const isPtaxFallback = sourceInfo?.isPtaxFallback ?? false;
-    
-    // Valor exibido no topo: sempre a fonte oficial (ou trabalho se em fallback)
-    const displayValue = isFallback ? work : official;
-    
-    // Determinar label da fonte
-    const getSourceLabel = () => {
-      if (isFallback) return 'Trabalho (fallback)';
-      if (isPtaxFallback) return 'PTAX (fallback)';
-      return 'FastForex';
-    };
-    
-    // Só mostrar botão de sincronizar se:
-    // 1. Fonte oficial disponível
-    // 2. Delta significativo (>=1%)
-    // 3. Não está editando
     const showSyncButton = isOfficialAvailable && Math.abs(delta) >= 1 && !isEditing;
 
-    // Para moedas com valores muito pequenos (ARS, COP), mostrar mais decimais
-    const decimals = displayValue < 0.1 ? 4 : 2;
-
     return (
-      <div 
-        key={key} 
-        className={`flex flex-col gap-1.5 p-2 rounded-lg bg-background/50 border border-border/50 ${compact ? 'p-1.5' : ''}`}
-      >
-        {/* Header: Moeda + Cotação Oficial */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="text-center cursor-help">
-                <div className={`text-muted-foreground font-medium ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
-                  {config.symbol} {key}
-                </div>
-                <div className={`font-mono font-bold text-foreground ${compact ? 'text-sm' : 'text-base'}`}>
-                  {cotacaoLoading ? "..." : displayValue.toFixed(decimals)}
-                </div>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs max-w-[220px]">
-              {isFallback ? (
-                <>
-                  <p className="font-medium text-amber-500 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    Fonte oficial indisponível
-                  </p>
-                  <p className="text-muted-foreground mt-1">
-                    FastForex{config.hasPtaxFallback ? ' e PTAX' : ''} não disponível.
-                    Exibindo cotação de trabalho como fallback.
-                  </p>
-                  <p className="mt-1">Trabalho: R$ {work.toFixed(6)}</p>
-                </>
-              ) : isPtaxFallback ? (
-                <>
-                  <p className="font-medium text-amber-400 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    Usando PTAX como fallback
-                  </p>
-                  <p className="text-muted-foreground mt-1">
-                    FastForex indisponível. Usando PTAX do Banco Central.
-                  </p>
-                  <p className="mt-1">PTAX: R$ {official.toFixed(6)}</p>
-                  <p className="text-muted-foreground">Trabalho: R$ {work.toFixed(6)}</p>
-                  <p className="text-muted-foreground mt-1">
-                    Δ = {delta > 0 ? "+" : ""}{delta.toFixed(2)}%
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="font-medium text-primary">{getSourceLabel()}</p>
-                  <p className="mt-1">Oficial: R$ {official.toFixed(6)}</p>
-                  <p className="text-muted-foreground">Trabalho: R$ {work.toFixed(6)}</p>
-                  <p className="text-muted-foreground mt-1">
-                    Δ = {delta > 0 ? "+" : ""}{delta.toFixed(2)}%
-                  </p>
-                </>
-              )}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        {/* Badge: Fonte + Delta */}
+      <div key={key} className="flex flex-col gap-1.5 p-2.5 rounded-lg bg-muted/20 border border-border/50">
+        <div className="text-center">
+          <div className="text-[10px] text-muted-foreground font-medium">{config.symbol} {key}</div>
+          <div className="font-mono font-bold text-base text-foreground">
+            {cotacaoLoading ? "..." : displayValue.toFixed(decimals)}
+          </div>
+        </div>
         <div className="flex justify-center">
           {isFallback ? (
-            <Badge 
-              variant="outline" 
-              className="bg-amber-500/10 text-amber-600 border-amber-500/30 font-mono text-[9px] px-1.5 py-0"
-            >
-              <AlertTriangle className="h-2 w-2 mr-0.5" />
-              Fallback
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 font-mono text-[9px] px-1.5 py-0">
+              <AlertTriangle className="h-2 w-2 mr-0.5" />Fallback
             </Badge>
           ) : (
-            <Badge 
-              variant="outline" 
-              className={`${classification.bgColor} ${classification.color} font-mono text-[9px] px-1 py-0`}
-            >
-              <DeltaIcon className="h-2 w-2 mr-0.5" />
-              {delta > 0 ? "+" : ""}{delta.toFixed(1)}%
+            <Badge variant="outline" className={`${classification.bgColor} ${classification.color} font-mono text-[9px] px-1 py-0`}>
+              <DeltaIcon className="h-2 w-2 mr-0.5" />{delta > 0 ? "+" : ""}{delta.toFixed(1)}%
             </Badge>
           )}
         </div>
-
-        {/* Cotação de Trabalho - Editável */}
         <div className="border-t border-border/30 pt-1.5">
           <div className="text-[9px] text-muted-foreground text-center mb-0.5">Trabalho</div>
           {isEditing ? (
@@ -358,22 +321,13 @@ export function DeltaCambialCard({
             </div>
           ) : (
             <div className="flex items-center justify-center gap-1">
-              <span className={`font-mono font-medium text-foreground ${compact ? 'text-xs' : 'text-sm'}`}>
-                {work.toFixed(decimals)}
-              </span>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-4 w-4 p-0" 
-                onClick={() => handleStartEdit(key)}
-              >
+              <span className="font-mono font-medium text-sm text-foreground">{work.toFixed(decimals)}</span>
+              <Button variant="ghost" size="icon" className="h-4 w-4 p-0" onClick={() => handleStartEdit(key)}>
                 <Pencil className="h-2.5 w-2.5 text-muted-foreground hover:text-foreground" />
               </Button>
             </div>
           )}
         </div>
-
-        {/* Botão Sincronizar - só aparece se fonte oficial disponível */}
         {showSyncButton && (
           <Button
             variant="ghost"
@@ -391,90 +345,78 @@ export function DeltaCambialCard({
   };
 
   return (
-    <Card className="border">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-          <DollarSign className="h-4 w-4 text-primary" />
-          Cotações Oficiais
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-4 w-4 rounded-full p-0">
-                <HelpCircle className="h-3 w-3 text-muted-foreground" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80" align="start">
-              <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Fontes de Cotação</h4>
-                <div className="text-xs space-y-2">
-                  <div>
-                    <p className="font-medium text-primary">Todas as moedas</p>
-                    <p className="text-muted-foreground">Fonte primária: FastForex API</p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-muted-foreground">USD, EUR, GBP (fallback)</p>
-                    <p className="text-muted-foreground">PTAX BCB se FastForex indisponível</p>
-                  </div>
-                </div>
-                <div className="text-xs space-y-1 border-t pt-2">
-                  <p><strong>Hierarquia de fallback:</strong></p>
-                  <p className="text-muted-foreground">1. FastForex (primária)</p>
-                  <p className="text-muted-foreground">2. PTAX BCB (USD/EUR/GBP)</p>
-                  <p className="text-muted-foreground">3. Cotação de Trabalho</p>
-                </div>
-                <div className="text-xs space-y-1 border-t pt-2">
-                  <p><strong>Delta (Δ):</strong> Diferença entre cotação oficial e de trabalho</p>
-                  <p className="text-muted-foreground">• &lt;1%: Alinhado</p>
-                  <p className="text-primary">• 1-3%: Atenção</p>
-                  <p className="text-destructive">• ≥3%: Defasagem</p>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </CardTitle>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-5 w-5"
-          onClick={() => refreshAll()}
-          disabled={cotacaoLoading}
-        >
-          <RefreshCw className={`h-3 w-3 ${cotacaoLoading ? "animate-spin" : ""}`} />
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-0">
-        {/* Grid de cotações principais */}
-        <div className="grid grid-cols-3 gap-3">
-          {primaryCurrencies.map((key) => renderCurrencyCard(key))}
+    <>
+      {/* Compact inline strip */}
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50 bg-card">
+        <DollarSign className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+
+        <div className="flex items-center gap-3">
+          {primaryCurrencies.map(renderCompactCurrency)}
         </div>
 
-        {/* Moedas secundárias em collapsible */}
-        <Collapsible open={showSecondary} onOpenChange={setShowSecondary}>
-          <CollapsibleTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full h-6 text-[10px] text-muted-foreground hover:text-foreground"
+        <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+          {secondaryCurrencies.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-5 text-[9px] text-muted-foreground hover:text-foreground px-1.5"
+              onClick={openOverlay}
             >
-              {showSecondary ? (
-                <>
-                  <ChevronUp className="h-3 w-3 mr-1" />
-                  Ocultar moedas adicionais
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-3 w-3 mr-1" />
-                  Mostrar mais moedas (MYR, MXN, ARS, COP)
-                </>
-              )}
+              <Info className="h-2.5 w-2.5 mr-0.5" />
+              +{secondaryCurrencies.length}
             </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2">
-            <div className="grid grid-cols-4 gap-2">
-              {secondaryCurrencies.map((key) => renderCurrencyCard(key, true))}
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={() => refreshAll()}
+            disabled={cotacaoLoading}
+          >
+            <RefreshCw className={`h-3 w-3 ${cotacaoLoading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+      </div>
+
+      {/* Full overlay with all currencies + editing */}
+      <CotacoesOverlay isOpen={isOverlayOpen} onClose={closeOverlay}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+            <DollarSign className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Cotações Oficiais</h3>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 ml-auto"
+              onClick={() => refreshAll()}
+              disabled={cotacaoLoading}
+            >
+              <RefreshCw className={`h-3 w-3 ${cotacaoLoading ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-xs font-medium text-muted-foreground">Principais</span>
+            <div className="grid grid-cols-3 gap-3">
+              {primaryCurrencies.map(renderFullCurrencyCard)}
             </div>
-          </CollapsibleContent>
-        </Collapsible>
-      </CardContent>
-    </Card>
+          </div>
+
+          {secondaryCurrencies.length > 0 && (
+            <div className="space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">Secundárias</span>
+              <div className="grid grid-cols-4 gap-2">
+                {secondaryCurrencies.map(renderFullCurrencyCard)}
+              </div>
+            </div>
+          )}
+
+          <div className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded border border-border/30 space-y-1">
+            <p><strong>Hierarquia:</strong> FastForex → PTAX (USD/EUR/GBP) → Trabalho</p>
+            <p><strong>Delta (Δ):</strong> &lt;1% Alinhado • 1-3% Atenção • ≥3% Defasagem</p>
+          </div>
+        </div>
+      </CotacoesOverlay>
+    </>
   );
 }
