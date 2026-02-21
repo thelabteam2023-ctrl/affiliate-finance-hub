@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -131,6 +132,7 @@ export default function ProjetoDetalhe() {
   // Project favorites
   const { isFavorite, toggleFavorite } = useProjectFavorites();
   const { canEdit } = useActionAccess();
+  const { setContent: setTopBarContent } = useTopBar();
   
   // Project modules - dynamic menu
   const { activeModules, isModuleActive, activateModule, refresh: refreshModules, loading: modulesLoading, error: modulesError } = useProjectModules(id);
@@ -365,7 +367,73 @@ export default function ProjetoDetalhe() {
     }
   }, [id]);
 
-  // Refetch KPIs apenas quando projeto mudar (sem dependência de filtro de período)
+  // Inject project header into TopBar
+  const diasCiclo = entregaAtiva?.data_fim_prevista ? differenceInDays(new Date(entregaAtiva.data_fim_prevista), new Date()) : null;
+  useEffect(() => {
+    if (!projeto) {
+      setTopBarContent(null);
+      return;
+    }
+    setTopBarContent(
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Button variant="ghost" size="icon" className="flex-shrink-0 h-7 w-7" onClick={() => navigate("/projetos")}>
+          <ArrowLeft className="h-3.5 w-3.5" />
+        </Button>
+        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <FolderKanban className="h-3.5 w-3.5 text-primary" />
+        </div>
+        <span className="text-sm font-bold tracking-tight truncate">{projeto.nome}</span>
+        {projeto.tem_investimento_crypto && (
+          <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] px-1.5 py-0 flex-shrink-0">
+            <Coins className="h-2.5 w-2.5 mr-0.5" />
+            Crypto
+          </Badge>
+        )}
+        <Badge className={`${getStatusColor(projeto.status)} text-[10px] px-1.5 py-0 flex-shrink-0`}>
+          {getStatusLabel(projeto.status)}
+        </Badge>
+        {diasCiclo !== null && (
+          <span className="text-[11px] text-muted-foreground items-center gap-1 flex-shrink-0 hidden md:flex">
+            <Clock className="h-3 w-3" />
+            {diasCiclo} {diasCiclo === 1 ? 'dia' : 'dias'}
+          </span>
+        )}
+        <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => { if (id) toggleFavorite(id); }}
+                >
+                  <Star 
+                    className={`h-3.5 w-3.5 transition-colors ${
+                      id && isFavorite(id) 
+                        ? "fill-amber-400 text-amber-400" 
+                        : "text-muted-foreground hover:text-amber-400"
+                    }`} 
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{id && isFavorite(id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {canEdit('projetos', 'projetos.edit') && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => setEditDialogOpen(true)}>
+              <Edit className="mr-1 h-3 w-3" />
+              Editar
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [projeto, diasCiclo, id, isFavorite, canEdit, editDialogOpen]);
+
   // As abas usam seus próprios filtros internos
   
   const fetchApostasResumo = async () => {
@@ -613,64 +681,6 @@ export default function ProjetoDetalhe() {
   return (
     // Filtros agora são isolados por aba - cada tab usa seu próprio useTabFilters
     <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8 space-y-4">
-    {/* Header compacto */}
-      <div className="flex items-center gap-2 md:gap-3 flex-shrink-0 min-h-[48px] max-h-[60px]">
-        <Button variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8" onClick={() => navigate("/projetos")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <FolderKanban className="h-4 w-4 text-primary" />
-        </div>
-        <h2 className="text-base md:text-lg font-bold tracking-tight truncate">{projeto.nome}</h2>
-        {projeto.tem_investimento_crypto && (
-          <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] px-1.5 py-0 flex-shrink-0">
-            <Coins className="h-2.5 w-2.5 mr-0.5" />
-            Crypto
-          </Badge>
-        )}
-        <Badge className={`${getStatusColor(projeto.status)} text-[10px] px-1.5 py-0 flex-shrink-0`}>
-          {getStatusLabel(projeto.status)}
-        </Badge>
-        {getDiasAteFimCiclo() !== null && (
-          <span className="text-[11px] text-muted-foreground items-center gap-1 flex-shrink-0 hidden md:flex">
-            <Clock className="h-3 w-3" />
-            {getDiasAteFimCiclo()} {getDiasAteFimCiclo() === 1 ? 'dia' : 'dias'}
-          </span>
-        )}
-        <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => {
-                    if (id) toggleFavorite(id);
-                  }}
-                >
-                  <Star 
-                    className={`h-3.5 w-3.5 transition-colors ${
-                      id && isFavorite(id) 
-                        ? "fill-amber-400 text-amber-400" 
-                        : "text-muted-foreground hover:text-amber-400"
-                    }`} 
-                  />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{id && isFavorite(id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          {canEdit('projetos', 'projetos.edit') && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => setEditDialogOpen(true)}>
-              <Edit className="mr-1 h-3 w-3" />
-              Editar
-            </Button>
-          )}
-        </div>
-      </div>
 
       {/* Filtro de período removido - cada aba usa seu próprio StandardTimeFilter interno (padrão Bônus/Freebets) */}
 
