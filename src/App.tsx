@@ -1,3 +1,4 @@
+import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { CalculadoraProvider } from "@/contexts/CalculadoraContext";
@@ -49,6 +50,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { minutesUntilTimeout, showingWarning, resetActivity } = useInactivityTimeout();
   
   return (
+    <TopBarProvider>
     <SidebarProvider defaultOpen={true}>
       {/* Banner de aviso de inatividade */}
       {showingWarning && minutesUntilTimeout !== null && minutesUntilTimeout <= 5 && (
@@ -62,12 +64,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         <AppSidebar />
         
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* Header com trigger da sidebar */}
-          <header className="shrink-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-            <div className="flex h-14 items-center px-4">
-              <SidebarTrigger className="hover:bg-accent hover:text-accent-foreground" />
-            </div>
-          </header>
+          {/* Header com trigger da sidebar + conteúdo contextual */}
+          <TopBarHeader />
 
           {/* Main content - flex-1 + min-h-0 + overflow-auto para scroll correto */}
           <main className="flex-1 min-h-0 overflow-auto">
@@ -76,6 +74,20 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </SidebarProvider>
+    </TopBarProvider>
+  );
+}
+
+/** TopBar renderiza trigger + conteúdo contextual injetado pela página */
+function TopBarHeader() {
+  const { content } = useTopBar();
+  return (
+    <header className="shrink-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="flex h-12 items-center gap-2 px-3">
+        <SidebarTrigger className="hover:bg-accent hover:text-accent-foreground flex-shrink-0" />
+        {content}
+      </div>
+    </header>
   );
 }
 
