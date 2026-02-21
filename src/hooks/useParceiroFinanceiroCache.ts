@@ -135,7 +135,7 @@ export function useParceiroFinanceiroCache() {
       .from("bookmakers")
       .select(`
         id, nome, moeda, saldo_atual, status, projeto_id, bookmaker_catalogo_id,
-        login_username, login_password_encrypted
+        login_username, login_password_encrypted, instance_identifier
       `)
       .eq("parceiro_id", parceiroId);
 
@@ -277,6 +277,7 @@ export function useParceiroFinanceiroCache() {
       return {
         bookmaker_id: bm.id,
         bookmaker_nome: bm.nome,
+        instance_identifier: bm.instance_identifier || null,
         moeda: moedaNativa,
         logo_url: bm.bookmaker_catalogo_id ? logosMap.get(bm.bookmaker_catalogo_id) || null : null,
         total_depositado: totalDepositado,

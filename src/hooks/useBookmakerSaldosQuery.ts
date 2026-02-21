@@ -27,6 +27,7 @@ export interface BookmakerSaldo {
   parceiro_primeiro_nome: string | null;
   moeda: string;
   logo_url: string | null;
+  instance_identifier: string | null;
   // Saldos brutos (da RPC)
   saldo_real: number;
   saldo_freebet: number;
@@ -80,6 +81,7 @@ export function useBookmakerSaldosQuery({
         parceiro_primeiro_nome: row.parceiro_primeiro_nome || null,
         moeda: row.moeda || "BRL",
         logo_url: row.logo_url || null,
+        instance_identifier: row.instance_identifier || null,
         saldo_real: Number(row.saldo_real) || 0,
         saldo_freebet: Number(row.saldo_freebet) || 0,
         saldo_bonus: Number(row.saldo_bonus) || 0,

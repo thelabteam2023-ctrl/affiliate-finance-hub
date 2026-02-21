@@ -30,6 +30,7 @@ function getMoedaExecucao(tx: { tipo_moeda?: string; moeda?: string; coin?: stri
 export interface BookmakerFinanceiro {
   bookmaker_id: string;
   bookmaker_nome: string;
+  instance_identifier: string | null;
   logo_url: string | null;
   moeda: string; // Moeda nativa da casa
   // Valores na moeda NATIVA da casa
@@ -113,7 +114,8 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           projeto_id,
           bookmaker_catalogo_id,
           login_username,
-          login_password_encrypted
+          login_password_encrypted,
+          instance_identifier
         `)
         .eq("parceiro_id", parceiroId);
 
@@ -267,6 +269,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
         return {
           bookmaker_id: bm.id,
           bookmaker_nome: bm.nome,
+          instance_identifier: bm.instance_identifier || null,
           moeda: moedaNativa,
           logo_url: bm.bookmaker_catalogo_id ? logosMap.get(bm.bookmaker_catalogo_id) || null : null,
           total_depositado: totalDepositado,

@@ -17,6 +17,8 @@ export interface BookmakerOptionData {
   logo_url?: string | null;
   /** Se true, o rollover já foi iniciado (rollover_progress > 0) */
   bonus_rollover_started?: boolean;
+  /** Identificador de instância para múltiplas contas da mesma casa */
+  instance_identifier?: string | null;
 }
 
 interface BookmakerSelectOptionProps {
@@ -50,7 +52,8 @@ export function BookmakerSelectOption({
     saldo_freebet = 0, 
     saldo_bonus = 0, 
     logo_url, 
-    bonus_rollover_started = false 
+    bonus_rollover_started = false,
+    instance_identifier,
   } = bookmaker;
   
   const parceiroShortName = getFirstLastName(parceiro_nome || "");
@@ -78,7 +81,12 @@ export function BookmakerSelectOption({
       {/* Coluna 2: Nome + Parceiro (centralizado) */}
       <div className="flex flex-col items-center justify-center min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="uppercase text-xs font-medium truncate">{nome}</span>
+          <span className="uppercase text-xs font-medium truncate">
+            {nome}
+            {instance_identifier && (
+              <span className="text-primary/80 ml-1 normal-case">({instance_identifier})</span>
+            )}
+          </span>
           <CurrencyBadge moeda={moeda} />
         </div>
         {parceiroShortName && (
@@ -121,6 +129,7 @@ export interface BookmakerSelectTriggerData {
   moeda: string;
   saldo_operavel: number;
   logo_url?: string | null;
+  instance_identifier?: string | null;
 }
 
 interface BookmakerSelectTriggerProps {
@@ -162,7 +171,12 @@ export function BookmakerSelectTrigger({
       )}
       
       {/* Nome */}
-      <span className="uppercase text-xs font-medium truncate">{nome}</span>
+      <span className="uppercase text-xs font-medium truncate">
+        {nome}
+        {bookmaker.instance_identifier && (
+          <span className="text-primary/80 ml-1 normal-case">({bookmaker.instance_identifier})</span>
+        )}
+      </span>
     </div>
   );
 }

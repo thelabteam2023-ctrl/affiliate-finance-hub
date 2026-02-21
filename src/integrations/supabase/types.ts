@@ -12198,6 +12198,7 @@ export type Database = {
           bonus_rollover_started: boolean
           has_pending_transactions: boolean
           id: string
+          instance_identifier: string
           logo_url: string
           moeda: string
           nome: string

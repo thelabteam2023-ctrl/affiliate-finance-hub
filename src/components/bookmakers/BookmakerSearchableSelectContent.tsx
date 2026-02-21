@@ -65,7 +65,8 @@ export function BookmakerSearchableSelectContent({
         const term = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const nome = bk.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const parceiro = (bk.parceiro_nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return nome.includes(term) || parceiro.includes(term);
+        const instance = ((bk as any).instance_identifier || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return nome.includes(term) || parceiro.includes(term) || instance.includes(term);
       })
     : sorted;
 
