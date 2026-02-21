@@ -194,109 +194,77 @@ export function SurebetTableRow({
       
       {/* Casa */}
       <td className="px-2" style={{ height: '78px' }}>
-        {isEditing ? (
-          <div className="flex flex-col">
-            <div className="text-xs font-medium uppercase truncate text-center">
-              {selectedBookmaker?.nome || "—"}
-            </div>
-            {/* Metadados fixos - altura fixa para evitar layout jumps */}
-            <BookmakerMetaRow 
-              bookmaker={selectedBookmaker ? {
-                parceiro_nome: selectedBookmaker.parceiro_nome || null,
-                moeda: selectedBookmaker.moeda,
-                saldo_operavel: selectedBookmaker.saldo_operavel
-              } : null}
+        <div className="flex flex-col">
+          <Select 
+            value={entry.bookmaker_id}
+            onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", v)}
+          >
+            <SelectTrigger className="h-8 text-[10px] w-full">
+              <SelectValue placeholder="Selecione">
+                {selectedBookmaker?.nome && (
+                  <span className="truncate uppercase">{selectedBookmaker.nome}</span>
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <BookmakerSearchableSelectContent
+              bookmakers={bookmakers}
+              className="max-w-[300px]"
             />
-          </div>
-        ) : (
-          <div className="flex flex-col">
-            <Select 
-              value={entry.bookmaker_id}
-              onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", v)}
-            >
-              <SelectTrigger className="h-8 text-[10px] w-full">
-                <SelectValue placeholder="Selecione">
-                  {selectedBookmaker?.nome && (
-                    <span className="truncate uppercase">{selectedBookmaker.nome}</span>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <BookmakerSearchableSelectContent
-                bookmakers={bookmakers}
-                className="max-w-[300px]"
-              />
-            </Select>
-            {/* Metadados fixos - altura fixa para evitar layout jumps */}
-            <BookmakerMetaRow 
-              bookmaker={selectedBookmaker ? {
-                parceiro_nome: selectedBookmaker.parceiro_nome || null,
-                moeda: selectedBookmaker.moeda,
-                saldo_operavel: selectedBookmaker.saldo_operavel
-              } : null}
-            />
-          </div>
-        )}
+          </Select>
+          {/* Metadados fixos - altura fixa para evitar layout jumps */}
+          <BookmakerMetaRow 
+            bookmaker={selectedBookmaker ? {
+              parceiro_nome: selectedBookmaker.parceiro_nome || null,
+              moeda: selectedBookmaker.moeda,
+              saldo_operavel: selectedBookmaker.saldo_operavel
+            } : null}
+          />
+        </div>
       </td>
       
       {/* Odd - compacto para até 20,650 (2 dígitos + 3 decimais) */}
       <td className="px-1" style={{ height: '78px' }}>
-        {isEditing ? (
-          <div className="text-sm font-medium text-center tabular-nums">{entry.odd || "—"}</div>
-        ) : (
-          <Input 
-            type="number"
-            step="0.001"
-            placeholder="0.00"
-            value={entry.odd}
-            onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
-            className="h-8 text-xs text-center px-0.5 w-[68px] tabular-nums"
-            onWheel={(e) => e.currentTarget.blur()}
-            data-field-type="odd"
-            onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
-          />
-        )}
+        <Input 
+          type="number"
+          step="0.001"
+          placeholder="0.00"
+          value={entry.odd}
+          onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
+          className="h-8 text-xs text-center px-0.5 w-[68px] tabular-nums"
+          onWheel={(e) => e.currentTarget.blur()}
+          data-field-type="odd"
+          onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
+        />
       </td>
       
       {/* Stake - compacto para até 150999 (6-7 dígitos) */}
       <td className="px-1" style={{ height: '78px' }}>
-        {isEditing ? (
-          <div className="text-xs font-medium text-center tabular-nums">
-            {formatCurrency(parseFloat(entry.stake) || 0, entry.moeda)}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-0.5">
-            <MoneyInput 
-              value={entry.stake}
-              onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
-              currency={entry.moeda}
-              minDigits={6}
-              className={`h-8 text-xs text-center w-[90px] tabular-nums ${
-                hasInsufficientBalance ? "border-destructive focus-visible:ring-destructive/50" : ""
-              }`}
-              data-field-type="stake"
-              onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
-            />
-            {hasInsufficientBalance && (
-              <span className="text-[9px] text-destructive font-medium">Saldo insuf.</span>
-            )}
-          </div>
-        )}
+        <div className="flex flex-col items-center gap-0.5">
+          <MoneyInput 
+            value={entry.stake}
+            onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
+            currency={entry.moeda}
+            minDigits={6}
+            className={`h-8 text-xs text-center w-[90px] tabular-nums ${
+              hasInsufficientBalance ? "border-destructive focus-visible:ring-destructive/50" : ""
+            }`}
+            data-field-type="stake"
+            onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
+          />
+          {hasInsufficientBalance && (
+            <span className="text-[9px] text-destructive font-medium">Saldo insuf.</span>
+          )}
+        </div>
       </td>
       
       {/* Linha */}
       <td className="px-2" style={{ height: '78px' }}>
-        {isEditing ? (
-          <div className="text-xs text-muted-foreground text-center truncate">
-            {entry.selecaoLivre || "—"}
-          </div>
-        ) : (
-          <Input
-            placeholder="Linha"
-            value={entry.selecaoLivre}
-            onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
-            className="h-8 text-xs px-1 border-dashed w-20"
-          />
-        )}
+        <Input
+          placeholder="Linha"
+          value={entry.selecaoLivre}
+          onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
+          className="h-8 text-xs px-1 border-dashed w-20"
+        />
       </td>
       
       {/* Referência (Target) - só no modo criação */}
