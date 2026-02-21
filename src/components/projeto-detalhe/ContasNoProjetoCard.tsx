@@ -116,12 +116,6 @@ export function ContasNoProjetoCard({ projetoId, hasForeignCurrency = false }: C
       >
         <Users className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
 
-        {hasForeignCurrency && (
-          <Badge variant="outline" className="text-[9px] px-1 py-0 border-primary/30 text-primary flex-shrink-0">
-            <Globe className="h-2.5 w-2.5 mr-0.5" />
-            Multi
-          </Badge>
-        )}
 
         <div className="flex items-center gap-1 text-xs">
           <span className="text-muted-foreground">Parceiros</span>
