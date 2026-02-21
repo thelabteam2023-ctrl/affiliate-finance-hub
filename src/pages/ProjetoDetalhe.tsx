@@ -613,54 +613,44 @@ export default function ProjetoDetalhe() {
   return (
     // Filtros agora são isolados por aba - cada tab usa seu próprio useTabFilters
     <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8 space-y-4">
-    {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-shrink-0">
-        <div className="flex items-center gap-3 md:gap-4 min-w-0">
-          <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={() => navigate("/projetos")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <FolderKanban className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg md:text-2xl font-bold tracking-tight truncate">{projeto.nome}</h2>
-                <Badge className={`${getStatusColor(projeto.status)} text-xs`}>
-                  {getStatusLabel(projeto.status)}
-                </Badge>
-                {getDiasAteFimCiclo() !== null && (
-                  <span className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {getDiasAteFimCiclo()} {getDiasAteFimCiclo() === 1 ? 'dia' : 'dias'} até fim do ciclo
-                  </span>
-                )}
-              </div>
-              {projeto.descricao && (
-                <p className="text-muted-foreground text-sm truncate hidden sm:block">{projeto.descricao}</p>
-              )}
-              {projeto.tem_investimento_crypto && (
-                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-xs mt-1">
-                  <Coins className="h-3 w-3 mr-1" />
-                  Crypto
-                </Badge>
-              )}
-            </div>
-          </div>
+    {/* Header compacto */}
+      <div className="flex items-center gap-2 md:gap-3 flex-shrink-0 min-h-[48px] max-h-[60px]">
+        <Button variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8" onClick={() => navigate("/projetos")}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <FolderKanban className="h-4 w-4 text-primary" />
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-auto">
+        <h2 className="text-base md:text-lg font-bold tracking-tight truncate">{projeto.nome}</h2>
+        {projeto.tem_investimento_crypto && (
+          <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] px-1.5 py-0 flex-shrink-0">
+            <Coins className="h-2.5 w-2.5 mr-0.5" />
+            Crypto
+          </Badge>
+        )}
+        <Badge className={`${getStatusColor(projeto.status)} text-[10px] px-1.5 py-0 flex-shrink-0`}>
+          {getStatusLabel(projeto.status)}
+        </Badge>
+        {getDiasAteFimCiclo() !== null && (
+          <span className="text-[11px] text-muted-foreground items-center gap-1 flex-shrink-0 hidden md:flex">
+            <Clock className="h-3 w-3" />
+            {getDiasAteFimCiclo()} {getDiasAteFimCiclo() === 1 ? 'dia' : 'dias'}
+          </span>
+        )}
+        <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   size="icon"
+                  className="h-7 w-7"
                   onClick={() => {
                     if (id) toggleFavorite(id);
                   }}
                 >
                   <Star 
-                    className={`h-4 w-4 transition-colors ${
+                    className={`h-3.5 w-3.5 transition-colors ${
                       id && isFavorite(id) 
                         ? "fill-amber-400 text-amber-400" 
                         : "text-muted-foreground hover:text-amber-400"
@@ -674,9 +664,9 @@ export default function ProjetoDetalhe() {
             </Tooltip>
           </TooltipProvider>
           {canEdit('projetos', 'projetos.edit') && (
-            <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Editar Projeto
+            <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => setEditDialogOpen(true)}>
+              <Edit className="mr-1 h-3 w-3" />
+              Editar
             </Button>
           )}
         </div>
