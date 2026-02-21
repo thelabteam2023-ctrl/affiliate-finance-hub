@@ -55,6 +55,7 @@ interface BookmakerOption {
   id: string;
   nome: string;
   parceiroNome?: string;
+  instanceIdentifier?: string | null;
 }
 
 interface ParceiroOption {
@@ -109,7 +110,7 @@ export function TabFiltersBar({
       // Buscar bookmakers
       const { data: bkData } = await supabase
         .from("bookmakers")
-        .select("id, nome, parceiro:parceiros(id, nome)")
+        .select("id, nome, instance_identifier, parceiro:parceiros(id, nome)")
         .eq("projeto_id", projetoId)
         .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
 
@@ -118,6 +119,7 @@ export function TabFiltersBar({
           id: bk.id,
           nome: bk.nome,
           parceiroNome: bk.parceiro?.nome,
+          instanceIdentifier: bk.instance_identifier,
         }));
         setBookmakers(bkOptions);
 
@@ -140,7 +142,11 @@ export function TabFiltersBar({
   // Nomes selecionados para badges
   const selectedBookmakerNames = useMemo(() => {
     return filters.bookmakerIds
-      .map((id) => bookmakers.find((b) => b.id === id)?.nome)
+      .map((id) => {
+        const bk = bookmakers.find((b) => b.id === id);
+        if (!bk) return null;
+        return bk.instanceIdentifier ? `${bk.nome} (${bk.instanceIdentifier})` : bk.nome;
+      })
       .filter(Boolean) as string[];
   }, [filters.bookmakerIds, bookmakers]);
 
@@ -272,6 +278,9 @@ export function TabFiltersBar({
                         <div className="flex flex-col min-w-0">
                           <span className="font-medium text-sm tracking-wide uppercase truncate">
                             {bk.nome}
+                            {bk.instanceIdentifier && (
+                              <span className="text-primary/80 ml-1 normal-case text-xs">({bk.instanceIdentifier})</span>
+                            )}
                           </span>
                           {bk.parceiroNome && (
                             <span className="text-[11px] text-muted-foreground truncate">
