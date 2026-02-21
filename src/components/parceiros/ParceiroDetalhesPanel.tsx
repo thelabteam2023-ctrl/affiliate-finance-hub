@@ -6,13 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search, Pencil, Plus, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search, Pencil, Plus, Minus, FolderKanban, Loader2 } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
 } from "@/components/ui/context-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ParceiroMovimentacoesTab } from "./ParceiroMovimentacoesTab";
@@ -83,6 +90,38 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const [buscaCasa, setBuscaCasa] = useState("");
   const { canEdit, canDelete } = useActionAccess();
   const { convertToBRL, dataSource, isUsingFallback, rates } = useCotacoes();
+  const { workspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+
+  // Fetch projects for "Vincular a projeto" submenu
+  const { data: projetos } = useQuery({
+    queryKey: ["projetos-list-for-link", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+      const { data } = await supabase
+        .from("projetos")
+        .select("id, nome")
+        .eq("workspace_id", workspaceId)
+        .eq("status", "EM_ANDAMENTO")
+        .order("nome");
+      return data || [];
+    },
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+  });
+
+  const handleVincularProjeto = useCallback(async (bookmakerId: string, projetoId: string, projetoNome: string) => {
+    const { error } = await supabase
+      .from("bookmakers")
+      .update({ projeto_id: projetoId })
+      .eq("id", bookmakerId);
+    if (error) {
+      toast({ title: "Erro ao vincular projeto", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Projeto vinculado", description: `Casa vinculada ao projeto "${projetoNome}"` });
+      queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+    }
+  }, [toast, queryClient]);
 
   // Reset currency filter when partner changes to prevent filtering with a currency
   // that may not exist for the new partner
@@ -896,13 +935,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                             </ContextMenuTrigger>
                             <ContextMenuContent>
                               <ContextMenuItem
-                                onClick={() => onEditVinculo?.(bm.bookmaker_id)}
-                                className="gap-2"
-                              >
-                                <Pencil className="h-4 w-4" />
-                                Editar vínculo
-                              </ContextMenuItem>
-                              <ContextMenuItem
                                 onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")}
                                 className="gap-2"
                               >
@@ -915,6 +947,39 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                               >
                                 <Minus className="h-4 w-4 text-destructive" />
                                 Saque
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                              <ContextMenuSub>
+                                <ContextMenuSubTrigger className="gap-2">
+                                  <FolderKanban className="h-4 w-4" />
+                                  Vincular a projeto
+                                </ContextMenuSubTrigger>
+                                <ContextMenuSubContent className="min-w-[180px]">
+                                  {projetos && projetos.length > 0 ? (
+                                    projetos.map((proj) => (
+                                      <ContextMenuItem
+                                        key={proj.id}
+                                        onClick={() => handleVincularProjeto(bm.bookmaker_id, proj.id, proj.nome)}
+                                        className="gap-2"
+                                      >
+                                        <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
+                                        {proj.nome}
+                                      </ContextMenuItem>
+                                    ))
+                                  ) : (
+                                    <ContextMenuItem disabled className="text-muted-foreground text-xs">
+                                      Nenhum projeto disponível
+                                    </ContextMenuItem>
+                                  )}
+                                </ContextMenuSubContent>
+                              </ContextMenuSub>
+                              <ContextMenuSeparator />
+                              <ContextMenuItem
+                                onClick={() => onEditVinculo?.(bm.bookmaker_id)}
+                                className="gap-2"
+                              >
+                                <Pencil className="h-4 w-4" />
+                                Editar vínculo
                               </ContextMenuItem>
                             </ContextMenuContent>
                           </ContextMenu>
