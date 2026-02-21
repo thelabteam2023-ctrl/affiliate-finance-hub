@@ -574,6 +574,42 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // 1. Buscar dados do bônus antes de excluir para saber se precisa estornar
+      const { data: bonusData, error: fetchError } = await supabase
+        .from("project_bookmaker_link_bonuses")
+        .select("id, bookmaker_id, bonus_amount, status, valor_creditado_no_saldo, title")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Usuário não autenticado");
+
+      // 2. Se o bônus estava creditado, estornar o valor no ledger ANTES de excluir
+      if (bonusData.status === "credited") {
+        const valorCreditado = (bonusData as any).valor_creditado_no_saldo ?? bonusData.bonus_amount;
+        
+        if (valorCreditado > 0) {
+          const moeda = await getBookmakerMoeda(bonusData.bookmaker_id);
+          const result = await estornarBonusViaLedger({
+            bookmakerId: bonusData.bookmaker_id,
+            valor: valorCreditado,
+            moeda,
+            workspaceId: workspaceId!,
+            userId: userData.user.id,
+            descricao: `Estorno por exclusão de bônus: ${bonusData.title || 'Sem título'}`,
+            bonusId: bonusData.id,
+          });
+
+          if (!result.success) {
+            throw new Error(`Falha ao estornar saldo do bônus: ${result.error}`);
+          }
+          console.log(`[useProjectBonuses] Bônus estornado via ledger: ${valorCreditado}`);
+        }
+      }
+
+      // 3. Excluir o registro do bônus
       const { error } = await supabase
         .from("project_bookmaker_link_bonuses")
         .delete()
@@ -582,7 +618,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Bônus excluído com sucesso");
+      toast.success("Bônus excluído e saldo estornado com sucesso");
       invalidateBonusQueries(projectId);
     },
     onError: (error: Error) => {
