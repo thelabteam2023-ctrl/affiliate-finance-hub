@@ -23,6 +23,13 @@ import { Badge } from "@/components/ui/badge";
 import { useProjetoHistoricoContas } from "@/hooks/useProjetoHistoricoContas";
 import { createPortal } from "react-dom";
 
+/** Retorna "Primeiro Último" em Title Case */
+function shortName(full: string): string {
+  const parts = full.trim().split(/\s+/);
+  const pick = parts.length > 1 ? [parts[0], parts[parts.length - 1]] : parts;
+  return pick.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
+
 interface ContasNoProjetoCardProps {
   projetoId: string;
   hasForeignCurrency?: boolean;
@@ -154,7 +161,7 @@ export function ContasNoProjetoCard({ projetoId, hasForeignCurrency = false }: C
                 <div className="space-y-1">
                   {parceirosAtivosLista.map((p) => (
                     <div key={p.id} className="flex items-center justify-between text-xs py-1 px-2 rounded-md bg-muted/20">
-                      <span className="font-medium truncate">{p.nome}</span>
+                      <span className="font-medium truncate">{shortName(p.nome)}</span>
                       <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
                         {p.totalContas} {p.totalContas === 1 ? 'conta' : 'contas'}
                       </span>
@@ -191,7 +198,7 @@ export function ContasNoProjetoCard({ projetoId, hasForeignCurrency = false }: C
                   {historicoParceirosLista.map((p) => (
                     <div key={p.id} className="flex items-center justify-between text-xs py-1 px-2 rounded-md bg-muted/10">
                       <span className={`font-medium truncate ${parceirosAtivosIds.has(p.id) ? 'text-foreground' : 'text-muted-foreground'}`}>
-                        {p.nome}
+                        {shortName(p.nome)}
                       </span>
                       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                         <span className="text-[10px] text-muted-foreground">
