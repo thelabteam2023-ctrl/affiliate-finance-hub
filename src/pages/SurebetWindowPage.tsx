@@ -41,6 +41,9 @@ export default function SurebetWindowPage() {
   const [saveCount, setSaveCount] = useState(0); // Contador de salvamentos
   const [rascunhoCarregado, setRascunhoCarregado] = useState<ApostaRascunho | null>(null);
   
+  // Hook must be called before any conditional returns (Rules of Hooks)
+  const contentRef = useResizeWindowToContent([formKey, loading]);
+  
   // Hook de rascunhos
   const { buscarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
   
@@ -243,7 +246,7 @@ export default function SurebetWindowPage() {
     );
   }
   
-  const contentRef = useResizeWindowToContent([formKey, loading]);
+  
 
   return (
     <div ref={contentRef} className="bg-background">
