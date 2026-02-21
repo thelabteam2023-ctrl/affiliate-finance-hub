@@ -110,8 +110,9 @@ export function SurebetTableRow({
   onFieldKeyDown
 }: SurebetTableRowProps) {
   const selectedBookmaker = bookmakers.find(b => b.id === entry.bookmaker_id);
-  const lucro = scenario?.lucro || 0;
-  const roi = scenario?.roi || 0;
+  const lucro = scenario?.lucro ?? 0;
+  const roi = scenario?.roi ?? 0;
+  const hasScenarioData = scenario != null && (parseFloat(String(entry.odd)) > 0 && parseFloat(entry.stake) > 0);
   const isDirected = directedProfitLegs.includes(pernaIndex);
   
   // Resultado atual da perna (armazenado no entry)
@@ -378,7 +379,7 @@ export function SurebetTableRow({
         <span className={`font-medium tabular-nums ${
           lucro >= 0 ? "text-emerald-500" : "text-red-500"
         } ${Math.abs(lucro) >= 100000 ? "text-[11px]" : "text-sm"}`}>
-          {lucro !== 0 ? formatCompactCurrency(lucro, moedaDominante) : "—"}
+          {hasScenarioData ? formatCompactCurrency(lucro, moedaDominante) : "—"}
         </span>
       </td>
       
@@ -387,7 +388,7 @@ export function SurebetTableRow({
         <span className={`text-xs ${
           roi >= 0 ? "text-emerald-500" : "text-red-500"
         }`}>
-          {roi !== 0 ? `${roi > 0 ? "+" : ""}${roi.toFixed(2)}%` : "—"}
+          {hasScenarioData ? `${roi > 0 ? "+" : ""}${roi.toFixed(2)}%` : "—"}
         </span>
       </td>
       
