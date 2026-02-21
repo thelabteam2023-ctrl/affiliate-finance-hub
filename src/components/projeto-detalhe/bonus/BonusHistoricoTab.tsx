@@ -229,7 +229,7 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
                           <img
                             src={bonus.bookmaker_logo_url}
                             alt={bonus.bookmaker_nome}
-                            className="h-10 w-10 rounded-lg object-contain bg-white p-1 flex-shrink-0"
+                            className="h-10 w-10 rounded-lg object-contain logo-blend p-1 flex-shrink-0"
                           />
                         ) : (
                           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -282,7 +282,7 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
                         <img
                           src={ajuste.bookmaker_logo_url}
                           alt={ajuste.bookmaker_nome}
-                          className="h-10 w-10 rounded-lg object-contain bg-white p-1 flex-shrink-0"
+                          className="h-10 w-10 rounded-lg object-contain logo-blend p-1 flex-shrink-0"
                         />
                       ) : (
                         <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">

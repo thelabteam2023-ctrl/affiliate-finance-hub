@@ -188,7 +188,7 @@ export function AlertasTab({ bonuses, dateRange }: AnalyticsTabProps) {
               <p className="text-xs opacity-80 mt-0.5">{alert.description}</p>
               <div className="flex items-center gap-2 mt-2">
                 {alert.logo_url ? (
-                  <img src={alert.logo_url} alt={alert.bookmaker_nome} className="h-4 w-4 rounded object-contain bg-white" />
+                  <img src={alert.logo_url} alt={alert.bookmaker_nome} className="h-4 w-4 rounded object-contain logo-blend" />
                 ) : (
                   <Building2 className="h-4 w-4 opacity-50" />
                 )}

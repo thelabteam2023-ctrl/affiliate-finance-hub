@@ -213,7 +213,7 @@ function FinalizedBonusHistory({
                           <img
                             src={bonus.bookmaker_logo_url}
                             alt={bonus.bookmaker_nome}
-                            className="h-8 w-8 rounded-lg object-contain bg-white p-0.5 flex-shrink-0"
+                            className="h-8 w-8 rounded-lg object-contain logo-blend p-0.5 flex-shrink-0"
                           />
                         ) : (
                           <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -270,7 +270,7 @@ function FinalizedBonusHistory({
                         <img
                           src={ajuste.bookmaker_logo_url}
                           alt={ajuste.bookmaker_nome}
-                          className="h-8 w-8 rounded-lg object-contain bg-white p-0.5 flex-shrink-0"
+                          className="h-8 w-8 rounded-lg object-contain logo-blend p-0.5 flex-shrink-0"
                         />
                       ) : (
                         <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
@@ -616,7 +616,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                           <img
                             src={bonus.bookmaker_logo_url}
                             alt={bonus.bookmaker_nome}
-                            className="h-8 w-8 rounded-lg object-contain bg-white p-0.5"
+                            className="h-8 w-8 rounded-lg object-contain logo-blend p-0.5"
                           />
                         ) : (
                           <div className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
@@ -714,7 +714,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                                 <img
                                   src={bk.logo_url}
                                   alt={bk.nome}
-                                  className="h-8 w-8 rounded object-contain bg-white p-0.5"
+                                  className="h-8 w-8 rounded object-contain logo-blend p-0.5"
                                 />
                               ) : (
                                 <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center">
@@ -863,7 +863,7 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
                         <img
                           src={bk.logo_url}
                           alt={bk.nome}
-                          className="h-10 w-10 rounded-lg object-contain bg-white p-1"
+                          className="h-10 w-10 rounded-lg object-contain logo-blend p-1"
                         />
                       ) : (
                         <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">

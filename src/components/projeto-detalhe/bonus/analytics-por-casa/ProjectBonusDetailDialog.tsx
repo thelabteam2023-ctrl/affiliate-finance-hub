@@ -63,7 +63,7 @@ export function ProjectBonusDetailDialog({ bookmaker, open, onOpenChange }: Proj
               <img 
                 src={bk.logo_url} 
                 alt={bk.nome} 
-                className="h-12 w-12 rounded-lg object-contain bg-white p-0.5" 
+                className="h-12 w-12 rounded-lg object-contain logo-blend p-0.5" 
               />
             ) : (
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">

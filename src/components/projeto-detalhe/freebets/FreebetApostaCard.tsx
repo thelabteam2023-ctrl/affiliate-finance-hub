@@ -236,7 +236,7 @@ export function FreebetApostaCard({
                 <img 
                   src={aposta.logo_url} 
                   alt={aposta.bookmaker_nome || ''} 
-                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain bg-white/10 p-1 shrink-0"
+                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain logo-blend p-1 shrink-0"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               ) : (
@@ -380,7 +380,7 @@ export function FreebetApostaCard({
               <img 
                 src={aposta.logo_url} 
                 alt={aposta.bookmaker_nome || ''} 
-                className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain bg-white/10 p-1 shrink-0"
+                className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain logo-blend p-1 shrink-0"
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
             ) : (

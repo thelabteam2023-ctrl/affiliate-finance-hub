@@ -145,6 +145,12 @@ input[type="number"] {
     box-shadow: 0 0 30px hsl(142 76% 36% / 0.3);
   }
 
+  /* Bookmaker logo: remove white background by blending */
+  .logo-blend {
+    background: transparent;
+    mix-blend-mode: lighten;
+  }
+
   .animate-glow {
     animation: glow 3s ease-in-out infinite;
   }

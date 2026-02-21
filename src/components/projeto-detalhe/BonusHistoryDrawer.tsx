@@ -178,7 +178,7 @@ export function BonusHistoryDrawer({
                 <img
                   src={bookmakerLogo}
                   alt={bookmakerName}
-                  className="h-10 w-10 rounded-lg object-contain bg-white p-1"
+                  className="h-10 w-10 rounded-lg object-contain logo-blend p-1"
                 />
               ) : (
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">

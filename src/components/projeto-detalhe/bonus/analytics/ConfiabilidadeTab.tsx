@@ -144,7 +144,7 @@ export function ConfiabilidadeTab({ bonuses, dateRange }: AnalyticsTabProps) {
           return (
             <div key={bk.bookmaker_id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
               {bk.logo_url ? (
-                <img src={bk.logo_url} alt={bk.bookmaker_nome} className="h-8 w-8 rounded-lg object-contain bg-white p-0.5" />
+                <img src={bk.logo_url} alt={bk.bookmaker_nome} className="h-8 w-8 rounded-lg object-contain logo-blend p-0.5" />
               ) : (
                 <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Building2 className="h-4 w-4 text-primary" />

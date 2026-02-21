@@ -816,7 +816,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
                     >
                       <div className="flex items-center gap-2">
                         {bk.logo_url ? (
-                          <img src={bk.logo_url} alt={bk.nome} className="h-6 w-6 rounded object-contain bg-white p-0.5" />
+                          <img src={bk.logo_url} alt={bk.nome} className="h-6 w-6 rounded object-contain logo-blend p-0.5" />
                         ) : (
                           <Gift className="h-5 w-5 text-amber-400" />
                         )}
