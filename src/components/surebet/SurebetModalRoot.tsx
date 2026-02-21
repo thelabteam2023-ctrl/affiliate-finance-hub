@@ -222,6 +222,7 @@ export function SurebetModalRoot({
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("1");
   const [saving, setSaving] = useState(false);
+  const [deletingPerna, setDeletingPerna] = useState(false);
   
   const [showConversionDialog, setShowConversionDialog] = useState(false);
   const [conversionInProgress, setConversionInProgress] = useState(false);
@@ -1332,6 +1333,84 @@ export function SurebetModalRoot({
   };
 
   // ============================================
+  // EXCLUIR PERNA INDIVIDUAL (MODO EDIÇÃO)
+  // ============================================
+  
+  const handleDeletePerna = useCallback(async (pernaIndex: number) => {
+    if (!isEditing || !surebet) return;
+    
+    const originalPerna = originalPernasSnapshot.current[pernaIndex];
+    if (!originalPerna) {
+      toast.error("Perna não encontrada no banco de dados");
+      return;
+    }
+    
+    // Mínimo de 2 pernas
+    if (odds.length <= 2) {
+      toast.error("Mínimo de 2 pernas. Use 'Excluir' para remover toda a operação.");
+      return;
+    }
+    
+    try {
+      setDeletingPerna(true);
+      
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('deletar_perna_surebet_v1', {
+        p_perna_id: originalPerna.id,
+      });
+      
+      if (rpcError) {
+        console.error(`[SurebetModalRoot] Erro ao deletar perna ${originalPerna.id}:`, rpcError);
+        throw new Error(rpcError.message);
+      }
+      
+      const result = rpcResult as any;
+      if (result && !result.success) {
+        throw new Error(result.error || 'Falha ao excluir perna');
+      }
+      
+      console.log(`[SurebetModalRoot] ✅ Perna ${originalPerna.id} excluída via RPC:`, result);
+      
+      // Remover da UI
+      setOdds(prev => prev.filter((_, i) => i !== pernaIndex));
+      setDirectedProfitLegs(prev => 
+        prev.filter(i => i !== pernaIndex).map(i => i > pernaIndex ? i - 1 : i)
+      );
+      
+      // Atualizar snapshots
+      originalPernasSnapshot.current = originalPernasSnapshot.current.filter((_, i) => i !== pernaIndex);
+      originalPernaIds.current = originalPernaIds.current.filter((_, i) => i !== pernaIndex);
+      
+      // Recalcular crédito virtual
+      const stakeMap = new Map<string, number>();
+      originalPernasSnapshot.current.forEach(p => {
+        const current = stakeMap.get(p.bookmaker_id) || 0;
+        stakeMap.set(p.bookmaker_id, current + p.stake);
+      });
+      originalStakesByBookmaker.current = stakeMap;
+      
+      // Atualizar modelo visual
+      const newCount = odds.length - 1;
+      if (newCount === 2) setModeloTipo("2");
+      else if (newCount === 3) setModeloTipo("3");
+      else {
+        setModeloTipo("4+");
+        setNumPernasCustom(newCount);
+      }
+      
+      // Invalidar saldos
+      invalidateSaldos(projetoId);
+      
+      toast.success(`Perna ${pernaIndex + 1} excluída`, {
+        description: "O valor foi devolvido à casa de aposta.",
+      });
+    } catch (error: any) {
+      toast.error("Erro ao excluir perna: " + error.message);
+    } finally {
+      setDeletingPerna(false);
+    }
+  }, [isEditing, surebet, odds.length, invalidateSaldos, projetoId]);
+
+  // ============================================
   // VALIDAÇÃO DE SALDO POR PERNA
   // ============================================
 
@@ -1588,7 +1667,7 @@ export function SurebetModalRoot({
                     )}
                     <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Lucro</th>
                     <th className="py-2 px-2 text-center font-medium text-muted-foreground w-16">ROI</th>
-                    {!isEditing && <th className="py-2 px-2 w-8"></th>}
+                    <th className="py-2 px-2 w-8"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1613,6 +1692,8 @@ export function SurebetModalRoot({
                       onSetReference={setReferenceIndex}
                       onToggleDirected={toggleDirectedLeg}
                       onAddEntry={addAdditionalEntry}
+                      onDeletePerna={handleDeletePerna}
+                      canDeletePerna={isEditing && odds.length > 2}
                       onFocus={setFocusedLeg}
                       onBlur={() => setFocusedLeg(null)}
                       onFieldKeyDown={handleFieldKeyDown}
