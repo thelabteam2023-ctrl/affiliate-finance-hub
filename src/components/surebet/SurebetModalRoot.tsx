@@ -234,6 +234,10 @@ export function SurebetModalRoot({
   // Crédito virtual: armazena stakes originais por bookmaker_id para modo edição
   // Permite que o saldo "bloqueado" pela aposta original seja reconhecido como disponível
   const originalStakesByBookmaker = useRef<Map<string, number>>(new Map());
+  // IDs das pernas originais (do banco) para usar na RPC de edição atômica
+  const originalPernaIds = useRef<string[]>([]);
+  // Snapshot das pernas originais para detectar mudanças
+  const originalPernasSnapshot = useRef<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string }>>([]);
   const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   
   const {
@@ -540,6 +544,17 @@ export function SurebetModalRoot({
         }
       });
       originalStakesByBookmaker.current = stakeMap;
+      
+      // Armazenar IDs e snapshot das pernas originais para edição atômica
+      originalPernaIds.current = pernasData.map((p: any) => p.id);
+      originalPernasSnapshot.current = pernasData.map((p: any) => ({
+        id: p.id,
+        bookmaker_id: p.bookmaker_id || "",
+        stake: parseFloat(p.stake) || 0,
+        odd: parseFloat(p.odd) || 0,
+        selecao: p.selecao || "",
+        selecao_livre: p.selecao_livre || "",
+      }));
       
       const pernasOdds: OddEntry[] = pernasData.map((perna: any, index: number) => ({
         bookmaker_id: perna.bookmaker_id || "",
@@ -955,28 +970,73 @@ export function SurebetModalRoot({
 
       if (isEditing && surebet) {
         // ================================================================
-        // MODO EDIÇÃO: Update direto (sem novo impacto financeiro)
+        // MODO EDIÇÃO: Usar RPC atômica por perna (com eventos financeiros)
+        // Garante que troca de bookmaker, odd ou stake gere REVERSAL/STAKE
         // ================================================================
+        
+        // 1. Para cada perna que tem ID original, chamar editar_perna_surebet_atomica
+        //    se houve mudança de bookmaker, odd, stake ou seleção
+        for (let i = 0; i < pernasPreenchidas.length; i++) {
+          const entry = pernasPreenchidas[i];
+          const originalPerna = originalPernasSnapshot.current[i];
+          
+          if (!originalPerna) {
+            // Perna nova (adicionada durante edição) - não tem ID original
+            // Será tratada abaixo com insert direto
+            continue;
+          }
+          
+          const newStake = parseFloat(entry.stake) || 0;
+          const newOdd = parseFloat(entry.odd) || 0;
+          const newBookmakerId = entry.bookmaker_id;
+          const newSelecao = entry.selecao;
+          const newSelecaoLivre = entry.selecaoLivre || "";
+          
+          // Detectar se houve mudança
+          const bookmakerChanged = newBookmakerId !== originalPerna.bookmaker_id;
+          const stakeChanged = Math.abs(newStake - originalPerna.stake) > 0.001;
+          const oddChanged = Math.abs(newOdd - originalPerna.odd) > 0.001;
+          const selecaoChanged = newSelecao !== originalPerna.selecao;
+          const selecaoLivreChanged = newSelecaoLivre !== originalPerna.selecao_livre;
+          
+          if (bookmakerChanged || stakeChanged || oddChanged || selecaoChanged || selecaoLivreChanged) {
+            const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_perna_surebet_atomica', {
+              p_perna_id: originalPerna.id,
+              ...(bookmakerChanged ? { p_new_bookmaker_id: newBookmakerId } : {}),
+              ...(stakeChanged ? { p_new_stake: newStake } : {}),
+              ...(oddChanged ? { p_new_odd: newOdd } : {}),
+              ...(selecaoChanged ? { p_new_selecao: newSelecao } : {}),
+              ...(selecaoLivreChanged ? { p_new_selecao_livre: newSelecaoLivre } : {}),
+            });
+            
+            if (rpcError) {
+              console.error(`[SurebetModalRoot] Erro ao editar perna ${originalPerna.id}:`, rpcError);
+              throw new Error(`Erro ao editar perna ${i + 1}: ${rpcError.message}`);
+            }
+            
+            const result = rpcResult as any;
+            if (result && !result.success) {
+              throw new Error(`Erro na perna ${i + 1}: ${result.error || 'Falha desconhecida'}`);
+            }
+            
+            console.log(`[SurebetModalRoot] ✅ Perna ${originalPerna.id} editada via RPC:`, result);
+          }
+        }
+        
+        // 2. Atualizar campos do registro pai (evento, esporte, mercado, etc.)
+        //    A RPC já recalculou stake_total e lucro, mas precisamos atualizar metadados
         const pernasToSave: SurebetPerna[] = pernasPreenchidas.map((entry) => {
           const stake = parseFloat(entry.stake) || 0;
           const moeda = getBookmakerMoeda(entry.bookmaker_id);
-          const snapshotFields = getSnapshotFields(stake, moeda);
           const odd = parseFloat(entry.odd) || 0;
-          
           const resultado = (entry as any).resultado as ('GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID' | null);
           let lucro_prejuizo: number | null = null;
           
-          if (resultado === 'GREEN') {
-            lucro_prejuizo = (stake * odd) - stake;
-          } else if (resultado === 'MEIO_GREEN') {
-            lucro_prejuizo = ((stake * odd) - stake) / 2;
-          } else if (resultado === 'MEIO_RED') {
-            lucro_prejuizo = -stake / 2;
-          } else if (resultado === 'RED') {
-            lucro_prejuizo = -stake;
-          } else if (resultado === 'VOID') {
-            lucro_prejuizo = 0;
-          }
+          if (resultado === 'GREEN') lucro_prejuizo = (stake * odd) - stake;
+          else if (resultado === 'MEIO_GREEN') lucro_prejuizo = ((stake * odd) - stake) / 2;
+          else if (resultado === 'MEIO_RED') lucro_prejuizo = -stake / 2;
+          else if (resultado === 'RED') lucro_prejuizo = -stake;
+          else if (resultado === 'VOID') lucro_prejuizo = 0;
           
           return {
             selecao: entry.selecao,
@@ -986,15 +1046,9 @@ export function SurebetModalRoot({
             moeda,
             odd,
             stake,
-            stake_brl_referencia: snapshotFields.valor_brl_referencia,
-            cotacao_snapshot: snapshotFields.cotacao_snapshot,
-            cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
-            resultado: resultado,
+            resultado,
             lucro_prejuizo,
-            lucro_prejuizo_brl_referencia: lucro_prejuizo ? snapshotFields.valor_brl_referencia : null,
-            gerou_freebet: (entry as any).gerouFreebet || false,
-            valor_freebet_gerada: (entry as any).valorFreebetGerada ? parseFloat((entry as any).valorFreebetGerada) : null
-          };
+          } as SurebetPerna;
         });
         
         const resultados = pernasToSave.map(p => p.resultado);
@@ -1009,9 +1063,6 @@ export function SurebetModalRoot({
         
         if (todasComResultado) {
           statusAposta = 'LIQUIDADA';
-          
-          // CRÍTICO: converter lucro de cada perna para moeda de consolidação antes de somar
-          // Evita mistura de moedas nominais (ex: USD + EUR → USD)
           lucroRealTotal = pernasToSave.reduce((acc, p) => {
             const lucroLocal = p.lucro_prejuizo || 0;
             const lucroConsolidado = convertViaBRL(
@@ -1025,17 +1076,11 @@ export function SurebetModalRoot({
           
           roiReal = analysis.stakeTotal > 0 ? (lucroRealTotal / analysis.stakeTotal) * 100 : 0;
           
-          if (todasVoid) {
-            resultadoAposta = 'VOID';
-          } else if (temGreen && lucroRealTotal >= 0) {
-            resultadoAposta = 'GREEN';
-          } else if (lucroRealTotal > 0) {
-            resultadoAposta = 'GREEN';
-          } else if (lucroRealTotal < 0) {
-            resultadoAposta = 'RED';
-          } else {
-            resultadoAposta = 'VOID';
-          }
+          if (todasVoid) resultadoAposta = 'VOID';
+          else if (temGreen && lucroRealTotal >= 0) resultadoAposta = 'GREEN';
+          else if (lucroRealTotal > 0) resultadoAposta = 'GREEN';
+          else if (lucroRealTotal < 0) resultadoAposta = 'RED';
+          else resultadoAposta = 'VOID';
         }
 
         const { error: updateError } = await supabase
@@ -1047,27 +1092,43 @@ export function SurebetModalRoot({
             modelo,
             estrategia,
             contexto_operacional: contexto,
-            stake_total: analysis.stakeTotal,
             lucro_esperado: analysis.minLucro,
             roi_esperado: analysis.minRoi,
             status: statusAposta,
             resultado: resultadoAposta,
-            lucro_prejuizo: lucroRealTotal,
-            roi_real: roiReal,
             updated_at: new Date().toISOString()
           })
           .eq("id", surebet.id);
 
         if (updateError) throw updateError;
-
-        // Deletar pernas antigas e inserir novas
-        await supabase.from("apostas_pernas").delete().eq("aposta_id", surebet.id);
-        const pernasInsert = pernasToInserts(surebet.id, pernasToSave);
-        const { error: insertPernasError } = await supabase
+        
+        // 3. Atualizar pernas JSON no registro pai (para compatibilidade)
+        const { data: pernasAtualizadas } = await supabase
           .from("apostas_pernas")
-          .insert(pernasInsert);
-
-        if (insertPernasError) throw insertPernasError;
+          .select("*")
+          .eq("aposta_id", surebet.id)
+          .order("ordem", { ascending: true });
+        
+        if (pernasAtualizadas) {
+          await supabase
+            .from("apostas_unificada")
+            .update({
+              pernas: pernasAtualizadas.map((p: any) => ({
+                selecao: p.selecao,
+                selecao_livre: p.selecao_livre,
+                bookmaker_id: p.bookmaker_id,
+                bookmaker_nome: bookmakerSaldos.find(b => b.id === p.bookmaker_id)?.nome || "",
+                moeda: p.moeda,
+                odd: p.odd,
+                stake: p.stake,
+                resultado: p.resultado,
+                lucro_prejuizo: p.lucro_prejuizo,
+                gerou_freebet: p.gerou_freebet,
+                valor_freebet_gerada: p.valor_freebet_gerada,
+              }))
+            })
+            .eq("id", surebet.id);
+        }
         
       } else {
         // ================================================================
