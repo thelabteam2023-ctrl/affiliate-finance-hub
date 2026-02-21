@@ -111,6 +111,16 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   });
 
   const handleVincularProjeto = useCallback(async (bookmakerId: string, projetoId: string, projetoNome: string) => {
+    // Check if bookmaker is already linked to a project
+    const { data: current } = await supabase
+      .from("bookmakers")
+      .select("projeto_id")
+      .eq("id", bookmakerId)
+      .single();
+    if (current?.projeto_id) {
+      toast({ title: "Casa já vinculada", description: "Desvincule do projeto atual antes de vincular a outro.", variant: "destructive" });
+      return;
+    }
     const { error } = await supabase
       .from("bookmakers")
       .update({ projeto_id: projetoId })
@@ -119,6 +129,19 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       toast({ title: "Erro ao vincular projeto", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Projeto vinculado", description: `Casa vinculada ao projeto "${projetoNome}"` });
+      queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+    }
+  }, [toast, queryClient]);
+
+  const handleDesvincularProjeto = useCallback(async (bookmakerId: string, projetoNome: string) => {
+    const { error } = await supabase
+      .from("bookmakers")
+      .update({ projeto_id: null })
+      .eq("id", bookmakerId);
+    if (error) {
+      toast({ title: "Erro ao desvincular", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Projeto desvinculado", description: `Casa desvinculada do projeto "${projetoNome}"` });
       queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
     }
   }, [toast, queryClient]);
@@ -949,30 +972,50 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                 Saque
                               </ContextMenuItem>
                               <ContextMenuSeparator />
-                              <ContextMenuSub>
-                                <ContextMenuSubTrigger className="gap-2">
-                                  <FolderKanban className="h-4 w-4" />
-                                  Vincular a projeto
-                                </ContextMenuSubTrigger>
-                                <ContextMenuSubContent className="min-w-[180px]">
-                                  {projetos && projetos.length > 0 ? (
-                                    projetos.map((proj) => (
-                                      <ContextMenuItem
-                                        key={proj.id}
-                                        onClick={() => handleVincularProjeto(bm.bookmaker_id, proj.id, proj.nome)}
-                                        className="gap-2"
-                                      >
-                                        <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
-                                        {proj.nome}
-                                      </ContextMenuItem>
-                                    ))
-                                  ) : (
-                                    <ContextMenuItem disabled className="text-muted-foreground text-xs">
-                                      Nenhum projeto disponível
+                              {(() => {
+                                const usage = usageMap[bm.bookmaker_id];
+                                const isLinked = usage?.isActiveInProject || (bm.projetos && bm.projetos.length > 0);
+                                const projetoNome = usage?.projetoAtivoNome || projetos?.find(p => bm.projetos?.includes(p.id))?.nome || "atual";
+                                
+                                if (isLinked) {
+                                  return (
+                                    <ContextMenuItem
+                                      onClick={() => handleDesvincularProjeto(bm.bookmaker_id, projetoNome)}
+                                      className="gap-2 text-destructive focus:text-destructive"
+                                    >
+                                      <FolderKanban className="h-4 w-4" />
+                                      Desvincular do projeto {projetoNome}
                                     </ContextMenuItem>
-                                  )}
-                                </ContextMenuSubContent>
-                              </ContextMenuSub>
+                                  );
+                                }
+                                
+                                return (
+                                  <ContextMenuSub>
+                                    <ContextMenuSubTrigger className="gap-2">
+                                      <FolderKanban className="h-4 w-4" />
+                                      Vincular a projeto
+                                    </ContextMenuSubTrigger>
+                                    <ContextMenuSubContent className="min-w-[180px]">
+                                      {projetos && projetos.length > 0 ? (
+                                        projetos.map((proj) => (
+                                          <ContextMenuItem
+                                            key={proj.id}
+                                            onClick={() => handleVincularProjeto(bm.bookmaker_id, proj.id, proj.nome)}
+                                            className="gap-2"
+                                          >
+                                            <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
+                                            {proj.nome}
+                                          </ContextMenuItem>
+                                        ))
+                                      ) : (
+                                        <ContextMenuItem disabled className="text-muted-foreground text-xs">
+                                          Nenhum projeto disponível
+                                        </ContextMenuItem>
+                                      )}
+                                    </ContextMenuSubContent>
+                                  </ContextMenuSub>
+                                );
+                              })()}
                               <ContextMenuSeparator />
                               <ContextMenuItem
                                 onClick={() => onEditVinculo?.(bm.bookmaker_id)}
