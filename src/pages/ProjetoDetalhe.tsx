@@ -697,7 +697,7 @@ export default function ProjetoDetalhe() {
       {/* Summary Bar - KPIs compactos em faixa horizontal */}
       {showKpis && (
         <div className="flex-shrink-0 rounded-lg border border-border/60 bg-card/60 backdrop-blur px-4 py-2.5" style={{ maxHeight: "90px" }}>
-          <div className="flex items-center gap-4 md:gap-6 flex-wrap">
+          <div className="flex items-center justify-center gap-4 md:gap-6 flex-wrap">
             {/* Saldo Operável — destaque principal */}
             <SaldoOperavelCard projetoId={id!} variant="compact" />
 
@@ -711,10 +711,19 @@ export default function ProjetoDetalhe() {
               <div className="flex flex-col cursor-help min-w-[70px]">
                 <span className="text-[10px] text-muted-foreground leading-tight">Apostas</span>
                 <span className="text-sm md:text-base font-bold leading-tight">{apostasResumo?.total_apostas || 0}</span>
-                <div className="flex gap-1 text-[9px] leading-tight">
-                  <span className="text-emerald-500">{apostasResumo?.greens || 0}G</span>
-                  <span className="text-red-500">{apostasResumo?.reds || 0}R</span>
-                  <span className="text-gray-400">{apostasResumo?.voids || 0}V</span>
+                <div className="flex items-center gap-1.5 text-[10px] leading-tight mt-0.5">
+                  <span className="inline-flex items-center gap-0.5 text-emerald-500 font-medium">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    {apostasResumo?.greens || 0}
+                  </span>
+                  <span className="inline-flex items-center gap-0.5 text-red-500 font-medium">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
+                    {apostasResumo?.reds || 0}
+                  </span>
+                  <span className="inline-flex items-center gap-0.5 text-muted-foreground font-medium">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/60" />
+                    {apostasResumo?.voids || 0}
+                  </span>
                 </div>
               </div>
             </CountBreakdownTooltip>
