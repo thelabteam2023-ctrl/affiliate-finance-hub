@@ -1,9 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search } from "lucide-react";
+import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X } from "lucide-react";
 import { useSaldoOperavel } from "@/hooks/useSaldoOperavel";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -11,14 +10,88 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
 import { SaldoCompostoSimples } from "@/components/ui/saldo-composto";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
+import { createPortal } from "react-dom";
 
 interface SaldoOperavelCardProps {
   projetoId: string;
   variant?: "default" | "compact";
+}
+
+/**
+ * Floating Overlay Panel for "Saldo por Casa"
+ * - Fixed centered in viewport
+ * - Backdrop click closes
+ * - ESC closes
+ * - Body scroll locked while open
+ * - Responsive grid layout
+ */
+function SaldoOverlayPanel({
+  isOpen,
+  onClose,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  // Lock body scroll + ESC handler
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9998] flex items-center justify-center"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      style={{ background: "rgba(0,0,0,0.45)" }}
+    >
+      <div
+        className="relative bg-background border border-border rounded-xl shadow-2xl flex flex-col"
+        style={{
+          width: "min(900px, 85vw)",
+          maxWidth: "95vw",
+          maxHeight: "80vh",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 h-7 w-7 z-10"
+          onClick={onClose}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+
+        {/* Scrollable content */}
+        <div className="overflow-y-auto p-5 pr-10">
+          {children}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOperavelCardProps) {
@@ -40,14 +113,13 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   const { cotacaoUSD } = useCotacoes();
   
   const [isRetrying, setIsRetrying] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  const openPanel = useCallback(() => setIsPanelOpen(true), []);
+  const closePanel = useCallback(() => {
+    setIsPanelOpen(false);
+    setSearchTerm("");
   }, []);
 
   const conversaoVisual = useMemo(() => {
@@ -120,11 +192,13 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   const hasBonus = saldoBonus > 0;
   const casasComRollover = casasComSaldo.filter(c => c.hasRollover).length;
 
-  // Conteúdo do detalhamento por casa — REDESIGNED
+  // Conteúdo do detalhamento por casa
   const CasasBreakdown = () => (
     <div className="space-y-3">
-      {/* Badge Moeda Oficial */}
+      {/* Header */}
       <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+        <Wallet className="h-4 w-4 text-primary" />
+        <h3 className="text-sm font-semibold text-foreground">Saldo Operável</h3>
         <Badge 
           variant="outline" 
           className="text-[10px] px-2 py-0.5 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
@@ -136,7 +210,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       {/* Composição do Saldo */}
       <div className="space-y-2">
         <p className="text-xs font-medium text-foreground">Composição do Saldo</p>
-        <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
           <div className="p-2 rounded bg-muted/30">
             <span className="text-muted-foreground">Fiat (Real)</span>
             <p className="font-semibold">{formatCurrency(saldoReal)}</p>
@@ -162,7 +236,6 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         </div>
       </div>
 
-      {/* Texto explicativo */}
       <p className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded border border-border/30">
         Este saldo já inclui dinheiro real, freebets e créditos operáveis. 
         Os valores acima são apenas a decomposição do total.
@@ -172,7 +245,6 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       <div className="space-y-2">
         <p className="text-xs font-medium text-foreground">Saldo por Casa</p>
         
-        {/* Search — only when 8+ houses */}
         {casasComSaldo.length >= 8 && (
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -181,74 +253,70 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="h-8 pl-8 text-xs bg-muted/30 border-border/50"
+              autoFocus
             />
           </div>
         )}
 
-        {/* Grid container with max-height and scroll */}
-        <div className="overflow-y-auto" style={{ maxHeight: "50vh" }}>
-          <div 
-            className="grid gap-2"
-            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}
-          >
-            {filteredCasas.map((casa) => (
-              <div 
-                key={casa.id} 
-                className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-              >
-                {/* Row 1: Name + Currency + Balance — horizontal, single line */}
-                <div className="flex items-center justify-between gap-1.5 min-w-0">
-                  <div className="flex items-center gap-1 min-w-0 flex-1">
-                    <span className="text-xs font-medium text-foreground truncate">
-                      {casa.nome}
-                      {casa.instanceIdentifier && (
-                        <span className="text-primary/80 ml-1 font-normal">({casa.instanceIdentifier})</span>
-                      )}
-                    </span>
-                    {casa.parceiroPrimeiroNome && (
-                      <span className="text-[10px] text-primary/80 truncate flex-shrink-0">
-                        {casa.parceiroPrimeiroNome}
-                      </span>
+        <div 
+          className="grid gap-2"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}
+        >
+          {filteredCasas.map((casa) => (
+            <div 
+              key={casa.id} 
+              className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center justify-between gap-1.5 min-w-0">
+                <div className="flex items-center gap-1 min-w-0 flex-1">
+                  <span className="text-xs font-medium text-foreground truncate">
+                    {casa.nome}
+                    {casa.instanceIdentifier && (
+                      <span className="text-primary/80 ml-1 font-normal">({casa.instanceIdentifier})</span>
                     )}
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <Badge 
-                      variant="outline" 
-                      className="text-[8px] px-1 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal leading-tight"
-                    >
-                      {casa.moedaOriginal}
-                    </Badge>
-                    <SaldoCompostoSimples
-                      saldoReal={casa.saldoRealNativo}
-                      saldoFreebet={casa.saldoFreebetNativo}
-                      formatCurrency={(val) => formatCurrencyUtil(val, casa.moedaOriginal)}
-                      className="text-xs text-primary font-semibold whitespace-nowrap"
-                    />
-                  </div>
-                </div>
-                
-                {/* Row 2: Rollover bar — compact */}
-                {casa.hasRollover && (
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <Gift className="h-3 w-3 text-amber-500 flex-shrink-0" />
-                    <Progress 
-                      value={casa.rolloverPercentual} 
-                      className="h-1 flex-1"
-                    />
-                    <span className="text-[9px] text-muted-foreground whitespace-nowrap w-7 text-right">
-                      {casa.rolloverPercentual.toFixed(0)}%
+                  </span>
+                  {casa.parceiroPrimeiroNome && (
+                    <span className="text-[10px] text-primary/80 truncate flex-shrink-0">
+                      {casa.parceiroPrimeiroNome}
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <Badge 
+                    variant="outline" 
+                    className="text-[8px] px-1 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal leading-tight"
+                  >
+                    {casa.moedaOriginal}
+                  </Badge>
+                  <SaldoCompostoSimples
+                    saldoReal={casa.saldoRealNativo}
+                    saldoFreebet={casa.saldoFreebetNativo}
+                    formatCurrency={(val) => formatCurrencyUtil(val, casa.moedaOriginal)}
+                    className="text-xs text-primary font-semibold whitespace-nowrap"
+                  />
+                </div>
               </div>
-            ))}
+              
+              {casa.hasRollover && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Gift className="h-3 w-3 text-amber-500 flex-shrink-0" />
+                  <Progress 
+                    value={casa.rolloverPercentual} 
+                    className="h-1 flex-1"
+                  />
+                  <span className="text-[9px] text-muted-foreground whitespace-nowrap w-7 text-right">
+                    {casa.rolloverPercentual.toFixed(0)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          ))}
 
-            {filteredCasas.length === 0 && searchTerm && (
-              <p className="text-xs text-muted-foreground col-span-full text-center py-4">
-                Nenhuma casa encontrada para "{searchTerm}"
-              </p>
-            )}
-          </div>
+          {filteredCasas.length === 0 && searchTerm && (
+            <p className="text-xs text-muted-foreground col-span-full text-center py-4">
+              Nenhuma casa encontrada para "{searchTerm}"
+            </p>
+          )}
         </div>
       </div>
       
@@ -261,10 +329,13 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
 
   // Trigger content
   const TriggerContent = ({ isCompact = false }: { isCompact?: boolean }) => (
-    <div className={cn(
-      "flex flex-col items-center justify-center text-center cursor-pointer group",
-      isCompact && "px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20"
-    )}>
+    <div 
+      className={cn(
+        "flex flex-col items-center justify-center text-center cursor-pointer group",
+        isCompact && "px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20"
+      )}
+      onClick={hasCasas ? openPanel : undefined}
+    >
       <div className="flex items-center justify-center gap-2">
         {isCompact && <Wallet className="h-4 w-4 text-primary" />}
         <span className={cn(
@@ -310,95 +381,26 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     </p>
   );
 
+  // Overlay panel (shared across all variants)
+  const overlayPanel = (
+    <SaldoOverlayPanel isOpen={isPanelOpen} onClose={closePanel}>
+      <CasasBreakdown />
+    </SaldoOverlayPanel>
+  );
+
   // Compact variant
   if (variant === "compact") {
-    if (isMobile) {
-      return (
-        <Drawer>
-          <DrawerTrigger asChild>
-            <div className="cursor-pointer">
-              <TriggerContent isCompact />
-            </div>
-          </DrawerTrigger>
-          <DrawerContent className="max-h-[85vh]">
-            <DrawerHeader>
-              <DrawerTitle className="flex items-center gap-2 text-base">
-                <Wallet className="h-4 w-4 text-primary" />
-                Saldo Operável
-              </DrawerTitle>
-            </DrawerHeader>
-            <div className="px-4 pb-6 overflow-y-auto" style={{ maxHeight: "65vh" }}>
-              <CasasBreakdown />
-            </div>
-          </DrawerContent>
-        </Drawer>
-      );
-    }
-
     return (
-      <Popover onOpenChange={() => setSearchTerm("")}>
-        <PopoverTrigger asChild>
-          <div className="cursor-pointer">
-            <TriggerContent isCompact />
-          </div>
-        </PopoverTrigger>
-        <PopoverContent 
-          className="w-[580px] p-4" 
-          align="start" 
-          side="bottom"
-          sideOffset={8}
-          collisionPadding={16}
-        >
-          <CasasBreakdown />
-        </PopoverContent>
-      </Popover>
+      <>
+        <TriggerContent isCompact />
+        {overlayPanel}
+      </>
     );
   }
 
-  // Default variant — Mobile → Drawer
-  if (isMobile) {
-    return (
-      <Drawer>
-        <Card className="border-primary/30 bg-primary/5">
-          <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-2 p-3 md:p-6">
-            <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5">
-              Saldo Operável
-              <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-            </CardTitle>
-            <Badge 
-              variant="outline" 
-              className="ml-2 text-[9px] px-1.5 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
-            >
-              {moedaConsolidacao}
-            </Badge>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center p-3 pt-0 md:p-6 md:pt-0">
-            <DrawerTrigger asChild>
-              <div className="cursor-pointer">
-                <TriggerContent />
-              </div>
-            </DrawerTrigger>
-            <SubtitleText />
-          </CardContent>
-        </Card>
-        <DrawerContent className="max-h-[85vh]">
-          <DrawerHeader>
-            <DrawerTitle className="flex items-center gap-2 text-base">
-              <Wallet className="h-4 w-4 text-primary" />
-              Saldo Operável
-            </DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-6 overflow-y-auto" style={{ maxHeight: "65vh" }}>
-            <CasasBreakdown />
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
-  // Default variant — Desktop → Popover (wider, grid)
+  // Default variant
   return (
-    <Popover onOpenChange={() => setSearchTerm("")}>
+    <>
       <Card className="border-primary/30 bg-primary/5">
         <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-2 p-3 md:p-6">
           <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5">
@@ -413,23 +415,11 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           </Badge>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center p-3 pt-0 md:p-6 md:pt-0">
-          <PopoverTrigger asChild>
-            <div className="cursor-pointer">
-              <TriggerContent />
-            </div>
-          </PopoverTrigger>
+          <TriggerContent />
           <SubtitleText />
         </CardContent>
       </Card>
-      <PopoverContent 
-        className="w-[580px] p-4" 
-        align="start" 
-        side="bottom"
-        sideOffset={8}
-        collisionPadding={16}
-      >
-        <CasasBreakdown />
-      </PopoverContent>
-    </Popover>
+      {overlayPanel}
+    </>
   );
 }
