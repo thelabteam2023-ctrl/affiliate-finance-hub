@@ -90,7 +90,7 @@ export function ConversaoTab({ bonuses, dateRange }: AnalyticsTabProps) {
               {index + 1}
             </div>
             {bk.logo_url ? (
-              <img src={bk.logo_url} alt={bk.bookmaker_nome} className="h-8 w-8 rounded-lg object-contain bg-white p-0.5" />
+              <img src={bk.logo_url} alt={bk.bookmaker_nome} className="h-8 w-8 rounded-lg object-contain logo-blend p-0.5" />
             ) : (
               <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Building2 className="h-4 w-4 text-primary" />

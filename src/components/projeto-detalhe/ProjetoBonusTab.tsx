@@ -379,7 +379,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
                     <img
                       src={bk.logo_url}
                       alt={bk.nome}
-                      className="h-6 w-6 rounded object-contain bg-white"
+                      className="h-6 w-6 rounded object-contain logo-blend"
                     />
                   ) : (
                     <Building2 className="h-5 w-5 text-muted-foreground" />
@@ -539,7 +539,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
                             <img
                               src={bonus.bookmaker_logo_url}
                               alt={bonus.bookmaker_nome}
-                              className="h-8 w-8 rounded object-contain bg-white p-0.5"
+                              className="h-8 w-8 rounded object-contain logo-blend p-0.5"
                             />
                           ) : (
                             <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">

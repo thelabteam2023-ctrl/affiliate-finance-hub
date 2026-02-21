@@ -344,7 +344,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                       <img
                         src={bk.logo_url}
                         alt={bk.nome}
-                        className="h-8 w-8 rounded-lg object-contain bg-white p-0.5"
+                        className="h-8 w-8 rounded-lg object-contain logo-blend p-0.5"
                       />
                     ) : (
                       <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center">
@@ -393,7 +393,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                     <img
                       src={bonus.bookmaker_logo_url}
                       alt={bonus.bookmaker_nome}
-                      className="h-8 w-8 rounded-lg object-contain bg-white p-0.5"
+                      className="h-8 w-8 rounded-lg object-contain logo-blend p-0.5"
                     />
                   ) : (
                     <div className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
@@ -471,7 +471,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                           <img
                             src={bk.logo_url}
                             alt={bk.nome}
-                            className="h-8 w-8 rounded-lg object-contain bg-white p-0.5"
+                            className="h-8 w-8 rounded-lg object-contain logo-blend p-0.5"
                           />
                         ) : (
                           <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -585,7 +585,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
                         <img
                           src={bk.logo_url}
                           alt={bk.nome}
-                          className="h-10 w-10 rounded-lg object-contain bg-white p-1"
+                          className="h-10 w-10 rounded-lg object-contain logo-blend p-1"
                         />
                       ) : (
                         <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -884,7 +884,7 @@ function FinalizedBonusesSection({ bonuses, formatCurrency }: FinalizedBonusesSe
                       <img
                         src={data.bookmaker_logo}
                         alt={data.bookmaker_nome}
-                        className="h-8 w-8 rounded-lg object-contain bg-white p-0.5"
+                        className="h-8 w-8 rounded-lg object-contain logo-blend p-0.5"
                       />
                     ) : (
                       <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">

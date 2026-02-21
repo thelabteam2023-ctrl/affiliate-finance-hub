@@ -151,7 +151,7 @@ function BookmakerLogo({
       <img 
         src={logoUrl} 
         alt={nome} 
-        className={cn(LOGO_SIZE, "rounded-lg object-contain bg-white/10 p-1")}
+        className={cn(LOGO_SIZE, "rounded-lg object-contain logo-blend p-1")}
         onError={(e) => { e.currentTarget.style.display = 'none'; }}
       />
     );

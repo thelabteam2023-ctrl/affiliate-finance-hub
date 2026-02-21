@@ -412,7 +412,7 @@ export function BonusDialog({
                               <img
                                 src={bk.logo_url}
                                 alt={bk.nome}
-                                className="h-6 w-6 rounded object-contain bg-white shrink-0"
+                                className="h-6 w-6 rounded object-contain logo-blend shrink-0"
                               />
                             ) : (
                               <Building2 className="h-6 w-6 shrink-0" />

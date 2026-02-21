@@ -134,7 +134,7 @@ export function BookmakerHistoricoDialog({
                 <img
                   src={logoUrl}
                   alt={bookmakerNome}
-                  className="h-8 w-8 rounded object-contain bg-white p-0.5"
+                  className="h-8 w-8 rounded object-contain logo-blend p-0.5"
                 />
               ) : (
                 <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">

@@ -134,7 +134,7 @@ export function ProjectBonusAnalyticsTab({ projectId }: ProjectBonusAnalyticsTab
                       <img 
                         src={bk.logo_url} 
                         alt={bk.nome} 
-                        className="h-10 w-10 rounded-lg object-contain bg-white p-0.5 shrink-0" 
+                        className="h-10 w-10 rounded-lg object-contain logo-blend p-0.5 shrink-0" 
                       />
                     ) : (
                       <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">

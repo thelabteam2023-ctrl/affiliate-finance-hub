@@ -73,7 +73,7 @@ export function BookmakerBonusDetailDialog({
               <img 
                 src={bookmaker.logo_url} 
                 alt={bookmaker.nome}
-                className="h-12 w-12 rounded-lg object-contain bg-white p-1"
+                className="h-12 w-12 rounded-lg object-contain logo-blend p-1"
               />
             ) : (
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">

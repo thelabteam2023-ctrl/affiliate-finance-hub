@@ -225,7 +225,7 @@ export default function BookmakerAccessDialog({
               <img 
                 src={bookmaker.logo_url} 
                 alt="" 
-                className="h-6 w-6 rounded object-contain bg-white p-0.5"
+                className="h-6 w-6 rounded object-contain logo-blend p-0.5"
               />
             )}
             Gerenciar Acesso

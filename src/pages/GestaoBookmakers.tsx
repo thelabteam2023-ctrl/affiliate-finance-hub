@@ -731,7 +731,7 @@ export default function GestaoBookmakers() {
                           <img 
                             src={bookmaker.bookmakers_catalogo.logo_url} 
                             alt={bookmaker.nome}
-                            className="w-10 h-10 rounded object-contain bg-white/5 p-1"
+                            className="w-10 h-10 rounded object-contain logo-blend p-1"
                           />
                         ) : (
                           <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
@@ -997,7 +997,7 @@ export default function GestaoBookmakers() {
                                 <img 
                                   src={bookmaker.bookmakers_catalogo.logo_url} 
                                   alt={bookmaker.nome}
-                                  className="w-8 h-8 rounded object-contain bg-white/5 p-1 shrink-0"
+                                  className="w-8 h-8 rounded object-contain logo-blend p-1 shrink-0"
                                 />
                               ) : (
                                 <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">

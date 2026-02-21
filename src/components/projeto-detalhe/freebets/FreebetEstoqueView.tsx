@@ -298,7 +298,7 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                     <img
                       src={bk.logo_url}
                       alt={bk.nome}
-                      className="h-10 w-10 rounded-lg object-contain bg-white p-1"
+                      className="h-10 w-10 rounded-lg object-contain logo-blend p-1"
                     />
                   ) : (
                     <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
@@ -350,7 +350,7 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                         <img
                           src={bk.logo_url}
                           alt={bk.nome}
-                          className="h-10 w-10 rounded-lg object-contain bg-white p-1"
+                          className="h-10 w-10 rounded-lg object-contain logo-blend p-1"
                         />
                       ) : (
                         <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
@@ -448,7 +448,7 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                             <img
                               src={fb.logo_url}
                               alt={fb.bookmaker_nome}
-                              className="h-6 w-6 rounded object-contain bg-white p-0.5"
+                              className="h-6 w-6 rounded object-contain logo-blend p-0.5"
                             />
                           ) : (
                             <Gift className="h-5 w-5 text-amber-400" />

@@ -234,7 +234,7 @@ export function FreebetApostasList({
                   <img 
                     src={aposta.logo_url} 
                     alt={aposta.bookmaker_nome || ''} 
-                    className="h-10 w-10 rounded-lg object-contain bg-white/10 p-1 shrink-0"
+                    className="h-10 w-10 rounded-lg object-contain logo-blend p-1 shrink-0"
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
                 ) : (

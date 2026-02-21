@@ -27,7 +27,7 @@ export function FreebetResumoPorCasa({ stats, formatCurrency, viewMode = 'card' 
           <div key={stat.bookmaker_id} className="flex items-center gap-4 p-3 rounded-lg border bg-card">
             {/* Logo */}
             {stat.logo_url ? (
-              <img src={stat.logo_url} alt={stat.bookmaker_nome} className="h-10 w-10 rounded-lg object-contain bg-white p-1" />
+              <img src={stat.logo_url} alt={stat.bookmaker_nome} className="h-10 w-10 rounded-lg object-contain logo-blend p-1" />
             ) : (
               <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
                 <Building2 className="h-5 w-5" />
@@ -80,7 +80,7 @@ export function FreebetResumoPorCasa({ stats, formatCurrency, viewMode = 'card' 
           <CardHeader className="pb-2">
             <div className="flex items-center gap-3">
               {stat.logo_url ? (
-                <img src={stat.logo_url} alt={stat.bookmaker_nome} className="h-10 w-10 rounded-lg object-contain bg-white p-1" />
+                <img src={stat.logo_url} alt={stat.bookmaker_nome} className="h-10 w-10 rounded-lg object-contain logo-blend p-1" />
               ) : (
                 <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
                   <Building2 className="h-5 w-5" />
