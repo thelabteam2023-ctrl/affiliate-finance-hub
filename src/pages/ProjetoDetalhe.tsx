@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
-import { VolumeKPI } from "@/components/kpis/VolumeKPI";
+import { VolumeKPI } from "@/components/kpis/VolumeKPI"; // kept for potential future use
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -694,129 +694,137 @@ export default function ProjetoDetalhe() {
 
       {/* Filtro de período removido - cada aba usa seu próprio StandardTimeFilter interno (padrão Bônus/Freebets) */}
 
-      {/* KPIs Resumo - Only show on performance tabs */}
+      {/* Summary Bar - KPIs compactos em faixa horizontal */}
       {showKpis && (
-        <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-5 flex-shrink-0">
-          {/* Saldo Operável - KPI estratégico transversal */}
-          <SaldoOperavelCard projetoId={id!} />
-          {/* Apostas - Com breakdown por módulo */}
-          <CountBreakdownTooltip
-            breakdown={kpiBreakdowns?.apostas || null}
-            title="Entradas por Módulo"
-          >
-            <Card className="overflow-hidden cursor-help" style={{ contain: "layout paint" }}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium">Apostas</CardTitle>
-                <Target className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                <div className="text-lg md:text-2xl font-bold">{apostasResumo?.total_apostas || 0}</div>
-                <div className="flex flex-wrap gap-x-1.5 md:gap-x-2 gap-y-0.5 text-[10px] md:text-xs">
-                  <span className="text-emerald-500">{apostasResumo?.greens || 0} G</span>
-                  <span className="text-red-500">{apostasResumo?.reds || 0} R</span>
-                  <span className="text-lime-400">{apostasResumo?.meio_greens || 0} ½G</span>
-                  <span className="text-orange-400">{apostasResumo?.meio_reds || 0} ½R</span>
-                  <span className="text-gray-400">{apostasResumo?.voids || 0} V</span>
+        <div className="flex-shrink-0 rounded-lg border border-border/60 bg-card/60 backdrop-blur px-4 py-2.5" style={{ maxHeight: "90px" }}>
+          <div className="flex items-center gap-4 md:gap-6 flex-wrap">
+            {/* Saldo Operável — destaque principal */}
+            <SaldoOperavelCard projetoId={id!} variant="compact" />
+
+            <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
+
+            {/* Apostas */}
+            <CountBreakdownTooltip
+              breakdown={kpiBreakdowns?.apostas || null}
+              title="Entradas por Módulo"
+            >
+              <div className="flex flex-col cursor-help min-w-[70px]">
+                <span className="text-[10px] text-muted-foreground leading-tight">Apostas</span>
+                <span className="text-sm md:text-base font-bold leading-tight">{apostasResumo?.total_apostas || 0}</span>
+                <div className="flex gap-1 text-[9px] leading-tight">
+                  <span className="text-emerald-500">{apostasResumo?.greens || 0}G</span>
+                  <span className="text-red-500">{apostasResumo?.reds || 0}R</span>
+                  <span className="text-gray-400">{apostasResumo?.voids || 0}V</span>
                 </div>
-              </CardContent>
-            </Card>
-          </CountBreakdownTooltip>
+              </div>
+            </CountBreakdownTooltip>
 
-          {/* Volume em Apostas - Consolidado com tooltip multi-moeda */}
-          {(() => {
-            const cb = kpiBreakdowns?.volume?.currencyBreakdown || [];
-            const volByCurrency: Record<string, number> = {};
-            cb.forEach(item => { volByCurrency[item.moeda] = item.valor; });
-            const moeda = projetoResultado?.moedaConsolidacao || kpiBreakdowns?.volume?.currency || 'BRL';
-            const rateDateStr = rateLastUpdate ? new Date(rateLastUpdate).toLocaleDateString('pt-BR') : undefined;
-            return (
-              <VolumeKPI
-                volumeByCurrency={volByCurrency}
-                consolidationCurrency={moeda}
-                getRate={getRate}
-                formatCurrency={formatCurrency}
-                rateDate={rateDateStr}
-              />
-            );
-          })()}
+            <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
 
-          {/* Resultado/Lucro - Com breakdown dinâmico por módulo */}
-          <KpiBreakdownTooltip
-            breakdown={kpiBreakdowns?.lucro || null}
-            formatValue={formatCurrency}
-            title="Lucro por Módulo"
-          >
-            <Card className="overflow-hidden cursor-help" style={{ contain: "layout paint" }}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium">
+            {/* Volume */}
+            {(() => {
+              const cb = kpiBreakdowns?.volume?.currencyBreakdown || [];
+              const volByCurrency: Record<string, number> = {};
+              cb.forEach(item => { volByCurrency[item.moeda] = item.valor; });
+              const moeda = projetoResultado?.moedaConsolidacao || kpiBreakdowns?.volume?.currency || 'BRL';
+              const rateDateStr = rateLastUpdate ? new Date(rateLastUpdate).toLocaleDateString('pt-BR') : undefined;
+
+              // Inline compact volume
+              const consolidation = (() => {
+                let total = 0;
+                Object.entries(volByCurrency).forEach(([m, v]) => {
+                  if (m === moeda) { total += v; }
+                  else {
+                    const rate = getRate(m);
+                    if (moeda === 'BRL') { total += v * rate; }
+                    else { total += v / rate * getRate(moeda); }
+                  }
+                });
+                // Fallback simples
+                if (total === 0) {
+                  total = Object.values(volByCurrency).reduce((a, b) => a + b, 0);
+                }
+                return total;
+              })();
+
+              return (
+                <div className="flex flex-col min-w-[80px]">
+                  <span className="text-[10px] text-muted-foreground leading-tight">Volume</span>
+                  <span className="text-sm md:text-base font-bold leading-tight truncate">
+                    {formatCurrency(consolidation)}
+                  </span>
+                </div>
+              );
+            })()}
+
+            <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
+
+            {/* Lucro/Prejuízo */}
+            <KpiBreakdownTooltip
+              breakdown={kpiBreakdowns?.lucro || null}
+              formatValue={formatCurrency}
+              title="Lucro por Módulo"
+            >
+              <div className="flex flex-col cursor-help min-w-[80px]">
+                <span className="text-[10px] text-muted-foreground leading-tight">
                   {(projetoResultado?.netProfit || 0) >= 0 ? "Lucro" : "Prejuízo"}
-                </CardTitle>
-                {(projetoResultado?.netProfit || 0) >= 0 ? (
-                  <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-emerald-500" />
-                ) : (
-                  <TrendingDown className="h-3.5 w-3.5 md:h-4 md:w-4 text-red-500" />
-                )}
-              </CardHeader>
-              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                <div className={`text-lg md:text-2xl font-bold truncate ${(projetoResultado?.netProfit || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                </span>
+                <span className={cn(
+                  "text-sm md:text-base font-bold leading-tight truncate",
+                  (projetoResultado?.netProfit || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
+                )}>
                   {formatCurrency(Math.abs(projetoResultado?.netProfit || 0))}
-                </div>
-                <p className="text-[10px] md:text-xs text-muted-foreground truncate">
-                  Resultado consolidado
-                </p>
-              </CardContent>
-            </Card>
-          </KpiBreakdownTooltip>
+                </span>
+              </div>
+            </KpiBreakdownTooltip>
 
-          {/* ROI - Com tooltip explicativo */}
-          <TooltipProvider>
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <Card className="overflow-hidden cursor-help" style={{ contain: "layout paint" }}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
-                    <CardTitle className="text-xs md:text-sm font-medium">ROI</CardTitle>
-                    <Percent className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-                    <div className={`text-lg md:text-2xl font-bold ${(kpiBreakdowns?.roi?.total || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
+
+            {/* ROI */}
+            <TooltipProvider>
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-col cursor-help min-w-[50px]">
+                    <span className="text-[10px] text-muted-foreground leading-tight">ROI</span>
+                    <span className={cn(
+                      "text-sm md:text-base font-bold leading-tight",
+                      (kpiBreakdowns?.roi?.total || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
+                    )}>
                       {(kpiBreakdowns?.roi?.total || 0).toFixed(2)}%
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[240px] p-3" sideOffset={8}>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold border-b border-border pb-1.5">Cálculo do ROI</p>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Lucro Total:</span>
+                        <span className={(kpiBreakdowns?.roi?.lucroTotal || 0) >= 0 ? "text-emerald-500" : "text-red-500"}>
+                          {formatCurrency(kpiBreakdowns?.roi?.lucroTotal || 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">Volume Total:</span>
+                        <span>{formatCurrency(kpiBreakdowns?.roi?.volumeTotal || 0)}</span>
+                      </div>
                     </div>
-                    <p className="text-[10px] md:text-xs text-muted-foreground">
-                      Retorno sobre investimento
-                    </p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-[240px] p-3" sideOffset={8}>
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold border-b border-border pb-1.5">Cálculo do ROI</p>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between gap-3">
-                      <span className="text-muted-foreground">Lucro Total:</span>
-                      <span className={(kpiBreakdowns?.roi?.lucroTotal || 0) >= 0 ? "text-emerald-500" : "text-red-500"}>
-                        {formatCurrency(kpiBreakdowns?.roi?.lucroTotal || 0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <span className="text-muted-foreground">Volume Total:</span>
-                      <span>{formatCurrency(kpiBreakdowns?.roi?.volumeTotal || 0)}</span>
+                    <div className="border-t border-border pt-1.5 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">ROI = Lucro ÷ Volume</span>
+                        <span className={cn(
+                          "font-bold",
+                          (kpiBreakdowns?.roi?.total || 0) >= 0 ? "text-emerald-500" : "text-red-500"
+                        )}>
+                          {(kpiBreakdowns?.roi?.total || 0).toFixed(2)}%
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="border-t border-border pt-1.5 text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">ROI = Lucro ÷ Volume</span>
-                      <span className={cn(
-                        "font-bold",
-                        (kpiBreakdowns?.roi?.total || 0) >= 0 ? "text-emerald-500" : "text-red-500"
-                      )}>
-                        {(kpiBreakdowns?.roi?.total || 0).toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       )}
 
