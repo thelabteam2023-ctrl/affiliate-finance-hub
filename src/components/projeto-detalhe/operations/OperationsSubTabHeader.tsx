@@ -17,8 +17,14 @@ export interface OperationsSubTabHeaderProps {
   /** Número de operações abertas (para badge) */
   openCount: number;
   
+  /** Número total de operações abertas (sem filtros dimensionais) */
+  totalOpenCount?: number;
+  
   /** Número de operações no histórico (opcional, mostra badge se > 0) */
   historyCount?: number;
+  
+  /** Número total de operações no histórico (sem filtros dimensionais) */
+  totalHistoryCount?: number;
   
   /** Modo de visualização cards/list (opcional) */
   viewMode?: "cards" | "list";
@@ -52,7 +58,9 @@ export function OperationsSubTabHeader({
   subTab,
   onSubTabChange,
   openCount,
+  totalOpenCount,
   historyCount,
+  totalHistoryCount,
   viewMode = "cards",
   onViewModeChange,
   showViewToggle = true,
@@ -61,6 +69,8 @@ export function OperationsSubTabHeader({
   extraActions,
   className,
 }: OperationsSubTabHeaderProps) {
+  const isOpenFiltered = totalOpenCount !== undefined && totalOpenCount !== openCount;
+  const isHistoryFiltered = totalHistoryCount !== undefined && totalHistoryCount !== historyCount;
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <div className="flex items-center justify-between gap-4">
@@ -84,7 +94,7 @@ export function OperationsSubTabHeader({
                 variant="secondary" 
                 className="h-5 px-1.5 text-xs ml-1"
               >
-                {openCount}
+                {isOpenFiltered ? `${openCount}/${totalOpenCount}` : openCount}
               </Badge>
             )}
           </Button>
@@ -107,7 +117,7 @@ export function OperationsSubTabHeader({
                 variant="secondary" 
                 className="h-5 px-1.5 text-xs ml-1"
               >
-                {historyCount}
+                {isHistoryFiltered ? `${historyCount}/${totalHistoryCount}` : historyCount}
               </Badge>
             )}
           </Button>

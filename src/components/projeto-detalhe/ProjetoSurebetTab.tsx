@@ -821,6 +821,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   const surebetsAbertas = useMemo(() => filteredSurebetsForOperacoes.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE"), [filteredSurebetsForOperacoes]);
   const surebetsHistorico = useMemo(() => filteredSurebetsForOperacoes.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE"), [filteredSurebetsForOperacoes]);
 
+  // Contagens totais (sem filtros dimensionais) para indicar no badge
+  const totalSurebetsAbertas = useMemo(() => surebets.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE").length, [surebets]);
+  const totalSurebetsHistorico = useMemo(() => surebets.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE").length, [surebets]);
+
   // Auto-switch to history tab when no open operations
   useEffect(() => {
     if (!loading && surebetsAbertas.length === 0 && surebetsHistorico.length > 0 && operacoesSubTab === 'abertas') {
@@ -1098,7 +1102,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
               subTab={operacoesSubTab}
               onSubTabChange={setOperacoesSubTab}
               openCount={surebetsAbertas.length}
+              totalOpenCount={totalSurebetsAbertas}
               historyCount={surebetsHistorico.length}
+              totalHistoryCount={totalSurebetsHistorico}
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}

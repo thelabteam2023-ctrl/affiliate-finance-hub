@@ -616,6 +616,16 @@ export function ProjetoValueBetTab({
     });
   }, [apostasListaAtual, searchTerm, tabFilters.resultados]);
 
+  // Filtered counts per sub-tab for badge display
+  const filteredAbertasCount = useMemo(() => apostasAbertas.filter(a => {
+    const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
+    return matchesResultado;
+  }).length, [apostasAbertas, tabFilters.resultados]);
+  const filteredHistoricoCount = useMemo(() => apostasHistorico.filter(a => {
+    const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
+    return matchesResultado;
+  }).length, [apostasHistorico, tabFilters.resultados]);
+
   // formatCurrency agora vem do useProjetoCurrency
 
   const formatPercent = (value: number) => {
@@ -825,8 +835,10 @@ export function ProjetoValueBetTab({
             <OperationsSubTabHeader
               subTab={apostasSubTab}
               onSubTabChange={setApostasSubTab}
-              openCount={apostasAbertas.length}
-              historyCount={apostasHistorico.length}
+              openCount={filteredAbertasCount}
+              totalOpenCount={apostasAbertas.length}
+              historyCount={filteredHistoricoCount}
+              totalHistoryCount={apostasHistorico.length}
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}

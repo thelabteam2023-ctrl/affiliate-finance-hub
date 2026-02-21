@@ -722,6 +722,16 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const apostasAbertas = useMemo(() => apostas.filter(a => !a.resultado || a.resultado === "PENDENTE"), [apostas]);
   const apostasHistorico = useMemo(() => apostas.filter(a => a.resultado && a.resultado !== "PENDENTE"), [apostas]);
 
+  // Filtered counts per sub-tab for badge display
+  const filteredAbertasCount = useMemo(() => apostasAbertas.filter(a => {
+    const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
+    return matchesResultado;
+  }).length, [apostasAbertas, tabFilters.resultados]);
+  const filteredHistoricoCount = useMemo(() => apostasHistorico.filter(a => {
+    const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
+    return matchesResultado;
+  }).length, [apostasHistorico, tabFilters.resultados]);
+
   // Auto-switch to history tab when no open operations
   useEffect(() => {
     if (!loading && apostasAbertas.length === 0 && apostasHistorico.length > 0 && apostasSubTab === 'abertas') {
@@ -900,8 +910,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
             <OperationsSubTabHeader
               subTab={apostasSubTab}
               onSubTabChange={setApostasSubTab}
-              openCount={apostasAbertas.length}
-              historyCount={apostasHistorico.length}
+              openCount={filteredAbertasCount}
+              totalOpenCount={apostasAbertas.length}
+              historyCount={filteredHistoricoCount}
+              totalHistoryCount={apostasHistorico.length}
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}

@@ -649,6 +649,21 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
     return false;
   });
 
+  // Total counts without dimensional filters (for badge comparison)
+  const isItemPendenteFn = (item: ApostaUnificada) => {
+    if (item.tipo === "simples") { const a = item.data as Aposta; return a.status === "PENDENTE" || !a.resultado; }
+    if (item.tipo === "multipla") { const am = item.data as ApostaMultipla; return am.status === "PENDENTE" || !am.resultado; }
+    if (item.tipo === "surebet") { const sb = item.data as Surebet; return sb.status === "PENDENTE" || !sb.resultado; }
+    return false;
+  };
+  const allUnificadas: ApostaUnificada[] = useMemo(() => [
+    ...apostas.map(a => ({ tipo: "simples" as const, data: a, data_aposta: a.data_aposta })),
+    ...apostasMultiplas.map(am => ({ tipo: "multipla" as const, data: am, data_aposta: am.data_aposta })),
+    ...surebets.map(sb => ({ tipo: "surebet" as const, data: sb, data_aposta: sb.data_operacao })),
+  ], [apostas, apostasMultiplas, surebets]);
+  const totalAbertasCount = useMemo(() => allUnificadas.filter(isItemPendenteFn).length, [allUnificadas]);
+  const totalHistoricoCount = useMemo(() => allUnificadas.filter(i => !isItemPendenteFn(i)).length, [allUnificadas]);
+
   // Auto-switch to history tab when no open operations
   useEffect(() => {
     if (!loading && apostasAbertas.length === 0 && apostasHistorico.length > 0 && subTab === 'abertas') {
@@ -1045,7 +1060,9 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
               subTab={subTab}
               onSubTabChange={setSubTab}
               openCount={apostasAbertas.length}
+              totalOpenCount={totalAbertasCount}
               historyCount={apostasHistorico.length}
+              totalHistoryCount={totalHistoricoCount}
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}
