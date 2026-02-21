@@ -26,8 +26,14 @@ export interface OperationsHistoryConfig {
   /** Número de operações abertas (para badge) */
   openCount: number;
   
+  /** Total de operações abertas sem filtros dimensionais */
+  totalOpenCount?: number;
+  
   /** Número de operações no histórico */
   historyCount: number;
+  
+  /** Total de operações no histórico sem filtros dimensionais */
+  totalHistoryCount?: number;
   
   /** Modo de visualização cards/list */
   viewMode: "cards" | "list";
@@ -85,7 +91,9 @@ export function OperationsHistoryModule({
   showEstrategiaFilter = false,
   showFiltersBar = true,
   openCount,
+  totalOpenCount,
   historyCount,
+  totalHistoryCount,
   viewMode,
   onViewModeChange,
   subTab,
@@ -116,7 +124,9 @@ export function OperationsHistoryModule({
           subTab={subTab}
           onSubTabChange={onSubTabChange}
           openCount={openCount}
+          totalOpenCount={totalOpenCount}
           historyCount={historyCount}
+          totalHistoryCount={totalHistoryCount}
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
           showViewToggle={(subTab === "abertas" && hasOpenContent) || (subTab === "historico" && hasHistoryContent)}

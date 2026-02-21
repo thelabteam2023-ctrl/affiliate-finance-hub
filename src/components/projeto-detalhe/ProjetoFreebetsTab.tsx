@@ -429,6 +429,10 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   // Apostas por status
   const apostasAtivas = apostasFiltradas.filter(ap => ap.status === "PENDENTE" || ap.resultado === "PENDENTE");
   const apostasHistorico = apostasFiltradas.filter(ap => ap.status === "LIQUIDADA" && ap.resultado !== "PENDENTE");
+  
+  // Total counts without casa filter for badge comparison
+  const totalAtivas = useMemo(() => apostasNoPeriodo.filter(ap => ap.status === "PENDENTE" || ap.resultado === "PENDENTE").length, [apostasNoPeriodo]);
+  const totalHistorico = useMemo(() => apostasNoPeriodo.filter(ap => ap.status === "LIQUIDADA" && ap.resultado !== "PENDENTE").length, [apostasNoPeriodo]);
 
   // Auto-switch to history tab when no active operations (only on initial load)
   useEffect(() => {
@@ -859,7 +863,9 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
             subTab={subTab === "ativas" ? "abertas" : "historico"}
             onSubTabChange={(tab) => setSubTab(tab === "abertas" ? "ativas" : "historico")}
             openCount={apostasAtivas.length}
+            totalOpenCount={totalAtivas}
             historyCount={apostasHistorico.length}
+            totalHistoryCount={totalHistorico}
             viewMode={viewMode === "card" ? "cards" : "list"}
             onViewModeChange={(mode) => setViewMode(mode === "cards" ? "card" : "list")}
             showViewToggle={true}

@@ -983,6 +983,22 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const apostasAbertasList = useMemo(() => apostasUnificadasBase.filter(isItemPendente), [apostasUnificadasBase]);
   const apostasHistoricoList = useMemo(() => apostasUnificadasBase.filter(item => !isItemPendente(item)), [apostasUnificadasBase]);
 
+  // Total counts without dimensional filters for badge comparison
+  const totalAbertasRaw = useMemo(() => {
+    let count = 0;
+    count += apostas.filter(a => !a.resultado || a.resultado === "PENDENTE" || a.status === "PENDENTE").length;
+    count += apostasMultiplas.filter(am => !am.resultado || am.resultado === "PENDENTE" || am.status === "PENDENTE").length;
+    count += surebets.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE").length;
+    return count;
+  }, [apostas, apostasMultiplas, surebets]);
+  const totalHistoricoRaw = useMemo(() => {
+    let count = 0;
+    count += apostas.filter(a => a.resultado && a.resultado !== "PENDENTE" && a.status !== "PENDENTE").length;
+    count += apostasMultiplas.filter(am => am.resultado && am.resultado !== "PENDENTE" && am.status !== "PENDENTE").length;
+    count += surebets.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE").length;
+    return count;
+  }, [apostas, apostasMultiplas, surebets]);
+
   // Auto-switch to history tab when no open operations
   useEffect(() => {
     if (!loading && apostasAbertasList.length === 0 && apostasHistoricoList.length > 0 && apostasSubTab === 'abertas') {
@@ -1213,7 +1229,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               subTab={apostasSubTab}
               onSubTabChange={setApostasSubTab}
               openCount={apostasAbertasList.length}
+              totalOpenCount={totalAbertasRaw}
               historyCount={apostasHistoricoList.length}
+              totalHistoryCount={totalHistoricoRaw}
               viewMode={viewMode}
               onViewModeChange={(mode) => setViewMode(mode)}
               showViewToggle={true}

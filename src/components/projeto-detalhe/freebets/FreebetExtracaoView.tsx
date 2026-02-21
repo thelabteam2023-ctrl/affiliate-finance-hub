@@ -298,6 +298,7 @@ export function FreebetExtracaoView({
             onSubTabChange={setSubTab}
             openCount={apostasAtivas.length}
             historyCount={apostasHistorico.length}
+            totalHistoryCount={apostasHistoricoRaw.length}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             showViewToggle={true}
