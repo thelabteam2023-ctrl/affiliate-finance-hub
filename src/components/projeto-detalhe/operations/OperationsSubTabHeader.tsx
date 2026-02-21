@@ -145,7 +145,7 @@ export function OperationsSubTabHeader({
             type="text"
             value={searchQuery || ""}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Buscar por jogo ou evento..."
+            placeholder="Buscar por jogo, evento ou casa..."
             className="w-full h-9 rounded-lg border border-border bg-background/50 pl-9 pr-9 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
           />
           {searchQuery && (

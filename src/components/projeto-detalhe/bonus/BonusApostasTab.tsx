@@ -560,7 +560,8 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
     const matchesSearch = 
       aposta.evento.toLowerCase().includes(searchTerm.toLowerCase()) ||
       aposta.esporte.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      aposta.selecao.toLowerCase().includes(searchTerm.toLowerCase());
+      aposta.selecao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (aposta.bookmaker?.nome || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || aposta.status === statusFilter;
     const matchesResultado = resultadoFilter === "all" || aposta.resultado === resultadoFilter;
     const matchesDimResultado = dimensionalFilter.resultados.length === 0 || dimensionalFilter.resultados.includes(aposta.resultado as any);
@@ -587,7 +588,8 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
     const matchesSearch = 
       sb.evento.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sb.esporte.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sb.modelo.toLowerCase().includes(searchTerm.toLowerCase());
+      sb.modelo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sb.pernas?.some((p: any) => (p?.bookmaker_nome || '').toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === "all" || sb.status === statusFilter;
     const matchesResultado = resultadoFilter === "all" || sb.resultado === resultadoFilter;
     const matchesDimResultado = dimensionalFilter.resultados.length === 0 || dimensionalFilter.resultados.includes(sb.resultado as any);
