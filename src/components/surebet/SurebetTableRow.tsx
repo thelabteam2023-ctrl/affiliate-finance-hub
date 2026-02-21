@@ -58,6 +58,7 @@ interface BookmakerOption {
   saldo_bonus?: number;
   logo_url?: string | null;
   bonus_rollover_started?: boolean;
+  instance_identifier?: string | null;
 }
 
 interface SurebetTableRowProps {
@@ -206,7 +207,12 @@ export function SurebetTableRow({
             <SelectTrigger className="h-8 text-[10px] w-full">
               <SelectValue placeholder="Selecione">
                 {selectedBookmaker?.nome && (
-                  <span className="truncate uppercase">{selectedBookmaker.nome}</span>
+                  <span className="truncate uppercase">
+                    {selectedBookmaker.nome}
+                    {selectedBookmaker.instance_identifier && (
+                      <span className="text-primary/80 ml-1 normal-case text-[9px]">({selectedBookmaker.instance_identifier})</span>
+                    )}
+                  </span>
                 )}
               </SelectValue>
             </SelectTrigger>

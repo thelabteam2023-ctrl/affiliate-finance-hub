@@ -226,7 +226,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     if (!buscaCasa.trim()) return bookmakersFiltradosMoeda;
     const termo = buscaCasa.trim().toLowerCase();
     return bookmakersFiltradosMoeda.filter(b => 
-      b.bookmaker_nome.toLowerCase().includes(termo)
+      b.bookmaker_nome.toLowerCase().includes(termo) ||
+      (b.instance_identifier || '').toLowerCase().includes(termo)
     );
   }, [bookmakersFiltradosMoeda, buscaCasa]);
 
@@ -712,7 +713,12 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                               )}
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                  <p className="text-xs font-medium truncate">{bm.bookmaker_nome}</p>
+                                  <p className="text-xs font-medium truncate">
+                                    {bm.bookmaker_nome}
+                                    {bm.instance_identifier && (
+                                      <span className="text-primary/80 ml-1 font-normal">({bm.instance_identifier})</span>
+                                    )}
+                                  </p>
                                   {bm.has_credentials && (
                                     <Popover
                                       open={credentialsPopoverOpen === bm.bookmaker_id}

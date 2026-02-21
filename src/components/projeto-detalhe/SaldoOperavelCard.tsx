@@ -71,7 +71,8 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     const term = searchTerm.toLowerCase();
     return casasComSaldo.filter(c => 
       c.nome.toLowerCase().includes(term) || 
-      c.parceiroPrimeiroNome?.toLowerCase().includes(term)
+      c.parceiroPrimeiroNome?.toLowerCase().includes(term) ||
+      c.instanceIdentifier?.toLowerCase().includes(term)
     );
   }, [casasComSaldo, searchTerm]);
 
@@ -200,6 +201,9 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                   <div className="flex items-center gap-1 min-w-0 flex-1">
                     <span className="text-xs font-medium text-foreground truncate">
                       {casa.nome}
+                      {casa.instanceIdentifier && (
+                        <span className="text-primary/80 ml-1 font-normal">({casa.instanceIdentifier})</span>
+                      )}
                     </span>
                     {casa.parceiroPrimeiroNome && (
                       <span className="text-[10px] text-primary/80 truncate flex-shrink-0">
