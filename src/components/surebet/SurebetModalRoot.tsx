@@ -230,6 +230,10 @@ export function SurebetModalRoot({
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
+  // Crédito virtual: armazena stakes originais por bookmaker_id para modo edição
+  // Permite que o saldo "bloqueado" pela aposta original seja reconhecido como disponível
+  const originalStakesByBookmaker = useRef<Map<string, number>>(new Map());
   const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   
   const {
@@ -242,9 +246,21 @@ export function SurebetModalRoot({
   } = useSurebetPrintImport();
 
   // Bookmakers disponíveis (base - sem ajuste intra-form)
-  // Em modo edição, incluir TODOS os bookmakers para que os já selecionados nas pernas apareçam
+  // Em modo edição: incluir TODOS e aplicar crédito virtual das stakes originais
   const bookmakersDisponiveis = useMemo(() => {
-    if (isEditing) return bookmakerSaldos;
+    if (isEditing) {
+      return bookmakerSaldos.map(bk => {
+        const creditoVirtual = originalStakesByBookmaker.current.get(bk.id) || 0;
+        if (creditoVirtual > 0) {
+          return {
+            ...bk,
+            saldo_operavel: bk.saldo_operavel + creditoVirtual,
+            saldo_disponivel: bk.saldo_disponivel + creditoVirtual,
+          };
+        }
+        return bk;
+      });
+    }
     return bookmakerSaldos.filter((bk) => bk.saldo_operavel >= 0.50);
   }, [bookmakerSaldos, isEditing]);
 
@@ -515,6 +531,16 @@ export function SurebetModalRoot({
       .order("ordem", { ascending: true });
 
     if (pernasData && pernasData.length > 0) {
+      // Armazenar stakes originais por bookmaker para crédito virtual em modo edição
+      const stakeMap = new Map<string, number>();
+      pernasData.forEach((perna: any) => {
+        if (perna.bookmaker_id && perna.stake) {
+          const current = stakeMap.get(perna.bookmaker_id) || 0;
+          stakeMap.set(perna.bookmaker_id, current + (parseFloat(perna.stake) || 0));
+        }
+      });
+      originalStakesByBookmaker.current = stakeMap;
+      
       const pernasOdds: OddEntry[] = pernasData.map((perna: any, index: number) => ({
         bookmaker_id: perna.bookmaker_id || "",
         moeda: (perna.moeda || "BRL") as SupportedCurrency,
@@ -1277,7 +1303,9 @@ export function SurebetModalRoot({
       const bookmaker = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
       if (!bookmaker) return;
       
-      const saldoBase = bookmaker.saldo_operavel ?? 0;
+      // Em modo edição, aplicar crédito virtual das stakes originais
+      const creditoVirtual = isEditing ? (originalStakesByBookmaker.current.get(entry.bookmaker_id) || 0) : 0;
+      const saldoBase = (bookmaker.saldo_operavel ?? 0) + creditoVirtual;
       
       // Calcular quanto já foi alocado em pernas ANTERIORES (índice < atual) para esta mesma bookmaker
       let alocadoEmOutrasPernas = 0;
@@ -1303,7 +1331,7 @@ export function SurebetModalRoot({
       insufficientLegs,
       adjustedBalances
     };
-  }, [odds, bookmakerSaldos]);
+  }, [odds, bookmakerSaldos, isEditing]);
 
   // ============================================
   // RASCUNHO
