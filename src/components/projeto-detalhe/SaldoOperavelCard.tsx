@@ -1,17 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search } from "lucide-react";
 import { useSaldoOperavel } from "@/hooks/useSaldoOperavel";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
 import { SaldoCompostoSimples } from "@/components/ui/saldo-composto";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
@@ -21,16 +21,6 @@ interface SaldoOperavelCardProps {
   variant?: "default" | "compact";
 }
 
-/**
- * Card do KPI "Saldo Operável" - REFATORADO
- * 
- * REGRAS DE EXIBIÇÃO:
- * 1. Valor principal SEMPRE na moeda de consolidação do projeto
- * 2. Conversão visual (≈ BRL/USD) é apenas referência, nunca altera cálculos
- * 3. Composição (Fiat + Freebet + Créditos) na moeda de consolidação
- * 4. Badge "Moeda Oficial" neutro, não parecer CTA
- * 5. Texto explicativo obrigatório sobre composição
- */
 export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOperavelCardProps) {
   const { 
     saldoOperavel, 
@@ -51,7 +41,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   
   const [isRetrying, setIsRetrying] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -60,26 +50,13 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Calcular conversão visual para a outra moeda
   const conversaoVisual = useMemo(() => {
     if (moedaConsolidacao === "USD") {
-      // Projeto em USD → mostrar conversão para BRL
       const valorBRL = saldoOperavel * cotacaoUSD;
-      return {
-        valor: valorBRL,
-        moeda: "BRL",
-        symbol: "R$",
-        label: "≈ R$"
-      };
+      return { valor: valorBRL, moeda: "BRL", symbol: "R$", label: "≈ R$" };
     } else {
-      // Projeto em BRL → mostrar conversão para USD
       const valorUSD = saldoOperavel / cotacaoUSD;
-      return {
-        valor: valorUSD,
-        moeda: "USD",
-        symbol: "$",
-        label: "≈ $"
-      };
+      return { valor: valorUSD, moeda: "USD", symbol: "$", label: "≈ $" };
     }
   }, [saldoOperavel, moedaConsolidacao, cotacaoUSD]);
 
@@ -88,6 +65,15 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     await refetch();
     setIsRetrying(false);
   };
+
+  const filteredCasas = useMemo(() => {
+    if (!searchTerm.trim()) return casasComSaldo;
+    const term = searchTerm.toLowerCase();
+    return casasComSaldo.filter(c => 
+      c.nome.toLowerCase().includes(term) || 
+      c.parceiroPrimeiroNome?.toLowerCase().includes(term)
+    );
+  }, [casasComSaldo, searchTerm]);
 
   if (isLoading) {
     return (
@@ -132,12 +118,11 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   const hasFreebet = saldoFreebet > 0;
   const hasBonus = saldoBonus > 0;
   const casasComRollover = casasComSaldo.filter(c => c.hasRollover).length;
-  const hasExtras = hasFreebet || hasBonus;
 
-  // Conteúdo do detalhamento por casa
+  // Conteúdo do detalhamento por casa — REDESIGNED
   const CasasBreakdown = () => (
     <div className="space-y-3">
-      {/* Badge Moeda Oficial - Design neutro/corporativo */}
+      {/* Badge Moeda Oficial */}
       <div className="flex items-center gap-2 pb-2 border-b border-border/50">
         <Badge 
           variant="outline" 
@@ -147,7 +132,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         </Badge>
       </div>
 
-      {/* Composição do Saldo - SEMPRE na moeda de consolidação */}
+      {/* Composição do Saldo */}
       <div className="space-y-2">
         <p className="text-xs font-medium text-foreground">Composição do Saldo</p>
         <div className="grid grid-cols-2 gap-2 text-xs">
@@ -176,38 +161,56 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         </div>
       </div>
 
-      {/* Texto explicativo obrigatório */}
+      {/* Texto explicativo */}
       <p className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded border border-border/30">
         Este saldo já inclui dinheiro real, freebets e créditos operáveis. 
         Os valores acima são apenas a decomposição do total.
       </p>
 
-      {/* Lista de casas com saldo NA MOEDA NATIVA */}
+      {/* Saldo por Casa — GRID RESPONSIVO */}
       <div className="space-y-2">
         <p className="text-xs font-medium text-foreground">Saldo por Casa</p>
-        <ScrollArea className={cn(
-          casasComSaldo.length > 4 ? "h-[220px]" : "h-auto"
-        )}>
-          <div className="space-y-2 pr-2">
-            {casasComSaldo.map((casa) => (
+        
+        {/* Search — only when 8+ houses */}
+        {casasComSaldo.length >= 8 && (
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Buscar casa..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-8 pl-8 text-xs bg-muted/30 border-border/50"
+            />
+          </div>
+        )}
+
+        {/* Grid container with max-height and scroll */}
+        <div className="overflow-y-auto" style={{ maxHeight: "50vh" }}>
+          <div 
+            className="grid gap-2"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}
+          >
+            {filteredCasas.map((casa) => (
               <div 
                 key={casa.id} 
-                className="p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors space-y-1.5"
+                className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
               >
-                {/* Nome e Saldo Composto NA MOEDA NATIVA */}
-                <div className="flex justify-between items-center gap-2">
-                  <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
-                    {casa.nome}
+                {/* Row 1: Name + Currency + Balance — horizontal, single line */}
+                <div className="flex items-center justify-between gap-1.5 min-w-0">
+                  <div className="flex items-center gap-1 min-w-0 flex-1">
+                    <span className="text-xs font-medium text-foreground truncate">
+                      {casa.nome}
+                    </span>
                     {casa.parceiroPrimeiroNome && (
-                      <span className="text-primary/80 ml-1 font-normal">
+                      <span className="text-[10px] text-primary/80 truncate flex-shrink-0">
                         {casa.parceiroPrimeiroNome}
                       </span>
                     )}
-                  </span>
-                  <div className="flex items-center gap-1.5">
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <Badge 
                       variant="outline" 
-                      className="text-[9px] px-1 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
+                      className="text-[8px] px-1 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal leading-tight"
                     >
                       {casa.moedaOriginal}
                     </Badge>
@@ -215,59 +218,34 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                       saldoReal={casa.saldoRealNativo}
                       saldoFreebet={casa.saldoFreebetNativo}
                       formatCurrency={(val) => formatCurrencyUtil(val, casa.moedaOriginal)}
-                      className="text-sm text-primary"
+                      className="text-xs text-primary font-semibold whitespace-nowrap"
                     />
                   </div>
                 </div>
                 
-                {/* Rollover individual com 🎁 */}
+                {/* Row 2: Rollover bar — compact */}
                 {casa.hasRollover && (
-                  <div className="flex items-center gap-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Gift className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-xs">
-                            Rollover: {formatCurrency(casa.rolloverProgress)} / {formatCurrency(casa.rolloverTarget)}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Progress 
-                            value={casa.rolloverPercentual} 
-                            className="h-1.5 flex-1 cursor-help"
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-xs">
-                            {formatCurrency(casa.rolloverProgress)} de {formatCurrency(casa.rolloverTarget)}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <Gift className="h-3 w-3 text-amber-500 flex-shrink-0" />
+                    <Progress 
+                      value={casa.rolloverPercentual} 
+                      className="h-1 flex-1"
+                    />
+                    <span className="text-[9px] text-muted-foreground whitespace-nowrap w-7 text-right">
                       {casa.rolloverPercentual.toFixed(0)}%
-                    </span>
-                  </div>
-                )}
-                
-                {/* Info extra: Em aposta (na moeda nativa) */}
-                {casa.saldoEmApostaNativo > 0 && (
-                  <div className="flex gap-3 text-[10px]">
-                    <span className="text-muted-foreground">
-                      Pendente: <span className="font-medium">{formatCurrencyUtil(casa.saldoEmApostaNativo, casa.moedaOriginal)}</span>
                     </span>
                   </div>
                 )}
               </div>
             ))}
+
+            {filteredCasas.length === 0 && searchTerm && (
+              <p className="text-xs text-muted-foreground col-span-full text-center py-4">
+                Nenhuma casa encontrada para "{searchTerm}"
+              </p>
+            )}
           </div>
-        </ScrollArea>
+        </div>
       </div>
       
       <p className="text-[10px] text-muted-foreground pt-1 border-t">
@@ -277,7 +255,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     </div>
   );
 
-  // Trigger para desktop (Popover) ou mobile (Dialog)
+  // Trigger content
   const TriggerContent = ({ isCompact = false }: { isCompact?: boolean }) => (
     <div className={cn(
       "flex flex-col items-center justify-center text-center cursor-pointer group",
@@ -285,14 +263,12 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     )}>
       <div className="flex items-center justify-center gap-2">
         {isCompact && <Wallet className="h-4 w-4 text-primary" />}
-        {/* Valor principal na moeda de consolidação */}
         <span className={cn(
           "font-bold text-primary",
           isCompact ? "text-sm font-medium" : "text-lg md:text-2xl"
         )}>
           {formatCurrency(saldoOperavel)}
         </span>
-        {/* Indicador de rollover ativo */}
         {casasComRollover > 0 && !isCompact && (
           <TooltipProvider>
             <Tooltip>
@@ -312,7 +288,6 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           )} />
         )}
       </div>
-      {/* Conversão visual - apenas referência */}
       {!isCompact && saldoOperavel > 0 && (
         <span className="text-xs text-muted-foreground">
           {conversaoVisual.label} {conversaoVisual.valor.toLocaleString("pt-BR", { 
@@ -324,53 +299,68 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     </div>
   );
 
+  const SubtitleText = () => (
+    <p className="text-[10px] md:text-xs text-muted-foreground mt-1 text-center">
+      {totalCasas} casa{totalCasas !== 1 ? 's' : ''}
+      {casasComRollover > 0 && ` • ${casasComRollover} com rollover`}
+    </p>
+  );
+
+  // Compact variant
   if (variant === "compact") {
     if (isMobile) {
       return (
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
+        <Drawer>
+          <DrawerTrigger asChild>
             <div className="cursor-pointer">
               <TriggerContent isCompact />
             </div>
-          </DialogTrigger>
-          <DialogContent className="max-w-[90vw] sm:max-w-[340px]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base">
+          </DrawerTrigger>
+          <DrawerContent className="max-h-[85vh]">
+            <DrawerHeader>
+              <DrawerTitle className="flex items-center gap-2 text-base">
                 <Wallet className="h-4 w-4 text-primary" />
                 Saldo Operável
-              </DialogTitle>
-            </DialogHeader>
-            <CasasBreakdown />
-          </DialogContent>
-        </Dialog>
+              </DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-6 overflow-y-auto" style={{ maxHeight: "65vh" }}>
+              <CasasBreakdown />
+            </div>
+          </DrawerContent>
+        </Drawer>
       );
     }
 
     return (
-      <Popover>
+      <Popover onOpenChange={() => setSearchTerm("")}>
         <PopoverTrigger asChild>
           <div className="cursor-pointer">
             <TriggerContent isCompact />
           </div>
         </PopoverTrigger>
-        <PopoverContent className="w-[320px] p-3" align="start">
+        <PopoverContent 
+          className="w-[580px] p-4" 
+          align="start" 
+          side="bottom"
+          sideOffset={8}
+          collisionPadding={16}
+        >
           <CasasBreakdown />
         </PopoverContent>
       </Popover>
     );
   }
 
-  // Variant default
+  // Default variant — Mobile → Drawer
   if (isMobile) {
     return (
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Drawer>
         <Card className="border-primary/30 bg-primary/5">
           <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-2 p-3 md:p-6">
             <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5">
               Saldo Operável
               <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
             </CardTitle>
-            {/* Badge Moeda Oficial - neutro */}
             <Badge 
               variant="outline" 
               className="ml-2 text-[9px] px-1.5 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
@@ -379,39 +369,38 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
             </Badge>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center p-3 pt-0 md:p-6 md:pt-0">
-            <DialogTrigger asChild>
+            <DrawerTrigger asChild>
               <div className="cursor-pointer">
                 <TriggerContent />
               </div>
-            </DialogTrigger>
-            <p className="text-[10px] md:text-xs text-muted-foreground mt-1 text-center">
-              {totalCasas} casa{totalCasas !== 1 ? 's' : ''}
-              {casasComRollover > 0 && ` • ${casasComRollover} com rollover`}
-            </p>
+            </DrawerTrigger>
+            <SubtitleText />
           </CardContent>
         </Card>
-        <DialogContent className="max-w-[90vw] sm:max-w-[340px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader>
+            <DrawerTitle className="flex items-center gap-2 text-base">
               <Wallet className="h-4 w-4 text-primary" />
               Saldo Operável
-            </DialogTitle>
-          </DialogHeader>
-          <CasasBreakdown />
-        </DialogContent>
-      </Dialog>
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6 overflow-y-auto" style={{ maxHeight: "65vh" }}>
+            <CasasBreakdown />
+          </div>
+        </DrawerContent>
+      </Drawer>
     );
   }
 
+  // Default variant — Desktop → Popover (wider, grid)
   return (
-    <Popover>
+    <Popover onOpenChange={() => setSearchTerm("")}>
       <Card className="border-primary/30 bg-primary/5">
         <CardHeader className="flex flex-row items-center justify-center space-y-0 pb-2 p-3 md:p-6">
           <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5">
             Saldo Operável
             <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
           </CardTitle>
-          {/* Badge Moeda Oficial - neutro, não parece CTA */}
           <Badge 
             variant="outline" 
             className="ml-2 text-[9px] px-1.5 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
@@ -425,13 +414,16 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               <TriggerContent />
             </div>
           </PopoverTrigger>
-          <p className="text-[10px] md:text-xs text-muted-foreground mt-1 text-center">
-            {totalCasas} casa{totalCasas !== 1 ? 's' : ''}
-            {casasComRollover > 0 && ` • ${casasComRollover} com rollover`}
-          </p>
+          <SubtitleText />
         </CardContent>
       </Card>
-      <PopoverContent className="w-[360px] p-4" align="start">
+      <PopoverContent 
+        className="w-[580px] p-4" 
+        align="start" 
+        side="bottom"
+        sideOffset={8}
+        collisionPadding={16}
+      >
         <CasasBreakdown />
       </PopoverContent>
     </Popover>
