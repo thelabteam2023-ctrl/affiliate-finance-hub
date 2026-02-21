@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Plus, Check } from 'lucide-react';
+import { Plus, Check, Trash2 } from 'lucide-react';
 import { BookmakerSelectOption, BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
@@ -81,6 +81,8 @@ interface SurebetTableRowProps {
   onSetReference: (index: number) => void;
   onToggleDirected: (index: number) => void;
   onAddEntry: (index: number) => void;
+  onDeletePerna?: (index: number) => void;
+  canDeletePerna?: boolean;
   onFocus: (index: number) => void;
   onBlur: () => void;
   onFieldKeyDown: (e: KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => void;
@@ -105,6 +107,8 @@ export function SurebetTableRow({
   onSetReference,
   onToggleDirected,
   onAddEntry,
+  onDeletePerna,
+  canDeletePerna = false,
   onFocus,
   onBlur,
   onFieldKeyDown
@@ -373,6 +377,22 @@ export function SurebetTableRow({
           >
             <Plus className="h-4 w-4" />
           </Button>
+        </td>
+      )}
+      {isEditing && (
+        <td className="px-1 text-center" style={{ height: '78px' }}>
+          {canDeletePerna && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onDeletePerna?.(pernaIndex)}
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+              title="Excluir esta perna"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </td>
       )}
     </tr>
