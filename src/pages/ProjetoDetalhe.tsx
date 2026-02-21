@@ -375,23 +375,19 @@ export default function ProjetoDetalhe() {
       return;
     }
     setTopBarContent(
-      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 flex-1 min-w-0 py-1">
-        {/* LEFT: Back button */}
-        <Button variant="ghost" size="icon" className="flex-shrink-0 h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => navigate("/projetos")}>
-          <ArrowLeft className="h-3.5 w-3.5" />
-        </Button>
-
-        {/* CENTER: Project context */}
+      <div className="flex items-center justify-center flex-1 min-w-0 py-1">
+        {/* All project context centered */}
         <div className="flex items-center gap-2 min-w-0">
+          <Button variant="ghost" size="icon" className="flex-shrink-0 h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => navigate("/projetos")}>
+            <ArrowLeft className="h-3.5 w-3.5" />
+          </Button>
           <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
             <FolderKanban className="h-3.5 w-3.5 text-primary" />
           </div>
           <span className="text-sm font-bold tracking-tight truncate">{projeto.nome}</span>
 
-          {/* Separator */}
           <div className="h-4 w-px bg-border flex-shrink-0 hidden sm:block" />
 
-          {/* Badges group */}
           <div className="flex items-center gap-1.5 flex-shrink-0 hidden sm:flex">
             {projeto.tem_investimento_crypto && (
               <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] px-1.5 py-0">
@@ -412,39 +408,39 @@ export default function ProjetoDetalhe() {
               </>
             )}
           </div>
-        </div>
 
-        {/* RIGHT: Actions */}
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => { if (id) toggleFavorite(id); }}
-                >
-                  <Star 
-                    className={`h-3.5 w-3.5 transition-colors ${
-                      id && isFavorite(id) 
-                        ? "fill-amber-400 text-amber-400" 
-                        : "text-muted-foreground hover:text-amber-400"
-                    }`} 
-                  />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{id && isFavorite(id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          {canEdit('projetos', 'projetos.edit') && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground" onClick={() => setEditDialogOpen(true)}>
-              <Edit className="mr-1 h-3 w-3" />
-              Editar
-            </Button>
-          )}
+          {/* Actions inline */}
+          <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => { if (id) toggleFavorite(id); }}
+                  >
+                    <Star 
+                      className={`h-3.5 w-3.5 transition-colors ${
+                        id && isFavorite(id) 
+                          ? "fill-amber-400 text-amber-400" 
+                          : "text-muted-foreground hover:text-amber-400"
+                      }`} 
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{id && isFavorite(id) ? "Remover dos atalhos" : "Adicionar aos atalhos"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            {canEdit('projetos', 'projetos.edit') && (
+              <Button variant="ghost" size="sm" className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground" onClick={() => setEditDialogOpen(true)}>
+                <Edit className="mr-1 h-3 w-3" />
+                Editar
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     );
