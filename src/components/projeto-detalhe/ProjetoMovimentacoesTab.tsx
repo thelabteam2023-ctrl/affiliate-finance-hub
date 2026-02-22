@@ -353,7 +353,8 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     const saques = transacoes
       .filter(t => t.tipo_transacao === "SAQUE")
       .reduce((acc, t) => acc + t.valor, 0);
-    return { depositos, saques, saldo: depositos - saques };
+    // Fluxo de caixa: saques retornam ao caixa (+), depósitos saem do caixa (-)
+    return { depositos, saques, saldo: saques - depositos };
   }, [transacoes]);
 
   // (period helpers removed - using StandardTimeFilter)
@@ -502,10 +503,10 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
             tooltip: (
               <div className="space-y-1">
                 <p className="font-semibold text-foreground">Total de Depósitos</p>
-                <p className="text-muted-foreground">Soma dos depósitos realizados nas bookmakers do projeto no período.</p>
+                <p className="text-muted-foreground">Capital enviado do caixa para as bookmakers no período.</p>
               </div>
             ),
-            valueClassName: "text-emerald-500",
+            valueClassName: "text-red-500",
             minWidth: "min-w-[80px]",
           },
           {
@@ -514,30 +515,31 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
             tooltip: (
               <div className="space-y-1">
                 <p className="font-semibold text-foreground">Total de Saques</p>
-                <p className="text-muted-foreground">Soma dos saques realizados das bookmakers do projeto no período.</p>
+                <p className="text-muted-foreground">Capital retornado das bookmakers para o caixa no período.</p>
               </div>
             ),
-            valueClassName: "text-red-500",
+            valueClassName: "text-emerald-500",
             minWidth: "min-w-[80px]",
           },
           {
-            label: "Saldo Período",
+            label: "Fluxo Líquido",
             value: formatCurrency(totais.saldo, "BRL"),
             tooltip: (
               <div className="space-y-1.5">
-                <p className="font-semibold text-foreground">Saldo do Período</p>
+                <p className="font-semibold text-foreground">Fluxo Líquido do Período</p>
+                <p className="text-muted-foreground text-xs">Saques − Depósitos. Positivo = mais dinheiro retornou ao caixa do que saiu.</p>
                 <div className="space-y-0.5">
                   <div className="flex justify-between gap-4">
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Depósitos</span>
-                    <span className="font-semibold text-foreground">{formatCurrency(totais.depositos, "BRL")}</span>
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Saques (entrada)</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(totais.saques, "BRL")}</span>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Saques</span>
-                    <span className="font-semibold text-foreground">{formatCurrency(totais.saques, "BRL")}</span>
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Depósitos (saída)</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(totais.depositos, "BRL")}</span>
                   </div>
                 </div>
                 <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
-                  <span className="font-semibold">Saldo</span>
+                  <span className="font-semibold">Fluxo</span>
                   <span className={cn("font-semibold", totais.saldo >= 0 ? "text-emerald-500" : "text-red-500")}>{formatCurrency(totais.saldo, "BRL")}</span>
                 </div>
               </div>
