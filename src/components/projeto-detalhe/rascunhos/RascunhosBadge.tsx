@@ -45,9 +45,9 @@ export const RascunhosBadge = memo(function RascunhosBadge({
             variant="outline"
             size="sm"
             onClick={onClick}
-            className="relative gap-2"
+            className="relative gap-1.5 h-6 text-[11px] px-2"
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Rascunhos</span>
             <Badge 
               variant={prontos > 0 ? "default" : "secondary"} 
