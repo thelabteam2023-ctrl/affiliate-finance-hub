@@ -941,8 +941,8 @@ export function SurebetModalRoot({
     if (!estrategia) { toast.error("Selecione uma estratégia"); return; }
     if (!contexto) { toast.error("Selecione um contexto"); return; }
     if (!evento.trim()) { toast.error("Informe o evento"); return; }
-    if (analysis.pernasCompletasCount < numPernas) {
-      toast.error(`Preencha todas as ${numPernas} pernas`);
+    if (odds.length < numPernas || analysis.pernasCompletasCount < numPernas) {
+      toast.error(`Preencha todas as ${numPernas} pernas (${analysis.pernasCompletasCount} preenchidas)`);
       return;
     }
     
@@ -1487,7 +1487,7 @@ export function SurebetModalRoot({
   }, [odds, evento]);
 
   // Pode salvar como rascunho: tem dados parciais, mas não tem todas as pernas completas
-  const podeSalvarRascunho = !isEditing && !rascunho && temDadosParciais && analysis.pernasCompletasCount < numPernas;
+  const podeSalvarRascunho = !rascunho && temDadosParciais && (analysis.pernasCompletasCount < numPernas || odds.length < numPernas);
 
   // Handler para salvar como rascunho
   const handleSalvarRascunho = useCallback(() => {
@@ -1766,7 +1766,7 @@ export function SurebetModalRoot({
               )}
               <Button 
                 onClick={handleSave} 
-                disabled={saving || analysis.stakeTotal <= 0 || analysis.pernasCompletasCount < numPernas || (!isEditing && balanceValidation.hasInsufficientBalance)}
+                disabled={saving || analysis.stakeTotal <= 0 || analysis.pernasCompletasCount < numPernas || odds.length < numPernas || (!isEditing && balanceValidation.hasInsufficientBalance)}
                 title={balanceValidation.hasInsufficientBalance ? "Saldo insuficiente em uma ou mais casas" : undefined}
               >
                 <Save className="h-4 w-4 mr-1" />
