@@ -241,28 +241,63 @@ export function CountBreakdownTooltip({
               {title}
             </p>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {visibleContributions.map((contribution) => {
                 const IconComponent = MODULE_ICONS[contribution.moduleId] || Target;
                 return (
                   <div
                     key={contribution.moduleId}
-                    className="flex items-center justify-between gap-3 text-xs"
+                    className="space-y-1"
                   >
-                    <div className="flex items-center gap-1.5">
-                      <IconComponent className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {contribution.moduleName}
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <IconComponent className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          {contribution.moduleName}
+                        </span>
+                      </div>
+                      <span className="font-bold text-sm">
+                        {contribution.value.toLocaleString()}
                       </span>
                     </div>
-                    <span className="font-medium">
-                      {contribution.value.toLocaleString()}
-                      {contribution.details && (
-                        <span className="text-muted-foreground/60 ml-1">
-                          {contribution.details}
-                        </span>
-                      )}
-                    </span>
+                    {contribution.details && (
+                      <div className="ml-5 flex flex-col gap-0.5 text-xs">
+                        {contribution.details.split(/\s+/).filter(Boolean).map((part, i) => {
+                          const isGreen = part.includes('G');
+                          const isRed = part.includes('R');
+                          const isVoid = part.includes('V');
+                          const num = part.replace(/[GRV]/g, '');
+                          if (isGreen) return (
+                            <div key={i} className="flex items-center justify-between gap-3">
+                              <span className="flex items-center gap-1 text-emerald-500">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                Greens
+                              </span>
+                              <span className="font-semibold text-emerald-500">{num}</span>
+                            </div>
+                          );
+                          if (isRed) return (
+                            <div key={i} className="flex items-center justify-between gap-3">
+                              <span className="flex items-center gap-1 text-red-500">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
+                                Reds
+                              </span>
+                              <span className="font-semibold text-red-500">{num}</span>
+                            </div>
+                          );
+                          if (isVoid) return (
+                            <div key={i} className="flex items-center justify-between gap-3">
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/60" />
+                                Voids
+                              </span>
+                              <span className="font-semibold text-muted-foreground">{num}</span>
+                            </div>
+                          );
+                          return null;
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
