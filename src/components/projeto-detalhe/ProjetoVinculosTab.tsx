@@ -457,7 +457,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
       <TabsContent value="ativos" className="space-y-3">
         {/* KPIs - Faixa compacta horizontal */}
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch lg:justify-center">
           {/* Relacionamentos compacto */}
           <ContasNoProjetoCard 
             projetoId={projetoId} 
