@@ -149,16 +149,17 @@ export function useApostaRascunho(projetoId: string, workspaceId: string) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Carregar rascunhos do localStorage
-  useEffect(() => {
+  const loadRascunhos = useCallback(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const allRascunhos: ApostaRascunho[] = JSON.parse(stored);
-        // Filtrar apenas os do projeto/workspace atual
         const filtered = allRascunhos.filter(
           r => r.projeto_id === projetoId && r.workspace_id === workspaceId
         );
         setRascunhos(filtered);
+      } else {
+        setRascunhos([]);
       }
     } catch (error) {
       console.error('Erro ao carregar rascunhos:', error);
@@ -167,22 +168,41 @@ export function useApostaRascunho(projetoId: string, workspaceId: string) {
     }
   }, [projetoId, workspaceId]);
 
+  useEffect(() => {
+    loadRascunhos();
+  }, [loadRascunhos]);
+
+  // Reagir a mudanças no localStorage (cross-window via 'storage', same-window via custom event)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY) loadRascunhos();
+    };
+    const handleCustomChange = () => loadRascunhos();
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('rascunhos-updated', handleCustomChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('rascunhos-updated', handleCustomChange);
+    };
+  }, [loadRascunhos]);
+
   // Salvar todos os rascunhos no localStorage
   const persistRascunhos = useCallback((updated: ApostaRascunho[]) => {
     try {
-      // Carregar todos os rascunhos existentes
       const stored = localStorage.getItem(STORAGE_KEY);
       const allRascunhos: ApostaRascunho[] = stored ? JSON.parse(stored) : [];
       
-      // Remover rascunhos do projeto/workspace atual
       const outros = allRascunhos.filter(
         r => r.projeto_id !== projetoId || r.workspace_id !== workspaceId
       );
       
-      // Combinar com os atualizados
       const final = [...outros, ...updated];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(final));
       setRascunhos(updated);
+      
+      // Notificar outras instâncias do hook na mesma janela
+      window.dispatchEvent(new Event('rascunhos-updated'));
     } catch (error) {
       console.error('Erro ao salvar rascunhos:', error);
     }
