@@ -473,40 +473,38 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
           },
           (() => {
             const totalBonuses = bonuses.length;
-            // Contagem por finalize_reason real
             const rolloverCompleted = bonuses.filter(b => b.status === 'finalized' && b.finalize_reason === 'rollover_completed').length;
             const cycleCompleted = bonuses.filter(b => b.status === 'finalized' && (['cycle_completed', 'early_withdrawal', 'extracted_early'] as string[]).includes(b.finalize_reason || '')).length;
             const expired = bonuses.filter(b => b.status === 'expired' || (b.status === 'finalized' && b.finalize_reason === 'expired')).length;
             const cancelledReversed = bonuses.filter(b => b.status === 'reversed' || b.status === 'failed' || (b.status === 'finalized' && (['cancelled_reversed', 'bonus_consumed'] as string[]).includes(b.finalize_reason || ''))).length;
-            const concluded = rolloverCompleted + cycleCompleted + expired + cancelledReversed;
-            const conclusionRate = totalBonuses > 0 ? (concluded / totalBonuses) * 100 : 0;
+            const rolloverRate = totalBonuses > 0 ? (rolloverCompleted / totalBonuses) * 100 : 0;
             return {
-              label: "Ciclo Encerrado",
+              label: "Rollover Concluído",
               value: (
-                <span className={conclusionRate >= 70 ? "text-emerald-500" : conclusionRate >= 40 ? "text-amber-500" : "text-muted-foreground"}>
-                  {conclusionRate.toFixed(0)}%
+                <span className={rolloverRate >= 30 ? "text-emerald-500" : rolloverRate >= 15 ? "text-amber-500" : "text-muted-foreground"}>
+                  {rolloverRate.toFixed(0)}%
                 </span>
               ),
               tooltip: (
                 <div className="space-y-1.5">
-                  <p className="font-semibold text-foreground">Taxa de Ciclo Encerrado</p>
-                  <p className="text-muted-foreground text-xs">Distribuição dos bônus por motivo de finalização.</p>
+                  <p className="font-semibold text-foreground">Taxa de Rollover Concluído</p>
+                  <p className="text-muted-foreground text-xs">De {totalBonuses} bônus, {rolloverCompleted} cumpriram o rollover completo.</p>
                   <div className="space-y-0.5">
                     <div className="flex justify-between gap-4">
-                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Rollover concluído</span>
-                      <span className="font-semibold text-foreground">{rolloverCompleted} <span className="text-muted-foreground font-normal">({totalBonuses > 0 ? ((rolloverCompleted / totalBonuses) * 100).toFixed(0) : 0}%)</span></span>
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Rollover concluído (saque liberado)</span>
+                      <span className="font-semibold text-foreground">{rolloverCompleted}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" /> Ciclo encerrado</span>
-                      <span className="font-semibold text-foreground">{cycleCompleted} <span className="text-muted-foreground font-normal">({totalBonuses > 0 ? ((cycleCompleted / totalBonuses) * 100).toFixed(0) : 0}%)</span></span>
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" /> Encerrado antes do rollover</span>
+                      <span className="font-semibold text-foreground">{cycleCompleted}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" /> Expirado</span>
-                      <span className="font-semibold text-foreground">{expired} <span className="text-muted-foreground font-normal">({totalBonuses > 0 ? ((expired / totalBonuses) * 100).toFixed(0) : 0}%)</span></span>
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" /> Expirou sem concluir</span>
+                      <span className="font-semibold text-foreground">{expired}</span>
                     </div>
                     <div className="flex justify-between gap-4">
                       <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Cancelado / Revertido</span>
-                      <span className="font-semibold text-foreground">{cancelledReversed} <span className="text-muted-foreground font-normal">({totalBonuses > 0 ? ((cancelledReversed / totalBonuses) * 100).toFixed(0) : 0}%)</span></span>
+                      <span className="font-semibold text-foreground">{cancelledReversed}</span>
                     </div>
                   </div>
                   <div className="border-t border-border/50 pt-1 space-y-0.5">
@@ -520,13 +518,13 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                     </div>
                   </div>
                   <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
-                    <span className="font-semibold">Total</span>
+                    <span className="font-semibold">Total de bônus</span>
                     <span className="font-semibold text-foreground">{totalBonuses}</span>
                   </div>
                 </div>
               ),
-              subtitle: <span className="text-muted-foreground">{concluded} de {totalBonuses}</span>,
-              minWidth: "min-w-[90px]",
+              subtitle: <span className="text-muted-foreground">{rolloverCompleted} de {totalBonuses}</span>,
+              minWidth: "min-w-[110px]",
             };
           })(),
           ...(expiring7Days.length > 0 ? [{
