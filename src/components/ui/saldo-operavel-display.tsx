@@ -7,6 +7,55 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+/**
+ * Formata valor de forma compacta:
+ * >= 1.000.000 → "1,12M"
+ * >= 100.000 → "100,5K"
+ */
+function compactValue(value: number): string | null {
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+  if (abs >= 1_000_000) {
+    return `${sign}${(abs / 1_000_000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 })}M`;
+  }
+  if (abs >= 100_000) {
+    return `${sign}${(abs / 1_000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 })}K`;
+  }
+  return null;
+}
+
+function CompactCurrencyValue({
+  value,
+  formatCurrency,
+  moeda,
+  className,
+}: {
+  value: number;
+  formatCurrency: (v: number, m?: string) => string;
+  moeda?: string;
+  className?: string;
+}) {
+  const compact = compactValue(value);
+  const full = formatCurrency(value, moeda);
+
+  if (!compact) {
+    return <span className={className}>{full}</span>;
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={cn(className, "cursor-help")}>{compact}</span>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <span className="text-xs font-medium">{full}</span>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 interface SaldoOperavelDisplayProps {
   /** Saldo Operável = Fiat + Bônus + Freebet */
   saldoOperavel: number;
@@ -106,19 +155,19 @@ export function SaldoOperavelDisplay({
               </TooltipProvider>
             )}
           </p>
-          <p className="font-bold text-foreground tabular-nums">{formatCurrency(saldoOperavel, moeda)}</p>
+          <CompactCurrencyValue value={saldoOperavel} formatCurrency={formatCurrency} moeda={moeda} className="font-bold text-foreground tabular-nums text-xs" />
         </div>
 
         {/* Em Aposta - Informativo */}
         <div className="text-right w-[90px] flex-shrink-0">
           <p className="text-xs text-muted-foreground">Em Aposta</p>
-          <p className="font-medium text-warning tabular-nums">{formatCurrency(saldoEmAposta, moeda)}</p>
+          <CompactCurrencyValue value={saldoEmAposta} formatCurrency={formatCurrency} moeda={moeda} className="font-medium text-warning tabular-nums text-xs" />
         </div>
 
         {/* Disponível - Destaque secundário */}
         <div className="text-right w-[100px] flex-shrink-0">
           <p className="text-xs text-muted-foreground">Disponível</p>
-          <p className="font-semibold text-accent-foreground tabular-nums">{formatCurrency(saldoDisponivel, moeda)}</p>
+          <CompactCurrencyValue value={saldoDisponivel} formatCurrency={formatCurrency} moeda={moeda} className="font-semibold text-accent-foreground tabular-nums text-xs" />
         </div>
       </div>
     );
