@@ -1117,7 +1117,7 @@ export function ProjetoValueBetTab({
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
         {activeNavTab === "visao-geral" && renderVisaoGeral()}
-        {activeNavTab !== "visao-geral" && periodFilterComponent}
+        {activeNavTab !== "visao-geral" && <div className="mb-4">{periodFilterComponent}</div>}
         {activeNavTab === "apostas" && renderApostas()}
         {activeNavTab === "por-casa" && renderPorCasa()}
       </div>
