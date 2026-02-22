@@ -908,6 +908,15 @@ export default function ProjetoDetalhe() {
             <ProjetoBonusArea 
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
+              actionsSlot={
+                <GlobalActionsBar
+                  projetoId={id!}
+                  activeTab={activeTab}
+                  onApostaCreated={triggerGlobalRefresh}
+                  onBonusCreated={triggerGlobalRefresh}
+                  onNavigateToTab={setActiveTab}
+                />
+              }
             />
           </TabsContent>
 
