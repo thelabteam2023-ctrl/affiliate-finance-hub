@@ -1487,7 +1487,7 @@ export function SurebetModalRoot({
   }, [odds, evento]);
 
   // Pode salvar como rascunho: tem dados parciais, mas não tem todas as pernas completas
-  const podeSalvarRascunho = !rascunho && temDadosParciais && (analysis.pernasCompletasCount < numPernas || odds.length < numPernas);
+  const podeSalvarRascunho = !isEditing && !rascunho && temDadosParciais && (analysis.pernasCompletasCount < numPernas || odds.length < numPernas);
 
   // Handler para salvar como rascunho
   const handleSalvarRascunho = useCallback(() => {
