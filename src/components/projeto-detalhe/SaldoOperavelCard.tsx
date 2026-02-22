@@ -294,8 +294,8 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           )}
           {saldoEmAposta > 0 && (
             <div className="p-2 rounded bg-muted/30">
-              <span className="text-muted-foreground">Em Apostas</span>
-              <p className="font-semibold text-destructive">-{formatCurrency(saldoEmAposta)}</p>
+              <span className="text-muted-foreground">Apostas em Aberto</span>
+              <p className="font-semibold text-amber-500">{formatCurrency(saldoEmAposta)}</p>
             </div>
           )}
         </div>
