@@ -482,35 +482,48 @@ export default function ProjetoDetalhe() {
         .select("valor, moeda_operacao, valor_brl_referencia")
         .eq("projeto_id", id);
       
+      // Build query for giros_gratis (fórmula canônica: LUCRO = APOSTAS + CASHBACK + GIROS)
+      let girosQuery = supabase
+        .from("giros_gratis")
+        .select("valor_retorno, moeda, valor_retorno_brl_referencia")
+        .eq("projeto_id", id)
+        .eq("status", "CONFIRMADO");
+      
       // CRÍTICO: Usar getOperationalDateRangeForQuery para garantir timezone operacional (São Paulo)
       if (start && end) {
         const { startUTC, endUTC } = getOperationalDateRangeForQuery(start, end);
         apostasQuery = apostasQuery.gte("data_aposta", startUTC);
         apostasQuery = apostasQuery.lte("data_aposta", endUTC);
-        // Cashback usa data (não timestamp), então mantém formato YYYY-MM-DD
+        // Cashback e Giros usam data (não timestamp), então mantém formato YYYY-MM-DD
         const startDateStr = start.toISOString().split("T")[0];
         const endDateStr = end.toISOString().split("T")[0];
         cashbackQuery = cashbackQuery.gte("data_credito", startDateStr);
         cashbackQuery = cashbackQuery.lte("data_credito", endDateStr);
+        girosQuery = girosQuery.gte("data_credito", startDateStr);
+        girosQuery = girosQuery.lte("data_credito", endDateStr);
       } else if (start) {
         const { startUTC } = getOperationalDateRangeForQuery(start, start);
         apostasQuery = apostasQuery.gte("data_aposta", startUTC);
         cashbackQuery = cashbackQuery.gte("data_credito", start.toISOString().split("T")[0]);
+        girosQuery = girosQuery.gte("data_credito", start.toISOString().split("T")[0]);
       } else if (end) {
         const { endUTC } = getOperationalDateRangeForQuery(end, end);
         apostasQuery = apostasQuery.lte("data_aposta", endUTC);
         cashbackQuery = cashbackQuery.lte("data_credito", end.toISOString().split("T")[0]);
+        girosQuery = girosQuery.lte("data_credito", end.toISOString().split("T")[0]);
       }
       
-      const [apostasResult, cashbackResult] = await Promise.all([
+      const [apostasResult, cashbackResult, girosResult] = await Promise.all([
         apostasQuery,
-        cashbackQuery
+        cashbackQuery,
+        girosQuery
       ]);
       
       if (apostasResult.error) throw apostasResult.error;
       
       const todasApostas = apostasResult.data || [];
       const cashbacks = cashbackResult.data || [];
+      const giros = girosResult.data || [];
       
       // Para ARBITRAGEM, contar pernas individuais como operações separadas
       const arbitragemIds = todasApostas
@@ -549,6 +562,18 @@ export default function ProjetoDetalhe() {
         return acc + valor;
       }, 0);
       
+      // Calculate lucro from giros grátis (fórmula canônica)
+      const lucroGiros = giros.reduce((acc: number, g: any) => {
+        if (g.valor_retorno_brl_referencia != null) {
+          return acc + Number(g.valor_retorno_brl_referencia);
+        }
+        const valorRaw = Number(g.valor_retorno || 0);
+        const moedaGiro = g.moeda || 'BRL';
+        if (moedaGiro === 'BRL') return acc + valorRaw;
+        const taxa = getRate(moedaGiro);
+        return acc + (valorRaw * taxa);
+      }, 0);
+      
       // Para resultados de pernas de arbitragem, buscar resultados individuais
       let pernasGreens = 0, pernasReds = 0, pernasVoids = 0, pernasMeioGreens = 0, pernasMeioReds = 0;
       if (arbitragemIds.length > 0) {
@@ -577,7 +602,7 @@ export default function ProjetoDetalhe() {
         meio_greens: naoArb.filter(a => a.resultado === "MEIO_GREEN" || a.resultado === "HALF").length + pernasMeioGreens,
         meio_reds: naoArb.filter(a => a.resultado === "MEIO_RED").length + pernasMeioReds,
         total_stake: todasApostas.reduce((acc, a) => acc + Number(a.stake || 0), 0),
-        lucro_total: lucroApostas + lucroCashback,
+        lucro_total: lucroApostas + lucroCashback + lucroGiros,
         roi_percentual: 0
       };
       

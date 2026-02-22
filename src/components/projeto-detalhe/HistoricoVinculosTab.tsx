@@ -112,10 +112,10 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         .in("origem_bookmaker_id", bookmakerIds)
         .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
 
-      // Lucro de apostas - valor original (lucro_prejuizo)
+      // Lucro de apostas - priorizar pl_consolidado para evitar inflação em surebets
       const { data: apostasData } = await supabase
         .from("apostas_unificada")
-        .select("bookmaker_id, lucro_prejuizo")
+        .select("bookmaker_id, lucro_prejuizo, pl_consolidado")
         .eq("projeto_id", projetoId)
         .eq("status", "LIQUIDADA")
         .not("bookmaker_id", "is", null)
@@ -170,9 +170,10 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         }
       });
 
-      apostasData?.forEach((a) => {
+      apostasData?.forEach((a: any) => {
         if (a.bookmaker_id) {
-          lucroApostasMap[a.bookmaker_id] = (lucroApostasMap[a.bookmaker_id] || 0) + Number(a.lucro_prejuizo || 0);
+          // CRÍTICO: Usar pl_consolidado quando disponível para evitar inflação em surebets
+          lucroApostasMap[a.bookmaker_id] = (lucroApostasMap[a.bookmaker_id] || 0) + Number(a.pl_consolidado ?? a.lucro_prejuizo ?? 0);
         }
       });
 
