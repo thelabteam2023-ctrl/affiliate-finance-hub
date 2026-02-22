@@ -102,7 +102,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot }: Pro
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
         {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} dateRange={dateRange} isSingleDayPeriod={isSingleDayPeriod} periodFilter={periodFilterComponent} actionsSlot={actionsSlot} />}
-        {activeTab === "bookmakers" && periodFilterComponent}
+        {activeTab === "bookmakers" && <div className="mb-4">{periodFilterComponent}</div>}
         {activeTab === "bookmakers" && <BonusBookmakersTab projetoId={projetoId} />}
         {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} dateRange={dateRange} />}
       </div>
