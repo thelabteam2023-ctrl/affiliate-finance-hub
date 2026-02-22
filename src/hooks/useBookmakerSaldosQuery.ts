@@ -64,9 +64,14 @@ export function useBookmakerSaldosQuery({
 }: UseBookmakerSaldosQueryOptions) {
   const queryClient = useQueryClient();
 
-  // Realtime: invalidar cache quando bookmakers do projeto mudam (INSERT/UPDATE/DELETE)
+  // Realtime: invalidar cache quando bookmakers ou bônus do projeto mudam
   useEffect(() => {
     if (!enabled || !projetoId) return;
+
+    const invalidate = () => {
+      console.log('[useBookmakerSaldosQuery] Realtime: data changed, invalidating...');
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, projetoId] });
+    };
 
     const channel = supabase
       .channel(`bookmaker-saldos-${projetoId}`)
@@ -78,10 +83,17 @@ export function useBookmakerSaldosQuery({
           table: 'bookmakers',
           filter: `projeto_id=eq.${projetoId}`,
         },
-        () => {
-          console.log('[useBookmakerSaldosQuery] Realtime: bookmakers changed, invalidating...');
-          queryClient.invalidateQueries({ queryKey: [QUERY_KEY, projetoId] });
-        }
+        invalidate
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'project_bookmaker_link_bonuses',
+          filter: `project_id=eq.${projetoId}`,
+        },
+        invalidate
       )
       .subscribe();
 
