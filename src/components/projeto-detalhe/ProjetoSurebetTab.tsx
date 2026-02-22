@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 import {
   Select,
@@ -902,77 +903,57 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
   // Render Visão Geral
   const renderVisaoGeral = () => (
     <div className="space-y-6">
-      {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <SaldoOperavelCard projetoId={projetoId} />
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Surebets</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpis.total}</div>
-            <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs">
-              <span className="text-blue-400">{kpis.pendentes} Pendentes</span>
-              <span className="text-emerald-500">{kpis.greens} G</span>
-              <span className="text-red-500">{kpis.reds} R</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {(() => {
-          const volByCurrency: Record<string, number> = {};
-          kpis.currencyBreakdown.forEach(item => { volByCurrency[item.moeda] = item.valor; });
-          const rateDateStr = rateLastUpdate ? new Date(rateLastUpdate).toLocaleDateString('pt-BR') : undefined;
-          return (
-            <VolumeKPI
-              volumeByCurrency={volByCurrency}
-              consolidationCurrency={moedaConsolidacao || 'BRL'}
-              getRate={getRate}
-              formatCurrency={formatCurrency}
-              rateDate={rateDateStr}
-              icon={<Calculator className="h-4 w-4 text-muted-foreground" />}
-            />
-          );
-        })()}
-
-        <LucroCurrencyTooltip
-          lucroPorMoeda={kpis.lucroPorMoeda || []}
-          totalConsolidado={kpis.lucroTotal}
-          moedaConsolidacao={moedaConsolidacao || 'BRL'}
-          formatValue={formatCurrency}
-        >
-        <Card className="cursor-help">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{kpis.lucroTotal >= 0 ? 'Lucro' : 'Prejuízo'}</CardTitle>
-            {kpis.lucroTotal >= 0 ? (
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-red-500" />
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${kpis.lucroTotal >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {formatCurrency(kpis.lucroTotal)}
-            </div>
-            <p className="text-xs text-muted-foreground">Resultado consolidado</p>
-          </CardContent>
-        </Card>
-        </LucroCurrencyTooltip>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ROI</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${kpis.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {formatPercent(kpis.roi)}
-            </div>
-            <p className="text-xs text-muted-foreground">Retorno sobre investimento</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* KPIs - Faixa compacta horizontal */}
+      <KpiSummaryBar
+        leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
+        items={[
+          {
+            label: "Surebets",
+            value: kpis.total,
+            subtitle: (
+              <div className="flex items-center gap-2">
+                {kpis.pendentes > 0 && <span className="text-blue-400">{kpis.pendentes} Pend.</span>}
+                <span className="inline-flex items-center gap-0.5 text-emerald-500 font-semibold">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  {kpis.greens}
+                </span>
+                <span className="inline-flex items-center gap-0.5 text-red-500 font-semibold">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
+                  {kpis.reds}
+                </span>
+              </div>
+            ),
+          },
+          {
+            label: "Volume",
+            value: formatCurrency(kpis.stakeTotal),
+            minWidth: "min-w-[80px]",
+          },
+          {
+            label: kpis.lucroTotal >= 0 ? "Lucro" : "Prejuízo",
+            value: formatCurrency(kpis.lucroTotal),
+            valueClassName: kpis.lucroTotal >= 0 ? "text-emerald-500" : "text-red-500",
+            minWidth: "min-w-[80px]",
+            wrapper: (children) => (
+              <LucroCurrencyTooltip
+                lucroPorMoeda={kpis.lucroPorMoeda || []}
+                totalConsolidado={kpis.lucroTotal}
+                moedaConsolidacao={moedaConsolidacao || 'BRL'}
+                formatValue={formatCurrency}
+              >
+                {children}
+              </LucroCurrencyTooltip>
+            ),
+            cursorHelp: true,
+          },
+          {
+            label: "ROI",
+            value: formatPercent(kpis.roi),
+            valueClassName: kpis.roi >= 0 ? "text-emerald-500" : "text-red-500",
+            minWidth: "min-w-[50px]",
+          },
+        ]}
+      />
 
       {/* Filtro de período - abaixo dos KPIs */}
       {periodFilterComponent}

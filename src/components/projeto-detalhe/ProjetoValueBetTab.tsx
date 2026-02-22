@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
@@ -715,72 +716,57 @@ export function ProjetoValueBetTab({
   // Render Visão Geral
   const renderVisaoGeral = () => (
     <div className="space-y-6">
-      {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <SaldoOperavelCard projetoId={projetoId} />
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Apostas ValueBet</CardTitle>
-            <Target className="h-4 w-4 text-purple-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metricas.total}</div>
-            <p className="text-xs text-muted-foreground flex items-center gap-2">
-              {metricas.pendentes > 0 && <span>{metricas.pendentes} Pendentes</span>}
-              <span className="text-emerald-400">{metricas.greens}G</span>
-              <span className="text-red-400">{metricas.reds}R</span>
-            </p>
-          </CardContent>
-        </Card>
-
-        {(() => {
-          const volByCurrency: Record<string, number> = {};
-          metricas.currencyBreakdown.forEach(item => { volByCurrency[item.moeda] = item.valor; });
-          const rateDateStr = rateLastUpdate ? new Date(rateLastUpdate).toLocaleDateString('pt-BR') : undefined;
-          return (
-            <VolumeKPI
-              volumeByCurrency={volByCurrency}
-              consolidationCurrency={moedaConsolidacaoVal || 'BRL'}
-              getRate={getRate}
-              formatCurrency={formatCurrency}
-              rateDate={rateDateStr}
-            />
-          );
-        })()}
-
-        <LucroCurrencyTooltip
-          lucroPorMoeda={metricas.lucroPorMoeda || []}
-          totalConsolidado={metricas.lucroTotal}
-          moedaConsolidacao={moedaConsolidacaoVal || 'BRL'}
-          formatValue={formatCurrency}
-        >
-        <Card className={cn("cursor-help", metricas.lucroTotal >= 0 ? "border-emerald-500/20" : "border-red-500/20")}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{metricas.lucroTotal >= 0 ? 'Lucro' : 'Prejuízo'}</CardTitle>
-            <TrendingUp className={`h-4 w-4 ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${metricas.lucroTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {formatCurrency(metricas.lucroTotal)}
-            </div>
-            <p className="text-xs text-muted-foreground">Resultado consolidado</p>
-          </CardContent>
-        </Card>
-        </LucroCurrencyTooltip>
-
-        <Card className={metricas.roi >= 0 ? "border-emerald-500/20" : "border-red-500/20"}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ROI</CardTitle>
-            <Percent className={`h-4 w-4 ${metricas.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${metricas.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {formatPercent(metricas.roi)}
-            </div>
-            <p className="text-xs text-muted-foreground">Retorno sobre investimento</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* KPIs - Faixa compacta */}
+      <KpiSummaryBar
+        leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
+        items={[
+          {
+            label: "Apostas ValueBet",
+            value: metricas.total,
+            subtitle: (
+              <div className="flex items-center gap-2">
+                {metricas.pendentes > 0 && <span className="text-blue-400">{metricas.pendentes} Pend.</span>}
+                <span className="inline-flex items-center gap-0.5 text-emerald-500 font-semibold">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  {metricas.greens}
+                </span>
+                <span className="inline-flex items-center gap-0.5 text-red-500 font-semibold">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
+                  {metricas.reds}
+                </span>
+              </div>
+            ),
+          },
+          {
+            label: "Volume",
+            value: formatCurrency(metricas.totalStake),
+            minWidth: "min-w-[80px]",
+          },
+          {
+            label: metricas.lucroTotal >= 0 ? "Lucro" : "Prejuízo",
+            value: formatCurrency(metricas.lucroTotal),
+            valueClassName: metricas.lucroTotal >= 0 ? "text-emerald-500" : "text-red-500",
+            minWidth: "min-w-[80px]",
+            wrapper: (children) => (
+              <LucroCurrencyTooltip
+                lucroPorMoeda={metricas.lucroPorMoeda || []}
+                totalConsolidado={metricas.lucroTotal}
+                moedaConsolidacao={moedaConsolidacaoVal || 'BRL'}
+                formatValue={formatCurrency}
+              >
+                {children}
+              </LucroCurrencyTooltip>
+            ),
+            cursorHelp: true,
+          },
+          {
+            label: "ROI",
+            value: formatPercent(metricas.roi),
+            valueClassName: metricas.roi >= 0 ? "text-emerald-500" : "text-red-500",
+            minWidth: "min-w-[50px]",
+          },
+        ]}
+      />
 
       {/* Filtro de período - abaixo dos KPIs */}
       {periodFilterComponent}

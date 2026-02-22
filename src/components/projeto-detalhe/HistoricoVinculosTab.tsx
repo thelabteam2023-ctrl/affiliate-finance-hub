@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -437,79 +438,42 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Histórico</CardTitle>
-            <History className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalHistorico}</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-emerald-400">{vinculosAtivos} em uso</span>
-              {" · "}
-              <span className="text-muted-foreground">{vinculosDevolvidos} devolvidos</span>
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Depositado</CardTitle>
-            <ArrowDownCircle className="h-4 w-4 text-blue-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center">
-              {renderCurrencyBadges(depositosPorMoeda, "border-blue-500/50 text-blue-400")}
-            </div>
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Valor total depositado nas casas
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sacado</CardTitle>
-            <ArrowUpCircle className="h-4 w-4 text-emerald-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center">
-              {renderCurrencyBadges(saquesPorMoeda, "border-emerald-500/50 text-emerald-400")}
-            </div>
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Valor total sacado das casas
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {lucroTotalBRL >= 0 ? "Lucro Acumulado" : "Prejuízo Acumulado"}
-            </CardTitle>
-            {lucroTotalBRL >= 0 ? (
-              <TrendingUp className="h-4 w-4 text-emerald-400" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-red-400" />
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center">
-              {renderCurrencyBadges(
-                lucroPorMoeda,
-                lucroTotalBRL >= 0
-                  ? "border-emerald-500/50 text-emerald-400"
-                  : "border-red-500/50 text-red-400"
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Lucro total das operações
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* KPIs - Faixa compacta */}
+      <KpiSummaryBar
+        items={[
+          {
+            label: "Total Histórico",
+            value: totalHistorico,
+            subtitle: (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <span className="text-emerald-500">{vinculosAtivos} em uso</span>
+                <span>·</span>
+                <span>{vinculosDevolvidos} devolvidos</span>
+              </div>
+            ),
+          },
+          {
+            label: "Total Depositado",
+            value: renderCurrencyBadges(depositosPorMoeda, "border-blue-500/50 text-blue-400"),
+            cursorHelp: true,
+          },
+          {
+            label: "Total Sacado",
+            value: renderCurrencyBadges(saquesPorMoeda, "border-emerald-500/50 text-emerald-400"),
+            cursorHelp: true,
+          },
+          {
+            label: lucroTotalBRL >= 0 ? "Lucro Acumulado" : "Prejuízo Acumulado",
+            value: renderCurrencyBadges(
+              lucroPorMoeda,
+              lucroTotalBRL >= 0
+                ? "border-emerald-500/50 text-emerald-400"
+                : "border-red-500/50 text-red-400"
+            ),
+            cursorHelp: true,
+          },
+        ]}
+      />
 
       {/* Lista de Histórico */}
       {historico.length === 0 ? (

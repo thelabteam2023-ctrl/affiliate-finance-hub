@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -699,95 +700,67 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   // Visão Geral content
   const renderVisaoGeral = () => (
     <div className="space-y-6">
-      {/* KPIs - Métricas de Período */}
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <Card className="border-amber-500/20 bg-amber-500/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recebido</CardTitle>
-            <Gift className="h-4 w-4 text-amber-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-400">{formatCurrency(metricas.totalRecebido)}</div>
-            <p className="text-xs text-muted-foreground">{freebetsNoPeriodo.length} freebets</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-emerald-500/20 bg-emerald-500/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Extraído</CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-400">{formatCurrency(metricas.totalExtraido)}</div>
-            <p className="text-xs text-muted-foreground">{metricas.extracoesGanhas} extração(s)</p>
-          </CardContent>
-        </Card>
-
-        <Card className={metricas.juiceQualificadoras >= 0 ? "border-emerald-500/20 bg-emerald-500/5" : "border-red-500/20 bg-red-500/5"}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Juice Qualif.</CardTitle>
-            <Zap className="h-4 w-4 text-amber-400" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${metricas.juiceQualificadoras >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {formatCurrency(metricas.juiceQualificadoras)}
-            </div>
-            <p className="text-xs text-muted-foreground">{metricas.totalQualificadoras} qualificadora(s)</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa Extração</CardTitle>
-            <Percent className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${metricas.taxaExtracao >= 70 ? 'text-emerald-400' : metricas.taxaExtracao >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
-              {metricas.taxaExtracao.toFixed(1)}%
-            </div>
-            <p className="text-xs text-muted-foreground">Acerto: {metricas.taxaAcerto.toFixed(0)}%</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Extrações</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metricas.totalExtracoes}</div>
-            <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs">
-              <span className="text-blue-400">{metricas.extracoesPendentes} Pendentes</span>
-              <span className="text-emerald-500">{metricas.extracoesGanhas} G</span>
-              <span className="text-red-500">{metricas.extracoesPerdidas} R</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-amber-500/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Atual</CardTitle>
-            <Gift className="h-4 w-4 text-amber-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-400">{formatCurrency(totalFreebetDisponivel)}</div>
-            <p className="text-xs text-muted-foreground">{casasComFreebet} casas</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Freebets</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{freebetsNoPeriodo.length}</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-emerald-400">{freebetsDisponiveis}</span> / <span className="text-muted-foreground">{freebetsUtilizadas}</span>
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* KPIs - Faixa compacta */}
+      <KpiSummaryBar
+        items={[
+          {
+            label: "Recebido",
+            value: formatCurrency(metricas.totalRecebido),
+            valueClassName: "text-amber-500",
+            subtitle: <span className="text-muted-foreground">{freebetsNoPeriodo.length} freebets</span>,
+          },
+          {
+            label: "Extraído",
+            value: formatCurrency(metricas.totalExtraido),
+            valueClassName: "text-emerald-500",
+            subtitle: <span className="text-muted-foreground">{metricas.extracoesGanhas} extração(s)</span>,
+          },
+          {
+            label: "Juice Qualif.",
+            value: formatCurrency(metricas.juiceQualificadoras),
+            valueClassName: metricas.juiceQualificadoras >= 0 ? "text-emerald-500" : "text-red-500",
+            subtitle: <span className="text-muted-foreground">{metricas.totalQualificadoras} qualificadora(s)</span>,
+          },
+          {
+            label: "Taxa Extração",
+            value: `${metricas.taxaExtracao.toFixed(1)}%`,
+            valueClassName: metricas.taxaExtracao >= 70 ? "text-emerald-500" : metricas.taxaExtracao >= 50 ? "text-amber-500" : "text-red-500",
+            subtitle: <span className="text-muted-foreground">Acerto: {metricas.taxaAcerto.toFixed(0)}%</span>,
+          },
+          {
+            label: "Extrações",
+            value: metricas.totalExtracoes,
+            subtitle: (
+              <div className="flex items-center gap-2">
+                {metricas.extracoesPendentes > 0 && <span className="text-blue-400">{metricas.extracoesPendentes} Pend.</span>}
+                <span className="inline-flex items-center gap-0.5 text-emerald-500 font-semibold">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  {metricas.extracoesGanhas}
+                </span>
+                <span className="inline-flex items-center gap-0.5 text-red-500 font-semibold">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
+                  {metricas.extracoesPerdidas}
+                </span>
+              </div>
+            ),
+          },
+          {
+            label: "Saldo Atual",
+            value: formatCurrency(totalFreebetDisponivel),
+            valueClassName: "text-amber-500",
+            subtitle: <span className="text-muted-foreground">{casasComFreebet} casas</span>,
+          },
+          {
+            label: "Freebets",
+            value: freebetsNoPeriodo.length,
+            subtitle: (
+              <span className="text-muted-foreground">
+                <span className="text-emerald-500">{freebetsDisponiveis}</span> / {freebetsUtilizadas}
+              </span>
+            ),
+          },
+        ]}
+      />
 
       {/* Gráfico Curva de Extração + Freebets Disponíveis (lado a lado) */}
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
