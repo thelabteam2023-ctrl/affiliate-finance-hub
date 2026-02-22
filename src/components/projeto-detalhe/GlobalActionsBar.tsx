@@ -213,7 +213,7 @@ export function GlobalActionsBar({
         {showNovaApostaButton && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" className="h-7 text-xs px-2.5">
+              <Button variant="outline" size="sm" className="h-7 text-xs px-2.5">
                 <Plus className="mr-1 h-3.5 w-3.5" />
                 Nova Aposta
                 <ChevronDown className="ml-0.5 h-3 w-3" />
