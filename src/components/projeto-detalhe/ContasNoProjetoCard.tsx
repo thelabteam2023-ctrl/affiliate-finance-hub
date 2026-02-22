@@ -157,7 +157,7 @@ export function ContasNoProjetoCard({ projetoId, hasForeignCurrency = false }: C
               </span>
             </div>
             {parceirosAtivosLista.length > 0 ? (
-              <ScrollArea className="max-h-28">
+              <ScrollArea className="max-h-48">
                 <div className="space-y-1">
                   {parceirosAtivosLista.map((p) => (
                     <div key={p.id} className="flex items-center justify-between text-xs py-1 px-2 rounded-md bg-muted/20">
@@ -193,7 +193,7 @@ export function ContasNoProjetoCard({ projetoId, hasForeignCurrency = false }: C
               )}
             </button>
             {showHistorico && historicoParceirosLista.length > 0 && (
-              <ScrollArea className="max-h-32">
+              <ScrollArea className="max-h-48">
                 <div className="space-y-1">
                   {historicoParceirosLista.map((p) => (
                     <div key={p.id} className="flex items-center justify-between text-xs py-1 px-2 rounded-md bg-muted/10">
