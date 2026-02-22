@@ -613,12 +613,14 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
               </Select>
             )}
 
-            <StandardTimeFilter
-              period={period}
-              onPeriodChange={(p) => { setPeriod(p); setFiltroCiclo("TODOS"); }}
-              customDateRange={customDateRange}
-              onCustomDateRangeChange={setCustomDateRange}
-            />
+            {filtroCiclo === "TODOS" && (
+              <StandardTimeFilter
+                period={period}
+                onPeriodChange={(p) => { setPeriod(p); }}
+                customDateRange={customDateRange}
+                onCustomDateRangeChange={setCustomDateRange}
+              />
+            )}
           </div>
 
           {/* Lista de transações */}
