@@ -1058,7 +1058,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       </div>
 
       <Tabs value={activeNavTab} onValueChange={handleNavTabChange} className="space-y-6">
-        <div className="flex items-center justify-between border-b border-border/50">
+        <div className="relative flex items-center justify-center border-b border-border/50">
           <TabsList className="bg-transparent border-0 rounded-none p-0 h-auto gap-6">
             {NAV_ITEMS.map((item) => (
               <TabsTrigger
@@ -1071,7 +1071,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
               </TabsTrigger>
             ))}
           </TabsList>
-          {modeToggle}
+          <div className="absolute right-0">{modeToggle}</div>
         </div>
 
           <TabsContent value={activeNavTab} className="mt-0">
