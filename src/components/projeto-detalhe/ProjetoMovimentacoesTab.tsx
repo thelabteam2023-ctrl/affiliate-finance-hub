@@ -590,10 +590,12 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
                     setPeriod("custom");
                     setCustomDateRange({ from, to });
                   }
+                } else {
+                  setPeriod("mes_atual");
+                  setCustomDateRange(undefined);
                 }
               }}>
                 <SelectTrigger className="w-[140px] h-8 text-xs">
-                  <Repeat className="h-3 w-3 mr-1" />
                   <SelectValue placeholder="Ciclo" />
                 </SelectTrigger>
                 <SelectContent>
