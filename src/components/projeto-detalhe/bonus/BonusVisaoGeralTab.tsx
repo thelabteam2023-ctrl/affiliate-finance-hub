@@ -491,11 +491,17 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                     })
                     .map(bonus => {
                       const daysLeft = bonus.expires_at ? differenceInDays(parseISO(bonus.expires_at), new Date()) : 0;
+                      // Show only first and last name
+                      const shortName = bonus.parceiro_nome ? (() => {
+                        const parts = bonus.parceiro_nome.trim().split(/\s+/);
+                        return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1]}` : parts[0];
+                      })() : null;
                       return (
                         <div key={bonus.id} className="flex justify-between gap-4 items-center">
-                          <span className="flex items-center gap-1.5 truncate">
+                          <span className="flex items-center gap-1.5 truncate text-xs">
                             <span className={`inline-block w-1.5 h-1.5 rounded-full ${daysLeft <= 1 ? 'bg-red-500' : daysLeft <= 3 ? 'bg-amber-500' : 'bg-yellow-500'}`} />
-                            {bonus.bookmaker_nome}{bonus.parceiro_nome ? ` - ${bonus.parceiro_nome}` : ''}
+                            {bonus.bookmaker_nome}
+                            {shortName && <span className="text-[10px] text-muted-foreground font-normal">({shortName})</span>}
                           </span>
                           <span className={`font-semibold whitespace-nowrap ${daysLeft <= 1 ? 'text-red-500' : 'text-amber-500'}`}>
                             {daysLeft === 0 ? 'HOJE' : daysLeft === 1 ? '1 dia' : `${daysLeft} dias`}
