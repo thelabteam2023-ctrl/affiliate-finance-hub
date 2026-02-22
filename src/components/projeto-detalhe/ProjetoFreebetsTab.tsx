@@ -706,30 +706,35 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           {
             label: "Recebido",
             value: formatCurrency(metricas.totalRecebido),
+            tooltip: "Valor total de freebets recebidas das bookmakers no período.",
             valueClassName: "text-amber-500",
             subtitle: <span className="text-muted-foreground">{freebetsNoPeriodo.length} freebets</span>,
           },
           {
             label: "Extraído",
             value: formatCurrency(metricas.totalExtraido),
+            tooltip: "Valor efetivamente extraído das freebets via apostas de extração ganhas.",
             valueClassName: "text-emerald-500",
             subtitle: <span className="text-muted-foreground">{metricas.extracoesGanhas} extração(s)</span>,
           },
           {
             label: "Juice Qualif.",
             value: formatCurrency(metricas.juiceQualificadoras),
+            tooltip: "Custo (juice) das apostas qualificadoras necessárias para liberar as freebets.",
             valueClassName: metricas.juiceQualificadoras >= 0 ? "text-emerald-500" : "text-red-500",
             subtitle: <span className="text-muted-foreground">{metricas.totalQualificadoras} qualificadora(s)</span>,
           },
           {
             label: "Taxa Extração",
             value: `${metricas.taxaExtracao.toFixed(1)}%`,
+            tooltip: "Percentual do valor da freebet que foi efetivamente extraído. Acima de 70% é considerado bom.",
             valueClassName: metricas.taxaExtracao >= 70 ? "text-emerald-500" : metricas.taxaExtracao >= 50 ? "text-amber-500" : "text-red-500",
             subtitle: <span className="text-muted-foreground">Acerto: {metricas.taxaAcerto.toFixed(0)}%</span>,
           },
           {
             label: "Extrações",
             value: metricas.totalExtracoes,
+            tooltip: "Total de apostas de extração realizadas. Verde = ganhas, Vermelho = perdidas.",
             subtitle: (
               <div className="flex items-center gap-2">
                 {metricas.extracoesPendentes > 0 && <span className="text-blue-400">{metricas.extracoesPendentes} Pend.</span>}
@@ -747,12 +752,14 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           {
             label: "Saldo Atual",
             value: formatCurrency(totalFreebetDisponivel),
+            tooltip: "Saldo total de freebets disponíveis para uso nas bookmakers agora.",
             valueClassName: "text-amber-500",
             subtitle: <span className="text-muted-foreground">{casasComFreebet} casas</span>,
           },
           {
             label: "Freebets",
             value: freebetsNoPeriodo.length,
+            tooltip: "Total de freebets no período. Verde = disponíveis, segundo número = já utilizadas.",
             subtitle: (
               <span className="text-muted-foreground">
                 <span className="text-emerald-500">{freebetsDisponiveis}</span> / {freebetsUtilizadas}

@@ -1,11 +1,19 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface KpiItem {
   label: string;
   value: ReactNode;
   /** Optional subtitle text below the value */
   subtitle?: ReactNode;
+  /** Tooltip text explaining this KPI */
+  tooltip?: string;
   /** Optional wrapper (e.g. tooltip) around the item */
   wrapper?: (children: ReactNode) => ReactNode;
   /** Min width for the item */
@@ -46,7 +54,7 @@ export function KpiSummaryBar({ items, leading, className }: KpiSummaryBarProps)
               className={cn(
                 "flex flex-col",
                 item.minWidth || "min-w-[70px]",
-                item.cursorHelp && "cursor-help",
+                (item.cursorHelp || item.tooltip) && "cursor-help",
                 item.hideMobile && "hidden sm:flex"
               )}
             >
@@ -69,7 +77,26 @@ export function KpiSummaryBar({ items, leading, className }: KpiSummaryBarProps)
             </div>
           );
 
-          const wrappedContent = item.wrapper ? item.wrapper(content) : content;
+          // Apply tooltip if provided (and no custom wrapper already handles it)
+          let wrappedContent: ReactNode;
+          if (item.wrapper) {
+            wrappedContent = item.wrapper(content);
+          } else if (item.tooltip) {
+            wrappedContent = (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {content}
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs text-sm">
+                    <p>{item.tooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          } else {
+            wrappedContent = content;
+          }
 
           return (
             <div key={index} className="contents">

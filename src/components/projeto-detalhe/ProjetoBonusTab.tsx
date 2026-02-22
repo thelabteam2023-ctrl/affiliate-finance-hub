@@ -320,24 +320,28 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
           {
             label: "Bônus Creditados",
             value: formatCurrency(summary.total_credited),
+            tooltip: "Valor total de bônus já creditados e disponíveis para uso nas bookmakers.",
             valueClassName: "text-emerald-500",
             subtitle: <span className="text-muted-foreground">{summary.count_credited} bônus</span>,
           },
           {
             label: "Pendentes",
             value: formatCurrency(summary.total_pending),
+            tooltip: "Bônus registrados que ainda não foram creditados pela bookmaker.",
             valueClassName: "text-amber-500",
             subtitle: <span className="text-muted-foreground">{summary.count_pending} aguardando</span>,
           },
           {
             label: "Falhos / Expirados",
             value: formatCurrency(summary.total_failed + summary.total_expired),
+            tooltip: "Bônus que não foram creditados (falhos) ou que expiraram sem uso.",
             valueClassName: "text-red-500",
             subtitle: <span className="text-muted-foreground">{summary.count_failed + summary.count_expired} bônus</span>,
           },
           {
             label: "Total Registrado",
             value: bonuses.length,
+            tooltip: "Total de bônus registrados no projeto, independente do status.",
             subtitle: <span className="text-muted-foreground">em {Object.keys(topBookmakers).length} casas</span>,
           },
         ]}

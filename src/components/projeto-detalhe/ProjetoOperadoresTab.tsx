@@ -184,11 +184,13 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
           {
             label: "Operadores Ativos",
             value: operadoresAtivos,
+            tooltip: "Quantidade de operadores com status ativo neste projeto.",
             subtitle: <span className="text-muted-foreground">{operadores.length} total vinculados</span>,
           },
           {
             label: "Custo Fixo (Referência)",
             value: formatCurrency(totalPagamentos),
+            tooltip: "Soma dos valores fixos de referência dos acordos com operadores. Não representa pagamentos efetivos.",
             subtitle: <span className="text-muted-foreground">Soma dos valores de referência</span>,
           },
         ]}

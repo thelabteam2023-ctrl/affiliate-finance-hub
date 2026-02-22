@@ -723,6 +723,7 @@ export function ProjetoValueBetTab({
           {
             label: "Apostas ValueBet",
             value: metricas.total,
+            tooltip: "Total de apostas de valor registradas no período. Verde = Green, Vermelho = Red.",
             subtitle: (
               <div className="flex items-center gap-2">
                 {metricas.pendentes > 0 && <span className="text-blue-400">{metricas.pendentes} Pend.</span>}
@@ -740,6 +741,7 @@ export function ProjetoValueBetTab({
           {
             label: "Volume",
             value: formatCurrency(metricas.totalStake),
+            tooltip: "Soma total das stakes apostadas em ValueBets no período.",
             minWidth: "min-w-[80px]",
           },
           {
@@ -762,6 +764,7 @@ export function ProjetoValueBetTab({
           {
             label: "ROI",
             value: formatPercent(metricas.roi),
+            tooltip: "Retorno sobre investimento: lucro dividido pelo volume total apostado.",
             valueClassName: metricas.roi >= 0 ? "text-emerald-500" : "text-red-500",
             minWidth: "min-w-[50px]",
           },

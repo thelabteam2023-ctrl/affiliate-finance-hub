@@ -444,6 +444,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
           {
             label: "Total Histórico",
             value: totalHistorico,
+            tooltip: "Quantidade total de bookmakers que já foram vinculadas a este projeto ao longo do tempo.",
             subtitle: (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <span className="text-emerald-500">{vinculosAtivos} em uso</span>

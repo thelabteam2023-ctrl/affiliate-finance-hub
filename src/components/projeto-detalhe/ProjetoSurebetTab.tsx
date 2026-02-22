@@ -910,6 +910,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           {
             label: "Surebets",
             value: kpis.total,
+            tooltip: "Quantidade total de surebets registradas no período. Verde = Green, Vermelho = Red.",
             subtitle: (
               <div className="flex items-center gap-2">
                 {kpis.pendentes > 0 && <span className="text-blue-400">{kpis.pendentes} Pend.</span>}
@@ -927,6 +928,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           {
             label: "Volume",
             value: formatCurrency(kpis.stakeTotal),
+            tooltip: "Soma total das stakes apostadas em surebets no período selecionado.",
             minWidth: "min-w-[80px]",
           },
           {
@@ -949,6 +951,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           {
             label: "ROI",
             value: formatPercent(kpis.roi),
+            tooltip: "Retorno sobre investimento: lucro dividido pelo volume total apostado.",
             valueClassName: kpis.roi >= 0 ? "text-emerald-500" : "text-red-500",
             minWidth: "min-w-[50px]",
           },
