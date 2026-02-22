@@ -471,6 +471,59 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             ),
             minWidth: "min-w-[120px]",
           },
+          (() => {
+            const totalBonuses = bonuses.length;
+            const concluded = summary.count_finalized + summary.count_failed + summary.count_expired + summary.count_reversed;
+            const conclusionRate = totalBonuses > 0 ? (concluded / totalBonuses) * 100 : 0;
+            return {
+              label: "Ciclo Encerrado",
+              value: (
+                <span className={conclusionRate >= 70 ? "text-emerald-500" : conclusionRate >= 40 ? "text-amber-500" : "text-muted-foreground"}>
+                  {conclusionRate.toFixed(0)}%
+                </span>
+              ),
+              tooltip: (
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-foreground">Taxa de Ciclo Encerrado</p>
+                  <p className="text-muted-foreground text-xs">% dos bônus que já tiveram seu ciclo concluído (rollover completo, expirado, cancelado ou revertido).</p>
+                  <div className="space-y-0.5">
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Finalizados</span>
+                      <span className="font-semibold text-foreground">{summary.count_finalized}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Falhados</span>
+                      <span className="font-semibold text-foreground">{summary.count_failed}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" /> Expirados</span>
+                      <span className="font-semibold text-foreground">{summary.count_expired}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Revertidos</span>
+                      <span className="font-semibold text-foreground">{summary.count_reversed}</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-border/50 pt-1 space-y-0.5">
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" /> Em andamento</span>
+                      <span className="font-semibold text-foreground">{summary.count_credited}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/50" /> Pendentes</span>
+                      <span className="font-semibold text-foreground">{summary.count_pending}</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
+                    <span className="font-semibold">Total</span>
+                    <span className="font-semibold text-foreground">{totalBonuses}</span>
+                  </div>
+                </div>
+              ),
+              subtitle: <span className="text-muted-foreground">{concluded} de {totalBonuses}</span>,
+              minWidth: "min-w-[90px]",
+            };
+          })(),
           ...(expiring7Days.length > 0 ? [{
             label: "Expirando",
             value: (
