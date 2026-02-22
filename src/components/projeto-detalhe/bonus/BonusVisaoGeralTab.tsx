@@ -494,19 +494,19 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                   <div className="space-y-0.5">
                     <div className="flex justify-between gap-4">
                       <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Rollover concluído</span>
-                      <span className="font-semibold text-foreground">{rolloverCompleted}</span>
+                      <span className="font-semibold text-foreground">{rolloverCompleted} <span className="text-muted-foreground font-normal">({totalBonuses > 0 ? ((rolloverCompleted / totalBonuses) * 100).toFixed(0) : 0}%)</span></span>
                     </div>
                     <div className="flex justify-between gap-4">
                       <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" /> Ciclo encerrado</span>
-                      <span className="font-semibold text-foreground">{cycleCompleted}</span>
+                      <span className="font-semibold text-foreground">{cycleCompleted} <span className="text-muted-foreground font-normal">({totalBonuses > 0 ? ((cycleCompleted / totalBonuses) * 100).toFixed(0) : 0}%)</span></span>
                     </div>
                     <div className="flex justify-between gap-4">
                       <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" /> Expirado</span>
-                      <span className="font-semibold text-foreground">{expired}</span>
+                      <span className="font-semibold text-foreground">{expired} <span className="text-muted-foreground font-normal">({totalBonuses > 0 ? ((expired / totalBonuses) * 100).toFixed(0) : 0}%)</span></span>
                     </div>
                     <div className="flex justify-between gap-4">
                       <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Cancelado / Revertido</span>
-                      <span className="font-semibold text-foreground">{cancelledReversed}</span>
+                      <span className="font-semibold text-foreground">{cancelledReversed} <span className="text-muted-foreground font-normal">({totalBonuses > 0 ? ((cancelledReversed / totalBonuses) * 100).toFixed(0) : 0}%)</span></span>
                     </div>
                   </div>
                   <div className="border-t border-border/50 pt-1 space-y-0.5">
