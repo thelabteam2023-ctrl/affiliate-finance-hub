@@ -507,30 +507,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                 </div>
               </div>
             ),
-            subtitle: (
-              <div className="flex flex-col gap-0.5 mt-0.5">
-                {expiring7Days
-                  .sort((a, b) => {
-                    const dA = a.expires_at ? differenceInDays(parseISO(a.expires_at), new Date()) : 999;
-                    const dB = b.expires_at ? differenceInDays(parseISO(b.expires_at), new Date()) : 999;
-                    return dA - dB;
-                  })
-                  .slice(0, 3)
-                  .map(bonus => {
-                    const daysLeft = bonus.expires_at ? differenceInDays(parseISO(bonus.expires_at), new Date()) : 0;
-                    return (
-                      <span key={bonus.id} className={`text-[10px] leading-tight truncate max-w-[120px] ${daysLeft <= 1 ? 'text-red-500' : 'text-amber-500'}`}>
-                        {bonus.bookmaker_nome} — {daysLeft === 0 ? 'HOJE' : `${daysLeft}d`}
-                      </span>
-                    );
-                  })
-                }
-                {expiring7Days.length > 3 && (
-                  <span className="text-[10px] text-muted-foreground">+{expiring7Days.length - 3} mais...</span>
-                )}
-              </div>
-            ),
-            minWidth: "min-w-[100px]",
+            subtitle: <span className="text-muted-foreground">bônus em risco</span>,
+            minWidth: "min-w-[80px]",
             valueClassName: "text-amber-500",
           }] : []),
         ]}
