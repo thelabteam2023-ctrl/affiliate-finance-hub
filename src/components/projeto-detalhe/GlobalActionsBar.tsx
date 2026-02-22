@@ -208,7 +208,7 @@ export function GlobalActionsBar({
   return (
     <>
       {/* Actions Bar */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col items-start gap-1.5">
         {/* Nova Aposta Dropdown - APENAS em abas operacionais (whitelist) */}
         {showNovaApostaButton && (
           <DropdownMenu>
