@@ -1077,7 +1077,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   {/* Apostas */}
                   <div className="text-center w-[70px] flex-shrink-0">
                     <p className="text-xs text-muted-foreground">Apostas</p>
-                    <p className="font-medium flex items-center justify-center gap-1">
+                    <p className="font-medium tabular-nums flex items-center justify-center gap-1">
                       <Target className="h-3 w-3 text-primary" />
                       {vinculo.totalApostas}
                     </p>

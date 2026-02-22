@@ -106,19 +106,19 @@ export function SaldoOperavelDisplay({
               </TooltipProvider>
             )}
           </p>
-          <p className="font-bold text-foreground">{formatCurrency(saldoOperavel, moeda)}</p>
+          <p className="font-bold text-foreground tabular-nums">{formatCurrency(saldoOperavel, moeda)}</p>
         </div>
 
         {/* Em Aposta - Informativo */}
         <div className="text-right w-[90px] flex-shrink-0">
           <p className="text-xs text-muted-foreground">Em Aposta</p>
-          <p className="font-medium text-warning">{formatCurrency(saldoEmAposta, moeda)}</p>
+          <p className="font-medium text-warning tabular-nums">{formatCurrency(saldoEmAposta, moeda)}</p>
         </div>
 
         {/* Disponível - Destaque secundário */}
         <div className="text-right w-[100px] flex-shrink-0">
           <p className="text-xs text-muted-foreground">Disponível</p>
-          <p className="font-semibold text-accent-foreground">{formatCurrency(saldoDisponivel, moeda)}</p>
+          <p className="font-semibold text-accent-foreground tabular-nums">{formatCurrency(saldoDisponivel, moeda)}</p>
         </div>
       </div>
     );
