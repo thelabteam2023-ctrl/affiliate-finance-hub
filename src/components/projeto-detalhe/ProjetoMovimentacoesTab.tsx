@@ -591,8 +591,12 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
                     setCustomDateRange({ from, to });
                   }
                 } else {
-                  setPeriod("mes_atual");
-                  setCustomDateRange(undefined);
+                  // "Todos" = do início do primeiro ciclo até agora
+                  const primeiroCiclo = ciclos[ciclos.length - 1]; // ciclos ordenados desc, último é o primeiro
+                  if (primeiroCiclo) {
+                    setPeriod("custom");
+                    setCustomDateRange({ from: new Date(primeiroCiclo.data_inicio), to: new Date() });
+                  }
                 }
               }}>
                 <SelectTrigger className="w-[140px] h-8 text-xs">
