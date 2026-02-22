@@ -380,7 +380,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
           },
           {
             label: "Performance de Bônus",
-            tooltip: "Resultado líquido da operação de bônus: bônus creditado + juice das extrações + ajustes pós-limitação.",
+            tooltip: `Resultado líquido: bônus creditado + juice + ajustes pós-limitação.\n\nBônus Creditado: ${formatCurrency(bonusPerformance.totalBonusCreditado)}\nJuice: ${formatCurrency(bonusPerformance.totalJuice)}\nExtração: ${bonusPerformance.performancePercent.toFixed(1)}%`,
             value: (
               <div className="flex items-baseline gap-2">
                 <span className={bonusPerformance.total >= 0 ? "text-emerald-500" : "text-red-500"}>
@@ -399,11 +399,6 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                   {bonusPerformance.performancePercent.toFixed(1)}%
                 </Badge>
               </div>
-            ),
-            subtitle: (
-              <span className="text-muted-foreground">
-                Bônus: {formatCurrency(bonusPerformance.totalBonusCreditado)} | Juice: {formatCurrency(bonusPerformance.totalJuice)}
-              </span>
             ),
             minWidth: "min-w-[120px]",
           },
