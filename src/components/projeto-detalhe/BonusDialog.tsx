@@ -127,6 +127,7 @@ export function BonusDialog({
   const [templateMaxValue, setTemplateMaxValue] = useState<number | null>(null);
   const [bookmakerSearch, setBookmakerSearch] = useState("");
   const isEditMode = !!bonus;
+  const prevBookmakerIdRef = useRef<string>("");
 
   // Get the selected bookmaker to find its catalogo_id
   const selectedBookmaker = useMemo(() => {
@@ -143,6 +144,7 @@ export function BonusDialog({
       if (bonus) {
         // Edit mode
         setBookmakerId(bonus.bookmaker_id);
+        prevBookmakerIdRef.current = bonus.bookmaker_id;
         setTitle(bonus.title);
         setAmount(String(bonus.bonus_amount));
         setCurrency(bonus.currency);
@@ -159,7 +161,9 @@ export function BonusDialog({
         setSelectedTemplateId(null);
       } else {
         // Create mode - default to credited (most bookmakers credit immediately)
-        setBookmakerId(preselectedBookmakerId || "");
+        const initialBk = preselectedBookmakerId || "";
+        setBookmakerId(initialBk);
+        prevBookmakerIdRef.current = initialBk;
         setTitle("");
         setAmount("");
         setCurrency("BRL");
@@ -182,15 +186,16 @@ export function BonusDialog({
   }, [open, bonus, preselectedBookmakerId]);
 
   // Reset template selection when bookmaker changes AND inherit currency from bookmaker
+  // Track previous bookmakerId to only reset when it ACTUALLY changes (not on bookmakers array ref change)
   useEffect(() => {
-    if (!isEditMode && bookmakerId) {
+    if (!isEditMode && bookmakerId && bookmakerId !== prevBookmakerIdRef.current) {
+      prevBookmakerIdRef.current = bookmakerId;
       setSelectedTemplateId(null);
       setFilledFromTemplate(false);
       setTemplatePercent(null);
       setTemplateMaxValue(null);
       
       // CRÍTICO: Herdar moeda da bookmaker selecionada
-      // A moeda do bônus deve ser a mesma da casa para evitar inconsistências
       const bk = bookmakers.find(b => b.id === bookmakerId);
       if (bk?.moeda) {
         setCurrency(bk.moeda);
