@@ -430,21 +430,24 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
             </div>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-xs">
-            <div className="text-sm space-y-1">
-              <p className="font-medium">Valores por moeda:</p>
-              {agregados.map((item) => (
-                <p key={item.moeda} className="flex justify-between gap-4">
-                  <span>{item.moeda}:</span>
-                  <span>{formatSimple(item.valor, item.moeda)}</span>
-                </p>
-              ))}
+            <div className="space-y-1.5">
+              <p className="font-semibold text-foreground">Valores por Moeda</p>
+              <div className="space-y-0.5">
+                {agregados.map((item) => (
+                  <div key={item.moeda} className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5">
+                      <span className={`inline-block w-1.5 h-1.5 rounded-full ${item.moeda === 'BRL' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                      {item.moeda}
+                    </span>
+                    <span className="font-semibold text-foreground">{formatSimple(item.valor, item.moeda)}</span>
+                  </div>
+                ))}
+              </div>
               {isMulti && (
-                <>
-                  <hr className="my-1 border-border" />
-                  <p className="text-muted-foreground">
-                    Consolidado via {sources.usd?.label || "cotação oficial"} (USD: R$ {cotacaoUSD.toFixed(4)}): ≈ R$ {consolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </>
+                <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
+                  <span className="font-semibold">≈ Consolidado</span>
+                  <span className="font-semibold text-foreground">R$ {consolidado.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
               )}
             </div>
           </TooltipContent>
@@ -505,9 +508,22 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
             label: "Limitados",
             value: vinculosLimitados,
             tooltip: (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <p className="font-semibold text-foreground">Contas Limitadas</p>
-                <p className="text-muted-foreground">Vínculos que sofreram limitação durante o uso no projeto.</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500" /> Limitados</span>
+                    <span className="font-semibold text-foreground">{vinculosLimitados}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Sem limitação</span>
+                    <span className="font-semibold text-foreground">{totalHistorico - vinculosLimitados}</span>
+                  </div>
+                </div>
+                <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
+                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold text-foreground">{totalHistorico}</span>
+                </div>
               </div>
             ),
             valueClassName: vinculosLimitados > 0 ? "text-yellow-500" : undefined,
@@ -606,14 +622,26 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
                                       </Badge>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" className="max-w-xs">
-                                      <div className="text-sm space-y-1">
-                                        <p className="font-medium">Limitação: {item.limitation_type}</p>
-                                        {item.bets_before_limitation != null && (
-                                          <p className="text-muted-foreground">{item.bets_before_limitation} apostas antes da limitação</p>
-                                        )}
-                                        {item.limitation_date && (
-                                          <p className="text-muted-foreground">Em {format(new Date(item.limitation_date), "dd/MM/yyyy", { locale: ptBR })}</p>
-                                        )}
+                                      <div className="space-y-1.5">
+                                        <p className="font-semibold text-foreground">Detalhes da Limitação</p>
+                                        <div className="space-y-0.5">
+                                          <div className="flex justify-between gap-4">
+                                            <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500" /> Tipo</span>
+                                            <span className="font-semibold text-foreground">{item.limitation_type}</span>
+                                          </div>
+                                          {item.bets_before_limitation != null && (
+                                            <div className="flex justify-between gap-4">
+                                              <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" /> Apostas antes</span>
+                                              <span className="font-semibold text-foreground">{item.bets_before_limitation}</span>
+                                            </div>
+                                          )}
+                                          {item.limitation_date && (
+                                            <div className="flex justify-between gap-4">
+                                              <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Data</span>
+                                              <span className="font-semibold text-foreground">{format(new Date(item.limitation_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
                                     </TooltipContent>
                                   </Tooltip>
