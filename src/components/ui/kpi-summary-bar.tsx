@@ -30,6 +30,8 @@ interface KpiSummaryBarProps {
   items: KpiItem[];
   /** Optional leading element (e.g. SaldoOperavelCard) */
   leading?: ReactNode;
+  /** Optional action buttons rendered vertically on the far left */
+  actions?: ReactNode;
   className?: string;
 }
 
@@ -37,7 +39,7 @@ interface KpiSummaryBarProps {
  * Faixa horizontal compacta de KPIs — padrão unificado para todas as abas.
  * Substitui grids de cards por uma barra inline centralizada.
  */
-export function KpiSummaryBar({ items, leading, className }: KpiSummaryBarProps) {
+export function KpiSummaryBar({ items, leading, actions, className }: KpiSummaryBarProps) {
   return (
     <div
       className={cn(
@@ -46,6 +48,15 @@ export function KpiSummaryBar({ items, leading, className }: KpiSummaryBarProps)
       )}
     >
       <div className="flex items-center justify-center gap-4 md:gap-6 flex-wrap">
+        {/* Action buttons — vertically stacked, left-aligned */}
+        {actions && (
+          <>
+            <div className="flex flex-col gap-1.5 items-start flex-shrink-0">
+              {actions}
+            </div>
+            <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
+          </>
+        )}
         {leading}
 
         {items.map((item, index) => {

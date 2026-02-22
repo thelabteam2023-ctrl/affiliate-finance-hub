@@ -15,6 +15,7 @@ import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 interface ProjetoBonusAreaProps {
   projetoId: string;
   refreshTrigger?: number;
+  actionsSlot?: React.ReactNode;
 }
 
 type NavigationMode = "tabs" | "sidebar";
@@ -22,7 +23,7 @@ type TabValue = "visao-geral" | "bookmakers" | "apostas";
 
 const STORAGE_KEY = "bonus-area-nav-mode";
 
-export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusAreaProps) {
+export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot }: ProjetoBonusAreaProps) {
   const { getBookmakersWithActiveBonus, fetchBonuses } = useProjectBonuses({ projectId: projetoId });
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
   
@@ -100,7 +101,7 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger }: ProjetoBonusArea
 
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
-        {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} dateRange={dateRange} isSingleDayPeriod={isSingleDayPeriod} periodFilter={periodFilterComponent} />}
+        {activeTab === "visao-geral" && <BonusVisaoGeralTab projetoId={projetoId} dateRange={dateRange} isSingleDayPeriod={isSingleDayPeriod} periodFilter={periodFilterComponent} actionsSlot={actionsSlot} />}
         {activeTab === "bookmakers" && periodFilterComponent}
         {activeTab === "bookmakers" && <BonusBookmakersTab projetoId={projetoId} />}
         {activeTab === "apostas" && <BonusApostasTab projetoId={projetoId} dateRange={dateRange} />}

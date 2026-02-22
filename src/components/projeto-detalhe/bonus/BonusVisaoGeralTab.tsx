@@ -29,6 +29,7 @@ interface BonusVisaoGeralTabProps {
   dateRange?: DateRangeResult | null;
   isSingleDayPeriod?: boolean;
   periodFilter?: React.ReactNode;
+  actionsSlot?: React.ReactNode;
 }
 
 interface BookmakerWithBonus {
@@ -49,7 +50,7 @@ interface BonusResultEntry {
   juice: number; // custo operacional (P&L das apostas com bônus)
 }
 
-export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false, periodFilter }: BonusVisaoGeralTabProps) {
+export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false, periodFilter, actionsSlot }: BonusVisaoGeralTabProps) {
   const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
   const { formatCurrency, convertToConsolidation, convertToConsolidationOficial } = useProjetoCurrency(projetoId);
@@ -354,6 +355,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       {/* KPIs - Faixa compacta */}
       <TooltipProvider>
       <KpiSummaryBar
+        actions={actionsSlot}
         leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
         items={[
           {
