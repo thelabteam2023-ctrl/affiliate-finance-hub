@@ -311,18 +311,21 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
             {
               label: "Perdas Pendentes",
               value: formatCurrency(totalPendente),
+              tooltip: "Valor total de perdas aguardando confirmação ou resolução.",
               valueClassName: "text-amber-500",
               subtitle: <span className="text-muted-foreground">{perdasPendentes.length} registro(s)</span>,
             },
             {
               label: "Perdas Confirmadas",
               value: formatCurrency(totalConfirmada),
+              tooltip: "Valor total de perdas já confirmadas e que impactam o resultado do projeto.",
               valueClassName: "text-red-500",
               subtitle: <span className="text-muted-foreground">{perdasConfirmadas.length} registro(s)</span>,
             },
             {
               label: "Perdas Revertidas",
               value: formatCurrency(totalReversa),
+              tooltip: "Valor total de perdas que foram revertidas e não impactam o resultado final.",
               valueClassName: "text-emerald-500",
               subtitle: <span className="text-muted-foreground">{perdasReversas.length} registro(s)</span>,
             },

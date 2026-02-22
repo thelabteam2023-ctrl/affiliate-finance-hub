@@ -501,18 +501,21 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
           {
             label: "Depósitos",
             value: formatCurrency(totais.depositos, "BRL"),
+            tooltip: "Total de depósitos realizados nas bookmakers do projeto no período.",
             valueClassName: "text-emerald-500",
             minWidth: "min-w-[80px]",
           },
           {
             label: "Saques",
             value: formatCurrency(totais.saques, "BRL"),
+            tooltip: "Total de saques realizados das bookmakers do projeto no período.",
             valueClassName: "text-red-500",
             minWidth: "min-w-[80px]",
           },
           {
             label: "Saldo Período",
             value: formatCurrency(totais.saldo, "BRL"),
+            tooltip: "Diferença entre depósitos e saques no período. Positivo indica mais saques que depósitos.",
             valueClassName: totais.saldo >= 0 ? "text-emerald-500" : "text-red-500",
             minWidth: "min-w-[80px]",
           },

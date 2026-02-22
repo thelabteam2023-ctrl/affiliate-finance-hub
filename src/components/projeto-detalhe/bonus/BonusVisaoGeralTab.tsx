@@ -359,6 +359,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
           {
             label: "Histórico de Casas",
             value: analyticsSummary.total_bookmakers,
+            tooltip: "Quantidade de bookmakers com bônus já operados neste projeto.",
             subtitle: <span className="text-muted-foreground">{analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}</span>,
           },
           {
@@ -379,6 +380,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
           },
           {
             label: "Performance de Bônus",
+            tooltip: "Resultado líquido da operação de bônus: bônus creditado + juice das extrações + ajustes pós-limitação.",
             value: (
               <div className="flex items-baseline gap-2">
                 <span className={bonusPerformance.total >= 0 ? "text-emerald-500" : "text-red-500"}>

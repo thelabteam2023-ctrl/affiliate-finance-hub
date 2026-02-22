@@ -126,16 +126,19 @@ export function HistoricoConciliacoesTab({ projetoId }: HistoricoConciliacoesTab
           {
             label: "Total de Ajustes",
             value: conciliacoes.length,
+            tooltip: "Quantidade total de conciliações de saldo realizadas neste projeto.",
             subtitle: <span className="text-muted-foreground">conciliações realizadas</span>,
           },
           {
             label: "Ajustes Positivos",
             value: `+${formatCurrency(totals.positivo, "BRL")}`,
+            tooltip: "Soma dos ajustes que aumentaram o saldo das bookmakers (saldo real era maior que o esperado).",
             valueClassName: "text-emerald-500",
           },
           {
             label: "Ajustes Negativos",
             value: formatCurrency(totals.negativo, "BRL"),
+            tooltip: "Soma dos ajustes que reduziram o saldo das bookmakers (saldo real era menor que o esperado).",
             valueClassName: "text-red-500",
           },
         ]}
