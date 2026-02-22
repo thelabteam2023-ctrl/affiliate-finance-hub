@@ -191,6 +191,19 @@ function ParceiroFilterSelect({ value, onChange, parceiros }: { value: string; o
   );
 }
 
+// Helper: abbreviate crypto wallet address for display
+const abbreviateWalletAddress = (address: string | null | undefined): string | null => {
+  if (!address || address.length <= 14) return address || null;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
+
+// Helper: get wallet address from walletsDetalhes by wallet id
+const getWalletAddress = (walletId: string | null, walletsDetalhes: WalletDetalhe[]): string | null => {
+  if (!walletId) return null;
+  const wallet = walletsDetalhes.find(w => w.id === walletId);
+  return abbreviateWalletAddress(wallet?.endereco);
+};
+
 export function HistoricoMovimentacoes({
   loading,
   filtroTipo,
@@ -440,11 +453,15 @@ export function HistoricoMovimentacoes({
                               : transacao.destino_conta_bancaria_id 
                                 ? contasBancarias.find(c => c.id === transacao.destino_conta_bancaria_id)?.banco || 'Conta' 
                                 : 'Destino';
+                            const walletAddr = getWalletAddress(transacao.destino_wallet_id, walletsDetalhes);
                             return (
                               <div className="flex flex-col">
                                 <span className="text-sm text-muted-foreground">{walletName}</span>
                                 {destinoInfo?.secondary && (
                                   <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
+                                )}
+                                {walletAddr && (
+                                  <span className="text-[10px] font-mono text-muted-foreground/50">{walletAddr}</span>
                                 )}
                               </div>
                             );
@@ -462,11 +479,15 @@ export function HistoricoMovimentacoes({
                           ) : null}
                           {(() => {
                             const origemInfo = getOrigemInfo ? getOrigemInfo(transacao) : { primary: getOrigemLabel(transacao) };
+                            const walletAddr = getWalletAddress(transacao.origem_wallet_id, walletsDetalhes);
                             return (
                               <div className="flex flex-col">
                                 <span className="text-sm text-muted-foreground">{origemInfo.primary}</span>
                                 {origemInfo.secondary && (
                                   <span className="text-xs text-muted-foreground/70">{origemInfo.secondary}</span>
+                                )}
+                                {walletAddr && (
+                                  <span className="text-[10px] font-mono text-muted-foreground/50">{walletAddr}</span>
                                 )}
                               </div>
                             );
@@ -517,6 +538,10 @@ export function HistoricoMovimentacoes({
                                 {origemInfo.secondary && (
                                   <span className="text-xs text-muted-foreground/70">{origemInfo.secondary}</span>
                                 )}
+                                {transacao.origem_wallet_id && (() => {
+                                  const walletAddr = getWalletAddress(transacao.origem_wallet_id, walletsDetalhes);
+                                  return walletAddr ? <span className="text-[10px] font-mono text-muted-foreground/50">{walletAddr}</span> : null;
+                                })()}
                               </div>
                             </div>
                           );
@@ -549,6 +574,10 @@ export function HistoricoMovimentacoes({
                                   {destinoInfo.secondary && (
                                     <span className="text-xs text-muted-foreground/70">{destinoInfo.secondary}</span>
                                   )}
+                                  {transacao.destino_wallet_id && (() => {
+                                    const walletAddr = getWalletAddress(transacao.destino_wallet_id, walletsDetalhes);
+                                    return walletAddr ? <span className="text-[10px] font-mono text-muted-foreground/50">{walletAddr}</span> : null;
+                                  })()}
                                 </div>
                               )}
                             </div>
