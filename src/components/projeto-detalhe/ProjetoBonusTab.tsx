@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -313,66 +314,34 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bônus Creditados</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-400">
-              {formatCurrency(summary.total_credited)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {summary.count_credited} bônus
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-400">
-              {formatCurrency(summary.total_pending)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {summary.count_pending} aguardando
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Falhos / Expirados</CardTitle>
-            <XCircle className="h-4 w-4 text-red-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-400">
-              {formatCurrency(summary.total_failed + summary.total_expired)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {summary.count_failed + summary.count_expired} bônus
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Registrado</CardTitle>
-            <Gift className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{bonuses.length}</div>
-            <p className="text-xs text-muted-foreground">
-              em {Object.keys(topBookmakers).length} casas
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* KPIs - Faixa compacta */}
+      <KpiSummaryBar
+        items={[
+          {
+            label: "Bônus Creditados",
+            value: formatCurrency(summary.total_credited),
+            valueClassName: "text-emerald-500",
+            subtitle: <span className="text-muted-foreground">{summary.count_credited} bônus</span>,
+          },
+          {
+            label: "Pendentes",
+            value: formatCurrency(summary.total_pending),
+            valueClassName: "text-amber-500",
+            subtitle: <span className="text-muted-foreground">{summary.count_pending} aguardando</span>,
+          },
+          {
+            label: "Falhos / Expirados",
+            value: formatCurrency(summary.total_failed + summary.total_expired),
+            valueClassName: "text-red-500",
+            subtitle: <span className="text-muted-foreground">{summary.count_failed + summary.count_expired} bônus</span>,
+          },
+          {
+            label: "Total Registrado",
+            value: bonuses.length,
+            subtitle: <span className="text-muted-foreground">em {Object.keys(topBookmakers).length} casas</span>,
+          },
+        ]}
+      />
 
       {/* Top Bookmakers (optional) */}
       {topBookmakersList.length > 0 && (

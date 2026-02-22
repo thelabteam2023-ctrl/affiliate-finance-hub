@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, Fragment } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectBonuses, ProjectBonus, bonusQueryKeys } from "@/hooks/useProjectBonuses";
@@ -350,112 +351,42 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         />
       )}
 
-      {/* KPIs with hierarchy - Saldo Operável is primary */}
+      {/* KPIs - Faixa compacta */}
       <TooltipProvider>
-      <div className="grid gap-4 md:grid-cols-4">
-        <SaldoOperavelCard projetoId={projetoId} />
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Histórico de Casas</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <TooltipUI>
-              <TooltipTrigger asChild>
-                <div className="cursor-help">
-                  <div className="text-2xl font-bold">{analyticsSummary.total_bookmakers}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}
-                  </p>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="p-3">
-                {(() => {
-                  const totalReceived = analyticsStats.reduce((sum, s) => sum + s.total_bonus_count, 0);
-                  const pending = analyticsStats.reduce((sum, s) => sum + s.bonus_pending_count, 0);
-                  const inProgress = Math.max(0, analyticsStats.reduce((sum, s) => sum + s.bonus_credited_count - s.bonus_finalized_count, 0));
-                  const finalized = analyticsStats.reduce((sum, s) => sum + s.bonus_finalized_count, 0);
-                  const limited = analyticsSummary.status_breakdown.limitadas;
-                  const items = [
-                    { label: "Recebidos", value: totalReceived, icon: <Gift className="h-3 w-3" /> },
-                    { label: "Pendentes", value: pending, icon: <Timer className="h-3 w-3" /> },
-                    { label: "Em andamento", value: inProgress },
-                    { label: "Finalizados", value: finalized },
-                    ...(limited > 0 ? [{ label: "Limitadas", value: limited, isWarning: true, icon: <AlertTriangle className="h-3 w-3" /> }] : []),
-                  ];
-                  return (
-                    <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-xs">
-                      {items.map((item) => (
-                        <Fragment key={item.label}>
-                          <span className={`flex items-center justify-end gap-0.5 ${'isWarning' in item && item.isWarning ? "text-amber-500" : "text-muted-foreground"}`}>
-                            {'icon' in item && item.icon}
-                            {item.label}
-                          </span>
-                          <span className={`font-semibold tabular-nums text-right min-w-[2ch] ${'isWarning' in item && item.isWarning ? "text-amber-500" : "text-foreground"}`}>{item.value}</span>
-                        </Fragment>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </TooltipContent>
-            </TooltipUI>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Volume Operado</CardTitle>
-            <BarChart3 className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <CurrencyBreakdownTooltip
-              breakdown={analyticsSummary.volume_breakdown}
-              moedaConsolidacao={analyticsSummary.moeda_consolidacao}
-            >
-              <div className="text-2xl font-bold truncate">
-                {formatCurrency(analyticsSummary.volume_breakdown.reduce((acc, item) => 
-                  acc + convertToConsolidationOficial(item.valor, item.moeda), 0
-                ))}
-              </div>
-            </CurrencyBreakdownTooltip>
-            <p className="text-xs text-muted-foreground">Volume apostado em bônus</p>
-          </CardContent>
-        </Card>
-
-        {/* Nova KPI: Performance de Bônus com % */}
-        
-          <Card className={bonusPerformance.total >= 0 ? "border-primary/30 bg-primary/5" : "border-destructive/30 bg-destructive/5"}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-                Performance de Bônus
-                <TooltipUI>
-                  <TooltipTrigger asChild>
-                    <Receipt className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-[280px]">
-                    <div className="text-xs space-y-1">
-                      <p><strong>Resultado:</strong> Bônus creditados + Juice</p>
-                      <p><strong>Eficiência:</strong> % do bônus convertido</p>
-                      <p className="text-muted-foreground">100% = conversão total | &gt;100% = lucro adicional</p>
-                    </div>
-                  </TooltipContent>
-                </TooltipUI>
-              </CardTitle>
-              {bonusPerformance.total >= 0 ? (
-                <TrendingUp className="h-4 w-4 text-primary" />
-              ) : (
-                <TrendingDown className="h-4 w-4 text-destructive" />
-              )}
-            </CardHeader>
-            <CardContent>
+      <KpiSummaryBar
+        leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
+        items={[
+          {
+            label: "Histórico de Casas",
+            value: analyticsSummary.total_bookmakers,
+            subtitle: <span className="text-muted-foreground">{analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}</span>,
+          },
+          {
+            label: "Volume Operado",
+            value: (
+              <CurrencyBreakdownTooltip
+                breakdown={analyticsSummary.volume_breakdown}
+                moedaConsolidacao={analyticsSummary.moeda_consolidacao}
+              >
+                <span className="truncate">
+                  {formatCurrency(analyticsSummary.volume_breakdown.reduce((acc, item) => 
+                    acc + convertToConsolidationOficial(item.valor, item.moeda), 0
+                  ))}
+                </span>
+              </CurrencyBreakdownTooltip>
+            ),
+            minWidth: "min-w-[80px]",
+          },
+          {
+            label: "Performance de Bônus",
+            value: (
               <div className="flex items-baseline gap-2">
-                <span className={`text-2xl font-bold ${bonusPerformance.total >= 0 ? "text-primary" : "text-destructive"}`}>
+                <span className={bonusPerformance.total >= 0 ? "text-emerald-500" : "text-red-500"}>
                   {formatCurrency(bonusPerformance.total)}
                 </span>
                 <Badge 
                   variant="outline"
-                  className={`text-xs font-semibold ${
+                  className={`text-[10px] font-semibold ${
                     bonusPerformance.performancePercent >= 70 
                       ? "border-emerald-500/50 text-emerald-500 bg-emerald-500/10" 
                       : bonusPerformance.performancePercent >= 60
@@ -466,18 +397,16 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                   {bonusPerformance.performancePercent.toFixed(1)}%
                 </Badge>
               </div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                <span>Bônus: {formatCurrency(bonusPerformance.totalBonusCreditado)}</span>
-                <CurrencyBreakdownTooltip
-                  breakdown={bonusPerformance.bonusPorMoeda}
-                  moedaConsolidacao={analyticsSummary.moeda_consolidacao}
-                />
-                <span>| Juice: {formatCurrency(bonusPerformance.totalJuice)}</span>
-              </div>
-            </CardContent>
-          </Card>
-        
-      </div>
+            ),
+            subtitle: (
+              <span className="text-muted-foreground">
+                Bônus: {formatCurrency(bonusPerformance.totalBonusCreditado)} | Juice: {formatCurrency(bonusPerformance.totalJuice)}
+              </span>
+            ),
+            minWidth: "min-w-[120px]",
+          },
+        ]}
+      />
       </TooltipProvider>
 
       {/* Filtro de período - abaixo dos KPIs */}

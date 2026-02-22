@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -494,42 +495,29 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
 
   return (
     <div className="space-y-4">
-      {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Depósitos</CardTitle>
-            <ArrowDownLeft className="h-4 w-4 text-emerald-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-400">
-              {formatCurrency(totais.depositos, "BRL")}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saques</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-red-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-400">
-              {formatCurrency(totais.saques, "BRL")}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Período</CardTitle>
-            <ArrowRightLeft className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${totais.saldo >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-              {formatCurrency(totais.saldo, "BRL")}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* KPIs - Faixa compacta */}
+      <KpiSummaryBar
+        items={[
+          {
+            label: "Depósitos",
+            value: formatCurrency(totais.depositos, "BRL"),
+            valueClassName: "text-emerald-500",
+            minWidth: "min-w-[80px]",
+          },
+          {
+            label: "Saques",
+            value: formatCurrency(totais.saques, "BRL"),
+            valueClassName: "text-red-500",
+            minWidth: "min-w-[80px]",
+          },
+          {
+            label: "Saldo Período",
+            value: formatCurrency(totais.saldo, "BRL"),
+            valueClassName: totais.saldo >= 0 ? "text-emerald-500" : "text-red-500",
+            minWidth: "min-w-[80px]",
+          },
+        ]}
+      />
 
       {/* Filtros */}
       <Card>

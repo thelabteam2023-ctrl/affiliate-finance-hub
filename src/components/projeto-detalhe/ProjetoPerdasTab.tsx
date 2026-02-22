@@ -7,6 +7,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -302,61 +303,35 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
 
   return (
     <div className="space-y-4">
-      {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-yellow-500/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Perdas Pendentes</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">
-              {formatCurrency(totalPendente)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {perdasPendentes.length} registro(s) • Capital bloqueado
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-red-500/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Perdas Confirmadas</CardTitle>
-            <Ban className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">
-              {formatCurrency(totalConfirmada)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {perdasConfirmadas.length} registro(s) • Impacta lucro/ROI
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-green-500/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Perdas Revertidas</CardTitle>
-            <RotateCcw className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">
-              {formatCurrency(totalReversa)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {perdasReversas.length} registro(s) • Recuperado
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <Button onClick={() => setDialogOpen(true)} className="w-full">
-              <Plus className="mr-2 h-4 w-4" />
-              Registrar Perda
-            </Button>
-          </CardContent>
-        </Card>
+      {/* KPIs - Faixa compacta */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <KpiSummaryBar
+          className="flex-1"
+          items={[
+            {
+              label: "Perdas Pendentes",
+              value: formatCurrency(totalPendente),
+              valueClassName: "text-amber-500",
+              subtitle: <span className="text-muted-foreground">{perdasPendentes.length} registro(s)</span>,
+            },
+            {
+              label: "Perdas Confirmadas",
+              value: formatCurrency(totalConfirmada),
+              valueClassName: "text-red-500",
+              subtitle: <span className="text-muted-foreground">{perdasConfirmadas.length} registro(s)</span>,
+            },
+            {
+              label: "Perdas Revertidas",
+              value: formatCurrency(totalReversa),
+              valueClassName: "text-emerald-500",
+              subtitle: <span className="text-muted-foreground">{perdasReversas.length} registro(s)</span>,
+            },
+          ]}
+        />
+        <Button onClick={() => setDialogOpen(true)} className="shrink-0">
+          <Plus className="mr-2 h-4 w-4" />
+          Registrar Perda
+        </Button>
       </div>
 
       {/* Histórico */}

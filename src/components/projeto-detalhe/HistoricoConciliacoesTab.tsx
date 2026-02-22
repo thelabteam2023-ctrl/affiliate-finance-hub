@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
@@ -119,45 +120,26 @@ export function HistoricoConciliacoesTab({ projetoId }: HistoricoConciliacoesTab
 
   return (
     <div className="space-y-4">
-      {/* KPIs de resumo */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Ajustes</CardTitle>
-            <Scale className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{conciliacoes.length}</div>
-            <p className="text-xs text-muted-foreground">conciliações realizadas</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ajustes Positivos</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-500">
-              +{formatCurrency(totals.positivo, "BRL")}
-            </div>
-            <p className="text-xs text-muted-foreground">saldo maior que esperado</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ajustes Negativos</CardTitle>
-            <ArrowDownRight className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">
-              {formatCurrency(totals.negativo, "BRL")}
-            </div>
-            <p className="text-xs text-muted-foreground">saldo menor que esperado</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* KPIs - Faixa compacta */}
+      <KpiSummaryBar
+        items={[
+          {
+            label: "Total de Ajustes",
+            value: conciliacoes.length,
+            subtitle: <span className="text-muted-foreground">conciliações realizadas</span>,
+          },
+          {
+            label: "Ajustes Positivos",
+            value: `+${formatCurrency(totals.positivo, "BRL")}`,
+            valueClassName: "text-emerald-500",
+          },
+          {
+            label: "Ajustes Negativos",
+            value: formatCurrency(totals.negativo, "BRL"),
+            valueClassName: "text-red-500",
+          },
+        ]}
+      />
 
       {/* Card de resultado líquido */}
       <Card className={totals.total >= 0 ? "border-emerald-500/30" : "border-red-500/30"}>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -177,45 +178,21 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* KPIs de Operadores */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Operadores Ativos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{operadoresAtivos}</div>
-            <p className="text-xs text-muted-foreground">
-              {operadores.length} total vinculados
-            </p>
-          </CardContent>
-        </Card>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-1">
-                    Custo Fixo (Referência)
-                    <FileText className="h-3 w-3 text-muted-foreground" />
-                  </CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(totalPagamentos)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Soma dos valores de referência
-                  </p>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Valor de referência - pagamento real é registrado manualmente</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      {/* KPIs - Faixa compacta */}
+      <KpiSummaryBar
+        items={[
+          {
+            label: "Operadores Ativos",
+            value: operadoresAtivos,
+            subtitle: <span className="text-muted-foreground">{operadores.length} total vinculados</span>,
+          },
+          {
+            label: "Custo Fixo (Referência)",
+            value: formatCurrency(totalPagamentos),
+            subtitle: <span className="text-muted-foreground">Soma dos valores de referência</span>,
+          },
+        ]}
+      />
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Operadores Vinculados</h3>
