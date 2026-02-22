@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Receipt, TrendingUp, TrendingDown, AreaChart as AreaChartIcon, Activity, Filter, X, Calendar } from "lucide-react";
+import { Receipt, TrendingUp, TrendingDown, AreaChart as AreaChartIcon, Activity, Filter, X, Calendar, Info } from "lucide-react";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
@@ -309,110 +310,113 @@ export function BonusResultadoLiquidoChart({
   const isPositivo = acumuladoFinal >= 0;
 
   // Renderiza KPIs baseado no modo
-  const renderKPIs = () => {
+  const renderKPIsTooltipContent = () => {
     switch (chartMode) {
       case "resultado":
         return (
-          <>
-            <Badge variant="outline" className="text-xs border-warning/30 text-warning">
-              Bônus: {formatCurrency(kpis.totalBonus)}
-            </Badge>
-            <Badge 
-              variant="outline" 
-              className={`text-xs ${kpis.totalJuice >= 0 ? "border-primary/30 text-primary" : "border-destructive/30 text-destructive"}`}
-            >
-              Juice: {formatCurrency(kpis.totalJuice)}
-            </Badge>
-            <Badge 
-              className={`text-xs ${
-                isPositivo 
-                  ? "bg-primary/20 text-primary border-primary/30" 
-                  : "bg-destructive/20 text-destructive border-destructive/30"
-              }`}
-            >
-              {isPositivo ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-              Acumulado: {formatCurrency(acumuladoFinal)}
-            </Badge>
-            <Badge 
-              variant="outline"
-              className={`text-xs font-semibold ${getPerformanceColorClass(kpis.performancePercent)}`}
-            >
-              Performance: {kpis.performancePercent.toFixed(1)}%
-            </Badge>
-          </>
+          <div className="space-y-1.5">
+            <p className="font-semibold text-foreground text-xs">Resumo do Período</p>
+            <div className="space-y-1">
+              <div className="flex justify-between gap-4 text-xs">
+                <span className="text-warning">Bônus</span>
+                <span className="font-semibold text-warning">{formatCurrency(kpis.totalBonus)}</span>
+              </div>
+              <div className="flex justify-between gap-4 text-xs">
+                <span className={kpis.totalJuice >= 0 ? "text-primary" : "text-destructive"}>Juice</span>
+                <span className={`font-semibold ${kpis.totalJuice >= 0 ? "text-primary" : "text-destructive"}`}>{formatCurrency(kpis.totalJuice)}</span>
+              </div>
+              <div className="border-t border-border/50 pt-1 flex justify-between gap-4 text-xs">
+                <span className={acumuladoFinal >= 0 ? "text-primary" : "text-destructive"}>Acumulado</span>
+                <span className={`font-semibold ${acumuladoFinal >= 0 ? "text-primary" : "text-destructive"}`}>{formatCurrency(acumuladoFinal)}</span>
+              </div>
+              <div className="flex justify-between gap-4 text-xs">
+                <span className="text-muted-foreground">Performance</span>
+                <span className={`font-semibold ${getPerformanceColorClass(kpis.performancePercent).replace(/border-\S+/g, '').replace(/bg-\S+/g, '').trim()}`}>{kpis.performancePercent.toFixed(1)}%</span>
+              </div>
+            </div>
+          </div>
         );
       case "bonus_juice":
-        const selectedBookmakerName = selectedBookmaker 
-          ? bookmakerStats.find(b => b.bookmaker_id === selectedBookmaker)?.bookmaker_nome 
-          : null;
         return (
-          <>
-            {/* Filtro por casa */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-xs gap-1">
-                  <Filter className="h-3 w-3" />
-                  {selectedBookmakerName ? (
-                    <span className="max-w-[100px] truncate">{selectedBookmakerName}</span>
-                  ) : (
-                    "Todas as casas"
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-64">
-                <DropdownMenuLabel className="text-xs">Filtrar por casa</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => setSelectedBookmaker(null)}
-                  className="text-xs"
-                >
-                  <span className="flex-1">Todas as casas</span>
-                  {!selectedBookmaker && <Badge variant="secondary" className="text-[10px] h-4">Ativo</Badge>}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <ScrollArea className="h-[200px]">
-                  {bookmakerStats.map((stat) => (
-                    <DropdownMenuItem 
-                      key={stat.bookmaker_id}
-                      onClick={() => setSelectedBookmaker(stat.bookmaker_id)}
-                      className="text-xs flex items-center justify-between"
-                    >
-                      <span className="flex-1 truncate">{stat.bookmaker_nome}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-warning font-medium">{formatCurrency(stat.total_bonus)}</span>
-                        {selectedBookmaker === stat.bookmaker_id && (
-                          <Badge variant="secondary" className="text-[10px] h-4">Ativo</Badge>
-                        )}
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                </ScrollArea>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            {selectedBookmaker && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => setSelectedBookmaker(null)}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            )}
-            
-            <Badge variant="outline" className="text-xs border-warning/30 text-warning">
-              Bônus: {formatCurrency(kpis.totalBonus)}
-            </Badge>
-            <Badge 
-              variant="outline" 
-              className={`text-xs ${kpis.totalJuice >= 0 ? "border-primary/30 text-primary" : "border-destructive/30 text-destructive"}`}
-            >
-              Juice: {formatCurrency(kpis.totalJuice)}
-            </Badge>
-          </>
+          <div className="space-y-1.5">
+            <p className="font-semibold text-foreground text-xs">Resumo do Período</p>
+            <div className="space-y-1">
+              <div className="flex justify-between gap-4 text-xs">
+                <span className="text-warning">Bônus</span>
+                <span className="font-semibold text-warning">{formatCurrency(kpis.totalBonus)}</span>
+              </div>
+              <div className="flex justify-between gap-4 text-xs">
+                <span className={kpis.totalJuice >= 0 ? "text-primary" : "text-destructive"}>Juice</span>
+                <span className={`font-semibold ${kpis.totalJuice >= 0 ? "text-primary" : "text-destructive"}`}>{formatCurrency(kpis.totalJuice)}</span>
+              </div>
+            </div>
+          </div>
         );
     }
+  };
+
+  // Render filter controls for bonus_juice mode (kept inline)
+  const renderBonusJuiceFilters = () => {
+    if (chartMode !== "bonus_juice") return null;
+    const selectedBookmakerName = selectedBookmaker 
+      ? bookmakerStats.find(b => b.bookmaker_id === selectedBookmaker)?.bookmaker_nome 
+      : null;
+    return (
+      <>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-6 px-2 text-xs gap-1">
+              <Filter className="h-3 w-3" />
+              {selectedBookmakerName ? (
+                <span className="max-w-[100px] truncate">{selectedBookmakerName}</span>
+              ) : (
+                "Todas as casas"
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64">
+            <DropdownMenuLabel className="text-xs">Filtrar por casa</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={() => setSelectedBookmaker(null)}
+              className="text-xs"
+            >
+              <span className="flex-1">Todas as casas</span>
+              {!selectedBookmaker && <Badge variant="secondary" className="text-[10px] h-4">Ativo</Badge>}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <ScrollArea className="h-[200px]">
+              {bookmakerStats.map((stat) => (
+                <DropdownMenuItem 
+                  key={stat.bookmaker_id}
+                  onClick={() => setSelectedBookmaker(stat.bookmaker_id)}
+                  className="text-xs flex items-center justify-between"
+                >
+                  <span className="flex-1 truncate">{stat.bookmaker_nome}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-warning font-medium">{formatCurrency(stat.total_bonus)}</span>
+                    {selectedBookmaker === stat.bookmaker_id && (
+                      <Badge variant="secondary" className="text-[10px] h-4">Ativo</Badge>
+                    )}
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </ScrollArea>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
+        {selectedBookmaker && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setSelectedBookmaker(null)}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        )}
+      </>
+    );
   };
 
   // Renderiza gráfico baseado no modo
@@ -591,7 +595,21 @@ export function BonusResultadoLiquidoChart({
         
         {/* KPIs dinâmicos */}
         <div className="flex flex-wrap items-center gap-2 mt-2">
-          {renderKPIs()}
+          {renderBonusJuiceFilters()}
+          <TooltipProvider>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs p-0">
+                <div className="px-3 py-2.5">
+                  {renderKPIsTooltipContent()}
+                </div>
+              </TooltipContent>
+            </UITooltip>
+          </TooltipProvider>
         </div>
       </CardHeader>
       <CardContent className="pt-2">
