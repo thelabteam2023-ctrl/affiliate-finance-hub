@@ -311,21 +311,48 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
             {
               label: "Perdas Pendentes",
               value: formatCurrency(totalPendente),
-              tooltip: "Valor total de perdas aguardando confirmação ou resolução.",
+              tooltip: (
+                <div className="space-y-1">
+                  <p className="font-semibold text-foreground">Perdas Pendentes</p>
+                  <p className="text-muted-foreground">Aguardando confirmação ou resolução.</p>
+                  <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
+                    <span>Registros</span>
+                    <span className="font-semibold text-foreground">{perdasPendentes.length}</span>
+                  </div>
+                </div>
+              ),
               valueClassName: "text-amber-500",
               subtitle: <span className="text-muted-foreground">{perdasPendentes.length} registro(s)</span>,
             },
             {
               label: "Perdas Confirmadas",
               value: formatCurrency(totalConfirmada),
-              tooltip: "Valor total de perdas já confirmadas e que impactam o resultado do projeto.",
+              tooltip: (
+                <div className="space-y-1">
+                  <p className="font-semibold text-foreground">Perdas Confirmadas</p>
+                  <p className="text-muted-foreground">Impactam o resultado do projeto.</p>
+                  <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
+                    <span>Registros</span>
+                    <span className="font-semibold text-foreground">{perdasConfirmadas.length}</span>
+                  </div>
+                </div>
+              ),
               valueClassName: "text-red-500",
               subtitle: <span className="text-muted-foreground">{perdasConfirmadas.length} registro(s)</span>,
             },
             {
               label: "Perdas Revertidas",
               value: formatCurrency(totalReversa),
-              tooltip: "Valor total de perdas que foram revertidas e não impactam o resultado final.",
+              tooltip: (
+                <div className="space-y-1">
+                  <p className="font-semibold text-foreground">Perdas Revertidas</p>
+                  <p className="text-muted-foreground">Não impactam o resultado final.</p>
+                  <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
+                    <span>Registros</span>
+                    <span className="font-semibold text-foreground">{perdasReversas.length}</span>
+                  </div>
+                </div>
+              ),
               valueClassName: "text-emerald-500",
               subtitle: <span className="text-muted-foreground">{perdasReversas.length} registro(s)</span>,
             },

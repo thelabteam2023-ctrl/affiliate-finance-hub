@@ -803,7 +803,31 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           {
             label: "Duplo Green",
             value: metricas.total,
-            tooltip: "Total de apostas Duplo Green registradas no período. Verde = Green, Vermelho = Red.",
+            tooltip: (
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Detalhamento Duplo Green</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Greens</span>
+                    <span className="font-semibold text-foreground">{metricas.greens}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Reds</span>
+                    <span className="font-semibold text-foreground">{metricas.reds}</span>
+                  </div>
+                  {metricas.pendentes > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400" /> Pendentes</span>
+                      <span className="font-semibold text-foreground">{metricas.pendentes}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
+                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold text-foreground">{metricas.total}</span>
+                </div>
+              </div>
+            ),
             subtitle: (
               <div className="flex items-center gap-2">
                 {metricas.pendentes > 0 && <span className="text-blue-400">{metricas.pendentes} Pend.</span>}
@@ -821,7 +845,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           {
             label: "Volume",
             value: formatCurrency(metricas.totalStake),
-            tooltip: "Soma total das stakes apostadas em Duplo Green no período.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Volume Apostado</p>
+                <p className="text-muted-foreground">Soma total das stakes apostadas em Duplo Green no período.</p>
+              </div>
+            ),
             minWidth: "min-w-[80px]",
           },
           {
@@ -844,7 +873,12 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
           {
             label: "ROI",
             value: formatPercent(metricas.roi),
-            tooltip: "Retorno sobre investimento: lucro dividido pelo volume total apostado.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Retorno sobre Investimento</p>
+                <p className="text-muted-foreground">Lucro dividido pelo volume total apostado no período.</p>
+              </div>
+            ),
             valueClassName: metricas.roi >= 0 ? "text-emerald-500" : "text-red-500",
             minWidth: "min-w-[50px]",
           },

@@ -706,35 +706,95 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           {
             label: "Recebido",
             value: formatCurrency(metricas.totalRecebido),
-            tooltip: "Valor total de freebets recebidas das bookmakers no período.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Freebets Recebidas</p>
+                <p className="text-muted-foreground">Valor total de freebets recebidas das bookmakers no período.</p>
+                <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
+                  <span>Quantidade</span>
+                  <span className="font-semibold text-foreground">{freebetsNoPeriodo.length}</span>
+                </div>
+              </div>
+            ),
             valueClassName: "text-amber-500",
             subtitle: <span className="text-muted-foreground">{freebetsNoPeriodo.length} freebets</span>,
           },
           {
             label: "Extraído",
             value: formatCurrency(metricas.totalExtraido),
-            tooltip: "Valor efetivamente extraído das freebets via apostas de extração ganhas.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Valor Extraído</p>
+                <p className="text-muted-foreground">Efetivamente extraído via apostas de extração ganhas.</p>
+                <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
+                  <span>Extrações ganhas</span>
+                  <span className="font-semibold text-foreground">{metricas.extracoesGanhas}</span>
+                </div>
+              </div>
+            ),
             valueClassName: "text-emerald-500",
             subtitle: <span className="text-muted-foreground">{metricas.extracoesGanhas} extração(s)</span>,
           },
           {
             label: "Juice Qualif.",
             value: formatCurrency(metricas.juiceQualificadoras),
-            tooltip: "Custo (juice) das apostas qualificadoras necessárias para liberar as freebets.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Juice das Qualificadoras</p>
+                <p className="text-muted-foreground">Custo das apostas necessárias para liberar as freebets.</p>
+                <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
+                  <span>Qualificadoras</span>
+                  <span className="font-semibold text-foreground">{metricas.totalQualificadoras}</span>
+                </div>
+              </div>
+            ),
             valueClassName: metricas.juiceQualificadoras >= 0 ? "text-emerald-500" : "text-red-500",
             subtitle: <span className="text-muted-foreground">{metricas.totalQualificadoras} qualificadora(s)</span>,
           },
           {
             label: "Taxa Extração",
             value: `${metricas.taxaExtracao.toFixed(1)}%`,
-            tooltip: "Percentual do valor da freebet que foi efetivamente extraído. Acima de 70% é considerado bom.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Taxa de Extração</p>
+                <p className="text-muted-foreground">Percentual do valor da freebet efetivamente extraído. Acima de 70% é bom.</p>
+                <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
+                  <span>Taxa de Acerto</span>
+                  <span className="font-semibold text-foreground">{metricas.taxaAcerto.toFixed(0)}%</span>
+                </div>
+              </div>
+            ),
             valueClassName: metricas.taxaExtracao >= 70 ? "text-emerald-500" : metricas.taxaExtracao >= 50 ? "text-amber-500" : "text-red-500",
             subtitle: <span className="text-muted-foreground">Acerto: {metricas.taxaAcerto.toFixed(0)}%</span>,
           },
           {
             label: "Extrações",
             value: metricas.totalExtracoes,
-            tooltip: "Total de apostas de extração realizadas. Verde = ganhas, Vermelho = perdidas.",
+            tooltip: (
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Detalhamento de Extrações</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Ganhas</span>
+                    <span className="font-semibold text-foreground">{metricas.extracoesGanhas}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Perdidas</span>
+                    <span className="font-semibold text-foreground">{metricas.extracoesPerdidas}</span>
+                  </div>
+                  {metricas.extracoesPendentes > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400" /> Pendentes</span>
+                      <span className="font-semibold text-foreground">{metricas.extracoesPendentes}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
+                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold text-foreground">{metricas.totalExtracoes}</span>
+                </div>
+              </div>
+            ),
             subtitle: (
               <div className="flex items-center gap-2">
                 {metricas.extracoesPendentes > 0 && <span className="text-blue-400">{metricas.extracoesPendentes} Pend.</span>}
@@ -752,14 +812,37 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           {
             label: "Saldo Atual",
             value: formatCurrency(totalFreebetDisponivel),
-            tooltip: "Saldo total de freebets disponíveis para uso nas bookmakers agora.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Saldo de Freebets</p>
+                <p className="text-muted-foreground">Total de freebets disponíveis para uso agora.</p>
+                <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
+                  <span>Casas com freebet</span>
+                  <span className="font-semibold text-foreground">{casasComFreebet}</span>
+                </div>
+              </div>
+            ),
             valueClassName: "text-amber-500",
             subtitle: <span className="text-muted-foreground">{casasComFreebet} casas</span>,
           },
           {
             label: "Freebets",
             value: freebetsNoPeriodo.length,
-            tooltip: "Total de freebets no período. Verde = disponíveis, segundo número = já utilizadas.",
+            tooltip: (
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Status das Freebets</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Disponíveis</span>
+                    <span className="font-semibold text-foreground">{freebetsDisponiveis}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Utilizadas</span>
+                    <span className="font-semibold text-foreground">{freebetsUtilizadas}</span>
+                  </div>
+                </div>
+              </div>
+            ),
             subtitle: (
               <span className="text-muted-foreground">
                 <span className="text-emerald-500">{freebetsDisponiveis}</span> / {freebetsUtilizadas}

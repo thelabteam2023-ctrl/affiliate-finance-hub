@@ -359,7 +359,12 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
           {
             label: "Histórico de Casas",
             value: analyticsSummary.total_bookmakers,
-            tooltip: "Quantidade de bookmakers com bônus já operados neste projeto.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Casas com Bônus</p>
+                <p className="text-muted-foreground">Bookmakers com bônus já operados neste projeto.</p>
+              </div>
+            ),
             subtitle: <span className="text-muted-foreground">{analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}</span>,
           },
           {
@@ -380,7 +385,26 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
           },
           {
             label: "Performance de Bônus",
-            tooltip: `Resultado líquido: bônus creditado + juice + ajustes pós-limitação.\n\nBônus Creditado: ${formatCurrency(bonusPerformance.totalBonusCreditado)}\nJuice: ${formatCurrency(bonusPerformance.totalJuice)}\nExtração: ${bonusPerformance.performancePercent.toFixed(1)}%`,
+            tooltip: (
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Performance de Bônus</p>
+                <p className="text-muted-foreground text-xs">Bônus creditado + juice + ajustes pós-limitação.</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Bônus Creditado</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(bonusPerformance.totalBonusCreditado)}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Juice</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(bonusPerformance.totalJuice)}</span>
+                  </div>
+                </div>
+                <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
+                  <span className="font-semibold">Extração</span>
+                  <span className="font-semibold text-foreground">{bonusPerformance.performancePercent.toFixed(1)}%</span>
+                </div>
+              </div>
+            ),
             value: (
               <div className="flex items-baseline gap-2">
                 <span className={bonusPerformance.total >= 0 ? "text-emerald-500" : "text-red-500"}>

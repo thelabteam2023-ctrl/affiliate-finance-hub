@@ -910,7 +910,31 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           {
             label: "Surebets",
             value: kpis.total,
-            tooltip: "Quantidade total de surebets registradas no período. Verde = Green, Vermelho = Red.",
+            tooltip: (
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Detalhamento de Surebets</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Greens</span>
+                    <span className="font-semibold text-foreground">{kpis.greens}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Reds</span>
+                    <span className="font-semibold text-foreground">{kpis.reds}</span>
+                  </div>
+                  {kpis.pendentes > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400" /> Pendentes</span>
+                      <span className="font-semibold text-foreground">{kpis.pendentes}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
+                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold text-foreground">{kpis.total}</span>
+                </div>
+              </div>
+            ),
             subtitle: (
               <div className="flex items-center gap-2">
                 {kpis.pendentes > 0 && <span className="text-blue-400">{kpis.pendentes} Pend.</span>}
@@ -928,7 +952,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           {
             label: "Volume",
             value: formatCurrency(kpis.stakeTotal),
-            tooltip: "Soma total das stakes apostadas em surebets no período selecionado.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Volume Apostado</p>
+                <p className="text-muted-foreground">Soma total das stakes apostadas em surebets no período selecionado.</p>
+              </div>
+            ),
             minWidth: "min-w-[80px]",
           },
           {
@@ -951,7 +980,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
           {
             label: "ROI",
             value: formatPercent(kpis.roi),
-            tooltip: "Retorno sobre investimento: lucro dividido pelo volume total apostado.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Retorno sobre Investimento</p>
+                <p className="text-muted-foreground">Lucro dividido pelo volume total apostado no período.</p>
+              </div>
+            ),
             valueClassName: kpis.roi >= 0 ? "text-emerald-500" : "text-red-500",
             minWidth: "min-w-[50px]",
           },

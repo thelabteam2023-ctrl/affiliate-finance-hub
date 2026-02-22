@@ -184,13 +184,36 @@ export function ProjetoOperadoresTab({ projetoId }: ProjetoOperadoresTabProps) {
           {
             label: "Operadores Ativos",
             value: operadoresAtivos,
-            tooltip: "Quantidade de operadores com status ativo neste projeto.",
+            tooltip: (
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Operadores</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Ativos</span>
+                    <span className="font-semibold text-foreground">{operadoresAtivos}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Inativos</span>
+                    <span className="font-semibold text-foreground">{operadores.length - operadoresAtivos}</span>
+                  </div>
+                </div>
+                <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
+                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold text-foreground">{operadores.length}</span>
+                </div>
+              </div>
+            ),
             subtitle: <span className="text-muted-foreground">{operadores.length} total vinculados</span>,
           },
           {
             label: "Custo Fixo (Referência)",
             value: formatCurrency(totalPagamentos),
-            tooltip: "Soma dos valores fixos de referência dos acordos com operadores. Não representa pagamentos efetivos.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Custo Fixo de Referência</p>
+                <p className="text-muted-foreground">Soma dos valores fixos dos acordos com operadores. Não representa pagamentos efetivos.</p>
+              </div>
+            ),
             subtitle: <span className="text-muted-foreground">Soma dos valores de referência</span>,
           },
         ]}

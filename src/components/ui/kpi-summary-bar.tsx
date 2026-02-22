@@ -12,8 +12,8 @@ export interface KpiItem {
   value: ReactNode;
   /** Optional subtitle text below the value */
   subtitle?: ReactNode;
-  /** Tooltip text explaining this KPI */
-  tooltip?: string;
+  /** Tooltip content — string or structured ReactNode */
+  tooltip?: ReactNode;
   /** Optional wrapper (e.g. tooltip) around the item */
   wrapper?: (children: ReactNode) => ReactNode;
   /** Min width for the item */
@@ -88,8 +88,14 @@ export function KpiSummaryBar({ items, leading, className }: KpiSummaryBarProps)
                   <TooltipTrigger asChild>
                     {content}
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-xs text-sm">
-                    <p>{item.tooltip}</p>
+                  <TooltipContent side="bottom" className="max-w-xs text-sm p-0">
+                    <div className="px-3 py-2.5">
+                      {typeof item.tooltip === "string" ? (
+                        <p>{item.tooltip}</p>
+                      ) : (
+                        item.tooltip
+                      )}
+                    </div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
