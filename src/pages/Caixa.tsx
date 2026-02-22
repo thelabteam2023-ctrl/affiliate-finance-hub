@@ -457,11 +457,13 @@ export default function Caixa() {
     if (tipo === "APORTE_FINANCEIRO" && transacao) {
       // Se destino é CAIXA_OPERACIONAL → é Aporte (Investidor → Caixa)
       if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
-        return "Aporte";
+        const base = "Aporte";
+        return transacao.status === "CANCELADO" ? `${base} Cancelado` : base;
       }
       // Se origem é CAIXA_OPERACIONAL → é Liquidação (Caixa → Investidor)
       if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
-        return "Liquidação";
+        const base = "Liquidação";
+        return transacao.status === "CANCELADO" ? `${base} Cancelada` : base;
       }
     }
     
@@ -482,17 +484,28 @@ export default function Caixa() {
       RENOVACAO_PARCERIA: "Renovação Parceria",
       BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
     };
-    return labels[tipo] || tipo;
+    const base = labels[tipo] || tipo;
+    
+    // Append "Cancelado/a" for cancelled transactions
+    if (transacao?.status === "CANCELADO") {
+      const femininos = ["TRANSFERENCIA", "LIQUIDACAO", "BONIFICACAO_ESTRATEGICA", "DESPESA_ADMINISTRATIVA", "RENOVACAO_PARCERIA"];
+      return `${base} ${femininos.includes(tipo) ? "Cancelada" : "Cancelado"}`;
+    }
+    
+    return base;
   };
 
   const getTipoColor = (tipo: string, transacao?: Transacao) => {
+    // Cancelled transactions always get a distinct muted/red style
+    if (transacao?.status === "CANCELADO") {
+      return "bg-red-500/10 text-red-400/70 border-red-500/20 line-through";
+    }
+    
     // Para APORTE_FINANCEIRO, determinamos a cor pela direção
     if (tipo === "APORTE_FINANCEIRO" && transacao) {
-      // Se destino é CAIXA_OPERACIONAL → é Aporte (verde)
       if (transacao.destino_tipo === "CAIXA_OPERACIONAL") {
         return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
       }
-      // Se origem é CAIXA_OPERACIONAL → é Liquidação (amarelo)
       if (transacao.origem_tipo === "CAIXA_OPERACIONAL") {
         return "bg-amber-500/20 text-amber-400 border-amber-500/30";
       }
