@@ -156,7 +156,7 @@ export function SurebetModalRoot({
   const { workspaceId } = useWorkspace();
   
   // Hook de rascunhos
-  const { criarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
+  const { criarRascunho, atualizarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
   
   const { getSnapshotFields } = useCurrencySnapshot();
   const {
@@ -1487,7 +1487,9 @@ export function SurebetModalRoot({
   }, [odds, evento]);
 
   // Pode salvar como rascunho: tem dados parciais, mas não tem todas as pernas completas
-  const podeSalvarRascunho = !isEditing && !rascunho && temDadosParciais && (analysis.pernasCompletasCount < numPernas || odds.length < numPernas);
+  // Também permite atualizar rascunho existente (quando veio de rascunho)
+  const podeSalvarRascunho = !isEditing && temDadosParciais && (analysis.pernasCompletasCount < numPernas || odds.length < numPernas);
+  const isAtualizandoRascunho = !!rascunho;
 
   // Handler para salvar como rascunho
   const handleSalvarRascunho = useCallback(() => {
@@ -1509,7 +1511,7 @@ export function SurebetModalRoot({
     
     const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
     
-    const rascunhoSalvo = criarRascunho('SUREBET', {
+    const dadosRascunho = {
       evento: evento || undefined,
       mercado: mercado || undefined,
       esporte: esporte || undefined,
@@ -1519,19 +1521,28 @@ export function SurebetModalRoot({
       modelo_tipo: modeloTipo,
       quantidade_pernas: numPernas,
       pernas: pernasRascunho,
-    });
+    };
+
+    let rascunhoSalvo;
+    if (rascunho) {
+      // Atualizar rascunho existente
+      rascunhoSalvo = atualizarRascunho(rascunho.id, dadosRascunho);
+    } else {
+      // Criar novo rascunho
+      rascunhoSalvo = criarRascunho('SUREBET', dadosRascunho);
+    }
     
     toast.success(
-      `Rascunho salvo!`,
+      rascunho ? `Rascunho atualizado!` : `Rascunho salvo!`,
       { 
-        description: rascunhoSalvo.motivo_incompleto || 'Acesse seus rascunhos para continuar depois',
+        description: rascunhoSalvo?.motivo_incompleto || 'Acesse seus rascunhos para continuar depois',
         icon: <FileText className="h-4 w-4 text-blue-500" />
       }
     );
     
     // Fechar o formulário
     if (!embedded) onOpenChange(false);
-  }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, workspaceId, bookmakerSaldos, criarRascunho, onOpenChange]);
+  }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, workspaceId, bookmakerSaldos, criarRascunho, atualizarRascunho, rascunho, onOpenChange]);
 
   const getBookmakerNome = (id: string) => bookmakerSaldos.find(b => b.id === id)?.nome || "";
 
@@ -1751,7 +1762,7 @@ export function SurebetModalRoot({
                   className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
                 >
                   <FileText className="h-4 w-4 mr-1" />
-                  Rascunho
+                  {isAtualizandoRascunho ? 'Atualizar Rascunho' : 'Rascunho'}
                 </Button>
               )}
               {analysis.isOperacaoParcial && !isEditing && (
