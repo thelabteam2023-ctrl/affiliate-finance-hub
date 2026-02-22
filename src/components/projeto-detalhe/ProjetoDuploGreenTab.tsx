@@ -76,6 +76,7 @@ interface ProjetoDuploGreenTabProps {
   projetoId: string;
   onDataChange?: () => void;
   refreshTrigger?: number;
+  actionsSlot?: React.ReactNode;
 }
 
 interface Aposta {
@@ -172,7 +173,7 @@ function ResultadoBadge({ resultado }: { resultado: string | null }) {
 // Ordenação para Por Casa
 type SortField = "volume" | "lucro" | "apostas" | "roi";
 
-export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }: ProjetoDuploGreenTabProps) {
+export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, actionsSlot }: ProjetoDuploGreenTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -798,6 +799,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger }
   const renderVisaoGeral = () => (
     <div className="space-y-6">
       <KpiSummaryBar
+        actions={actionsSlot}
         leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
         items={[
           {

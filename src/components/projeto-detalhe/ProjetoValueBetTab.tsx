@@ -71,6 +71,7 @@ interface ProjetoValueBetTabProps {
   projetoId: string;
   onDataChange?: () => void;
   refreshTrigger?: number;
+  actionsSlot?: React.ReactNode;
 }
 
 interface Aposta {
@@ -164,7 +165,8 @@ interface CasaAgregada {
 export function ProjetoValueBetTab({ 
   projetoId, 
   onDataChange, 
-  refreshTrigger
+  refreshTrigger,
+  actionsSlot
 }: ProjetoValueBetTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
@@ -718,6 +720,7 @@ export function ProjetoValueBetTab({
     <div className="space-y-6">
       {/* KPIs - Faixa compacta */}
       <KpiSummaryBar
+        actions={actionsSlot}
         leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
         items={[
           {
