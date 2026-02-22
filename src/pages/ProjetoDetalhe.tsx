@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from "react";
 import { useTopBar } from "@/contexts/TopBarContext";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -154,16 +154,30 @@ export default function ProjetoDetalhe() {
   const appliedDefaultTabForProject = useRef<string | null>(null);
   const lastProjectId = useRef<string | undefined>(undefined);
   
+  // Persist active tab in URL search params so refresh keeps current tab
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  
   // KPIs sempre mostram dados completos (sem filtro de período - cada aba usa seu próprio)
-  const [activeTab, setActiveTab] = useState("apostas");
+  const [activeTab, setActiveTabState] = useState(tabFromUrl || "apostas");
+  
+  // Wrapper that also syncs to URL
+  const setActiveTab = useCallback((tab: string) => {
+    setActiveTabState(tab);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", tab);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
   
   // CRITICAL: Reset state synchronously during render when project ID changes.
-  // useEffect runs AFTER render, so the hook's loading state would still be stale
-  // on the first render after id changes, causing the wrong tab to be applied.
   if (id !== lastProjectId.current) {
     lastProjectId.current = id;
     appliedDefaultTabForProject.current = null;
-    setActiveTab("apostas"); // Reset immediately to prevent stale tab from showing
+    if (!tabFromUrl) {
+      setActiveTabState("apostas");
+    }
   }
   
   // Refresh trigger - incrementado toda vez que uma aposta/bonus é criado
@@ -312,6 +326,12 @@ export default function ProjetoDetalhe() {
     // Mark as applied for this project
     appliedDefaultTabForProject.current = id;
     
+    // If URL already has a tab param (e.g. page refresh), respect it over defaultTab
+    if (tabFromUrl && isValidTab(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+      return;
+    }
+    
     if (defaultTab) {
       if (isValidTab(defaultTab)) {
         setActiveTab(defaultTab);
@@ -324,7 +344,7 @@ export default function ProjetoDetalhe() {
     } else {
       setActiveTab("apostas");
     }
-  }, [id, defaultTab, tabPreferenceLoading, modulesLoading, modulesError, isModuleActive]);
+  }, [id, defaultTab, tabPreferenceLoading, modulesLoading, modulesError, isModuleActive, tabFromUrl]);
   
   // Função centralizada para disparar refresh em todas as abas
   const triggerGlobalRefresh = () => {
