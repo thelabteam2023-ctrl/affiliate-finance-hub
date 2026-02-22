@@ -52,8 +52,8 @@ export function KpiSummaryBar({ items, leading, className }: KpiSummaryBarProps)
           const content = (
             <div
               className={cn(
-                "flex flex-col",
-                item.minWidth || "min-w-[70px]",
+              "flex flex-col items-center text-center",
+              item.minWidth || "min-w-[70px]",
                 (item.cursorHelp || item.tooltip) && "cursor-help",
                 item.hideMobile && "hidden sm:flex"
               )}
