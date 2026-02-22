@@ -18,6 +18,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export interface BookmakerSaldo {
   id: string;
@@ -61,6 +62,34 @@ export function useBookmakerSaldosQuery({
   includeZeroBalance = false,
   currentBookmakerId = null
 }: UseBookmakerSaldosQueryOptions) {
+  const queryClient = useQueryClient();
+
+  // Realtime: invalidar cache quando bookmakers do projeto mudam (INSERT/UPDATE/DELETE)
+  useEffect(() => {
+    if (!enabled || !projetoId) return;
+
+    const channel = supabase
+      .channel(`bookmaker-saldos-${projetoId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookmakers',
+          filter: `projeto_id=eq.${projetoId}`,
+        },
+        () => {
+          console.log('[useBookmakerSaldosQuery] Realtime: bookmakers changed, invalidating...');
+          queryClient.invalidateQueries({ queryKey: [QUERY_KEY, projetoId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [enabled, projetoId, queryClient]);
+
   return useQuery({
     queryKey: [QUERY_KEY, projetoId],
     queryFn: async (): Promise<BookmakerSaldo[]> => {
@@ -102,9 +131,9 @@ export function useBookmakerSaldosQuery({
       );
     },
     enabled: enabled && !!projetoId,
-    staleTime: 5 * 1000, // 5 segundos - saldos podem mudar a qualquer momento (bônus, apostas)
+    staleTime: 5 * 1000,
     refetchOnWindowFocus: true,
-    refetchOnMount: 'always' // SEMPRE refetch ao montar - garante dados frescos ao abrir dialogs
+    refetchOnMount: 'always'
   });
 }
 
