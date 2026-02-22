@@ -213,10 +213,10 @@ export function GlobalActionsBar({
         {showNovaApostaButton && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" className="h-7 text-xs px-2.5 bg-emerald-700/80 hover:bg-emerald-600/90 text-emerald-50 border border-emerald-500/30">
-                <Plus className="mr-1 h-3.5 w-3.5" />
+              <Button size="sm" className="h-6 text-[11px] px-2 bg-emerald-700/80 hover:bg-emerald-600/90 text-emerald-50 border border-emerald-500/30">
+                <Plus className="mr-0.5 h-3 w-3" />
                 Nova Aposta
-                <ChevronDown className="ml-0.5 h-3 w-3" />
+                <ChevronDown className="ml-0.5 h-2.5 w-2.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -250,7 +250,7 @@ export function GlobalActionsBar({
           <Button 
             variant="outline" 
             size="sm" 
-            className="h-7 text-xs px-2.5"
+            className="h-6 text-[11px] px-2"
             onClick={() => setBonusDialogOpen(true)}
           >
             <Coins className="mr-1 h-3.5 w-3.5" />
