@@ -28,6 +28,7 @@ import {
   Info,
   CircleDollarSign,
   DollarSign,
+  AlertTriangle,
 } from "lucide-react";
 import { useCotacoes, CotacaoSourceInfo } from "@/hooks/useCotacoes";
 import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from "@/utils/formatCurrency";
@@ -45,13 +46,16 @@ interface HistoricoVinculo {
   data_vinculacao: string;
   data_desvinculacao: string | null;
   status_final: string | null;
-  moeda: string; // Moeda do bookmaker (BRL ou USD) - ÚNICO VALOR
-  // Valores NA MOEDA ORIGINAL do bookmaker - SEM CONVERSÃO
+  moeda: string;
   total_depositado: number;
-  total_depositado_pendente: number; // NOVO: depósitos ainda não confirmados
+  total_depositado_pendente: number;
   total_sacado: number;
-  total_sacado_pendente: number; // NOVO: saques ainda não confirmados
+  total_sacado_pendente: number;
   lucro_operacional: number;
+  limitation_type: string | null;
+  limitation_bucket: string | null;
+  limitation_date: string | null;
+  bets_before_limitation: number | null;
 }
 
 // Agregação por moeda para KPIs multi-moeda
@@ -132,6 +136,13 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         .eq("status", "CONFIRMADO")
         .in("bookmaker_id", bookmakerIds);
 
+      // Limitation events por bookmaker
+      const { data: limitationData } = await supabase
+        .from("limitation_events")
+        .select("bookmaker_id, limitation_type, limitation_bucket, event_timestamp, project_bets_before_limitation")
+        .eq("projeto_id", projetoId)
+        .in("bookmaker_id", bookmakerIds);
+
       // Agregar por bookmaker - valores originais SEM conversão
       // Separar CONFIRMADO de PENDENTE para clareza
       const depositosConfirmadosMap: Record<string, number> = {};
@@ -141,6 +152,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
       const lucroApostasMap: Record<string, number> = {};
       const cashbackMap: Record<string, number> = {};
       const girosGratisMap: Record<string, number> = {};
+      const limitationMap: Record<string, { type: string; bucket: string; date: string; bets: number }> = {};
 
       depositos?.forEach((d: any) => {
         if (d.status === "CONFIRMADO" || d.status === "LIQUIDADO") {
@@ -176,6 +188,18 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         }
       });
 
+      limitationData?.forEach((l: any) => {
+        // Keep latest limitation per bookmaker
+        if (!limitationMap[l.bookmaker_id]) {
+          limitationMap[l.bookmaker_id] = {
+            type: l.limitation_type,
+            bucket: l.limitation_bucket,
+            date: l.event_timestamp,
+            bets: l.project_bets_before_limitation,
+          };
+        }
+      });
+
       // Montar histórico com moeda original - SEM CONVERSÃO
       // Lucro Operacional = Apostas + Cashback + Giros Grátis (todas as fontes de ganho)
       const mappedHistorico: HistoricoVinculo[] = historicoData.map((h: any) => {
@@ -183,6 +207,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         const lucroCashback = cashbackMap[h.bookmaker_id] || 0;
         const lucroGiros = girosGratisMap[h.bookmaker_id] || 0;
         const lucroOperacionalTotal = lucroApostas + lucroCashback + lucroGiros;
+        const limitation = limitationMap[h.bookmaker_id];
 
         return {
           id: h.id,
@@ -199,6 +224,10 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
           total_sacado: saquesConfirmadosMap[h.bookmaker_id] || 0,
           total_sacado_pendente: saquesPendentesMap[h.bookmaker_id] || 0,
           lucro_operacional: lucroOperacionalTotal,
+          limitation_type: limitation?.type || null,
+          limitation_bucket: limitation?.bucket || null,
+          limitation_date: limitation?.date || null,
+          bets_before_limitation: limitation?.bets ?? null,
         };
       });
 
@@ -290,6 +319,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
   const totalHistorico = historico.length;
   const vinculosDevolvidos = historico.filter((h) => h.data_desvinculacao !== null).length;
   const vinculosAtivos = historico.filter((h) => h.data_desvinculacao === null).length;
+  const vinculosLimitados = historico.filter((h) => h.limitation_type !== null).length;
 
   // Obter todas as moedas únicas do histórico
   const moedasNoHistorico = [...new Set(historico.map((h) => h.moeda || "BRL"))].sort(
@@ -472,6 +502,20 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
             ),
           },
           {
+            label: "Limitados",
+            value: vinculosLimitados,
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Contas Limitadas</p>
+                <p className="text-muted-foreground">Vínculos que sofreram limitação durante o uso no projeto.</p>
+              </div>
+            ),
+            valueClassName: vinculosLimitados > 0 ? "text-yellow-500" : undefined,
+            subtitle: vinculosLimitados > 0 ? (
+              <span className="text-yellow-500 text-xs">{Math.round((vinculosLimitados / totalHistorico) * 100)}% do total</span>
+            ) : undefined,
+          },
+          {
             label: "Total Depositado",
             value: renderCurrencyBadges(depositosPorMoeda, "border-blue-500/50 text-blue-400"),
             cursorHelp: true,
@@ -552,6 +596,29 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{item.bookmaker_nome}</span>
                               {getStatusBadge(item.status_final, isActive)}
+                              {item.limitation_type && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px] gap-0.5">
+                                        <AlertTriangle className="h-2.5 w-2.5" />
+                                        {item.limitation_bucket === "rapida" ? "Rápida" : item.limitation_bucket === "moderada" ? "Moderada" : "Tardia"}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs">
+                                      <div className="text-sm space-y-1">
+                                        <p className="font-medium">Limitação: {item.limitation_type}</p>
+                                        {item.bets_before_limitation != null && (
+                                          <p className="text-muted-foreground">{item.bets_before_limitation} apostas antes da limitação</p>
+                                        )}
+                                        {item.limitation_date && (
+                                          <p className="text-muted-foreground">Em {format(new Date(item.limitation_date), "dd/MM/yyyy", { locale: ptBR })}</p>
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                               {moeda !== 'BRL' && (
                                 <Badge variant="outline" className="text-[9px] px-1 py-0 border-emerald-500/30 text-emerald-400">
                                   {moeda}

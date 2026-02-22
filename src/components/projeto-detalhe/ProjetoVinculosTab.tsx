@@ -24,7 +24,7 @@ import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoricoVinculosTab } from "./HistoricoVinculosTab";
 import { HistoricoConciliacoesTab } from "./HistoricoConciliacoesTab";
-import { ProjetoMovimentacoesTab } from "./ProjetoMovimentacoesTab";
+
 import { ContasNoProjetoCard } from "./ContasNoProjetoCard";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 import { VinculoBonusDrawer } from "./VinculoBonusDrawer";
@@ -441,10 +441,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           <TabsTrigger value="ativos" className="flex items-center gap-2">
             <Link2 className="h-4 w-4" />
             Ativos ({vinculos.length})
-          </TabsTrigger>
-          <TabsTrigger value="movimentacoes" className="flex items-center gap-2">
-            <Wallet className="h-4 w-4" />
-            Movimentações
           </TabsTrigger>
           <TabsTrigger value="historico" className="flex items-center gap-2">
             <History className="h-4 w-4" />
@@ -1436,9 +1432,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
       )}
       </TabsContent>
 
-      <TabsContent value="movimentacoes">
-        <ProjetoMovimentacoesTab projetoId={projetoId} />
-      </TabsContent>
 
       <TabsContent value="historico">
         <HistoricoVinculosTab projetoId={projetoId} />
