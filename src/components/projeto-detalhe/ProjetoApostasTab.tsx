@@ -66,6 +66,7 @@ interface ProjetoApostasTabProps {
   onDataChange?: () => void;
   refreshTrigger?: number;
   formatCurrency?: (value: number) => string;
+  actionsSlot?: React.ReactNode;
 }
 
 // Fallback para formatação de moeda
@@ -290,7 +291,7 @@ function getCasaLabelFromAposta(aposta: { bookmaker?: any; pernas?: unknown | nu
   return pernaNome || "—";
 }
 
-export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp }: ProjetoApostasTabProps) {
+export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp, actionsSlot }: ProjetoApostasTabProps) {
   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [apostas, setApostas] = useState<Aposta[]>([]);
@@ -1219,6 +1220,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   return (
     <div className="space-y-4">
+      {/* Actions Slot - botões de ação dentro da aba */}
+      {actionsSlot && (
+        <div className="flex items-center gap-2 pt-1 pb-2 border-b border-border/50 flex-shrink-0">
+          {actionsSlot}
+        </div>
+      )}
 
       {/* Card de Histórico com Filtros */}
       <Card>

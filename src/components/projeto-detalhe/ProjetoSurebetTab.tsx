@@ -75,6 +75,7 @@ interface ProjetoSurebetTabProps {
   projetoId: string;
   onDataChange?: () => void;
   refreshTrigger?: number;
+  actionsSlot?: React.ReactNode;
 }
 
 interface Surebet {
@@ -177,7 +178,7 @@ const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null })
   }
 };
 
-export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: ProjetoSurebetTabProps) {
+export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, actionsSlot }: ProjetoSurebetTabProps) {
   const queryClient = useQueryClient();
   
   
@@ -932,6 +933,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger }: P
     <div className="space-y-6">
       {/* KPIs - Faixa compacta horizontal */}
       <KpiSummaryBar
+        actions={actionsSlot}
         leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
         items={[
           {
