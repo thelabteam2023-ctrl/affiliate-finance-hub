@@ -327,7 +327,8 @@ async function fetchApostasModuleData(
   
   const greens = apostas.filter(a => a.resultado === 'GREEN' || a.resultado === 'MEIO_GREEN').length;
   const reds = apostas.filter(a => a.resultado === 'RED' || a.resultado === 'MEIO_RED').length;
-  const countDetails = `${greens}G/${reds}R`;
+  const voids = apostas.filter(a => a.resultado === 'VOID' || a.resultado === 'REEMBOLSO').length;
+  const countDetails = `${greens}G ${reds}R ${voids}V`;
 
   // Volume CONSOLIDADO - usando a mesma lógica de useProjetoResultado
   const volume = apostas.reduce((acc, a) => {
