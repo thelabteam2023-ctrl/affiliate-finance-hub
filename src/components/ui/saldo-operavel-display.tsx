@@ -90,7 +90,7 @@ export function SaldoOperavelDisplay({
     return (
       <div className={cn("flex items-center gap-4", className)}>
         {/* Saldo Operável - Dominante */}
-        <div className="text-right min-w-[100px]">
+        <div className="text-right w-[110px] flex-shrink-0">
           <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
             Saldo Operável
             {hasComposition && (
@@ -110,13 +110,13 @@ export function SaldoOperavelDisplay({
         </div>
 
         {/* Em Aposta - Informativo */}
-        <div className="text-right min-w-[80px]">
+        <div className="text-right w-[90px] flex-shrink-0">
           <p className="text-xs text-muted-foreground">Em Aposta</p>
           <p className="font-medium text-warning">{formatCurrency(saldoEmAposta, moeda)}</p>
         </div>
 
         {/* Disponível - Destaque secundário */}
-        <div className="text-right min-w-[80px]">
+        <div className="text-right w-[100px] flex-shrink-0">
           <p className="text-xs text-muted-foreground">Disponível</p>
           <p className="font-semibold text-accent-foreground">{formatCurrency(saldoDisponivel, moeda)}</p>
         </div>
