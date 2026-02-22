@@ -98,7 +98,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   };
 
   const expiring7Days = getExpiringSoon(7);
-  const expiring15Days = getExpiringSoon(15);
+  // expiring15Days removed - now using KPI with countdown
 
   // Fetch apostas com bônus (juice/custo operacional) - inclui apostas com bonus_id OU estratégia EXTRACAO_BONUS
   // IMPORTANTE: Buscar moeda_operacao para converter corretamente para moeda de consolidação
@@ -471,6 +471,68 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             ),
             minWidth: "min-w-[120px]",
           },
+          ...(expiring7Days.length > 0 ? [{
+            label: "Expirando",
+            value: (
+              <div className="flex flex-col items-center w-full">
+                <span className="text-amber-500">{expiring7Days.length}</span>
+              </div>
+            ),
+            tooltip: (
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Bônus Expirando em 7 dias</p>
+                <p className="text-muted-foreground text-xs">Contagem regressiva dos bônus próximos do vencimento.</p>
+                <div className="space-y-1">
+                  {expiring7Days
+                    .sort((a, b) => {
+                      const dA = a.expires_at ? differenceInDays(parseISO(a.expires_at), new Date()) : 999;
+                      const dB = b.expires_at ? differenceInDays(parseISO(b.expires_at), new Date()) : 999;
+                      return dA - dB;
+                    })
+                    .map(bonus => {
+                      const daysLeft = bonus.expires_at ? differenceInDays(parseISO(bonus.expires_at), new Date()) : 0;
+                      return (
+                        <div key={bonus.id} className="flex justify-between gap-4 items-center">
+                          <span className="flex items-center gap-1.5 truncate">
+                            <span className={`inline-block w-1.5 h-1.5 rounded-full ${daysLeft <= 1 ? 'bg-red-500' : daysLeft <= 3 ? 'bg-amber-500' : 'bg-yellow-500'}`} />
+                            {bonus.bookmaker_nome}
+                          </span>
+                          <span className={`font-semibold whitespace-nowrap ${daysLeft <= 1 ? 'text-red-500' : 'text-amber-500'}`}>
+                            {daysLeft === 0 ? 'HOJE' : daysLeft === 1 ? '1 dia' : `${daysLeft} dias`}
+                          </span>
+                        </div>
+                      );
+                    })
+                  }
+                </div>
+              </div>
+            ),
+            subtitle: (
+              <div className="flex flex-col gap-0.5 mt-0.5">
+                {expiring7Days
+                  .sort((a, b) => {
+                    const dA = a.expires_at ? differenceInDays(parseISO(a.expires_at), new Date()) : 999;
+                    const dB = b.expires_at ? differenceInDays(parseISO(b.expires_at), new Date()) : 999;
+                    return dA - dB;
+                  })
+                  .slice(0, 3)
+                  .map(bonus => {
+                    const daysLeft = bonus.expires_at ? differenceInDays(parseISO(bonus.expires_at), new Date()) : 0;
+                    return (
+                      <span key={bonus.id} className={`text-[10px] leading-tight truncate max-w-[120px] ${daysLeft <= 1 ? 'text-red-500' : 'text-amber-500'}`}>
+                        {bonus.bookmaker_nome} — {daysLeft === 0 ? 'HOJE' : `${daysLeft}d`}
+                      </span>
+                    );
+                  })
+                }
+                {expiring7Days.length > 3 && (
+                  <span className="text-[10px] text-muted-foreground">+{expiring7Days.length - 3} mais...</span>
+                )}
+              </div>
+            ),
+            minWidth: "min-w-[100px]",
+            valueClassName: "text-amber-500",
+          }] : []),
         ]}
       />
       </TooltipProvider>
@@ -488,53 +550,6 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         isSingleDayPeriod={isSingleDayPeriod}
         dateRange={dateRange}
       />
-
-      {/* Expiring Soon */}
-      {expiring7Days.length > 0 && (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-4 w-4" />
-              Expirando em 7 dias ({expiring7Days.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {expiring7Days.map(bonus => (
-                <Badge key={bonus.id} variant="outline" className="border-destructive/30 text-destructive">
-                  {bonus.bookmaker_nome} - {formatBonusOriginalCurrency(bonus.bonus_amount, bonus.currency)}
-                  {bonus.expires_at && (
-                    <span className="ml-1 text-xs">({format(parseISO(bonus.expires_at), 'dd/MM')})</span>
-                  )}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {expiring15Days.length > expiring7Days.length && (
-        <Card className="border-warning/30 bg-warning/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-warning">
-              <Timer className="h-4 w-4" />
-              Expirando em 15 dias ({expiring15Days.length - expiring7Days.length} adicionais)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {expiring15Days.filter(b => !expiring7Days.some(e => e.id === b.id)).map(bonus => (
-                <Badge key={bonus.id} variant="outline" className="border-warning/30 text-warning">
-                  {bonus.bookmaker_nome} - {formatBonusOriginalCurrency(bonus.bonus_amount, bonus.currency)}
-                  {bonus.expires_at && (
-                    <span className="ml-1 text-xs">({format(parseISO(bonus.expires_at), 'dd/MM')})</span>
-                  )}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Central de Análise de Bônus - Card Analítico Unificado */}
       <BonusAnalyticsCard bonuses={bonuses} dateRange={dateRange} />
