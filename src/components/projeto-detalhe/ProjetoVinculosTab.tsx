@@ -436,24 +436,26 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
   return (
     <Tabs defaultValue="ativos" className="space-y-4">
-      <TabsList>
-        <TabsTrigger value="ativos" className="flex items-center gap-2">
-          <Link2 className="h-4 w-4" />
-          Ativos ({vinculos.length})
-        </TabsTrigger>
-        <TabsTrigger value="movimentacoes" className="flex items-center gap-2">
-          <Wallet className="h-4 w-4" />
-          Movimentações
-        </TabsTrigger>
-        <TabsTrigger value="historico" className="flex items-center gap-2">
-          <History className="h-4 w-4" />
-          Histórico ({historicoCount.total})
-        </TabsTrigger>
-        <TabsTrigger value="conciliacoes" className="flex items-center gap-2">
-          <ArrowRightLeft className="h-4 w-4" />
-          Ajustes
-        </TabsTrigger>
-      </TabsList>
+      <div className="flex justify-center">
+        <TabsList>
+          <TabsTrigger value="ativos" className="flex items-center gap-2">
+            <Link2 className="h-4 w-4" />
+            Ativos ({vinculos.length})
+          </TabsTrigger>
+          <TabsTrigger value="movimentacoes" className="flex items-center gap-2">
+            <Wallet className="h-4 w-4" />
+            Movimentações
+          </TabsTrigger>
+          <TabsTrigger value="historico" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Histórico ({historicoCount.total})
+          </TabsTrigger>
+          <TabsTrigger value="conciliacoes" className="flex items-center gap-2">
+            <ArrowRightLeft className="h-4 w-4" />
+            Ajustes
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
       <TabsContent value="ativos" className="space-y-3">
         {/* KPIs - Faixa compacta horizontal */}
@@ -499,16 +501,17 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             <TooltipTrigger asChild>
               <span className="inline-block">
                 <Button 
+                  size="sm"
                   onClick={handleOpenAddDialog}
                   disabled={!canManageVinculos || responsibilitiesLoading}
-                  className={!canManageVinculos && !responsibilitiesLoading ? "opacity-50 cursor-not-allowed" : ""}
+                  className={!canManageVinculos && !responsibilitiesLoading ? "opacity-50 cursor-not-allowed text-xs" : "text-xs"}
                 >
                   {responsibilitiesLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   ) : !canManageVinculos ? (
-                    <Lock className="mr-2 h-4 w-4" />
+                    <Lock className="mr-1.5 h-3.5 w-3.5" />
                   ) : (
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
                   )}
                   Adicionar Vínculos
                 </Button>
