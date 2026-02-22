@@ -385,7 +385,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         </div>
       </div>
       
-      <p className="text-[10px] text-muted-foreground pt-1 border-t">
+      <p className="text-xs text-muted-foreground pt-1.5 border-t border-border">
         {casasComSaldo.length} casa{casasComSaldo.length !== 1 ? 's' : ''} com saldo
         {casasComRollover > 0 && ` • ${casasComRollover} com rollover`}
       </p>
