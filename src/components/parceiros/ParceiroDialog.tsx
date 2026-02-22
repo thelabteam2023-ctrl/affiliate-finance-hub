@@ -103,6 +103,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [initialState, setInitialState] = useState<any>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [planLimitError, setPlanLimitError] = useState<string | null>(null);
+  const [hasSavedDuringSession, setHasSavedDuringSession] = useState(false);
   const { toast } = useToast();
 
   // 🔍 DEBUG: Log para rastrear montagem/desmontagem e estado do dialog
@@ -439,6 +440,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setTelefoneError("");
     setCheckingCpf(false);
     setCheckingTelefone(false);
+    setHasSavedDuringSession(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -994,6 +996,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       });
 
       // Switch to bank accounts tab
+      setHasSavedDuringSession(true);
       setActiveTab("bancos");
     } catch (error: any) {
       let errorMessage = error.message;
@@ -1166,6 +1169,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         description: "Agora você pode adicionar wallets crypto.",
       });
 
+      setHasSavedDuringSession(true);
       // Switch to crypto tab
       setActiveTab("crypto");
     } catch (error: any) {
@@ -1188,7 +1192,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      onClose(); // Sem saved = apenas fechou sem salvar
+      // Se houve salvamento intermediário (Salvar e Continuar), notificar o pai
+      onClose(hasSavedDuringSession ? { saved: true } : undefined);
     }
   };
 
