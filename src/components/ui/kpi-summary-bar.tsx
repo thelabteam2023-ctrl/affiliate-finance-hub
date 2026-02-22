@@ -105,14 +105,15 @@ export function KpiSummaryBar({ items, leading, actions, className }: KpiSummary
       )}
     >
       {actions ? (
-        <div className="flex items-center gap-4 md:gap-6">
-          {/* Actions — left-aligned */}
-          <div className="flex flex-col gap-1.5 items-start flex-shrink-0">
+        <div className="flex flex-col xl:flex-row items-start xl:items-center gap-3 xl:gap-6">
+          {/* Actions — left-aligned, horizontal on small screens, vertical on large */}
+          <div className="flex flex-row xl:flex-col gap-1.5 items-center xl:items-start flex-shrink-0">
             {actions}
           </div>
-          <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
+          <div className="hidden xl:block h-8 w-px bg-border/50 flex-shrink-0" />
+          <div className="block xl:hidden h-px w-full bg-border/50 flex-shrink-0" />
           {/* KPIs — centered in remaining space */}
-          <div className="flex-1 flex items-center justify-center gap-4 md:gap-6 flex-wrap">
+          <div className="flex-1 flex items-center justify-center gap-3 md:gap-4 xl:gap-6 flex-wrap w-full">
             {renderKpis()}
           </div>
         </div>
