@@ -51,7 +51,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   
   return (
     <TopBarProvider>
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={false}>
       {/* Banner de aviso de inatividade */}
       {showingWarning && minutesUntilTimeout !== null && minutesUntilTimeout <= 5 && (
         <InactivityWarningBanner 
