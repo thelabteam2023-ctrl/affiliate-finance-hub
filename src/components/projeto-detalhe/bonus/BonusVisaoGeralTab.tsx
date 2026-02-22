@@ -473,7 +473,12 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
           },
           (() => {
             const totalBonuses = bonuses.length;
-            const concluded = summary.count_finalized + summary.count_failed + summary.count_expired + summary.count_reversed;
+            // Contagem por finalize_reason real
+            const rolloverCompleted = bonuses.filter(b => b.status === 'finalized' && b.finalize_reason === 'rollover_completed').length;
+            const cycleCompleted = bonuses.filter(b => b.status === 'finalized' && (['cycle_completed', 'early_withdrawal', 'extracted_early'] as string[]).includes(b.finalize_reason || '')).length;
+            const expired = bonuses.filter(b => b.status === 'expired' || (b.status === 'finalized' && b.finalize_reason === 'expired')).length;
+            const cancelledReversed = bonuses.filter(b => b.status === 'reversed' || b.status === 'failed' || (b.status === 'finalized' && (['cancelled_reversed', 'bonus_consumed'] as string[]).includes(b.finalize_reason || ''))).length;
+            const concluded = rolloverCompleted + cycleCompleted + expired + cancelledReversed;
             const conclusionRate = totalBonuses > 0 ? (concluded / totalBonuses) * 100 : 0;
             return {
               label: "Ciclo Encerrado",
@@ -485,32 +490,32 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               tooltip: (
                 <div className="space-y-1.5">
                   <p className="font-semibold text-foreground">Taxa de Ciclo Encerrado</p>
-                  <p className="text-muted-foreground text-xs">% dos bônus que já tiveram seu ciclo concluído (rollover completo, expirado, cancelado ou revertido).</p>
+                  <p className="text-muted-foreground text-xs">Distribuição dos bônus por motivo de finalização.</p>
                   <div className="space-y-0.5">
                     <div className="flex justify-between gap-4">
-                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Finalizados</span>
-                      <span className="font-semibold text-foreground">{summary.count_finalized}</span>
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Rollover concluído</span>
+                      <span className="font-semibold text-foreground">{rolloverCompleted}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Falhados</span>
-                      <span className="font-semibold text-foreground">{summary.count_failed}</span>
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" /> Ciclo encerrado</span>
+                      <span className="font-semibold text-foreground">{cycleCompleted}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" /> Expirados</span>
-                      <span className="font-semibold text-foreground">{summary.count_expired}</span>
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" /> Expirado</span>
+                      <span className="font-semibold text-foreground">{expired}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Revertidos</span>
-                      <span className="font-semibold text-foreground">{summary.count_reversed}</span>
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Cancelado / Revertido</span>
+                      <span className="font-semibold text-foreground">{cancelledReversed}</span>
                     </div>
                   </div>
                   <div className="border-t border-border/50 pt-1 space-y-0.5">
                     <div className="flex justify-between gap-4">
-                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" /> Em andamento</span>
+                      <span>Em andamento</span>
                       <span className="font-semibold text-foreground">{summary.count_credited}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/50" /> Pendentes</span>
+                      <span>Pendentes</span>
                       <span className="font-semibold text-foreground">{summary.count_pending}</span>
                     </div>
                   </div>
