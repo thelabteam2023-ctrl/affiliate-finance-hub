@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
@@ -501,21 +502,49 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
           {
             label: "Depósitos",
             value: formatCurrency(totais.depositos, "BRL"),
-            tooltip: "Total de depósitos realizados nas bookmakers do projeto no período.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Total de Depósitos</p>
+                <p className="text-muted-foreground">Soma dos depósitos realizados nas bookmakers do projeto no período.</p>
+              </div>
+            ),
             valueClassName: "text-emerald-500",
             minWidth: "min-w-[80px]",
           },
           {
             label: "Saques",
             value: formatCurrency(totais.saques, "BRL"),
-            tooltip: "Total de saques realizados das bookmakers do projeto no período.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Total de Saques</p>
+                <p className="text-muted-foreground">Soma dos saques realizados das bookmakers do projeto no período.</p>
+              </div>
+            ),
             valueClassName: "text-red-500",
             minWidth: "min-w-[80px]",
           },
           {
             label: "Saldo Período",
             value: formatCurrency(totais.saldo, "BRL"),
-            tooltip: "Diferença entre depósitos e saques no período. Positivo indica mais saques que depósitos.",
+            tooltip: (
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Saldo do Período</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Depósitos</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(totais.depositos, "BRL")}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Saques</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(totais.saques, "BRL")}</span>
+                  </div>
+                </div>
+                <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
+                  <span className="font-semibold">Saldo</span>
+                  <span className={cn("font-semibold", totais.saldo >= 0 ? "text-emerald-500" : "text-red-500")}>{formatCurrency(totais.saldo, "BRL")}</span>
+                </div>
+              </div>
+            ),
             valueClassName: totais.saldo >= 0 ? "text-emerald-500" : "text-red-500",
             minWidth: "min-w-[80px]",
           },

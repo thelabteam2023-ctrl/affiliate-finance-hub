@@ -320,28 +320,69 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
           {
             label: "Bônus Creditados",
             value: formatCurrency(summary.total_credited),
-            tooltip: "Valor total de bônus já creditados e disponíveis para uso nas bookmakers.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Bônus Creditados</p>
+                <p className="text-muted-foreground">Já creditados e disponíveis para uso.</p>
+                <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
+                  <span>Quantidade</span>
+                  <span className="font-semibold text-foreground">{summary.count_credited}</span>
+                </div>
+              </div>
+            ),
             valueClassName: "text-emerald-500",
             subtitle: <span className="text-muted-foreground">{summary.count_credited} bônus</span>,
           },
           {
             label: "Pendentes",
             value: formatCurrency(summary.total_pending),
-            tooltip: "Bônus registrados que ainda não foram creditados pela bookmaker.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Bônus Pendentes</p>
+                <p className="text-muted-foreground">Registrados, aguardando crédito pela bookmaker.</p>
+                <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
+                  <span>Quantidade</span>
+                  <span className="font-semibold text-foreground">{summary.count_pending}</span>
+                </div>
+              </div>
+            ),
             valueClassName: "text-amber-500",
             subtitle: <span className="text-muted-foreground">{summary.count_pending} aguardando</span>,
           },
           {
             label: "Falhos / Expirados",
             value: formatCurrency(summary.total_failed + summary.total_expired),
-            tooltip: "Bônus que não foram creditados (falhos) ou que expiraram sem uso.",
+            tooltip: (
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Falhos & Expirados</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Falhos</span>
+                    <span className="font-semibold text-foreground">{summary.count_failed}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Expirados</span>
+                    <span className="font-semibold text-foreground">{summary.count_expired}</span>
+                  </div>
+                </div>
+              </div>
+            ),
             valueClassName: "text-red-500",
             subtitle: <span className="text-muted-foreground">{summary.count_failed + summary.count_expired} bônus</span>,
           },
           {
             label: "Total Registrado",
             value: bonuses.length,
-            tooltip: "Total de bônus registrados no projeto, independente do status.",
+            tooltip: (
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">Total de Bônus</p>
+                <p className="text-muted-foreground">Todos os bônus registrados, independente do status.</p>
+                <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
+                  <span>Casas</span>
+                  <span className="font-semibold text-foreground">{Object.keys(topBookmakers).length}</span>
+                </div>
+              </div>
+            ),
             subtitle: <span className="text-muted-foreground">em {Object.keys(topBookmakers).length} casas</span>,
           },
         ]}
