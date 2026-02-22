@@ -7,14 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { 
   ArrowRight, 
-  Calendar, 
   Filter, 
   AlertCircle, 
   Building2, 
@@ -30,9 +27,11 @@ import {
   TrendingDown,
   Banknote
 } from "lucide-react";
-import { format, subDays, startOfDay, endOfDay, isToday } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDateTime } from "@/utils/dateUtils";
+import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
+import { DateRange } from "react-day-picker";
 
 interface ProjetoMovimentacoesTabProps {
   projetoId: string;
@@ -179,8 +178,13 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
   const [parceiros, setParceiros] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [filtroTipo, setFiltroTipo] = useState("TODOS");
-  const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
-  const [dataFim, setDataFim] = useState<Date | undefined>(new Date());
+  const [period, setPeriod] = useState<StandardPeriodFilter>("mes_atual");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+  
+  // Derive dataInicio/dataFim from standard period
+  const dateRange = useMemo(() => getDateRangeFromPeriod(period, customDateRange), [period, customDateRange]);
+  const dataInicio = dateRange?.start;
+  const dataFim = dateRange?.end;
   
   const { formatCurrency } = useProjectCurrencyFormat();
   const { getLogoUrl } = useBookmakerLogoMap();
@@ -338,28 +342,7 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     return { depositos, saques, saldo: depositos - saques };
   }, [transacoes]);
 
-  const handlePeriodoRapido = (dias: number | null) => {
-    if (dias === null) {
-      setDataInicio(undefined);
-      setDataFim(undefined);
-    } else if (dias === 0) {
-      setDataInicio(startOfDay(new Date()));
-      setDataFim(endOfDay(new Date()));
-    } else {
-      setDataInicio(subDays(new Date(), dias));
-      setDataFim(new Date());
-    }
-  };
-
-  const getPeriodoAtivo = () => {
-    if (!dataInicio && !dataFim) return "todos";
-    if (dataInicio && dataFim && isToday(dataInicio) && isToday(dataFim)) return "hoje";
-    const hoje = new Date();
-    const diffDays = dataInicio ? Math.floor((hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)) : null;
-    if (diffDays === 7) return "7dias";
-    if (diffDays === 30) return "30dias";
-    return "custom";
-  };
+  // (period helpers removed - using StandardTimeFilter)
 
   // Função para obter bookmaker (do projeto ou global)
   const getBookmaker = (id: string | null) => {
@@ -584,66 +567,15 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-[130px] justify-start text-left text-sm">
-                    {dataInicio ? format(dataInicio, "dd/MM/yyyy") : "Data início"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent 
-                    mode="single" 
-                    selected={dataInicio} 
-                    onSelect={setDataInicio} 
-                    locale={ptBR}
-                    initialFocus 
-                    className="pointer-events-auto" 
-                  />
-                </PopoverContent>
-              </Popover>
-              <span className="text-muted-foreground text-sm">até</span>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-[130px] justify-start text-left text-sm">
-                    {dataFim ? format(dataFim, "dd/MM/yyyy") : "Data fim"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent 
-                    mode="single" 
-                    selected={dataFim} 
-                    onSelect={setDataFim}
-                    locale={ptBR}
-                    initialFocus 
-                    className="pointer-events-auto" 
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
           </div>
 
-          {/* Atalhos de período */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Período:</span>
-            {[
-              { key: "hoje", label: "Hoje", dias: 0 },
-              { key: "7dias", label: "7 dias", dias: 7 },
-              { key: "30dias", label: "30 dias", dias: 30 },
-              { key: "todos", label: "Todo período", dias: null },
-            ].map((p) => (
-              <Button
-                key={p.key}
-                variant={getPeriodoAtivo() === p.key ? "default" : "outline"}
-                size="sm"
-                onClick={() => handlePeriodoRapido(p.dias)}
-                className="h-7 px-3 text-xs"
-              >
-                {p.label}
-              </Button>
-            ))}
-          </div>
+          {/* Filtro de período padrão */}
+          <StandardTimeFilter
+            period={period}
+            onPeriodChange={setPeriod}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={setCustomDateRange}
+          />
 
           {/* Lista de transações */}
           <ScrollArea className="h-[400px]">
