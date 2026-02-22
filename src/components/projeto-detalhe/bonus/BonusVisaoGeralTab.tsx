@@ -495,7 +495,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                         <div key={bonus.id} className="flex justify-between gap-4 items-center">
                           <span className="flex items-center gap-1.5 truncate">
                             <span className={`inline-block w-1.5 h-1.5 rounded-full ${daysLeft <= 1 ? 'bg-red-500' : daysLeft <= 3 ? 'bg-amber-500' : 'bg-yellow-500'}`} />
-                            {bonus.bookmaker_nome}
+                            {bonus.bookmaker_nome}{bonus.parceiro_nome ? ` - ${bonus.parceiro_nome}` : ''}
                           </span>
                           <span className={`font-semibold whitespace-nowrap ${daysLeft <= 1 ? 'text-red-500' : 'text-amber-500'}`}>
                             {daysLeft === 0 ? 'HOJE' : daysLeft === 1 ? '1 dia' : `${daysLeft} dias`}
