@@ -25,7 +25,8 @@ import {
   ArrowRightLeft,
   TrendingUp,
   TrendingDown,
-  Banknote
+  Banknote,
+  Repeat
 } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -178,6 +179,8 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
   const [parceiros, setParceiros] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [filtroTipo, setFiltroTipo] = useState("TODOS");
+  const [filtroCiclo, setFiltroCiclo] = useState("TODOS");
+  const [ciclos, setCiclos] = useState<{ id: string; numero_ciclo: number; data_inicio: string; data_fim_real: string | null; data_fim_prevista: string; status: string }[]>([]);
   const [period, setPeriod] = useState<StandardPeriodFilter>("mes_atual");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   
@@ -316,9 +319,20 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     }
   }, [projetoId, dataInicio, dataFim, fetchBookmakers, fetchContasBancarias, fetchWallets, fetchAllBookmakers, fetchParceiros]);
 
+  // Fetch ciclos for cycle filter
+  const fetchCiclos = useCallback(async () => {
+    const { data } = await supabase
+      .from("projeto_ciclos")
+      .select("id, numero_ciclo, data_inicio, data_fim_real, data_fim_prevista, status")
+      .eq("projeto_id", projetoId)
+      .order("numero_ciclo", { ascending: false });
+    setCiclos(data || []);
+  }, [projetoId]);
+
   useEffect(() => {
     fetchTransacoes();
-  }, [fetchTransacoes]);
+    fetchCiclos();
+  }, [fetchTransacoes, fetchCiclos]);
 
   // Filtrar transações por tipo
   const transacoesFiltradas = useMemo(() => {
@@ -550,32 +564,56 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Filtros */}
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Tipo de transação" />
+          {/* Filtros - tudo na mesma linha */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+              <SelectTrigger className="w-[140px] h-8 text-xs">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Tipo: Todos</SelectItem>
+                <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
+                <SelectItem value="DEPOSITO">Depósito</SelectItem>
+                <SelectItem value="SAQUE">Saque</SelectItem>
+                <SelectItem value="APORTE_FINANCEIRO">Aporte & Liquidação</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {ciclos.length > 0 && (
+              <Select value={filtroCiclo} onValueChange={(val) => {
+                setFiltroCiclo(val);
+                if (val !== "TODOS") {
+                  const ciclo = ciclos.find(c => c.id === val);
+                  if (ciclo) {
+                    const from = new Date(ciclo.data_inicio);
+                    const to = ciclo.data_fim_real ? new Date(ciclo.data_fim_real) : new Date(ciclo.data_fim_prevista);
+                    setPeriod("custom");
+                    setCustomDateRange({ from, to });
+                  }
+                }
+              }}>
+                <SelectTrigger className="w-[140px] h-8 text-xs">
+                  <Repeat className="h-3 w-3 mr-1" />
+                  <SelectValue placeholder="Ciclo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="TODOS">Todos os tipos</SelectItem>
-                  <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
-                  <SelectItem value="DEPOSITO">Depósito</SelectItem>
-                  <SelectItem value="SAQUE">Saque</SelectItem>
-                  <SelectItem value="APORTE_FINANCEIRO">Aporte & Liquidação</SelectItem>
+                  <SelectItem value="TODOS">Ciclo: Todos</SelectItem>
+                  {ciclos.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      Ciclo {c.numero_ciclo} {c.status === "ativo" ? "●" : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            </div>
-          </div>
+            )}
 
-          {/* Filtro de período padrão */}
-          <StandardTimeFilter
-            period={period}
-            onPeriodChange={setPeriod}
-            customDateRange={customDateRange}
-            onCustomDateRangeChange={setCustomDateRange}
-          />
+            <StandardTimeFilter
+              period={period}
+              onPeriodChange={(p) => { setPeriod(p); setFiltroCiclo("TODOS"); }}
+              customDateRange={customDateRange}
+              onCustomDateRangeChange={setCustomDateRange}
+            />
+          </div>
 
           {/* Lista de transações */}
           <ScrollArea className="h-[400px]">
