@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -171,16 +172,14 @@ const getStatusBadge = (status: string) => {
 };
 
 export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabProps) {
-  const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [bookmakers, setBookmakers] = useState<Record<string, BookmakerInfo>>({});
   const [allBookmakers, setAllBookmakers] = useState<Record<string, BookmakerInfo>>({});
   const [contasBancarias, setContasBancarias] = useState<Record<string, ContaBancariaInfo>>({});
   const [wallets, setWallets] = useState<Record<string, WalletInfo>>({});
   const [parceiros, setParceiros] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
   const [filtroTipo, setFiltroTipo] = useState("TODOS");
   const [filtroCiclo, setFiltroCiclo] = useState("TODOS");
-  const [ciclos, setCiclos] = useState<{ id: string; numero_ciclo: number; data_inicio: string; data_fim_real: string | null; data_fim_prevista: string; status: string }[]>([]);
+  
   const [period, setPeriod] = useState<StandardPeriodFilter>("mes_atual");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   
@@ -280,11 +279,11 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
     }
   }, []);
 
-  // Buscar transações do cash_ledger pelo projeto_id_snapshot
-  const fetchTransacoes = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Buscar dados auxiliares em paralelo (para exibição de nomes/logos)
+  // Query transações com cache
+  const { data: transacoes = [], isLoading: loading, refetch: refetchTransacoes } = useQuery({
+    queryKey: ["movimentacoes", projetoId, dataInicio?.toISOString(), dataFim?.toISOString()],
+    queryFn: async () => {
+      // Buscar dados auxiliares em paralelo
       await Promise.all([
         fetchBookmakers(),
         fetchContasBancarias(), 
@@ -293,8 +292,6 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
         fetchParceiros()
       ]);
 
-      // Buscar transações pelo projeto_id_snapshot (imutável, gravado no momento da transação)
-      // MODELO: Atribuição temporal - mostra apenas movimentações do período de vínculo
       let query = supabase
         .from("cash_ledger")
         .select("*")
@@ -309,30 +306,25 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-      setTransacoes(data || []);
-    } catch (error: any) {
-      console.error("Erro ao buscar movimentações:", error.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [projetoId, dataInicio, dataFim, fetchBookmakers, fetchContasBancarias, fetchWallets, fetchAllBookmakers, fetchParceiros]);
+      return (data || []) as Transacao[];
+    },
+    staleTime: 5 * 60 * 1000, // 5 min cache
+  });
 
-  // Fetch ciclos for cycle filter
-  const fetchCiclos = useCallback(async () => {
-    const { data } = await supabase
-      .from("projeto_ciclos")
-      .select("id, numero_ciclo, data_inicio, data_fim_real, data_fim_prevista, status")
-      .eq("projeto_id", projetoId)
-      .order("numero_ciclo", { ascending: false });
-    setCiclos(data || []);
-  }, [projetoId]);
-
-  useEffect(() => {
-    fetchTransacoes();
-    fetchCiclos();
-  }, [fetchTransacoes, fetchCiclos]);
+  // Query ciclos com cache
+  const { data: ciclos = [] } = useQuery({
+    queryKey: ["projeto-ciclos-filter", projetoId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("projeto_ciclos")
+        .select("id, numero_ciclo, data_inicio, data_fim_real, data_fim_prevista, status")
+        .eq("projeto_id", projetoId)
+        .order("numero_ciclo", { ascending: false });
+      return data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Filtrar transações por tipo
   const transacoesFiltradas = useMemo(() => {
@@ -558,7 +550,7 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
             <Button
               variant="ghost"
               size="icon"
-              onClick={fetchTransacoes}
+              onClick={() => refetchTransacoes()}
               disabled={loading}
             >
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
