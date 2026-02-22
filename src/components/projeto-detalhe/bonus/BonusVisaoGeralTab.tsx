@@ -358,11 +358,56 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         items={[
           {
             label: "Histórico de Casas",
-            value: analyticsSummary.total_bookmakers,
+            value: (
+              <div className="flex flex-col items-center w-full">
+                <span>{analyticsSummary.total_bookmakers}</span>
+              </div>
+            ),
             tooltip: (
-              <div className="space-y-1">
-                <p className="font-semibold text-foreground">Casas com Bônus</p>
-                <p className="text-muted-foreground">Bookmakers com bônus já operados neste projeto.</p>
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Histórico de Casas</p>
+                <p className="text-muted-foreground text-xs">Bookmakers com bônus operados neste projeto.</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Ativas</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.status_breakdown.ativas}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" /> Concluídas</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.status_breakdown.concluidas}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" /> Limitadas</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.status_breakdown.limitadas}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Bloqueadas</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.status_breakdown.bloqueadas}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Encerradas</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.status_breakdown.encerradas}</span>
+                  </div>
+                </div>
+                <div className="border-t border-border/50 pt-1 space-y-0.5">
+                  <p className="font-semibold text-foreground text-xs">Bônus</p>
+                  <div className="flex justify-between gap-4">
+                    <span>Total recebidos</span>
+                    <span className="font-semibold text-foreground">{analyticsSummary.total_bonus_count}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Em andamento</span>
+                    <span className="font-semibold text-foreground">{summary.count_credited}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Finalizados</span>
+                    <span className="font-semibold text-foreground">{summary.count_finalized}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Pendentes</span>
+                    <span className="font-semibold text-foreground">{summary.count_pending}</span>
+                  </div>
+                </div>
               </div>
             ),
             subtitle: <span className="text-muted-foreground">{analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}</span>,
