@@ -158,6 +158,9 @@ export function SurebetModalRoot({
   // Hook de rascunhos
   const { criarRascunho, atualizarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
   
+  // Rastrear ID do rascunho salvo para evitar duplicatas
+  const [rascunhoIdLocal, setRascunhoIdLocal] = useState<string | null>(rascunho?.id || null);
+  
   const { getSnapshotFields } = useCurrencySnapshot();
   const {
     moedaConsolidacao,
@@ -1489,8 +1492,8 @@ export function SurebetModalRoot({
   // Pode salvar como rascunho: tem dados parciais, mas não tem todas as pernas completas
   // Também permite atualizar rascunho existente (quando veio de rascunho)
   const podeSalvarRascunho = !isEditing && temDadosParciais && (analysis.pernasCompletasCount < numPernas || odds.length < numPernas);
-  const isAtualizandoRascunho = !!rascunho;
-
+  const isAtualizandoRascunho = !!rascunho || !!rascunhoIdLocal;
+  const rascunhoIdEfetivo = rascunho?.id || rascunhoIdLocal;
   // Handler para salvar como rascunho
   const handleSalvarRascunho = useCallback(() => {
     if (!workspaceId) {
@@ -1524,16 +1527,20 @@ export function SurebetModalRoot({
     };
 
     let rascunhoSalvo;
-    if (rascunho) {
-      // Atualizar rascunho existente
-      rascunhoSalvo = atualizarRascunho(rascunho.id, dadosRascunho);
+    if (rascunhoIdEfetivo) {
+      // Atualizar rascunho existente (veio de prop ou já foi salvo antes nesta sessão)
+      rascunhoSalvo = atualizarRascunho(rascunhoIdEfetivo, dadosRascunho);
     } else {
       // Criar novo rascunho
       rascunhoSalvo = criarRascunho('SUREBET', dadosRascunho);
+      // Guardar o ID para que cliques subsequentes atualizem em vez de criar duplicatas
+      if (rascunhoSalvo) {
+        setRascunhoIdLocal(rascunhoSalvo.id);
+      }
     }
     
     toast.success(
-      rascunho ? `Rascunho atualizado!` : `Rascunho salvo!`,
+      rascunhoIdEfetivo ? `Rascunho atualizado!` : `Rascunho salvo!`,
       { 
         description: rascunhoSalvo?.motivo_incompleto || 'Acesse seus rascunhos para continuar depois',
         icon: <FileText className="h-4 w-4 text-blue-500" />
@@ -1542,7 +1549,7 @@ export function SurebetModalRoot({
     
     // Fechar o formulário
     if (!embedded) onOpenChange(false);
-  }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, workspaceId, bookmakerSaldos, criarRascunho, atualizarRascunho, rascunho, onOpenChange]);
+  }, [odds, evento, mercado, esporte, estrategia, contexto, modeloTipo, numPernas, workspaceId, bookmakerSaldos, criarRascunho, atualizarRascunho, rascunhoIdEfetivo, onOpenChange]);
 
   const getBookmakerNome = (id: string) => bookmakerSaldos.find(b => b.id === id)?.nome || "";
 
