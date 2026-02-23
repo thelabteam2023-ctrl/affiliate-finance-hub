@@ -11,7 +11,8 @@ import { CASH_REAL_TYPES } from "@/lib/cashOperationalTypes";
 import { getGrupoFromCategoria, getGrupoInfo } from "@/lib/despesaGrupos";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal, HelpCircle } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -810,20 +811,40 @@ export default function Caixa() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 bg-popover">
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={() => setAjusteDialogOpen(true)}
-                      className="flex items-center gap-2 text-muted-foreground cursor-pointer"
-                    >
-                      <Wrench className="h-4 w-4" />
-                      <span>Ajuste Manual</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => setReconciliacaoDialogOpen(true)}
-                      className="flex items-center gap-2 text-muted-foreground cursor-pointer"
-                    >
-                      <TrendingUp className="h-4 w-4" />
-                      <span>Reconciliação de Saldo</span>
-                    </DropdownMenuItem>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuItem 
+                          onClick={() => setAjusteDialogOpen(true)}
+                          className="flex items-center gap-2 text-muted-foreground cursor-pointer"
+                        >
+                          <Wrench className="h-4 w-4" />
+                          <span>Ajuste Manual</span>
+                          <HelpCircle className="h-3 w-3 ml-auto opacity-50" />
+                        </DropdownMenuItem>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-[280px] text-xs space-y-1.5 p-3">
+                        <p className="font-semibold">Use quando souber o valor e o motivo</p>
+                        <p className="text-muted-foreground">Ex: "A bookmaker cobrou R$15 de taxa que não registrei" → Ajuste de -15</p>
+                        <p className="text-muted-foreground">Ex: "Recebi R$50 de cashback que esqueci de lançar" → Ajuste de +50</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuItem 
+                          onClick={() => setReconciliacaoDialogOpen(true)}
+                          className="flex items-center gap-2 text-muted-foreground cursor-pointer"
+                        >
+                          <TrendingUp className="h-4 w-4" />
+                          <span>Reconciliação de Saldo</span>
+                          <HelpCircle className="h-3 w-3 ml-auto opacity-50" />
+                        </DropdownMenuItem>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-[280px] text-xs space-y-1.5 p-3">
+                        <p className="font-semibold">Use quando souber apenas o saldo real</p>
+                        <p className="text-muted-foreground">Ex: "O sistema diz R$1.200, mas na conta real tem R$1.350. Não sei por quê."</p>
+                        <p className="text-muted-foreground">Você informa o saldo real e o sistema calcula o ajuste automaticamente. Uso raro — é um "ponto zero".</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
