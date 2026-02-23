@@ -304,50 +304,53 @@ export function ReconciliacaoDialog({
       };
 
       // Definir origem/destino
-      if (direcao === "ENTRADA") {
-        transactionData.origem_tipo = "CAIXA_OPERACIONAL";
-        switch (tipoEntidade) {
-          case "BOOKMAKER":
+      // Reconciliação é ajuste interno na entidade (não passa pelo caixa operacional)
+      switch (tipoEntidade) {
+        case "BOOKMAKER":
+          if (direcao === "ENTRADA") {
+            transactionData.origem_tipo = "AJUSTE";
             transactionData.destino_tipo = "BOOKMAKER";
             transactionData.destino_bookmaker_id = entidadeId;
             transactionData.valor_destino = valorAjuste;
             transactionData.moeda_destino = moeda;
-            break;
-          case "CONTA_BANCARIA":
-            transactionData.destino_tipo = "PARCEIRO_CONTA";
-            transactionData.destino_conta_bancaria_id = entidadeId;
-            transactionData.valor_destino = valorAjuste;
-            transactionData.moeda_destino = moeda;
-            break;
-          case "WALLET":
-            transactionData.destino_tipo = "PARCEIRO_WALLET";
-            transactionData.destino_wallet_id = entidadeId;
-            transactionData.valor_destino = valorAjuste;
-            transactionData.moeda_destino = moeda;
-            break;
-        }
-      } else {
-        transactionData.destino_tipo = "CAIXA_OPERACIONAL";
-        switch (tipoEntidade) {
-          case "BOOKMAKER":
+          } else {
             transactionData.origem_tipo = "BOOKMAKER";
             transactionData.origem_bookmaker_id = entidadeId;
             transactionData.valor_origem = valorAjuste;
             transactionData.moeda_origem = moeda;
-            break;
-          case "CONTA_BANCARIA":
+            transactionData.destino_tipo = "AJUSTE";
+          }
+          break;
+        case "CONTA_BANCARIA":
+          if (direcao === "ENTRADA") {
+            transactionData.origem_tipo = "AJUSTE";
+            transactionData.destino_tipo = "PARCEIRO_CONTA";
+            transactionData.destino_conta_bancaria_id = entidadeId;
+            transactionData.valor_destino = valorAjuste;
+            transactionData.moeda_destino = moeda;
+          } else {
             transactionData.origem_tipo = "PARCEIRO_CONTA";
             transactionData.origem_conta_bancaria_id = entidadeId;
             transactionData.valor_origem = valorAjuste;
             transactionData.moeda_origem = moeda;
-            break;
-          case "WALLET":
+            transactionData.destino_tipo = "AJUSTE";
+          }
+          break;
+        case "WALLET":
+          if (direcao === "ENTRADA") {
+            transactionData.origem_tipo = "AJUSTE";
+            transactionData.destino_tipo = "PARCEIRO_WALLET";
+            transactionData.destino_wallet_id = entidadeId;
+            transactionData.valor_destino = valorAjuste;
+            transactionData.moeda_destino = moeda;
+          } else {
             transactionData.origem_tipo = "PARCEIRO_WALLET";
             transactionData.origem_wallet_id = entidadeId;
             transactionData.valor_origem = valorAjuste;
             transactionData.moeda_origem = moeda;
-            break;
-        }
+            transactionData.destino_tipo = "AJUSTE";
+          }
+          break;
       }
 
       const { error } = await supabase.from("cash_ledger").insert([transactionData] as any);
