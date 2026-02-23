@@ -280,6 +280,7 @@ export function ReconciliacaoDialog({
         tipo_moeda: isCrypto ? "CRYPTO" : "FIAT",
         moeda,
         valor: valorAjuste,
+        valor_usd: moeda === "USD" || moeda === "USDT" || moeda === "USDC" ? valorAjuste : (cotacaoSnapshot ? valorAjuste / cotacaoSnapshot : null),
         descricao: `[RECONCILIAÇÃO ${direcao}] ${motivo} | Saldo sistema: ${saldoSistema.toFixed(2)} → Saldo real: ${(parseFloat(saldoReal) || 0).toFixed(2)} | Diferença: ${diferenca.toFixed(2)}`,
         status: "CONFIRMADO",
         data_transacao: new Date().toISOString().split("T")[0],
@@ -303,39 +304,51 @@ export function ReconciliacaoDialog({
         },
       };
 
-      // Definir origem/destino
-      // Reconciliação é ajuste unilateral na entidade (a entidade é origem e destino)
-      switch (tipoEntidade) {
-        case "BOOKMAKER":
-          transactionData.origem_tipo = "BOOKMAKER";
-          transactionData.origem_bookmaker_id = entidadeId;
-          transactionData.valor_origem = valorAjuste;
-          transactionData.moeda_origem = moeda;
-          transactionData.destino_tipo = "BOOKMAKER";
-          transactionData.destino_bookmaker_id = entidadeId;
-          transactionData.valor_destino = valorAjuste;
-          transactionData.moeda_destino = moeda;
-          break;
-        case "CONTA_BANCARIA":
-          transactionData.origem_tipo = "PARCEIRO_CONTA";
-          transactionData.origem_conta_bancaria_id = entidadeId;
-          transactionData.valor_origem = valorAjuste;
-          transactionData.moeda_origem = moeda;
-          transactionData.destino_tipo = "PARCEIRO_CONTA";
-          transactionData.destino_conta_bancaria_id = entidadeId;
-          transactionData.valor_destino = valorAjuste;
-          transactionData.moeda_destino = moeda;
-          break;
-        case "WALLET":
-          transactionData.origem_tipo = "PARCEIRO_WALLET";
-          transactionData.origem_wallet_id = entidadeId;
-          transactionData.valor_origem = valorAjuste;
-          transactionData.moeda_origem = moeda;
-          transactionData.destino_tipo = "PARCEIRO_WALLET";
-          transactionData.destino_wallet_id = entidadeId;
-          transactionData.valor_destino = valorAjuste;
-          transactionData.moeda_destino = moeda;
-          break;
+      // Definir origem/destino baseado na direção
+      // ENTRADA: só destino (crédito na entidade)
+      // SAÍDA: só origem (débito na entidade)
+      if (direcao === "ENTRADA") {
+        switch (tipoEntidade) {
+          case "BOOKMAKER":
+            transactionData.destino_tipo = "BOOKMAKER";
+            transactionData.destino_bookmaker_id = entidadeId;
+            transactionData.valor_destino = valorAjuste;
+            transactionData.moeda_destino = moeda;
+            break;
+          case "CONTA_BANCARIA":
+            transactionData.destino_tipo = "PARCEIRO_CONTA";
+            transactionData.destino_conta_bancaria_id = entidadeId;
+            transactionData.valor_destino = valorAjuste;
+            transactionData.moeda_destino = moeda;
+            break;
+          case "WALLET":
+            transactionData.destino_tipo = "PARCEIRO_WALLET";
+            transactionData.destino_wallet_id = entidadeId;
+            transactionData.valor_destino = valorAjuste;
+            transactionData.moeda_destino = moeda;
+            break;
+        }
+      } else {
+        switch (tipoEntidade) {
+          case "BOOKMAKER":
+            transactionData.origem_tipo = "BOOKMAKER";
+            transactionData.origem_bookmaker_id = entidadeId;
+            transactionData.valor_origem = valorAjuste;
+            transactionData.moeda_origem = moeda;
+            break;
+          case "CONTA_BANCARIA":
+            transactionData.origem_tipo = "PARCEIRO_CONTA";
+            transactionData.origem_conta_bancaria_id = entidadeId;
+            transactionData.valor_origem = valorAjuste;
+            transactionData.moeda_origem = moeda;
+            break;
+          case "WALLET":
+            transactionData.origem_tipo = "PARCEIRO_WALLET";
+            transactionData.origem_wallet_id = entidadeId;
+            transactionData.valor_origem = valorAjuste;
+            transactionData.moeda_origem = moeda;
+            break;
+        }
       }
 
       const { error } = await supabase.from("cash_ledger").insert([transactionData] as any);
