@@ -241,7 +241,7 @@ export function SurebetModalRoot({
   // IDs das pernas originais (do banco) para usar na RPC de edição atômica
   const originalPernaIds = useRef<string[]>([]);
   // Snapshot das pernas originais para detectar mudanças
-  const originalPernasSnapshot = useRef<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string }>>([]);
+  const originalPernasSnapshot = useRef<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null }>>([]);
   const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   
   const {
@@ -558,6 +558,7 @@ export function SurebetModalRoot({
         odd: parseFloat(p.odd) || 0,
         selecao: p.selecao || "",
         selecao_livre: p.selecao_livre || "",
+        resultado: p.resultado || null,
       }));
       
       const pernasOdds: OddEntry[] = pernasData.map((perna: any, index: number) => ({
@@ -1024,7 +1025,39 @@ export function SurebetModalRoot({
             }
             
             console.log(`[SurebetModalRoot] ✅ Perna ${originalPerna.id} editada via RPC:`, result);
+        }
+        
+        // 1.5. Liquidar/reliquidar pernas cujo resultado mudou
+        for (let i = 0; i < pernasPreenchidas.length; i++) {
+          const entry = pernasPreenchidas[i];
+          const originalPerna = originalPernasSnapshot.current[i];
+          if (!originalPerna) continue;
+          
+          const newResultado = (entry as any).resultado as string | null;
+          const oldResultado = originalPerna.resultado;
+          
+          // Só processar se o resultado realmente mudou
+          if (newResultado && newResultado !== oldResultado) {
+            const liqResult = await liquidarPernaSurebet({
+              surebet_id: surebet.id,
+              perna_id: originalPerna.id,
+              bookmaker_id: entry.bookmaker_id,
+              resultado: newResultado as 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID',
+              resultado_anterior: oldResultado,
+              stake: parseFloat(entry.stake) || 0,
+              odd: parseFloat(entry.odd) || 0,
+              moeda: getBookmakerMoeda(entry.bookmaker_id),
+              workspace_id: workspaceId,
+              fonte_saldo: 'REAL',
+            });
+            
+            if (!liqResult.success) {
+              console.error(`[SurebetModalRoot] Erro ao liquidar perna ${originalPerna.id}:`, liqResult.error);
+              throw new Error(`Erro ao liquidar perna ${i + 1}: ${liqResult.error}`);
+            }
+            console.log(`[SurebetModalRoot] ✅ Perna ${originalPerna.id} liquidada: ${oldResultado || 'null'} → ${newResultado}`);
           }
+        }
         }
         
         // 2. Atualizar campos do registro pai (evento, esporte, mercado, etc.)
