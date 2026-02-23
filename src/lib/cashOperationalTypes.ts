@@ -47,6 +47,7 @@ export const CASH_REAL_TYPES = [
   'AJUSTE_MANUAL',
   'AJUSTE_SALDO',
   'CONCILIACAO',
+  'AJUSTE_RECONCILIACAO',
   
   // Ajustes Cambiais (diferenças reais entre valor esperado e recebido)
   // CRÍTICO: Creditam/debitam wallets, DEVEM aparecer para trilha de auditoria

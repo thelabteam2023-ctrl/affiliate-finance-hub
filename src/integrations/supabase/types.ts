@@ -1242,6 +1242,7 @@ export type Database = {
           observacoes: string | null
           parceiro_id: string | null
           projeto_id: string | null
+          reconciled_at: string | null
           saldo_atual: number
           saldo_bonus: number | null
           saldo_freebet: number
@@ -1270,6 +1271,7 @@ export type Database = {
           observacoes?: string | null
           parceiro_id?: string | null
           projeto_id?: string | null
+          reconciled_at?: string | null
           saldo_atual?: number
           saldo_bonus?: number | null
           saldo_freebet?: number
@@ -1298,6 +1300,7 @@ export type Database = {
           observacoes?: string | null
           parceiro_id?: string | null
           projeto_id?: string | null
+          reconciled_at?: string | null
           saldo_atual?: number
           saldo_bonus?: number | null
           saldo_freebet?: number
@@ -2579,6 +2582,7 @@ export type Database = {
           parceiro_id: string
           pix_key: string | null
           pix_keys: Json | null
+          reconciled_at: string | null
           tipo_conta: string
           titular: string
           updated_at: string
@@ -2595,6 +2599,7 @@ export type Database = {
           parceiro_id: string
           pix_key?: string | null
           pix_keys?: Json | null
+          reconciled_at?: string | null
           tipo_conta: string
           titular: string
           updated_at?: string
@@ -2611,6 +2616,7 @@ export type Database = {
           parceiro_id?: string
           pix_key?: string | null
           pix_keys?: Json | null
+          reconciled_at?: string | null
           tipo_conta?: string
           titular?: string
           updated_at?: string
@@ -8652,6 +8658,7 @@ export type Database = {
           network: string
           observacoes_encrypted: string | null
           parceiro_id: string
+          reconciled_at: string | null
           rede_id: string | null
           updated_at: string
         }
@@ -8666,6 +8673,7 @@ export type Database = {
           network: string
           observacoes_encrypted?: string | null
           parceiro_id: string
+          reconciled_at?: string | null
           rede_id?: string | null
           updated_at?: string
         }
@@ -8680,6 +8688,7 @@ export type Database = {
           network?: string
           observacoes_encrypted?: string | null
           parceiro_id?: string
+          reconciled_at?: string | null
           rede_id?: string | null
           updated_at?: string
         }
