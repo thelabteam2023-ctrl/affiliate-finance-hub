@@ -292,7 +292,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         .from("cash_ledger")
         .select("id, valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata")
         .eq("ajuste_motivo", "BONUS_CANCELAMENTO")
-        .eq("ajuste_direcao", "NEGATIVO")
+        .eq("ajuste_direcao", "SAIDA")
         .in("origem_bookmaker_id", bookmakerIds);
 
       if (error) throw error;
