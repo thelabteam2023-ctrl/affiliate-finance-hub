@@ -401,10 +401,20 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     return moedas.size === 1 ? moedas.values().next().value : null;
   })();
   
+  const isMulticurrency = !moedaPernas && surebet.pernas && surebet.pernas.length > 0;
+  
   // Formatter para totais do card: usa moeda das pernas se uniforme, senão projeto
   const formatTotal = moedaPernas 
     ? (v: number) => formatPernaValue(v, moedaPernas)
     : formatValue;
+  
+  // Para multicurrency, recalcular stake total na moeda correta de cada perna
+  const stakeRealTotal = (() => {
+    if (!surebet.pernas || surebet.pernas.length === 0) return surebet.stake_total;
+    if (!isMulticurrency) return surebet.pernas.reduce((sum, p) => sum + (p.stake_total || p.stake || 0), 0);
+    // Multicurrency: stake_total do banco pode ser soma nominal - retornar o valor do banco como fallback
+    return surebet.stake_total;
+  })();
   
   // Detectar contexto de bônus pela estratégia ou prop
   const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
@@ -546,9 +556,33 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
           </span>
           
           <div className="flex items-center gap-3 shrink-0">
-            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-              Stake: {formatTotal(surebet.stake_total)}
-            </span>
+            {isMulticurrency ? (
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap cursor-help">
+                      Stake: {formatTotal(stakeRealTotal)}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs space-y-0.5">
+                    <p className="font-medium mb-1">Stakes por moeda:</p>
+                    {Object.entries(
+                      (surebet.pernas || []).reduce<Record<string, number>>((acc, p) => {
+                        const m = p.moeda || 'BRL';
+                        acc[m] = (acc[m] || 0) + (p.stake_total || p.stake || 0);
+                        return acc;
+                      }, {})
+                    ).map(([m, v]) => (
+                      <p key={m}>{formatPernaValue(v, m)}</p>
+                    ))}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                Stake: {formatTotal(stakeRealTotal)}
+              </span>
+            )}
             
             {lucroExibir !== null && lucroExibir !== undefined && (
               <div className="flex items-center gap-1 shrink-0">
