@@ -11,10 +11,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Loader2, CheckCircle2, AlertTriangle, Clock, XCircle } from "lucide-react";
 import { FinalizeReason } from "@/hooks/useProjectBonuses";
 
-const FINALIZE_REASONS: { value: FinalizeReason; label: string; description: string; icon: React.ReactNode; impact: string }[] = [
+const FINALIZE_REASONS: { value: FinalizeReason; label: string; description: string; icon: React.ReactNode; impact: string; hasFinancialImpact?: boolean }[] = [
   {
     value: "rollover_completed",
     label: "Rollover concluído (Saque liberado)",
@@ -39,9 +40,10 @@ const FINALIZE_REASONS: { value: FinalizeReason; label: string; description: str
   {
     value: "cancelled_reversed",
     label: "Cancelado / Revertido",
-    description: "A casa cancelou o bônus ou houve violação de regras.",
+    description: "A casa cancelou o bônus ou houve violação de regras. O saldo de bônus será perdido.",
     icon: <XCircle className="h-4 w-4 text-red-400" />,
-    impact: "Sem impacto financeiro",
+    impact: "Debita valor perdido do saldo",
+    hasFinancialImpact: true,
   },
 ];
 
@@ -50,7 +52,7 @@ interface FinalizeBonusDialogProps {
   onOpenChange: (open: boolean) => void;
   bonusAmount: number;
   currency: string;
-  onConfirm: (reason: FinalizeReason) => Promise<boolean>;
+  onConfirm: (reason: FinalizeReason, debitAmount?: number) => Promise<boolean>;
 }
 
 const formatCurrency = (value: number, currency: string = "BRL") => {
@@ -73,12 +75,27 @@ export function FinalizeBonusDialog({
 }: FinalizeBonusDialogProps) {
   const [selectedReason, setSelectedReason] = useState<FinalizeReason>("rollover_completed");
   const [confirming, setConfirming] = useState(false);
+  const [debitAmount, setDebitAmount] = useState<string>("");
+
+  const selectedReasonData = FINALIZE_REASONS.find(r => r.value === selectedReason);
+  const hasFinancialImpact = selectedReasonData?.hasFinancialImpact ?? false;
+  const parsedDebit = parseFloat(debitAmount.replace(",", "."));
+  const isValidDebit = !hasFinancialImpact || (parsedDebit > 0 && !isNaN(parsedDebit));
+
+  const handleReasonChange = (value: FinalizeReason) => {
+    setSelectedReason(value);
+    if (value !== "cancelled_reversed") {
+      setDebitAmount("");
+    }
+  };
 
   const handleConfirm = async () => {
     setConfirming(true);
-    const success = await onConfirm(selectedReason);
+    const debit = hasFinancialImpact && parsedDebit > 0 ? parsedDebit : undefined;
+    const success = await onConfirm(selectedReason, debit);
     setConfirming(false);
     if (success) {
+      setDebitAmount("");
       onOpenChange(false);
     }
   };
@@ -98,9 +115,11 @@ export function FinalizeBonusDialog({
             </p>
             <p className="text-muted-foreground text-sm">
               Após finalizar, o vínculo lógico do bônus será encerrado.
-              <span className="block mt-1 text-emerald-500 font-medium">
-                ✓ Nenhuma alteração será feita no saldo.
-              </span>
+              {!hasFinancialImpact && (
+                <span className="block mt-1 text-emerald-500 font-medium">
+                  ✓ Nenhuma alteração será feita no saldo.
+                </span>
+              )}
             </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -109,7 +128,7 @@ export function FinalizeBonusDialog({
           <Label className="text-sm font-medium mb-3 block">Motivo da finalização:</Label>
           <RadioGroup
             value={selectedReason}
-            onValueChange={(value) => setSelectedReason(value as FinalizeReason)}
+            onValueChange={(value) => handleReasonChange(value as FinalizeReason)}
             className="space-y-2"
           >
             {FINALIZE_REASONS.map((reason) => (
@@ -120,7 +139,7 @@ export function FinalizeBonusDialog({
                     ? "bg-primary/10 border-primary"
                     : "hover:bg-muted/50"
                 }`}
-                onClick={() => setSelectedReason(reason.value)}
+                onClick={() => handleReasonChange(reason.value)}
               >
                 <RadioGroupItem value={reason.value} id={reason.value} className="mt-0.5" />
                 <div className="flex-1">
@@ -134,13 +153,36 @@ export function FinalizeBonusDialog({
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {reason.description}
                   </p>
-                  <p className="text-xs text-emerald-500/80 mt-0.5">
+                  <p className={`text-xs mt-0.5 ${reason.hasFinancialImpact ? "text-red-400" : "text-emerald-500/80"}`}>
                     📌 {reason.impact}
                   </p>
                 </div>
               </div>
             ))}
           </RadioGroup>
+
+          {hasFinancialImpact && (
+            <div className="mt-4 p-3 rounded-lg border border-red-500/30 bg-red-500/5 space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2 text-red-400">
+                <AlertTriangle className="h-4 w-4" />
+                Valor perdido (a debitar do saldo)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Informe o valor do bônus que será perdido e removido do saldo da conta.
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground font-medium">{currency === "BRL" ? "R$" : currency === "USD" ? "$" : currency}</span>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={debitAmount}
+                  onChange={(e) => setDebitAmount(e.target.value)}
+                  className="max-w-[160px]"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <AlertDialogFooter>
@@ -150,8 +192,8 @@ export function FinalizeBonusDialog({
               e.preventDefault();
               handleConfirm();
             }}
-            disabled={confirming}
-            className="bg-primary hover:bg-primary/90"
+            disabled={confirming || !isValidDebit}
+            className={hasFinancialImpact ? "bg-destructive hover:bg-destructive/90" : "bg-primary hover:bg-primary/90"}
           >
             {confirming ? (
               <>

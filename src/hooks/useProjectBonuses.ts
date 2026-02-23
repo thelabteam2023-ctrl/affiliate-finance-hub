@@ -520,14 +520,14 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
 
   // Finalize mutation
   const finalizeMutation = useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: FinalizeReason }) => {
+    mutationFn: async ({ id, reason, debitAmount }: { id: string; reason: FinalizeReason; debitAmount?: number }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
       // GUARD: Check current status in DB to prevent double finalization
       const { data: currentBonus, error: fetchError } = await supabase
         .from("project_bookmaker_link_bonuses")
-        .select("status")
+        .select("status, bookmaker_id, workspace_id, currency, title")
         .eq("id", id)
         .single();
 
@@ -551,6 +551,35 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         .eq("status", "credited"); // Only finalize if still credited (DB-level guard)
 
       if (error) throw error;
+
+      // FINANCIAL IMPACT: If cancelled_reversed with debit amount, create ledger entry
+      if (reason === "cancelled_reversed" && debitAmount && debitAmount > 0 && currentBonus) {
+        const { error: ledgerError } = await supabase
+          .from("cash_ledger")
+          .insert({
+            tipo_transacao: "AJUSTE_SALDO",
+            tipo_moeda: "FIAT",
+            moeda: currentBonus.currency || "BRL",
+            valor: debitAmount,
+            status: "CONFIRMADO",
+            data_transacao: new Date().toISOString().split("T")[0],
+            data_confirmacao: new Date().toISOString(),
+            impacta_caixa_operacional: false,
+            user_id: userData.user.id,
+            workspace_id: currentBonus.workspace_id || "",
+            origem_tipo: "BOOKMAKER",
+            origem_bookmaker_id: currentBonus.bookmaker_id,
+            ajuste_direcao: "NEGATIVO",
+            ajuste_motivo: `Bônus cancelado/revertido: ${currentBonus.title || "Bônus"} — valor perdido`,
+            descricao: `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"}`,
+          });
+
+        if (ledgerError) {
+          console.error("Erro ao criar débito no ledger:", ledgerError);
+          toast.error("Bônus finalizado, mas houve erro ao debitar o saldo. Verifique manualmente.");
+        }
+      }
+
       return reason;
     },
     onSuccess: async (reason) => {
@@ -665,9 +694,9 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
     }
   };
 
-  const finalizeBonus = async (id: string, reason: FinalizeReason): Promise<boolean> => {
+  const finalizeBonus = async (id: string, reason: FinalizeReason, debitAmount?: number): Promise<boolean> => {
     try {
-      await finalizeMutation.mutateAsync({ id, reason });
+      await finalizeMutation.mutateAsync({ id, reason, debitAmount });
       return true;
     } catch {
       return false;
