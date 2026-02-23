@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
@@ -968,15 +968,15 @@ export default function CentralOperacoes() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {casasPendentesConciliacao.slice(0, 4).map((casa) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {casasPendentesConciliacao.map((casa) => (
                   <div key={casa.bookmaker_id} className="flex items-center justify-between p-2 rounded-lg border border-amber-500/30 bg-amber-500/10">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0 animate-pulse" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium truncate">
                           {casa.bookmaker_nome}
-                          {casa.parceiro_nome && <span className="text-muted-foreground font-normal"> de {casa.parceiro_nome}</span>}
+                          {casa.parceiro_nome && <span className="text-muted-foreground font-normal"> de {getFirstLastName(casa.parceiro_nome)}</span>}
                         </p>
                         <p className="text-[10px] text-muted-foreground truncate">
                           {casa.projeto_nome ? (
@@ -997,7 +997,6 @@ export default function CentralOperacoes() {
                         size="sm" 
                         variant="outline"
                         onClick={() => {
-                          // Navegar para a aba de conciliação do Caixa Operacional
                           navigate(`/caixa?tab=conciliacao&bookmaker=${casa.bookmaker_id}`);
                         }}
                         className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10 h-6 text-xs px-2"
@@ -1007,11 +1006,6 @@ export default function CentralOperacoes() {
                     </div>
                   </div>
                 ))}
-                {casasPendentesConciliacao.length > 4 && (
-                  <p className="text-[10px] text-muted-foreground text-center pt-1">
-                    +{casasPendentesConciliacao.length - 4} outras casas pendentes
-                  </p>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -1040,8 +1034,7 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <ScrollArea className="max-h-[280px]">
-              <div className="space-y-2 pr-1">
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
                 {saquesPendentes.map((saque) => {
                   const destinoNome = saque.destino_wallet_id 
                     ? (saque.wallet_exchange || saque.wallet_nome || "Wallet") 
@@ -1049,7 +1042,7 @@ export default function CentralOperacoes() {
                   const parceiroShort = saque.parceiro_nome ? getFirstLastName(saque.parceiro_nome) : "";
                   
                   return (
-                    <div key={saque.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
+                    <div key={saque.id} className="flex items-center gap-2 p-2 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
                       {saque.destino_wallet_id ? (
                         <Wallet className="h-4 w-4 text-yellow-400 shrink-0" />
                       ) : (
@@ -1074,7 +1067,6 @@ export default function CentralOperacoes() {
                   );
                 })}
               </div>
-              </ScrollArea>
             </CardContent>
           </Card>
         ),
@@ -1102,15 +1094,15 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {alertasSaques.slice(0, 4).map((alerta) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {alertasSaques.map((alerta) => (
                   <div key={alerta.entidade_id} className="flex items-center justify-between p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Building2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xs font-medium truncate">{alerta.titulo}</p>
                         {alerta.parceiro_nome && (
-                          <p className="text-[10px] text-muted-foreground truncate">{alerta.parceiro_nome}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{getFirstLastName(alerta.parceiro_nome)}</p>
                         )}
                       </div>
                     </div>
@@ -1153,15 +1145,15 @@ export default function CentralOperacoes() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {alertasLimitadas.slice(0, 4).map((alerta) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {alertasLimitadas.map((alerta) => (
                   <div key={alerta.entidade_id} className="flex items-center justify-between p-2 rounded-lg border border-orange-500/30 bg-orange-500/10">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Building2 className="h-3.5 w-3.5 text-orange-400 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xs font-medium truncate">{alerta.titulo}</p>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {alerta.parceiro_nome && `${alerta.parceiro_nome} • `}Sacar ou realocar saldo
+                          {alerta.parceiro_nome && `${getFirstLastName(alerta.parceiro_nome)} • `}Sacar ou realocar saldo
                         </p>
                       </div>
                     </div>
@@ -1208,15 +1200,15 @@ export default function CentralOperacoes() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {casasAguardandoDecisao.slice(0, 4).map((casa) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {casasAguardandoDecisao.map((casa) => (
                   <div key={casa.id} className="flex items-center justify-between p-2 rounded-lg border border-purple-500/30 bg-purple-500/10">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Unlink className="h-3.5 w-3.5 text-purple-400 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xs font-medium truncate">{casa.nome}</p>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {casa.parceiro_nome || "Sem parceiro"}
+                          {casa.parceiro_nome ? getFirstLastName(casa.parceiro_nome) : "Sem parceiro"}
                         </p>
                       </div>
                     </div>
@@ -1273,15 +1265,15 @@ export default function CentralOperacoes() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {casasAtivasDesvinculadas.slice(0, 4).map((casa) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {casasAtivasDesvinculadas.map((casa) => (
                   <div key={casa.id} className="flex items-center justify-between p-2 rounded-lg border border-slate-500/30 bg-slate-500/10">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Unlink className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xs font-medium truncate">{casa.nome}</p>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {casa.parceiro_nome || "Sem parceiro"}
+                          {casa.parceiro_nome ? getFirstLastName(casa.parceiro_nome) : "Sem parceiro"}
                         </p>
                       </div>
                     </div>
@@ -1335,8 +1327,8 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {participacoesPendentes.slice(0, 4).map((part) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {participacoesPendentes.map((part) => (
                   <div key={part.id} className="flex items-center justify-between p-2 rounded-lg border border-indigo-500/20 bg-indigo-500/5 cursor-pointer" onClick={() => { setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}>
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <User className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
@@ -1381,8 +1373,8 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {pagamentosOperadorPendentes.slice(0, 4).map((pag) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {pagamentosOperadorPendentes.map((pag) => (
                   <div key={pag.id} className="flex items-center justify-between p-2 rounded-lg border border-orange-500/20 bg-orange-500/5 cursor-pointer" onClick={() => { setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}>
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <DollarSign className="h-3.5 w-3.5 text-orange-400 shrink-0" />
@@ -1427,8 +1419,8 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {alertasCiclosFiltrados.slice(0, 4).map((ciclo) => {
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {alertasCiclosFiltrados.map((ciclo) => {
                   const getUrgencyColor = () => {
                     switch (ciclo.urgencia) {
                       case "CRITICA": return "border-red-500/40 bg-red-500/10";
@@ -1487,8 +1479,8 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {alertasLucro.slice(0, 4).map((alerta) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {alertasLucro.map((alerta) => (
                   <div key={alerta.id} className="flex items-center justify-between p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
@@ -1539,8 +1531,8 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {entregasPendentes.slice(0, 4).map((entrega) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {entregasPendentes.map((entrega) => (
                   <div key={entrega.id} className={`flex items-center justify-between p-2 rounded-lg border ${entrega.nivel_urgencia === "CRITICA" ? "border-red-500/30 bg-red-500/5" : "border-purple-500/20 bg-purple-500/5"}`}>
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Target className={`h-3.5 w-3.5 shrink-0 ${entrega.nivel_urgencia === "CRITICA" ? "text-red-400" : "text-purple-400"}`} />
@@ -1586,12 +1578,12 @@ export default function CentralOperacoes() {
               <p className="text-xs text-muted-foreground">Parceiros sem indicação, fornecedor ou origem registrada</p>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {parceirosSemParceria.slice(0, 4).map((parceiro) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {parceirosSemParceria.map((parceiro) => (
                   <div key={parceiro.id} className="flex items-center justify-between p-2 rounded-lg border border-amber-500/20 bg-amber-500/5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <User className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-                      <span className="text-xs font-medium truncate">{parceiro.nome}</span>
+                      <span className="text-xs font-medium truncate">{getFirstLastName(parceiro.nome)}</span>
                     </div>
                     <Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao", { state: { tab: "parcerias", parceiroId: parceiro.id } })} className="h-6 text-xs px-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10">
                       Definir Origem
@@ -1626,12 +1618,12 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {pagamentosParceiros.slice(0, 4).map((pag) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {pagamentosParceiros.map((pag) => (
                   <div key={pag.parceriaId} className="flex items-center justify-between p-2 rounded-lg border border-cyan-500/20 bg-cyan-500/5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <User className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-                      <span className="text-xs font-medium truncate">{pag.parceiroNome}</span>
+                      <span className="text-xs font-medium truncate">{getFirstLastName(pag.parceiroNome)}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs font-bold text-cyan-400">{formatCurrency(pag.valorParceiro)}</span>
@@ -1669,8 +1661,8 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {bonusPendentes.slice(0, 4).map((bonus) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {bonusPendentes.map((bonus) => (
                   <div key={bonus.indicadorId} className="flex items-center justify-between p-2 rounded-lg border border-pink-500/20 bg-pink-500/5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Gift className="h-3.5 w-3.5 text-pink-400 shrink-0" />
@@ -1715,14 +1707,14 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {comissoesPendentes.slice(0, 4).map((comissao) => (
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {comissoesPendentes.map((comissao) => (
                   <div key={comissao.parceriaId} className="flex items-center justify-between p-2 rounded-lg border border-teal-500/20 bg-teal-500/5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Banknote className="h-3.5 w-3.5 text-teal-400 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xs font-medium truncate">{comissao.indicadorNome}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">→ {comissao.parceiroNome}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">→ {getFirstLastName(comissao.parceiroNome)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -1761,14 +1753,14 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {parceriasEncerramento.slice(0, 4).map((parc) => {
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {parceriasEncerramento.map((parc) => {
                   const isRed = parc.diasRestantes <= 5;
                   return (
                     <div key={parc.id} className={`flex items-center justify-between p-2 rounded-lg border ${isRed ? "border-red-500/30 bg-red-500/5" : "border-yellow-500/30 bg-yellow-500/5"}`}>
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <Calendar className={`h-3.5 w-3.5 shrink-0 ${isRed ? "text-red-400" : "text-yellow-400"}`} />
-                        <span className="text-xs font-medium truncate">{parc.parceiroNome}</span>
+                        <span className="text-xs font-medium truncate">{getFirstLastName(parc.parceiroNome)}</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <Badge className={`text-[10px] h-5 ${isRed ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>
