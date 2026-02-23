@@ -15,7 +15,7 @@ import {
   CashbackManualKPIs,
   CashbackManualPorCasa,
 } from "./cashback";
-import { CashbackManualFormData } from "@/types/cashback-manual";
+import { CashbackManualFormData, CashbackManualComBookmaker } from "@/types/cashback-manual";
 
 interface ProjetoCashbackTabProps {
   projetoId: string;
@@ -29,6 +29,7 @@ const getCurrencySymbol = (moeda: string) => {
 export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
   // Estados para dialog
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCashback, setEditingCashback] = useState<CashbackManualComBookmaker | null>(null);
   
   // Estados gerais
   const [activeTab, setActiveTab] = useState("lancamentos");
@@ -48,6 +49,7 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
     loading,
     refresh,
     criarCashback,
+    editarCashback,
     deletarCashback,
     moedaConsolidacao,
     cotacaoInfo,
@@ -66,9 +68,24 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
     })}`;
   };
 
-  // Handler para salvar
+  // Handler para salvar (criar ou editar)
   const handleSaveCashback = async (data: CashbackManualFormData): Promise<boolean> => {
+    if (editingCashback) {
+      return await editarCashback(editingCashback.id, data);
+    }
     return await criarCashback(data);
+  };
+
+  // Handler para abrir edição
+  const handleEditCashback = (registro: CashbackManualComBookmaker) => {
+    setEditingCashback(registro);
+    setDialogOpen(true);
+  };
+
+  // Handler para abrir dialog de criação
+  const handleOpenCreate = () => {
+    setEditingCashback(null);
+    setDialogOpen(true);
   };
 
   if (loading && registros.length === 0) {
@@ -108,7 +125,7 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
-          <Button onClick={() => setDialogOpen(true)} className="gap-2">
+          <Button onClick={handleOpenCreate} className="gap-2">
             <Plus className="h-4 w-4" />
             Lançar Cashback
           </Button>
@@ -187,6 +204,7 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
             registros={registros}
             formatCurrency={formatCurrency}
             onDelete={deletarCashback}
+            onEdit={handleEditCashback}
             loading={loading}
           />
         </TabsContent>
@@ -203,9 +221,20 @@ export function ProjetoCashbackTab({ projetoId }: ProjetoCashbackTabProps) {
       {/* Dialog de lançamento */}
       <CashbackManualDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingCashback(null);
+        }}
         projetoId={projetoId}
         onSave={handleSaveCashback}
+        editingCashback={editingCashback ? {
+          id: editingCashback.id,
+          bookmaker_id: editingCashback.bookmaker_id,
+          valor: Number(editingCashback.valor),
+          data_credito: editingCashback.data_credito,
+          observacoes: editingCashback.observacoes,
+          tem_rollover: (editingCashback as any).tem_rollover || false,
+        } : null}
       />
     </div>
   );

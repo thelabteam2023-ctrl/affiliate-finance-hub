@@ -417,6 +417,152 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
     [projetoId, workspaceId, user, invalidateProject]
   );
 
+  // Editar lançamento de cashback (estorna + recria via ledger)
+  const editarCashback = useCallback(
+    async (id: string, data: CashbackManualFormData): Promise<boolean> => {
+      if (!user || !workspaceId) {
+        toast.error("Usuário não autenticado");
+        return false;
+      }
+
+      try {
+        // 1. Buscar registro atual
+        const { data: registroAtual, error: fetchError } = await supabase
+          .from("cashback_manual")
+          .select("bookmaker_id, valor, projeto_id, moeda_operacao, cash_ledger_id")
+          .eq("id", id)
+          .single();
+
+        if (fetchError || !registroAtual) {
+          toast.error("Registro de cashback não encontrado");
+          return false;
+        }
+
+        // 2. Buscar dados da bookmaker atual (para estorno)
+        const { data: bookmakerAtual } = await supabase
+          .from("bookmakers")
+          .select("moeda, workspace_id")
+          .eq("id", registroAtual.bookmaker_id)
+          .single();
+
+        // 3. Estornar o cashback antigo via ledger
+        if (bookmakerAtual) {
+          const estornoResult = await estornarCashbackViaLedger({
+            bookmakerId: registroAtual.bookmaker_id,
+            valor: Number(registroAtual.valor),
+            moeda: bookmakerAtual.moeda || "BRL",
+            workspaceId: bookmakerAtual.workspace_id || workspaceId,
+            userId: user.id,
+            descricao: "Estorno de cashback manual (edição)",
+            referenciaId: id,
+          });
+
+          if (!estornoResult.success) {
+            toast.error(`Erro ao estornar cashback anterior: ${estornoResult.error}`);
+            return false;
+          }
+        }
+
+        // 4. Buscar dados da nova bookmaker
+        const { data: bookmakerNova, error: bkErr } = await supabase
+          .from("bookmakers")
+          .select("id, moeda, projeto_id, workspace_id")
+          .eq("id", data.bookmaker_id)
+          .single();
+
+        if (bkErr || !bookmakerNova) {
+          toast.error("Casa não encontrada");
+          return false;
+        }
+
+        const moedaOperacao = bookmakerNova.moeda || "BRL";
+        const dataCredito = data.data_credito || new Date().toISOString().split("T")[0];
+
+        // 5. Calcular cotação
+        let valorBRLReferencia: number | null = null;
+        let cotacaoSnapshot: number | null = null;
+
+        if (moedaOperacao !== "BRL") {
+          try {
+            const { data: ratesData, error: ratesError } = await supabase.functions.invoke("get-exchange-rates");
+            if (!ratesError && ratesData?.USDBRL) {
+              cotacaoSnapshot = Number(ratesData.USDBRL);
+              valorBRLReferencia = data.valor * cotacaoSnapshot;
+            } else {
+              const { data: projetoData } = await supabase
+                .from("projetos")
+                .select("cotacao_trabalho")
+                .eq("id", projetoId)
+                .single();
+              if (projetoData?.cotacao_trabalho && projetoData.cotacao_trabalho > 0) {
+                cotacaoSnapshot = Number(projetoData.cotacao_trabalho);
+                valorBRLReferencia = data.valor * cotacaoSnapshot;
+              }
+            }
+          } catch (err) {
+            console.error("Erro ao buscar cotação:", err);
+          }
+        } else {
+          valorBRLReferencia = data.valor;
+          cotacaoSnapshot = 1;
+        }
+
+        // 6. Atualizar registro
+        const { error: updateError } = await supabase
+          .from("cashback_manual")
+          .update({
+            bookmaker_id: data.bookmaker_id,
+            valor: data.valor,
+            data_credito: dataCredito,
+            observacoes: data.observacoes || null,
+            moeda_operacao: moedaOperacao,
+            valor_brl_referencia: valorBRLReferencia,
+            cotacao_snapshot: cotacaoSnapshot,
+            cotacao_snapshot_at: new Date().toISOString(),
+            tem_rollover: data.tem_rollover || false,
+          })
+          .eq("id", id);
+
+        if (updateError) throw updateError;
+
+        // 7. Registrar novo valor via ledger
+        const ledgerResult = await registrarCashbackViaLedger({
+          bookmakerId: data.bookmaker_id,
+          valor: data.valor,
+          moeda: moedaOperacao,
+          workspaceId: workspaceId,
+          userId: user.id,
+          descricao: `Cashback manual (editado): ${data.observacoes || "Sem observações"}`,
+          dataCredito: dataCredito,
+          cotacao: cotacaoSnapshot || undefined,
+          referenciaId: id,
+        });
+
+        if (!ledgerResult.success) {
+          toast.error(`Erro ao registrar novo valor: ${ledgerResult.error}`);
+          return false;
+        }
+
+        // 8. Atualizar ledger_id
+        if (ledgerResult.entryId) {
+          await supabase
+            .from("cashback_manual")
+            .update({ cash_ledger_id: ledgerResult.entryId })
+            .eq("id", id);
+        }
+
+        toast.success("Cashback atualizado com sucesso!");
+        await invalidateProject(projetoId);
+        return true;
+      } catch (err) {
+        console.error("Erro ao editar cashback:", err);
+        toast.error("Erro ao editar cashback");
+        return false;
+      }
+    },
+    [projetoId, workspaceId, user, invalidateProject]
+  );
+
   // Wrapper para refresh que pode ser usado como onClick
   const handleRefresh = useCallback(async () => {
     await refetch();
@@ -430,6 +576,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
     error: error ? String(error) : null,
     refresh: handleRefresh,
     criarCashback,
+    editarCashback,
     deletarCashback,
     moedaConsolidacao: currencyConfig.moedaConsolidacao,
     cotacaoInfo: {

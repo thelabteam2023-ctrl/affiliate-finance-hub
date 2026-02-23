@@ -63,6 +63,14 @@ interface CashbackManualDialogProps {
   onOpenChange: (open: boolean) => void;
   projetoId: string;
   onSave: (data: CashbackManualFormData) => Promise<boolean>;
+  editingCashback?: {
+    id: string;
+    bookmaker_id: string;
+    valor: number;
+    data_credito: string;
+    observacoes: string | null;
+    tem_rollover: boolean;
+  } | null;
 }
 
 export function CashbackManualDialog({
@@ -70,9 +78,12 @@ export function CashbackManualDialog({
   onOpenChange,
   projetoId,
   onSave,
+  editingCashback,
 }: CashbackManualDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedBookmaker, setSelectedBookmaker] = useState<BookmakerVinculoData | null>(null);
+
+  const isEditing = !!editingCashback;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -87,16 +98,26 @@ export function CashbackManualDialog({
 
   useEffect(() => {
     if (open) {
-      form.reset({
-        bookmaker_id: "",
-        valor: 0,
-        data_credito: new Date(),
-        observacoes: "",
-        tem_rollover: false,
-      });
-      setSelectedBookmaker(null);
+      if (editingCashback) {
+        form.reset({
+          bookmaker_id: editingCashback.bookmaker_id,
+          valor: editingCashback.valor,
+          data_credito: editingCashback.data_credito ? new Date(editingCashback.data_credito + "T12:00:00") : new Date(),
+          observacoes: editingCashback.observacoes || "",
+          tem_rollover: editingCashback.tem_rollover || false,
+        });
+      } else {
+        form.reset({
+          bookmaker_id: "",
+          valor: 0,
+          data_credito: new Date(),
+          observacoes: "",
+          tem_rollover: false,
+        });
+        setSelectedBookmaker(null);
+      }
     }
-  }, [open, form]);
+  }, [open, form, editingCashback]);
 
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
@@ -145,10 +166,12 @@ export function CashbackManualDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-emerald-500" />
-            Lançar Cashback
+            {isEditing ? "Editar Cashback" : "Lançar Cashback"}
           </DialogTitle>
           <DialogDescription>
-            Registre um cashback já recebido. O saldo será atualizado imediatamente.
+            {isEditing 
+              ? "Altere os dados do cashback. O saldo será ajustado automaticamente."
+              : "Registre um cashback já recebido. O saldo será atualizado imediatamente."}
           </DialogDescription>
         </DialogHeader>
 
@@ -350,7 +373,7 @@ export function CashbackManualDialog({
                 ) : (
                   <>
                     <DollarSign className="h-4 w-4 mr-2" />
-                    Lançar Cashback
+                    {isEditing ? "Salvar Alterações" : "Lançar Cashback"}
                   </>
                 )}
               </Button>
