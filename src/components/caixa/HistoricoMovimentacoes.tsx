@@ -600,7 +600,34 @@ export function HistoricoMovimentacoes({
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    {transacao.tipo_moeda === "CRYPTO" ? (
+                    {/* Reconciliação: mostrar Antes → Depois */}
+                    {transacao.tipo_transacao === "AJUSTE_RECONCILIACAO" && transacao.auditoria_metadata ? (() => {
+                      const meta = transacao.auditoria_metadata as any;
+                      const saldoAntes = meta?.saldo_sistema_anterior;
+                      const saldoDepois = meta?.saldo_real_informado;
+                      const diff = meta?.diferenca;
+                      const moedaDisplay = transacao.moeda || "USD";
+                      const getCurrSym = (m: string) => {
+                        if (m === "BRL") return "R$";
+                        if (m === "USD" || m === "USDT" || m === "USDC") return "$";
+                        if (m === "EUR") return "€";
+                        return m + " ";
+                      };
+                      const sym = getCurrSym(moedaDisplay);
+                      const fmtVal = (v: number) => v?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00';
+                      return (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <span className="text-muted-foreground tabular-nums">{sym} {fmtVal(saldoAntes)}</span>
+                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-medium text-foreground tabular-nums">{sym} {fmtVal(saldoDepois)}</span>
+                          </div>
+                          <div className={`text-xs font-medium tabular-nums ${diff > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {diff > 0 ? '+' : ''}{sym} {fmtVal(Math.abs(diff))}
+                          </div>
+                        </div>
+                      );
+                    })() : transacao.tipo_moeda === "CRYPTO" ? (
                       <div className="flex flex-col items-end">
                         <div className="font-medium text-blue-400">${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0.00'} USD</div>
                         <div className="text-xs text-muted-foreground">{transacao.qtd_coin} {transacao.coin}</div>
