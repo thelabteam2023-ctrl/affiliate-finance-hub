@@ -6,6 +6,7 @@ import { AlertTriangle, Check, Clock, Calculator, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProjectBonus } from "@/hooks/useProjectBonuses";
 import { format, differenceInDays, isPast } from "date-fns";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import {
   Tooltip,
@@ -194,7 +195,7 @@ export function RolloverProgress({ bonus, onUpdateProgress, compact = false }: R
         <span>
           Cálculo automático baseado nas apostas vinculadas.
           {bonus.min_odds && ` Apenas odds ≥ ${bonus.min_odds} contam.`}
-          {bonus.credited_at && ` Só apostas após ${format(new Date(bonus.credited_at), "dd/MM/yyyy", { locale: ptBR })}.`}
+          {bonus.credited_at && ` Só apostas após ${format(parseLocalDateTime(bonus.credited_at), "dd/MM/yyyy", { locale: ptBR })}.`}
         </span>
       </div>
     </div>

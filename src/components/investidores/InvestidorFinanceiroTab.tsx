@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { parseLocalDate } from "@/lib/dateUtils";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Download, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -117,7 +117,7 @@ export function InvestidorFinanceiroTab({
     const rows = transacoes.map((t) => {
       const tipo = getTipoLabel(t);
       return [
-        format(parseLocalDate(t.data_transacao), "dd/MM/yyyy HH:mm"),
+        format(parseLocalDateTime(t.data_transacao), "dd/MM/yyyy HH:mm"),
         tipo.label,
         t.tipo_moeda === "CRYPTO" ? t.coin : t.moeda,
         t.valor.toString(),
@@ -255,7 +255,7 @@ export function InvestidorFinanceiroTab({
                 return (
                   <TableRow key={t.id}>
                     <TableCell className="font-mono text-[11px]">
-                      {format(parseLocalDate(t.data_transacao), "dd/MM/yy")}
+                      {format(parseLocalDateTime(t.data_transacao), "dd/MM/yy")}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">

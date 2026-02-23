@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Crown, Shield, User, DollarSign, Gamepad2, Eye, Settings2, Sparkles, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { getRoleLabel } from "@/lib/roleLabels";
 import {
@@ -266,7 +267,7 @@ export function MemberList({ members, currentUserId, onRoleChange, onRemove, can
                   </div>
                   <p className="text-sm text-muted-foreground">{member.email}</p>
                   <p className="text-xs text-muted-foreground">
-                    Desde {format(new Date(member.joined_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    Desde {format(parseLocalDateTime(member.joined_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </p>
                 </div>
               </div>

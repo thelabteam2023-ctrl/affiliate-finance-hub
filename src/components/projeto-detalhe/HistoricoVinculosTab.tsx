@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import {
   History,
@@ -245,7 +246,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
   };
 
   const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
+    return format(parseLocalDateTime(dateString), "dd/MM/yyyy", { locale: ptBR });
   };
 
   // Renderiza valor simples na moeda original do bookmaker

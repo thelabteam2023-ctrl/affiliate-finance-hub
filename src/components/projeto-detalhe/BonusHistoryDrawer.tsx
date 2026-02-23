@@ -44,6 +44,7 @@ import {
   Target,
 } from "lucide-react";
 import { format } from "date-fns";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { ProjectBonus, BonusStatus, FinalizeReason } from "@/hooks/useProjectBonuses";
 
@@ -268,12 +269,12 @@ export function BonusHistoryDrawer({
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {format(new Date(bonus.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                {format(parseLocalDateTime(bonus.created_at), "dd/MM/yyyy", { locale: ptBR })}
                               </span>
                               {bonus.expires_at && (
                                 <span className="flex items-center gap-1 text-amber-400">
                                   <Clock className="h-3 w-3" />
-                                  Expira: {format(new Date(bonus.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                                  Expira: {format(parseLocalDateTime(bonus.expires_at), "dd/MM/yyyy", { locale: ptBR })}
                                 </span>
                               )}
                             </div>
@@ -391,7 +392,7 @@ export function BonusHistoryDrawer({
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {format(new Date(bonus.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                {format(parseLocalDateTime(bonus.created_at), "dd/MM/yyyy", { locale: ptBR })}
                               </span>
                               {bonus.status === "finalized" && bonus.finalize_reason && (
                                 <span className="text-blue-400">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { parseLocalDate } from "@/lib/dateUtils";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -160,7 +160,7 @@ export function PromocoesTab() {
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("pt-BR");
+    return parseLocalDateTime(date).toLocaleDateString("pt-BR");
   };
 
   const getStatusBadge = (status: string) => {
@@ -175,8 +175,8 @@ export function PromocoesTab() {
 
   const isPromocaoActive = (promocao: Promocao) => {
     const today = new Date();
-    const inicio = parseLocalDate(promocao.data_inicio);
-    const fim = parseLocalDate(promocao.data_fim);
+    const inicio = parseLocalDateTime(promocao.data_inicio);
+    const fim = parseLocalDateTime(promocao.data_fim);
     return promocao.status === "ATIVA" && today >= inicio && today <= fim;
   };
 

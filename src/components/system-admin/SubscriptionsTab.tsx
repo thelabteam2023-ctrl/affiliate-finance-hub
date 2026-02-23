@@ -15,6 +15,7 @@ import {
   ArrowUpCircle, ArrowDownCircle, RotateCcw, Plus, CreditCard
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
+import { parseLocalDateTime } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 
 export function SubscriptionsTab() {
@@ -281,7 +282,7 @@ export function SubscriptionsTab() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {sub.expires_at 
-                          ? format(new Date(sub.expires_at), 'dd/MM/yyyy', { locale: ptBR })
+                          ? format(parseLocalDateTime(sub.expires_at), 'dd/MM/yyyy', { locale: ptBR })
                           : '—'
                         }
                       </TableCell>

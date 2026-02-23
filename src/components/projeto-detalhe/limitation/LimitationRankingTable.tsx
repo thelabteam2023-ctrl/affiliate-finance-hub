@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Building2 } from "lucide-react";
 import { format } from "date-fns";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import {
   type LimitationStats,
   STRATEGIC_PROFILE_CONFIG,
@@ -147,7 +148,7 @@ export function LimitationRankingTable({ stats }: LimitationRankingTableProps) {
 
                 {/* Última limitação */}
                 <TableCell className="text-right text-xs text-muted-foreground">
-                  {format(new Date(s.last_limitation_at), "dd/MM/yy")}
+                  {format(parseLocalDateTime(s.last_limitation_at), "dd/MM/yy")}
                 </TableCell>
               </TableRow>
             );

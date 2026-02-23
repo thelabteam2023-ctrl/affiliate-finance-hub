@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { parseLocalDateTime } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 
 interface ResetCounts {
@@ -221,7 +222,7 @@ export function CommunityResetTab() {
                           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
-                              {format(new Date(log.created_at), "d MMM yyyy, HH:mm", { locale: ptBR })}
+                              {format(parseLocalDateTime(log.created_at), "d MMM yyyy, HH:mm", { locale: ptBR })}
                             </span>
                             {log.metadata?.reason && (
                               <span>Motivo: {log.metadata.reason}</span>

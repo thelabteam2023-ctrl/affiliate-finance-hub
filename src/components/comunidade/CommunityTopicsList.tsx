@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { MessageSquare, User, Flag, Plus, Send, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
+import { parseLocalDateTime } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -289,7 +290,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0
                             <User className="h-3 w-3" />
                             <span>{getAuthorName(topic)}</span>
                             <span>•</span>
-                            <span>{format(new Date(topic.created_at), "d MMM yyyy", { locale: ptBR })}</span>
+                            <span>{format(parseLocalDateTime(topic.created_at), "d MMM yyyy", { locale: ptBR })}</span>
                             {commentCount > 0 && (
                               <>
                                 <span>•</span>
@@ -372,7 +373,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0
                                     <Badge variant="outline" className="text-[10px]">Você</Badge>
                                   )}
                                   <span className="text-muted-foreground">
-                                    {format(new Date(comment.created_at), "d MMM yyyy, HH:mm", { locale: ptBR })}
+                                    {format(parseLocalDateTime(comment.created_at), "d MMM yyyy, HH:mm", { locale: ptBR })}
                                   </span>
                                   {renderEditedBadge(comment.edited_at)}
                                 </div>

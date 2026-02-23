@@ -41,6 +41,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
+import { parseLocalDateTime } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -128,7 +129,7 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
-                <span>Aberta: <span className="text-foreground">{format(new Date(ocorrencia.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span></span>
+                <span>Aberta: <span className="text-foreground">{format(parseLocalDateTime(ocorrencia.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span></span>
               </div>
             </div>
 
