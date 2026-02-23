@@ -283,6 +283,7 @@ export function ReconciliacaoDialog({
         valor_usd: moeda === "USD" || moeda === "USDT" || moeda === "USDC" ? valorAjuste : (cotacaoSnapshot ? valorAjuste / cotacaoSnapshot : null),
         descricao: `[RECONCILIAÇÃO ${direcao}] ${motivo} | Saldo sistema: ${saldoSistema.toFixed(2)} → Saldo real: ${(parseFloat(saldoReal) || 0).toFixed(2)} | Diferença: ${diferenca.toFixed(2)}`,
         status: "CONFIRMADO",
+        transit_status: "CONFIRMED",
         data_transacao: new Date().toISOString().split("T")[0],
         impacta_caixa_operacional: false,
         ajuste_motivo: motivo.trim(),
@@ -290,6 +291,8 @@ export function ReconciliacaoDialog({
         cotacao: cotacaoSnapshot,
         cotacao_snapshot_at: cotacaoSnapshotAt,
         valor_usd_referencia: valorBrlRef,
+        // Para wallets crypto: preencher coin e qtd_coin (exigido pela view v_saldo_parceiro_wallets)
+        ...(tipoEntidade === "WALLET" && isCrypto ? { coin: moeda, qtd_coin: valorAjuste } : {}),
         auditoria_metadata: {
           tipo_reconciliacao: "RECONCILIACAO_DESENVOLVIMENTO",
           saldo_sistema_anterior: saldoSistema,
