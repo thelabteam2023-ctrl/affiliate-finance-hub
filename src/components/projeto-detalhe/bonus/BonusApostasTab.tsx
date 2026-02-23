@@ -940,6 +940,7 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
               resultado: p.resultado,
               bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || "—",
               bookmaker_id: p.bookmaker_id,
+              moeda: p.moeda || 'BRL',
               entries: p.entries,
               odd_media: p.odd_media,
               stake_total: p.stake_total,
