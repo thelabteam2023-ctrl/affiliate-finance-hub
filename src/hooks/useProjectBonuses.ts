@@ -138,6 +138,9 @@ export function useInvalidateBonusQueries() {
     queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
     queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
     
+    // Perdas por cancelamento de bônus
+    queryClient.invalidateQueries({ queryKey: ["bonus-perdas-cancelamento"] });
+    
     console.log(`[useInvalidateBonusQueries] Invalidated FINANCIAL_STATE for project ${projectId}`);
   }, [queryClient]);
 }
@@ -570,8 +573,14 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
             origem_tipo: "BOOKMAKER",
             origem_bookmaker_id: currentBonus.bookmaker_id,
             ajuste_direcao: "NEGATIVO",
-            ajuste_motivo: `Bônus cancelado/revertido: ${currentBonus.title || "Bônus"} — valor perdido`,
-            descricao: `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"}`,
+            ajuste_motivo: `BONUS_CANCELAMENTO`,
+            descricao: `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"} — valor perdido`,
+            auditoria_metadata: {
+              tipo: "BONUS_CANCELAMENTO",
+              bonus_id: id,
+              bonus_title: currentBonus.title,
+              valor_perdido: debitAmount,
+            },
           });
 
         if (ledgerError) {
