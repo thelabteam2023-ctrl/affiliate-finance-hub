@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
@@ -1039,8 +1040,9 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {saquesPendentes.slice(0, 4).map((saque) => {
+              <ScrollArea className="max-h-[280px]">
+              <div className="space-y-2 pr-1">
+                {saquesPendentes.map((saque) => {
                   const destinoNome = saque.destino_wallet_id 
                     ? (saque.wallet_exchange || saque.wallet_nome || "Wallet") 
                     : (saque.banco_nome || "Conta Bancária");
@@ -1072,6 +1074,7 @@ export default function CentralOperacoes() {
                   );
                 })}
               </div>
+              </ScrollArea>
             </CardContent>
           </Card>
         ),
