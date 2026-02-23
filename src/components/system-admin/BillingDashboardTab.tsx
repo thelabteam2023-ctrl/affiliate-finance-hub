@@ -17,6 +17,7 @@ import {
   XCircle, RotateCcw, Plus, MoreHorizontal, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { parseLocalDateTime } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 
 const STATUS_CONFIG = {
@@ -317,7 +318,7 @@ export function BillingDashboardTab() {
                     return (
                       <TableRow key={sale.id}>
                         <TableCell className="text-muted-foreground">
-                          {format(new Date(sale.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                          {format(parseLocalDateTime(sale.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                         </TableCell>
                         <TableCell>
                           <div>

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Calendar, Clock, AlertTriangle, CreditCard, Infinity, Info } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 
 const PLAN_COLORS: Record<string, string> = {
@@ -167,14 +168,14 @@ export function SubscriptionInfoCard() {
           <div>
             <span className="text-muted-foreground">Início:</span>
             <span className="ml-2 font-medium">
-              {format(new Date(subscription.started_at), 'dd/MM/yyyy', { locale: ptBR })}
+              {format(parseLocalDateTime(subscription.started_at), 'dd/MM/yyyy', { locale: ptBR })}
             </span>
           </div>
           {subscription.expires_at && (
             <div>
               <span className="text-muted-foreground">Expira em:</span>
               <span className={`ml-2 font-medium ${isWarning ? 'text-amber-500' : isCritical ? 'text-destructive' : ''}`}>
-                {format(new Date(subscription.expires_at), 'dd/MM/yyyy', { locale: ptBR })}
+                {format(parseLocalDateTime(subscription.expires_at), 'dd/MM/yyyy', { locale: ptBR })}
               </span>
             </div>
           )}

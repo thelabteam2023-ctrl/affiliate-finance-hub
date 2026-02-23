@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, LogIn, Calendar, Users, TrendingUp, Circle } from 'lucide-react';
 import { format, formatDistanceToNow, differenceInMinutes } from 'date-fns';
+import { parseLocalDateTime } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { InactiveUsersCard } from './InactiveUsersCard';
@@ -254,14 +255,14 @@ export function LoginHistoryTab() {
                         <TableCell className="text-sm">
                           {record.last_login_global ? (
                             <span className="font-medium">
-                              {format(new Date(record.last_login_global), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              {format(parseLocalDateTime(record.last_login_global), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">Nunca logou</span>
                           )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {format(new Date(record.login_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                          {format(parseLocalDateTime(record.login_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
                         </TableCell>
                         <TableCell>
                           <span className={cn(

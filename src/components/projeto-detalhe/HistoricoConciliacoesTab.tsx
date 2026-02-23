@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
 import { format } from "date-fns";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { ArrowDownRight, ArrowUpRight, Scale, FileText, Calendar } from "lucide-react";
 
@@ -212,7 +213,7 @@ export function HistoricoConciliacoesTab({ projetoId }: HistoricoConciliacoesTab
                     <p className="font-medium text-sm">{c.bookmaker_nome}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Calendar className="h-3 w-3" />
-                      {format(new Date(c.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {format(parseLocalDateTime(c.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </div>
                   </div>
                 </div>

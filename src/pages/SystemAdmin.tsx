@@ -28,6 +28,7 @@ import {
   Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3, ArrowUpDown
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
+import { parseLocalDateTime } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -448,7 +449,7 @@ export default function SystemAdmin() {
                               )}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm">
-                              {format(new Date(u.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                              {format(parseLocalDateTime(u.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
@@ -521,7 +522,7 @@ export default function SystemAdmin() {
                               )}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm">
-                              {format(new Date(u.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                              {format(parseLocalDateTime(u.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                             </TableCell>
                             <TableCell className="text-right">
                               <span className="text-muted-foreground text-xs">Removido</span>
@@ -602,7 +603,7 @@ export default function SystemAdmin() {
                               )}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm">
-                              {format(new Date(w.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                              {format(parseLocalDateTime(w.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">

@@ -19,6 +19,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { getTipoProjetoLabel, getTipoProjetoColor } from "@/types/projeto";
 
@@ -99,7 +100,7 @@ export function BookmakerHistoricoDialog({
 
   const formatDate = (dateStr: string) => {
     try {
-      return format(new Date(dateStr), "dd MMM yyyy", { locale: ptBR });
+      return format(parseLocalDateTime(dateStr), "dd MMM yyyy", { locale: ptBR });
     } catch {
       return dateStr;
     }

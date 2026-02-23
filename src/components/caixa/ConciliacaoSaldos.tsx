@@ -909,7 +909,7 @@ export function ConciliacaoSaldos({
                           )}
 
                           <div className="text-xs text-muted-foreground shrink-0">
-                            {format(new Date(adj.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            {format(parseLocalDateTime(adj.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                           </div>
                         </div>
 

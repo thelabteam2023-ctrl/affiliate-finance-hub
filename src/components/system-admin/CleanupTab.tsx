@@ -16,6 +16,7 @@ import {
   CheckCircle2, XCircle, Eye, Shield, Flame, Archive, Crown
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { parseLocalDateTime } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';
 
 export function CleanupTab() {
@@ -301,7 +302,7 @@ export function CleanupTab() {
                           {c.workspace_name || <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {format(new Date(c.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                          {format(parseLocalDateTime(c.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                         </TableCell>
                         <TableCell>
                           {c.is_test_user ? (
@@ -415,7 +416,7 @@ export function CleanupTab() {
                           {u.full_name || <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {format(new Date(u.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                          {format(parseLocalDateTime(u.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="gap-1 text-muted-foreground">
