@@ -61,6 +61,7 @@ interface WalletCrypto {
   exchange: string;
   endereco: string;
   parceiro_id: string;
+  parceiro_nome?: string;
   moeda: string[];
   reconciled_at?: string | null;
 }
@@ -172,7 +173,7 @@ export function ReconciliacaoDialog({
       const [bookmakersRes, contasRes, walletsRes, saldosContasRes, saldosWalletsRes] = await Promise.all([
         supabase.from("bookmakers").select(`id, nome, saldo_atual, moeda, parceiro_id, reconciled_at, parceiros!inner(nome, status)`).in("status", ["ativo", "limitada"]).eq("parceiros.status", "ativo").order("nome"),
         supabase.from("contas_bancarias").select(`id, banco, titular, parceiro_id, moeda, reconciled_at, parceiros!inner(status)`).eq("parceiros.status", "ativo").order("banco"),
-        supabase.from("wallets_crypto").select(`id, exchange, endereco, parceiro_id, moeda, reconciled_at, parceiros!inner(status)`).eq("parceiros.status", "ativo").order("exchange"),
+        supabase.from("wallets_crypto").select(`id, exchange, endereco, parceiro_id, moeda, reconciled_at, parceiros!inner(nome, status)`).eq("parceiros.status", "ativo").order("exchange"),
         supabase.from("v_saldo_parceiro_contas").select("conta_id, saldo"),
         supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin"),
       ]);
@@ -191,7 +192,8 @@ export function ReconciliacaoDialog({
 
       setWallets((walletsRes.data || []).map((w: any) => ({
         id: w.id, exchange: w.exchange, endereco: w.endereco,
-        parceiro_id: w.parceiro_id, moeda: Array.isArray(w.moeda) ? w.moeda : ["USDT"],
+        parceiro_id: w.parceiro_id, parceiro_nome: w.parceiros?.nome,
+        moeda: Array.isArray(w.moeda) ? w.moeda : ["USDT"],
         reconciled_at: w.reconciled_at,
       })));
 
@@ -479,12 +481,22 @@ export function ReconciliacaoDialog({
                   ))}
                   {tipoEntidade === "WALLET" && wallets.map((wallet) => (
                     <SelectItem key={wallet.id} value={wallet.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{wallet.exchange} - {wallet.endereco.slice(0, 10)}...</span>
-                        <div className="flex gap-1">
-                          {wallet.moeda.slice(0, 3).map((m) => (
-                            <Badge key={m} variant="secondary" className="text-xs">{m}</Badge>
-                          ))}
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium uppercase">{wallet.exchange}</span>
+                          <div className="flex gap-1">
+                            {wallet.moeda.slice(0, 3).map((m) => (
+                              <Badge key={m} variant="secondary" className="text-[10px] px-1.5 py-0">{m}</Badge>
+                            ))}
+                            {wallet.moeda.length > 3 && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">+{wallet.moeda.length - 3}</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          {wallet.parceiro_nome && <span>{wallet.parceiro_nome}</span>}
+                          {wallet.parceiro_nome && <span>•</span>}
+                          <span className="font-mono">{wallet.endereco.slice(0, 6)}...{wallet.endereco.slice(-4)}</span>
                         </div>
                       </div>
                     </SelectItem>
