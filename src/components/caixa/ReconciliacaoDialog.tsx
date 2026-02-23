@@ -27,6 +27,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, Scale, TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
+import { WalletSearchSelect } from "./WalletSearchSelect";
 
 interface ReconciliacaoDialogProps {
   open: boolean;
@@ -451,58 +452,45 @@ export function ReconciliacaoDialog({
               <Label>
                 {tipoEntidade === "BOOKMAKER" ? "Bookmaker" : tipoEntidade === "CONTA_BANCARIA" ? "Conta Bancária" : "Wallet"}
               </Label>
-              <Select value={entidadeId} onValueChange={setEntidadeId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {tipoEntidade === "BOOKMAKER" && bookmakers.map((bk) => (
-                    <SelectItem key={bk.id} value={bk.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{bk.nome}</span>
-                        <Badge variant="secondary" className="text-xs">{bk.moeda}</Badge>
-                        <span className="text-muted-foreground text-xs">
-                          ({getCurrencySymbol(bk.moeda)} {bk.saldo_atual.toFixed(2)})
-                        </span>
-                        {bk.parceiro_nome && <span className="text-muted-foreground text-xs">• {bk.parceiro_nome}</span>}
-                      </div>
-                    </SelectItem>
-                  ))}
-                  {tipoEntidade === "CONTA_BANCARIA" && contas.map((conta) => (
-                    <SelectItem key={conta.id} value={conta.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{conta.banco} - {conta.titular}</span>
-                        <Badge variant="secondary" className="text-xs">{conta.moeda}</Badge>
-                        <span className="text-muted-foreground text-xs">
-                          ({getCurrencySymbol(conta.moeda)} {(saldosContas[conta.id] || 0).toFixed(2)})
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                  {tipoEntidade === "WALLET" && wallets.map((wallet) => (
-                    <SelectItem key={wallet.id} value={wallet.id}>
-                      <div className="flex flex-col gap-0.5">
+              {tipoEntidade === "WALLET" ? (
+                <WalletSearchSelect
+                  wallets={wallets}
+                  value={entidadeId}
+                  onValueChange={setEntidadeId}
+                  placeholder="Selecione..."
+                />
+              ) : (
+                <Select value={entidadeId} onValueChange={setEntidadeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tipoEntidade === "BOOKMAKER" && bookmakers.map((bk) => (
+                      <SelectItem key={bk.id} value={bk.id}>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium uppercase">{wallet.exchange}</span>
-                          <div className="flex gap-1">
-                            {wallet.moeda.slice(0, 3).map((m) => (
-                              <Badge key={m} variant="secondary" className="text-[10px] px-1.5 py-0">{m}</Badge>
-                            ))}
-                            {wallet.moeda.length > 3 && (
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">+{wallet.moeda.length - 3}</Badge>
-                            )}
-                          </div>
+                          <span>{bk.nome}</span>
+                          <Badge variant="secondary" className="text-xs">{bk.moeda}</Badge>
+                          <span className="text-muted-foreground text-xs">
+                            ({getCurrencySymbol(bk.moeda)} {bk.saldo_atual.toFixed(2)})
+                          </span>
+                          {bk.parceiro_nome && <span className="text-muted-foreground text-xs">• {bk.parceiro_nome}</span>}
                         </div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                          {wallet.parceiro_nome && <span>{wallet.parceiro_nome}</span>}
-                          {wallet.parceiro_nome && <span>•</span>}
-                          <span className="font-mono">{wallet.endereco.slice(0, 6)}...{wallet.endereco.slice(-4)}</span>
+                      </SelectItem>
+                    ))}
+                    {tipoEntidade === "CONTA_BANCARIA" && contas.map((conta) => (
+                      <SelectItem key={conta.id} value={conta.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{conta.banco} - {conta.titular}</span>
+                          <Badge variant="secondary" className="text-xs">{conta.moeda}</Badge>
+                          <span className="text-muted-foreground text-xs">
+                            ({getCurrencySymbol(conta.moeda)} {(saldosContas[conta.id] || 0).toFixed(2)})
+                          </span>
                         </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Moeda (para wallets com múltiplas) */}

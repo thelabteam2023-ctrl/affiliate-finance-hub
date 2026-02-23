@@ -28,6 +28,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info } from "lucide-react";
+import { WalletSearchSelect } from "./WalletSearchSelect";
 
 interface AjusteManualDialogProps {
   open: boolean;
@@ -639,39 +640,12 @@ export function AjusteManualDialog({
             {tipoDestino === "WALLET" && (
               <div className="space-y-2">
                 <Label>Wallet</Label>
-                <Select value={walletId} onValueChange={setWalletId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a wallet" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {wallets.map((wallet) => (
-                      <SelectItem key={wallet.id} value={wallet.id}>
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium uppercase">{wallet.exchange}</span>
-                            <div className="flex gap-1">
-                              {wallet.moeda.slice(0, 3).map((m) => (
-                                <Badge key={m} variant="secondary" className="text-[10px] px-1.5 py-0">
-                                  {m}
-                                </Badge>
-                              ))}
-                              {wallet.moeda.length > 3 && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                  +{wallet.moeda.length - 3}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                            {wallet.parceiro_nome && <span>{wallet.parceiro_nome}</span>}
-                            {wallet.parceiro_nome && <span>•</span>}
-                            <span className="font-mono">{wallet.endereco.slice(0, 6)}...{wallet.endereco.slice(-4)}</span>
-                          </div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <WalletSearchSelect
+                  wallets={wallets}
+                  value={walletId}
+                  onValueChange={setWalletId}
+                  placeholder="Selecione a wallet"
+                />
               </div>
             )}
 
