@@ -274,7 +274,42 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     gcTime: PERIOD_GC_TIME,
   });
 
-  // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação
+  // Fetch perdas por cancelamento de bônus (cash_ledger com ajuste_motivo = BONUS_CANCELAMENTO)
+  const { data: perdasCancelamento = [] } = useQuery({
+    queryKey: ["bonus-perdas-cancelamento", projetoId],
+    queryFn: async () => {
+      const { data: bookmakers } = await supabase
+        .from("bookmakers")
+        .select("id, moeda")
+        .eq("projeto_id", projetoId);
+
+      if (!bookmakers || bookmakers.length === 0) return [];
+
+      const bookmakerIds = bookmakers.map(b => b.id);
+      const moedaMap = new Map(bookmakers.map(b => [b.id, b.moeda || "BRL"]));
+
+      const { data, error } = await supabase
+        .from("cash_ledger")
+        .select("id, valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata")
+        .eq("ajuste_motivo", "BONUS_CANCELAMENTO")
+        .eq("ajuste_direcao", "NEGATIVO")
+        .in("origem_bookmaker_id", bookmakerIds);
+
+      if (error) throw error;
+
+      return (data || []).map(entry => ({
+        valor: -(Number(entry.valor) || 0), // Negativo pois é perda
+        moeda: entry.moeda || moedaMap.get(entry.origem_bookmaker_id || "") || "BRL",
+        bookmaker_id: entry.origem_bookmaker_id || "",
+        data_operacional: entry.data_transacao,
+      }));
+    },
+    enabled: !!projetoId,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
+  });
+
+  // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação - Perdas Cancelamento
   // CRÍTICO: Converter TODOS os valores para moeda de consolidação do projeto
   const bonusPerformance = useMemo(() => {
     // Filtrar bônus por período (usar credited_at como data de competência)
@@ -329,15 +364,29 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     }, 0);
 
     const totalJuice = juiceBets + juiceAjustes;
+
+    // Somar perdas por cancelamento de bônus - FILTRAR POR PERÍODO
+    let filteredPerdas = perdasCancelamento;
+    if (dateRange?.start || dateRange?.end) {
+      filteredPerdas = perdasCancelamento.filter(p => {
+        const perdaDate = new Date(p.data_operacional);
+        if (dateRange.start && perdaDate < startOfDay(dateRange.start)) return false;
+        if (dateRange.end && perdaDate > dateRange.end) return false;
+        return true;
+      });
+    }
+    const totalPerdasCancelamento = filteredPerdas.reduce((acc, p) => {
+      return acc + convertToConsolidationOficial(p.valor, p.moeda);
+    }, 0);
     
-    const total = totalBonusCreditado + totalJuice;
+    const total = totalBonusCreditado + totalJuice + totalPerdasCancelamento;
     
     const performancePercent = totalBonusCreditado > 0 
       ? ((total / totalBonusCreditado) * 100) 
       : 0;
     
-    return { totalBonusCreditado, totalJuice, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsData, ajustesPostLimitacao, convertToConsolidationOficial, dateRange]);
+    return { totalBonusCreditado, totalJuice, totalPerdasCancelamento, total, performancePercent, bonusPorMoeda };
+  }, [bonuses, bonusBetsData, ajustesPostLimitacao, perdasCancelamento, convertToConsolidationOficial, dateRange]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
@@ -435,7 +484,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             tooltip: (
               <div className="space-y-1.5">
                 <p className="font-semibold text-foreground">Performance de Bônus</p>
-                <p className="text-muted-foreground text-xs">Bônus creditado + juice + ajustes pós-limitação.</p>
+                <p className="text-muted-foreground text-xs">Bônus creditado + juice + ajustes - perdas por cancelamento.</p>
                 <div className="space-y-0.5">
                   <div className="flex justify-between gap-4">
                     <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Bônus Creditado</span>
@@ -445,6 +494,12 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                     <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Juice</span>
                     <span className="font-semibold text-foreground">{formatCurrency(bonusPerformance.totalJuice)}</span>
                   </div>
+                  {bonusPerformance.totalPerdasCancelamento !== 0 && (
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-500" /> Perdas (Cancelamento)</span>
+                      <span className="font-semibold text-red-500">{formatCurrency(bonusPerformance.totalPerdasCancelamento)}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
                   <span className="font-semibold">Extração</span>
@@ -586,7 +641,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       <BonusResultadoLiquidoChart
         bonuses={bonuses}
         bonusBets={bonusBetsData}
-        ajustesPostLimitacao={ajustesPostLimitacao}
+        ajustesPostLimitacao={[...ajustesPostLimitacao, ...perdasCancelamento]}
         formatCurrency={formatCurrency}
         convertToConsolidation={convertToConsolidationOficial}
         isSingleDayPeriod={isSingleDayPeriod}
