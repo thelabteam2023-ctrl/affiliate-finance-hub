@@ -7,7 +7,8 @@ import {
   MessageSquare,
   AlertCircle,
   User,
-  Lock
+  Lock,
+  Pencil
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -50,6 +51,7 @@ interface CashbackManualListProps {
   registros: CashbackManualComBookmaker[];
   formatCurrency: (value: number) => string;
   onDelete: (id: string) => Promise<boolean>;
+  onEdit?: (registro: CashbackManualComBookmaker) => void;
   loading?: boolean;
 }
 
@@ -57,6 +59,7 @@ export function CashbackManualList({
   registros,
   formatCurrency,
   onDelete,
+  onEdit,
   loading,
 }: CashbackManualListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -144,6 +147,19 @@ export function CashbackManualList({
             <span className="text-sm font-semibold text-emerald-500 whitespace-nowrap">
               +{formatWithCurrency(Number(registro.valor), registro.moeda_operacao)}
             </span>
+
+            {/* Ação de editar */}
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-muted-foreground hover:text-primary"
+                onClick={() => onEdit(registro)}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                <span className="sr-only md:not-sr-only md:ml-1 text-xs">Editar</span>
+              </Button>
+            )}
 
             {/* Ação de remover */}
             <AlertDialog>
