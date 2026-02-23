@@ -1047,6 +1047,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                   odd: p.odd || 0,
                   stake: p.stake || 0,
                   resultado: p.resultado,
+                  lucro_prejuizo: p.lucro_prejuizo ?? null,
                   bookmaker_nome: p.bookmaker_nome || '',
                   bookmaker_id: p.bookmaker_id,
                   moeda: p.moeda || 'BRL',
@@ -1061,6 +1062,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                   onPernaResultChange={handleSurebetPernaResolve}
                   onDelete={handleDeleteSurebet}
                   formatCurrency={formatCurrency}
+                  convertToConsolidation={convertFnOficial}
                 />
               );
             })}

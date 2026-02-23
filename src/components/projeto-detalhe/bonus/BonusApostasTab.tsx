@@ -928,10 +928,8 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
         if (item.tipo === "surebet") {
           const sb = item.data as Surebet;
           
-          // Detectar moeda a partir das pernas (primeira perna define a moeda do card)
           const pernas = sb.pernas || [];
-          const moedaSurebet = (pernas[0] as any)?.moeda || 'BRL';
-          
+
           // Converter para formato SurebetData compatível com SurebetCard
           const surebetData: SurebetData = {
             ...sb,
@@ -942,6 +940,7 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
               odd: p.odd,
               stake: p.stake,
               resultado: p.resultado,
+              lucro_prejuizo: p.lucro_prejuizo ?? null,
               bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || "—",
               bookmaker_id: p.bookmaker_id,
               moeda: p.moeda || 'BRL',
@@ -951,15 +950,13 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
             })),
           };
           
-          // Criar formatador baseado na moeda das pernas
-          const formatSurebetCurrency = (value: number) => formatCurrencyWithMoeda(value, moedaSurebet);
-          
           return (
             <SurebetCard
               key={sb.id}
               surebet={surebetData}
               isBonusContext={true}
-              formatCurrency={formatSurebetCurrency}
+              formatCurrency={formatProjectCurrency}
+              convertToConsolidation={convertToConsolidation}
               bookmakerNomeMap={bookmakerNomeMap}
               onEdit={(surebet) => {
                 // Abrir em janela externa
