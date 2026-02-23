@@ -540,9 +540,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           id, evento, esporte, modelo, stake_total, spread_calculado,
           roi_esperado, roi_real, lucro_esperado, lucro_prejuizo,
           status, resultado, data_aposta, observacoes, created_at, pernas, estrategia,
-          workspace_id,
+          workspace_id, moeda_operacao, stake_consolidado, pl_consolidado,
+          valor_brl_referencia, lucro_prejuizo_brl_referencia,
           apostas_pernas (
-            id, selecao, selecao_livre, odd, stake, resultado, bookmaker_id, moeda, ordem
+            id, selecao, selecao_livre, odd, stake, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem
           )
         `)
         .eq("projeto_id", projetoId)
@@ -1361,6 +1362,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   odd: p.odd,
                   stake: p.stake,
                   resultado: p.resultado,
+                  lucro_prejuizo: p.lucro_prejuizo ?? null,
                   bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
                   bookmaker_id: p.bookmaker_id,
                   moeda: p.moeda || 'BRL',
@@ -1383,6 +1385,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   onPernaResultChange={handleSurebetPernaResolve}
                   onDelete={prepareDeleteSurebet}
                   formatCurrency={formatCurrency}
+                  convertToConsolidation={convertToConsolidation}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
               );

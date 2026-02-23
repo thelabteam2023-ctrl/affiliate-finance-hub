@@ -350,7 +350,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         });
         const pernasSurebetCard: SurebetPerna[] = pernasOrdenadas.map((p, idx) => ({
           id: p.id || `perna-${idx}`, selecao: p.selecao, selecao_livre: p.selecao_livre,
-          odd: p.odd, stake: p.stake, resultado: p.resultado,
+          odd: p.odd, stake: p.stake, resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
           bookmaker_nome: p.bookmaker_nome || "—", bookmaker_id: p.bookmaker_id,
           moeda: p.moeda || 'BRL',
         }));
@@ -1293,6 +1293,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   onPernaResultChange={handleSurebetPernaResolve}
                   onDelete={handleSurebetDelete}
                   formatCurrency={formatCurrency}
+                  convertToConsolidation={convertFnOficial}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
               );

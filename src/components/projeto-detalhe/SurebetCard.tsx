@@ -32,6 +32,8 @@ export interface SurebetPerna {
   odd: number;
   stake: number;
   resultado: string | null;
+  /** Lucro nominal da perna na moeda original */
+  lucro_prejuizo?: number | null;
   bookmaker_nome: string;
   bookmaker_id?: string;
   moeda?: string;
@@ -96,6 +98,8 @@ interface SurebetCardProps {
   onDuplicate?: (surebetId: string) => void;
   className?: string;
   formatCurrency?: (value: number) => string;
+  /** Conversão fallback para consolidar pernas multimoeda em runtime */
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
   /** Quando true, exibe badge "Bônus" no lugar de "SUREBET" */
   isBonusContext?: boolean;
   /**
@@ -389,7 +393,7 @@ function PernaItem({
   );
 }
 
-export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChange, onDelete, onDuplicate, className, formatCurrency, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
+export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChange, onDelete, onDuplicate, className, formatCurrency, convertToConsolidation, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
   // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
   
@@ -413,21 +417,36 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     ? (v: number) => formatPernaValue(v, moedaPernas)
     : formatValue;
   
-  // Para multicurrency, usar stake_consolidado (já convertido para moeda do projeto)
-  const stakeRealTotal = (() => {
-    if (isMulticurrency && surebet.stake_consolidado != null && surebet.stake_consolidado > 0) {
-      return surebet.stake_consolidado;
+  // Para multicurrency, priorizar valor consolidado do banco.
+  // Fallback robusto: consolidar em runtime a partir das pernas.
+  const stakeConsolidadoFallback = (() => {
+    if (!isMulticurrency || !surebet.pernas || surebet.pernas.length === 0 || !convertToConsolidation) {
+      return null;
     }
+
+    return surebet.pernas.reduce((sum, p) => {
+      const stakePerna = p.stake_total || p.stake || 0;
+      const moedaPerna = p.moeda || "BRL";
+      return sum + convertToConsolidation(stakePerna, moedaPerna);
+    }, 0);
+  })();
+
+  const stakeRealTotal = (() => {
+    if (isMulticurrency) {
+      if (typeof surebet.stake_consolidado === "number") return surebet.stake_consolidado;
+      if (typeof stakeConsolidadoFallback === "number") return stakeConsolidadoFallback;
+      return surebet.stake_total;
+    }
+
     if (!surebet.pernas || surebet.pernas.length === 0) return surebet.stake_total;
-    if (!isMulticurrency) return surebet.pernas.reduce((sum, p) => sum + (p.stake_total || p.stake || 0), 0);
-    return surebet.stake_total;
+    return surebet.pernas.reduce((sum, p) => sum + (p.stake_total || p.stake || 0), 0);
   })();
   
   // Detectar contexto de bônus pela estratégia ou prop
   const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
   
   // Calcular pior cenário a partir das pernas quando pendente
-  // IMPORTANTE: Só funciona corretamente para moeda única. Para multicurrency, usar valores do banco.
+  // IMPORTANTE: Só funciona corretamente para moeda única. Para multicurrency, usar valores consolidados.
   const calcularPiorCenario = (): { lucro: number; roi: number } | null => {
     if (!surebet.pernas || surebet.pernas.length < 2) return null;
     // NÃO calcular localmente para multicurrency - as moedas se misturam
@@ -450,19 +469,67 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     
     return { lucro: piorLucro, roi: piorRoi };
   };
+
+  const getPernaLucroNominal = (perna: SurebetPerna): number | null => {
+    if (typeof perna.lucro_prejuizo === "number") return perna.lucro_prejuizo;
+
+    const stake = perna.stake_total || perna.stake || 0;
+    const odd = perna.odd || 0;
+
+    switch (perna.resultado) {
+      case "GREEN":
+        return stake * (odd - 1);
+      case "MEIO_GREEN":
+        return (stake * (odd - 1)) / 2;
+      case "RED":
+        return -stake;
+      case "MEIO_RED":
+        return -stake / 2;
+      case "VOID":
+      case "PENDENTE":
+      case null:
+        return 0;
+      default:
+        return null;
+    }
+  };
+
+  const lucroConsolidadoFallback = (() => {
+    if (!isLiquidada || !isMulticurrency || !surebet.pernas || surebet.pernas.length === 0 || !convertToConsolidation) {
+      return null;
+    }
+
+    let hasAnyLucro = false;
+    const total = surebet.pernas.reduce((sum, perna) => {
+      const lucroNominal = getPernaLucroNominal(perna);
+      if (typeof lucroNominal !== "number") return sum;
+      hasAnyLucro = true;
+      return sum + convertToConsolidation(lucroNominal, perna.moeda || "BRL");
+    }, 0);
+
+    return hasAnyLucro ? total : null;
+  })();
   
   // Usar lucro_esperado do banco ou calcular a partir das pernas
   const piorCenarioCalculado = !isLiquidada ? calcularPiorCenario() : null;
   
-  // Para lucro exibido: priorizar pl_consolidado (já convertido) sobre lucro_real (nominal)
+  const lucroConsolidadoEfetivo = typeof surebet.pl_consolidado === "number"
+    ? surebet.pl_consolidado
+    : lucroConsolidadoFallback;
+
+  // Para lucro exibido: priorizar consolidado para multicurrency
   const lucroExibir = isLiquidada 
-    ? (isMulticurrency && surebet.pl_consolidado != null ? surebet.pl_consolidado : surebet.lucro_real)
+    ? (isMulticurrency
+      ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
+      : surebet.lucro_real)
     : (surebet.lucro_esperado ?? piorCenarioCalculado?.lucro ?? null);
+
   const roiExibir = (() => {
     if (isLiquidada) {
-      // Para multicurrency com pl_consolidado, recalcular ROI a partir dos valores consolidados
-      if (isMulticurrency && surebet.pl_consolidado != null && surebet.stake_consolidado != null && surebet.stake_consolidado > 0) {
-        return (surebet.pl_consolidado / surebet.stake_consolidado) * 100;
+      if (isMulticurrency) {
+        if (typeof lucroConsolidadoEfetivo === "number" && stakeRealTotal > 0) {
+          return (lucroConsolidadoEfetivo / stakeRealTotal) * 100;
+        }
       }
       return surebet.roi_real;
     }
