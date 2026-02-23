@@ -46,8 +46,8 @@ export const CASH_REAL_TYPES = [
   // Ajustes de Caixa (quando afetam caixa real)
   'AJUSTE_MANUAL',
   'AJUSTE_SALDO',
-  'CONCILIACAO',
   'AJUSTE_RECONCILIACAO',
+  'CONCILIACAO',
   
   // Ajustes Cambiais (diferenças reais entre valor esperado e recebido)
   // CRÍTICO: Creditam/debitam wallets, DEVEM aparecer para trilha de auditoria
