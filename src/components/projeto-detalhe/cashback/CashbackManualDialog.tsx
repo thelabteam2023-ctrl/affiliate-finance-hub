@@ -245,8 +245,11 @@ export function CashbackManualDialog({
                         min="0.01"
                         placeholder="0,00"
                         className="pl-12"
-                        value={field.value || ""}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        value={field.value === 0 ? "" : field.value}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          field.onChange(val === "" ? 0 : parseFloat(val) || 0);
+                        }}
                       />
                     </div>
                   </FormControl>
