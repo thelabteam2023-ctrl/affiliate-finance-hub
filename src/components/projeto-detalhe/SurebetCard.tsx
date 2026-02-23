@@ -56,6 +56,10 @@ export interface SurebetData {
   lucro_esperado: number | null;
   lucro_real: number | null;
   roi_real: number | null;
+  /** Lucro consolidado na moeda do projeto (já convertido) */
+  pl_consolidado?: number | null;
+  /** Stake consolidado na moeda do projeto (já convertido) */
+  stake_consolidado?: number | null;
   status: string;
   resultado: string | null;
   observacoes: string | null;
@@ -404,15 +408,18 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   const isMulticurrency = !moedaPernas && surebet.pernas && surebet.pernas.length > 0;
   
   // Formatter para totais do card: usa moeda das pernas se uniforme, senão projeto
+  // Para multicurrency, SEMPRE usar formatValue do projeto (valores já convertidos)
   const formatTotal = moedaPernas 
     ? (v: number) => formatPernaValue(v, moedaPernas)
     : formatValue;
   
-  // Para multicurrency, recalcular stake total na moeda correta de cada perna
+  // Para multicurrency, usar stake_consolidado (já convertido para moeda do projeto)
   const stakeRealTotal = (() => {
+    if (isMulticurrency && surebet.stake_consolidado != null && surebet.stake_consolidado > 0) {
+      return surebet.stake_consolidado;
+    }
     if (!surebet.pernas || surebet.pernas.length === 0) return surebet.stake_total;
     if (!isMulticurrency) return surebet.pernas.reduce((sum, p) => sum + (p.stake_total || p.stake || 0), 0);
-    // Multicurrency: stake_total do banco pode ser soma nominal - retornar o valor do banco como fallback
     return surebet.stake_total;
   })();
   
@@ -420,8 +427,11 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
   
   // Calcular pior cenário a partir das pernas quando pendente
+  // IMPORTANTE: Só funciona corretamente para moeda única. Para multicurrency, usar valores do banco.
   const calcularPiorCenario = (): { lucro: number; roi: number } | null => {
     if (!surebet.pernas || surebet.pernas.length < 2) return null;
+    // NÃO calcular localmente para multicurrency - as moedas se misturam
+    if (isMulticurrency) return null;
     
     const stakeTotal = surebet.stake_total || surebet.pernas.reduce((sum, p) => sum + (p.stake_total || p.stake || 0), 0);
     if (stakeTotal <= 0) return null;
@@ -444,12 +454,20 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   // Usar lucro_esperado do banco ou calcular a partir das pernas
   const piorCenarioCalculado = !isLiquidada ? calcularPiorCenario() : null;
   
+  // Para lucro exibido: priorizar pl_consolidado (já convertido) sobre lucro_real (nominal)
   const lucroExibir = isLiquidada 
-    ? surebet.lucro_real 
+    ? (isMulticurrency && surebet.pl_consolidado != null ? surebet.pl_consolidado : surebet.lucro_real)
     : (surebet.lucro_esperado ?? piorCenarioCalculado?.lucro ?? null);
-  const roiExibir = isLiquidada 
-    ? surebet.roi_real 
-    : (surebet.roi_esperado ?? piorCenarioCalculado?.roi ?? null);
+  const roiExibir = (() => {
+    if (isLiquidada) {
+      // Para multicurrency com pl_consolidado, recalcular ROI a partir dos valores consolidados
+      if (isMulticurrency && surebet.pl_consolidado != null && surebet.stake_consolidado != null && surebet.stake_consolidado > 0) {
+        return (surebet.pl_consolidado / surebet.stake_consolidado) * 100;
+      }
+      return surebet.roi_real;
+    }
+    return surebet.roi_esperado ?? piorCenarioCalculado?.roi ?? null;
+  })();
   
   // Configuração do badge principal
   const estrategiaConfig = showBonusBadge 
