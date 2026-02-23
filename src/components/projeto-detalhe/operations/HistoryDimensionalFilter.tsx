@@ -25,6 +25,7 @@ interface BookmakerOption {
   nome: string;
   parceiroId?: string;
   parceiroNome?: string;
+  instanceIdentifier?: string | null;
 }
 
 interface ParceiroOption {
@@ -69,7 +70,7 @@ export function HistoryDimensionalFilter({
     const fetchOptions = async () => {
       const { data: bkData } = await supabase
         .from("bookmakers")
-        .select("id, nome, parceiro:parceiros(id, nome)")
+        .select("id, nome, instance_identifier, parceiro:parceiros(id, nome)")
         .eq("projeto_id", projetoId)
         .in("status", ["ativo", "ATIVO", "LIMITADA", "limitada"]);
 
@@ -79,6 +80,7 @@ export function HistoryDimensionalFilter({
           nome: bk.nome,
           parceiroId: bk.parceiro?.id,
           parceiroNome: bk.parceiro?.nome,
+          instanceIdentifier: bk.instance_identifier,
         }));
         setBookmakers(bkOptions);
 
@@ -167,6 +169,9 @@ export function HistoryDimensionalFilter({
                       <div className="flex flex-col min-w-0">
                         <span className="font-medium text-sm tracking-wide uppercase truncate">
                           {bk.nome}
+                          {bk.instanceIdentifier && (
+                            <span className="text-primary/80 ml-1 normal-case text-xs">({bk.instanceIdentifier})</span>
+                          )}
                         </span>
                         {bk.parceiroNome && (
                           <span className="text-[11px] text-muted-foreground truncate">
