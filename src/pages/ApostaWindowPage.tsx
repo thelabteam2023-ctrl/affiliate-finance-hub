@@ -35,6 +35,9 @@ export default function ApostaWindowPage() {
   const [formKey, setFormKey] = useState(0);
   const [saveCount, setSaveCount] = useState(0);
 
+  // Auto-resize window to fit content (MUST be before any early returns - Rules of Hooks)
+  const contentRef = useResizeWindowToContent([formKey, loading]);
+
   // Debug: Log when component mounts
   useEffect(() => {
     console.error("🚨🚨🚨 ApostaWindowPage MOUNTED", { 
@@ -180,8 +183,6 @@ export default function ApostaWindowPage() {
     );
   }
 
-  // Auto-resize window to fit content
-  const contentRef = useResizeWindowToContent([formKey, loading]);
 
   return (
     <div ref={contentRef} className="bg-background">
