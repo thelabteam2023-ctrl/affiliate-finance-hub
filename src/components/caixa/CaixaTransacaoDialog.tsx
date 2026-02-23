@@ -1254,15 +1254,19 @@ export function CaixaTransacaoDialog({
     if (!hasMoedaOrCoin) return;
     
     affiliateFocusStepRef.current = 3;
-    setTimeout(() => {
+    // Use retry logic to wait for the wallet/conta select to render (especially in SAQUE where destinoParceiroId is pre-set)
+    const tryFocus = (attempt: number) => {
       if (tipoMoeda === "CRYPTO" && walletCryptoSelectRef.current) {
         walletCryptoSelectRef.current.focus();
         walletCryptoSelectRef.current.click();
       } else if (tipoMoeda === "FIAT" && contaBancariaSelectRef.current) {
         contaBancariaSelectRef.current.focus();
         contaBancariaSelectRef.current.click();
+      } else if (attempt < 5) {
+        setTimeout(() => tryFocus(attempt + 1), 150);
       }
-    }, 200);
+    };
+    setTimeout(() => tryFocus(0), 200);
   }, [coin, moeda, tipoMoeda]);
 
   // Affiliate focus step 4: After wallet/conta selected, focus valor input
