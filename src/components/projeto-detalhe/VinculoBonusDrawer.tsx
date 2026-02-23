@@ -85,9 +85,9 @@ export function VinculoBonusDrawer({
     setFinalizeDialogOpen(true);
   };
 
-  const handleConfirmFinalize = async (reason: FinalizeReason): Promise<boolean> => {
+  const handleConfirmFinalize = async (reason: FinalizeReason, debitAmount?: number): Promise<boolean> => {
     if (!bonusToFinalize) return false;
-    const success = await finalizeBonus(bonusToFinalize.id, reason);
+    const success = await finalizeBonus(bonusToFinalize.id, reason, debitAmount);
     if (success) {
       setBonusToFinalize(null);
       if (onBonusChange) {

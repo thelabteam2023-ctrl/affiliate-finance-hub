@@ -8,14 +8,14 @@
  - Finalizar bônus **NUNCA** soma nem subtrai dinheiro real
  - Finalização apenas: muda estado, muda direito de saque, encerra vínculo lógico
  
- ### Motivos de Finalização (FinalizeReason)
- 
- | Valor | Label | Impacto Financeiro |
- |-------|-------|-------------------|
- | `rollover_completed` | Rollover concluído (Saque liberado) | ZERO |
- | `cycle_completed` | Bônus utilizado / Ciclo encerrado | ZERO |
- | `expired` | Expirado | ZERO |
- | `cancelled_reversed` | Cancelado / Revertido | ZERO |
+### Motivos de Finalização (FinalizeReason)
+
+| Valor | Label | Impacto Financeiro |
+|-------|-------|-------------------|
+| `rollover_completed` | Rollover concluído (Saque liberado) | ZERO |
+| `cycle_completed` | Bônus utilizado / Ciclo encerrado | ZERO |
+| `expired` | Expirado | ZERO |
+| `cancelled_reversed` | Cancelado / Revertido | DEBITA valor perdido do saldo via cash_ledger (AJUSTE_SALDO NEGATIVO) |
  
  ### Implementação Técnica
  ```typescript
