@@ -652,7 +652,7 @@ export default function CentralOperacoes() {
         const bookmakersMap = Object.fromEntries((bookmakersData.data || []).map((b: any) => [b.id, { nome: b.nome, projeto_id: b.projeto_id }]));
         const projetosMap = Object.fromEntries((projetosNomes.data || []).map((p: any) => [p.id, p.nome]));
         const parceirosMap = Object.fromEntries((parceirosNomes.data || []).map((p: any) => [p.id, p.nome]));
-        const contasMap = Object.fromEntries((contasNomes.data || []).map((c: any) => [c.id, `${c.banco} - ${c.titular}`]));
+        const contasMap = Object.fromEntries((contasNomes.data || []).map((c: any) => [c.id, c.banco || "Conta Bancária"]));
         // Criar mapa estruturado das wallets (com dados completos, não apenas label)
         const walletsDataMap = Object.fromEntries(
           (walletsNomes.data || []).map((w: any) => {
