@@ -29,6 +29,7 @@ import { SaldosParceirosSheet } from "@/components/caixa/SaldosParceirosSheet";
 import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
+import { ReconciliacaoDialog } from "@/components/caixa/ReconciliacaoDialog";
 // TransacoesEmTransito removido - lógica unificada na Conciliação
 import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -120,6 +121,7 @@ export default function Caixa() {
   
   // Estado para ajuste manual
   const [ajusteDialogOpen, setAjusteDialogOpen] = useState(false);
+  const [reconciliacaoDialogOpen, setReconciliacaoDialogOpen] = useState(false);
 
   // Estado para pré-preenchimento do dialog de transação (vindo de navegação)
   const [dialogDefaultData, setDialogDefaultData] = useState<{
@@ -481,6 +483,7 @@ export default function Caixa() {
       PAGTO_OPERADOR: "Pagto. Operador",
       AJUSTE_MANUAL: "Ajuste Manual",
       AJUSTE_SALDO: "Ajuste Saldo",
+      AJUSTE_RECONCILIACAO: "Reconciliação",
       RENOVACAO_PARCERIA: "Renovação Parceria",
       BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
     };
@@ -525,6 +528,7 @@ export default function Caixa() {
       PAGTO_OPERADOR: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
       AJUSTE_MANUAL: "bg-amber-600/20 text-amber-500 border-amber-600/30",
       AJUSTE_SALDO: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+      AJUSTE_RECONCILIACAO: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
       RENOVACAO_PARCERIA: "bg-teal-500/20 text-teal-400 border-teal-500/30",
       BONIFICACAO_ESTRATEGICA: "bg-violet-500/20 text-violet-400 border-violet-500/30",
     };
@@ -813,6 +817,13 @@ export default function Caixa() {
                       <Wrench className="h-4 w-4" />
                       <span>Ajuste Manual</span>
                     </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setReconciliacaoDialogOpen(true)}
+                      className="flex items-center gap-2 text-muted-foreground cursor-pointer"
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                      <span>Reconciliação de Saldo</span>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -1046,6 +1057,17 @@ export default function Caixa() {
         onClose={() => setAjusteDialogOpen(false)}
         onSuccess={async () => {
           setAjusteDialogOpen(false);
+          await new Promise(resolve => setTimeout(resolve, 300));
+          fetchData();
+        }}
+      />
+
+      {/* Dialog Reconciliação */}
+      <ReconciliacaoDialog
+        open={reconciliacaoDialogOpen}
+        onClose={() => setReconciliacaoDialogOpen(false)}
+        onSuccess={async () => {
+          setReconciliacaoDialogOpen(false);
           await new Promise(resolve => setTimeout(resolve, 300));
           fetchData();
         }}
