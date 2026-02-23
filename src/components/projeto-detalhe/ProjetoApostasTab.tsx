@@ -199,6 +199,9 @@ interface Surebet {
   observacoes: string | null;
   created_at: string;
   workspace_id?: string;
+  // Campos de consolidação multi-moeda
+  pl_consolidado?: number | null;
+  stake_consolidado?: number | null;
   pernas?: {
     id: string;
     bookmaker_id: string;
@@ -1348,7 +1351,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               const surebetData: SurebetData = {
                 ...sb,
                 workspace_id: sb.workspace_id,
-                lucro_real: sb.lucro_prejuizo,
+                lucro_real: sb.pl_consolidado ?? sb.lucro_prejuizo,
+                pl_consolidado: sb.pl_consolidado,
+                stake_consolidado: sb.stake_consolidado,
                 pernas: sb.pernas?.map((p: any) => ({
                   id: p.id,
                   selecao: p.selecao,
