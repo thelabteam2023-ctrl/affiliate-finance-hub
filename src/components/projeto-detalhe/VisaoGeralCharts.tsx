@@ -37,6 +37,8 @@ interface Perna {
   odd?: number;
   selecao?: string;
   moeda?: string;
+  stake_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
 }
 
 interface ApostaBase {
@@ -822,6 +824,14 @@ export function VisaoGeralCharts({
       vinculoData.lucro += lucro;
     };
 
+    // Helper para converter stake/lucro de perna para moeda de consolidação
+    const convertPernaStake = (valor: number, pernaMoeda: string): number => {
+      if (!valor) return 0;
+      if (moedaConsolidacao && pernaMoeda === moedaConsolidacao) return valor;
+      if (convertToConsolidation && pernaMoeda !== (moedaConsolidacao || "BRL")) return convertToConsolidation(valor, pernaMoeda);
+      return valor;
+    };
+
     apostas.forEach((a) => {
       const moedaOp = a.moeda_operacao || "BRL";
       
@@ -829,18 +839,25 @@ export function VisaoGeralCharts({
         a.pernas.forEach((perna) => {
           const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
           const parceiroNome = perna.parceiro_nome;
-          const pernaStake = typeof perna.stake === "number" ? perna.stake : 0;
-          const pernaLucro = typeof perna.lucro_prejuizo === "number" ? perna.lucro_prejuizo : 0;
           const pernaMoeda = perna.moeda || moedaOp;
-          processEntry(nomeCompleto, parceiroNome, pernaStake, pernaLucro, pernaMoeda);
+          const pernaStakeRaw = typeof perna.stake === "number" ? perna.stake : 0;
+          const pernaLucroRaw = typeof perna.lucro_prejuizo === "number" ? perna.lucro_prejuizo : 0;
+          // Converter para moeda de consolidação
+          const pernaStake = (moedaConsolidacao === "BRL" && typeof perna.stake_brl_referencia === "number")
+            ? perna.stake_brl_referencia
+            : convertPernaStake(pernaStakeRaw, pernaMoeda);
+          const pernaLucro = (moedaConsolidacao === "BRL" && typeof perna.lucro_prejuizo_brl_referencia === "number")
+            ? perna.lucro_prejuizo_brl_referencia
+            : convertPernaStake(pernaLucroRaw, pernaMoeda);
+          processEntry(nomeCompleto, parceiroNome, pernaStake, pernaLucro, moedaConsolidacao || "BRL");
         });
       } else {
         const nomeCompleto = a.bookmaker_nome || "Desconhecida";
         const parceiroNome = a.parceiro_nome;
-        // Use RAW stake (original currency), not consolidated
-        const rawStake = typeof a.stake_total === "number" ? a.stake_total : a.stake;
-        const rawLucro = a.lucro_prejuizo ?? 0;
-        processEntry(nomeCompleto, parceiroNome, rawStake, rawLucro, moedaOp);
+        // Usar valores consolidados na moeda do projeto
+        const stakeConsolidado = getConsolidatedStakeLocal(a);
+        const lucroConsolidado = getConsolidatedLucroLocal(a);
+        processEntry(nomeCompleto, parceiroNome, stakeConsolidado, lucroConsolidado, moedaConsolidacao || "BRL");
       }
     });
 
