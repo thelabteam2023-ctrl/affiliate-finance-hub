@@ -1082,6 +1082,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   stake: isSimples ? (s.stake || s.stake_total) : s.stake_total,
                   bookmaker_nome: isSimples ? (s.bookmaker_nome || "—") : (s.pernas?.[0]?.bookmaker_nome || "—"),
                   parceiro_nome: isSimples ? s.parceiro_nome : undefined,
+                  moeda_operacao: s.moeda_operacao,
+                  stake_consolidado: s.stake_consolidado,
+                  pl_consolidado: s.pl_consolidado,
+                  valor_brl_referencia: s.valor_brl_referencia,
+                  lucro_prejuizo_brl_referencia: s.lucro_prejuizo_brl_referencia,
                   pernas: isSimples 
                     ? [{
                         bookmaker_nome: s.bookmaker_nome || "—",
@@ -1089,7 +1094,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                         stake: s.stake || s.stake_total,
                         odd: s.odd,
                         resultado: s.resultado || undefined,
-                        lucro_prejuizo: s.lucro_real || 0
+                        lucro_prejuizo: s.lucro_real || 0,
+                        moeda: s.moeda_operacao || undefined,
                       }]
                     : s.pernas?.map(p => ({
                         bookmaker_nome: p.bookmaker_nome,
@@ -1256,6 +1262,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   bookmaker_nome: operacao.bookmaker_nome,
                   parceiro_nome: operacao.parceiro_nome,
                   logo_url: getLogoUrl(bookmakerBase || ""),
+                  moeda: operacao.moeda_operacao || undefined,
                 };
                 
                 return (
@@ -1280,6 +1287,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                       setApostaDialogOpen(true);
                     }}
                     onQuickResolve={handleQuickResolve}
+                    onDelete={(apostaId) => handleSurebetDelete(apostaId)}
                     formatCurrency={formatCurrency}
                   />
                 );
