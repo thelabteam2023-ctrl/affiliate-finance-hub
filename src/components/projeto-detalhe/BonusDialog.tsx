@@ -239,7 +239,11 @@ export function BonusDialog({
     const percentLabel = template.percent ? `${template.percent}%` : "";
     setTitle([tipoLabel, percentLabel].filter(Boolean).join(" "));
     
-    setCurrency(template.moeda || "BRL");
+    // CRÍTICO: Nunca sobrescrever moeda quando bookmaker já está selecionada
+    // A moeda do bônus DEVE ser a moeda operacional da bookmaker, não do template do catálogo
+    if (!bookmakerId) {
+      setCurrency(template.moeda || "BRL");
+    }
     
     // Store percentage for auto-calculation
     if (template.percent) {
