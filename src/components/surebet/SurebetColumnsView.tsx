@@ -223,9 +223,9 @@ export function SurebetColumnsView({
                   </div>
                 )}
 
-                {/* Odd + Stake */}
-                <div className="grid grid-cols-2 gap-1.5">
-                  <div>
+                {/* Odd + Linha + Stake na mesma linha */}
+                <div className="flex items-end gap-1.5">
+                  <div className="w-[72px] shrink-0">
                     <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Odd</label>
                     <Input 
                       type="number"
@@ -233,13 +233,22 @@ export function SurebetColumnsView({
                       placeholder="0.00"
                       value={entry.odd}
                       onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
-                      className="h-8 text-xs text-center tabular-nums"
+                      className="h-8 text-[11px] text-center tabular-nums"
                       onWheel={(e) => e.currentTarget.blur()}
                       data-field-type="odd"
                       onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
                     />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
+                    <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Linha</label>
+                    <Input
+                      placeholder="Linha"
+                      value={entry.selecaoLivre}
+                      onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
+                      className="h-8 text-[11px] px-2 border-dashed"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Stake</label>
                     <MoneyInput 
                       value={entry.stake}
@@ -247,7 +256,7 @@ export function SurebetColumnsView({
                       currency={entry.moeda}
                       minDigits={5}
                       className={cn(
-                        "h-8 text-xs text-center tabular-nums",
+                        "h-8 text-[11px] text-center tabular-nums",
                         hasInsufficientBalance && "border-destructive focus-visible:ring-destructive/50"
                       )}
                       data-field-type="stake"
@@ -258,14 +267,6 @@ export function SurebetColumnsView({
                     )}
                   </div>
                 </div>
-
-                {/* Linha */}
-                <Input
-                  placeholder="Linha"
-                  value={entry.selecaoLivre}
-                  onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
-                  className="h-7 text-xs px-2 border-dashed"
-                />
 
                 {/* Resultado (modo edição) */}
                 {isEditing && (
