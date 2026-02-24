@@ -736,10 +736,38 @@ export function SurebetModalRoot({
     setOdds(prev => {
       const newOdds = [...prev];
       const currentEntries = newOdds[pernaIndex].additionalEntries || [];
-      newOdds[pernaIndex].additionalEntries = [
-        ...currentEntries,
-        { bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecaoLivre: "" }
-      ];
+      if (currentEntries.length >= 4) return prev; // max 5 total (1 main + 4 additional)
+      newOdds[pernaIndex] = {
+        ...newOdds[pernaIndex],
+        additionalEntries: [
+          ...currentEntries,
+          { bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecaoLivre: "" }
+        ]
+      };
+      return newOdds;
+    });
+  }, []);
+
+  const updateAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number, field: string, value: string) => {
+    setOdds(prev => {
+      const newOdds = [...prev];
+      const entries = [...(newOdds[pernaIndex].additionalEntries || [])];
+      entries[entryIndex] = { ...entries[entryIndex], [field]: value };
+      if (field === 'bookmaker_id') {
+        const bk = bookmakerSaldos.find(b => b.id === value);
+        if (bk) entries[entryIndex].moeda = bk.moeda as SupportedCurrency;
+      }
+      newOdds[pernaIndex] = { ...newOdds[pernaIndex], additionalEntries: entries };
+      return newOdds;
+    });
+  }, [bookmakerSaldos]);
+
+  const removeAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number) => {
+    setOdds(prev => {
+      const newOdds = [...prev];
+      const entries = [...(newOdds[pernaIndex].additionalEntries || [])];
+      entries.splice(entryIndex, 1);
+      newOdds[pernaIndex] = { ...newOdds[pernaIndex], additionalEntries: entries };
       return newOdds;
     });
   }, []);
@@ -1772,6 +1800,8 @@ export function SurebetModalRoot({
                         onSetReference={setReferenceIndex}
                         onToggleDirected={toggleDirectedLeg}
                         onAddEntry={addAdditionalEntry}
+                        onUpdateAdditionalEntry={updateAdditionalEntry}
+                        onRemoveAdditionalEntry={removeAdditionalEntry}
                         onDeletePerna={handleDeletePerna}
                         canDeletePerna={isEditing && odds.length > 2}
                         onFocus={setFocusedLeg}
@@ -1797,6 +1827,8 @@ export function SurebetModalRoot({
                 onSetReference={setReferenceIndex}
                 onToggleDirected={toggleDirectedLeg}
                 onAddEntry={addAdditionalEntry}
+                onUpdateAdditionalEntry={updateAdditionalEntry}
+                onRemoveAdditionalEntry={removeAdditionalEntry}
                 onDeletePerna={handleDeletePerna}
                 canDeletePerna={isEditing && odds.length > 2}
                 onFocus={setFocusedLeg}
