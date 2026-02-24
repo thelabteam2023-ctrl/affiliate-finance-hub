@@ -97,23 +97,25 @@ export function BookmakerSelectOption({
         )}
       </div>
       
-      {/* Coluna 3: Saldo Consolidado (fixo à direita) */}
+      {/* Coluna 3: Saldo (fixo à direita) */}
       <div className="flex flex-col items-end flex-shrink-0">
-        <span className={cn(
-          "text-xs font-medium flex items-center gap-1",
-          disabled ? "text-destructive" : getCurrencyTextColor(moeda)
-        )}>
-          {disabled ? "Indisponível" : formatCurrency(saldo_operavel, moeda)}
-          {!disabled && hasBonus && (
-            <span className="text-purple-400" title="Bônus ativo">🎁</span>
-          )}
-        </span>
-        
-        {/* Freebet badge - SEMPRE visível quando há saldo de freebet */}
-        {showBreakdown && !disabled && saldo_freebet > 0 && (
-          <span className="text-[9px] text-amber-400/80 flex items-center gap-0.5">
-            <Gift className="h-2.5 w-2.5" />
-            FB: {formatCurrency(saldo_freebet, moeda)}
+        {disabled ? (
+          <span className="text-xs font-medium text-destructive">Indisponível</span>
+        ) : saldo_freebet > 0 ? (
+          <>
+            <span className={cn("text-xs font-medium flex items-center gap-1", getCurrencyTextColor(moeda))}>
+              {formatCurrency(saldo_operavel - saldo_freebet, moeda)}
+              {hasBonus && <span className="text-purple-400" title="Bônus ativo">🎁</span>}
+            </span>
+            <span className="text-[9px] text-amber-400/80 flex items-center gap-0.5">
+              <Gift className="h-2.5 w-2.5" />
+              FB: {formatCurrency(saldo_freebet, moeda)}
+            </span>
+          </>
+        ) : (
+          <span className={cn("text-xs font-medium flex items-center gap-1", getCurrencyTextColor(moeda))}>
+            {formatCurrency(saldo_operavel, moeda)}
+            {hasBonus && <span className="text-purple-400" title="Bônus ativo">🎁</span>}
           </span>
         )}
       </div>
