@@ -145,19 +145,28 @@ export function calcularStakeTotal(
 
 /**
  * Calcula stakes direcionadas (Checkbox D).
- * 
- * REGRA CORRIGIDA (v2 — sem acumulação):
- *   - Usa `baseStakes` (snapshot das stakes equalizadas) como fonte IMUTÁVEL
- *   - NUNCA lê de odds.stake (estado mutado pela UI)
- *   - Pernas DESMARCADAS: mantêm stake do snapshot (lucro ≈ 0)
- *   - Perna MARCADA: stake = retornoAlvo − Σ stakesDesmarcadas
  *
- * Isso garante que toggles repetidos sempre partam da mesma base.
+ * REGRA v3 — Compatível com calculadora de referência:
+ *   - Pernas DESMARCADAS: lucro = 0 (break even) → stake_i = totalStake / odd_i
+ *   - Pernas MARCADAS: dividem todo o lucro com payouts iguais entre si
+ *   - Perna de REFERÊNCIA: stake fixa, determina o totalStake
+ *
+ * Caso 1 — Referência DESMARCADA (mais comum):
+ *   totalStake = refStake × refOdd
+ *   unchecked_i = totalStake / odd_i
+ *   checked: targetPayout = remaining / Σ(1/odd_j) → stake_j = targetPayout / odd_j
+ *
+ * Caso 2 — Referência MARCADA:
+ *   targetPayout = refStake × refOdd (todas as marcadas têm mesmo payout)
+ *   checked_j = targetPayout / odd_j
+ *   totalStake = Σ(checked) / (1 − Σ(1/odd_i for unchecked))
+ *   unchecked_i = totalStake / odd_i
  */
 function calcularStakesDirecionadas(
   parsedOdds: number[],
   baseStakes: number[],
   directedProfitLegs: number[],
+  refIndex: number,
   arredondarFn: (v: number) => number
 ): number[] | null {
   const n = parsedOdds.length;
@@ -166,25 +175,60 @@ function calcularStakesDirecionadas(
   const valid = parsedOdds.filter(o => o > 1).length;
   if (valid !== n) return null;
 
-  const markedIndices = directedProfitLegs;
-  const unmarkedIndices = parsedOdds.map((_, i) => i).filter(i => !markedIndices.includes(i));
+  if (refIndex < 0 || refIndex >= n) return null;
+  if (baseStakes[refIndex] <= 0) return null;
 
-  if (markedIndices.length !== 1) return null; // Múltiplas marcadas: comportamento padrão
+  const refStake = baseStakes[refIndex];
+  const refOdd = parsedOdds[refIndex];
+  const isRefChecked = directedProfitLegs.includes(refIndex);
+  const uncheckedIndices = parsedOdds.map((_, i) => i).filter(i => !directedProfitLegs.includes(i));
 
-  const markedIndex = markedIndices[0];
+  const result = new Array(n).fill(0);
 
-  const stakesUnmarkedValid = unmarkedIndices.every(i => baseStakes[i] > 0);
-  if (!stakesUnmarkedValid) return null;
+  if (!isRefChecked) {
+    // Caso 1: Referência desmarcada → break even → totalStake = refStake × refOdd
+    const totalStake = refStake * refOdd;
 
-  // Sempre parte das stakes equalizadas (snapshot), nunca do estado atual
-  const somaStakesDesmarcadas = unmarkedIndices.reduce((acc, i) => acc + baseStakes[i], 0);
-  const retornosDesmarcadas = unmarkedIndices.map(i => baseStakes[i] * parsedOdds[i]);
-  const retornoAlvo = Math.max(...retornosDesmarcadas);
+    // Pernas desmarcadas: break even (payout = totalStake)
+    for (const i of uncheckedIndices) {
+      result[i] = arredondarFn(totalStake / parsedOdds[i]);
+    }
 
-  let stakeMarked = Math.max(0, retornoAlvo - somaStakesDesmarcadas);
-  stakeMarked = arredondarFn(stakeMarked);
+    // Pernas marcadas: dividem restante com payouts iguais
+    const sumUnchecked = uncheckedIndices.reduce((acc, i) => acc + result[i], 0);
+    const remaining = totalStake - sumUnchecked;
 
-  return parsedOdds.map((_, i) => (i === markedIndex ? stakeMarked : baseStakes[i]));
+    if (directedProfitLegs.length === 1) {
+      result[directedProfitLegs[0]] = arredondarFn(remaining);
+    } else {
+      const invOddSum = directedProfitLegs.reduce((acc, i) => acc + 1 / parsedOdds[i], 0);
+      const targetPayout = remaining / invOddSum;
+      for (const i of directedProfitLegs) {
+        result[i] = arredondarFn(targetPayout / parsedOdds[i]);
+      }
+    }
+  } else {
+    // Caso 2: Referência marcada → payout fixo para todas marcadas
+    const targetPayout = refStake * refOdd;
+
+    result[refIndex] = refStake;
+    for (const i of directedProfitLegs) {
+      if (i === refIndex) continue;
+      result[i] = arredondarFn(targetPayout / parsedOdds[i]);
+    }
+
+    const sumChecked = directedProfitLegs.reduce((acc, i) => acc + result[i], 0);
+    const invOddSumUnchecked = uncheckedIndices.reduce((acc, i) => acc + 1 / parsedOdds[i], 0);
+
+    if (1 - invOddSumUnchecked <= 0) return null;
+
+    const totalStake = sumChecked / (1 - invOddSumUnchecked);
+    for (const i of uncheckedIndices) {
+      result[i] = arredondarFn(totalStake / parsedOdds[i]);
+    }
+  }
+
+  return result;
 }
 
 // ─── Hook Principal ───────────────────────────────────────────
@@ -263,7 +307,8 @@ export function useSurebetCalculator({
     const baseStakes = (equalizedStakesSnapshot && equalizedStakesSnapshot.length === odds.length)
       ? equalizedStakesSnapshot
       : odds.map(o => getStakeTotalPerna(o));
-    return calcularStakesDirecionadas(parsedOdds, baseStakes, directedProfitLegs, arredondarStake);
+    const refIndex = odds.findIndex(o => o.isReference);
+    return calcularStakesDirecionadas(parsedOdds, baseStakes, directedProfitLegs, refIndex, arredondarStake);
   }, [odds, directedProfitLegs, arredondarStake, getOddMediaPerna, getStakeTotalPerna, equalizedStakesSnapshot]);
 
   // ── Stakes equalizadas ou dirigidas ──────────────────────────
