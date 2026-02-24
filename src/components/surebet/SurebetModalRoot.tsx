@@ -942,8 +942,8 @@ export function SurebetModalRoot({
     });
     
     if (needsUpdate) {
-      // Salvar snapshot das stakes equalizadas como base imutável para checkbox D
-      const snapshot = newOdds.map(o => parseFloat(o.stake) || 0);
+      // Salvar snapshot das stakes equalizadas (TOTAL da perna, incluindo sub-entradas)
+      const snapshot = newOdds.map(o => getStakeTotalPerna(o));
       setEqualizedStakesSnapshot(snapshot);
       setOdds(newOdds);
     } else {
@@ -954,7 +954,7 @@ export function SurebetModalRoot({
       }
     }
   }, [
-    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}`).join(','),
+    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}:${e.moeda}`).join('|')}`).join(','),
     odds.map(o => o.isReference).join(','),
     arredondarAtivado,
     arredondarValor,

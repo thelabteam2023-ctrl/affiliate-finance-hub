@@ -917,7 +917,7 @@ export function SurebetDialogTable({
     });
     
     if (needsUpdate) {
-      const snapshot = newOdds.map(o => parseFloat(o.stake) || 0);
+      const snapshot = newOdds.map(o => getStakeTotalPerna(o));
       setEqualizedStakesSnapshot(snapshot);
       setOdds(newOdds);
     } else {
@@ -927,7 +927,7 @@ export function SurebetDialogTable({
       }
     }
   }, [
-    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${o.moeda}-${o.stakeOrigem}`).join(','),
+    odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${o.moeda}-${o.stakeOrigem}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}:${e.moeda}`).join('|')}`).join(','),
     odds.map(o => o.isReference).join(','),
     arredondarAtivado,
     arredondarValor,
