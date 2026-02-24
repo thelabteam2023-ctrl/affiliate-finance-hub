@@ -3,16 +3,16 @@
  * 
  * Design: Tabular, compacto, focado em velocidade operacional
  * - Múltiplas entradas por perna
- * - Sem cards grandes
- * - Sem observações, comissões, câmbio
+ * - Dois layouts: vertical (tabela) e horizontal (colunas lado a lado)
  */
 import React, { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Save, Trash2 } from 'lucide-react';
+import { Save, Trash2, Columns3, Rows3 } from 'lucide-react';
 import { SurebetCompactHeader } from './SurebetCompactHeader';
 import { SurebetExecutionTable, type Leg, type LegEntry } from './SurebetExecutionTable';
+import { SurebetColumnsLayout } from './SurebetColumnsLayout';
 import type { SupportedCurrency } from '@/hooks/useCurrencySnapshot';
-
+import { cn } from '@/lib/utils';
 // Gera ID único
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
@@ -138,6 +138,9 @@ export function SurebetCompactForm({
   canSave,
 }: SurebetCompactFormProps) {
   
+  // Layout: 'vertical' (tabela) ou 'horizontal' (colunas)
+  const [layout, setLayout] = useState<'vertical' | 'horizontal'>('horizontal');
+  
   // Estado interno para legs se não fornecido externamente
   const [internalLegs, setInternalLegs] = useState<Leg[]>(() => createInitialLegs(modelo));
   
@@ -191,21 +194,58 @@ export function SurebetCompactForm({
         />
       </div>
 
-      {/* Tabela de execução */}
-      <div className="flex-1 overflow-auto">
-        <SurebetExecutionTable
-          legs={legs}
-          setLegs={setLegs}
-          modelo={modelo}
-          bookmakers={bookmakers}
-          isEditing={isEditing}
-          arredondarAtivado={arredondarAtivado}
-          setArredondarAtivado={setArredondarAtivado}
-          arredondarValor={arredondarValor}
-          setArredondarValor={setArredondarValor}
-          formatCurrency={formatCurrency}
-          getBookmakerMoeda={getBookmakerMoeda}
-        />
+      {/* Toggle de layout + Tabela/Colunas */}
+      <div className="flex-1 overflow-auto space-y-2">
+        <div className="flex justify-end">
+          <div className="flex items-center rounded-md border border-border/40 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setLayout('vertical')}
+              className={cn(
+                "p-1.5 transition-colors",
+                layout === 'vertical' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Layout vertical (tabela)"
+            >
+              <Rows3 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayout('horizontal')}
+              className={cn(
+                "p-1.5 transition-colors",
+                layout === 'horizontal' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Layout horizontal (colunas)"
+            >
+              <Columns3 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {layout === 'vertical' ? (
+          <SurebetExecutionTable
+            legs={legs}
+            setLegs={setLegs}
+            modelo={modelo}
+            bookmakers={bookmakers}
+            isEditing={isEditing}
+            arredondarAtivado={arredondarAtivado}
+            setArredondarAtivado={setArredondarAtivado}
+            arredondarValor={arredondarValor}
+            setArredondarValor={setArredondarValor}
+            formatCurrency={formatCurrency}
+            getBookmakerMoeda={getBookmakerMoeda}
+          />
+        ) : (
+          <SurebetColumnsLayout
+            legs={legs}
+            setLegs={setLegs}
+            bookmakers={bookmakers}
+            formatCurrency={formatCurrency}
+            getBookmakerMoeda={getBookmakerMoeda}
+          />
+        )}
       </div>
 
       {/* Footer com ações */}
