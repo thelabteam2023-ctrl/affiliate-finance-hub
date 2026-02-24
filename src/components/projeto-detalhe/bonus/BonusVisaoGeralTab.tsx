@@ -593,7 +593,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               (acc, b) => acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency), 0
             );
             
-            // Calcular dias do calendário: usar período selecionado ou primeiro bônus até hoje
+            // Dias corridos: período selecionado ou primeiro bônus até hoje
             let calendarDays = 1;
             if (dateRange?.start && dateRange?.end) {
               calendarDays = Math.max(1, differenceInDays(dateRange.end, dateRange.start) + 1);
@@ -603,7 +603,13 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               calendarDays = Math.max(1, differenceInDays(new Date(), earliest) + 1);
             }
             
+            // Dias com depósito (distintos)
+            const depositDays = new Set(
+              eligibleForAvg.map(b => b.credited_at!.split('T')[0])
+            ).size;
+            
             const avgPerDay = calendarDays > 0 ? totalCredited / calendarDays : 0;
+            const avgPerDepositDay = depositDays > 0 ? totalCredited / depositDays : 0;
             return {
               label: "Média Bônus/Dia",
               value: (
@@ -611,8 +617,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               ),
               tooltip: (
                 <div className="space-y-1.5">
-                  <p className="font-semibold text-foreground">Média de Bônus Depositado por Dia</p>
-                  <p className="text-muted-foreground text-xs">Total creditado dividido pelo período completo em dias corridos.</p>
+                  <p className="font-semibold text-foreground">Média de Bônus por Dia</p>
+                  <p className="text-muted-foreground text-xs">Total creditado dividido pelo período em dias corridos.</p>
                   <div className="space-y-0.5">
                     <div className="flex justify-between gap-4">
                       <span>Total creditado</span>
@@ -623,8 +629,19 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                       <span className="font-semibold text-foreground">{calendarDays}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span>Bônus considerados</span>
-                      <span className="font-semibold text-foreground">{eligibleForAvg.length}</span>
+                      <span>Média por dia corrido</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(avgPerDay)}</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-border/50 pt-1 space-y-0.5">
+                    <p className="text-muted-foreground text-xs">Nos dias que depositou:</p>
+                    <div className="flex justify-between gap-4">
+                      <span>Dias com depósito</span>
+                      <span className="font-semibold text-foreground">{depositDays}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span>Média por dia depositado</span>
+                      <span className="font-semibold text-emerald-500">{formatCurrency(avgPerDepositDay)}</span>
                     </div>
                   </div>
                 </div>
