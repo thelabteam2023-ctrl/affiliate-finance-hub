@@ -38,6 +38,7 @@ import { ptBR } from "date-fns/locale";
 import { ApostaDialog } from "@/components/projeto-detalhe/ApostaDialog";
 import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
 import { SurebetCard, SurebetData } from "@/components/projeto-detalhe/SurebetCard";
+import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
 import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import { ApostaCard } from "@/components/projeto-detalhe/ApostaCard";
@@ -933,21 +934,20 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
           // Converter para formato SurebetData compatível com SurebetCard
           const surebetData: SurebetData = {
             ...sb,
-            pernas: pernas.map((p: any) => ({
-              id: p.id,
-              selecao: p.selecao,
-              selecao_livre: p.selecao_livre,
-              odd: p.odd,
-              stake: p.stake,
-              resultado: p.resultado,
-              lucro_prejuizo: p.lucro_prejuizo ?? null,
-              bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || "—",
-              bookmaker_id: p.bookmaker_id,
-              moeda: p.moeda || 'BRL',
-              entries: p.entries,
-              odd_media: p.odd_media,
-              stake_total: p.stake_total,
-            })),
+            pernas: groupPernasBySelecao(
+              pernas.map((p: any) => ({
+                id: p.id,
+                selecao: p.selecao,
+                selecao_livre: p.selecao_livre,
+                odd: p.odd,
+                stake: p.stake,
+                resultado: p.resultado,
+                lucro_prejuizo: p.lucro_prejuizo ?? null,
+                bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || "—",
+                bookmaker_id: p.bookmaker_id,
+                moeda: p.moeda || 'BRL',
+              }))
+            ),
           };
           
           return (
