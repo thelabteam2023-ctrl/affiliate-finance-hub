@@ -322,6 +322,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           .select(`
             id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
             resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
+            stake_brl_referencia, lucro_prejuizo_brl_referencia,
             bookmakers (nome, parceiro:parceiros(nome))
           `)
           .in("aposta_id", apostaIdsMultiLeg)
@@ -335,10 +336,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             id: p.id,
             bookmaker_id: p.bookmaker_id,
             bookmaker_nome: parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}` : (bookmaker?.nome || "—"),
+            parceiro_nome: parceiroNome || null,
             moeda: p.moeda || 'BRL',
             selecao: p.selecao, selecao_livre: p.selecao_livre, odd: p.odd, stake: p.stake,
             resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
             gerou_freebet: p.gerou_freebet, valor_freebet_gerada: p.valor_freebet_gerada,
+            stake_brl_referencia: p.stake_brl_referencia,
+            lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
           });
         });
       }
@@ -1089,10 +1093,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                       }]
                     : s.pernas?.map(p => ({
                         bookmaker_nome: p.bookmaker_nome,
+                        parceiro_nome: (p as any).parceiro_nome,
                         stake: p.stake,
                         odd: p.odd,
                         resultado: p.resultado || undefined,
-                        lucro_prejuizo: getLucroPerna(p)
+                        lucro_prejuizo: getLucroPerna(p),
+                        moeda: p.moeda,
+                        stake_brl_referencia: (p as any).stake_brl_referencia,
+                        lucro_prejuizo_brl_referencia: (p as any).lucro_prejuizo_brl_referencia,
                       }))
                 };
               })}
