@@ -145,15 +145,18 @@ export function calcularStakeTotal(
 
 /**
  * Calcula stakes direcionadas (Checkbox D).
- * Mantém stakes das pernas desmarcadas FIXAS e reduz a da marcada
- * para que o lucro nas desmarcadas seja ≈ 0.
+ * 
+ * REGRA CORRIGIDA (v2 — sem acumulação):
+ *   - Usa `baseStakes` (snapshot das stakes equalizadas) como fonte IMUTÁVEL
+ *   - NUNCA lê de odds.stake (estado mutado pela UI)
+ *   - Pernas DESMARCADAS: mantêm stake do snapshot (lucro ≈ 0)
+ *   - Perna MARCADA: stake = retornoAlvo − Σ stakesDesmarcadas
  *
- * IMPORTANTE: Este cálculo ainda opera em moeda local (não consolida).
- * A análise final é responsabilidade do engine.
+ * Isso garante que toggles repetidos sempre partam da mesma base.
  */
 function calcularStakesDirecionadas(
   parsedOdds: number[],
-  odds: OddEntry[],
+  baseStakes: number[],
   directedProfitLegs: number[],
   arredondarFn: (v: number) => number
 ): number[] | null {
@@ -169,20 +172,19 @@ function calcularStakesDirecionadas(
   if (markedIndices.length !== 1) return null; // Múltiplas marcadas: comportamento padrão
 
   const markedIndex = markedIndices[0];
-  const currentStakes = odds.map(o => parseFloat(o.stake) || 0);
 
-  const stakesUnmarkedValid = unmarkedIndices.every(i => currentStakes[i] > 0);
+  const stakesUnmarkedValid = unmarkedIndices.every(i => baseStakes[i] > 0);
   if (!stakesUnmarkedValid) return null;
 
-  const somaStakesDesmarcadas = unmarkedIndices.reduce((acc, i) => acc + currentStakes[i], 0);
-  const retornosDesmarcadas = unmarkedIndices.map(i => currentStakes[i] * parsedOdds[i]);
+  // Sempre parte das stakes equalizadas (snapshot), nunca do estado atual
+  const somaStakesDesmarcadas = unmarkedIndices.reduce((acc, i) => acc + baseStakes[i], 0);
+  const retornosDesmarcadas = unmarkedIndices.map(i => baseStakes[i] * parsedOdds[i]);
   const retornoAlvo = Math.max(...retornosDesmarcadas);
-  const stakeTotalNecessario = retornoAlvo;
 
-  let stakeMarked = Math.max(0, stakeTotalNecessario - somaStakesDesmarcadas);
+  let stakeMarked = Math.max(0, retornoAlvo - somaStakesDesmarcadas);
   stakeMarked = arredondarFn(stakeMarked);
 
-  return parsedOdds.map((_, i) => (i === markedIndex ? stakeMarked : currentStakes[i]));
+  return parsedOdds.map((_, i) => (i === markedIndex ? stakeMarked : baseStakes[i]));
 }
 
 // ─── Hook Principal ───────────────────────────────────────────
@@ -196,6 +198,8 @@ interface UseSurebetCalculatorParams {
   bookmakerSaldos: BookmakerInfo[];
   /** Configuração de câmbio do projeto — OBRIGATÓRIA para multi-moeda correto */
   engineConfig?: SurebetEngineConfig;
+  /** Snapshot das stakes equalizadas — base imutável para checkbox D */
+  equalizedStakesSnapshot?: number[];
 }
 
 export function useSurebetCalculator({
@@ -206,6 +210,7 @@ export function useSurebetCalculator({
   arredondarValor,
   bookmakerSaldos,
   engineConfig,
+  equalizedStakesSnapshot,
 }: UseSurebetCalculatorParams) {
 
   // ── Arredondamento ───────────────────────────────────────────
@@ -252,10 +257,14 @@ export function useSurebetCalculator({
   }, [safeConfig.brlRates, getMoedaPerna]);
 
   // ── Checkbox D ───────────────────────────────────────────────
+  // Usa snapshot imutável como base; fallback para stakes atuais se snapshot vazio
   const directedStakesLocal = useMemo(() => {
     const parsedOdds = odds.map(o => getOddMediaPerna(o));
-    return calcularStakesDirecionadas(parsedOdds, odds, directedProfitLegs, arredondarStake);
-  }, [odds, directedProfitLegs, arredondarStake, getOddMediaPerna]);
+    const baseStakes = (equalizedStakesSnapshot && equalizedStakesSnapshot.length === odds.length)
+      ? equalizedStakesSnapshot
+      : odds.map(o => getStakeTotalPerna(o));
+    return calcularStakesDirecionadas(parsedOdds, baseStakes, directedProfitLegs, arredondarStake);
+  }, [odds, directedProfitLegs, arredondarStake, getOddMediaPerna, getStakeTotalPerna, equalizedStakesSnapshot]);
 
   // ── Stakes equalizadas ou dirigidas ──────────────────────────
   const { calculatedStakesLocal, calculatedStakesConsolidated } = useMemo(() => {

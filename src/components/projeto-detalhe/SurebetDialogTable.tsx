@@ -359,6 +359,7 @@ export function SurebetDialogTable({
   
   // Checkbox D: por padrão TODAS marcadas (neutro)
   const [directedProfitLegs, setDirectedProfitLegs] = useState<number[]>([0, 1]);
+  const [equalizedStakesSnapshot, setEqualizedStakesSnapshot] = useState<number[]>([]);
   
   // Controles
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
@@ -675,6 +676,7 @@ export function SurebetDialogTable({
       
       setOdds(newOdds);
       setDirectedProfitLegs(Array.from({ length: numPernas }, (_, i) => i));
+      setEqualizedStakesSnapshot([]);
       initializeLegPrints(numPernas);
     }
   }, [numPernas, isEditing]);
@@ -704,6 +706,7 @@ export function SurebetDialogTable({
       additionalEntries: []
     })));
     setDirectedProfitLegs([0, 1]);
+    setEqualizedStakesSnapshot([]);
     setLinkedApostas([]);
   };
 
@@ -914,7 +917,14 @@ export function SurebetDialogTable({
     });
     
     if (needsUpdate) {
+      const snapshot = newOdds.map(o => parseFloat(o.stake) || 0);
+      setEqualizedStakesSnapshot(snapshot);
       setOdds(newOdds);
+    } else {
+      const allValid = odds.every(o => getOddMediaPerna(o) > 1 && (parseFloat(o.stake) || 0) > 0);
+      if (allValid && equalizedStakesSnapshot.length !== odds.length) {
+        setEqualizedStakesSnapshot(odds.map(o => getStakeTotalPerna(o)));
+      }
     }
   }, [
     odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}-${o.moeda}-${o.stakeOrigem}`).join(','),
@@ -941,23 +951,25 @@ export function SurebetDialogTable({
     
     if (validOddsCount !== odds.length) return null;
     
-    // Usar moeda diretamente do OddEntry (já sincronizada com bookmaker)
+    // Usar snapshot como base imutável (sem acumulação)
+    const baseStakes = (equalizedStakesSnapshot.length === odds.length)
+      ? equalizedStakesSnapshot
+      : odds.map(o => getStakeTotalPerna(o));
+    
     const moedasPernas = odds.map(o => o.moeda as string);
     
-    const refIndex = directedProfitLegs.find(i => {
-      const stake = parseFloat(odds[i].stake);
-      return !isNaN(stake) && stake > 0;
-    });
+    // Encontrar a perna de referência (primeira marcada com stake > 0 no snapshot)
+    const refIndex = directedProfitLegs.find(i => baseStakes[i] > 0);
     
     if (refIndex === undefined) return null;
     
-    const refStake = parseFloat(odds[refIndex].stake) || 0;
+    const refStake = baseStakes[refIndex];
     const refOdd = parsedOdds[refIndex];
     const refMoeda = moedasPernas[refIndex];
     
     if (refStake <= 0 || refOdd <= 1) return null;
     
-    // Retorno-alvo na moeda da referência
+    // Retorno-alvo na moeda da referência (baseado no snapshot)
     const retornoAlvoRefCurrency = refStake * refOdd;
     
     // Calcular stakes para pernas D=true (converter para moeda de cada perna)
@@ -965,32 +977,21 @@ export function SurebetDialogTable({
     for (const i of directedProfitLegs) {
       const oddI = parsedOdds[i];
       if (oddI > 1) {
-        // Converter retorno-alvo para moeda desta perna
         const retornoInLegCurrency = convertCurrency(retornoAlvoRefCurrency, refMoeda, moedasPernas[i], getEffectiveRate as GetEffectiveRateFn);
         stakesDirected[i] = retornoInLegCurrency / oddI;
       }
     }
     
-    // Para calcular stakes D=false, precisamos trabalhar na moeda da referência
-    // Converter stakes D=true para moeda ref para somar
     const somaStakesDirectedRefCurrency = Object.entries(stakesDirected).reduce((acc, [idx, stake]) => {
       const i = parseInt(idx);
       return acc + convertCurrency(stake, moedasPernas[i], refMoeda, getEffectiveRate as GetEffectiveRateFn);
     }, 0);
     
-    // Índices das pernas não direcionadas (D=false)
     const undirectedIndices = odds.map((_, i) => i).filter(i => !directedProfitLegs.includes(i));
     
     if (undirectedIndices.length === 0) return null;
     
-    // Para D=false: lucro = 0, ou seja, retorno = stake_total (tudo na moeda ref)
-    // stake_i_ref = stakeTotal_ref / odd_i_ajustada
-    // odd_i_ajustada considera conversão de moeda
     const sumInvOddsAjustadas = undirectedIndices.reduce((acc, i) => {
-      // Odd ajustada: se a perna ganha, retorno na moeda ref = stake_na_moeda_perna * odd
-      // convertido para ref. Mas para a fórmula de inversão trabalhamos na moeda ref.
-      // stake_i_ref * odd_i_efetiva_ref = stakeTotal_ref
-      // odd_efetiva_ref = odd_i * (taxa_perna/taxa_ref)
       const ratePerna = getEffectiveRate(moedasPernas[i]).rate;
       const rateRef = getEffectiveRate(refMoeda).rate;
       const oddEfetivaRef = parsedOdds[i] * (ratePerna / rateRef);
@@ -1009,10 +1010,8 @@ export function SurebetDialogTable({
       if (oddI <= 1) {
         newStakes.push(0);
       } else if (directedProfitLegs.includes(i)) {
-        // Stake na moeda da perna
         newStakes.push(arredondarStake(stakesDirected[i] || 0));
       } else {
-        // Calcular na moeda ref, depois converter para moeda da perna
         const ratePerna = getEffectiveRate(moedasPernas[i]).rate;
         const rateRef = getEffectiveRate(refMoeda).rate;
         const oddEfetivaRef = oddI * (ratePerna / rateRef);
@@ -1023,23 +1022,17 @@ export function SurebetDialogTable({
     }
     
     return newStakes;
-  }, [odds.map(o => `${o.odd}|${o.stake}|${o.bookmaker_id}`).join(','), directedProfitLegs, arredondarAtivado, arredondarValor, getEffectiveRate, bookmakerSaldos]);
+  }, [odds.map(o => `${o.odd}|${o.bookmaker_id}`).join(','), directedProfitLegs, arredondarAtivado, arredondarValor, getEffectiveRate, bookmakerSaldos, equalizedStakesSnapshot]);
   
   // Aplicar stakes calculadas quando há direcionamento
+  // v2: aplica TODAS as stakes do resultado (sem feedback loop)
   useEffect(() => {
     if (isEditing) return;
     if (!directedStakes) return;
     if (directedProfitLegs.length === odds.length) return;
     
-    const refIndex = directedProfitLegs.find(i => {
-      const stake = parseFloat(odds[i].stake);
-      return !isNaN(stake) && stake > 0;
-    });
-    
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
-      if (i === refIndex) return o;
-      
       const targetStake = directedStakes[i];
       const currentStake = parseFloat(o.stake) || 0;
       
