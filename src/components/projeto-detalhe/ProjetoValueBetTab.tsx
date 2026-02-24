@@ -405,6 +405,25 @@ export function ProjetoValueBetTab({
     }
   }, [apostas, onDataChange, projetoId, invalidateSaldos, hasActiveRolloverBonus, atualizarProgressoRollover]);
 
+  // Deletar aposta
+  const handleDeleteAposta = useCallback(async (apostaId: string) => {
+    try {
+      const { deletarAposta } = await import("@/services/aposta/ApostaService");
+      const result = await deletarAposta(apostaId);
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao excluir aposta");
+        return;
+      }
+      setApostas(prev => prev.filter(a => a.id !== apostaId));
+      invalidateSaldos(projetoId);
+      onDataChange?.();
+      toast.success("Aposta excluída");
+    } catch (error: any) {
+      console.error("Erro ao excluir aposta:", error);
+      toast.error("Erro ao excluir aposta");
+    }
+  }, [projetoId, invalidateSaldos, onDataChange]);
+
   const metricas = useMemo(() => {
     const { convertToConsolidation, moedaConsolidacao } = { convertToConsolidation: convertToConsolidationOficialFn, moedaConsolidacao: moedaConsolidacaoVal };
     
@@ -933,6 +952,7 @@ export function ProjetoValueBetTab({
                  if (a) openEditDialog(a);
                }}
                onQuickResolve={handleQuickResolve}
+               onDelete={handleDeleteAposta}
                variant="card"
                /* Card usa moeda original da aposta via defaultFormatCurrency */
             />
@@ -957,6 +977,7 @@ export function ProjetoValueBetTab({
                  if (a) openEditDialog(a);
                }}
                onQuickResolve={handleQuickResolve}
+               onDelete={handleDeleteAposta}
                variant="list"
                /* Card usa moeda original da aposta via defaultFormatCurrency */
             />
