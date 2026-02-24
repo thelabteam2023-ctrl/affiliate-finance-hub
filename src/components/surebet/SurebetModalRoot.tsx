@@ -1658,8 +1658,8 @@ export function SurebetModalRoot({
               onDataApostaChange: setDataAposta,
               esportesList: ESPORTES,
             }}
-            showImport={!isEditing}
-            onImportClick={() => fileInputRef.current?.click()}
+            showImport={false}
+            legPrintStatuses={legPrints}
             showCloseButton={!embedded}
             onClose={() => onOpenChange(false)}
             embedded={embedded}
@@ -1846,7 +1846,7 @@ export function SurebetModalRoot({
               setArredondarAtivado={setArredondarAtivado}
               arredondarValor={arredondarValor}
               setArredondarValor={setArredondarValor}
-              onImport={handleImportButtonClick}
+              
             />
           </div>
 
