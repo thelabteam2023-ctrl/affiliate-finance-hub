@@ -407,13 +407,13 @@ export function SurebetColumnsView({
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Odd ø</span>
-                        <span className="text-[11px] font-semibold tabular-nums text-foreground">
+                        <span className="text-sm font-bold tabular-nums text-foreground">
                           {hasOddData ? oddMedia.toFixed(2) : "—"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Stake</span>
-                        <span className="text-[11px] font-semibold tabular-nums text-foreground">
+                        <span className="text-sm font-bold tabular-nums text-foreground">
                           {hasStakeData
                             ? moedas.length === 1
                               ? formatCurrency(totalStake, moedas[0])
