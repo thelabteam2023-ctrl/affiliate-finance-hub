@@ -135,7 +135,50 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
         };
       });
 
-      setFreebets(formatted);
+      // Também buscar freebets originadas do módulo de bônus (project_bookmaker_link_bonuses)
+      let bonusFreebetQuery = supabase
+        .from("project_bookmaker_link_bonuses")
+        .select(`
+          id, bookmaker_id, bonus_amount, status, created_at,
+          bookmakers!project_bookmaker_link_bonuses_bookmaker_id_fkey (
+            nome, moeda, parceiro_id,
+            parceiros!bookmakers_parceiro_id_fkey (nome),
+            bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
+          )
+        `)
+        .eq("project_id", projetoId)
+        .eq("tipo_bonus", "FREEBET");
+
+      const { data: bonusFreebets } = await bonusFreebetQuery;
+
+      // IDs já presentes para evitar duplicatas
+      const existingIds = new Set(formatted.map(f => f.id));
+
+      const bonusFormatted: FreebetRecebidaCompleta[] = (bonusFreebets || [])
+        .filter((bf: any) => !existingIds.has(bf.id))
+        .map((bf: any) => ({
+          id: bf.id,
+          bookmaker_id: bf.bookmaker_id,
+          bookmaker_nome: bf.bookmakers?.nome || "Desconhecida",
+          parceiro_nome: bf.bookmakers?.parceiros?.nome || null,
+          logo_url: bf.bookmakers?.bookmakers_catalogo?.logo_url || null,
+          valor: bf.bonus_amount || 0,
+          moeda: bf.bookmakers?.moeda || "BRL",
+          motivo: "Bônus Freebet",
+          data_recebida: bf.created_at,
+          data_validade: null,
+          utilizada: false,
+          data_utilizacao: null,
+          aposta_id: null,
+          status: bf.status === "credited" ? "LIBERADA" as const : "PENDENTE" as const,
+          origem: "PROMOCAO" as const,
+          qualificadora_id: null,
+          diasParaExpirar: null,
+          tem_rollover: false,
+        }));
+
+      const allFreebets = [...formatted, ...bonusFormatted];
+      setFreebets(allFreebets);
 
       // Fetch bookmakers with freebet balance
       const { data: bookmakers, error: bookmakersError } = await supabase
@@ -169,7 +212,7 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
       });
 
       // Aggregate freebet counts per bookmaker
-      formatted.forEach(fb => {
+      allFreebets.forEach(fb => {
         const bk = bookmakerEstoqueMap.get(fb.bookmaker_id);
         if (bk) {
           bk.freebets_count++;
@@ -287,6 +330,31 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
         });
 
       if (error) throw error;
+
+      // Se status LIBERADA, gerar financial_event para incrementar saldo_freebet
+      if (data.status === "LIBERADA") {
+        // Buscar moeda da bookmaker
+        const { data: bkData } = await supabase
+          .from("bookmakers")
+          .select("moeda")
+          .eq("id", data.bookmaker_id)
+          .single();
+
+        const { error: rpcError } = await supabase.rpc("process_financial_event", {
+          p_bookmaker_id: data.bookmaker_id,
+          p_tipo_evento: "FREEBET_CREDIT",
+          p_tipo_uso: "FREEBET",
+          p_origem: "FREEBET_MANUAL",
+          p_valor: data.valor,
+          p_moeda: bkData?.moeda || "BRL",
+          p_descricao: `Freebet manual: ${data.motivo}`,
+        });
+        
+        if (rpcError) {
+          console.error("[useFreebetEstoque] Erro ao creditar freebet no saldo:", rpcError);
+          toast.error("Freebet registrada, mas erro ao atualizar saldo");
+        }
+      }
 
       toast.success("Freebet registrada com sucesso");
       await fetchEstoque();
