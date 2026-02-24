@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getFirstLastName } from "@/lib/utils";
+import { Gift } from "lucide-react";
 
 export type SupportedCurrency = "BRL" | "USD" | "EUR" | "GBP" | "USDT";
 
@@ -108,9 +109,10 @@ export function BookmakerSelectOption({
           )}
         </span>
         
-        {/* Breakdown opcional: só mostra se tem freebet separado (não usado ainda) */}
-        {showBreakdown && !disabled && saldo_freebet > 0 && !bonus_rollover_started && (
-          <span className="text-[9px] text-muted-foreground/70">
+        {/* Freebet badge - SEMPRE visível quando há saldo de freebet */}
+        {showBreakdown && !disabled && saldo_freebet > 0 && (
+          <span className="text-[9px] text-amber-400/80 flex items-center gap-0.5">
+            <Gift className="h-2.5 w-2.5" />
             FB: {formatCurrency(saldo_freebet, moeda)}
           </span>
         )}
