@@ -584,6 +584,47 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               minWidth: "min-w-[110px]",
             };
           })(),
+          (() => {
+            // Média de depósito de bônus por dia
+            const eligibleForAvg = bonuses.filter(b => 
+              (b.status === "credited" || b.status === "finalized") && b.credited_at
+            );
+            const distinctDays = new Set(
+              eligibleForAvg.map(b => b.credited_at!.split('T')[0])
+            ).size;
+            const totalCredited = eligibleForAvg.reduce(
+              (acc, b) => acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency), 0
+            );
+            const avgPerDay = distinctDays > 0 ? totalCredited / distinctDays : 0;
+            return {
+              label: "Média Bônus/Dia",
+              value: (
+                <span>{formatCurrency(avgPerDay)}</span>
+              ),
+              tooltip: (
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-foreground">Média de Bônus Depositado por Dia</p>
+                  <p className="text-muted-foreground text-xs">Total de bônus creditados dividido pelo número de dias distintos com depósitos.</p>
+                  <div className="space-y-0.5">
+                    <div className="flex justify-between gap-4">
+                      <span>Total creditado</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(totalCredited)}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span>Dias com depósito</span>
+                      <span className="font-semibold text-foreground">{distinctDays}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span>Bônus considerados</span>
+                      <span className="font-semibold text-foreground">{eligibleForAvg.length}</span>
+                    </div>
+                  </div>
+                </div>
+              ),
+              subtitle: <span className="text-muted-foreground">{distinctDays} {distinctDays === 1 ? "dia" : "dias"} com depósito</span>,
+              minWidth: "min-w-[100px]",
+            };
+          })(),
           ...(expiring7Days.length > 0 ? [{
             label: "Expirando",
             value: (
