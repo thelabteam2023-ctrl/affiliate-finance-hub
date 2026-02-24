@@ -9,7 +9,7 @@
  */
 
 import React, { RefObject } from "react";
-import { Calculator, Layers, FileStack, Camera, Loader2, X } from "lucide-react";
+import { Calculator, Layers, FileStack, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -79,6 +79,8 @@ interface BetFormHeaderV2Props {
   onImportClick?: () => void;
   isPrintProcessing?: boolean;
   printProcessingPhase?: string;
+  /** Status de processamento por perna: array com isProcessing por leg */
+  legPrintStatuses?: Array<{ isProcessing: boolean }>;
   fileInputRef?: RefObject<HTMLInputElement>;
   onFileSelect?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   extraBadge?: React.ReactNode;
@@ -127,6 +129,7 @@ export function BetFormHeaderV2({
   onImportClick,
   isPrintProcessing = false,
   printProcessingPhase = "primary",
+  legPrintStatuses,
   fileInputRef,
   onFileSelect,
   extraBadge,
@@ -191,44 +194,17 @@ export function BetFormHeaderV2({
           </div>
         
         <div className="flex items-center gap-2 flex-1 justify-end">
-          {showImport && !isEditing && (
-            <>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={onImportClick}
-                      disabled={isPrintProcessing}
-                      className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      {isPrintProcessing ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Camera className="h-3.5 w-3.5" />
-                      )}
-                      {isPrintProcessing 
-                        ? (printProcessingPhase === "backup" ? "Alternativo..." : "Analisando...") 
-                        : "Importar"}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" align="end" className="max-w-[200px]">
-                    <p className="text-xs">Cole com Ctrl+V ou clique para selecionar imagem do bilhete</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              {fileInputRef && onFileSelect && (
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/*"
-                  className="hidden"
-                  onChange={onFileSelect}
-                />
+          {!isEditing && legPrintStatuses && legPrintStatuses.some(s => s.isProcessing) && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {legPrintStatuses.map((status, i) => 
+                status.isProcessing ? (
+                  <span key={i} className="flex items-center gap-1 text-primary animate-pulse">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Perna {i + 1}
+                  </span>
+                ) : null
               )}
-            </>
+            </div>
           )}
           
           {showCloseButton && !embedded && onClose && (

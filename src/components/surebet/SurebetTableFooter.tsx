@@ -5,8 +5,6 @@
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Upload } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { type SurebetAnalysis } from '@/hooks/useSurebetCalculator';
@@ -19,7 +17,7 @@ interface SurebetTableFooterProps {
   setArredondarAtivado: (value: boolean) => void;
   arredondarValor: string;
   setArredondarValor: (value: string) => void;
-  onImport: () => void;
+  
 }
 
 export function SurebetTableFooter({
@@ -29,7 +27,7 @@ export function SurebetTableFooter({
   setArredondarAtivado,
   arredondarValor,
   setArredondarValor,
-  onImport
+  
 }: SurebetTableFooterProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-border/50">
