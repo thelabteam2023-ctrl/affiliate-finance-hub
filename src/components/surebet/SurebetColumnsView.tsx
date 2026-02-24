@@ -302,7 +302,7 @@ export function SurebetColumnsView({
                 {additionalEntries.map((addEntry, addIndex) => {
                   const addBookmaker = bookmakers.find(b => b.id === addEntry.bookmaker_id);
                   return (
-                    <div key={`add-${addIndex}`} className="pt-2 mt-2 border-t border-border/20 space-y-1.5">
+                    <div key={`add-${addIndex}`} className="pt-2 mt-2 border-t border-primary/15 space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] text-muted-foreground">Sub {addIndex + 2}</span>
                         <Button
