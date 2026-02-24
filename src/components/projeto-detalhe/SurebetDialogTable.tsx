@@ -154,6 +154,8 @@ interface OddEntry {
   lucro_prejuizo?: number | null;
   gerouFreebet?: boolean;
   valorFreebetGerada?: string;
+  usarFreebet?: boolean;
+  valorFreebetUsar?: number;
   freebetStatus?: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA" | null;
   index?: number;
   additionalEntries?: OddFormEntry[];

@@ -66,6 +66,7 @@ import { BookmakerSearchableSelectContent } from "@/components/bookmakers/Bookma
 // updateBookmakerBalance REMOVIDO - Motor v7 usa exclusivamente RPCs de liquidação
 import { useImportMultiplaBetPrint } from "@/hooks/useImportMultiplaBetPrint";
 import { GerouFreebetInput } from "./GerouFreebetInput";
+import { FreebetToggle } from "@/components/apostas/waterfall";
 
 interface Selecao {
   descricao: string;
@@ -312,6 +313,7 @@ export function ApostaMultiplaDialog({
 
   // Freebet state
   const [usarFreebet, setUsarFreebet] = useState(false);
+  const [valorFreebetUsar, setValorFreebetUsar] = useState(0);
   const [gerouFreebet, setGerouFreebet] = useState(false);
   const [valorFreebetGerada, setValorFreebetGerada] = useState("");
 
@@ -416,6 +418,7 @@ export function ApostaMultiplaDialog({
       }
       
       setUsarFreebet(false);
+      setValorFreebetUsar(0);
       setGerouFreebet(false);
       setValorFreebetGerada("");
       setResultadoManual(null);
@@ -465,6 +468,7 @@ export function ApostaMultiplaDialog({
       { descricao: "", odd: "", resultado: "PENDENTE" },
     ]);
     setUsarFreebet(false);
+    setValorFreebetUsar(0);
     setGerouFreebet(false);
     setValorFreebetGerada("");
     setBookmakerSaldo(null);
@@ -1421,28 +1425,21 @@ export function ApostaMultiplaDialog({
             {bookmakerSaldo &&
               bookmakerSaldo.saldoFreebet > 0 &&
               !aposta?.gerou_freebet && (
-                <Card className="border-amber-500/30 bg-amber-500/5">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Gift className="h-4 w-4 text-amber-400" />
-                        <span className="text-sm font-medium">
-                          Usar Freebet nesta aposta?
-                        </span>
-                      </div>
-                      <Switch
-                        checked={usarFreebet}
-                        onCheckedChange={handleUsarFreebetChange}
-                      />
-                    </div>
-                    {usarFreebet && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Stake será debitada do saldo de Freebet (SNR - stake não
-                        retorna)
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
+                <FreebetToggle
+                  checked={usarFreebet}
+                  onCheckedChange={(checked) => {
+                    setUsarFreebet(checked);
+                    if (checked) {
+                      setGerouFreebet(false);
+                      setValorFreebetGerada("");
+                    }
+                  }}
+                  saldoFreebet={bookmakerSaldo.saldoFreebet}
+                  moeda={bookmakerSaldo.moeda}
+                  disabled={!!aposta?.tipo_freebet}
+                  valorFreebet={valorFreebetUsar}
+                  onValorFreebetChange={setValorFreebetUsar}
+                />
               )}
 
             {/* Seleções */}

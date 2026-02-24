@@ -636,6 +636,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   
   // Toggle simples: Usar Freebet nesta aposta? (Bookmaker simples)
   const [usarFreebetBookmaker, setUsarFreebetBookmaker] = useState(false);
+  // Valor de freebet a utilizar (editável pelo operador)
+  const [valorFreebetUsar, setValorFreebetUsar] = useState(0);
   
   // Tipo de aposta para Exchange Back (Normal, Freebet SNR, Freebet SR)
   const [tipoApostaExchangeBack, setTipoApostaExchangeBack] = useState<"normal" | "freebet_snr" | "freebet_sr">("normal");
@@ -1320,6 +1322,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     setCoberturaTaxaExtracao(null);
     setTipoApostaBack("normal");
     setUsarFreebetBookmaker(false);
+    setValorFreebetUsar(0);
     setTipoApostaExchangeBack("normal");
     setGerouFreebet(false);
     setValorFreebetGerada("");
@@ -3070,6 +3073,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                       saldoFreebet={bookmakerSaldo.saldoFreebet}
                       moeda={bookmakerSaldo.moeda}
                       disabled={!!aposta?.tipo_freebet}
+                      valorFreebet={valorFreebetUsar}
+                      onValorFreebetChange={setValorFreebetUsar}
                     />
                   )}
                   
@@ -3965,6 +3970,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     saldoFreebet={bookmakerSaldo.saldoFreebet}
                     moeda={bookmakerSaldo.moeda}
                     disabled={!!aposta?.tipo_freebet}
+                    valorFreebet={valorFreebetUsar}
+                    onValorFreebetChange={setValorFreebetUsar}
                   />
                 )}
                 
