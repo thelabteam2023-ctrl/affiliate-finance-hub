@@ -225,6 +225,13 @@ export function BonusDialog({
     setSelectedTemplateId(template.id);
     setFilledFromTemplate(true);
     
+    // Auto-set tipo based on template type
+    if (template.tipoBônus === "FREE_BET") {
+      setTipoBonus("FREEBET");
+    } else {
+      setTipoBonus("BONUS");
+    }
+    
     // Auto-fill fields from template
     const tipoLabel = template.tipoBônus === "OUTRO" && template.tipoOutro 
       ? template.tipoOutro 
@@ -511,14 +518,20 @@ export function BonusDialog({
           </div>
 
           {/* Template Suggestions - Centralizado */}
-          {!isEditMode && hasTemplates && bookmakerId && (
+          {!isEditMode && bookmakerId && (() => {
+            const filtered = templates.filter(t => tipoBonus === "FREEBET" ? t.tipoBônus === "FREE_BET" : t.tipoBônus !== "FREE_BET");
+            return filtered.length > 0;
+          })() && (
             <div className="space-y-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
               <div className="flex items-center justify-center gap-2 text-sm font-medium text-primary">
                 <Sparkles className="h-4 w-4" />
-                Sugestões de bônus
+                {tipoBonus === "FREEBET" ? "Sugestões de freebet" : "Sugestões de bônus"}
               </div>
               <div className="flex flex-wrap justify-center gap-2">
-                {templates.map((template) => (
+                {templates.filter((t) => {
+                  if (tipoBonus === "FREEBET") return t.tipoBônus === "FREE_BET";
+                  return t.tipoBônus !== "FREE_BET";
+                }).map((template) => (
                   <button
                     key={template.id}
                     type="button"
