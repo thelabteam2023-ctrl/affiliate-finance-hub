@@ -43,6 +43,7 @@ import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { toast } from "sonner";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
+import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { ApostaDialog } from "./ApostaDialog";
 import { ApostaCard, ApostaCardData } from "./ApostaCard";
@@ -348,12 +349,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           const order: Record<string, number> = { "Casa": 1, "1": 1, "Empate": 2, "X": 2, "Fora": 3, "2": 3 };
           return (order[a.selecao] || 99) - (order[b.selecao] || 99);
         });
-        const pernasSurebetCard: SurebetPerna[] = pernasOrdenadas.map((p, idx) => ({
-          id: p.id || `perna-${idx}`, selecao: p.selecao, selecao_livre: p.selecao_livre,
-          odd: p.odd, stake: p.stake, resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
-          bookmaker_nome: p.bookmaker_nome || "—", bookmaker_id: p.bookmaker_id,
-          moeda: p.moeda || 'BRL',
-        }));
+        
+        const pernasSurebetCard = groupPernasBySelecao(pernasOrdenadas);
         const hasValidPernas = pernasSurebetCard.length > 0;
         const isSimples = arb.forma_registro === "SIMPLES" && !hasValidPernas;
         return {

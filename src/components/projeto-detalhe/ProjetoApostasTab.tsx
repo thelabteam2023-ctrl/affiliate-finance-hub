@@ -29,6 +29,7 @@ import {
   History
 } from "lucide-react";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
+import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import { SurebetDialog } from "./SurebetDialog";
 import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasResumo";
 import { ApostaCard } from "./ApostaCard";
@@ -1355,21 +1356,20 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 lucro_real: sb.pl_consolidado ?? sb.lucro_prejuizo,
                 pl_consolidado: sb.pl_consolidado,
                 stake_consolidado: sb.stake_consolidado,
-                pernas: sb.pernas?.map((p: any) => ({
-                  id: p.id,
-                  selecao: p.selecao,
-                  selecao_livre: p.selecao_livre,
-                  odd: p.odd,
-                  stake: p.stake,
-                  resultado: p.resultado,
-                  lucro_prejuizo: p.lucro_prejuizo ?? null,
-                  bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
-                  bookmaker_id: p.bookmaker_id,
-                  moeda: p.moeda || 'BRL',
-                  entries: p.entries,
-                  odd_media: p.odd_media,
-                  stake_total: p.stake_total,
-                }))
+                pernas: groupPernasBySelecao(
+                  (sb.pernas || []).map((p: any) => ({
+                    id: p.id,
+                    selecao: p.selecao,
+                    selecao_livre: p.selecao_livre,
+                    odd: p.odd,
+                    stake: p.stake,
+                    resultado: p.resultado,
+                    lucro_prejuizo: p.lucro_prejuizo ?? null,
+                    bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
+                    bookmaker_id: p.bookmaker_id,
+                    moeda: p.moeda || 'BRL',
+                  }))
+                ),
               };
               
               return (
