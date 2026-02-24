@@ -399,12 +399,33 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
   // Delete freebet
   const deleteFreebet = async (id: string) => {
     try {
+      // Buscar dados da freebet antes de deletar para reverter o saldo
+      const freebet = freebets.find(fb => fb.id === id);
+      
       const { error } = await supabase
         .from("freebets_recebidas")
         .delete()
         .eq("id", id);
 
       if (error) throw error;
+
+      // Se era LIBERADA e não utilizada, reverter o saldo_freebet
+      if (freebet && freebet.status === "LIBERADA" && !freebet.utilizada) {
+        const { error: rpcError } = await supabase.rpc("process_financial_event", {
+          p_bookmaker_id: freebet.bookmaker_id,
+          p_tipo_evento: "FREEBET_EXPIRE",
+          p_tipo_uso: "FREEBET",
+          p_origem: "EXCLUSAO_FREEBET",
+          p_valor: -freebet.valor, // negativo para debitar
+          p_moeda: freebet.moeda,
+          p_descricao: `Reversão por exclusão de freebet: ${freebet.motivo}`,
+        });
+
+        if (rpcError) {
+          console.error("[useFreebetEstoque] Erro ao reverter saldo_freebet:", rpcError);
+          toast.error("Freebet removida, mas erro ao reverter saldo");
+        }
+      }
 
       toast.success("Freebet removida com sucesso");
       await fetchEstoque();
