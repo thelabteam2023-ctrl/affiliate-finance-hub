@@ -913,8 +913,20 @@ export function SurebetModalRoot({
       // Passo 3: converter retorno-alvo da consolidação para moeda da perna
       const targetReturnInLegCurrency = convertViaBRL(targetReturnConsolidated, consolidationCurrency, legMoeda, brlRates);
       
-      // Passo 4: stake = retorno-alvo na moeda da perna / odd
-      const calculatedStake = arredondarStake(targetReturnInLegCurrency / oddMedia);
+      // Passo 4: stake TOTAL necessário para a perna = retorno-alvo / odd
+      const totalStakeNeeded = arredondarStake(targetReturnInLegCurrency / oddMedia);
+      
+      // Passo 5: subtrair contribuição das sub-entradas adicionais
+      // Sem isso, o main stake recebe o total e as sub-entradas são somadas por cima,
+      // causando acumulação progressiva ao alternar referências.
+      const additionalStakeInLegCurrency = (o.additionalEntries || []).reduce((acc, e) => {
+        const s = parseFloat(e.stake) || 0;
+        if (s <= 0) return acc;
+        const m = (e.moeda as string) || legMoeda;
+        return acc + convertViaBRL(s, m, legMoeda, brlRates);
+      }, 0);
+      
+      const calculatedStake = Math.max(0, totalStakeNeeded - additionalStakeInLegCurrency);
       const currentStake = parseFloat(o.stake) || 0;
       
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
