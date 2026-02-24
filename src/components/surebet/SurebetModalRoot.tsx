@@ -223,6 +223,7 @@ export function SurebetModalRoot({
   );
   
   const [directedProfitLegs, setDirectedProfitLegs] = useState<number[]>([0, 1]);
+  const [equalizedStakesSnapshot, setEqualizedStakesSnapshot] = useState<number[]>([]);
   
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
   const [arredondarValor, setArredondarValor] = useState("1");
@@ -339,6 +340,7 @@ export function SurebetModalRoot({
     arredondarValor,
     bookmakerSaldos: bookmakerSaldos.map(b => ({ id: b.id, moeda: b.moeda })),
     engineConfig,
+    equalizedStakesSnapshot,
   });
 
   // ============================================
@@ -509,9 +511,11 @@ export function SurebetModalRoot({
       }
       setOdds(newOdds);
       setDirectedProfitLegs(Array.from({ length: numPernas }, (_, i) => i));
+      setEqualizedStakesSnapshot([]);
     } else {
       setOdds(odds.slice(0, numPernas));
       setDirectedProfitLegs(prev => prev.filter(i => i < numPernas));
+      setEqualizedStakesSnapshot(prev => prev.slice(0, numPernas));
     }
     
     initializeLegPrints(numPernas);
@@ -532,6 +536,7 @@ export function SurebetModalRoot({
       additionalEntries: []
     })));
     setDirectedProfitLegs(Array.from({ length: n }, (_, i) => i));
+    setEqualizedStakesSnapshot([]);
   };
 
   const fetchLinkedPernas = async (surebetId: string) => {
@@ -936,7 +941,18 @@ export function SurebetModalRoot({
       return o;
     });
     
-    if (needsUpdate) setOdds(newOdds);
+    if (needsUpdate) {
+      // Salvar snapshot das stakes equalizadas como base imutável para checkbox D
+      const snapshot = newOdds.map(o => parseFloat(o.stake) || 0);
+      setEqualizedStakesSnapshot(snapshot);
+      setOdds(newOdds);
+    } else {
+      // Mesmo sem mudanças, garantir que snapshot existe quando todas as pernas estão calculadas
+      const allValid = odds.every(o => getOddMediaPerna(o) > 1 && (parseFloat(o.stake) || 0) > 0);
+      if (allValid && equalizedStakesSnapshot.length !== odds.length) {
+        setEqualizedStakesSnapshot(odds.map(o => getStakeTotalPerna(o)));
+      }
+    }
   }, [
     odds.map(o => `${o.odd}-${o.stake}-${o.isManuallyEdited}-${o.bookmaker_id}`).join(','),
     odds.map(o => o.isReference).join(','),
@@ -952,9 +968,11 @@ export function SurebetModalRoot({
   // APLICAR STAKES DIRECIONADAS (CHECKBOX D)
   // ============================================
   // 
-  // REGRA DE NEGÓCIO:
-  // - Pernas DESMARCADAS (D=false): stakes FIXAS, lucro ≈ 0
-  // - Perna MARCADA (D=true): stake pode ser REDUZIDA para compensar
+  // REGRA DE NEGÓCIO (v2 — sem loop de feedback):
+  // - directedStakes é calculado a partir do snapshot IMUTÁVEL
+  // - Pernas DESMARCADAS: restauradas para valor do snapshot
+  // - Perna MARCADA: recebe stake calculada
+  // - Dependências NÃO incluem odds.stake (quebra o loop)
   // ============================================
 
   useEffect(() => {
@@ -965,21 +983,12 @@ export function SurebetModalRoot({
     // Verificar se temos stakes calculadas
     if (!directedStakes || directedStakes.length !== odds.length) return;
     
-    // Identificar pernas marcadas (apenas essas terão stake alterada)
-    const markedIndices = directedProfitLegs;
-    
-    // Verificar se há diferença real para atualizar (APENAS nas marcadas)
+    // Aplicar todas as stakes do resultado (marcadas E desmarcadas vêm do snapshot)
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
-      // Só altera stakes das pernas MARCADAS
-      if (!markedIndices.includes(i)) {
-        return o; // Pernas desmarcadas: stakes FIXAS
-      }
-      
       const calculatedStake = directedStakes[i];
       const currentStake = parseFloat(o.stake) || 0;
       
-      // Só atualiza se a diferença for significativa
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
         needsUpdate = true;
         return { 
@@ -999,7 +1008,6 @@ export function SurebetModalRoot({
     directedProfitLegs.join(','),
     directedStakes?.join(','),
     odds.map(o => o.odd).join(','),
-    odds.map(o => o.stake).join(','), // Re-calcular quando stakes das desmarcadas mudam
     arredondarAtivado,
     arredondarValor
   ]);
