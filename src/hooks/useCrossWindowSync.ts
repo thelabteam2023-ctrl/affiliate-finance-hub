@@ -115,7 +115,7 @@ export function useCrossWindowSync(options: CrossWindowSyncOptions): void {
       });
     }
     
-    // Fallback: listener para localStorage (funciona em todos os browsers)
+    // Fallback 1: listener para localStorage (funciona em todos os browsers)
     const handleStorage = (event: StorageEvent) => {
       if (!event.key || !storageKeys.has(event.key) || !event.newValue) return;
       
@@ -130,7 +130,24 @@ export function useCrossWindowSync(options: CrossWindowSyncOptions): void {
       }
     };
     
+    // Fallback 2: postMessage (cross-origin compatible, from window.opener)
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || data.source !== 'surebet_window') return;
+      
+      const matchesChannel = channels.some((ch) => {
+        const config = CHANNEL_CONFIG[ch];
+        return config.validEvents.includes(data.type);
+      });
+      
+      if (matchesChannel && data.projetoId === projetoId) {
+        log(`Evento postMessage recebido: ${data.type}`);
+        onSyncRef.current();
+      }
+    };
+    
     window.addEventListener('storage', handleStorage);
+    window.addEventListener('message', handleMessage);
     
     // Cleanup
     return () => {
@@ -142,6 +159,7 @@ export function useCrossWindowSync(options: CrossWindowSyncOptions): void {
         }
       });
       window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('message', handleMessage);
       log('Canais fechados e listeners removidos');
     };
   }, [projetoId, channels, log]);
