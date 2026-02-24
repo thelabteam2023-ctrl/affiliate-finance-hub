@@ -21,6 +21,7 @@ import {
   calcularStakesEqualizadasMultiCurrency,
   analisarArbitragem,
   type EngineLeg,
+  type BRLRates,
   type SurebetEngineConfig,
   type SurebetEngineAnalysis,
   type LegScenarioResult,
@@ -66,14 +67,20 @@ interface BookmakerInfo {
 /**
  * Odd média ponderada pelas stakes das entradas adicionais.
  * Se não houver stakes, usa a odd principal.
+ * 
+ * MULTI-MOEDA: Quando brlRates e baseCurrency são fornecidos,
+ * converte as stakes para a moeda base antes de calcular o peso,
+ * garantindo que EUR 100 + USD 100 pese corretamente.
  */
 export function calcularOddMedia(
   mainEntry: { odd: string; stake: string },
-  additionalEntries?: OddFormEntry[]
+  additionalEntries?: OddFormEntry[],
+  brlRates?: BRLRates,
+  baseCurrency?: string
 ): number {
   const all = [
-    { odd: mainEntry.odd, stake: mainEntry.stake, isMain: true },
-    ...(additionalEntries || []).map(e => ({ odd: e.odd, stake: e.stake, isMain: false })),
+    { odd: mainEntry.odd, stake: mainEntry.stake, moeda: baseCurrency || "BRL", isMain: true },
+    ...(additionalEntries || []).map(e => ({ odd: e.odd, stake: e.stake, moeda: (e.moeda as string) || baseCurrency || "BRL", isMain: false })),
   ];
 
   const validas = all
@@ -83,22 +90,53 @@ export function calcularOddMedia(
   if (validas.length === 0) return 0;
 
   const comStake = validas.filter(e => !isNaN(e.stakeNum) && e.stakeNum > 0);
-  const somaStake = comStake.reduce((acc, e) => acc + e.stakeNum, 0);
 
+  if (comStake.length > 0 && brlRates && baseCurrency) {
+    // Converter stakes para moeda base antes de ponderar
+    const convertedStakes = comStake.map(e => ({
+      ...e,
+      stakeConverted: convertViaBRL(e.stakeNum, e.moeda, baseCurrency, brlRates),
+    }));
+    const somaConverted = convertedStakes.reduce((acc, e) => acc + e.stakeConverted, 0);
+    if (somaConverted > 0) {
+      return convertedStakes.reduce((acc, e) => acc + e.stakeConverted * e.oddNum, 0) / somaConverted;
+    }
+  }
+
+  // Fallback: soma nominal (mono-moeda)
+  const somaStake = comStake.reduce((acc, e) => acc + e.stakeNum, 0);
   if (somaStake > 0) {
-    const somaStakeOdd = comStake.reduce((acc, e) => acc + e.stakeNum * e.oddNum, 0);
-    return somaStakeOdd / somaStake;
+    return comStake.reduce((acc, e) => acc + e.stakeNum * e.oddNum, 0) / somaStake;
   }
 
   return validas.find(e => e.isMain)?.oddNum ?? validas[0].oddNum;
 }
 
-/** Soma das stakes de todas as entradas de uma perna */
+/**
+ * Soma das stakes de todas as entradas de uma perna.
+ * 
+ * MULTI-MOEDA: Quando brlRates e baseCurrency são fornecidos,
+ * converte sub-entradas para a moeda base antes de somar,
+ * garantindo que EUR 100 + USD 100 ≠ 200 USD.
+ */
 export function calcularStakeTotal(
   mainEntry: { stake: string },
-  additionalEntries?: OddFormEntry[]
+  additionalEntries?: OddFormEntry[],
+  brlRates?: BRLRates,
+  baseCurrency?: string
 ): number {
   const main = parseFloat(mainEntry.stake) || 0;
+
+  if (brlRates && baseCurrency && additionalEntries && additionalEntries.length > 0) {
+    const extra = additionalEntries.reduce((acc, e) => {
+      const stakeNum = parseFloat(e.stake) || 0;
+      const moeda = (e.moeda as string) || baseCurrency;
+      // Converter para moeda base da perna
+      return acc + convertViaBRL(stakeNum, moeda, baseCurrency, brlRates);
+    }, 0);
+    return main + extra;
+  }
+
   const extra = (additionalEntries || []).reduce((acc, e) => acc + (parseFloat(e.stake) || 0), 0);
   return main + extra;
 }
@@ -177,15 +215,6 @@ export function useSurebetCalculator({
     return Math.round(valor / fator) * fator;
   }, [arredondarAtivado, arredondarValor]);
 
-  // ── Helpers de perna ─────────────────────────────────────────
-  const getOddMediaPerna = useCallback((entry: OddEntry): number => {
-    return calcularOddMedia({ odd: entry.odd, stake: entry.stake }, entry.additionalEntries);
-  }, []);
-
-  const getStakeTotalPerna = useCallback((entry: OddEntry): number => {
-    return calcularStakeTotal({ stake: entry.stake }, entry.additionalEntries);
-  }, []);
-
   // ── Moeda de cada perna ──────────────────────────────────────
   const getMoedaPerna = useCallback((entry: OddEntry): SupportedCurrency => {
     const bk = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
@@ -195,12 +224,32 @@ export function useSurebetCalculator({
   // ── Configuração de fallback quando engineConfig não fornecido ─
   const safeConfig: SurebetEngineConfig = useMemo(() => {
     if (engineConfig) return engineConfig;
-    // Fallback sem conversão real (mono-moeda)
     return {
       consolidationCurrency: "BRL",
       brlRates: { BRL: 1, USD: 5.5, EUR: 6.0, GBP: 7.0 },
     };
   }, [engineConfig]);
+
+  // ── Helpers de perna (dependem de getMoedaPerna e safeConfig) ──
+  const getOddMediaPerna = useCallback((entry: OddEntry): number => {
+    const baseCurrency = getMoedaPerna(entry);
+    return calcularOddMedia(
+      { odd: entry.odd, stake: entry.stake },
+      entry.additionalEntries,
+      safeConfig.brlRates,
+      baseCurrency
+    );
+  }, [safeConfig.brlRates, getMoedaPerna]);
+
+  const getStakeTotalPerna = useCallback((entry: OddEntry): number => {
+    const baseCurrency = getMoedaPerna(entry);
+    return calcularStakeTotal(
+      { stake: entry.stake },
+      entry.additionalEntries,
+      safeConfig.brlRates,
+      baseCurrency
+    );
+  }, [safeConfig.brlRates, getMoedaPerna]);
 
   // ── Checkbox D ───────────────────────────────────────────────
   const directedStakesLocal = useMemo(() => {
