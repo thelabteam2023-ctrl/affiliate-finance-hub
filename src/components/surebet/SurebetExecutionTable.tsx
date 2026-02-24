@@ -58,6 +58,9 @@ interface SurebetExecutionTableProps {
 // Gera ID único
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
+// Máximo de sub-entries por perna
+const MAX_ENTRIES_PER_LEG = 5;
+
 // Formata valor para exibição
 function formatValue(value: number, showSign: boolean = false): string {
   const formatted = value.toLocaleString('pt-BR', { 
@@ -111,6 +114,16 @@ export function SurebetExecutionTable({
       return acc + leg.entries.reduce((sum, entry) => sum + (parseFloat(entry.stake) || 0), 0);
     }, 0);
   }, [legs]);
+
+  // Calcular odd média ponderada de uma perna
+  const calculateWeightedOdd = useCallback((entries: LegEntry[]): number => {
+    const totalStake = entries.reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+    if (totalStake <= 0) return 0;
+    const weightedSum = entries.reduce((sum, e) => {
+      return sum + (parseFloat(e.stake) || 0) * (parseFloat(e.odd) || 0);
+    }, 0);
+    return weightedSum / totalStake;
+  }, []);
 
   // Calcular lucro e ROI por entrada
   const calculateEntryProfit = useCallback((entry: LegEntry, legEntries: LegEntry[]): { lucro: number; roi: number } => {
@@ -183,11 +196,12 @@ export function SurebetExecutionTable({
     });
   }, [setLegs]);
 
-  // Handler para adicionar entrada em uma perna
+  // Handler para adicionar entrada em uma perna (máximo MAX_ENTRIES_PER_LEG)
   const addEntry = useCallback((legIndex: number) => {
     setLegs(prev => {
       const updated = [...prev];
       const leg = { ...updated[legIndex] };
+      if (leg.entries.length >= MAX_ENTRIES_PER_LEG) return prev;
       leg.entries = [...leg.entries, {
         id: generateId(),
         bookmaker_id: '',
@@ -263,6 +277,8 @@ export function SurebetExecutionTable({
               const { lucro, roi } = calculateEntryProfit(entry, leg.entries);
               const isPositive = lucro >= 0;
               const hasData = entry.bookmaker_id && parseFloat(entry.odd) > 1 && parseFloat(entry.stake) > 0;
+              const weightedOdd = leg.entries.length > 1 ? calculateWeightedOdd(leg.entries) : 0;
+              const canAddMore = leg.entries.length < MAX_ENTRIES_PER_LEG;
               
               return (
                 <tr 
@@ -285,16 +301,24 @@ export function SurebetExecutionTable({
                         )}>
                           {leg.label}
                         </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-5 w-5 p-0 text-muted-foreground hover:text-primary"
-                          onClick={() => addEntry(legIndex)}
-                          title="Adicionar casa"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
+                        {/* Odd média ponderada quando há múltiplas entradas */}
+                        {leg.entries.length > 1 && weightedOdd > 0 && (
+                          <span className="text-[9px] text-muted-foreground font-mono tabular-nums" title="Odd média ponderada">
+                            ø {weightedOdd.toFixed(3)}
+                          </span>
+                        )}
+                        {canAddMore && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 text-muted-foreground hover:text-primary"
+                            onClick={() => addEntry(legIndex)}
+                            title={`Adicionar casa (${leg.entries.length}/${MAX_ENTRIES_PER_LEG})`}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   )}
