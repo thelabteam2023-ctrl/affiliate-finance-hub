@@ -141,22 +141,41 @@ export default function SurebetWindowPage() {
   // FLUXO DISTINTO: Criação mantém aberto, Edição fecha automaticamente
   const handleSuccess = useCallback((action?: SurebetActionType) => {
     // Notificar janela principal para atualizar listas/KPIs/saldos
+    const payload = { 
+      type: "SUREBET_SAVED", 
+      projetoId,
+      surebetId: id || "novo",
+      action
+    };
+    
+    // 1. BroadcastChannel (same-origin tabs/windows)
     try {
       const channel = new BroadcastChannel("surebet_channel");
-      channel.postMessage({ 
-        type: "SUREBET_SAVED", 
-        projetoId,
-        surebetId: id || "novo",
-        action
-      });
+      channel.postMessage(payload);
       channel.close();
     } catch (err) {
+      // fallback
+    }
+    
+    // 2. window.opener.postMessage (cross-origin compatible)
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ ...payload, source: 'surebet_window' }, '*');
+      }
+    } catch (err) {
+      // opener may be inaccessible
+    }
+    
+    // 3. localStorage fallback (triggers StorageEvent in same-origin windows)
+    try {
       localStorage.setItem("surebet_saved", JSON.stringify({ 
-        projetoId, 
-        surebetId: id || "novo",
-        action,
+        ...payload,
         timestamp: Date.now() 
       }));
+      // Remove immediately to allow re-triggering
+      setTimeout(() => localStorage.removeItem("surebet_saved"), 100);
+    } catch (err) {
+      // ignore
     }
     
     // Se veio de rascunho, deletar o rascunho após salvar com sucesso (não em delete)
