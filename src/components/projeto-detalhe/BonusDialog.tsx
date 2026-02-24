@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle, Clock, Lock, Search } from "lucide-react";
-import { BonusFormData, BonusStatus, ProjectBonus } from "@/hooks/useProjectBonuses";
+import { BonusFormData, BonusStatus, ProjectBonus, TipoBonus } from "@/hooks/useProjectBonuses";
 import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
 import { format, addDays } from "date-fns";
@@ -106,6 +106,7 @@ export function BonusDialog({
   const { toast } = useToast();
   const [bookmakerId, setBookmakerId] = useState("");
   const [title, setTitle] = useState("");
+  const [tipoBonus, setTipoBonus] = useState<TipoBonus>("BONUS");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("BRL");
   const [status, setStatus] = useState<BonusStatus>("pending");
@@ -148,6 +149,7 @@ export function BonusDialog({
         setTitle(bonus.title);
         setAmount(String(bonus.bonus_amount));
         setCurrency(bonus.currency);
+        setTipoBonus(bonus.tipo_bonus || "BONUS");
         setStatus(bonus.status);
         setCreditedAt(bonus.credited_at ? format(new Date(bonus.credited_at), "yyyy-MM-dd") : "");
         setExpiresAt(bonus.expires_at ? format(new Date(bonus.expires_at), "yyyy-MM-dd") : "");
@@ -167,6 +169,7 @@ export function BonusDialog({
         setTitle("");
         setAmount("");
         setCurrency("BRL");
+        setTipoBonus("BONUS");
         setStatus("credited");
         setCreditedAt(format(new Date(), "yyyy-MM-dd"));
         setExpiresAt("");
@@ -327,6 +330,7 @@ export function BonusDialog({
       bonus_amount: parsedAmount,
       currency,
       status,
+      tipo_bonus: tipoBonus,
       credited_at: status === "credited" && creditedAt ? new Date(creditedAt).toISOString() : null,
       expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
       notes: null,
@@ -351,18 +355,62 @@ export function BonusDialog({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Gift className="h-5 w-5 text-primary" />
-            {isEditMode ? "Editar Bônus" : "Registrar Bônus"}
+            {tipoBonus === "FREEBET" ? <Sparkles className="h-5 w-5 text-primary" /> : <Gift className="h-5 w-5 text-primary" />}
+            {isEditMode 
+              ? `Editar ${tipoBonus === "FREEBET" ? "Freebet" : "Bônus"}` 
+              : `Registrar ${tipoBonus === "FREEBET" ? "Freebet" : "Bônus"}`}
           </DialogTitle>
           <DialogDescription>
             {isEditMode
-              ? "Atualize as informações do bônus"
-              : "Registre um novo bônus recebido pelo vínculo"}
+              ? `Atualize as informações ${tipoBonus === "FREEBET" ? "da freebet" : "do bônus"}`
+              : `Registre ${tipoBonus === "FREEBET" ? "uma nova freebet recebida" : "um novo bônus recebido"} pelo vínculo`}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-4">
-          {/* Bookmaker Select - Centralizado (sem ID Card) */}
+          {/* Tipo de Promoção Toggle */}
+          <div className="flex justify-center">
+            <div className="inline-flex items-center rounded-lg border border-border p-1 bg-muted/30">
+              <button
+                type="button"
+                onClick={() => setTipoBonus("BONUS")}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all",
+                  tipoBonus === "BONUS"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Gift className="h-3.5 w-3.5" />
+                Bônus
+              </button>
+              <button
+                type="button"
+                onClick={() => setTipoBonus("FREEBET")}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all",
+                  tipoBonus === "FREEBET"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Freebet
+              </button>
+            </div>
+          </div>
+
+          {/* Info banner for Freebet */}
+          {tipoBonus === "FREEBET" && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground">
+                Freebet credita em <strong className="text-foreground">saldo freebet</strong>. 
+                Ao vencer, apenas o <strong className="text-foreground">lucro</strong> (retorno − stake) 
+                vai para o saldo real. Perda = sem impacto.
+              </p>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground text-center block">Casa de Apostas</Label>
             <Select
@@ -574,7 +622,7 @@ export function BonusDialog({
             {/* Bônus */}
             <div className="flex flex-col">
               <div className="h-5 flex items-center justify-center gap-1">
-                <Label className="text-xs text-muted-foreground">Valor do Bônus *</Label>
+                <Label className="text-xs text-muted-foreground">{tipoBonus === "FREEBET" ? "Valor da Freebet" : "Valor do Bônus"} *</Label>
                 {templatePercent && amount && (
                   <Badge variant="secondary" className="text-[9px] px-1 h-4">Auto</Badge>
                 )}
@@ -853,7 +901,7 @@ export function BonusDialog({
             disabled={saving || !bookmakerId || !amount || parseFloat(amount) <= 0}
           >
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditMode ? "Salvar Alterações" : "Registrar Bônus"}
+            {isEditMode ? "Salvar Alterações" : `Registrar ${tipoBonus === "FREEBET" ? "Freebet" : "Bônus"}`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -924,6 +972,7 @@ export function BonusDialog({
                   bonus_amount: parsedAmount,
                   currency,
                   status: "pending",
+                  tipo_bonus: tipoBonus,
                   credited_at: null,
                   expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
                   notes: null,
