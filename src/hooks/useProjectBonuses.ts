@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { registrarBonusCreditadoViaLedger, estornarBonusViaLedger, getBookmakerMoeda } from "@/lib/ledgerService";
+import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
 import { useWorkspace } from "@/hooks/useWorkspace";
 
 export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
@@ -11,6 +12,8 @@ export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "rever
 export type FinalizeReason = "rollover_completed" | "cycle_completed" | "expired" | "cancelled_reversed";
 
 export type BonusSource = "manual" | "template";
+
+export type TipoBonus = "BONUS" | "FREEBET";
 
 export interface ProjectBonus {
   id: string;
@@ -22,6 +25,7 @@ export interface ProjectBonus {
   saldo_atual: number; // Saldo atual do bônus (pode ser menor que bonus_amount se consumido)
   currency: string;
   status: BonusStatus;
+  tipo_bonus: TipoBonus;
   credited_at: string | null;
   expires_at: string | null;
   notes: string | null;
@@ -60,6 +64,7 @@ export interface BonusFormData {
   bonus_amount: number;
   currency: string;
   status: BonusStatus;
+  tipo_bonus?: TipoBonus;
   credited_at?: string | null;
   expires_at?: string | null;
   notes?: string | null;
@@ -180,6 +185,7 @@ async function fetchBonusesFromDb(projectId: string, bookmakerId?: string): Prom
     saldo_atual: Number(b.saldo_atual || 0),
     currency: b.currency,
     status: b.status as BonusStatus,
+    tipo_bonus: (b.tipo_bonus || 'BONUS') as TipoBonus,
     credited_at: b.credited_at,
     expires_at: b.expires_at,
     notes: b.notes,
@@ -334,6 +340,8 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
 
       // CORREÇÃO: saldo_atual do bônus deve refletir o valor creditado
       // A RPC get_bookmaker_saldos calcula saldo_bonus via SUM(saldo_atual) dos bônus creditados
+      const tipoBonus = data.tipo_bonus || 'BONUS';
+      
       const bonusData = {
         project_id: projectId,
         bookmaker_id: data.bookmaker_id,
@@ -345,6 +353,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         migrado_para_saldo_unificado: true,
         currency: data.currency,
         status: data.status,
+        tipo_bonus: tipoBonus,
         credited_at: data.status === "credited" ? (data.credited_at || new Date().toISOString()) : null,
         expires_at: data.expires_at || null,
         notes: data.notes || null,
@@ -370,22 +379,40 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       // MODELO UNIFICADO: Se status = credited, creditar via ledger
       if (data.status === "credited") {
         const moeda = await getBookmakerMoeda(data.bookmaker_id);
-        
         const creditedAt = data.credited_at || new Date().toISOString();
-        const result = await registrarBonusCreditadoViaLedger({
-          bookmakerId: data.bookmaker_id,
-          valor: data.bonus_amount,
-          moeda,
-          workspaceId,
-          userId: userData.user.id,
-          descricao: `Crédito de bônus: ${data.title || 'Sem título'}`,
-          dataCredito: creditedAt.split('T')[0],
-        });
         
-        if (!result.success) {
-          console.error("[useProjectBonuses] Erro ao creditar bônus via ledger:", result.error);
+        if (tipoBonus === 'FREEBET') {
+          // FREEBET: Creditar em saldo_freebet
+          const result = await creditarFreebetViaLedger(
+            data.bookmaker_id,
+            data.bonus_amount,
+            `Crédito de freebet (bônus): ${data.title || 'Sem título'}`,
+            {
+              userId: userData.user.id,
+              workspaceId,
+            }
+          );
+          if (!result.success) {
+            console.error("[useProjectBonuses] Erro ao creditar freebet via ledger:", result.error);
+          } else {
+            console.log(`[useProjectBonuses] Freebet creditada via ledger: ${data.bonus_amount}`);
+          }
         } else {
-          console.log(`[useProjectBonuses] Bônus creditado via ledger: ${data.bonus_amount}`);
+          // BONUS TRADICIONAL: Creditar em saldo_atual
+          const result = await registrarBonusCreditadoViaLedger({
+            bookmakerId: data.bookmaker_id,
+            valor: data.bonus_amount,
+            moeda,
+            workspaceId,
+            userId: userData.user.id,
+            descricao: `Crédito de bônus: ${data.title || 'Sem título'}`,
+            dataCredito: creditedAt.split('T')[0],
+          });
+          if (!result.success) {
+            console.error("[useProjectBonuses] Erro ao creditar bônus via ledger:", result.error);
+          } else {
+            console.log(`[useProjectBonuses] Bônus creditado via ledger: ${data.bonus_amount}`);
+          }
         }
       }
     },
@@ -417,23 +444,33 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         if (data.status === "credited") {
           const bonusAmount = data.bonus_amount ?? existingBonus.bonus_amount;
           const moeda = await getBookmakerMoeda(existingBonus.bookmaker_id);
-          
           const creditedAt = (data.credited_at || existingBonus.credited_at || new Date().toISOString());
-          const result = await registrarBonusCreditadoViaLedger({
-            bookmakerId: existingBonus.bookmaker_id,
-            valor: bonusAmount,
-            moeda,
-            workspaceId,
-            userId: userData?.user?.id || '',
-            descricao: `Crédito de bônus: ${existingBonus.title || 'Sem título'}`,
-            bonusId: id,
-            dataCredito: creditedAt.split('T')[0],
-          });
+          const tipoBonus = data.tipo_bonus || existingBonus.tipo_bonus || 'BONUS';
           
-          if (!result.success) {
-            console.error("[useProjectBonuses] Erro ao creditar bônus via ledger:", result.error);
+          if (tipoBonus === 'FREEBET') {
+            const result = await creditarFreebetViaLedger(
+              existingBonus.bookmaker_id,
+              bonusAmount,
+              `Crédito de freebet (bônus): ${existingBonus.title || 'Sem título'}`,
+              { userId: userData?.user?.id || '', workspaceId }
+            );
+            if (!result.success) {
+              console.error("[useProjectBonuses] Erro ao creditar freebet via ledger:", result.error);
+            }
           } else {
-            console.log(`[useProjectBonuses] Bônus atualizado e creditado via ledger: ${bonusAmount}`);
+            const result = await registrarBonusCreditadoViaLedger({
+              bookmakerId: existingBonus.bookmaker_id,
+              valor: bonusAmount,
+              moeda,
+              workspaceId,
+              userId: userData?.user?.id || '',
+              descricao: `Crédito de bônus: ${existingBonus.title || 'Sem título'}`,
+              bonusId: id,
+              dataCredito: creditedAt.split('T')[0],
+            });
+            if (!result.success) {
+              console.error("[useProjectBonuses] Erro ao creditar bônus via ledger:", result.error);
+            }
           }
 
           updateData.valor_creditado_no_saldo = bonusAmount;
@@ -459,33 +496,37 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         const moeda = await getBookmakerMoeda(existingBonus.bookmaker_id);
 
         if (delta !== 0) {
-          if (delta > 0) {
-            // Bônus aumentou: creditar a diferença
-            const result = await registrarBonusCreditadoViaLedger({
-              bookmakerId: existingBonus.bookmaker_id,
-              valor: delta,
-              moeda,
-              workspaceId,
-              userId: userData?.user?.id || '',
-              descricao: `Ajuste de bônus: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (+${delta})`,
-              bonusId: id,
-            });
-            if (!result.success) {
-              console.error("[useProjectBonuses] Erro ao ajustar bônus (crédito) via ledger:", result.error);
+          const tipoBonus = existingBonus.tipo_bonus || 'BONUS';
+          
+          if (tipoBonus === 'FREEBET') {
+            // FREEBET: usar ledger de freebet
+            if (delta > 0) {
+              await creditarFreebetViaLedger(existingBonus.bookmaker_id, delta,
+                `Ajuste de freebet: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (+${delta})`,
+                { userId: userData?.user?.id || '', workspaceId });
+            } else {
+              await estornarFreebetViaLedger(existingBonus.bookmaker_id, Math.abs(delta),
+                `Ajuste de freebet: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (${delta})`);
             }
           } else {
-            // Bônus diminuiu: estornar a diferença
-            const result = await estornarBonusViaLedger({
-              bookmakerId: existingBonus.bookmaker_id,
-              valor: Math.abs(delta),
-              moeda,
-              workspaceId,
-              userId: userData?.user?.id || '',
-              descricao: `Ajuste de bônus: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (${delta})`,
-              bonusId: id,
-            });
-            if (!result.success) {
-              console.error("[useProjectBonuses] Erro ao ajustar bônus (estorno) via ledger:", result.error);
+            if (delta > 0) {
+              const result = await registrarBonusCreditadoViaLedger({
+                bookmakerId: existingBonus.bookmaker_id,
+                valor: delta, moeda, workspaceId,
+                userId: userData?.user?.id || '',
+                descricao: `Ajuste de bônus: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (+${delta})`,
+                bonusId: id,
+              });
+              if (!result.success) console.error("[useProjectBonuses] Erro ao ajustar bônus (crédito):", result.error);
+            } else {
+              const result = await estornarBonusViaLedger({
+                bookmakerId: existingBonus.bookmaker_id,
+                valor: Math.abs(delta), moeda, workspaceId,
+                userId: userData?.user?.id || '',
+                descricao: `Ajuste de bônus: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (${delta})`,
+                bonusId: id,
+              });
+              if (!result.success) console.error("[useProjectBonuses] Erro ao ajustar bônus (estorno):", result.error);
             }
           }
           console.log(`[useProjectBonuses] Bônus ${id} editado: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (delta: ${delta})`);
@@ -615,7 +656,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       // 1. Buscar dados do bônus antes de excluir para saber se precisa estornar
       const { data: bonusData, error: fetchError } = await supabase
         .from("project_bookmaker_link_bonuses")
-        .select("id, bookmaker_id, bonus_amount, status, valor_creditado_no_saldo, title")
+        .select("id, bookmaker_id, bonus_amount, status, valor_creditado_no_saldo, title, tipo_bonus")
         .eq("id", id)
         .single();
 
@@ -627,23 +668,30 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       // 2. Se o bônus estava creditado, estornar o valor no ledger ANTES de excluir
       if (bonusData.status === "credited") {
         const valorCreditado = (bonusData as any).valor_creditado_no_saldo ?? bonusData.bonus_amount;
+        const tipoBonus = (bonusData as any).tipo_bonus || 'BONUS';
         
         if (valorCreditado > 0) {
-          const moeda = await getBookmakerMoeda(bonusData.bookmaker_id);
-          const result = await estornarBonusViaLedger({
-            bookmakerId: bonusData.bookmaker_id,
-            valor: valorCreditado,
-            moeda,
-            workspaceId: workspaceId!,
-            userId: userData.user.id,
-            descricao: `Estorno por exclusão de bônus: ${bonusData.title || 'Sem título'}`,
-            bonusId: bonusData.id,
-          });
-
-          if (!result.success) {
-            throw new Error(`Falha ao estornar saldo do bônus: ${result.error}`);
+          if (tipoBonus === 'FREEBET') {
+            const result = await estornarFreebetViaLedger(
+              bonusData.bookmaker_id,
+              valorCreditado,
+              `Estorno por exclusão de freebet: ${bonusData.title || 'Sem título'}`
+            );
+            if (!result.success) throw new Error(`Falha ao estornar freebet: ${result.error}`);
+          } else {
+            const moeda = await getBookmakerMoeda(bonusData.bookmaker_id);
+            const result = await estornarBonusViaLedger({
+              bookmakerId: bonusData.bookmaker_id,
+              valor: valorCreditado,
+              moeda,
+              workspaceId: workspaceId!,
+              userId: userData.user.id,
+              descricao: `Estorno por exclusão de bônus: ${bonusData.title || 'Sem título'}`,
+              bonusId: bonusData.id,
+            });
+            if (!result.success) throw new Error(`Falha ao estornar saldo do bônus: ${result.error}`);
           }
-          console.log(`[useProjectBonuses] Bônus estornado via ledger: ${valorCreditado}`);
+          console.log(`[useProjectBonuses] ${tipoBonus} estornado via ledger: ${valorCreditado}`);
         }
       }
 

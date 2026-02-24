@@ -6538,6 +6538,7 @@ export type Database = {
           source: string
           status: string
           template_snapshot: Json | null
+          tipo_bonus: string
           title: string
           updated_at: string
           user_id: string
@@ -6573,6 +6574,7 @@ export type Database = {
           source?: string
           status?: string
           template_snapshot?: Json | null
+          tipo_bonus?: string
           title?: string
           updated_at?: string
           user_id: string
@@ -6608,6 +6610,7 @@ export type Database = {
           source?: string
           status?: string
           template_snapshot?: Json | null
+          tipo_bonus?: string
           title?: string
           updated_at?: string
           user_id?: string
