@@ -1673,11 +1673,13 @@ export function SurebetDialogTable({
                         )}
                         {/* Metadados fixos - altura fixa para evitar layout jumps */}
                         <BookmakerMetaRow 
-                          bookmaker={selectedBookmaker ? {
-                            parceiro_nome: selectedBookmaker.parceiro_nome || null,
-                            moeda: selectedBookmaker.moeda,
-                            saldo_operavel: selectedBookmaker.saldo_operavel
-                          } : null}
+            bookmaker={selectedBookmaker ? {
+              parceiro_nome: selectedBookmaker.parceiro_nome || null,
+              moeda: selectedBookmaker.moeda,
+              saldo_operavel: selectedBookmaker.saldo_operavel,
+              saldo_freebet: selectedBookmaker.saldo_freebet,
+              saldo_disponivel: selectedBookmaker.saldo_disponivel,
+            } : null}
                         />
                       </div>
                     </td>

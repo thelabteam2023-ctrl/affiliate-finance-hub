@@ -193,6 +193,8 @@ export interface BookmakerMetaRowData {
   parceiro_nome: string | null;
   moeda: string;
   saldo_operavel: number;
+  saldo_freebet?: number;
+  saldo_disponivel?: number;
 }
 
 interface BookmakerMetaRowProps {
@@ -208,8 +210,11 @@ export function BookmakerMetaRow({ bookmaker, className }: BookmakerMetaRowProps
     );
   }
   
-  const { parceiro_nome, moeda, saldo_operavel } = bookmaker;
+  const { parceiro_nome, moeda, saldo_operavel, saldo_freebet = 0, saldo_disponivel } = bookmaker;
   const parceiroShort = parceiro_nome?.split(' ')[0] || '';
+  const hasFreebet = saldo_freebet > 0;
+  // Se tem freebet, mostrar saldo_disponivel (real) separado
+  const saldoReal = hasFreebet && saldo_disponivel != null ? saldo_disponivel : saldo_operavel;
   
   return (
     <div className={cn(
@@ -219,8 +224,13 @@ export function BookmakerMetaRow({ bookmaker, className }: BookmakerMetaRowProps
       {parceiroShort && <span>{parceiroShort}</span>}
       {parceiroShort && <span className="opacity-50">•</span>}
       <span className={getCurrencyTextColor(moeda)}>
-        {formatCurrency(saldo_operavel, moeda)}
+        {formatCurrency(saldoReal, moeda)}
       </span>
+      {hasFreebet && (
+        <span className="text-amber-400/80 flex items-center gap-0.5">
+          + <Gift className="h-2.5 w-2.5 inline" /> {formatCurrency(saldo_freebet, moeda)}
+        </span>
+      )}
     </div>
   );
 }

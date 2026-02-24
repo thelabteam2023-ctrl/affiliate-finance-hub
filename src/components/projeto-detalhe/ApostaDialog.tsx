@@ -2960,7 +2960,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             return {
                               parceiro_nome: selectedBk.parceiro_nome,
                               moeda: selectedBk.moeda,
-                              saldo_operavel: saldoExibicao
+                              saldo_operavel: saldoExibicao,
+                              saldo_freebet: selectedBk.saldo_freebet,
+                              saldo_disponivel: selectedBk.saldo_disponivel,
                             };
                           })() : null}
                         />
@@ -3218,7 +3220,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     return {
                                       parceiro_nome: selectedBk.parceiro_nome,
                                       moeda: selectedBk.moeda,
-                                      saldo_operavel: selectedBk.saldo_operavel
+                                      saldo_operavel: selectedBk.saldo_operavel,
+                                      saldo_freebet: selectedBk.saldo_freebet,
+                                      saldo_disponivel: selectedBk.saldo_disponivel,
                                     };
                                   })() : null}
                                 />
@@ -3444,7 +3448,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     return {
                                       parceiro_nome: selectedBk.parceiro_nome,
                                       moeda: selectedBk.moeda,
-                                      saldo_operavel: selectedBk.saldo_operavel
+                                      saldo_operavel: selectedBk.saldo_operavel,
+                                      saldo_freebet: selectedBk.saldo_freebet,
+                                      saldo_disponivel: selectedBk.saldo_disponivel,
                                     };
                                   })() : null}
                                 />
@@ -3552,7 +3558,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     return {
                                       parceiro_nome: selectedBk.parceiro_nome,
                                       moeda: selectedBk.moeda,
-                                      saldo_operavel: selectedBk.saldo_operavel
+                                      saldo_operavel: selectedBk.saldo_operavel,
+                                      saldo_freebet: selectedBk.saldo_freebet,
+                                      saldo_disponivel: selectedBk.saldo_disponivel,
                                     };
                                   })() : null}
                                 />
@@ -3898,7 +3906,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 return {
                                   parceiro_nome: selectedBk.parceiro_nome,
                                   moeda: selectedBk.moeda,
-                                  saldo_operavel: saldoComReservas?.disponivel ?? selectedBk.saldo_operavel
+                                  saldo_operavel: saldoComReservas?.disponivel ?? selectedBk.saldo_operavel,
+                                  saldo_freebet: selectedBk.saldo_freebet,
+                                  saldo_disponivel: selectedBk.saldo_disponivel,
                                 };
                               })() : null}
                             />

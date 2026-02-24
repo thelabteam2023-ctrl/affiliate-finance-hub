@@ -226,7 +226,9 @@ export function SurebetTableRow({
             bookmaker={selectedBookmaker ? {
               parceiro_nome: selectedBookmaker.parceiro_nome || null,
               moeda: selectedBookmaker.moeda,
-              saldo_operavel: selectedBookmaker.saldo_operavel
+              saldo_operavel: selectedBookmaker.saldo_operavel,
+              saldo_freebet: selectedBookmaker.saldo_freebet,
+              saldo_disponivel: selectedBookmaker.saldo_disponivel,
             } : null}
           />
         </div>
