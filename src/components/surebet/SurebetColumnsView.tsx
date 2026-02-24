@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Trash2, Check } from 'lucide-react';
 import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
 import { BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
-import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
+import { type OddEntry, type LegScenario, calcularOddMedia } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { cn } from '@/lib/utils';
 import type { PernaResultado } from './SurebetTableRow';
@@ -381,26 +381,67 @@ export function SurebetColumnsView({
                 </div>
               </div>
 
-              {/* Footer: Lucro e ROI */}
+              {/* Footer: Odd Ponderada, Stake Total, Lucro e ROI */}
               <div className="px-3 py-2 bg-muted/20 border-t border-border/30 space-y-0.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</span>
-                  <span className={cn(
-                    "text-sm font-bold tabular-nums",
-                    hasData && scenario ? (isPositive ? "text-emerald-500" : "text-red-500") : "text-muted-foreground"
-                  )}>
-                    {hasData && scenario ? formatCompactValue(lucro) : "—"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">ROI</span>
-                  <span className={cn(
-                    "text-[11px] tabular-nums",
-                    hasData && scenario ? (isPositive ? "text-emerald-400" : "text-red-400") : "text-muted-foreground"
-                  )}>
-                    {hasData && scenario ? `${roi > 0 ? "+" : ""}${roi.toFixed(2)}%` : "—"}
-                  </span>
-                </div>
+                {(() => {
+                  // Calcular odd ponderada e stake total da perna
+                  const oddMedia = calcularOddMedia(entry, additionalEntries);
+                  const allEntries = [
+                    { stake: entry.stake, moeda: entry.moeda },
+                    ...additionalEntries.map(e => ({ stake: e.stake, moeda: e.moeda })),
+                  ];
+                  // Agrupar stakes por moeda
+                  const stakeByMoeda: Record<string, number> = {};
+                  allEntries.forEach(e => {
+                    const val = parseFloat(e.stake) || 0;
+                    if (val > 0) {
+                      stakeByMoeda[e.moeda] = (stakeByMoeda[e.moeda] || 0) + val;
+                    }
+                  });
+                  const moedas = Object.keys(stakeByMoeda);
+                  const totalStake = Object.values(stakeByMoeda).reduce((a, b) => a + b, 0);
+                  const hasStakeData = totalStake > 0;
+                  const hasOddData = oddMedia > 0;
+
+                  return (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Odd ø</span>
+                        <span className="text-[11px] font-semibold tabular-nums text-foreground">
+                          {hasOddData ? oddMedia.toFixed(2) : "—"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Stake</span>
+                        <span className="text-[11px] font-semibold tabular-nums text-foreground">
+                          {hasStakeData
+                            ? moedas.length === 1
+                              ? formatCurrency(totalStake, moedas[0])
+                              : moedas.map(m => formatCurrency(stakeByMoeda[m], m)).join(" + ")
+                            : "—"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</span>
+                        <span className={cn(
+                          "text-sm font-bold tabular-nums",
+                          hasData && scenario ? (isPositive ? "text-emerald-500" : "text-red-500") : "text-muted-foreground"
+                        )}>
+                          {hasData && scenario ? formatCompactValue(lucro) : "—"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">ROI</span>
+                        <span className={cn(
+                          "text-[11px] tabular-nums",
+                          hasData && scenario ? (isPositive ? "text-emerald-400" : "text-red-400") : "text-muted-foreground"
+                        )}>
+                          {hasData && scenario ? `${roi > 0 ? "+" : ""}${roi.toFixed(2)}%` : "—"}
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           );
