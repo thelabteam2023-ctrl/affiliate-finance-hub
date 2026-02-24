@@ -493,6 +493,25 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     }
   }, [projetoId, invalidateSaldos, onDataChange]);
 
+  // Deletar aposta simples
+  const handleDeleteAposta = useCallback(async (apostaId: string) => {
+    try {
+      const { deletarAposta } = await import("@/services/aposta/ApostaService");
+      const result = await deletarAposta(apostaId);
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao excluir aposta");
+        return;
+      }
+      invalidateSaldos(projetoId);
+      fetchData();
+      onDataChange?.();
+      toast.success("Aposta excluída");
+    } catch (error: any) {
+      console.error("Erro ao excluir aposta:", error);
+      toast.error("Erro ao excluir aposta");
+    }
+  }, [projetoId, invalidateSaldos, onDataChange]);
+
   const metricas = useMemo(() => {
     const total = apostas.length;
 
@@ -1076,6 +1095,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                     estrategia="DUPLO_GREEN"
                     onEdit={(apostaId) => { const a = apostasFiltradas.find(ap => ap.id === apostaId); if (a) handleOpenAposta(a); }}
                     onQuickResolve={handleQuickResolve}
+                    onDelete={handleDeleteAposta}
                     variant="card"
                     /* Card usa moeda original da aposta via defaultFormatCurrency */
                   />
@@ -1089,6 +1109,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                   estrategia="DUPLO_GREEN"
                   onEdit={(apostaId) => { const a = apostasFiltradas.find(ap => ap.id === apostaId); if (a) handleOpenAposta(a); }}
                   onQuickResolve={handleQuickResolve}
+                  onDelete={handleDeleteAposta}
                   variant="list"
                   /* Card usa moeda original da aposta via defaultFormatCurrency */
                 />
