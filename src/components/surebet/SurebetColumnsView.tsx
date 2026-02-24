@@ -341,23 +341,38 @@ export function SurebetColumnsView({
                           saldo_disponivel: addBookmaker.saldo_disponivel,
                         } : null}
                       />
-                      <div className="grid grid-cols-2 gap-1.5">
-                        <Input 
-                          type="number"
-                          step="0.001"
-                          placeholder="Odd"
-                          value={addEntry.odd}
-                          onChange={(e) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'odd', e.target.value)}
-                          className="h-7 text-xs text-center tabular-nums"
-                          onWheel={(e) => e.currentTarget.blur()}
-                        />
-                        <MoneyInput 
-                          value={addEntry.stake}
-                          onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
-                          currency={addEntry.moeda}
-                          minDigits={5}
-                          className="h-7 text-xs text-center tabular-nums"
-                        />
+                      <div className="flex items-end gap-1.5">
+                        <div className="w-[72px] shrink-0">
+                          <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Odd</label>
+                          <Input 
+                            type="number"
+                            step="0.001"
+                            placeholder="0.00"
+                            value={addEntry.odd}
+                            onChange={(e) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'odd', e.target.value)}
+                            className="h-7 text-xs text-center tabular-nums"
+                            onWheel={(e) => e.currentTarget.blur()}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Stake</label>
+                          <MoneyInput 
+                            value={addEntry.stake}
+                            onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
+                            currency={addEntry.moeda}
+                            minDigits={5}
+                            className="h-7 text-xs text-center tabular-nums"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Linha</label>
+                          <Input
+                            placeholder="Linha"
+                            value={addEntry.selecaoLivre || ''}
+                            onChange={(e) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'selecaoLivre', e.target.value)}
+                            className="h-7 text-xs px-2 border-dashed"
+                          />
+                        </div>
                       </div>
                     </div>
                   );
