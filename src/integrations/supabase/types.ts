@@ -12586,6 +12586,27 @@ export type Database = {
               p_bookmaker_id: string
               p_descricao?: string
               p_idempotency_key?: string
+              p_metadata?: Json
+              p_moeda?: string
+              p_origem?: string
+              p_reversed_event_id?: string
+              p_tipo_evento?: string
+              p_tipo_uso?: string
+              p_valor?: number
+            }
+            Returns: {
+              error_message: string
+              event_id: string
+              new_balance: number
+              success: boolean
+            }[]
+          }
+        | {
+            Args: {
+              p_aposta_id?: string
+              p_bookmaker_id: string
+              p_descricao?: string
+              p_idempotency_key?: string
               p_metadata?: string
               p_moeda?: string
               p_origem?: string
@@ -12599,27 +12620,6 @@ export type Database = {
               event_id: string
               new_balance: number
               new_freebet_balance: number
-              success: boolean
-            }[]
-          }
-        | {
-            Args: {
-              p_aposta_id?: string
-              p_bookmaker_id: string
-              p_descricao?: string
-              p_idempotency_key?: string
-              p_metadata?: Json
-              p_moeda?: string
-              p_origem?: string
-              p_reversed_event_id?: string
-              p_tipo_evento?: string
-              p_tipo_uso?: string
-              p_valor?: number
-            }
-            Returns: {
-              error_message: string
-              event_id: string
-              new_balance: number
               success: boolean
             }[]
           }
