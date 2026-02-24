@@ -1002,6 +1002,56 @@ export function SurebetModalRoot({
         return entry.bookmaker_id && parseFloat(entry.odd) > 1 && parseFloat(entry.stake) > 0;
       });
 
+      // ================================================================
+      // FLATTEN: Expandir additionalEntries em pernas individuais
+      // Cada sub-entrada herda selecao da perna pai mas tem seu próprio
+      // bookmaker_id, odd, stake e moeda
+      // ================================================================
+      interface FlatPerna {
+        bookmaker_id: string;
+        odd: string;
+        stake: string;
+        selecao: string;
+        selecaoLivre: string;
+        moeda: SupportedCurrency;
+        resultado?: string | null;
+        /** Index da perna pai no array odds (para agrupar resultado) */
+        parentLegIndex: number;
+      }
+
+      const allPernasFlat: FlatPerna[] = [];
+      for (let legIdx = 0; legIdx < pernasPreenchidas.length; legIdx++) {
+        const entry = pernasPreenchidas[legIdx];
+        // Entrada principal
+        allPernasFlat.push({
+          bookmaker_id: entry.bookmaker_id,
+          odd: entry.odd,
+          stake: entry.stake,
+          selecao: entry.selecao,
+          selecaoLivre: entry.selecaoLivre || '',
+          moeda: entry.moeda,
+          resultado: (entry as any).resultado || null,
+          parentLegIndex: legIdx,
+        });
+        // Sub-entradas (additionalEntries)
+        if (entry.additionalEntries && entry.additionalEntries.length > 0) {
+          for (const sub of entry.additionalEntries) {
+            if (sub.bookmaker_id && parseFloat(sub.odd) > 1 && parseFloat(sub.stake) > 0) {
+              allPernasFlat.push({
+                bookmaker_id: sub.bookmaker_id,
+                odd: sub.odd,
+                stake: sub.stake,
+                selecao: entry.selecao, // herda seleção da perna pai
+                selecaoLivre: sub.selecaoLivre || entry.selecaoLivre || '',
+                moeda: sub.moeda || entry.moeda,
+                resultado: (entry as any).resultado || null, // mesmo resultado da perna pai
+                parentLegIndex: legIdx,
+              });
+            }
+          }
+        }
+      }
+
       const modelo = numPernas === 2 ? "1-2" : numPernas === 3 ? "1-X-2" : `${numPernas}-way`;
 
       if (isEditing && surebet) {
@@ -1204,21 +1254,27 @@ export function SurebetModalRoot({
         // ================================================================
         
         // Preparar pernas no formato esperado pela RPC
-        const pernasParaRPC = pernasPreenchidas.map((entry) => {
-          const stake = parseFloat(entry.stake) || 0;
-          const moeda = getBookmakerMoeda(entry.bookmaker_id);
+        // USA allPernasFlat para incluir sub-entradas como pernas individuais
+        const pernasParaRPC = allPernasFlat.map((flat, idx) => {
+          const stake = parseFloat(flat.stake) || 0;
+          const moeda = getBookmakerMoeda(flat.bookmaker_id);
           const snapshotFields = getSnapshotFields(stake, moeda);
           
           return {
-            bookmaker_id: entry.bookmaker_id,
+            bookmaker_id: flat.bookmaker_id,
             stake,
-            odd: parseFloat(entry.odd) || 0,
+            odd: parseFloat(flat.odd) || 0,
             moeda,
-            selecao: entry.selecao,
-            selecao_livre: entry.selecaoLivre || null,
+            selecao: flat.selecao,
+            selecao_livre: flat.selecaoLivre || null,
             cotacao_snapshot: snapshotFields.cotacao_snapshot,
             stake_brl_referencia: snapshotFields.valor_brl_referencia,
           };
+        });
+        
+        console.log("[SurebetModalRoot] Pernas para RPC (com sub-entradas expandidas):", {
+          pernasPreenchidas: pernasPreenchidas.length,
+          totalComSubEntradas: allPernasFlat.length,
         });
         
         // Chamar RPC atômica
@@ -1254,11 +1310,15 @@ export function SurebetModalRoot({
         
         // ================================================================
         // PÓS-CRIAÇÃO: Liquidar pernas que já possuem resultado definido
+        // Usa allPernasFlat para incluir sub-entradas
         // ================================================================
-        const pernasComResultado = pernasPreenchidas
-          .map((entry, idx) => ({
-            resultado: (entry as any).resultado as string | null,
+        const pernasComResultado = allPernasFlat
+          .map((flat, idx) => ({
+            resultado: flat.resultado as string | null,
             index: idx,
+            bookmaker_id: flat.bookmaker_id,
+            stake: flat.stake,
+            odd: flat.odd,
           }))
           .filter(p => p.resultado && ['GREEN', 'RED', 'MEIO_GREEN', 'MEIO_RED', 'VOID'].includes(p.resultado!));
         
@@ -1266,24 +1326,24 @@ export function SurebetModalRoot({
           // Buscar IDs das pernas recém-criadas
           const { data: pernasDB } = await supabase
             .from('apostas_pernas')
-            .select('id, ordem')
+            .select('id, ordem, bookmaker_id')
             .eq('aposta_id', result.aposta_id)
             .order('ordem', { ascending: true });
           
           if (pernasDB && pernasDB.length > 0) {
             for (const p of pernasComResultado) {
+              // Matching por ordem (1-indexed)
               const pernaDB = pernasDB.find(db => db.ordem === p.index + 1);
-              const entryOriginal = pernasPreenchidas[p.index];
-              if (pernaDB && p.resultado && entryOriginal) {
+              if (pernaDB && p.resultado) {
                 const liqResult = await liquidarPernaSurebet({
                   surebet_id: result.aposta_id,
                   perna_id: pernaDB.id,
-                  bookmaker_id: entryOriginal.bookmaker_id,
+                  bookmaker_id: p.bookmaker_id,
                   resultado: p.resultado as 'GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID',
                   resultado_anterior: null,
-                  stake: parseFloat(entryOriginal.stake) || 0,
-                  odd: parseFloat(entryOriginal.odd) || 0,
-                  moeda: getBookmakerMoeda(entryOriginal.bookmaker_id),
+                  stake: parseFloat(p.stake) || 0,
+                  odd: parseFloat(p.odd) || 0,
+                  moeda: getBookmakerMoeda(p.bookmaker_id),
                   workspace_id: workspaceId,
                   fonte_saldo: 'REAL',
                 });
