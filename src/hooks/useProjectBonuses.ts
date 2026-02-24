@@ -394,6 +394,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
           );
           if (!result.success) {
             console.error("[useProjectBonuses] Erro ao creditar freebet via ledger:", result.error);
+            throw new Error(`Falha ao creditar freebet no saldo: ${result.error || 'erro desconhecido'}`);
           } else {
             console.log(`[useProjectBonuses] Freebet creditada via ledger: ${data.bonus_amount}`);
           }
