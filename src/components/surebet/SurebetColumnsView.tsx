@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2, Check } from 'lucide-react';
 import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
-import { formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
+import { BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { type OddEntry, type LegScenario } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { cn } from '@/lib/utils';
@@ -213,15 +213,15 @@ export function SurebetColumnsView({
                 </Select>
 
                 {/* Saldo info */}
-                {selectedBookmaker && (
-                  <div className="text-[9px] text-muted-foreground flex items-center gap-1 px-0.5">
-                    <span>{selectedBookmaker.moeda}</span>
-                    <span>{formatCurrency(selectedBookmaker.saldo_operavel, selectedBookmaker.moeda)}</span>
-                    {selectedBookmaker.saldo_freebet > 0 && (
-                      <span className="text-amber-400">🎁 {formatCurrency(selectedBookmaker.saldo_freebet, selectedBookmaker.moeda)}</span>
-                    )}
-                  </div>
-                )}
+                <BookmakerMetaRow 
+                  bookmaker={selectedBookmaker ? {
+                    parceiro_nome: selectedBookmaker.parceiro_nome || null,
+                    moeda: selectedBookmaker.moeda,
+                    saldo_operavel: selectedBookmaker.saldo_operavel,
+                    saldo_freebet: selectedBookmaker.saldo_freebet,
+                    saldo_disponivel: selectedBookmaker.saldo_disponivel,
+                  } : null}
+                />
 
                 {/* Odd + Linha + Stake na mesma linha */}
                 <div className="flex items-end gap-1.5">
