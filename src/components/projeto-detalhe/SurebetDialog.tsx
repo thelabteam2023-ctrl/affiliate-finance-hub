@@ -79,6 +79,7 @@ import { reliquidarAposta, liquidarPernaSurebet } from "@/services/aposta";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useSurebetPrintImport } from "@/hooks/useSurebetPrintImport";
 import { SurebetLegPrintCompact } from "./SurebetLegPrintFields";
+import { FreebetToggle } from "@/components/apostas/waterfall";
 
 interface Surebet {
   id: string;
@@ -189,6 +190,8 @@ interface OddEntry {
   lucro_prejuizo?: number | null;
   gerouFreebet?: boolean;
   valorFreebetGerada?: string;
+  usarFreebet?: boolean;
+  valorFreebetUsar?: number;
   freebetStatus?: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA" | null;
   index?: number;
   // NOVO: Entradas adicionais para esta perna (além da principal acima)
@@ -3700,8 +3703,34 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                             </div>
                           )}
                           
+                          {/* Toggle "Usar Freebet" - aparece se a casa tem saldo de freebet */}
+                          {entry.bookmaker_id && selectedBookmaker && (Number(selectedBookmaker.saldo_freebet) || 0) > 0 && !entry.gerouFreebet && (
+                            <div className="mt-2 pt-2 border-t border-border/30">
+                              <FreebetToggle
+                                checked={entry.usarFreebet || false}
+                                onCheckedChange={(checked) => {
+                                  const newOdds = [...odds];
+                                  newOdds[index] = { ...newOdds[index], usarFreebet: checked, valorFreebetUsar: checked ? (Number(selectedBookmaker.saldo_freebet) || 0) : 0 };
+                                  if (checked) {
+                                    newOdds[index].gerouFreebet = false;
+                                    newOdds[index].valorFreebetGerada = "";
+                                  }
+                                  setOdds(newOdds);
+                                }}
+                                saldoFreebet={Number(selectedBookmaker.saldo_freebet) || 0}
+                                moeda={selectedBookmaker.moeda}
+                                valorFreebet={entry.valorFreebetUsar || 0}
+                                onValorFreebetChange={(valor) => {
+                                  const newOdds = [...odds];
+                                  newOdds[index] = { ...newOdds[index], valorFreebetUsar: valor };
+                                  setOdds(newOdds);
+                                }}
+                              />
+                            </div>
+                          )}
+
                           {/* Toggle "Gerou Freebet" - compacto */}
-                          {!isEditing && entry.bookmaker_id && (
+                          {!isEditing && entry.bookmaker_id && !(entry.usarFreebet) && (
                             <div className={`mt-2 pt-2 border-t border-border/30 ${
                               entry.gerouFreebet 
                                 ? "bg-gradient-to-r from-emerald-500/10 to-transparent rounded-lg -mx-2 px-2 pb-2" 
