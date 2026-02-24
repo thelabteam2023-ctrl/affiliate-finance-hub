@@ -402,22 +402,33 @@ export function SurebetTableRow({
           >
             {/* Casa */}
             <td className="px-2" style={{ height: '52px' }}>
-              <Select 
-                value={addEntry.bookmaker_id}
-                onValueChange={(v) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'bookmaker_id', v)}
-              >
-                <SelectTrigger className="h-7 text-[10px] w-full">
-                  <SelectValue placeholder="Casa...">
-                    {addBookmaker?.nome && (
-                      <span className="truncate uppercase text-[9px]">{addBookmaker.nome}</span>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <BookmakerSearchableSelectContent
-                  bookmakers={bookmakers}
-                  className="max-w-[300px]"
+              <div className="flex flex-col">
+                <Select 
+                  value={addEntry.bookmaker_id}
+                  onValueChange={(v) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'bookmaker_id', v)}
+                >
+                  <SelectTrigger className="h-7 text-[10px] w-full">
+                    <SelectValue placeholder="Casa...">
+                      {addBookmaker?.nome && (
+                        <span className="truncate uppercase text-[9px]">{addBookmaker.nome}</span>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <BookmakerSearchableSelectContent
+                    bookmakers={bookmakers}
+                    className="max-w-[300px]"
+                  />
+                </Select>
+                <BookmakerMetaRow 
+                  bookmaker={addBookmaker ? {
+                    parceiro_nome: addBookmaker.parceiro_nome || null,
+                    moeda: addBookmaker.moeda,
+                    saldo_operavel: addBookmaker.saldo_operavel,
+                    saldo_freebet: addBookmaker.saldo_freebet,
+                    saldo_disponivel: addBookmaker.saldo_disponivel,
+                  } : null}
                 />
-              </Select>
+              </div>
             </td>
             
             {/* Odd */}
