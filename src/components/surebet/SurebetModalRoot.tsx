@@ -627,7 +627,7 @@ export function SurebetModalRoot({
         const newOdds = [...prev];
         if (newOdds[legIndex]) {
           if (legData.odd) newOdds[legIndex] = { ...newOdds[legIndex], odd: legData.odd, isManuallyEdited: false };
-          if (legData.stake) newOdds[legIndex] = { ...newOdds[legIndex], stake: legData.stake, isManuallyEdited: false, isReference: legIndex === 0 };
+          if (legData.stake) newOdds[legIndex] = { ...newOdds[legIndex], stake: legData.stake, isManuallyEdited: false, stakeOrigem: "print" as const, isReference: legIndex === 0 };
           if (legData.selecaoLivre) newOdds[legIndex] = { ...newOdds[legIndex], selecaoLivre: legData.selecaoLivre };
         }
         return newOdds;
