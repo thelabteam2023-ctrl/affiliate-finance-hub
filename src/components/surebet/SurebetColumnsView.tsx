@@ -240,15 +240,6 @@ export function SurebetColumnsView({
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Linha</label>
-                    <Input
-                      placeholder="Linha"
-                      value={entry.selecaoLivre}
-                      onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
-                      className="h-8 text-[11px] px-2 border-dashed"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
                     <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Stake</label>
                     <MoneyInput 
                       value={entry.stake}
@@ -265,6 +256,15 @@ export function SurebetColumnsView({
                     {hasInsufficientBalance && (
                       <span className="text-[9px] text-destructive font-medium mt-0.5 block text-center">Saldo insuf.</span>
                     )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Linha</label>
+                    <Input
+                      placeholder="Linha"
+                      value={entry.selecaoLivre}
+                      onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
+                      className="h-8 text-[11px] px-2 border-dashed"
+                    />
                   </div>
                 </div>
 
