@@ -17,6 +17,7 @@ import { BookmakerSearchableSelectContent } from '@/components/bookmakers/Bookma
 import { BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
 import { type OddEntry, type LegScenario, calcularOddMedia } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
+import { useExchangeRatesSafe } from '@/contexts/ExchangeRatesContext';
 import { cn } from '@/lib/utils';
 import type { PernaResultado } from './SurebetTableRow';
 
@@ -110,6 +111,8 @@ export function SurebetColumnsView({
   onFieldKeyDown,
   getPernaLabel,
 }: SurebetColumnsViewProps) {
+  const exchangeRates = useExchangeRatesSafe();
+  const convertToBRL = exchangeRates?.convertToBRL ?? ((v: number, _m: string) => v);
 
   return (
     <div className="w-full space-y-3">
@@ -328,6 +331,16 @@ export function SurebetColumnsView({
                           className="max-w-[300px]"
                         />
                       </Select>
+                      {/* Saldo info da sub-entrada */}
+                      <BookmakerMetaRow 
+                        bookmaker={addBookmaker ? {
+                          parceiro_nome: addBookmaker.parceiro_nome || null,
+                          moeda: addBookmaker.moeda,
+                          saldo_operavel: addBookmaker.saldo_operavel,
+                          saldo_freebet: addBookmaker.saldo_freebet,
+                          saldo_disponivel: addBookmaker.saldo_disponivel,
+                        } : null}
+                      />
                       <div className="grid grid-cols-2 gap-1.5">
                         <Input 
                           type="number"
@@ -384,15 +397,35 @@ export function SurebetColumnsView({
               {/* Footer: Odd Ponderada, Stake Total, Lucro e ROI */}
               <div className="px-3 py-2 bg-muted/20 border-t border-border/30 space-y-0.5">
                 {(() => {
-                  // Calcular odd ponderada e stake total da perna
-                  const oddMedia = calcularOddMedia(entry, additionalEntries);
-                  const allEntries = [
-                    { stake: entry.stake, moeda: entry.moeda },
-                    ...additionalEntries.map(e => ({ stake: e.stake, moeda: e.moeda })),
+                  // Calcular odd ponderada multi-moeda e stake total da perna
+                  // Converte stakes para BRL antes de ponderar para integridade multimoeda
+                  const allLegEntries = [
+                    { odd: entry.odd, stake: entry.stake, moeda: entry.moeda },
+                    ...additionalEntries.map(e => ({ odd: e.odd, stake: e.stake, moeda: e.moeda })),
                   ];
-                  // Agrupar stakes por moeda
+                  const validEntries = allLegEntries
+                    .map(e => ({
+                      oddNum: parseFloat(e.odd),
+                      stakeNum: parseFloat(e.stake),
+                      moeda: e.moeda,
+                    }))
+                    .filter(e => !isNaN(e.oddNum) && e.oddNum > 1);
+
+                  let oddMedia = 0;
+                  const comStake = validEntries.filter(e => !isNaN(e.stakeNum) && e.stakeNum > 0);
+                  if (comStake.length > 0) {
+                    // Ponderar usando stake convertida para BRL (pivot)
+                    const somaStakeBRL = comStake.reduce((acc, e) => acc + convertToBRL(e.stakeNum, e.moeda), 0);
+                    if (somaStakeBRL > 0) {
+                      oddMedia = comStake.reduce((acc, e) => acc + convertToBRL(e.stakeNum, e.moeda) * e.oddNum, 0) / somaStakeBRL;
+                    }
+                  } else if (validEntries.length > 0) {
+                    oddMedia = validEntries[0].oddNum;
+                  }
+
+                  // Agrupar stakes por moeda (exibição nominal)
                   const stakeByMoeda: Record<string, number> = {};
-                  allEntries.forEach(e => {
+                  allLegEntries.forEach(e => {
                     const val = parseFloat(e.stake) || 0;
                     if (val > 0) {
                       stakeByMoeda[e.moeda] = (stakeByMoeda[e.moeda] || 0) + val;
