@@ -411,6 +411,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
           });
           if (!result.success) {
             console.error("[useProjectBonuses] Erro ao creditar bônus via ledger:", result.error);
+            throw new Error(`Falha ao creditar bônus no saldo: ${result.error || 'erro desconhecido'}`);
           } else {
             console.log(`[useProjectBonuses] Bônus creditado via ledger: ${data.bonus_amount}`);
           }
@@ -457,6 +458,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
             );
             if (!result.success) {
               console.error("[useProjectBonuses] Erro ao creditar freebet via ledger:", result.error);
+              throw new Error(`Falha ao creditar freebet no saldo: ${result.error || 'erro desconhecido'}`);
             }
           } else {
             const result = await registrarBonusCreditadoViaLedger({
@@ -471,6 +473,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
             });
             if (!result.success) {
               console.error("[useProjectBonuses] Erro ao creditar bônus via ledger:", result.error);
+              throw new Error(`Falha ao creditar bônus no saldo: ${result.error || 'erro desconhecido'}`);
             }
           }
 
