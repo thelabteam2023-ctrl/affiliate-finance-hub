@@ -29,6 +29,7 @@ import { type SurebetEngineConfig, convertViaBRL } from "@/utils/surebetCurrency
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Columns3, Rows3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -41,6 +42,7 @@ import { calcSurebetWindowHeight } from "@/lib/windowHelper";
 
 import { SurebetTableRow } from "./SurebetTableRow";
 import { SurebetTableFooter } from "./SurebetTableFooter";
+import { SurebetColumnsView } from "./SurebetColumnsView";
 
 // ============================================
 // TIPOS
@@ -231,6 +233,7 @@ export function SurebetModalRoot({
   const [conversionInProgress, setConversionInProgress] = useState(false);
   
   const [focusedLeg, setFocusedLeg] = useState<number | null>(null);
+  const [viewLayout, setViewLayout] = useState<'vertical' | 'horizontal'>('vertical');
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1691,68 +1694,117 @@ export function SurebetModalRoot({
                   />
                 </div>
               )}
+              {/* Toggle de layout */}
+              <div className="flex items-center rounded-md border border-border/40 overflow-hidden ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setViewLayout('vertical')}
+                  className={cn(
+                    "p-1.5 transition-colors",
+                    viewLayout === 'vertical' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Layout vertical (tabela)"
+                >
+                  <Rows3 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewLayout('horizontal')}
+                  className={cn(
+                    "p-1.5 transition-colors",
+                    viewLayout === 'horizontal' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Layout horizontal (colunas)"
+                >
+                  <Columns3 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
 
-            {/* TABELA PRINCIPAL */}
-            <div className="overflow-x-auto" ref={tableContainerRef}>
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-border/50">
-                    <th className="py-2 px-2 text-left font-medium text-muted-foreground w-16">Perna</th>
-                    <th className="py-2 px-2 text-left font-medium text-muted-foreground min-w-[160px]">Casa</th>
-                    <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
-                    <th className="py-2 px-2 text-center font-medium text-muted-foreground w-24">Stake</th>
-                    <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Linha</th>
-                    {!isEditing && (
-                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Referência">
-                        <Target className="h-3.5 w-3.5 mx-auto" />
-                      </th>
-                    )}
-                    {isEditing && (
-                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-28">Resultado</th>
-                    )}
-                    {!isEditing && (
-                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Distribuição de lucro">
-                        D
-                      </th>
-                    )}
-                    <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Lucro</th>
-                    <th className="py-2 px-2 text-center font-medium text-muted-foreground w-16">ROI</th>
-                    <th className="py-2 px-2 w-8"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {odds.map((entry, pernaIndex) => (
-                    <SurebetTableRow
-                      key={pernaIndex}
-                      entry={entry}
-                      pernaIndex={pernaIndex}
-                      label={getPernaLabel(pernaIndex, numPernas)}
-                      rowSpan={1}
-                      scenario={analysis.scenarios[pernaIndex]}
-                      isEditing={isEditing}
-                      isFocused={focusedLeg === pernaIndex}
-                      isProcessing={legPrints[pernaIndex]?.isProcessing || false}
-                      bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
-                      directedProfitLegs={directedProfitLegs}
-                      numPernas={numPernas}
-                      moedaDominante={analysis.moedaDominante}
-                      hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
-                      onResultadoChange={handlePernaResultadoChange}
-                      onUpdateOdd={updateOdd}
-                      onSetReference={setReferenceIndex}
-                      onToggleDirected={toggleDirectedLeg}
-                      onAddEntry={addAdditionalEntry}
-                      onDeletePerna={handleDeletePerna}
-                      canDeletePerna={isEditing && odds.length > 2}
-                      onFocus={setFocusedLeg}
-                      onBlur={() => setFocusedLeg(null)}
-                      onFieldKeyDown={handleFieldKeyDown}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {/* TABELA PRINCIPAL ou COLUNAS */}
+            {viewLayout === 'vertical' ? (
+              <div className="overflow-x-auto" ref={tableContainerRef}>
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-border/50">
+                      <th className="py-2 px-2 text-left font-medium text-muted-foreground w-16">Perna</th>
+                      <th className="py-2 px-2 text-left font-medium text-muted-foreground min-w-[160px]">Casa</th>
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-24">Stake</th>
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Linha</th>
+                      {!isEditing && (
+                        <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Referência">
+                          <Target className="h-3.5 w-3.5 mx-auto" />
+                        </th>
+                      )}
+                      {isEditing && (
+                        <th className="py-2 px-2 text-center font-medium text-muted-foreground w-28">Resultado</th>
+                      )}
+                      {!isEditing && (
+                        <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Distribuição de lucro">
+                          D
+                        </th>
+                      )}
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Lucro</th>
+                      <th className="py-2 px-2 text-center font-medium text-muted-foreground w-16">ROI</th>
+                      <th className="py-2 px-2 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {odds.map((entry, pernaIndex) => (
+                      <SurebetTableRow
+                        key={pernaIndex}
+                        entry={entry}
+                        pernaIndex={pernaIndex}
+                        label={getPernaLabel(pernaIndex, numPernas)}
+                        rowSpan={1}
+                        scenario={analysis.scenarios[pernaIndex]}
+                        isEditing={isEditing}
+                        isFocused={focusedLeg === pernaIndex}
+                        isProcessing={legPrints[pernaIndex]?.isProcessing || false}
+                        bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
+                        directedProfitLegs={directedProfitLegs}
+                        numPernas={numPernas}
+                        moedaDominante={analysis.moedaDominante}
+                        hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
+                        onResultadoChange={handlePernaResultadoChange}
+                        onUpdateOdd={updateOdd}
+                        onSetReference={setReferenceIndex}
+                        onToggleDirected={toggleDirectedLeg}
+                        onAddEntry={addAdditionalEntry}
+                        onDeletePerna={handleDeletePerna}
+                        canDeletePerna={isEditing && odds.length > 2}
+                        onFocus={setFocusedLeg}
+                        onBlur={() => setFocusedLeg(null)}
+                        onFieldKeyDown={handleFieldKeyDown}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <SurebetColumnsView
+                odds={odds}
+                scenarios={analysis.scenarios}
+                isEditing={isEditing}
+                bookmakersByLeg={getAdjustedBookmakersForLeg}
+                directedProfitLegs={directedProfitLegs}
+                numPernas={numPernas}
+                moedaDominante={analysis.moedaDominante}
+                insufficientLegs={balanceValidation.insufficientLegs}
+                onResultadoChange={handlePernaResultadoChange}
+                onUpdateOdd={updateOdd}
+                onSetReference={setReferenceIndex}
+                onToggleDirected={toggleDirectedLeg}
+                onAddEntry={addAdditionalEntry}
+                onDeletePerna={handleDeletePerna}
+                canDeletePerna={isEditing && odds.length > 2}
+                onFocus={setFocusedLeg}
+                onBlur={() => setFocusedLeg(null)}
+                onFieldKeyDown={handleFieldKeyDown}
+                getPernaLabel={getPernaLabel}
+              />
+            )}
 
             {/* FOOTER - Totais e Controles */}
             <SurebetTableFooter
