@@ -48,6 +48,8 @@ interface SurebetColumnsViewProps {
   onSetReference: (index: number) => void;
   onToggleDirected: (index: number) => void;
   onAddEntry: (index: number) => void;
+  onUpdateAdditionalEntry: (pernaIndex: number, entryIndex: number, field: string, value: string) => void;
+  onRemoveAdditionalEntry: (pernaIndex: number, entryIndex: number) => void;
   onDeletePerna?: (index: number) => void;
   canDeletePerna?: boolean;
   onFocus: (index: number) => void;
@@ -99,6 +101,8 @@ export function SurebetColumnsView({
   onSetReference,
   onToggleDirected,
   onAddEntry,
+  onUpdateAdditionalEntry,
+  onRemoveAdditionalEntry,
   onDeletePerna,
   canDeletePerna = false,
   onFocus,
@@ -121,6 +125,9 @@ export function SurebetColumnsView({
           const selectedBookmaker = bookmakers.find(b => b.id === entry.bookmaker_id);
           const isDirected = directedProfitLegs.includes(pernaIndex);
           const hasInsufficientBalance = insufficientLegs.includes(pernaIndex);
+          const additionalEntries = entry.additionalEntries || [];
+          const totalEntries = 1 + additionalEntries.length;
+          const canAddMore = totalEntries < 5;
 
           return (
             <div 
@@ -287,16 +294,71 @@ export function SurebetColumnsView({
                   </div>
                 )}
 
+                {/* Sub-entradas adicionais */}
+                {additionalEntries.map((addEntry, addIndex) => {
+                  const addBookmaker = bookmakers.find(b => b.id === addEntry.bookmaker_id);
+                  return (
+                    <div key={`add-${addIndex}`} className="pt-2 mt-2 border-t border-border/20 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] text-muted-foreground">Sub {addIndex + 2}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onRemoveAdditionalEntry(pernaIndex, addIndex)}
+                          className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <Select 
+                        value={addEntry.bookmaker_id}
+                        onValueChange={(v) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'bookmaker_id', v)}
+                      >
+                        <SelectTrigger className="h-7 text-[10px] w-full">
+                          <SelectValue placeholder="Casa...">
+                            {addBookmaker?.nome && (
+                              <span className="truncate uppercase text-[9px]">{addBookmaker.nome}</span>
+                            )}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <BookmakerSearchableSelectContent
+                          bookmakers={bookmakers}
+                          className="max-w-[300px]"
+                        />
+                      </Select>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <Input 
+                          type="number"
+                          step="0.001"
+                          placeholder="Odd"
+                          value={addEntry.odd}
+                          onChange={(e) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'odd', e.target.value)}
+                          className="h-7 text-xs text-center tabular-nums"
+                          onWheel={(e) => e.currentTarget.blur()}
+                        />
+                        <MoneyInput 
+                          value={addEntry.stake}
+                          onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
+                          currency={addEntry.moeda}
+                          minDigits={5}
+                          className="h-7 text-xs text-center tabular-nums"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
                 {/* Add entry / Delete perna */}
                 <div className="flex items-center justify-between pt-1">
-                  {!isEditing && (
+                  {!isEditing && canAddMore && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => onAddEntry(pernaIndex)}
                       className="h-6 text-[10px] px-2 text-muted-foreground hover:text-primary"
-                      title="Adicionar casa"
+                      title={`Adicionar casa (${totalEntries}/5)`}
                     >
                       <Plus className="h-3 w-3 mr-1" />
                       Casa

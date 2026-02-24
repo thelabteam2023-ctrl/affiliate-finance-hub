@@ -82,6 +82,8 @@ interface SurebetTableRowProps {
   onSetReference: (index: number) => void;
   onToggleDirected: (index: number) => void;
   onAddEntry: (index: number) => void;
+  onUpdateAdditionalEntry: (pernaIndex: number, entryIndex: number, field: string, value: string) => void;
+  onRemoveAdditionalEntry: (pernaIndex: number, entryIndex: number) => void;
   onDeletePerna?: (index: number) => void;
   canDeletePerna?: boolean;
   onFocus: (index: number) => void;
@@ -108,6 +110,8 @@ export function SurebetTableRow({
   onSetReference,
   onToggleDirected,
   onAddEntry,
+  onUpdateAdditionalEntry,
+  onRemoveAdditionalEntry,
   onDeletePerna,
   canDeletePerna = false,
   onFocus,
@@ -122,6 +126,10 @@ export function SurebetTableRow({
   
   // Resultado atual da perna (armazenado no entry)
   const resultado = (entry as any).resultado as PernaResultado;
+  
+  const additionalEntries = entry.additionalEntries || [];
+  const totalEntries = 1 + additionalEntries.length;
+  const canAddMore = totalEntries < 5;
 
   // Cores por posição da perna
   const getPernaColor = () => {
@@ -164,28 +172,30 @@ export function SurebetTableRow({
     );
   };
 
+  const mainRowSpan = totalEntries;
+
   return (
-    <tr 
-      className={`border-b border-border/30 relative ${
-        isFocused ? "bg-muted/30" : "hover:bg-muted/20"
-      }`}
-      style={{ height: '78px' }}
-      onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
-      onMouseLeave={() => !isEditing && onBlur()}
-    >
-      {/* Loading OCR - posicionado absolutamente para não afetar layout */}
-      {isProcessing && (
-        <td colSpan={10} className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs">
-            <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            Analisando print...
-          </div>
-        </td>
-      )}
-      
-      {/* Perna Label */}
-      {rowSpan > 0 && (
-        <td rowSpan={rowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
+    <>
+      <tr 
+        className={`border-b border-border/30 relative ${
+          isFocused ? "bg-muted/30" : "hover:bg-muted/20"
+        }`}
+        style={{ height: '78px' }}
+        onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
+        onMouseLeave={() => !isEditing && onBlur()}
+      >
+        {/* Loading OCR */}
+        {isProcessing && (
+          <td colSpan={10} className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+              <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              Analisando print...
+            </div>
+          </td>
+        )}
+        
+        {/* Perna Label */}
+        <td rowSpan={mainRowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
           <div className={`inline-flex items-center justify-center w-9 h-9 rounded-lg font-bold text-sm ${getPernaColor()}`}>
             {pernaIndex + 1}
           </div>
@@ -194,215 +204,264 @@ export function SurebetTableRow({
               {entry.selecaoLivre}
             </div>
           )}
-        </td>
-      )}
-      
-      {/* Casa */}
-      <td className="px-2" style={{ height: '78px' }}>
-        <div className="flex flex-col">
-          <Select 
-            value={entry.bookmaker_id}
-            onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", v)}
-          >
-            <SelectTrigger className="h-8 text-[10px] w-full">
-              <SelectValue placeholder="Selecione">
-                {selectedBookmaker?.nome && (
-                  <span className="truncate uppercase">
-                    {selectedBookmaker.nome}
-                    {selectedBookmaker.instance_identifier && (
-                      <span className="text-primary/80 ml-1 normal-case text-[9px]">({selectedBookmaker.instance_identifier})</span>
-                    )}
-                  </span>
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <BookmakerSearchableSelectContent
-              bookmakers={bookmakers}
-              className="max-w-[300px]"
-            />
-          </Select>
-          {/* Metadados fixos - altura fixa para evitar layout jumps */}
-          <BookmakerMetaRow 
-            bookmaker={selectedBookmaker ? {
-              parceiro_nome: selectedBookmaker.parceiro_nome || null,
-              moeda: selectedBookmaker.moeda,
-              saldo_operavel: selectedBookmaker.saldo_operavel,
-              saldo_freebet: selectedBookmaker.saldo_freebet,
-              saldo_disponivel: selectedBookmaker.saldo_disponivel,
-            } : null}
-          />
-        </div>
-      </td>
-      
-      {/* Odd - compacto para até 20,650 (2 dígitos + 3 decimais) */}
-      <td className="px-1" style={{ height: '78px' }}>
-        <Input 
-          type="number"
-          step="0.001"
-          placeholder="0.00"
-          value={entry.odd}
-          onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
-          className="h-8 text-xs text-center px-0.5 w-[68px] tabular-nums"
-          onWheel={(e) => e.currentTarget.blur()}
-          data-field-type="odd"
-          onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
-        />
-      </td>
-      
-      {/* Stake - compacto para até 150999 (6-7 dígitos) */}
-      <td className="px-1" style={{ height: '78px' }}>
-        <div className="flex flex-col items-center gap-0.5">
-          <MoneyInput 
-            value={entry.stake}
-            onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
-            currency={entry.moeda}
-            minDigits={6}
-            className={`h-8 text-xs text-center w-[90px] tabular-nums ${
-              hasInsufficientBalance ? "border-destructive focus-visible:ring-destructive/50" : ""
-            }`}
-            data-field-type="stake"
-            onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
-          />
-          {hasInsufficientBalance && (
-            <span className="text-[9px] text-destructive font-medium">Saldo insuf.</span>
+          {totalEntries > 1 && (
+            <div className="text-[9px] text-muted-foreground mt-1">{totalEntries}/5</div>
           )}
-        </div>
-      </td>
-      
-      {/* Linha */}
-      <td className="px-2" style={{ height: '78px' }}>
-        <Input
-          placeholder="Linha"
-          value={entry.selecaoLivre}
-          onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
-          className="h-8 text-xs px-1 border-dashed w-20"
-        />
-      </td>
-      
-      {/* Referência (Target) - só no modo criação */}
-      {!isEditing && (
-        <td className="px-2 text-center" style={{ height: '78px' }}>
-          <button
-            type="button"
-            onClick={() => onSetReference(pernaIndex)}
-            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-              entry.isReference 
-                ? "border-primary bg-primary" 
-                : "border-muted-foreground/30 hover:border-muted-foreground/50"
-            }`}
-          >
-            {entry.isReference && <div className="w-2 h-2 rounded-full bg-white" />}
-          </button>
         </td>
-      )}
-      
-      {/* Resultado - só no modo edição - layout igual Aposta Simples */}
-      {isEditing && (
-        <td className="px-1 text-center" style={{ height: '78px' }}>
-          <div className="group inline-flex rounded-md border border-border/40 bg-muted/20 p-0.5 gap-0.5">
-            <ResultadoButton 
-              tipo="GREEN" 
-              label="Green"
-              selectedClass="bg-emerald-500/20 text-emerald-500"
-              hoverClass="hover:bg-emerald-500/20 hover:text-emerald-500"
-            />
-            <ResultadoButton 
-              tipo="RED" 
-              label="Red"
-              selectedClass="bg-red-500/20 text-red-500"
-              hoverClass="hover:bg-red-500/20 hover:text-red-500"
-            />
-            <ResultadoButton 
-              tipo="MEIO_GREEN" 
-              label="½G"
-              selectedClass="bg-teal-500/20 text-teal-500"
-              hoverClass="hover:bg-teal-500/20 hover:text-teal-500"
-              hidden
-            />
-            <ResultadoButton 
-              tipo="MEIO_RED" 
-              label="½R"
-              selectedClass="bg-orange-500/20 text-orange-500"
-              hoverClass="hover:bg-orange-500/20 hover:text-orange-500"
-              hidden
-            />
-            <ResultadoButton 
-              tipo="VOID" 
-              label="Void"
-              selectedClass="bg-slate-500/20 text-slate-400"
-              hoverClass="hover:bg-slate-500/20 hover:text-slate-400"
+        
+        {/* Casa */}
+        <td className="px-2" style={{ height: '78px' }}>
+          <div className="flex flex-col">
+            <Select 
+              value={entry.bookmaker_id}
+              onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", v)}
+            >
+              <SelectTrigger className="h-8 text-[10px] w-full">
+                <SelectValue placeholder="Selecione">
+                  {selectedBookmaker?.nome && (
+                    <span className="truncate uppercase">
+                      {selectedBookmaker.nome}
+                      {selectedBookmaker.instance_identifier && (
+                        <span className="text-primary/80 ml-1 normal-case text-[9px]">({selectedBookmaker.instance_identifier})</span>
+                      )}
+                    </span>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <BookmakerSearchableSelectContent
+                bookmakers={bookmakers}
+                className="max-w-[300px]"
+              />
+            </Select>
+            <BookmakerMetaRow 
+              bookmaker={selectedBookmaker ? {
+                parceiro_nome: selectedBookmaker.parceiro_nome || null,
+                moeda: selectedBookmaker.moeda,
+                saldo_operavel: selectedBookmaker.saldo_operavel,
+                saldo_freebet: selectedBookmaker.saldo_freebet,
+                saldo_disponivel: selectedBookmaker.saldo_disponivel,
+              } : null}
             />
           </div>
         </td>
-      )}
-      
-      {/* Checkbox D — Distribuição de lucro */}
-      {!isEditing && (
-        <td className="px-2 text-center" style={{ height: '78px' }}>
-          <button
-            type="button"
-            onClick={() => onToggleDirected(pernaIndex)}
-            className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-              isDirected 
-                ? "border-primary bg-primary text-primary-foreground" 
-                : "border-muted-foreground/30 hover:border-muted-foreground/50"
-            }`}
-            title={isDirected ? "Lucro direcionado para esta perna" : "Lucro não direcionado para esta perna"}
-          >
-            {isDirected && <Check className="h-3 w-3" />}
-          </button>
-        </td>
-      )}
-      
-      {/* Lucro - formatação compacta para valores > 100.000 */}
-      <td className="px-1 text-center" style={{ height: '78px' }}>
-        <span className={`font-medium tabular-nums ${
-          lucro >= 0 ? "text-emerald-500" : "text-red-500"
-        } ${Math.abs(lucro) >= 100000 ? "text-[11px]" : "text-sm"}`}>
-          {hasScenarioData ? formatCompactCurrency(lucro, moedaDominante) : "—"}
-        </span>
-      </td>
-      
-      {/* ROI */}
-      <td className="px-2 text-center" style={{ height: '78px' }}>
-        <span className={`text-xs ${
-          roi >= 0 ? "text-emerald-500" : "text-red-500"
-        }`}>
-          {hasScenarioData ? `${roi > 0 ? "+" : ""}${roi.toFixed(2)}%` : "—"}
-        </span>
-      </td>
-      
-      {/* Ações */}
-      {!isEditing && (
+        
+        {/* Odd */}
         <td className="px-1" style={{ height: '78px' }}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onAddEntry(pernaIndex)}
-            className="h-7 w-7 p-0"
-            title="Adicionar casa"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          <Input 
+            type="number"
+            step="0.001"
+            placeholder="0.00"
+            value={entry.odd}
+            onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
+            className="h-8 text-xs text-center px-0.5 w-[68px] tabular-nums"
+            onWheel={(e) => e.currentTarget.blur()}
+            data-field-type="odd"
+            onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
+          />
         </td>
-      )}
-      {isEditing && (
-        <td className="px-1 text-center" style={{ height: '78px' }}>
-          {canDeletePerna && (
-            <Button
+        
+        {/* Stake */}
+        <td className="px-1" style={{ height: '78px' }}>
+          <div className="flex flex-col items-center gap-0.5">
+            <MoneyInput 
+              value={entry.stake}
+              onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
+              currency={entry.moeda}
+              minDigits={6}
+              className={`h-8 text-xs text-center w-[90px] tabular-nums ${
+                hasInsufficientBalance ? "border-destructive focus-visible:ring-destructive/50" : ""
+              }`}
+              data-field-type="stake"
+              onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
+            />
+            {hasInsufficientBalance && (
+              <span className="text-[9px] text-destructive font-medium">Saldo insuf.</span>
+            )}
+          </div>
+        </td>
+        
+        {/* Linha */}
+        <td className="px-2" style={{ height: '78px' }}>
+          <Input
+            placeholder="Linha"
+            value={entry.selecaoLivre}
+            onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
+            className="h-8 text-xs px-1 border-dashed w-20"
+          />
+        </td>
+        
+        {/* Referência (Target) */}
+        {!isEditing && (
+          <td rowSpan={mainRowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onDeletePerna?.(pernaIndex)}
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-              title="Excluir esta perna"
+              onClick={() => onSetReference(pernaIndex)}
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                entry.isReference 
+                  ? "border-primary bg-primary" 
+                  : "border-muted-foreground/30 hover:border-muted-foreground/50"
+              }`}
             >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          )}
+              {entry.isReference && <div className="w-2 h-2 rounded-full bg-white" />}
+            </button>
+          </td>
+        )}
+        
+        {/* Resultado (edição) */}
+        {isEditing && (
+          <td rowSpan={mainRowSpan} className="px-1 text-center align-middle" style={{ height: '78px' }}>
+            <div className="group inline-flex rounded-md border border-border/40 bg-muted/20 p-0.5 gap-0.5">
+              <ResultadoButton tipo="GREEN" label="Green" selectedClass="bg-emerald-500/20 text-emerald-500" hoverClass="hover:bg-emerald-500/20 hover:text-emerald-500" />
+              <ResultadoButton tipo="RED" label="Red" selectedClass="bg-red-500/20 text-red-500" hoverClass="hover:bg-red-500/20 hover:text-red-500" />
+              <ResultadoButton tipo="MEIO_GREEN" label="½G" selectedClass="bg-teal-500/20 text-teal-500" hoverClass="hover:bg-teal-500/20 hover:text-teal-500" hidden />
+              <ResultadoButton tipo="MEIO_RED" label="½R" selectedClass="bg-orange-500/20 text-orange-500" hoverClass="hover:bg-orange-500/20 hover:text-orange-500" hidden />
+              <ResultadoButton tipo="VOID" label="Void" selectedClass="bg-slate-500/20 text-slate-400" hoverClass="hover:bg-slate-500/20 hover:text-slate-400" />
+            </div>
+          </td>
+        )}
+        
+        {/* D (distribuição) */}
+        {!isEditing && (
+          <td rowSpan={mainRowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
+            <button
+              type="button"
+              onClick={() => onToggleDirected(pernaIndex)}
+              className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                isDirected 
+                  ? "border-primary bg-primary text-primary-foreground" 
+                  : "border-muted-foreground/30 hover:border-muted-foreground/50"
+              }`}
+              title={isDirected ? "Lucro direcionado para esta perna" : "Lucro não direcionado para esta perna"}
+            >
+              {isDirected && <Check className="h-3 w-3" />}
+            </button>
+          </td>
+        )}
+        
+        {/* Lucro */}
+        <td rowSpan={mainRowSpan} className="px-1 text-center align-middle" style={{ height: '78px' }}>
+          <span className={`font-medium tabular-nums ${
+            lucro >= 0 ? "text-emerald-500" : "text-red-500"
+          } ${Math.abs(lucro) >= 100000 ? "text-[11px]" : "text-sm"}`}>
+            {hasScenarioData ? formatCompactCurrency(lucro, moedaDominante) : "—"}
+          </span>
         </td>
-      )}
-    </tr>
+        
+        {/* ROI */}
+        <td rowSpan={mainRowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
+          <span className={`text-xs ${
+            roi >= 0 ? "text-emerald-500" : "text-red-500"
+          }`}>
+            {hasScenarioData ? `${roi > 0 ? "+" : ""}${roi.toFixed(2)}%` : "—"}
+          </span>
+        </td>
+        
+        {/* Ações */}
+        {!isEditing && (
+          <td rowSpan={mainRowSpan} className="px-1 align-middle" style={{ height: '78px' }}>
+            {canAddMore && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onAddEntry(pernaIndex)}
+                className="h-7 w-7 p-0"
+                title="Adicionar casa"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            )}
+          </td>
+        )}
+        {isEditing && (
+          <td rowSpan={mainRowSpan} className="px-1 text-center align-middle" style={{ height: '78px' }}>
+            {canDeletePerna && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onDeletePerna?.(pernaIndex)}
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                title="Excluir esta perna"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </td>
+        )}
+      </tr>
+
+      {/* Sub-entradas adicionais */}
+      {additionalEntries.map((addEntry, addIndex) => {
+        const addBookmaker = bookmakers.find(b => b.id === addEntry.bookmaker_id);
+        return (
+          <tr 
+            key={`add-${pernaIndex}-${addIndex}`}
+            className="border-b border-border/20 bg-muted/10"
+            style={{ height: '52px' }}
+          >
+            {/* Casa */}
+            <td className="px-2" style={{ height: '52px' }}>
+              <Select 
+                value={addEntry.bookmaker_id}
+                onValueChange={(v) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'bookmaker_id', v)}
+              >
+                <SelectTrigger className="h-7 text-[10px] w-full">
+                  <SelectValue placeholder="Casa...">
+                    {addBookmaker?.nome && (
+                      <span className="truncate uppercase text-[9px]">{addBookmaker.nome}</span>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <BookmakerSearchableSelectContent
+                  bookmakers={bookmakers}
+                  className="max-w-[300px]"
+                />
+              </Select>
+            </td>
+            
+            {/* Odd */}
+            <td className="px-1" style={{ height: '52px' }}>
+              <Input 
+                type="number"
+                step="0.001"
+                placeholder="0.00"
+                value={addEntry.odd}
+                onChange={(e) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'odd', e.target.value)}
+                className="h-7 text-xs text-center px-0.5 w-[68px] tabular-nums"
+                onWheel={(e) => e.currentTarget.blur()}
+              />
+            </td>
+            
+            {/* Stake */}
+            <td className="px-1" style={{ height: '52px' }}>
+              <MoneyInput 
+                value={addEntry.stake}
+                onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
+                currency={addEntry.moeda}
+                minDigits={6}
+                className="h-7 text-xs text-center w-[90px] tabular-nums"
+              />
+            </td>
+            
+            {/* Linha (vazia para sub-entradas) + Remove */}
+            <td className="px-2" style={{ height: '52px' }}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onRemoveAdditionalEntry(pernaIndex, addIndex)}
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                title="Remover sub-entrada"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </td>
+            
+            {/* Colunas spanadas pela main row - não renderizar */}
+          </tr>
+        );
+      })}
+    </>
   );
 }
