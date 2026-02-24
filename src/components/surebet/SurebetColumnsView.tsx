@@ -240,6 +240,7 @@ export function SurebetColumnsView({
                       onWheel={(e) => e.currentTarget.blur()}
                       data-field-type="odd"
                       onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
+                      tabIndex={pernaIndex * 3 + 1}
                     />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -255,6 +256,7 @@ export function SurebetColumnsView({
                       )}
                       data-field-type="stake"
                       onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
+                      tabIndex={pernaIndex * 3 + 2}
                     />
                     {hasInsufficientBalance && (
                       <span className="text-[9px] text-destructive font-medium mt-0.5 block text-center">Saldo insuf.</span>
@@ -267,6 +269,7 @@ export function SurebetColumnsView({
                       value={entry.selecaoLivre}
                       onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
                       className="h-8 text-[11px] px-2 border-dashed"
+                      tabIndex={pernaIndex * 3 + 3}
                     />
                   </div>
                 </div>
