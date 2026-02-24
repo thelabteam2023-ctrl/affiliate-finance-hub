@@ -1813,29 +1813,31 @@ export function SurebetModalRoot({
                 </table>
               </div>
             ) : (
-              <SurebetColumnsView
-                odds={odds}
-                scenarios={analysis.scenarios}
-                isEditing={isEditing}
-                bookmakersByLeg={getAdjustedBookmakersForLeg}
-                directedProfitLegs={directedProfitLegs}
-                numPernas={numPernas}
-                moedaDominante={analysis.moedaDominante}
-                insufficientLegs={balanceValidation.insufficientLegs}
-                onResultadoChange={handlePernaResultadoChange}
-                onUpdateOdd={updateOdd}
-                onSetReference={setReferenceIndex}
-                onToggleDirected={toggleDirectedLeg}
-                onAddEntry={addAdditionalEntry}
-                onUpdateAdditionalEntry={updateAdditionalEntry}
-                onRemoveAdditionalEntry={removeAdditionalEntry}
-                onDeletePerna={handleDeletePerna}
-                canDeletePerna={isEditing && odds.length > 2}
-                onFocus={setFocusedLeg}
-                onBlur={() => setFocusedLeg(null)}
-                onFieldKeyDown={handleFieldKeyDown}
-                getPernaLabel={getPernaLabel}
-              />
+              <div ref={tableContainerRef}>
+                <SurebetColumnsView
+                  odds={odds}
+                  scenarios={analysis.scenarios}
+                  isEditing={isEditing}
+                  bookmakersByLeg={getAdjustedBookmakersForLeg}
+                  directedProfitLegs={directedProfitLegs}
+                  numPernas={numPernas}
+                  moedaDominante={analysis.moedaDominante}
+                  insufficientLegs={balanceValidation.insufficientLegs}
+                  onResultadoChange={handlePernaResultadoChange}
+                  onUpdateOdd={updateOdd}
+                  onSetReference={setReferenceIndex}
+                  onToggleDirected={toggleDirectedLeg}
+                  onAddEntry={addAdditionalEntry}
+                  onUpdateAdditionalEntry={updateAdditionalEntry}
+                  onRemoveAdditionalEntry={removeAdditionalEntry}
+                  onDeletePerna={handleDeletePerna}
+                  canDeletePerna={isEditing && odds.length > 2}
+                  onFocus={setFocusedLeg}
+                  onBlur={() => setFocusedLeg(null)}
+                  onFieldKeyDown={handleFieldKeyDown}
+                  getPernaLabel={getPernaLabel}
+                />
+              </div>
             )}
 
             {/* FOOTER - Totais e Controles */}
