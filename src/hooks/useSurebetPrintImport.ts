@@ -23,20 +23,20 @@ const MATCH_ODDS_MARKET_PATTERN = /(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*
 // MONEYLINE / MATCH_WINNER (2-way, no draw — basketball, tennis, MMA, etc.)
 const MONEYLINE_MARKET_PATTERN = /(?:moneyline|money\s*line|\bml\b|vencedor(?!\s*(?:da\s*)?(?:partida|match))|winner|match\s*winner|main\s*line)/i;
 
-// TOTALS (Over/Under) — includes basketball-specific terms
-const TOTALS_MARKET_PATTERN = /(?:total\s*(?:de\s*)?(?:gols?|goals?|pontos?|points?|games?|sets?|cards?|cart[õo]es?|corners?|escanteios?|faltas?|shots?|runs?|kills?|mapas?|maps?|towers?|torres?|aces?|rounds?|rebounds?|assists?|steals?|blocks?|turnovers?|fouls?)|game\s*total|points?\s*total|over\s*[\/\\]?\s*under|o\s*[\/\\]\s*u|mais\s*[\/\\]\s*menos)/i;
+// TOTALS (Over/Under) — includes basketball + tennis-specific terms
+const TOTALS_MARKET_PATTERN = /(?:total\s*(?:de\s*)?(?:gols?|goals?|pontos?|points?|games?|sets?|cards?|cart[õo]es?|corners?|escanteios?|faltas?|shots?|runs?|kills?|mapas?|maps?|towers?|torres?|aces?|rounds?|rebounds?|assists?|steals?|blocks?|turnovers?|fouls?|double\s*faults?)|game\s*total|points?\s*total|match\s*total\s*games?|(?:1st|2nd|3rd)\s*set\s*total|set\s*total\s*games?|total\s*sets?|over\s*[\/\\]?\s*under|o\s*[\/\\]\s*u|mais\s*[\/\\]\s*menos)/i;
 
 // TEAM TOTALS — team-specific over/under
 const TEAM_TOTALS_MARKET_PATTERN = /(?:team\s*total|total\s*(?:do|de|da)\s*(?:equipe|time)|(?:home|away)\s*total)/i;
 
-// PLAYER PROPS / PLAYER TOTALS
-const PLAYER_TOTALS_MARKET_PATTERN = /(?:player\s*(?:props?|totals?|points?|rebounds?|assists?|steals?|blocks?|turnovers?|shots?|goals?|fouls?)|jogador\s*(?:pontos?|assistências?|rebotes?)|\bpra\b|points?\s*\+?\s*(?:assists?|rebounds?))/i;
+// PLAYER PROPS / PLAYER TOTALS — includes tennis-specific (aces, double faults, games won)
+const PLAYER_TOTALS_MARKET_PATTERN = /(?:player\s*(?:props?|totals?|points?|rebounds?|assists?|steals?|blocks?|turnovers?|shots?|goals?|fouls?|aces?|double\s*faults?|games?\s*won)|jogador\s*(?:pontos?|assistências?|rebotes?)|\bpra\b|points?\s*\+?\s*(?:assists?|rebounds?))/i;
 
-// YES_NO (binary) — includes basketball-specific
-const YES_NO_MARKET_PATTERN = /(?:ambas?\s*marcam?|both\s*teams?\s*(?:to\s*)?score|btts|gol\s*(?:nos?\s*)?(?:dois|2|primeiro|1[ºo]?)\s*tempo|clean\s*sheet|classifica|penalty\s*awarded|double\s*double|triple\s*double|overtime|prorroga[çc][ãa]o)/i;
+// YES_NO (binary) — includes basketball + tennis-specific
+const YES_NO_MARKET_PATTERN = /(?:ambas?\s*marcam?|both\s*teams?\s*(?:to\s*)?score|btts|gol\s*(?:nos?\s*)?(?:dois|2|primeiro|1[ºo]?)\s*tempo|clean\s*sheet|classifica|penalty\s*awarded|double\s*double|triple\s*double|overtime|prorroga[çc][ãa]o|tie\s*break)/i;
 
-// HANDICAP / SPREAD — includes basketball spread
-const HANDICAP_MARKET_PATTERN = /(?:asian\s*handicap|\bah\b|\beh\b|handicap\s*(?:europeu|asiatico|asiático)?|(?:point\s*)?spread|run\s*line|puck\s*line)/i;
+// HANDICAP / SPREAD — includes basketball spread + tennis handicaps
+const HANDICAP_MARKET_PATTERN = /(?:asian\s*handicap|\bah\b|\beh\b|handicap\s*(?:europeu|asiatico|asiático)?|(?:point\s*)?spread|run\s*line|puck\s*line|games?\s*handicap|match\s*games?\s*handicap|set\s*handicap|(?:1st|2nd|3rd)\s*set\s*game\s*handicap)/i;
 
 // DRAW NO BET
 const DNB_MARKET_PATTERN = /(?:draw\s*no\s*bet|\bdnb\b|empate\s*anula)/i;
@@ -44,8 +44,8 @@ const DNB_MARKET_PATTERN = /(?:draw\s*no\s*bet|\bdnb\b|empate\s*anula)/i;
 // RACE TO POINTS
 const RACE_TO_MARKET_PATTERN = /(?:race\s*to\s*\d+|corrida\s*(?:a|até)\s*\d+)/i;
 
-// HALF / QUARTER period markets
-const PERIOD_MARKET_PATTERN = /(?:1st\s*(?:half|quarter)|2nd\s*(?:half|quarter)|3rd\s*quarter|4th\s*quarter|1[ºo°]?\s*(?:tempo|quarto|quarter)|2[ºo°]?\s*(?:tempo|quarto|quarter)|3[ºo°]?\s*quarto|4[ºo°]?\s*quarto|first\s*half|second\s*half|half\s*time)/i;
+// HALF / QUARTER / SET / GAME period markets — includes tennis set/game level
+const PERIOD_MARKET_PATTERN = /(?:1st\s*(?:half|quarter|set)|2nd\s*(?:half|quarter|set)|3rd\s*(?:quarter|set)|4th\s*quarter|5th\s*set|1[ºo°]?\s*(?:tempo|quarto|quarter|set)|2[ºo°]?\s*(?:tempo|quarto|quarter|set)|3[ºo°]?\s*(?:quarto|set)|first\s*half|second\s*half|half\s*time|(?:1st|2nd|3rd)\s*set\s*(?:winner|total|handicap|game)|game\s*\d+\s*winner|set\s*\d+\s*winner)/i;
 
 // Binary markets that support smart line inference (TOTALS + YES_NO)
 const BINARY_MARKETS = [
@@ -58,6 +58,11 @@ const BINARY_MARKETS = [
   "Total Points", "Game Total", "Points Total",
   "Team Total", "Player Points", "Player Rebounds", "Player Assists",
   "Double Double", "Triple Double", "Overtime",
+  // Tennis
+  "Total Games", "Total Sets", "Match Total Games", "Set Total Games",
+  "1st Set Total", "2nd Set Total", "3rd Set Total",
+  "Player Aces", "Player Double Faults", "Player Games Won",
+  "Tie Break", "Tie Break in Match", "Tie Break First Set",
 ];
 
 // Mapping of binary line pairs (both directions)
