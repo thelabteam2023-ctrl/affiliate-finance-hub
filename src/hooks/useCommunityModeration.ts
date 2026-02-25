@@ -152,7 +152,7 @@ export function useCommunityModeration() {
 
   const clearChat = useCallback(async (
     workspaceId: string,
-    contextType: 'general' | 'bookmaker' = 'general',
+    contextType: 'general' | 'topic' = 'general',
     contextId: string | null = null
   ): Promise<ModerationResult> => {
     if (!canModerate) {
@@ -185,7 +185,7 @@ export function useCommunityModeration() {
 
   const getChatMessageCount = useCallback(async (
     workspaceId: string,
-    contextType: 'general' | 'bookmaker' = 'general',
+    contextType: 'general' | 'topic' = 'general',
     contextId: string | null = null
   ): Promise<number> => {
     try {

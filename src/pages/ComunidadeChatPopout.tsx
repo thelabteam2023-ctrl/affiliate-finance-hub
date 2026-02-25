@@ -15,16 +15,15 @@ export default function ComunidadeChatPopout() {
   const { notifyWindowOpened, notifyWindowClosed } = useChatBroadcast();
   
   const isPopoutMode = searchParams.get('mode') === 'popout';
-  const contextType = (searchParams.get('context') as 'general' | 'bookmaker') || 'general';
+  const contextType = (searchParams.get('context') as 'general' | 'topic') || 'general';
   const contextId = searchParams.get('contextId') || null;
-  const bookmakerName = searchParams.get('name') || undefined;
+  const topicTitle = searchParams.get('name') || undefined;
 
   // Notify other tabs that this window is open
   useEffect(() => {
     if (isPopoutMode && user) {
       notifyWindowOpened();
       
-      // Notify on close
       const handleBeforeUnload = () => {
         notifyWindowClosed();
       };
@@ -40,14 +39,13 @@ export default function ComunidadeChatPopout() {
 
   // Set window title
   useEffect(() => {
-    document.title = bookmakerName ? `Chat - ${bookmakerName}` : 'Chat Geral';
-  }, [bookmakerName]);
+    document.title = topicTitle ? `Chat - ${topicTitle}` : 'Chat Geral';
+  }, [topicTitle]);
 
   const handleGoToERP = () => {
     window.open('/comunidade', '_blank');
   };
 
-  // Loading state
   if (authLoading || accessLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
@@ -56,7 +54,6 @@ export default function ComunidadeChatPopout() {
     );
   }
 
-  // Not authenticated
   if (!user) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-background p-6">
@@ -72,7 +69,6 @@ export default function ComunidadeChatPopout() {
     );
   }
 
-  // Access blocked
   if (!hasFullAccess) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-background p-6">
@@ -99,7 +95,7 @@ export default function ComunidadeChatPopout() {
         onGoToERP={handleGoToERP}
         initialContextType={contextType}
         initialContextId={contextId}
-        bookmakerName={bookmakerName}
+        topicTitle={topicTitle}
       />
     </div>
   );

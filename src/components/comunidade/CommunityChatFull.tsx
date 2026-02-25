@@ -10,8 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, ExternalLink, Loader2, Globe, Building2, ChevronUp, Settings, Trash2, Shield } from 'lucide-react';
+import { MessageSquare, ExternalLink, Loader2, ChevronUp, Trash2, Shield } from 'lucide-react';
 import { CommunityChatConvertDialog } from './CommunityChatConvertDialog';
 import { ChatMessageItem, ChatMessage } from './ChatMessageItem';
 import { ChatInput } from './ChatInput';
@@ -30,10 +29,9 @@ interface CommunityChatFullProps {
   isPopout?: boolean;
   isEmbedded?: boolean;
   onGoToERP?: () => void;
-  initialContextType?: 'general' | 'bookmaker';
+  initialContextType?: 'general' | 'topic';
   initialContextId?: string | null;
-  bookmakerName?: string;
-  bookmakerLogo?: string | null;
+  topicTitle?: string;
 }
 
 const MESSAGES_PER_PAGE = 50;
@@ -45,8 +43,7 @@ export function CommunityChatFull({
   onGoToERP,
   initialContextType = 'general',
   initialContextId = null,
-  bookmakerName,
-  bookmakerLogo,
+  topicTitle,
 }: CommunityChatFullProps) {
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
@@ -56,7 +53,7 @@ export function CommunityChatFull({
 
   const { canModerate } = useCommunityModeration();
 
-  const [contextType, setContextType] = useState<'general' | 'bookmaker'>(initialContextType);
+  const [contextType, setContextType] = useState<'general' | 'topic'>(initialContextType);
   const [contextId, setContextId] = useState<string | null>(initialContextId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,7 +103,7 @@ export function CommunityChatFull({
         query = query.gt('created_at', getHistoryCutoff());
       }
 
-      if (contextType === 'bookmaker' && contextId) {
+      if (contextType === 'topic' && contextId) {
         query = query.eq('context_id', contextId);
       } else if (contextType === 'general') {
         query = query.is('context_id', null);
@@ -179,7 +176,7 @@ export function CommunityChatFull({
             const newMsg = payload.new as any;
             
             if (newMsg.context_type !== contextType) return;
-            if (contextType === 'bookmaker' && newMsg.context_id !== contextId) return;
+            if (contextType === 'topic' && newMsg.context_id !== contextId) return;
             if (contextType === 'general' && newMsg.context_id !== null) return;
 
             const { data: profile } = await supabase
@@ -277,7 +274,7 @@ export function CommunityChatFull({
         content,
         message_type: 'text',
         context_type: contextType,
-        context_id: contextType === 'bookmaker' ? contextId : null,
+        context_id: contextType === 'topic' ? contextId : null,
       })
       .select()
       .single();
@@ -311,7 +308,7 @@ export function CommunityChatFull({
         content: storagePath,
         message_type: type,
         context_type: contextType,
-        context_id: contextType === 'bookmaker' ? contextId : null,
+        context_id: contextType === 'topic' ? contextId : null,
       })
       .select()
       .single();
@@ -367,25 +364,20 @@ export function CommunityChatFull({
           <div className="flex flex-col px-4 py-3 border-b border-border shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {contextType === 'bookmaker' && bookmakerLogo ? (
-                  <img src={bookmakerLogo} alt={bookmakerName} className="h-6 w-6 object-contain rounded" />
-                ) : (
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                )}
+                <MessageSquare className="h-5 w-5 text-primary" />
                 <div>
                   <h1 className="font-semibold">
-                    {contextType === 'bookmaker' && bookmakerName 
-                      ? bookmakerName
+                    {contextType === 'topic' && topicTitle 
+                      ? topicTitle
                       : 'Chat Geral'
                     }
                   </h1>
-                  {contextType === 'bookmaker' && (
-                    <span className="text-xs text-muted-foreground">Chat por Bookmaker</span>
+                  {contextType === 'topic' && (
+                    <span className="text-xs text-muted-foreground">Conversa ao vivo</span>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {/* Moderation Menu */}
                 {canModerate && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -427,20 +419,15 @@ export function CommunityChatFull({
           <div className="flex flex-col px-4 py-2 border-b border-border shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {contextType === 'bookmaker' && bookmakerLogo ? (
-                  <img src={bookmakerLogo} alt={bookmakerName} className="h-5 w-5 object-contain rounded" />
-                ) : (
-                  <MessageSquare className="h-4 w-4 text-primary" />
-                )}
+                <MessageSquare className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium">
-                  {contextType === 'bookmaker' && bookmakerName 
-                    ? `${bookmakerName} · Chat`
+                  {contextType === 'topic' && topicTitle 
+                    ? `${topicTitle} · Chat`
                     : 'Chat Geral'
                   }
                 </span>
               </div>
               <div className="flex items-center gap-1">
-                {/* Moderation Menu for Embedded */}
                 {canModerate && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -471,43 +458,10 @@ export function CommunityChatFull({
           </div>
         )}
 
-        {/* Context Tabs - only show when no specific bookmaker context */}
-        {!initialContextId && (
+        {/* Online indicator when no specific header */}
+        {!isPopout && !isEmbedded && (
           <div className="px-4 py-2 border-b border-border">
-            <Tabs 
-              value={contextType} 
-              onValueChange={(v) => {
-                setContextType(v as 'general' | 'bookmaker');
-                setContextId(null);
-              }}
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="general" className="flex items-center gap-1.5">
-                  <Globe className="h-3.5 w-3.5" />
-                  Geral
-                </TabsTrigger>
-                <TabsTrigger value="bookmaker" className="flex items-center gap-1.5">
-                  <Building2 className="h-3.5 w-3.5" />
-                  Por Bookmaker
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            
-            {/* Contextual guidance for bookmaker tab */}
-            {contextType === 'bookmaker' && (
-              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-center">
-                <Building2 className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                <p className="text-sm font-medium">Selecione uma Bookmaker</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Acesse o chat específico de uma casa pela página da Comunidade ou pelo card de cada bookmaker.
-                </p>
-              </div>
-            )}
-            
-            {/* Online indicator for general chat */}
-            {contextType === 'general' && (
-              <OnlineIndicator count={onlineCount} isConnected={isConnected} className="mt-2" />
-            )}
+            <OnlineIndicator count={onlineCount} isConnected={isConnected} />
           </div>
         )}
 
@@ -547,8 +501,8 @@ export function CommunityChatFull({
             <div className="flex flex-col items-center justify-center h-full py-8 text-center">
               <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-3" />
               <p className="text-sm font-medium mb-1">
-                {contextType === 'bookmaker' && bookmakerName 
-                  ? `Ainda não há mensagens sobre ${bookmakerName}`
+                {contextType === 'topic' && topicTitle 
+                  ? `Ainda não há mensagens neste tópico`
                   : 'Nenhuma mensagem ainda'
                 }
               </p>
@@ -616,7 +570,7 @@ export function CommunityChatFull({
           workspaceId={workspaceId}
           contextType={contextType}
           contextId={contextId}
-          contextName={bookmakerName}
+          contextName={topicTitle}
           onCleared={() => {
             setMessages([]);
             fetchMessages();

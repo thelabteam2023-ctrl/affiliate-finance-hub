@@ -9,14 +9,14 @@ interface PresenceState {
   online_at: string;
 }
 
-export function useChatPresence(contextType: 'general' | 'bookmaker', contextId?: string | null) {
+export function useChatPresence(contextType: 'general' | 'topic', contextId?: string | null) {
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
   const [onlineCount, setOnlineCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
 
-  const contextKey = contextType === 'bookmaker' && contextId 
-    ? `bookmaker:${contextId}` 
+  const contextKey = contextType === 'topic' && contextId 
+    ? `topic:${contextId}` 
     : 'general';
 
   const channelName = `presence-chat-${workspaceId}-${contextKey}`;

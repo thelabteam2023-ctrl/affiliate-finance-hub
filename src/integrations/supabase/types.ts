@@ -2579,6 +2579,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           edited_at: string | null
+          has_chat_activity: boolean
           id: string
           is_anonymous: boolean | null
           status: string
@@ -2595,6 +2596,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           edited_at?: string | null
+          has_chat_activity?: boolean
           id?: string
           is_anonymous?: boolean | null
           status?: string
@@ -2611,6 +2613,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           edited_at?: string | null
+          has_chat_activity?: boolean
           id?: string
           is_anonymous?: boolean | null
           status?: string
