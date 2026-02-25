@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
 import { COMMUNITY_CATEGORIES, type CommunityCategory } from '@/lib/communityCategories';
 import {
   Dialog,
@@ -17,8 +18,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, X } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Building2, X, Check, ChevronsUpDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface CreateTopicDialogProps {
   open: boolean;
@@ -29,11 +32,6 @@ interface CreateTopicDialogProps {
   onSuccess: () => void;
 }
 
-interface BookmakerOption {
-  id: string;
-  nome: string;
-  logo_url: string | null;
-}
 
 export function CreateTopicDialog({
   open,
@@ -45,6 +43,7 @@ export function CreateTopicDialog({
 }: CreateTopicDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { data: workspaceBookmakers = [] } = useWorkspaceBookmakers();
   const [saving, setSaving] = useState(false);
 
   const [categoria, setCategoria] = useState<CommunityCategory>(defaultCategory || 'casas_de_aposta');
@@ -54,13 +53,19 @@ export function CreateTopicDialog({
 
   // Bookmaker tag (optional)
   const [bookmakerSearch, setBookmakerSearch] = useState('');
-  const [bookmakerOptions, setBookmakerOptions] = useState<BookmakerOption[]>([]);
-  const [selectedBookmaker, setSelectedBookmaker] = useState<BookmakerOption | null>(
-    defaultBookmakerId && defaultBookmakerName
-      ? { id: defaultBookmakerId, nome: defaultBookmakerName, logo_url: null }
-      : null
+  const [selectedBookmakerId, setSelectedBookmakerId] = useState<string | null>(defaultBookmakerId || null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const selectedBookmaker = useMemo(
+    () => workspaceBookmakers.find((b) => b.id === selectedBookmakerId) || null,
+    [workspaceBookmakers, selectedBookmakerId]
   );
-  const [showBookmakerSearch, setShowBookmakerSearch] = useState(!!defaultBookmakerId);
+
+  const filteredBookmakers = useMemo(() => {
+    if (!bookmakerSearch.trim()) return workspaceBookmakers;
+    const q = bookmakerSearch.toLowerCase();
+    return workspaceBookmakers.filter((b) => b.nome.toLowerCase().includes(q));
+  }, [workspaceBookmakers, bookmakerSearch]);
 
   // Reset when dialog opens
   useEffect(() => {
@@ -69,38 +74,12 @@ export function CreateTopicDialog({
       setTitulo('');
       setConteudo('');
       setIsAnonymous(false);
-      if (defaultBookmakerId && defaultBookmakerName) {
-        setSelectedBookmaker({ id: defaultBookmakerId, nome: defaultBookmakerName, logo_url: null });
-        setShowBookmakerSearch(true);
-      } else {
-        setSelectedBookmaker(null);
-        setShowBookmakerSearch(false);
-      }
+      setSelectedBookmakerId(defaultBookmakerId || null);
       setBookmakerSearch('');
+      setPopoverOpen(false);
     }
-  }, [open, defaultCategory, defaultBookmakerId, defaultBookmakerName]);
-
-  // Search bookmakers
-  useEffect(() => {
-    if (!bookmakerSearch.trim() || bookmakerSearch.length < 2) {
-      setBookmakerOptions([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      const { data } = await supabase
-        .from('bookmakers_catalogo')
-        .select('id, nome, logo_url')
-        .eq('status', 'ATIVA')
-        .eq('visibility', 'GLOBAL_REGULATED')
-        .ilike('nome', `%${bookmakerSearch.trim()}%`)
-        .order('nome')
-        .limit(8);
-      setBookmakerOptions(data || []);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [bookmakerSearch]);
+  }, [open, defaultCategory, defaultBookmakerId]);
+  
 
   const handleSubmit = async () => {
     if (!user?.id) {
@@ -201,63 +180,75 @@ export function CreateTopicDialog({
 
           {/* Bookmaker tag (optional) */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Casa relacionada (opcional)</Label>
-              {!showBookmakerSearch && (
-                <Button variant="ghost" size="sm" onClick={() => setShowBookmakerSearch(true)}>
-                  <Building2 className="h-3.5 w-3.5 mr-1" />
-                  Adicionar
-                </Button>
-              )}
-            </div>
-
-            {showBookmakerSearch && (
-              <div className="space-y-2">
-                {selectedBookmaker ? (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="gap-1">
-                      <Building2 className="h-3 w-3" />
-                      {selectedBookmaker.nome}
-                      <button
-                        onClick={() => { setSelectedBookmaker(null); setBookmakerSearch(''); }}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  </div>
-                ) : (
-                  <div className="relative">
+            <Label className="text-sm">Casa relacionada (opcional)</Label>
+            {selectedBookmaker ? (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="gap-1">
+                  {selectedBookmaker.logo_url ? (
+                    <img src={selectedBookmaker.logo_url} alt="" className="h-3 w-3 object-contain" />
+                  ) : (
+                    <Building2 className="h-3 w-3" />
+                  )}
+                  {selectedBookmaker.nome}
+                  <button
+                    onClick={() => setSelectedBookmakerId(null)}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              </div>
+            ) : (
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={popoverOpen}
+                    className="w-full justify-between font-normal text-muted-foreground"
+                  >
+                    Selecionar casa...
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start" side="bottom">
+                  <div className="p-2 border-b border-border">
                     <Input
                       placeholder="Buscar casa..."
                       value={bookmakerSearch}
                       onChange={(e) => setBookmakerSearch(e.target.value)}
+                      className="h-8"
                     />
-                    {bookmakerOptions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-md z-50 max-h-48 overflow-auto">
-                        {bookmakerOptions.map((bm) => (
-                          <button
-                            key={bm.id}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted text-left"
-                            onClick={() => {
-                              setSelectedBookmaker(bm);
-                              setBookmakerSearch('');
-                              setBookmakerOptions([]);
-                            }}
-                          >
-                            {bm.logo_url ? (
-                              <img src={bm.logo_url} alt="" className="h-5 w-5 object-contain" />
-                            ) : (
-                              <Building2 className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            {bm.nome}
-                          </button>
-                        ))}
-                      </div>
+                  </div>
+                  <div className="max-h-48 overflow-auto">
+                    {filteredBookmakers.length === 0 ? (
+                      <p className="text-sm text-muted-foreground p-3 text-center">Nenhuma casa encontrada.</p>
+                    ) : (
+                      filteredBookmakers.map((bm) => (
+                        <button
+                          key={bm.id}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted text-left"
+                          onClick={() => {
+                            setSelectedBookmakerId(bm.id);
+                            setBookmakerSearch('');
+                            setPopoverOpen(false);
+                          }}
+                        >
+                          {bm.logo_url ? (
+                            <img src={bm.logo_url} alt="" className="h-5 w-5 object-contain" />
+                          ) : (
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <span className="flex-1">{bm.nome}</span>
+                          {bm.id === selectedBookmakerId && (
+                            <Check className="h-4 w-4 text-primary" />
+                          )}
+                        </button>
+                      ))
                     )}
                   </div>
-                )}
-              </div>
+                </PopoverContent>
+              </Popover>
             )}
           </div>
 
