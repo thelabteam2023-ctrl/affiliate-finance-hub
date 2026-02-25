@@ -2508,7 +2508,8 @@ export type Database = {
       }
       community_topics: {
         Row: {
-          bookmaker_catalogo_id: string
+          bookmaker_catalogo_id: string | null
+          categoria: string
           conteudo: string
           created_at: string
           delete_reason: string | null
@@ -2523,7 +2524,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          bookmaker_catalogo_id: string
+          bookmaker_catalogo_id?: string | null
+          categoria?: string
           conteudo: string
           created_at?: string
           delete_reason?: string | null
@@ -2538,7 +2540,8 @@ export type Database = {
           user_id: string
         }
         Update: {
-          bookmaker_catalogo_id?: string
+          bookmaker_catalogo_id?: string | null
+          categoria?: string
           conteudo?: string
           created_at?: string
           delete_reason?: string | null
