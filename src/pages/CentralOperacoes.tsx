@@ -1580,12 +1580,12 @@ export default function CentralOperacoes() {
             <CardContent className="pt-0">
               <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
                 {parceirosSemParceria.map((parceiro) => (
-                  <div key={parceiro.id} className="flex items-center justify-between p-2 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                  <div key={parceiro.id} className="flex items-center justify-between p-2 rounded-lg border status-bg-orange">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <User className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                      <User className="h-3.5 w-3.5 status-orange shrink-0" />
                       <span className="text-xs font-medium truncate">{getFirstLastName(parceiro.nome)}</span>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao", { state: { tab: "parcerias", parceiroId: parceiro.id } })} className="h-6 text-xs px-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10">
+                    <Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao", { state: { tab: "parcerias", parceiroId: parceiro.id } })} className="h-6 text-xs px-2 status-orange status-bg-orange hover:opacity-80">
                       Definir Origem
                     </Button>
                   </div>
