@@ -237,10 +237,22 @@ REGRAS IMPORTANTES:
     - TOTALS: Total de Gols, Over/Under, O/U, Goals Total, Total Cards, Corners Total, Escanteios, Total Points, Game Total
     - TEAM_TOTALS: Team Total, Total do Time (ex: Lakers Total Points Over 112.5)
     - PLAYER_TOTALS: Player Points, Player Rebounds, Player Assists, Player Props, PRA
-    - YES_NO: Ambas Marcam, BTTS, Clean Sheet, Gol no 1º Tempo, Double Double, Triple Double, Overtime
-    - HANDICAP/SPREAD: Asian Handicap, AH, EH, Spread, Point Spread, Run Line, Puck Line
+    - YES_NO: Ambas Marcam, BTTS, Clean Sheet, Gol no 1º Tempo, Double Double, Triple Double, Overtime, Tie Break
+    - HANDICAP/SPREAD: Asian Handicap, AH, EH, Spread, Point Spread, Run Line, Puck Line, Games Handicap, Set Handicap, Match Games Handicap, 1st Set Game Handicap
     - DNB: Draw No Bet, Empate Anula, DNB
     - RACE_TO: Race to X Points (ex: Race to 20)
+    - TENNIS-SPECIFIC:
+      * MATCH_WINNER: Match Winner, Moneyline (2 vias, sem empate)
+      * SET_WINNER: 1st Set Winner, Set 2 Winner (2 vias por set)
+      * GAME_WINNER: Game 5 Winner, Game 7 Winner (2 vias por game)
+      * MATCH_HANDICAP: Games Handicap, Match Games Handicap (ex: Djokovic -4.5 Games)
+      * SET_HANDICAP: Set Handicap (ex: Alcaraz -1.5 Sets)
+      * GAME_HANDICAP: 1st Set Game Handicap (ex: Djokovic -2.5 dentro do set)
+      * TOTAL_GAMES_MATCH: Total Games, Match Total Games (Over/Under)
+      * TOTAL_GAMES_SET: 1st Set Total Games (Over/Under por set)
+      * TOTAL_SETS: Over/Under Sets (ex: Over 2.5 Sets)
+      * PLAYER_PROPS: Aces, Double Faults, Games Won (ex: Djokovic Over 12.5 Aces)
+      * CORRECT_SCORE: Placar em Sets (ex: 2-0, 2-1)
 
 Esportes reconhecidos: ${SPORTS_LIST.join(", ")}
 
