@@ -257,9 +257,17 @@ export function parseOcrMarket(
   const sideLineFromMarket = extractSideAndLine(rawMarket);
   const sideLine = sideLineFromSelection || sideLineFromMarket;
   
-  // Prioridade 0: Se o texto do MERCADO explicitamente contém "1x2" ou "1×2", é 1X2
+  // ================================================================
+  // TAXONOMIA 1X2 / MATCH_ODDS - Sinônimos e erros comuns de OCR
+  // ================================================================
+  // Inclui: Match Odds, 1X2, 1 X 2, Resultado da Partida, Resultado Final,
+  //         Full Time Result, FT Result, Moneyline Soccer, Três Vias
+  // Erros OCR comuns: "lX2", "IX2", "1×2", "1 X 2"
+  const MATCH_ODDS_PATTERN = /(?:^|\s|[^a-z0-9])(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|vencedor\s*(?:da\s*)?(?:partida|match)|match\s*(?:winner|result)|main\s*line)/i;
+
+  // Prioridade 0: Se o texto do MERCADO explicitamente contém padrões 1X2
   // Isso evita que nomes de times com números (ex: "Como 1907") confundam o parser
-  if (/1\s*[x×]\s*2/i.test(marketTextLower)) {
+  if (MATCH_ODDS_PATTERN.test(marketTextLower)) {
     type = "1X2";
     confidence = "high";
   }
@@ -273,8 +281,8 @@ export function parseOcrMarket(
     type = "HANDICAP";
     confidence = "high";
   }
-  // Prioridade 3: Outros tipos específicos
-  else if (/1x2|resultado.*final|final\s*(da|de)\s*partida|tres.*vias|match\s*winner|matched?\s*winner|match\s*result|vencedor\s*(da\s*)?(partida|match)|main\s*line/i.test(combinedText)) {
+  // Prioridade 3: Verificar 1X2 no texto combinado (mercado + seleção)
+  else if (MATCH_ODDS_PATTERN.test(combinedText)) {
     type = "1X2";
     confidence = "high";
   }
@@ -346,7 +354,7 @@ export function parseOcrMarket(
     // Mapeamento simples para outros tipos
     const typeDisplayMap: Record<MarketType, string> = {
       "MONEYLINE": "Moneyline / Vencedor",
-      "1X2": "1X2",
+      "1X2": "1X2 (Resultado)",
       "BTTS": "Ambas Marcam",
       "CORRECT_SCORE": "Placar Exato",
       "DOUBLE_CHANCE": "Dupla Chance",
