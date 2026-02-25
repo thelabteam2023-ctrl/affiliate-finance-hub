@@ -353,9 +353,7 @@ export default function BookmakerDialog({
     checkDuplicateAccounts();
   }, [parceiroId, bookmakerId, bookmaker?.id]);
 
-  const encryptPassword = (password: string): string => {
-    return btoa(password);
-  };
+  // encryptPassword moved to utils/cryptoPassword.ts
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -389,7 +387,7 @@ export default function BookmakerDialog({
         nome: selectedBookmaker?.nome || "",
         link_origem: selectedLink,
         login_username: loginUsername || "",
-        login_password_encrypted: loginPassword ? encryptPassword(loginPassword) : "",
+        login_password_encrypted: loginPassword ? await (await import("@/utils/cryptoPassword")).encryptPassword(loginPassword) : "",
         saldo_atual: 0,
         saldo_usd: 0,
         moeda: moedaOperacional,

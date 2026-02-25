@@ -286,13 +286,22 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     });
   };
 
-  const decryptPassword = (encrypted: string | null): string => {
+  const [decryptedPasswords, setDecryptedPasswords] = useState<Record<string, string>>({});
+  
+  const triggerDecrypt = useCallback(async (encrypted: string | null, id: string) => {
+    if (!encrypted || decryptedPasswords[id]) return;
+    const { decryptPassword: decrypt } = await import("@/utils/cryptoPassword");
+    const result = await decrypt(encrypted);
+    setDecryptedPasswords(prev => ({ ...prev, [id]: result }));
+  }, [decryptedPasswords]);
+
+  const getDecryptedPassword = (encrypted: string | null, id: string): string => {
     if (!encrypted) return "";
-    try {
-      return atob(encrypted);
-    } catch {
-      return encrypted;
+    if (!decryptedPasswords[id]) {
+      triggerDecrypt(encrypted, id);
+      return "••••••••";
     }
+    return decryptedPasswords[id];
   };
 
   const copyToClipboard = async (text: string, fieldName: string) => {
@@ -1045,13 +1054,16 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                                   <div className="flex items-center justify-between gap-2 p-2 rounded bg-muted/50">
                                     <div className="flex-1 min-w-0">
                                       <p className="text-xs text-muted-foreground">Senha</p>
-                                      <p className="text-sm font-medium truncate">{decryptPassword(vinculo.login_password_encrypted)}</p>
+                                      <p className="text-sm font-medium truncate">{getDecryptedPassword(vinculo.login_password_encrypted, vinculo.id)}</p>
                                     </div>
                                     <Button
                                       variant="ghost"
                                       size="icon"
                                       className="h-7 w-7 flex-shrink-0"
-                                      onClick={() => copyToClipboard(decryptPassword(vinculo.login_password_encrypted), `pass-header-${vinculo.id}`)}
+                                      onClick={() => {
+                                        const pwd = getDecryptedPassword(vinculo.login_password_encrypted, vinculo.id);
+                                        if (pwd && pwd !== "••••••••") copyToClipboard(pwd, `pass-header-${vinculo.id}`);
+                                      }}
                                     >
                                       {copiedField === `pass-header-${vinculo.id}` ? (
                                         <Check className="h-3 w-3 text-emerald-500" />

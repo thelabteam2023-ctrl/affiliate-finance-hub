@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.calculate-influence-rankings]
 verify_jwt = false
+
+[functions.crypto-password]
+verify_jwt = false
