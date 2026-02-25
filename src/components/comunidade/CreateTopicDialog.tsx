@@ -232,26 +232,13 @@ export function CreateTopicDialog({
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="titulo">Título *</Label>
-            <div className="flex gap-2">
-              <Input
-                id="titulo"
-                value={titulo}
-                onChange={(e) => setTitulo(e.target.value)}
-                placeholder="Ex: Nova exigência de verificação"
-                maxLength={200}
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                variant={listening && activeField === 'titulo' ? 'destructive' : 'outline'}
-                size="icon"
-                className="shrink-0"
-                onClick={() => toggleVoice('titulo')}
-                title="Ditar título por voz"
-              >
-                {listening && activeField === 'titulo' ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </Button>
-            </div>
+            <Input
+              id="titulo"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Ex: Nova exigência de verificação"
+              maxLength={200}
+            />
           </div>
 
           {/* Content */}
