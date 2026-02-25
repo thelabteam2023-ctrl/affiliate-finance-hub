@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.crypto-password]
 verify_jwt = false
+
+[functions.polish-topic]
+verify_jwt = false

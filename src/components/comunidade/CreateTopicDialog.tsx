@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Building2, X, Check, ChevronsUpDown } from 'lucide-react';
+import { Building2, X, Check, ChevronsUpDown, Sparkles, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +45,7 @@ export function CreateTopicDialog({
   const { toast } = useToast();
   const { data: workspaceBookmakers = [] } = useWorkspaceBookmakers();
   const [saving, setSaving] = useState(false);
+  const [polishing, setPolishing] = useState(false);
 
   const [categoria, setCategoria] = useState<CommunityCategory>(defaultCategory || 'casas_de_aposta');
   const [titulo, setTitulo] = useState('');
@@ -79,6 +80,33 @@ export function CreateTopicDialog({
       setPopoverOpen(false);
     }
   }, [open, defaultCategory, defaultBookmakerId]);
+
+  const handlePolish = async () => {
+    if (!titulo.trim() && !conteudo.trim()) {
+      toast({ title: 'Nada para polir', description: 'Escreva algo no título ou conteúdo primeiro.', variant: 'destructive' });
+      return;
+    }
+
+    setPolishing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('polish-topic', {
+        body: { titulo: titulo.trim(), conteudo: conteudo.trim(), categoria },
+      });
+
+      if (error) throw error;
+
+      if (data?.titulo) setTitulo(data.titulo);
+      if (data?.conteudo) setConteudo(data.conteudo);
+
+      toast({ title: '✨ Texto polido com sucesso!', description: 'Revise as sugestões antes de publicar.' });
+    } catch (error: any) {
+      console.error('Polish error:', error);
+      const msg = error?.message || 'Erro ao polir o texto';
+      toast({ title: 'Erro na IA', description: msg, variant: 'destructive' });
+    } finally {
+      setPolishing(false);
+    }
+  };
   
 
   const handleSubmit = async () => {
@@ -119,6 +147,8 @@ export function CreateTopicDialog({
       setSaving(false);
     }
   };
+
+  const canPolish = (titulo.trim().length > 0 || conteudo.trim().length > 0) && !polishing && !saving;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -177,6 +207,28 @@ export function CreateTopicDialog({
               rows={4}
             />
           </div>
+
+          {/* AI Polish Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full gap-2 border-dashed"
+            onClick={handlePolish}
+            disabled={!canPolish}
+          >
+            {polishing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Polindo com IA...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                Polir texto com IA
+              </>
+            )}
+          </Button>
 
           {/* Bookmaker tag (optional) */}
           <div className="space-y-2">
