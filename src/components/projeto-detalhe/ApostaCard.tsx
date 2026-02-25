@@ -84,65 +84,65 @@ const ESTRATEGIA_CONFIG: Record<string, { label: string; icon: typeof Zap; color
   DUPLO_GREEN: {
     label: "DG",
     icon: Zap,
-    color: "text-teal-400",
-    bgColor: "bg-teal-500/20",
-    borderColor: "border-teal-500/30",
+    color: "text-teal-700 dark:text-teal-400",
+    bgColor: "bg-teal-500/15 dark:bg-teal-500/20",
+    borderColor: "border-teal-600/30 dark:border-teal-500/30",
   },
   SUREBET: {
     label: "SUREBET",
     icon: ArrowLeftRight,
-    color: "text-amber-400",
-    bgColor: "bg-amber-500/20",
-    borderColor: "border-amber-500/30",
+    color: "text-amber-700 dark:text-amber-400",
+    bgColor: "bg-amber-500/15 dark:bg-amber-500/20",
+    borderColor: "border-amber-600/30 dark:border-amber-500/30",
   },
   VALUEBET: {
     label: "VB",
     icon: TrendingUp,
-    color: "text-purple-400",
-    bgColor: "bg-purple-500/20",
-    borderColor: "border-purple-500/30",
+    color: "text-purple-700 dark:text-purple-400",
+    bgColor: "bg-purple-500/15 dark:bg-purple-500/20",
+    borderColor: "border-purple-600/30 dark:border-purple-500/30",
   },
   PUNTER: {
     label: "PUNTER",
     icon: Target,
-    color: "text-blue-400",
-    bgColor: "bg-blue-500/20",
-    borderColor: "border-blue-500/30",
+    color: "text-blue-700 dark:text-blue-400",
+    bgColor: "bg-blue-500/15 dark:bg-blue-500/20",
+    borderColor: "border-blue-600/30 dark:border-blue-500/30",
   },
   FREEBET: {
     label: "FREEBET",
     icon: Gift,
-    color: "text-cyan-400",
-    bgColor: "bg-cyan-500/20",
-    borderColor: "border-cyan-500/30",
+    color: "text-cyan-700 dark:text-cyan-400",
+    bgColor: "bg-cyan-500/15 dark:bg-cyan-500/20",
+    borderColor: "border-cyan-600/30 dark:border-cyan-500/30",
   },
   EXTRACAO_FREEBET: {
     label: "EXT. FREEBET",
     icon: Gift,
-    color: "text-cyan-400",
-    bgColor: "bg-cyan-500/20",
-    borderColor: "border-cyan-500/30",
+    color: "text-cyan-700 dark:text-cyan-400",
+    bgColor: "bg-cyan-500/15 dark:bg-cyan-500/20",
+    borderColor: "border-cyan-600/30 dark:border-cyan-500/30",
   },
   BONUS: {
     label: "BÔNUS",
     icon: Coins,
-    color: "text-yellow-400",
-    bgColor: "bg-yellow-500/20",
-    borderColor: "border-yellow-500/30",
+    color: "text-yellow-700 dark:text-yellow-400",
+    bgColor: "bg-yellow-500/15 dark:bg-yellow-500/20",
+    borderColor: "border-yellow-600/30 dark:border-yellow-500/30",
   },
   EXTRACAO_BONUS: {
     label: "EXT. BÔNUS",
     icon: Coins,
-    color: "text-yellow-400",
-    bgColor: "bg-yellow-500/20",
-    borderColor: "border-yellow-500/30",
+    color: "text-yellow-700 dark:text-yellow-400",
+    bgColor: "bg-yellow-500/15 dark:bg-yellow-500/20",
+    borderColor: "border-yellow-600/30 dark:border-yellow-500/30",
   },
   NORMAL: {
     label: "NORMAL",
     icon: Target,
-    color: "text-blue-400",
-    bgColor: "bg-blue-500/20",
-    borderColor: "border-blue-500/30",
+    color: "text-blue-700 dark:text-blue-400",
+    bgColor: "bg-blue-500/15 dark:bg-blue-500/20",
+    borderColor: "border-blue-600/30 dark:border-blue-500/30",
   },
 };
 
@@ -153,11 +153,11 @@ interface ResultadoBadgeProps {
 }
 
 const RESULT_OPTIONS_SIMPLE = [
-  { value: "GREEN", label: "Green", icon: CheckCircle2, color: "text-emerald-400", bg: "hover:bg-emerald-500/20", pillBg: "bg-emerald-500/15 border-emerald-500/30" },
-  { value: "RED", label: "Red", icon: X, color: "text-red-400", bg: "hover:bg-red-500/20", pillBg: "bg-red-500/15 border-red-500/30" },
-  { value: "MEIO_GREEN", label: "½ Green", icon: CheckCircle2, color: "text-teal-400", bg: "hover:bg-teal-500/20", pillBg: "bg-teal-500/15 border-teal-500/30" },
-  { value: "MEIO_RED", label: "½ Red", icon: X, color: "text-orange-400", bg: "hover:bg-orange-500/20", pillBg: "bg-orange-500/15 border-orange-500/30" },
-  { value: "VOID", label: "Void", icon: CircleSlash, color: "text-gray-400", bg: "hover:bg-gray-500/20", pillBg: "bg-gray-500/15 border-gray-500/30" },
+  { value: "GREEN", label: "Green", icon: CheckCircle2, color: "text-emerald-700 dark:text-emerald-400", bg: "hover:bg-emerald-500/15 dark:hover:bg-emerald-500/20", pillBg: "bg-emerald-500/15 border-emerald-600/30 dark:border-emerald-500/30" },
+  { value: "RED", label: "Red", icon: X, color: "text-red-700 dark:text-red-400", bg: "hover:bg-red-500/15 dark:hover:bg-red-500/20", pillBg: "bg-red-500/15 border-red-600/30 dark:border-red-500/30" },
+  { value: "MEIO_GREEN", label: "½ Green", icon: CheckCircle2, color: "text-teal-700 dark:text-teal-400", bg: "hover:bg-teal-500/15 dark:hover:bg-teal-500/20", pillBg: "bg-teal-500/15 border-teal-600/30 dark:border-teal-500/30" },
+  { value: "MEIO_RED", label: "½ Red", icon: X, color: "text-orange-700 dark:text-orange-400", bg: "hover:bg-orange-500/15 dark:hover:bg-orange-500/20", pillBg: "bg-orange-500/15 border-orange-600/30 dark:border-orange-500/30" },
+  { value: "VOID", label: "Void", icon: CircleSlash, color: "text-muted-foreground", bg: "hover:bg-muted", pillBg: "bg-muted border-border" },
 ];
 
 function getSimpleResultConfig(resultado: string | null | undefined) {
@@ -167,9 +167,9 @@ function getSimpleResultConfig(resultado: string | null | undefined) {
     value: "PENDENTE",
     label: "Pendente",
     icon: Clock,
-    color: "text-blue-400",
-    bg: "hover:bg-blue-500/20",
-    pillBg: "bg-blue-500/15 border-blue-500/30",
+    color: "text-blue-700 dark:text-blue-400",
+    bg: "hover:bg-blue-500/15 dark:hover:bg-blue-500/20",
+    pillBg: "bg-blue-500/15 border-blue-600/30 dark:border-blue-500/30",
   };
 }
 
@@ -359,23 +359,23 @@ export function ApostaCard({
                 {config.label}
               </Badge>
               {isMultipla && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-500/30 text-purple-400 bg-purple-500/20 flex items-center gap-0.5">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-600/30 dark:border-purple-500/30 text-purple-700 dark:text-purple-400 bg-purple-500/15 dark:bg-purple-500/20 flex items-center gap-0.5">
                   <Layers className="h-2.5 w-2.5" />
                   {tipoMultiplaLabel}
                 </Badge>
               )}
               {isSimples && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-400 bg-blue-500/20">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-600/30 dark:border-blue-500/30 text-blue-700 dark:text-blue-400 bg-blue-500/15 dark:bg-blue-500/20">
                   SIMPLES
                 </Badge>
               )}
               {hasPernas && aposta.modelo && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-600/30 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/15 dark:bg-amber-500/20">
                   {aposta.modelo}
                 </Badge>
               )}
               {hasPernas && !aposta.modelo && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-600/30 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/15 dark:bg-amber-500/20">
                   {getModeloOperacao(aposta.pernas as Perna[])}
                 </Badge>
               )}

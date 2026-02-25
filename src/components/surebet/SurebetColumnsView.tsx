@@ -278,9 +278,9 @@ export function SurebetColumnsView({
                 {isEditing && (
                   <div className="flex flex-wrap gap-0.5">
                     {([
-                      { tipo: 'GREEN' as PernaResultado, label: 'Green', cls: 'bg-emerald-500/20 text-emerald-500', hover: 'hover:bg-emerald-500/20 hover:text-emerald-500' },
-                      { tipo: 'RED' as PernaResultado, label: 'Red', cls: 'bg-red-500/20 text-red-500', hover: 'hover:bg-red-500/20 hover:text-red-500' },
-                      { tipo: 'VOID' as PernaResultado, label: 'Void', cls: 'bg-slate-500/20 text-slate-400', hover: 'hover:bg-slate-500/20 hover:text-slate-400' },
+                      { tipo: 'GREEN' as PernaResultado, label: 'Green', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-500', hover: 'hover:bg-emerald-500/15 hover:text-emerald-700 dark:hover:text-emerald-500' },
+                      { tipo: 'RED' as PernaResultado, label: 'Red', cls: 'bg-red-500/15 text-red-700 dark:text-red-500', hover: 'hover:bg-red-500/15 hover:text-red-700 dark:hover:text-red-500' },
+                      { tipo: 'VOID' as PernaResultado, label: 'Void', cls: 'bg-muted text-muted-foreground', hover: 'hover:bg-muted hover:text-muted-foreground' },
                     ]).map(({ tipo, label, cls, hover }) => {
                       const resultado = (entry as any).resultado as PernaResultado;
                       const isActive = resultado === tipo;

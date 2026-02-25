@@ -92,47 +92,47 @@ const getTipoConfig = (tipo: string) => {
   const configs: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     DEPOSITO: { 
       label: "Depósito", 
-      color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-600/30 dark:border-emerald-500/30",
       icon: <ArrowDownLeft className="h-3 w-3" />
     },
     SAQUE: { 
       label: "Saque", 
-      color: "bg-red-500/20 text-red-400 border-red-500/30",
+      color: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-600/30 dark:border-red-500/30",
       icon: <ArrowUpRight className="h-3 w-3" />
     },
     TRANSFERENCIA: { 
       label: "Transferência", 
-      color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+      color: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-600/30 dark:border-blue-500/30",
       icon: <ArrowRightLeft className="h-3 w-3" />
     },
     APORTE_FIAT: { 
       label: "Aporte FIAT", 
-      color: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+      color: "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-600/30 dark:border-purple-500/30",
       icon: <TrendingUp className="h-3 w-3" />
     },
     APORTE_CRYPTO: { 
       label: "Aporte Crypto", 
-      color: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+      color: "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-600/30 dark:border-orange-500/30",
       icon: <TrendingUp className="h-3 w-3" />
     },
     LIQUIDACAO_FIAT: { 
       label: "Liquidação FIAT", 
-      color: "bg-pink-500/20 text-pink-400 border-pink-500/30",
+      color: "bg-pink-500/15 text-pink-700 dark:text-pink-400 border-pink-600/30 dark:border-pink-500/30",
       icon: <TrendingDown className="h-3 w-3" />
     },
     LIQUIDACAO_CRYPTO: { 
       label: "Liquidação Crypto", 
-      color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+      color: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-600/30 dark:border-amber-500/30",
       icon: <TrendingDown className="h-3 w-3" />
     },
     AJUSTE_SALDO: { 
       label: "Ajuste", 
-      color: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+      color: "bg-muted text-muted-foreground border-border",
       icon: <Banknote className="h-3 w-3" />
     },
     CASHBACK_MANUAL: { 
       label: "Cashback", 
-      color: "bg-teal-500/20 text-teal-400 border-teal-500/30",
+      color: "bg-teal-500/15 text-teal-700 dark:text-teal-400 border-teal-600/30 dark:border-teal-500/30",
       icon: <Banknote className="h-3 w-3" />
     },
   };

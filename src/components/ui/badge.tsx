@@ -45,7 +45,7 @@ interface SelectionBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 /** Cor padrão: Azul neutro/steel blue - informativo, sem conotação de P&L */
-const SELECTION_BADGE_DEFAULT_COLOR = "bg-slate-600/25 text-slate-300 border-slate-500/40";
+const SELECTION_BADGE_DEFAULT_COLOR = "bg-secondary text-muted-foreground border-border";
 
 function SelectionBadge({ 
   children, 

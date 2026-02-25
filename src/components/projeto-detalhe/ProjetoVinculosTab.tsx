@@ -345,21 +345,21 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
     switch (status.toUpperCase()) {
       case "ATIVO":
         return (
-          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-600/30 dark:border-emerald-500/30">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             Ativo
           </Badge>
         );
       case "LIMITADA":
         return (
-          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+          <Badge className="bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-600/30 dark:border-yellow-500/30">
             <ShieldAlert className="h-3 w-3 mr-1" />
             Limitada
           </Badge>
         );
       default:
         return (
-          <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">
+          <Badge className="bg-muted text-muted-foreground border-border">
             {status}
           </Badge>
         );
