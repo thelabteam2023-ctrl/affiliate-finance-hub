@@ -13,50 +13,56 @@ import { calcularOddReal, formatOddDisplay, type OddCalculationResult } from "@/
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-// Binary markets that support smart line inference
+// ========================================================================
+// MARKET FAMILY DETECTION PATTERNS
+// ========================================================================
+
+// MATCH_ODDS / 1X2 (3-way)
+const MATCH_ODDS_MARKET_PATTERN = /(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|vencedor\s*(?:da\s*)?(?:partida|match)|match\s*(?:winner|result)|main\s*line|moneyline\s*soccer)/i;
+
+// TOTALS (Over/Under)
+const TOTALS_MARKET_PATTERN = /(?:total\s*(?:de\s*)?(?:gols?|goals?|pontos?|points?|games?|sets?|cards?|cart[õo]es?|corners?|escanteios?|faltas?|shots?|runs?|kills?|mapas?|maps?|towers?|torres?|aces?|rounds?)|over\s*[\/\\]?\s*under|o\s*[\/\\]\s*u|mais\s*[\/\\]\s*menos)/i;
+
+// YES_NO (binary)
+const YES_NO_MARKET_PATTERN = /(?:ambas?\s*marcam?|both\s*teams?\s*(?:to\s*)?score|btts|gol\s*(?:nos?\s*)?(?:dois|2|primeiro|1[ºo]?)\s*tempo|clean\s*sheet|classifica|penalty\s*awarded)/i;
+
+// HANDICAP
+const HANDICAP_MARKET_PATTERN = /(?:asian\s*handicap|\bah\b|\beh\b|handicap\s*(?:europeu|asiatico|asiático)?|spread|run\s*line|puck\s*line)/i;
+
+// DRAW NO BET
+const DNB_MARKET_PATTERN = /(?:draw\s*no\s*bet|\bdnb\b|empate\s*anula)/i;
+
+// Binary markets that support smart line inference (TOTALS + YES_NO)
 const BINARY_MARKETS = [
-  "Over/Under",
-  "Ambas Marcam",
-  "BTTS",
-  "Sim/Não",
-  "Yes/No",
-  "Over",
-  "Under",
-  "Sim",
-  "Não",
-  "Yes",
-  "No",
-  "Total de Gols",
-  "Total de Pontos",
-  "Total de Games",
-  "Total de Sets",
+  "Over/Under", "Ambas Marcam", "BTTS", "Sim/Não", "Yes/No",
+  "Over", "Under", "Sim", "Não", "Yes", "No",
+  "Total de Gols", "Total de Pontos", "Total de Games", "Total de Sets",
+  "Total de Escanteios", "Total de Cartões", "Total de Faltas",
+  "Clean Sheet", "Gol no Primeiro Tempo",
 ];
 
 // Mapping of binary line pairs (both directions)
 const BINARY_LINE_PAIRS: Record<string, string> = {
-  // Over/Under
-  "over": "under",
-  "under": "over",
-  "mais": "menos",
-  "menos": "mais",
-  // Sim/Não
-  "sim": "não",
-  "não": "sim",
-  "yes": "no",
-  "no": "yes",
+  // Over/Under (TOTALS)
+  "over": "under", "under": "over",
+  "mais": "menos", "menos": "mais",
+  "acima": "abaixo", "abaixo": "acima",
+  "above": "below", "below": "above",
+  // Sim/Não (YES_NO)
+  "sim": "não", "não": "sim",
+  "yes": "no", "no": "yes",
   // BTTS
-  "ambas marcam sim": "ambas marcam não",
-  "ambas marcam não": "ambas marcam sim",
-  "btts sim": "btts não",
-  "btts não": "btts sim",
+  "ambas marcam sim": "ambas marcam não", "ambas marcam não": "ambas marcam sim",
+  "btts sim": "btts não", "btts não": "btts sim",
 };
 
-// MATCH_ODDS / 1X2 market detection pattern (same taxonomy as marketOcrParser.ts)
-const MATCH_ODDS_MARKET_PATTERN = /(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|vencedor\s*(?:da\s*)?(?:partida|match)|match\s*(?:winner|result)|main\s*line)/i;
+// ========================================================================
+// MARKET FAMILY INFERENCE FUNCTIONS
+// ========================================================================
 
 /**
- * For a MATCH_ODDS market, determines which canonical position (0=Home, 1=Draw, 2=Away)
- * the scanned selection corresponds to, and returns the selections for ALL 3 legs.
+ * MATCH_ODDS: determines canonical position (0=Home, 1=Draw, 2=Away)
+ * and returns selections for ALL 3 legs.
  */
 function inferMatchOddsLegs(
   scannedSelection: string,
@@ -66,35 +72,101 @@ function inferMatchOddsLegs(
   if (!mandante || !visitante) return null;
 
   const sel = scannedSelection.toLowerCase().trim();
-
-  // Determine which position was scanned
   let scannedPosition = -1;
 
-  // Check for Draw
   if (/^(empate|draw|x)$/i.test(sel)) {
     scannedPosition = 1;
-  }
-  // Check for Home team
-  else if (mandante.toLowerCase().includes(sel) || sel.includes(mandante.toLowerCase())) {
+  } else if (mandante.toLowerCase().includes(sel) || sel.includes(mandante.toLowerCase())) {
     scannedPosition = 0;
-  }
-  // Check for Away team
-  else if (visitante.toLowerCase().includes(sel) || sel.includes(visitante.toLowerCase())) {
+  } else if (visitante.toLowerCase().includes(sel) || sel.includes(visitante.toLowerCase())) {
     scannedPosition = 2;
-  }
-  // Selection "1" = Home, "2" = Away
-  else if (sel === "1") {
+  } else if (sel === "1") {
     scannedPosition = 0;
   } else if (sel === "2") {
     scannedPosition = 2;
   }
 
   if (scannedPosition === -1) return null;
-
-  // Build the 3 canonical selections
   const legSelections: (string | null)[] = [mandante.toUpperCase(), "EMPATE", visitante.toUpperCase()];
-
   return { legSelections, scannedPosition };
+}
+
+/**
+ * HANDICAP: "Team A -1.5" → generates "Team B +1.5" with inverted sign.
+ */
+function inferHandicapOpposite(
+  scannedSelection: string,
+  mandante: string | null,
+  visitante: string | null
+): string | null {
+  if (!mandante || !visitante) return null;
+
+  // Extract the handicap line value: "+1.5", "-0.25", etc.
+  const match = scannedSelection.match(/([+-]?\d+[.,]?\d*)\s*$/);
+  if (!match) return null;
+
+  const lineStr = match[1].replace(",", ".");
+  const lineValue = parseFloat(lineStr);
+  if (isNaN(lineValue)) return null;
+
+  // Determine which team was in the scanned selection
+  const selLower = scannedSelection.toLowerCase();
+  const mandanteLower = mandante.toLowerCase();
+  const visitanteLower = visitante.toLowerCase();
+
+  let oppositeTeam: string | null = null;
+
+  if (selLower.includes(mandanteLower)) {
+    oppositeTeam = visitante;
+  } else if (selLower.includes(visitanteLower)) {
+    oppositeTeam = mandante;
+  }
+
+  if (!oppositeTeam) return null;
+
+  // Invert the sign
+  const invertedValue = -lineValue;
+  const sign = invertedValue >= 0 ? "+" : "";
+  // Format: remove trailing zeros but keep .5, .25, .75
+  const formatted = invertedValue % 1 === 0 ? invertedValue.toFixed(0) : invertedValue.toString();
+
+  return `${oppositeTeam.toUpperCase()} ${sign}${formatted}`;
+}
+
+/**
+ * DNB (Draw No Bet): 2-leg with Team A / Team B (no draw).
+ */
+function inferDnbOpposite(
+  scannedSelection: string,
+  mandante: string | null,
+  visitante: string | null
+): string | null {
+  if (!mandante || !visitante) return null;
+
+  const selLower = scannedSelection.toLowerCase().trim();
+
+  if (selLower.includes(mandante.toLowerCase())) {
+    return visitante.toUpperCase();
+  } else if (selLower.includes(visitante.toLowerCase())) {
+    return mandante.toUpperCase();
+  }
+
+  return null;
+}
+
+/**
+ * Detects the market family from the mercado text.
+ */
+function detectMarketFamily(mercado: string): "MATCH_ODDS" | "TOTALS" | "YES_NO" | "HANDICAP" | "DNB" | "BINARY" | null {
+  if (MATCH_ODDS_MARKET_PATTERN.test(mercado)) return "MATCH_ODDS";
+  if (HANDICAP_MARKET_PATTERN.test(mercado)) return "HANDICAP";
+  if (DNB_MARKET_PATTERN.test(mercado)) return "DNB";
+  if (TOTALS_MARKET_PATTERN.test(mercado)) return "TOTALS";
+  if (YES_NO_MARKET_PATTERN.test(mercado)) return "YES_NO";
+  // Fallback: check if it's a known binary market
+  const lowerMercado = mercado.toLowerCase();
+  if (BINARY_MARKETS.some(m => lowerMercado.includes(m.toLowerCase()))) return "BINARY";
+  return null;
 }
 
 export interface LegPrintData {
@@ -245,51 +317,75 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
       oddCalculation: null,
     });
 
-    // ========== MATCH_ODDS / 1X2 inference (3-leg) ==========
-    if (MATCH_ODDS_MARKET_PATTERN.test(mercado)) {
-      const result = inferMatchOddsLegs(sourceLine, mandanteVal || null, visitanteVal || null);
-      if (result) {
-        console.log(`[SurebetPrintInfer] MATCH_ODDS detected. Scanned position: ${result.scannedPosition}. Filling other legs.`);
-        setLegPrints(prev => {
-          return prev.map((leg, idx) => {
-            // Skip the processed leg and legs that already have data
-            if (idx === processedLegIndex || leg.parsedData || leg.imagePreview) {
-              return leg;
-            }
-            // Only fill if we have a selection for this position
+    const fillOtherLegs = (inferredSelection: string) => {
+      setLegPrints(prev => prev.map((leg, idx) => {
+        if (idx === processedLegIndex || leg.parsedData || leg.imagePreview) return leg;
+        if (prev.length === 2) return buildInferredLegData(inferredSelection);
+        return leg;
+      }));
+    };
+
+    const family = detectMarketFamily(mercado);
+    console.log(`[SurebetPrintInfer] Market: "${mercado}", Family: ${family || "UNKNOWN"}, Selection: "${sourceLine}"`);
+
+    switch (family) {
+      // ========== MATCH_ODDS / 1X2 (3-leg) ==========
+      case "MATCH_ODDS": {
+        const result = inferMatchOddsLegs(sourceLine, mandanteVal || null, visitanteVal || null);
+        if (result) {
+          console.log(`[SurebetPrintInfer] MATCH_ODDS: position=${result.scannedPosition}`);
+          setLegPrints(prev => prev.map((leg, idx) => {
+            if (idx === processedLegIndex || leg.parsedData || leg.imagePreview) return leg;
             const sel = result.legSelections[idx];
-            if (sel) {
-              return buildInferredLegData(sel);
-            }
-            return leg;
-          });
-        });
-        return; // Done — don't fall through to binary inference
+            return sel ? buildInferredLegData(sel) : leg;
+          }));
+        }
+        return;
+      }
+
+      // ========== HANDICAP (2-leg: Team A -X → Team B +X) ==========
+      case "HANDICAP": {
+        const opposite = inferHandicapOpposite(sourceLine, mandanteVal || null, visitanteVal || null);
+        if (opposite) {
+          console.log(`[SurebetPrintInfer] HANDICAP: "${sourceLine}" → "${opposite}"`);
+          fillOtherLegs(opposite);
+        }
+        return;
+      }
+
+      // ========== DNB (2-leg: Team A → Team B) ==========
+      case "DNB": {
+        const opposite = inferDnbOpposite(sourceLine, mandanteVal || null, visitanteVal || null);
+        if (opposite) {
+          console.log(`[SurebetPrintInfer] DNB: "${sourceLine}" → "${opposite}"`);
+          fillOtherLegs(opposite);
+        }
+        return;
+      }
+
+      // ========== TOTALS / YES_NO / BINARY (2-leg: Over → Under, Sim → Não) ==========
+      case "TOTALS":
+      case "YES_NO":
+      case "BINARY": {
+        const inferredLine = getInferredLine(sourceLine);
+        if (inferredLine) {
+          console.log(`[SurebetPrintInfer] ${family}: "${sourceLine}" → "${inferredLine}"`);
+          fillOtherLegs(inferredLine);
+        }
+        return;
+      }
+
+      default: {
+        // Fallback: try binary inference anyway
+        if (canInferLine(mercado)) {
+          const inferredLine = getInferredLine(sourceLine);
+          if (inferredLine) {
+            console.log(`[SurebetPrintInfer] FALLBACK binary: "${sourceLine}" → "${inferredLine}"`);
+            fillOtherLegs(inferredLine);
+          }
+        }
       }
     }
-
-    // ========== Binary market inference (2-leg) ==========
-    if (!canInferLine(mercado)) return;
-
-    const inferredLine = getInferredLine(sourceLine);
-    if (!inferredLine) return;
-
-    // Update other legs that don't have a print yet
-    setLegPrints(prev => {
-      return prev.map((leg, idx) => {
-        // Skip the processed leg and legs that already have data
-        if (idx === processedLegIndex || leg.parsedData || leg.imagePreview) {
-          return leg;
-        }
-
-        // For 2-leg model, infer the other leg
-        if (prev.length === 2) {
-          return buildInferredLegData(inferredLine);
-        }
-
-        return leg;
-      });
-    });
   }, [canInferLine, getInferredLine]);
 
   const processLegImage = useCallback(async (legIndex: number, file: File) => {
