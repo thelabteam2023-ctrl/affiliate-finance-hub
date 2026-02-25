@@ -2817,7 +2817,6 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                   value={esporte} 
                   onValueChange={(newEsporte) => {
                     setEsporte(newEsporte);
-                    setMercado("");
                   }}
                 >
                   <SelectTrigger className="h-8 text-sm">
