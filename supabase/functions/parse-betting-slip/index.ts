@@ -233,10 +233,14 @@ REGRAS IMPORTANTES:
     - "0/U" → "O/U"
 16. FAMÍLIAS DE MERCADO para referência (ajuda a classificar corretamente):
     - MATCH_ODDS: Match Odds, 1X2, Resultado da Partida, Resultado Final, FT Result, Moneyline Soccer, Três Vias
-    - TOTALS: Total de Gols, Over/Under, O/U, Goals Total, Total Cards, Corners Total, Escanteios, Player Shots
-    - YES_NO: Ambas Marcam, BTTS, Clean Sheet, Gol no 1º Tempo, Classifica?
-    - HANDICAP: Asian Handicap, AH, EH, Spread, Run Line, Puck Line
+    - MONEYLINE/MATCH_WINNER: Moneyline, ML, Vencedor, Winner (2 vias, sem empate — basquete, tênis, MMA)
+    - TOTALS: Total de Gols, Over/Under, O/U, Goals Total, Total Cards, Corners Total, Escanteios, Total Points, Game Total
+    - TEAM_TOTALS: Team Total, Total do Time (ex: Lakers Total Points Over 112.5)
+    - PLAYER_TOTALS: Player Points, Player Rebounds, Player Assists, Player Props, PRA
+    - YES_NO: Ambas Marcam, BTTS, Clean Sheet, Gol no 1º Tempo, Double Double, Triple Double, Overtime
+    - HANDICAP/SPREAD: Asian Handicap, AH, EH, Spread, Point Spread, Run Line, Puck Line
     - DNB: Draw No Bet, Empate Anula, DNB
+    - RACE_TO: Race to X Points (ex: Race to 20)
 
 Esportes reconhecidos: ${SPORTS_LIST.join(", ")}
 
