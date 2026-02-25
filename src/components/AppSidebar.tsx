@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -28,6 +28,24 @@ import {
 import { WorkspaceSwitcher } from "@/components/workspace/WorkspaceSwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useTheme } from "next-themes";
+
+/** Menu item for theme toggle inside the profile dropdown */
+function ThemeMenuItem() {
+  const { theme, setTheme } = useTheme();
+  const isDark = theme === "dark";
+  return (
+    <DropdownMenuItem
+      onClick={(e) => {
+        e.preventDefault();
+        setTheme(isDark ? "light" : "dark");
+      }}
+    >
+      {isDark ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+      {isDark ? "Tema Claro" : "Tema Escuro"}
+    </DropdownMenuItem>
+  );
+}
 import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface MenuItem {
@@ -567,6 +585,8 @@ export function AppSidebar() {
                 Workspace
               </DropdownMenuItem>
             )}
+            <ThemeMenuItem />
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               Sair
