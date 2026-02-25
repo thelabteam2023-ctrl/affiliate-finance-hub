@@ -43,7 +43,7 @@ export default function ComunidadeDetalhe() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { hasFullAccess, canWrite, isViewer } = useCommunityAccess();
-  const { onlineCount, isConnected } = useChatPresence('bookmaker', id);
+  const { onlineCount, isConnected } = useChatPresence('general');
   
   const [bookmaker, setBookmaker] = useState<BookmakerDetails | null>(null);
   const [stats, setStats] = useState<BookmakerStats | null>(null);
@@ -55,8 +55,8 @@ export default function ComunidadeDetalhe() {
   const [topicsRefreshKey, setTopicsRefreshKey] = useState(0);
 
   const openBookmakerChat = () => {
-    const popoutUrl = `/comunidade/chat?mode=popout&context=bookmaker&contextId=${id}&name=${encodeURIComponent(bookmaker?.nome || '')}`;
-    window.open(popoutUrl, 'community-chat-bookmaker', 'width=480,height=800,scrollbars=yes,resizable=yes');
+    // Bookmaker-specific chat removed; redirect to general community chat
+    window.dispatchEvent(new CustomEvent('open-community-chat'));
   };
 
   useEffect(() => {

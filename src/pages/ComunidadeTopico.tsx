@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
+import { useChatPresence } from '@/hooks/useChatPresence';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, MessageSquare, User, Clock, Send, Building2, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, MessageSquare, User, Clock, Send, Building2, Pencil, Trash2, Radio } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { parseLocalDateTime } from '@/utils/dateUtils';
@@ -18,6 +19,8 @@ import { ModerationMenu } from '@/components/comunidade/ModerationMenu';
 import { CommunityEditDialog } from '@/components/comunidade/CommunityEditDialog';
 import { ReportButton } from '@/components/comunidade/ReportDialog';
 import { useCommunityModeration } from '@/hooks/useCommunityModeration';
+import { CommunityChatFull } from '@/components/comunidade/CommunityChatFull';
+import { OnlineIndicator } from '@/components/comunidade/OnlineIndicator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,6 +63,8 @@ export default function ComunidadeTopico() {
   const { user } = useAuth();
   const { canWrite, canEditAny } = useCommunityAccess();
   const { toast } = useToast();
+  const [showLiveChat, setShowLiveChat] = useState(false);
+  const { onlineCount, isConnected } = useChatPresence('topic', id);
 
   const [topic, setTopic] = useState<TopicDetail | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -375,7 +380,53 @@ export default function ComunidadeTopico() {
         )}
       </div>
 
-      {/* Edit Dialog */}
+      {/* Live Chat Section */}
+      <div className="mt-6">
+        {!showLiveChat ? (
+          <Card className="border-dashed">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Radio className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Conversa ao vivo</p>
+                  <OnlineIndicator count={onlineCount} isConnected={isConnected} />
+                </div>
+              </div>
+              <Button onClick={() => setShowLiveChat(true)} size="sm">
+                <MessageSquare className="h-4 w-4 mr-1" />
+                Entrar na conversa
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Radio className="h-4 w-4 text-primary animate-pulse" />
+                <span className="text-sm font-medium">Conversa ao vivo</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <OnlineIndicator count={onlineCount} isConnected={isConnected} />
+                <Button variant="ghost" size="sm" onClick={() => setShowLiveChat(false)}>
+                  Minimizar
+                </Button>
+              </div>
+            </div>
+            <div className="h-[400px]">
+              <CommunityChatFull
+                isEmbedded
+                initialContextType="topic"
+                initialContextId={id}
+                topicTitle={topic.titulo}
+              />
+            </div>
+          </Card>
+        )}
+      </div>
+
+
       <CommunityEditDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}

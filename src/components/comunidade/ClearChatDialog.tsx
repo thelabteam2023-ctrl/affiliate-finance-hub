@@ -17,7 +17,7 @@ interface ClearChatDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
-  contextType: 'general' | 'bookmaker';
+  contextType: 'general' | 'topic';
   contextId: string | null;
   contextName?: string;
   onCleared?: () => void;
@@ -60,8 +60,8 @@ export function ClearChatDialog({
   };
 
   const isConfirmValid = confirmPhrase === CONFIRMATION_PHRASE;
-  const chatLabel = contextType === 'bookmaker' && contextName 
-    ? `chat de ${contextName}` 
+  const chatLabel = contextType === 'topic' && contextName 
+    ? `chat de "${contextName}"` 
     : 'Chat Geral';
 
   return (
