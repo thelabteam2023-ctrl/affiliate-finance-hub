@@ -1632,8 +1632,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Campos explícitos do Prompt Oficial - NUNCA inferidos
         estrategia: registroValues.estrategia,
         forma_registro: registroValues.forma_registro,
-        // NOVA ARQUITETURA: contexto_operacional é DEPRECATED, sempre NORMAL
-        contexto_operacional: 'NORMAL',
+        // contexto_operacional: respeitar valor selecionado no formulário (NORMAL, BONUS, FREEBET)
+        contexto_operacional: registroValues.contexto_operacional || 'NORMAL',
         // VERDADE FINANCEIRA: usar_freebet toggle determina fonte de saldo
         fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
         usar_freebet: usarFreebetBookmaker,
@@ -1952,6 +1952,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               gerou_freebet: apostaData.gerou_freebet,
               valor_freebet_gerada: apostaData.valor_freebet_gerada,
               tipo_freebet: apostaData.tipo_freebet,
+              estrategia: apostaData.estrategia,
+              contexto_operacional: apostaData.contexto_operacional,
+              fonte_saldo: apostaData.fonte_saldo,
             })
             .eq("id", aposta.id);
           
@@ -2102,6 +2105,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               gerou_freebet: apostaData.gerou_freebet,
               valor_freebet_gerada: apostaData.valor_freebet_gerada,
               tipo_freebet: apostaData.tipo_freebet,
+              estrategia: apostaData.estrategia,
+              contexto_operacional: apostaData.contexto_operacional,
+              fonte_saldo: apostaData.fonte_saldo,
             })
             .eq("id", aposta.id);
           
