@@ -299,7 +299,7 @@ export function CreateTopicDialog({
                 {listening && activeField === 'conteudo' ? (
                   <><MicOff className="h-3.5 w-3.5" /> Parar</>
                 ) : (
-                  <><Mic className="h-3.5 w-3.5" /> Ditar</>
+                  <><Mic className="h-3.5 w-3.5" /> Falar</>
                 )}
               </Button>
             </div>
@@ -329,7 +329,7 @@ export function CreateTopicDialog({
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                ✨ Aprimorar com IA
+                Aprimorar com IA
               </>
             )}
           </Button>
