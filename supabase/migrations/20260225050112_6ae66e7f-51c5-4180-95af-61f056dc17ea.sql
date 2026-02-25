@@ -1,0 +1,2 @@
+ALTER TABLE public.community_topics DROP CONSTRAINT community_topics_status_check;
+ALTER TABLE public.community_topics ADD CONSTRAINT community_topics_status_check CHECK (status IN ('ATIVO', 'OCULTO', 'MODERADO', 'DELETED', 'FECHADO', 'REMOVIDO', 'REMOVIDO_AUTOR'));
