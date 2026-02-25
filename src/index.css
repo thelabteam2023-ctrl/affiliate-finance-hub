@@ -7,12 +7,68 @@ All colors MUST be HSL.
 */
 
 @layer base {
+  /* ═══ LIGHT THEME ═══ */
   :root {
-    /* Deep Navy Base */
+    --background: 210 20% 98%;
+    --foreground: 217 33% 17%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 217 33% 17%;
+    --card-elevated: 210 20% 97%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 33% 17%;
+
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 142 70% 42%;
+
+    --secondary: 210 18% 93%;
+    --secondary-foreground: 217 33% 17%;
+
+    --muted: 210 16% 93%;
+    --muted-foreground: 215 14% 45%;
+
+    --accent: 142 76% 36%;
+    --accent-foreground: 0 0% 100%;
+    --accent-soft: 142 76% 36% / 0.1;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --info: 199 89% 48%;
+
+    --chart-1: 142 76% 36%;
+    --chart-2: 199 89% 48%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 262 83% 58%;
+    --chart-5: 0 72% 51%;
+
+    --border: 214 20% 88%;
+    --input: 214 20% 91%;
+    --ring: 142 76% 36% / 0.25;
+
+    --radius: 0.75rem;
+
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 70% 42%));
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 97%));
+    --gradient-glow: radial-gradient(circle at top, hsl(142 76% 36% / 0.08), transparent 70%);
+
+    --shadow-soft: 0 4px 16px hsl(214 20% 80% / 0.3);
+    --shadow-medium: 0 8px 32px hsl(214 20% 80% / 0.4);
+    --shadow-strong: 0 16px 64px hsl(214 20% 70% / 0.3);
+    --shadow-glow: 0 0 40px hsl(142 76% 36% / 0.15);
+
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  /* ═══ DARK THEME ═══ */
+  .dark {
     --background: 217 50% 6%;
     --foreground: 210 20% 92%;
 
-    /* Surfaces */
     --card: 217 45% 8%;
     --card-foreground: 210 20% 92%;
     --card-elevated: 217 42% 10%;
@@ -20,58 +76,47 @@ All colors MUST be HSL.
     --popover: 217 45% 8%;
     --popover-foreground: 210 20% 92%;
 
-    /* Brand - Emerald Green */
     --primary: 142 76% 36%;
     --primary-foreground: 142 90% 98%;
     --primary-glow: 142 70% 45%;
 
-    /* Secondary - Deep Slate */
     --secondary: 217 32% 15%;
     --secondary-foreground: 210 20% 92%;
 
-    /* Muted */
     --muted: 217 30% 12%;
     --muted-foreground: 215 15% 60%;
 
-    /* Accent - Bright Emerald */
     --accent: 142 76% 36%;
     --accent-foreground: 142 90% 98%;
     --accent-soft: 142 76% 36% / 0.15;
 
-    /* Status Colors */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
     --info: 199 89% 48%;
 
-    /* Chart Colors */
     --chart-1: 142 76% 36%;
     --chart-2: 199 89% 48%;
     --chart-3: 38 92% 50%;
     --chart-4: 262 83% 58%;
     --chart-5: 0 72% 51%;
 
-    /* Borders & Inputs */
     --border: 217 30% 18%;
     --input: 217 40% 10%;
     --ring: 142 76% 36% / 0.3;
 
-    /* Radius */
     --radius: 0.75rem;
 
-    /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 70% 45%));
     --gradient-surface: linear-gradient(180deg, hsl(217 45% 9%), hsl(217 45% 7%));
     --gradient-glow: radial-gradient(circle at top, hsl(142 76% 36% / 0.15), transparent 70%);
 
-    /* Shadows */
     --shadow-soft: 0 4px 16px hsl(217 50% 4% / 0.4);
     --shadow-medium: 0 8px 32px hsl(217 50% 4% / 0.5);
     --shadow-strong: 0 16px 64px hsl(217 50% 4% / 0.6);
     --shadow-glow: 0 0 40px hsl(142 76% 36% / 0.25);
 
-    /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
@@ -106,7 +151,7 @@ input[type="number"] {
   /* Custom Scrollbar */
   * {
     scrollbar-width: thin;
-    scrollbar-color: hsl(142 76% 36% / 0.3) hsl(217 40% 10%);
+    scrollbar-color: hsl(var(--primary) / 0.3) hsl(var(--input));
   }
 
   *::-webkit-scrollbar {
@@ -115,18 +160,18 @@ input[type="number"] {
   }
 
   *::-webkit-scrollbar-track {
-    background: hsl(217 40% 10%);
+    background: hsl(var(--input));
     border-radius: 4px;
   }
 
   *::-webkit-scrollbar-thumb {
-    background: hsl(142 76% 36% / 0.3);
+    background: hsl(var(--primary) / 0.3);
     border-radius: 4px;
     transition: background 0.2s ease;
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background: hsl(142 76% 36% / 0.5);
+    background: hsl(var(--primary) / 0.5);
   }
 }
 
@@ -136,19 +181,27 @@ input[type="number"] {
   }
 
   .card-glass {
-    background: linear-gradient(180deg, hsl(217 45% 9% / 0.9), hsl(217 45% 7% / 0.95));
+    background: var(--gradient-surface);
     backdrop-filter: blur(12px);
-    border: 1px solid hsl(217 30% 18%);
+    border: 1px solid hsl(var(--border));
   }
 
   .glow-accent {
-    box-shadow: 0 0 30px hsl(142 76% 36% / 0.3);
+    box-shadow: var(--shadow-glow);
   }
 
   /* Bookmaker logo: remove white background by blending */
   .logo-blend {
     background: transparent;
     mix-blend-mode: lighten;
+  }
+
+  .dark .logo-blend {
+    mix-blend-mode: lighten;
+  }
+
+  :root:not(.dark) .logo-blend {
+    mix-blend-mode: darken;
   }
 
   .animate-glow {
