@@ -78,7 +78,7 @@ export default function BookmakerDialog({
   const [loginPassword, setLoginPassword] = useState("");
   const [moedaOperacional, setMoedaOperacional] = useState<FiatCurrency>("USD");
   const [status, setStatus] = useState("ativo");
-  const [saldoIrrecuperavel, setSaldoIrrecuperavel] = useState("");
+  
   const [instanceIdentifier, setInstanceIdentifier] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [showObservacoesDialog, setShowObservacoesDialog] = useState(false);
@@ -231,7 +231,6 @@ export default function BookmakerDialog({
         setLoginPassword("");
         setMoedaOperacional("USD");
         setStatus("ativo");
-        setSaldoIrrecuperavel("");
         setInstanceIdentifier("");
         setObservacoes("");
         setIsLoadingDetails(false);
@@ -268,7 +267,6 @@ export default function BookmakerDialog({
       setLoginPassword("");
       setMoedaOperacional((bookmaker.moeda as FiatCurrency) || "BRL");
       setStatus(bookmaker.status || "ativo");
-      setSaldoIrrecuperavel(bookmaker.saldo_irrecuperavel?.toString() || "0");
       setInstanceIdentifier(bookmaker.instance_identifier || "");
       setObservacoes(bookmaker.observacoes || "");
       setSelectedLink(bookmaker.link_origem || "");
@@ -286,7 +284,6 @@ export default function BookmakerDialog({
       setLoginUsername("");
       setLoginPassword("");
       setStatus("ativo");
-      setSaldoIrrecuperavel("");
       setInstanceIdentifier("");
       setObservacoes("");
       setSelectedLink("");
@@ -359,7 +356,6 @@ export default function BookmakerDialog({
         login_password_encrypted: loginPassword ? encryptPassword(loginPassword) : "",
         saldo_atual: 0,
         saldo_usd: 0,
-        saldo_irrecuperavel: parseFloat(saldoIrrecuperavel) || 0,
         moeda: moedaOperacional,
         status,
         instance_identifier: instanceIdentifier || null,
@@ -679,27 +675,6 @@ export default function BookmakerDialog({
                   <SelectItem value="limitada">Limitada</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="saldoIrrecuperavel" className="flex items-center gap-2">
-                Saldo Irrecuperável
-                <span className="text-xs text-muted-foreground">({CURRENCY_SYMBOLS[moedaOperacional]})</span>
-              </Label>
-              <Input
-                id="saldoIrrecuperavel"
-                type="number"
-                step="0.01"
-                min="0"
-                value={saldoIrrecuperavel}
-                onChange={(e) => setSaldoIrrecuperavel(e.target.value)}
-                placeholder="0,00"
-                disabled={loading}
-                className="font-mono"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Valor bloqueado/perdido que não pode ser sacado
-              </p>
             </div>
 
             <div className="col-span-2">
