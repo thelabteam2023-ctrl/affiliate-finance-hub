@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, MessageSquare, User, Clock, Send, Building2, Flag, Pencil } from 'lucide-react';
+import { ArrowLeft, MessageSquare, User, Clock, Send, Building2, Pencil, Trash2 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { parseLocalDateTime } from '@/utils/dateUtils';
@@ -16,6 +16,18 @@ import { useToast } from '@/hooks/use-toast';
 import { getCategoryByValue } from '@/lib/communityCategories';
 import { ModerationMenu } from '@/components/comunidade/ModerationMenu';
 import { CommunityEditDialog } from '@/components/comunidade/CommunityEditDialog';
+import { ReportButton } from '@/components/comunidade/ReportDialog';
+import { useCommunityModeration } from '@/hooks/useCommunityModeration';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface TopicDetail {
   id: string;
@@ -55,11 +67,14 @@ export default function ComunidadeTopico() {
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const { authorDeleteTopic, authorDeleteComment, loading: moderationLoading } = useCommunityModeration();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editType, setEditType] = useState<'topic' | 'comment'>('topic');
   const [editId, setEditId] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'topic' | 'comment'; id: string } | null>(null);
 
   useEffect(() => {
     if (id) fetchTopic();
@@ -152,7 +167,14 @@ export default function ComunidadeTopico() {
         conteudo: newComment.trim(),
         is_anonymous: false,
       });
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'P0001' || error.message?.includes('termos não permitidos')) {
+          toast({ title: 'Conteúdo bloqueado', description: 'Seu texto contém termos não permitidos.', variant: 'destructive' });
+        } else {
+          throw error;
+        }
+        return;
+      }
       toast({ title: 'Comentário adicionado!' });
       setNewComment('');
       fetchTopic();
@@ -164,6 +186,23 @@ export default function ComunidadeTopico() {
   };
 
   const canEdit = (authorId: string) => user?.id === authorId || canEditAny;
+  const isAuthor = (authorId: string) => user?.id === authorId;
+
+  const handleAuthorDelete = async () => {
+    if (!deleteTarget) return;
+    const result = deleteTarget.type === 'topic'
+      ? await authorDeleteTopic(deleteTarget.id)
+      : await authorDeleteComment(deleteTarget.id);
+    if (result.success) {
+      setDeleteConfirmOpen(false);
+      setDeleteTarget(null);
+      if (deleteTarget.type === 'topic') {
+        navigate('/comunidade');
+      } else {
+        fetchTopic();
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -241,6 +280,18 @@ export default function ComunidadeTopico() {
                   <Pencil className="h-4 w-4" />
                 </Button>
               )}
+              {isAuthor(topic.user_id) && (
+                <Button
+                  variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={() => {
+                    setDeleteTarget({ type: 'topic', id: topic.id });
+                    setDeleteConfirmOpen(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+              <ReportButton contentType="topic" contentId={topic.id} />
               <ModerationMenu type="topic" itemId={topic.id} itemTitle={topic.titulo} onDeleted={() => navigate('/comunidade')} />
             </div>
           </div>
@@ -283,6 +334,18 @@ export default function ComunidadeTopico() {
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                   )}
+                  {isAuthor(comment.user_id) && (
+                    <Button
+                      variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        setDeleteTarget({ type: 'comment', id: comment.id });
+                        setDeleteConfirmOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  <ReportButton contentType="comment" contentId={comment.id} size="sm" />
                   <ModerationMenu type="comment" itemId={comment.id} onDeleted={fetchTopic} size="sm" />
                 </div>
               </div>
@@ -322,6 +385,33 @@ export default function ComunidadeTopico() {
         initialContent={editContent}
         onSuccess={fetchTopic}
       />
+
+      {/* Author Delete Confirmation */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Excluir {deleteTarget?.type === 'topic' ? 'tópico' : 'comentário'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.type === 'topic'
+                ? 'Seu tópico e todos os comentários serão removidos permanentemente.'
+                : 'Seu comentário será removido permanentemente.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={moderationLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleAuthorDelete}
+              disabled={moderationLoading}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

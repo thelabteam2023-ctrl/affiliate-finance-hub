@@ -2276,6 +2276,30 @@ export type Database = {
           },
         ]
       }
+      community_blocked_words: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          word: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          word: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          word?: string
+        }
+        Relationships: []
+      }
       community_chat_messages: {
         Row: {
           content: string
@@ -2384,6 +2408,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      community_content_reports: {
+        Row: {
+          content_id: string
+          content_type: string
+          created_at: string
+          description: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: []
       }
       community_evaluations: {
         Row: {
@@ -11831,6 +11894,8 @@ export type Database = {
         }
         Returns: Json
       }
+      author_delete_comment: { Args: { p_comment_id: string }; Returns: Json }
+      author_delete_topic: { Args: { p_topic_id: string }; Returns: Json }
       bookmaker_pode_operar: {
         Args: { p_bookmaker_id: string }
         Returns: boolean
@@ -11904,6 +11969,7 @@ export type Database = {
         }
         Returns: Json
       }
+      check_blocked_words: { Args: { p_content: string }; Returns: string }
       check_custom_permissions_limit: {
         Args: { workspace_uuid: string }
         Returns: Json

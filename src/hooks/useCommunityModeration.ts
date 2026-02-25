@@ -18,7 +18,6 @@ export function useCommunityModeration() {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
-  // Check if user can moderate
   const canModerate = isSystemOwner || isOwner || isAdmin;
 
   const deleteTopic = useCallback(async (
@@ -35,10 +34,8 @@ export function useCommunityModeration() {
         p_topic_id: topicId,
         p_reason: reason,
       });
-
       if (error) throw error;
 
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['community-topics'] });
       queryClient.invalidateQueries({ queryKey: ['community-bookmaker-stats'] });
 
@@ -46,11 +43,7 @@ export function useCommunityModeration() {
       return { success: true };
     } catch (error: any) {
       console.error('Error deleting topic:', error);
-      toast({
-        title: 'Erro ao remover tópico',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao remover tópico', description: error.message, variant: 'destructive' });
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
@@ -71,26 +64,64 @@ export function useCommunityModeration() {
         p_comment_id: commentId,
         p_reason: reason,
       });
-
       if (error) throw error;
 
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['community-comments'] });
-
       toast({ title: 'Comentário removido com sucesso' });
       return { success: true };
     } catch (error: any) {
       console.error('Error deleting comment:', error);
-      toast({
-        title: 'Erro ao remover comentário',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao remover comentário', description: error.message, variant: 'destructive' });
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
   }, [canModerate, toast, queryClient]);
+
+  // Author delete (own content)
+  const authorDeleteTopic = useCallback(async (topicId: string): Promise<ModerationResult> => {
+    if (!user?.id) return { success: false, error: 'Não autenticado' };
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('author_delete_topic', {
+        p_topic_id: topicId,
+      });
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['community-topics'] });
+      toast({ title: 'Seu tópico foi removido' });
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error author-deleting topic:', error);
+      toast({ title: 'Erro ao remover tópico', description: error.message, variant: 'destructive' });
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, toast, queryClient]);
+
+  const authorDeleteComment = useCallback(async (commentId: string): Promise<ModerationResult> => {
+    if (!user?.id) return { success: false, error: 'Não autenticado' };
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('author_delete_comment', {
+        p_comment_id: commentId,
+      });
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['community-comments'] });
+      toast({ title: 'Seu comentário foi removido' });
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error author-deleting comment:', error);
+      toast({ title: 'Erro ao remover comentário', description: error.message, variant: 'destructive' });
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, toast, queryClient]);
 
   const deleteChatMessage = useCallback(async (
     messageId: string,
@@ -106,18 +137,13 @@ export function useCommunityModeration() {
         _message_id: messageId,
         _reason: reason,
       });
-
       if (error) throw error;
 
       toast({ title: 'Mensagem removida' });
       return { success: true };
     } catch (error: any) {
       console.error('Error deleting chat message:', error);
-      toast({
-        title: 'Erro ao remover mensagem',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao remover mensagem', description: error.message, variant: 'destructive' });
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
@@ -140,7 +166,6 @@ export function useCommunityModeration() {
         _context_type: contextType,
         _context_id: contextId,
       });
-
       if (error) throw error;
 
       const result = data as { success: boolean; deleted_count: number };
@@ -151,18 +176,13 @@ export function useCommunityModeration() {
       return { success: true, deletedCount: result.deleted_count };
     } catch (error: any) {
       console.error('Error clearing chat:', error);
-      toast({
-        title: 'Erro ao limpar chat',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao limpar chat', description: error.message, variant: 'destructive' });
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
   }, [canModerate, toast]);
 
-  // Get count of messages to be deleted (for confirmation modal)
   const getChatMessageCount = useCallback(async (
     workspaceId: string,
     contextType: 'general' | 'bookmaker' = 'general',
@@ -196,6 +216,8 @@ export function useCommunityModeration() {
     loading,
     deleteTopic,
     deleteComment,
+    authorDeleteTopic,
+    authorDeleteComment,
     deleteChatMessage,
     clearChat,
     getChatMessageCount,

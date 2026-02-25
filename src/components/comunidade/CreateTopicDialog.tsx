@@ -123,7 +123,14 @@ export function CreateTopicDialog({
         bookmaker_catalogo_id: selectedBookmaker?.id || null,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'P0001' || error.message?.includes('termos não permitidos')) {
+          toast({ title: 'Conteúdo bloqueado', description: 'Seu texto contém termos não permitidos. Por favor, revise.', variant: 'destructive' });
+        } else {
+          throw error;
+        }
+        return;
+      }
       toast({ title: 'Tópico criado com sucesso!' });
       onSuccess();
     } catch (error: any) {
