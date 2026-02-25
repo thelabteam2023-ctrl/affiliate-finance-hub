@@ -69,14 +69,20 @@ export default function ComunidadeDetalhe() {
     if (!id) return;
     
     try {
-      // Fetch bookmaker details
+      // Fetch bookmaker details (only GLOBAL_REGULATED allowed in Community)
       const { data: bmData, error: bmError } = await supabase
         .from('bookmakers_catalogo')
         .select('id, nome, logo_url, status, visibility')
         .eq('id', id)
+        .eq('visibility', 'GLOBAL_REGULATED')
         .single();
 
-      if (bmError) throw bmError;
+      if (bmError) {
+        // Bookmaker not found or restricted - don't reveal existence
+        setBookmaker(null);
+        setLoading(false);
+        return;
+      }
       setBookmaker(bmData);
 
       // Fetch stats from view

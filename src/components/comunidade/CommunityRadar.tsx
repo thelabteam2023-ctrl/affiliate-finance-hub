@@ -38,15 +38,16 @@ export function CommunityRadar() {
     try {
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
 
-      // Fetch topics with counts
+      // Fetch topics with counts (only GLOBAL_REGULATED)
       const { data: topicsData, error: topicsError } = await supabase
         .from('community_topics')
         .select(`
           bookmaker_catalogo_id,
           created_at,
-          bookmakers_catalogo!inner(nome, logo_url)
+          bookmakers_catalogo!inner(nome, logo_url, visibility)
         `)
-        .eq('status', 'ATIVO');
+        .eq('status', 'ATIVO')
+        .eq('bookmakers_catalogo.visibility', 'GLOBAL_REGULATED');
 
       if (topicsError) throw topicsError;
 
