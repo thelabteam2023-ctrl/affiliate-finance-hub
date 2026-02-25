@@ -677,8 +677,31 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const lucroPorMoeda = Array.from(lucroPorMoedaMap.entries())
       .map(([moeda, valor]) => ({ moeda, valor }))
       .filter(item => Math.abs(item.valor) > 0.01);
+
+    // Lucro/Dia: total de dias corridos e dias trabalhados
+    const datasUnicas = new Set<string>();
+    let dataMin: string | null = null;
+    let dataMax: string | null = null;
+    surebets.forEach(s => {
+      const d = s.data_operacao?.slice(0, 10);
+      if (d) {
+        datasUnicas.add(d);
+        if (!dataMin || d < dataMin) dataMin = d;
+        if (!dataMax || d > dataMax) dataMax = d;
+      }
+    });
+    const diasTrabalhados = datasUnicas.size;
+    let diasCorridos = 0;
+    if (dataMin && dataMax) {
+      const diffMs = new Date(dataMax).getTime() - new Date(dataMin).getTime();
+      diasCorridos = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
+    } else if (diasTrabalhados > 0) {
+      diasCorridos = 1;
+    }
+    const lucroPorDia = diasCorridos > 0 ? lucroTotal / diasCorridos : 0;
+    const lucroPorDiaTrabalhado = diasTrabalhados > 0 ? lucroTotal / diasTrabalhados : 0;
     
-    return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi, currencyBreakdown, lucroPorMoeda };
+    return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi, currencyBreakdown, lucroPorMoeda, lucroPorDia, lucroPorDiaTrabalhado, diasCorridos, diasTrabalhados };
   }, [surebets, convertFnOficial, moedaConsolidacao]);
 
   // KPIs FILTRADOS (para Operações) - Aplicam filtros dimensionais
@@ -1018,6 +1041,37 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             ),
             valueClassName: kpis.roi >= 0 ? "text-emerald-500" : "text-red-500",
             minWidth: "min-w-[50px]",
+          },
+          {
+            label: "Lucro/Dia",
+            value: formatCurrency(kpis.lucroPorDia),
+            valueClassName: kpis.lucroPorDia >= 0 ? "text-emerald-500" : "text-red-500",
+            tooltip: (
+              <div className="space-y-1.5">
+                <p className="font-semibold text-foreground">Lucro Médio por Dia</p>
+                <div className="space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Dias corridos</span>
+                    <span className="font-semibold text-foreground">{kpis.diasCorridos}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Dias trabalhados</span>
+                    <span className="font-semibold text-foreground">{kpis.diasTrabalhados}</span>
+                  </div>
+                </div>
+                <div className="border-t border-border/50 pt-1 space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span>Média (corridos)</span>
+                    <span className={cn("font-semibold", kpis.lucroPorDia >= 0 ? "text-emerald-500" : "text-red-500")}>{formatCurrency(kpis.lucroPorDia)}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Média (trabalhados)</span>
+                    <span className={cn("font-semibold", kpis.lucroPorDiaTrabalhado >= 0 ? "text-emerald-500" : "text-red-500")}>{formatCurrency(kpis.lucroPorDiaTrabalhado)}</span>
+                  </div>
+                </div>
+              </div>
+            ),
+            minWidth: "min-w-[80px]",
           },
         ]}
       />
