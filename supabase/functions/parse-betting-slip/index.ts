@@ -220,12 +220,23 @@ REGRAS IMPORTANTES:
     - NÃO substitua por nomenclaturas padrão como "1X2" ou "Moneyline"
 11. Identifique o esporte a partir de indicadores visuais ou textuais
 12. Para a seleção, extraia o que foi apostado (ex: "Over 2.5", "Team Name", "1")
-13. REGRA IMPORTANTE para mercado 1X2/MATCH_ODDS (Match Odds, Resultado da Partida, Resultado Final, Full Time Result, 1X2, Três Vias, Main Line):
+13. REGRA IMPORTANTE para mercado 1X2/MATCH_ODDS (Match Odds, Resultado da Partida, Resultado Final, Full Time Result, 1X2, Três Vias, Main Line, Moneyline Soccer):
     - Se a seleção for apenas "1", substitua pelo nome do time mandante (primeiro time)
     - Se a seleção for apenas "2", substitua pelo nome do time visitante (segundo time)
-    - Se a seleção for "X", substitua por "Empate"
+    - Se a seleção for "X", substitua por "EMPATE"
     - Isso torna a seleção mais descritiva
 14. Para valores numéricos (odd, stake, retorno), extraia APENAS os números, sem símbolos de moeda
+15. NORMALIZAÇÃO OCR: Corrija erros comuns:
+    - "lX2" ou "IX2" → "1X2"
+    - "Ouer" → "Over"
+    - "Undar" → "Under"
+    - "0/U" → "O/U"
+16. FAMÍLIAS DE MERCADO para referência (ajuda a classificar corretamente):
+    - MATCH_ODDS: Match Odds, 1X2, Resultado da Partida, Resultado Final, FT Result, Moneyline Soccer, Três Vias
+    - TOTALS: Total de Gols, Over/Under, O/U, Goals Total, Total Cards, Corners Total, Escanteios, Player Shots
+    - YES_NO: Ambas Marcam, BTTS, Clean Sheet, Gol no 1º Tempo, Classifica?
+    - HANDICAP: Asian Handicap, AH, EH, Spread, Run Line, Puck Line
+    - DNB: Draw No Bet, Empate Anula, DNB
 
 Esportes reconhecidos: ${SPORTS_LIST.join(", ")}
 
