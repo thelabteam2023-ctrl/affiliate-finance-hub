@@ -23,17 +23,17 @@ const MATCH_ODDS_MARKET_PATTERN = /(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*
 // MONEYLINE / MATCH_WINNER (2-way, no draw — basketball, tennis, MMA, etc.)
 const MONEYLINE_MARKET_PATTERN = /(?:moneyline|money\s*line|\bml\b|vencedor(?!\s*(?:da\s*)?(?:partida|match))|winner|match\s*winner|main\s*line)/i;
 
-// TOTALS (Over/Under) — includes basketball + tennis + baseball-specific terms
-const TOTALS_MARKET_PATTERN = /(?:total\s*(?:de\s*)?(?:gols?|goals?|pontos?|points?|games?|sets?|cards?|cart[õo]es?|corners?|escanteios?|faltas?|shots?|runs?|kills?|mapas?|maps?|towers?|torres?|aces?|rounds?|rebounds?|assists?|steals?|blocks?|turnovers?|fouls?|double\s*faults?|bases?|strikeouts?|hits?)|game\s*total|points?\s*total|match\s*total\s*games?|(?:1st|2nd|3rd)\s*set\s*total|set\s*total\s*games?|total\s*sets?|total\s*runs?|(?:first|1st)\s*5\s*innings?\s*total|inning\s*total|over\s*[\/\\]?\s*under|o\s*[\/\\]\s*u|mais\s*[\/\\]\s*menos)/i;
+// TOTALS (Over/Under) — all sports
+const TOTALS_MARKET_PATTERN = /(?:total\s*(?:de\s*)?(?:gols?|goals?|pontos?|points?|games?|sets?|cards?|cart[õo]es?|corners?|escanteios?|faltas?|shots?|runs?|kills?|mapas?|maps?|towers?|torres?|aces?|rounds?|rebounds?|assists?|steals?|blocks?|turnovers?|fouls?|double\s*faults?|bases?|strikeouts?|hits?|yards?|touchdowns?|completions?|receptions?|attempts?)|game\s*total|points?\s*total|match\s*total\s*games?|(?:1st|2nd|3rd)\s*set\s*total|set\s*total\s*games?|total\s*sets?|total\s*runs?|(?:first|1st)\s*5\s*innings?\s*total|inning\s*total|(?:1st|2nd)\s*half\s*total|(?:q[1-4]|[1-4](?:st|nd|rd|th)\s*quarter)\s*total|over\s*[\/\\]?\s*under|o\s*[\/\\]\s*u|mais\s*[\/\\]\s*menos)/i;
 
 // TEAM TOTALS — team-specific over/under
 const TEAM_TOTALS_MARKET_PATTERN = /(?:team\s*total|total\s*(?:do|de|da)\s*(?:equipe|time)|(?:home|away)\s*total)/i;
 
-// PLAYER PROPS / PLAYER TOTALS — includes tennis + baseball-specific (strikeouts, hits, home runs, total bases, RBI)
-const PLAYER_TOTALS_MARKET_PATTERN = /(?:player\s*(?:props?|totals?|points?|rebounds?|assists?|steals?|blocks?|turnovers?|shots?|goals?|fouls?|aces?|double\s*faults?|games?\s*won|strikeouts?|hits?|home\s*runs?|total\s*bases?|runs?\s*batted|rbi)|pitcher\s*strikeouts?|jogador\s*(?:pontos?|assistências?|rebotes?)|\bpra\b|points?\s*\+?\s*(?:assists?|rebounds?))/i;
+// PLAYER PROPS / PLAYER TOTALS — all sports
+const PLAYER_TOTALS_MARKET_PATTERN = /(?:player\s*(?:props?|totals?|points?|rebounds?|assists?|steals?|blocks?|turnovers?|shots?|goals?|fouls?|aces?|double\s*faults?|games?\s*won|strikeouts?|hits?|home\s*runs?|total\s*bases?|runs?\s*batted|rbi|passing\s*yards?|rushing\s*yards?|receiving\s*yards?|completions?|attempts?|receptions?|touchdowns?|sacks?|interceptions?)|pitcher\s*strikeouts?|(?:passing|rushing|receiving)\s*yards?|anytime\s*(?:td|touchdown)|first\s*(?:td|touchdown)|last\s*(?:td|touchdown)|jogador\s*(?:pontos?|assistências?|rebotes?)|\bpra\b|points?\s*\+?\s*(?:assists?|rebounds?))/i;
 
-// YES_NO (binary) — includes basketball + tennis + baseball-specific
-const YES_NO_MARKET_PATTERN = /(?:ambas?\s*marcam?|both\s*teams?\s*(?:to\s*)?score|btts|gol\s*(?:nos?\s*)?(?:dois|2|primeiro|1[ºo]?)\s*tempo|clean\s*sheet|classifica|penalty\s*awarded|double\s*double|triple\s*double|overtime|prorroga[çc][ãa]o|tie\s*break|extra\s*innings?|yrfi|nrfi|run\s*scored?\s*(?:in\s*)?(?:first|1st)\s*inning)/i;
+// YES_NO (binary) — all sports
+const YES_NO_MARKET_PATTERN = /(?:ambas?\s*marcam?|both\s*teams?\s*(?:to\s*)?score|btts|gol\s*(?:nos?\s*)?(?:dois|2|primeiro|1[ºo]?)\s*tempo|clean\s*sheet|classifica|penalty\s*awarded|double\s*double|triple\s*double|overtime|prorroga[çc][ãa]o|tie\s*break|extra\s*innings?|yrfi|nrfi|run\s*scored?\s*(?:in\s*)?(?:first|1st)\s*inning|safety\s*scored|defensive\s*(?:td|touchdown)|anytime\s*(?:td|touchdown)\s*(?:yes|no|sim|não))/i;
 
 // HANDICAP / SPREAD — includes basketball spread + tennis handicaps
 const HANDICAP_MARKET_PATTERN = /(?:asian\s*handicap|\bah\b|\beh\b|handicap\s*(?:europeu|asiatico|asiático)?|(?:point\s*)?spread|run\s*line|puck\s*line|games?\s*handicap|match\s*games?\s*handicap|set\s*handicap|(?:1st|2nd|3rd)\s*set\s*game\s*handicap)/i;
@@ -44,8 +44,8 @@ const DNB_MARKET_PATTERN = /(?:draw\s*no\s*bet|\bdnb\b|empate\s*anula)/i;
 // RACE TO POINTS / RUNS
 const RACE_TO_MARKET_PATTERN = /(?:race\s*to\s*\d+|corrida\s*(?:a|até)\s*\d+)/i;
 
-// HALF / QUARTER / SET / GAME / INNING period markets — includes tennis set/game + baseball innings
-const PERIOD_MARKET_PATTERN = /(?:1st\s*(?:half|quarter|set|inning)|2nd\s*(?:half|quarter|set|inning)|3rd\s*(?:quarter|set|inning)|4th\s*quarter|5th\s*(?:set|inning)|1[ºo°]?\s*(?:tempo|quarto|quarter|set|inning)|2[ºo°]?\s*(?:tempo|quarto|quarter|set|inning)|3[ºo°]?\s*(?:quarto|set|inning)|first\s*(?:half|5\s*innings?)|second\s*half|half\s*time|(?:1st|2nd|3rd)\s*set\s*(?:winner|total|handicap|game)|game\s*\d+\s*winner|set\s*\d+\s*winner|(?:first|1st)\s*5\s*innings?\s*(?:winner|total|spread|moneyline|ml)|f5\s*(?:winner|total|spread|ml)|inning\s*(?:winner|total))/i;
+// HALF / QUARTER / SET / GAME / INNING period markets — all sports
+const PERIOD_MARKET_PATTERN = /(?:1st\s*(?:half|quarter|set|inning)|2nd\s*(?:half|quarter|set|inning)|3rd\s*(?:quarter|set|inning)|4th\s*quarter|5th\s*(?:set|inning)|[qQ][1-4]|1[ºo°]?\s*(?:tempo|quarto|quarter|set|inning)|2[ºo°]?\s*(?:tempo|quarto|quarter|set|inning)|3[ºo°]?\s*(?:quarto|set|inning)|4[ºo°]?\s*quarto|first\s*(?:half|5\s*innings?)|second\s*half|half\s*time|(?:1st|2nd|3rd)\s*set\s*(?:winner|total|handicap|game)|game\s*\d+\s*winner|set\s*\d+\s*winner|(?:first|1st)\s*5\s*innings?\s*(?:winner|total|spread|moneyline|ml)|f5\s*(?:winner|total|spread|ml)|inning\s*(?:winner|total)|(?:1st|2nd)\s*half\s*(?:winner|spread|total|moneyline|ml)|(?:q[1-4]|[1-4](?:st|nd|rd|th)\s*quarter)\s*(?:winner|spread|total|moneyline|ml))/i;
 
 // Binary markets that support smart line inference (TOTALS + YES_NO)
 const BINARY_MARKETS = [
@@ -69,6 +69,14 @@ const BINARY_MARKETS = [
   "Pitcher Strikeouts", "Player Hits", "Player Home Runs", "Player Total Bases",
   "Player RBI", "Runs Batted In",
   "Extra Innings", "YRFI", "NRFI", "Run Scored First Inning",
+  // American Football (NFL)
+  "1st Half Total", "2nd Half Total", "1st Half Spread", "2nd Half Spread",
+  "1st Quarter Total", "Q1 Total", "Q2 Total", "Q3 Total", "Q4 Total",
+  "1st Quarter Spread", "Q1 Spread",
+  "Passing Yards", "Rushing Yards", "Receiving Yards",
+  "Completions", "Receptions", "Attempts",
+  "Anytime Touchdown", "First Touchdown", "Last Touchdown",
+  "Safety Scored", "Defensive TD",
 ];
 
 // Mapping of binary line pairs (both directions)
