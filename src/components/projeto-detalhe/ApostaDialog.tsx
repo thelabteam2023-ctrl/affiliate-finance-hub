@@ -1042,12 +1042,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     }
   }, [exchangeBookmakerId, bookmakers]);
 
-  useEffect(() => {
-    if (!aposta && !mercadoFromPrint && !mercadoFromEdit) {
-      setMercado("");
-      setSelecao("");
-    }
-  }, [esporte]);
+  // Nota: NÃO resetar mercado ao mudar esporte - o usuário pode preencher em qualquer ordem
 
   // Reset selecao when mercado changes (only for new bets AND not from print)
   useEffect(() => {
