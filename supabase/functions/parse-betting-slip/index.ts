@@ -264,6 +264,16 @@ REGRAS IMPORTANTES:
       * YES_NO: Extra Innings, YRFI/NRFI (Run Scored in First Inning)
       * RACE_TO_RUNS: Race to X Runs (ex: Race to 3 Runs)
       * CORRECT_SCORE: Placar exato (ex: 5-3)
+    - AMERICAN_FOOTBALL-SPECIFIC (NFL):
+      * MATCH_WINNER: Moneyline, ML, Winner (2 vias, sem empate)
+      * SPREAD_HANDICAP: Spread, Point Spread, Handicap (ex: Chiefs -3.5 → Bills +3.5)
+      * TOTAL_POINTS: Total Points, Game Total, Over/Under (ex: Over 47.5 Points)
+      * TEAM_TOTALS: Team Total Points (ex: Bills Over 23.5 Points)
+      * HALF_MARKETS: 1st Half Winner/Spread/Total, 2nd Half Winner/Spread/Total
+      * QUARTER_MARKETS: 1st Quarter Winner/Spread/Total, Q1-Q4 markets
+      * PLAYER_PROPS: Passing Yards, Rushing Yards, Receiving Yards, Completions, Receptions, Attempts, Sacks, Interceptions
+      * TOUCHDOWN_PROPS: Anytime TD, First TD, Last TD (YES/NO)
+      * YES_NO: Overtime, Safety Scored, Defensive TD
 
 Esportes reconhecidos: ${SPORTS_LIST.join(", ")}
 
