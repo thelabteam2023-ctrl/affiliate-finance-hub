@@ -461,81 +461,80 @@ export default function BookmakerDialog({
             </Alert>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label>Parceiro *</Label>
-            {/* Modo contextual: display estático (não usa ParceiroSelect) */}
-            {lockParceiro && parceiroId ? (
-              <div className="flex items-center justify-center gap-3 h-12 border rounded-md bg-muted/30 px-4">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium uppercase">
-                  {parceiroNome || "Carregando..."}
-                </span>
-              </div>
-            ) : (
-              <ParceiroSelect
-                key={open ? 'parceiro-open' : 'parceiro-closed'}
-                value={parceiroId}
-                onValueChange={(newParceiroId) => {
-                  setParceiroId(newParceiroId);
-                  // Resetar bookmaker quando parceiro muda (lista filtrada muda)
-                  if (!bookmaker) {
-                    setBookmakerId("");
-                    setSelectedBookmaker(null);
-                    setSelectedLink("");
-                  }
-                }}
-                disabled={loading}
-                includeParceiroId={bookmaker?.parceiro_id}
-              />
-            )}
-            {lockParceiro && (
-              <p className="text-xs text-muted-foreground">
-                Parceiro selecionado a partir do contexto atual
-              </p>
-            )}
-          </div>
+          {/* Parceiro + Bookmaker em grid 2 colunas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Parceiro *</Label>
+              {lockParceiro && parceiroId ? (
+                <div className="flex items-center justify-center gap-3 h-12 border rounded-md bg-muted/30 px-4">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium uppercase">
+                    {parceiroNome || "Carregando..."}
+                  </span>
+                </div>
+              ) : (
+                <ParceiroSelect
+                  key={open ? 'parceiro-open' : 'parceiro-closed'}
+                  value={parceiroId}
+                  onValueChange={(newParceiroId) => {
+                    setParceiroId(newParceiroId);
+                    if (!bookmaker) {
+                      setBookmakerId("");
+                      setSelectedBookmaker(null);
+                      setSelectedLink("");
+                    }
+                  }}
+                  disabled={loading}
+                  includeParceiroId={bookmaker?.parceiro_id}
+                />
+              )}
+              {lockParceiro && (
+                <p className="text-xs text-muted-foreground">
+                  Parceiro selecionado a partir do contexto atual
+                </p>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label>Bookmaker *</Label>
-            {/* Modo contextual: display estático (não usa BookmakerSelect) */}
-            {lockBookmaker && bookmakerId ? (
-              <div className="flex items-center justify-center gap-3 h-12 border rounded-md bg-muted/30 px-4">
-                {isLoadingDetails ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    <span className="text-muted-foreground">Carregando...</span>
-                  </>
-                ) : selectedBookmaker ? (
-                  <>
-                    {selectedBookmaker.logo_url && (
-                      <img 
-                        src={selectedBookmaker.logo_url} 
-                        alt="" 
-                        className="h-6 w-6 rounded object-contain"
-                        onError={(e) => { e.currentTarget.style.display = "none"; }}
-                      />
-                    )}
-                    <span className="uppercase font-medium">{selectedBookmaker.nome}</span>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground">Bookmaker não encontrada</span>
-                )}
-              </div>
-            ) : (
-              /* Modo genérico: select normal */
-              <BookmakerSelect
-                key={open ? `bookmaker-${parceiroId || 'none'}` : 'bookmaker-closed'}
-                value={bookmakerId}
-                onValueChange={handleBookmakerChange}
-                disabled={loading}
-                excludeVinculosDoParceiro={!bookmaker ? parceiroId : undefined}
-              />
-            )}
-            {lockBookmaker && (
-              <p className="text-xs text-muted-foreground">
-                Bookmaker selecionada a partir do contexto atual
-              </p>
-            )}
+            <div className="space-y-2">
+              <Label>Bookmaker *</Label>
+              {lockBookmaker && bookmakerId ? (
+                <div className="flex items-center justify-center gap-3 h-12 border rounded-md bg-muted/30 px-4">
+                  {isLoadingDetails ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      <span className="text-muted-foreground">Carregando...</span>
+                    </>
+                  ) : selectedBookmaker ? (
+                    <>
+                      {selectedBookmaker.logo_url && (
+                        <img 
+                          src={selectedBookmaker.logo_url} 
+                          alt="" 
+                          className="h-6 w-6 rounded object-contain"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
+                      )}
+                      <span className="uppercase font-medium">{selectedBookmaker.nome}</span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">Bookmaker não encontrada</span>
+                  )}
+                </div>
+              ) : (
+                <BookmakerSelect
+                  key={open ? `bookmaker-${parceiroId || 'none'}` : 'bookmaker-closed'}
+                  value={bookmakerId}
+                  onValueChange={handleBookmakerChange}
+                  disabled={loading}
+                  excludeVinculosDoParceiro={!bookmaker ? parceiroId : undefined}
+                />
+              )}
+              {lockBookmaker && (
+                <p className="text-xs text-muted-foreground">
+                  Bookmaker selecionada a partir do contexto atual
+                </p>
+              )}
+            </div>
           </div>
 
           {isLoadingDetails && bookmakerId && (
