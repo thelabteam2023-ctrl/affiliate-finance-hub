@@ -454,8 +454,15 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
               const away = eventParts[1].trim();
               if (selTrimmed === "1") sel.selecao.value = home;
               else if (selTrimmed === "2") sel.selecao.value = away;
-              else if (selTrimmed.toUpperCase() === "X") sel.selecao.value = "Empate";
+              else if (selTrimmed.toUpperCase() === "X") sel.selecao.value = "EMPATE";
             }
+          }
+          // Uppercase selection and mercado for consistency
+          if (sel.selecao?.value) {
+            sel.selecao.value = sel.selecao.value.toUpperCase();
+          }
+          if (sel.mercado?.value) {
+            sel.mercado.value = sel.mercado.value.toUpperCase();
           }
         }
         
@@ -556,7 +563,7 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
         }
       }
 
-      // Normalize 1x2 selection: "1" → home team, "2" → away team, "X" → Empate
+      // Normalize 1x2 selection: "1" → home team, "2" → away team, "X" → EMPATE
       if (parsedData.selecao?.value) {
         const selTrimmed = parsedData.selecao.value.trim();
         if (selTrimmed === "1" && parsedData.mandante?.value) {
@@ -564,8 +571,15 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
         } else if (selTrimmed === "2" && parsedData.visitante?.value) {
           parsedData.selecao.value = parsedData.visitante.value;
         } else if (selTrimmed.toUpperCase() === "X") {
-          parsedData.selecao.value = "Empate";
+          parsedData.selecao.value = "EMPATE";
         }
+        // Uppercase all selections for consistency
+        parsedData.selecao.value = parsedData.selecao.value.toUpperCase();
+      }
+
+      // Uppercase mercado for consistency
+      if (parsedData.mercado?.value) {
+        parsedData.mercado.value = parsedData.mercado.value.toUpperCase();
       }
 
       // Normalize bookmaker name (capitalize first letter of each word)
