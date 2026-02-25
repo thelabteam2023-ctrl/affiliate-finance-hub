@@ -203,7 +203,7 @@ export function CommunityRadar() {
               <div
                 key={item.bookmaker_catalogo_id}
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                onClick={() => navigate(`/comunidade/${item.bookmaker_catalogo_id}`)}
+                onClick={() => navigate(`/comunidade?casa=${item.bookmaker_catalogo_id}`)}
               >
                 {/* Rank */}
                 <div className="w-6 text-center">

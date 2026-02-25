@@ -1,154 +1,63 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useCommunityAccess } from '@/hooks/useCommunityAccess';
 import { PageHeader } from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useCommunityAccess } from '@/hooks/useCommunityAccess';
-import { useCommunityRanking, RankedBookmaker } from '@/hooks/useCommunityRanking';
-import { Search, Star, MessageSquare, Lock, ChevronDown, ChevronUp, TrendingUp, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Lock, Star, MessageSquare, Search, Plus, TrendingUp, Clock } from 'lucide-react';
+import { CategorySidebar } from '@/components/comunidade/CategorySidebar';
+import { TopicFeed } from '@/components/comunidade/TopicFeed';
 import { CommunityRadar } from '@/components/comunidade/CommunityRadar';
 import { CommunityChatPreview } from '@/components/comunidade/CommunityChatPreview';
 import { CommunityChatDrawer } from '@/components/comunidade/CommunityChatDrawer';
-
-const TOP_GRID_COUNT = 9;
-
-interface BookmakerStats {
-  bookmaker_catalogo_id: string;
-  nome: string;
-  logo_url: string | null;
-  regulamentacao_status: string;
-  visibility: string;
-  total_avaliacoes: number;
-  nota_media_geral: number | null;
-  total_topicos: number;
-  ultimo_topico_data: string | null;
-}
+import { CreateTopicDialog } from '@/components/comunidade/CreateTopicDialog';
+import { type CommunityCategory } from '@/lib/communityCategories';
 
 export default function Comunidade() {
   const navigate = useNavigate();
-  const { hasFullAccess, loading: accessLoading, plan, isOwner } = useCommunityAccess();
-  
-  // Ranked bookmakers for Top 9 grid (uses same logic as Radar) + recent activity outside top 9
-  const { rankedItems: top9Ranked, recentActivityItems, loading: rankingLoading } = useCommunityRanking({ 
-    limit: TOP_GRID_COUNT,
-    recentActivityLimit: 6
-  });
-  
-  // All bookmakers for "Ver mais" and search
-  const [allBookmakers, setAllBookmakers] = useState<BookmakerStats[]>([]);
-  const [loadingAll, setLoadingAll] = useState(true);
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { hasFullAccess, loading: accessLoading, plan } = useCommunityAccess();
 
-  // Listen for event to open chat drawer
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'recent' | 'trending'>('recent');
+  const [selectedCategory, setSelectedCategory] = useState<CommunityCategory | null>(null);
+  const [bookmakerFilter, setBookmakerFilter] = useState<string | null>(null);
+  const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [feedRefreshKey, setFeedRefreshKey] = useState(0);
+
+  // Handle URL params (e.g. ?casa=xxx from radar click)
+  useEffect(() => {
+    const casa = searchParams.get('casa');
+    if (casa) {
+      setBookmakerFilter(casa);
+    }
+  }, [searchParams]);
+
+  // Listen for chat drawer event
   useEffect(() => {
     const handleOpenChat = () => setChatDrawerOpen(true);
     window.addEventListener('open-community-chat', handleOpenChat);
     return () => window.removeEventListener('open-community-chat', handleOpenChat);
   }, []);
 
-  // Fetch all bookmakers for stats (lightweight, runs on mount)
-  useEffect(() => {
-    fetchAllBookmakers();
-  }, []);
-
-  // Also fetch when expanded or searching
-  useEffect(() => {
-    if (showAll || searchTerm.trim()) {
-      fetchAllBookmakers();
-    }
-  }, [showAll, searchTerm]);
-
-  const fetchAllBookmakers = async () => {
-    if (allBookmakers.length > 0) return; // Already loaded
-    
-    try {
-      const { data, error } = await supabase
-        .from('v_community_bookmaker_stats')
-        .select('*')
-        .order('nome');
-
-      if (error) throw error;
-      setAllBookmakers(data || []);
-    } catch (error) {
-      console.error('Error fetching bookmakers:', error);
-    } finally {
-      setLoadingAll(false);
-    }
+  const clearBookmakerFilter = () => {
+    setBookmakerFilter(null);
+    searchParams.delete('casa');
+    setSearchParams(searchParams);
   };
 
-  // Filter all bookmakers based on search
-  const filteredAllBookmakers = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return allBookmakers;
-    }
-    return allBookmakers.filter(bm =>
-      bm.nome.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [allBookmakers, searchTerm]);
-
-  // Determine which bookmakers to display
-  const displayedBookmakers = useMemo(() => {
-    // When searching, search ALL bookmakers
-    if (searchTerm.trim()) {
-      return filteredAllBookmakers;
-    }
-    // When expanded, show all
-    if (showAll) {
-      return allBookmakers;
-    }
-    // Default: show Top 9 ranked (dynamic based on engagement)
-    return top9Ranked;
-  }, [searchTerm, showAll, filteredAllBookmakers, allBookmakers, top9Ranked]);
-
-  const hasMoreToShow = !searchTerm.trim() && allBookmakers.length > TOP_GRID_COUNT;
-  const isSearching = !!searchTerm.trim();
-  const isShowingRanked = !isSearching && !showAll;
-
-  const loading = rankingLoading || (showAll && loadingAll);
-
-  const renderStars = (rating: number | null) => {
-    if (!rating) return <span className="text-muted-foreground text-sm">Sem avaliações</span>;
-    
-    const fullStars = Math.floor(rating);
-    const hasHalf = rating % 1 >= 0.5;
-    
-    return (
-      <div className="flex items-center gap-1">
-        {[...Array(5)].map((_, i) => (
-          <Star
-            key={i}
-            className={`h-4 w-4 ${
-              i < fullStars
-                ? 'fill-yellow-400 text-yellow-400'
-                : i === fullStars && hasHalf
-                ? 'fill-yellow-400/50 text-yellow-400'
-                : 'text-muted-foreground/30'
-            }`}
-          />
-        ))}
-        <span className="text-sm font-medium ml-1">{rating.toFixed(1)}</span>
-      </div>
-    );
-  };
-
-  // Upgrade prompt for Free/Starter users (OWNER ignora restrição de plano)
+  // Upgrade prompt for Free/Starter users
   if (!accessLoading && !hasFullAccess) {
     return (
       <div className="container mx-auto p-6 max-w-6xl">
         <PageHeader 
           title="Comunidade" 
-          description="Inteligência coletiva para decisões operacionais"
+          description="Hub de discussões para operadores"
           pagePath="/comunidade"
           pageIcon="Users"
         />
-        
         <Card className="mt-8 border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -156,8 +65,7 @@ export default function Comunidade() {
             </div>
             <h2 className="text-2xl font-bold mb-2">Módulo Exclusivo PRO+</h2>
             <p className="text-muted-foreground max-w-md mb-6">
-              Acesse avaliações, discussões e insights colaborativos sobre casas de apostas. 
-              Tome decisões mais seguras baseadas em experiências reais da comunidade.
+              Acesse discussões, avaliações e insights colaborativos da comunidade.
             </p>
             <div className="flex flex-col gap-3 text-left mb-6">
               <div className="flex items-center gap-2 text-sm">
@@ -166,7 +74,7 @@ export default function Comunidade() {
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <MessageSquare className="h-4 w-4 text-blue-500" />
-                <span>Tópicos e discussões por bookmaker</span>
+                <span>Tópicos e discussões por categoria</span>
               </div>
             </div>
             <Button onClick={() => navigate('/workspace')} size="lg">
@@ -185,7 +93,7 @@ export default function Comunidade() {
     <div className="container mx-auto p-6 max-w-7xl">
       <PageHeader 
         title="Comunidade" 
-        description="Avaliações e discussões sobre casas de apostas"
+        description="Hub de discussões e inteligência coletiva"
         pagePath="/comunidade"
         pageIcon="Users"
       />
@@ -196,226 +104,88 @@ export default function Comunidade() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar casa de apostas..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          {/* Stats Summary - only shows when allBookmakers is loaded */}
-          {allBookmakers.length > 0 && (
-            <div className="grid grid-cols-3 gap-4">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold">{allBookmakers.length}</p>
-                  <p className="text-sm text-muted-foreground">Casas Globais</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold">
-                    {allBookmakers.reduce((sum, bm) => sum + bm.total_avaliacoes, 0)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Avaliações</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold">
-                    {allBookmakers.reduce((sum, bm) => sum + bm.total_topicos, 0)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Tópicos</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Section Title */}
-          {isShowingRanked && top9Ranked.length > 0 && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              <span>Casas em destaque (mais discutidas nos últimos 30 dias)</span>
-            </div>
-          )}
-
-          {/* Bookmakers Grid */}
-          {loading || accessLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {[...Array(9)].map((_, i) => (
-                <Skeleton key={i} className="h-36" />
-              ))}
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                {displayedBookmakers.map((bm) => (
-                  <Card 
-                    key={bm.bookmaker_catalogo_id}
-                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => navigate(`/comunidade/${bm.bookmaker_catalogo_id}`)}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-start gap-2.5">
-                        {/* Logo */}
-                        <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
-                          {bm.logo_url ? (
-                            <img src={bm.logo_url} alt={bm.nome} className="h-8 w-8 object-contain" />
-                          ) : (
-                            <span className="text-base font-bold text-muted-foreground">
-                              {bm.nome.charAt(0)}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold truncate">{bm.nome}</h3>
-                            <Badge 
-                              variant="outline" 
-                              className={`text-[10px] shrink-0 ${
-                                bm.regulamentacao_status === 'REGULAMENTADA'
-                                  ? 'border-green-500/30 text-green-500'
-                                  : 'border-amber-500/30 text-amber-500'
-                              }`}
-                            >
-                              {bm.regulamentacao_status === 'REGULAMENTADA' ? 'Reg.' : 'Não Reg.'}
-                            </Badge>
-                          </div>
-                          
-                          {/* Rating */}
-                          {renderStars(bm.nota_media_geral)}
-                        </div>
-                      </div>
-
-                      {/* Stats Row */}
-                      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border">
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Star className="h-3.5 w-3.5" />
-                          <span>{bm.total_avaliacoes}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          <span>{bm.total_topicos}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Recent Activity Section - only when showing ranked (not searching or expanded) */}
-              {isShowingRanked && recentActivityItems.length > 0 && (
-                <div className="mt-6 space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4 text-blue-500" />
-                    <span>Atividade recente</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                    {recentActivityItems.map((bm) => (
-                      <Card 
-                        key={bm.bookmaker_catalogo_id}
-                        className="cursor-pointer hover:border-primary/50 transition-colors border-dashed"
-                        onClick={() => navigate(`/comunidade/${bm.bookmaker_catalogo_id}`)}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-start gap-2.5">
-                            <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
-                              {bm.logo_url ? (
-                                <img src={bm.logo_url} alt={bm.nome} className="h-8 w-8 object-contain" />
-                              ) : (
-                                <span className="text-base font-bold text-muted-foreground">
-                                  {bm.nome.charAt(0)}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold truncate">{bm.nome}</h3>
-                                <Badge 
-                                  variant="outline" 
-                                  className={`text-[10px] shrink-0 ${
-                                    bm.regulamentacao_status === 'REGULAMENTADA'
-                                      ? 'border-green-500/30 text-green-500'
-                                      : 'border-amber-500/30 text-amber-500'
-                                  }`}
-                                >
-                                  {bm.regulamentacao_status === 'REGULAMENTADA' ? 'Reg.' : 'Não Reg.'}
-                                </Badge>
-                              </div>
-                              {renderStars(bm.nota_media_geral)}
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border">
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Star className="h-3.5 w-3.5" />
-                              <span>{bm.total_avaliacoes}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <MessageSquare className="h-3.5 w-3.5" />
-                              <span>{bm.total_topicos + bm.total_comentarios}</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Ver mais / Ver menos button */}
-              {hasMoreToShow && (
-                <div className="flex justify-center mt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowAll(!showAll)}
-                    className="gap-2"
-                  >
-                    {showAll ? (
-                      <>
-                        <ChevronUp className="h-4 w-4" />
-                        Ver menos
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-4 w-4" />
-                        Ver mais casas ({allBookmakers.length - TOP_GRID_COUNT})
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-
-          {displayedBookmakers.length === 0 && !loading && (
-            <div className="text-center py-12 text-muted-foreground">
-              Nenhuma casa encontrada com "{searchTerm}"
-            </div>
-          )}
+        {/* Left Sidebar - Categories */}
+        <div className="lg:col-span-3 space-y-6 order-2 lg:order-1">
+          <CategorySidebar selected={selectedCategory} onSelect={setSelectedCategory} />
+          <CommunityRadar />
         </div>
 
-        {/* Sidebar */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Radar */}
-          <CommunityRadar />
-          
-          {/* Chat Preview */}
+        {/* Main Feed */}
+        <div className="lg:col-span-6 space-y-4 order-1 lg:order-2">
+          {/* Search + Actions */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar tópicos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Novo
+            </Button>
+          </div>
+
+          {/* Sort tabs */}
+          <div className="flex items-center gap-1 border-b border-border pb-1">
+            <Button
+              variant={sortBy === 'recent' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setSortBy('recent')}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              Recentes
+            </Button>
+            <Button
+              variant={sortBy === 'trending' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setSortBy('trending')}
+            >
+              <TrendingUp className="h-3.5 w-3.5" />
+              Em alta
+            </Button>
+
+            {bookmakerFilter && (
+              <Button variant="outline" size="sm" className="ml-auto text-xs" onClick={clearBookmakerFilter}>
+                Limpar filtro de casa ✕
+              </Button>
+            )}
+          </div>
+
+          {/* Topic Feed */}
+          <TopicFeed
+            categoryFilter={selectedCategory}
+            bookmakerFilter={bookmakerFilter}
+            searchTerm={searchTerm}
+            sortBy={sortBy}
+            refreshKey={feedRefreshKey}
+          />
+        </div>
+
+        {/* Right Sidebar - Chat */}
+        <div className="lg:col-span-3 space-y-6 order-3">
           <CommunityChatPreview />
         </div>
       </div>
 
-      {/* Chat Drawer (internal fallback) */}
-      <CommunityChatDrawer 
-        open={chatDrawerOpen} 
-        onOpenChange={setChatDrawerOpen} 
+      {/* Create Topic Dialog */}
+      <CreateTopicDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        defaultCategory={selectedCategory || undefined}
+        onSuccess={() => {
+          setCreateDialogOpen(false);
+          setFeedRefreshKey((k) => k + 1);
+        }}
       />
+
+      {/* Chat Drawer */}
+      <CommunityChatDrawer open={chatDrawerOpen} onOpenChange={setChatDrawerOpen} />
     </div>
   );
 }

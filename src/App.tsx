@@ -35,6 +35,7 @@ import Testes from "./pages/Testes";
 import Workspace from "./pages/Workspace";
 import Comunidade from "./pages/Comunidade";
 import ComunidadeDetalhe from "./pages/ComunidadeDetalhe";
+import ComunidadeTopico from "./pages/ComunidadeTopico";
 import ComunidadeChatPopout from "./pages/ComunidadeChatPopout";
 import SystemAdmin from "./pages/SystemAdmin";
 import AcceptInvite from "./pages/AcceptInvite";
@@ -261,6 +262,14 @@ const App = () => (
               <ProtectedRoute>
                 <AuthenticatedLayout>
                   <ComunidadeDetalhe />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/comunidade/topico/:id" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <ComunidadeTopico />
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
