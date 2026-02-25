@@ -1,3 +1,4 @@
+import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,6 +7,7 @@ import { ApostaPopupProvider } from "@/contexts/ApostaPopupContext";
 import { ApostaPopupContainer } from "@/components/popups/ApostaPopupContainer";
 import { ExchangeRatesProvider } from "@/contexts/ExchangeRatesContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -85,13 +87,15 @@ function TopBarHeader() {
     <header className="shrink-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="flex h-12 items-center gap-2 px-3">
         <SidebarTrigger className="text-muted-foreground/70 hover:text-muted-foreground hover:bg-accent/50 flex-shrink-0" />
-        {content}
+        <div className="flex-1 min-w-0">{content}</div>
+        <ThemeToggle />
       </div>
     </header>
   );
 }
 
 const App = () => (
+  <ThemeProvider attribute="class" defaultTheme="dark" storageKey="stakesync-theme">
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
@@ -325,6 +329,7 @@ const App = () => (
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;
