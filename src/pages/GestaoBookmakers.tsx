@@ -457,20 +457,20 @@ export default function GestaoBookmakers() {
         <Tabs defaultValue="contas" className="flex flex-col flex-1 min-h-0">
           <TabsList className={`grid w-full max-w-lg shrink-0 ${isSystemOwner ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="contas" className="flex items-center gap-2">
-              <Wallet className="h-4 w-4" />
+              <Wallet className="h-4 w-4 shrink-0 stroke-current" />
               Vínculos
             </TabsTrigger>
             <TabsTrigger value="catalogo" className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
+              <BookOpen className="h-4 w-4 shrink-0 stroke-current" />
               Bookmakers
             </TabsTrigger>
             <TabsTrigger value="limitacoes" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
+              <BarChart3 className="h-4 w-4 shrink-0 stroke-current" />
               Estatísticas
             </TabsTrigger>
             {isSystemOwner && (
               <TabsTrigger value="grupos" className="flex items-center gap-2">
-                <FolderOpen className="h-4 w-4" />
+                <FolderOpen className="h-4 w-4 shrink-0 stroke-current" />
                 Grupos
               </TabsTrigger>
             )}
