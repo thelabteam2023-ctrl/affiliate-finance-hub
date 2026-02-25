@@ -80,6 +80,7 @@ export default function BookmakerDialog({
   const [status, setStatus] = useState("ativo");
   
   const [instanceIdentifier, setInstanceIdentifier] = useState("");
+  const [showInstanceField, setShowInstanceField] = useState(false);
   const [observacoes, setObservacoes] = useState("");
   const [showObservacoesDialog, setShowObservacoesDialog] = useState(false);
   const [hasFinancialOperations, setHasFinancialOperations] = useState(false);
@@ -316,6 +317,41 @@ export default function BookmakerDialog({
       fetchBookmakerDetails(newBookmakerId);
     }
   };
+
+  // Detectar automaticamente se o parceiro já tem outra conta na mesma casa
+  useEffect(() => {
+    const checkDuplicateAccounts = async () => {
+      // Se já tem identificador preenchido (edição), sempre mostrar
+      if (instanceIdentifier) {
+        setShowInstanceField(true);
+        return;
+      }
+
+      if (!parceiroId || !bookmakerId) {
+        setShowInstanceField(false);
+        return;
+      }
+
+      try {
+        const { count, error } = await supabase
+          .from("bookmakers")
+          .select("id", { count: "exact", head: true })
+          .eq("parceiro_id", parceiroId)
+          .eq("bookmaker_catalogo_id", bookmakerId)
+          .neq("id", bookmaker?.id || "00000000-0000-0000-0000-000000000000");
+
+        if (!error && (count || 0) > 0) {
+          setShowInstanceField(true);
+        } else {
+          setShowInstanceField(false);
+        }
+      } catch {
+        setShowInstanceField(false);
+      }
+    };
+
+    checkDuplicateAccounts();
+  }, [parceiroId, bookmakerId, bookmaker?.id]);
 
   const encryptPassword = (password: string): string => {
     return btoa(password);
@@ -573,25 +609,27 @@ export default function BookmakerDialog({
             </div>
           )}
 
-          {/* MULTI-CONTA: Identificador de instância para diferenciar contas da mesma casa */}
-          <div>
-            <Label htmlFor="instanceIdentifier" className="flex items-center gap-2">
-              Identificador da Conta
-              <span className="text-xs text-muted-foreground">(opcional)</span>
-            </Label>
-            <Input
-              id="instanceIdentifier"
-              value={instanceIdentifier}
-              onChange={(e) => setInstanceIdentifier(e.target.value)}
-              placeholder="Ex: Principal, Backup, Email João, #1"
-              disabled={loading}
-              autoComplete="off"
-              maxLength={50}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Use para diferenciar múltiplas contas da mesma casa para este parceiro
-            </p>
-          </div>
+          {/* MULTI-CONTA: Aparece automaticamente quando o parceiro já tem outra conta na mesma casa */}
+          {showInstanceField && (
+            <div>
+              <Label htmlFor="instanceIdentifier" className="flex items-center gap-2">
+                Identificador da Conta
+                <span className="text-xs text-muted-foreground">(recomendado)</span>
+              </Label>
+              <Input
+                id="instanceIdentifier"
+                value={instanceIdentifier}
+                onChange={(e) => setInstanceIdentifier(e.target.value)}
+                placeholder="Ex: Principal, Backup, Email João, #1"
+                disabled={loading}
+                autoComplete="off"
+                maxLength={50}
+              />
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                Este parceiro já possui outra conta nesta casa. Diferencie com um identificador.
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
