@@ -33,15 +33,16 @@ export function useCommunityRanking(options: UseCommunityRankingOptions = {}) {
     try {
       const periodAgo = subDays(new Date(), periodDays).toISOString();
 
-      // Fetch topics with counts and bookmaker info
+      // Fetch topics with counts and bookmaker info (only GLOBAL_REGULATED)
       const { data: topicsData, error: topicsError } = await supabase
         .from('community_topics')
         .select(`
           bookmaker_catalogo_id,
           created_at,
-          bookmakers_catalogo!inner(nome, logo_url)
+          bookmakers_catalogo!inner(nome, logo_url, visibility)
         `)
-        .eq('status', 'ATIVO');
+        .eq('status', 'ATIVO')
+        .eq('bookmakers_catalogo.visibility', 'GLOBAL_REGULATED');
 
       if (topicsError) throw topicsError;
 

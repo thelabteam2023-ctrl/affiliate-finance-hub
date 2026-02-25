@@ -64,6 +64,7 @@ export function CommunityChatConvertDialog({
           .from('bookmakers_catalogo')
           .select('id, nome, logo_url')
           .eq('status', 'ATIVA')
+          .eq('visibility', 'GLOBAL_REGULATED')
           .order('nome');
 
         if (error) throw error;
