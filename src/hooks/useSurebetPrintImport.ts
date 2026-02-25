@@ -17,20 +17,35 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 // MARKET FAMILY DETECTION PATTERNS
 // ========================================================================
 
-// MATCH_ODDS / 1X2 (3-way)
-const MATCH_ODDS_MARKET_PATTERN = /(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|vencedor\s*(?:da\s*)?(?:partida|match)|match\s*(?:winner|result)|main\s*line|moneyline\s*soccer)/i;
+// MATCH_ODDS / 1X2 (3-way, football only)
+const MATCH_ODDS_MARKET_PATTERN = /(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|moneyline\s*soccer)/i;
 
-// TOTALS (Over/Under)
-const TOTALS_MARKET_PATTERN = /(?:total\s*(?:de\s*)?(?:gols?|goals?|pontos?|points?|games?|sets?|cards?|cart[õo]es?|corners?|escanteios?|faltas?|shots?|runs?|kills?|mapas?|maps?|towers?|torres?|aces?|rounds?)|over\s*[\/\\]?\s*under|o\s*[\/\\]\s*u|mais\s*[\/\\]\s*menos)/i;
+// MONEYLINE / MATCH_WINNER (2-way, no draw — basketball, tennis, MMA, etc.)
+const MONEYLINE_MARKET_PATTERN = /(?:moneyline|money\s*line|\bml\b|vencedor(?!\s*(?:da\s*)?(?:partida|match))|winner|match\s*winner|main\s*line)/i;
 
-// YES_NO (binary)
-const YES_NO_MARKET_PATTERN = /(?:ambas?\s*marcam?|both\s*teams?\s*(?:to\s*)?score|btts|gol\s*(?:nos?\s*)?(?:dois|2|primeiro|1[ºo]?)\s*tempo|clean\s*sheet|classifica|penalty\s*awarded)/i;
+// TOTALS (Over/Under) — includes basketball-specific terms
+const TOTALS_MARKET_PATTERN = /(?:total\s*(?:de\s*)?(?:gols?|goals?|pontos?|points?|games?|sets?|cards?|cart[õo]es?|corners?|escanteios?|faltas?|shots?|runs?|kills?|mapas?|maps?|towers?|torres?|aces?|rounds?|rebounds?|assists?|steals?|blocks?|turnovers?|fouls?)|game\s*total|points?\s*total|over\s*[\/\\]?\s*under|o\s*[\/\\]\s*u|mais\s*[\/\\]\s*menos)/i;
 
-// HANDICAP
-const HANDICAP_MARKET_PATTERN = /(?:asian\s*handicap|\bah\b|\beh\b|handicap\s*(?:europeu|asiatico|asiático)?|spread|run\s*line|puck\s*line)/i;
+// TEAM TOTALS — team-specific over/under
+const TEAM_TOTALS_MARKET_PATTERN = /(?:team\s*total|total\s*(?:do|de|da)\s*(?:equipe|time)|(?:home|away)\s*total)/i;
+
+// PLAYER PROPS / PLAYER TOTALS
+const PLAYER_TOTALS_MARKET_PATTERN = /(?:player\s*(?:props?|totals?|points?|rebounds?|assists?|steals?|blocks?|turnovers?|shots?|goals?|fouls?)|jogador\s*(?:pontos?|assistências?|rebotes?)|\bpra\b|points?\s*\+?\s*(?:assists?|rebounds?))/i;
+
+// YES_NO (binary) — includes basketball-specific
+const YES_NO_MARKET_PATTERN = /(?:ambas?\s*marcam?|both\s*teams?\s*(?:to\s*)?score|btts|gol\s*(?:nos?\s*)?(?:dois|2|primeiro|1[ºo]?)\s*tempo|clean\s*sheet|classifica|penalty\s*awarded|double\s*double|triple\s*double|overtime|prorroga[çc][ãa]o)/i;
+
+// HANDICAP / SPREAD — includes basketball spread
+const HANDICAP_MARKET_PATTERN = /(?:asian\s*handicap|\bah\b|\beh\b|handicap\s*(?:europeu|asiatico|asiático)?|(?:point\s*)?spread|run\s*line|puck\s*line)/i;
 
 // DRAW NO BET
 const DNB_MARKET_PATTERN = /(?:draw\s*no\s*bet|\bdnb\b|empate\s*anula)/i;
+
+// RACE TO POINTS
+const RACE_TO_MARKET_PATTERN = /(?:race\s*to\s*\d+|corrida\s*(?:a|até)\s*\d+)/i;
+
+// HALF / QUARTER period markets
+const PERIOD_MARKET_PATTERN = /(?:1st\s*(?:half|quarter)|2nd\s*(?:half|quarter)|3rd\s*quarter|4th\s*quarter|1[ºo°]?\s*(?:tempo|quarto|quarter)|2[ºo°]?\s*(?:tempo|quarto|quarter)|3[ºo°]?\s*quarto|4[ºo°]?\s*quarto|first\s*half|second\s*half|half\s*time)/i;
 
 // Binary markets that support smart line inference (TOTALS + YES_NO)
 const BINARY_MARKETS = [
@@ -39,6 +54,10 @@ const BINARY_MARKETS = [
   "Total de Gols", "Total de Pontos", "Total de Games", "Total de Sets",
   "Total de Escanteios", "Total de Cartões", "Total de Faltas",
   "Clean Sheet", "Gol no Primeiro Tempo",
+  // Basketball
+  "Total Points", "Game Total", "Points Total",
+  "Team Total", "Player Points", "Player Rebounds", "Player Assists",
+  "Double Double", "Triple Double", "Overtime",
 ];
 
 // Mapping of binary line pairs (both directions)
@@ -156,13 +175,26 @@ function inferDnbOpposite(
 
 /**
  * Detects the market family from the mercado text.
+ * Priority order matters — more specific patterns first.
  */
-function detectMarketFamily(mercado: string): "MATCH_ODDS" | "TOTALS" | "YES_NO" | "HANDICAP" | "DNB" | "BINARY" | null {
+function detectMarketFamily(mercado: string): "MATCH_ODDS" | "MONEYLINE" | "TOTALS" | "TEAM_TOTALS" | "PLAYER_TOTALS" | "YES_NO" | "HANDICAP" | "DNB" | "RACE_TO" | "BINARY" | null {
+  // Specific patterns first
   if (MATCH_ODDS_MARKET_PATTERN.test(mercado)) return "MATCH_ODDS";
   if (HANDICAP_MARKET_PATTERN.test(mercado)) return "HANDICAP";
   if (DNB_MARKET_PATTERN.test(mercado)) return "DNB";
+  if (RACE_TO_MARKET_PATTERN.test(mercado)) return "RACE_TO";
+  if (PLAYER_TOTALS_MARKET_PATTERN.test(mercado)) return "PLAYER_TOTALS";
+  if (TEAM_TOTALS_MARKET_PATTERN.test(mercado)) return "TEAM_TOTALS";
   if (TOTALS_MARKET_PATTERN.test(mercado)) return "TOTALS";
   if (YES_NO_MARKET_PATTERN.test(mercado)) return "YES_NO";
+  if (MONEYLINE_MARKET_PATTERN.test(mercado)) return "MONEYLINE";
+  // Period markets inherit the sub-type (total, spread, winner)
+  if (PERIOD_MARKET_PATTERN.test(mercado)) {
+    // Check what kind of period market
+    if (/total|over|under|mais|menos/i.test(mercado)) return "TOTALS";
+    if (/spread|handicap/i.test(mercado)) return "HANDICAP";
+    return "MONEYLINE"; // Period winner = 2-way
+  }
   // Fallback: check if it's a known binary market
   const lowerMercado = mercado.toLowerCase();
   if (BINARY_MARKETS.some(m => lowerMercado.includes(m.toLowerCase()))) return "BINARY";
@@ -260,21 +292,27 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
   }, []);
 
   // Get inferred line from source line
+  // Preserves prefix (team/player name) and suffix (stat type like "Points", "Assists")
+  // Ex: "LAKERS OVER 112.5" → "LAKERS UNDER 112.5"
+  // Ex: "LEBRON JAMES OVER 26.5 POINTS" → "LEBRON JAMES UNDER 26.5 POINTS"
   const getInferredLine = useCallback((sourceLine: string): string | null => {
     if (!sourceLine) return null;
     
     const lowerLine = sourceLine.toLowerCase().trim();
     
-    // Check direct pairs
+    // Check direct pairs — preserve prefix and suffix
     for (const [source, target] of Object.entries(BINARY_LINE_PAIRS)) {
-      if (lowerLine.includes(source)) {
-        // Extract the numeric part (e.g., "2.5" from "Over 2.5")
-        const numMatch = sourceLine.match(/[\d.,]+/);
-        const numPart = numMatch ? ` ${numMatch[0]}` : "";
+      const sourceIndex = lowerLine.indexOf(source);
+      if (sourceIndex !== -1) {
+        // Extract prefix (everything before the keyword)
+        const prefix = sourceLine.substring(0, sourceIndex).trim();
+        // Extract everything after the keyword
+        const afterKeyword = sourceLine.substring(sourceIndex + source.length).trim();
         
-        // Uppercase the target
+        // Build the inferred line preserving prefix and suffix
         const upperTarget = target.toUpperCase();
-        return upperTarget + numPart;
+        const parts = [prefix, upperTarget, afterKeyword].filter(Boolean);
+        return parts.join(" ");
       }
     }
     
@@ -363,8 +401,22 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
         return;
       }
 
-      // ========== TOTALS / YES_NO / BINARY (2-leg: Over → Under, Sim → Não) ==========
+      // ========== MONEYLINE / MATCH_WINNER (2-leg: Team A → Team B, no draw) ==========
+      case "MONEYLINE":
+      // ========== RACE_TO (2-leg: Team A → Team B) ==========
+      case "RACE_TO": {
+        const opposite = inferDnbOpposite(sourceLine, mandanteVal || null, visitanteVal || null);
+        if (opposite) {
+          console.log(`[SurebetPrintInfer] ${family}: "${sourceLine}" → "${opposite}"`);
+          fillOtherLegs(opposite);
+        }
+        return;
+      }
+
+      // ========== TOTALS / TEAM_TOTALS / PLAYER_TOTALS / YES_NO / BINARY ==========
       case "TOTALS":
+      case "TEAM_TOTALS":
+      case "PLAYER_TOTALS":
       case "YES_NO":
       case "BINARY": {
         const inferredLine = getInferredLine(sourceLine);
