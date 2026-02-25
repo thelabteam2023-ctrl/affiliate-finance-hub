@@ -220,9 +220,12 @@ REGRAS IMPORTANTES:
     - NÃO substitua por nomenclaturas padrão como "1X2" ou "Moneyline"
 11. Identifique o esporte a partir de indicadores visuais ou textuais
 12. Para a seleção, extraia o que foi apostado (ex: "Over 2.5", "Team Name", "1")
-13. REGRA IMPORTANTE para mercado 1X2: Se a seleção for apenas "1", substitua pelo nome do time mandante (primeiro time). Se for "2", substitua pelo nome do time visitante (segundo time). Se for "X", substitua por "Empate". Isso torna a seleção mais descritiva.
+13. REGRA IMPORTANTE para mercado 1X2/MATCH_ODDS (Match Odds, Resultado da Partida, Resultado Final, Full Time Result, 1X2, Três Vias, Main Line):
+    - Se a seleção for apenas "1", substitua pelo nome do time mandante (primeiro time)
+    - Se a seleção for apenas "2", substitua pelo nome do time visitante (segundo time)
+    - Se a seleção for "X", substitua por "Empate"
+    - Isso torna a seleção mais descritiva
 14. Para valores numéricos (odd, stake, retorno), extraia APENAS os números, sem símbolos de moeda
-13. Para valores numéricos (odd, stake, retorno), extraia APENAS os números, sem símbolos de moeda
 
 Esportes reconhecidos: ${SPORTS_LIST.join(", ")}
 
