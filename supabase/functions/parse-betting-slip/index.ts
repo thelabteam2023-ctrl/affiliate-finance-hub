@@ -253,6 +253,17 @@ REGRAS IMPORTANTES:
       * TOTAL_SETS: Over/Under Sets (ex: Over 2.5 Sets)
       * PLAYER_PROPS: Aces, Double Faults, Games Won (ex: Djokovic Over 12.5 Aces)
       * CORRECT_SCORE: Placar em Sets (ex: 2-0, 2-1)
+    - BASEBALL-SPECIFIC:
+      * MATCH_WINNER: Moneyline, Winner (2 vias, sem empate)
+      * RUN_LINE: Run Line, Spread, Handicap Runs (ex: Dodgers -1.5 → Padres +1.5)
+      * TOTAL_RUNS: Total Runs, Game Total, Over/Under Runs (ex: Over 8.5 Runs)
+      * TEAM_TOTALS: Team Total Runs (ex: Yankees Over 4.5 Runs)
+      * INNING_WINNER: 1st Inning Winner, First 5 Innings Winner, F5 Winner
+      * INNING_TOTALS: First 5 Innings Total (ex: Over 4.5 Runs)
+      * PLAYER_PROPS: Pitcher Strikeouts, Hits, Home Runs, Total Bases, RBI (ex: Cole Over 6.5 Strikeouts)
+      * YES_NO: Extra Innings, YRFI/NRFI (Run Scored in First Inning)
+      * RACE_TO_RUNS: Race to X Runs (ex: Race to 3 Runs)
+      * CORRECT_SCORE: Placar exato (ex: 5-3)
 
 Esportes reconhecidos: ${SPORTS_LIST.join(", ")}
 
