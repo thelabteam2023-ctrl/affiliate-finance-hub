@@ -108,33 +108,33 @@ export async function processFinancialEvent(
       return { success: false, errorMessage: error.message };
     }
 
-    const result = data?.[0];
+    // RPC retorna jsonb (objeto único), não array
+    const raw = Array.isArray(data) ? data?.[0] : data;
+    const result = raw as any;
     if (!result) {
       return { success: false, errorMessage: 'Resposta vazia do RPC' };
     }
 
     if (!result.success) {
-      console.warn('[FinancialEngine] Evento rejeitado:', result.error_message);
+      console.warn('[FinancialEngine] Evento rejeitado:', result.error_message || result.error);
       return { 
         success: false, 
-        errorMessage: result.error_message,
-        newBalance: result.new_balance,
-        // Campo pode não existir dependendo da versão da RPC
-        newFreebetBalance: (result as any).new_freebet_balance,
+        errorMessage: result.error_message || result.error,
+        newBalance: result.new_balance ?? result.saldo_atual,
+        newFreebetBalance: result.new_freebet_balance ?? result.saldo_freebet,
       };
     }
 
     console.log('[FinancialEngine] ✅ Evento processado:', {
       eventId: result.event_id,
-      newBalance: result.new_balance,
+      newBalance: result.new_balance ?? result.saldo_atual,
     });
 
     return {
       success: true,
       eventId: result.event_id,
-      newBalance: result.new_balance,
-      // Campo pode não existir dependendo da versão da RPC
-      newFreebetBalance: (result as any).new_freebet_balance,
+      newBalance: result.new_balance ?? result.saldo_atual,
+      newFreebetBalance: result.new_freebet_balance ?? result.saldo_freebet,
     };
   } catch (err: any) {
     console.error('[FinancialEngine] Exceção:', err);
