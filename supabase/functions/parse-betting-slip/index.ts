@@ -231,7 +231,18 @@ REGRAS IMPORTANTES:
     - "Ouer" → "Over"
     - "Undar" → "Under"
     - "0/U" → "O/U"
-16. FAMÍLIAS DE MERCADO para referência (ajuda a classificar corretamente):
+16. REGRA DE OURO — CONTEXTO TEMPORAL TEM PRIORIDADE MÁXIMA:
+    - Se o mercado contiver indicadores de PERÍODO (Quarter, Half, Set, Inning), SEMPRE classifique como mercado do período, NUNCA como mercado do jogo inteiro.
+    - Basquete: "Quarter", "1Q", "2Q", "3Q", "4Q", "1st Quarter", "2nd Quarter", "3rd Quarter", "4th Quarter", "3º Quarto" → QUARTER market (ex: QUARTER_WINNER, QUARTER_TOTAL, QUARTER_HANDICAP)
+    - Futebol Americano: "Quarter", "Q1", "Q2", "Q3", "Q4" → QUARTER market
+    - Futebol: "1º Tempo", "2º Tempo", "First Half", "Second Half" → HALF market
+    - Tênis: "Set 1", "1st Set", "2nd Set", "Final Set" → SET market
+    - Baseball: "1st Inning", "First 5 Innings", "F5" → INNING market
+    - Prioridade: Quarter > Half > Set > Inning > Match
+    - Ex: "Live Quarter 2 Moneyline" → mercado = "QUARTER 2 MONEYLINE" (NÃO "Moneyline" do jogo)
+    - Ex: "3º Quarto" → mercado = "3º Quarto" (NÃO resultado final)
+    - IMPORTANTE: No campo "mercado", SEMPRE inclua o contexto temporal no texto (ex: "Quarter 3 Moneyline", "1st Half Total", "1st Set Winner")
+17. FAMÍLIAS DE MERCADO para referência (ajuda a classificar corretamente):
     - MATCH_ODDS: Match Odds, 1X2, Resultado da Partida, Resultado Final, FT Result, Moneyline Soccer, Três Vias
     - MONEYLINE/MATCH_WINNER: Moneyline, ML, Vencedor, Winner (2 vias, sem empate — basquete, tênis, MMA)
     - TOTALS: Total de Gols, Over/Under, O/U, Goals Total, Total Cards, Corners Total, Escanteios, Total Points, Game Total
