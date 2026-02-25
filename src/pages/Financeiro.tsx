@@ -140,7 +140,6 @@ interface ApostaHistorico {
 interface BookmakerSaldo {
   saldo_atual: number;
   saldo_freebet: number;
-  saldo_irrecuperavel: number;
   status: string;
   projeto_id: string | null;
   moeda: string;
@@ -148,7 +147,6 @@ interface BookmakerSaldo {
 
 interface BookmakerDetalhado {
   saldo_atual: number;
-  saldo_irrecuperavel: number;
   projeto_id: string | null;
   projetos?: { nome: string } | null;
   moeda: string;
@@ -355,8 +353,8 @@ export default function Financeiro() {
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "CONFIRMADO"),
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "PENDENTE"),
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)"),
-        supabase.from("bookmakers").select("saldo_atual, saldo_freebet, saldo_irrecuperavel, status, estado_conta, aguardando_saque_at, projeto_id, moeda").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA"]),
-        supabase.from("bookmakers").select("saldo_atual, saldo_irrecuperavel, projeto_id, moeda, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA"]),
+        supabase.from("bookmakers").select("saldo_atual, saldo_freebet, status, estado_conta, aguardando_saque_at, projeto_id, moeda").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA"]),
+        supabase.from("bookmakers").select("saldo_atual, projeto_id, moeda, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA"]),
         supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
         supabase
           .from("parcerias")
@@ -535,11 +533,11 @@ export default function Financeiro() {
   // Saldo em Bookmakers (capital em operação) - SEPARADO POR MOEDA
   const saldoBookmakersBRL = bookmakersSaldos
     .filter(b => !b.moeda || b.moeda === "BRL")
-    .reduce((acc, b) => acc + (b.saldo_atual || 0) - (b.saldo_irrecuperavel || 0), 0);
+    .reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
   
   const saldoBookmakersUSD = bookmakersSaldos
     .filter(b => b.moeda === "USD")
-    .reduce((acc, b) => acc + (b.saldo_atual || 0) - (b.saldo_irrecuperavel || 0), 0);
+    .reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
   
   // Total em BRL para referência (USD convertido)
   const saldoBookmakers = saldoBookmakersBRL + (saldoBookmakersUSD * cotacaoUSD);
@@ -559,7 +557,7 @@ export default function Financeiro() {
       const projetoId = b.projeto_id || null;
       const projetoNome = b.projetos?.nome || "Sem Projeto";
       const key = projetoId || "sem_projeto";
-      const saldoLiquido = (b.saldo_atual || 0) - (b.saldo_irrecuperavel || 0);
+      const saldoLiquido = (b.saldo_atual || 0);
       const moeda = b.moeda || "BRL";
       const isUSD = moeda === "USD" || moeda === "USDT";
       

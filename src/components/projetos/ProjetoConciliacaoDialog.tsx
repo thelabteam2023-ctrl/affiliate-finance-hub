@@ -47,7 +47,6 @@ const MODELOS_ABSORCAO_LABELS: Record<string, string> = {
 interface SaldosNominais {
   fiat: number;
   crypto_usd: number;
-  saldo_irrecuperavel_total: number;
 }
 
 export function ProjetoConciliacaoDialog({
@@ -59,7 +58,7 @@ export function ProjetoConciliacaoDialog({
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [loadingNominal, setLoadingNominal] = useState(true);
-  const [saldosNominais, setSaldosNominais] = useState<SaldosNominais>({ fiat: 0, crypto_usd: 0, saldo_irrecuperavel_total: 0 });
+  const [saldosNominais, setSaldosNominais] = useState<SaldosNominais>({ fiat: 0, crypto_usd: 0 });
   const [formData, setFormData] = useState({
     saldo_real_fiat: "",
     saldo_real_crypto_usd: "",
@@ -87,18 +86,15 @@ export function ProjetoConciliacaoDialog({
       // Buscar saldos dos bookmakers vinculados ao projeto
       const { data: bookmakers, error } = await supabase
         .from("bookmakers")
-        .select("saldo_atual, saldo_irrecuperavel, moeda")
+        .select("saldo_atual, moeda")
         .eq("projeto_id", projeto.id);
 
       if (error) throw error;
 
       let totalFiat = 0;
       let totalCryptoUSD = 0;
-      let totalIrrecuperavel = 0;
 
       bookmakers?.forEach((bk) => {
-        totalIrrecuperavel += bk.saldo_irrecuperavel || 0;
-        
         if (bk.moeda === "BRL") {
           totalFiat += bk.saldo_atual || 0;
         } else if (bk.moeda === "USD" || bk.moeda === "EUR") {
@@ -109,7 +105,7 @@ export function ProjetoConciliacaoDialog({
         }
       });
 
-      setSaldosNominais({ fiat: totalFiat, crypto_usd: totalCryptoUSD, saldo_irrecuperavel_total: totalIrrecuperavel });
+      setSaldosNominais({ fiat: totalFiat, crypto_usd: totalCryptoUSD });
       setFormData(prev => ({
         ...prev,
         saldo_real_fiat: totalFiat.toFixed(2),
@@ -399,23 +395,6 @@ export function ProjetoConciliacaoDialog({
               </CardContent>
             </Card>
 
-            {/* Saldo Irrecuperável Info */}
-            {saldosNominais.saldo_irrecuperavel_total > 0 && (
-              <Card className="border-amber-500/30 bg-amber-500/5">
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm font-medium">Saldo Irrecuperável nos Bookmakers</span>
-                  </div>
-                  <p className="text-2xl font-mono text-amber-400">
-                    {formatCurrency(saldosNominais.saldo_irrecuperavel_total)}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Total de saldos bloqueados/perdidos registrados nos vínculos
-                  </p>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Perdas Confirmadas */}
             <Card className="border-red-500/30">
