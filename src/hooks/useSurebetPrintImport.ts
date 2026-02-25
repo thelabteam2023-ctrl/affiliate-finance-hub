@@ -92,7 +92,7 @@ function inferMatchOddsLegs(
   if (scannedPosition === -1) return null;
 
   // Build the 3 canonical selections
-  const legSelections: (string | null)[] = [mandante, "Empate", visitante];
+  const legSelections: (string | null)[] = [mandante.toUpperCase(), "EMPATE", visitante.toUpperCase()];
 
   return { legSelections, scannedPosition };
 }
@@ -200,9 +200,9 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
         const numMatch = sourceLine.match(/[\d.,]+/);
         const numPart = numMatch ? ` ${numMatch[0]}` : "";
         
-        // Capitalize first letter of target
-        const capitalizedTarget = target.charAt(0).toUpperCase() + target.slice(1);
-        return capitalizedTarget + numPart;
+        // Uppercase the target
+        const upperTarget = target.toUpperCase();
+        return upperTarget + numPart;
       }
     }
     
@@ -513,7 +513,7 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     return {
       odd: parsedData.odd?.value || "",
       stake: parsedData.stake?.value || "",
-      selecaoLivre: parsedData.selecao?.value || "",
+      selecaoLivre: (parsedData.selecao?.value || "").toUpperCase(),
     };
   }, [legPrints]);
 
