@@ -45,7 +45,7 @@ const DNB_MARKET_PATTERN = /(?:draw\s*no\s*bet|\bdnb\b|empate\s*anula)/i;
 const RACE_TO_MARKET_PATTERN = /(?:race\s*to\s*\d+|corrida\s*(?:a|até)\s*\d+)/i;
 
 // HALF / QUARTER / SET / GAME / INNING period markets — all sports
-const PERIOD_MARKET_PATTERN = /(?:1st\s*(?:half|quarter|set|inning)|2nd\s*(?:half|quarter|set|inning)|3rd\s*(?:quarter|set|inning)|4th\s*quarter|5th\s*(?:set|inning)|[qQ][1-4]|1[ºo°]?\s*(?:tempo|quarto|quarter|set|inning)|2[ºo°]?\s*(?:tempo|quarto|quarter|set|inning)|3[ºo°]?\s*(?:quarto|set|inning)|4[ºo°]?\s*quarto|first\s*(?:half|5\s*innings?)|second\s*half|half\s*time|(?:1st|2nd|3rd)\s*set\s*(?:winner|total|handicap|game)|game\s*\d+\s*winner|set\s*\d+\s*winner|(?:first|1st)\s*5\s*innings?\s*(?:winner|total|spread|moneyline|ml)|f5\s*(?:winner|total|spread|ml)|inning\s*(?:winner|total)|(?:1st|2nd)\s*half\s*(?:winner|spread|total|moneyline|ml)|(?:q[1-4]|[1-4](?:st|nd|rd|th)\s*quarter)\s*(?:winner|spread|total|moneyline|ml))/i;
+const PERIOD_MARKET_PATTERN = /(?:1st\s*(?:half|quarter|set|inning)|2nd\s*(?:half|quarter|set|inning)|3rd\s*(?:quarter|set|inning)|4th\s*quarter|5th\s*(?:set|inning)|[qQ][1-4]|1[ºo°]?\s*(?:tempo|quarto|quarter|set|inning)|2[ºo°]?\s*(?:tempo|quarto|quarter|set|inning)|3[ºo°]?\s*(?:quarto|quarter|set|inning)|4[ºo°]?\s*(?:quarto|quarter)|quarto\s*[1-4]|quarter\s*[1-4]|first\s*(?:half|5\s*innings?)|second\s*half|half\s*time|(?:1st|2nd|3rd)\s*set\s*(?:winner|total|handicap|game)|game\s*\d+\s*winner|set\s*\d+\s*winner|(?:first|1st)\s*5\s*innings?\s*(?:winner|total|spread|moneyline|ml)|f5\s*(?:winner|total|spread|ml)|inning\s*(?:winner|total)|(?:1st|2nd)\s*half\s*(?:winner|spread|total|moneyline|ml)|(?:q[1-4]|[1-4](?:st|nd|rd|th)\s*quarter)\s*(?:winner|spread|total|moneyline|ml)|live\s*quarter\s*\d)/i;
 
 // Binary markets that support smart line inference (TOTALS + YES_NO)
 const BINARY_MARKETS = [
@@ -197,7 +197,19 @@ function inferDnbOpposite(
  * Priority order matters — more specific patterns first.
  */
 function detectMarketFamily(mercado: string): "MATCH_ODDS" | "MONEYLINE" | "TOTALS" | "TEAM_TOTALS" | "PLAYER_TOTALS" | "YES_NO" | "HANDICAP" | "DNB" | "RACE_TO" | "BINARY" | null {
-  // Specific patterns first
+  // ★ REGRA DE OURO: Contexto temporal tem PRIORIDADE MÁXIMA
+  // Quarter > Half > Set > Inning > Match
+  // Se detectar período, classificar pelo sub-tipo do período, NUNCA como MATCH
+  if (PERIOD_MARKET_PATTERN.test(mercado)) {
+    // Check what kind of period market
+    if (PLAYER_TOTALS_MARKET_PATTERN.test(mercado)) return "PLAYER_TOTALS";
+    if (TEAM_TOTALS_MARKET_PATTERN.test(mercado)) return "TEAM_TOTALS";
+    if (/total|over|under|mais|menos|o\/u/i.test(mercado)) return "TOTALS";
+    if (/spread|handicap/i.test(mercado)) return "HANDICAP";
+    // Period winner = 2-way (MONEYLINE), NEVER 1X2/MATCH_ODDS
+    return "MONEYLINE";
+  }
+  // Specific patterns (only after period check)
   if (MATCH_ODDS_MARKET_PATTERN.test(mercado)) return "MATCH_ODDS";
   if (HANDICAP_MARKET_PATTERN.test(mercado)) return "HANDICAP";
   if (DNB_MARKET_PATTERN.test(mercado)) return "DNB";
@@ -207,13 +219,6 @@ function detectMarketFamily(mercado: string): "MATCH_ODDS" | "MONEYLINE" | "TOTA
   if (TOTALS_MARKET_PATTERN.test(mercado)) return "TOTALS";
   if (YES_NO_MARKET_PATTERN.test(mercado)) return "YES_NO";
   if (MONEYLINE_MARKET_PATTERN.test(mercado)) return "MONEYLINE";
-  // Period markets inherit the sub-type (total, spread, winner)
-  if (PERIOD_MARKET_PATTERN.test(mercado)) {
-    // Check what kind of period market
-    if (/total|over|under|mais|menos/i.test(mercado)) return "TOTALS";
-    if (/spread|handicap/i.test(mercado)) return "HANDICAP";
-    return "MONEYLINE"; // Period winner = 2-way
-  }
   // Fallback: check if it's a known binary market
   const lowerMercado = mercado.toLowerCase();
   if (BINARY_MARKETS.some(m => lowerMercado.includes(m.toLowerCase()))) return "BINARY";
