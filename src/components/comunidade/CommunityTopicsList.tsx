@@ -211,9 +211,13 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0
     setEditDialogOpen(true);
   };
 
-  const canEdit = (authorId: string) => {
-    // User can edit if they are the author OR if they are admin
-    return user?.id === authorId || canEditAny;
+  const EDIT_WINDOW_MS = 30 * 60 * 1000; // 30 minutos
+
+  const canEdit = (authorId: string, createdAt?: string) => {
+    if (canEditAny) return true;
+    if (user?.id !== authorId) return false;
+    if (!createdAt) return true;
+    return Date.now() - new Date(createdAt).getTime() < EDIT_WINDOW_MS;
   };
 
   const getAuthorName = (item: { is_anonymous: boolean; profiles?: { full_name: string; email: string } | null }) => {
@@ -312,7 +316,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0
                       {isOwnTopic && (
                         <Badge variant="outline" className="text-[10px]">Você</Badge>
                       )}
-                      {canEdit(topic.user_id) && (
+                      {canEdit(topic.user_id, topic.created_at) && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -380,7 +384,7 @@ export function CommunityTopicsList({ bookmakerId, onCreateTopic, refreshKey = 0
                                 <p className="text-sm mt-1">{comment.conteudo}</p>
                               </div>
                               <div className="flex items-start gap-1 shrink-0">
-                                {canEdit(comment.user_id) && (
+                                {canEdit(comment.user_id, comment.created_at) && (
                                   <Button
                                     variant="ghost"
                                     size="icon"

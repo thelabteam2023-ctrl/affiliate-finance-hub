@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -37,6 +37,14 @@ export function CommunityEditDialog({
   const [title, setTitle] = useState(initialTitle || '');
   const [content, setContent] = useState(initialContent);
   const [saving, setSaving] = useState(false);
+
+  // Sync state when dialog opens or props change
+  useEffect(() => {
+    if (open) {
+      setTitle(initialTitle || '');
+      setContent(initialContent || '');
+    }
+  }, [open, initialTitle, initialContent]);
 
   const handleSave = async () => {
     if (!content.trim()) {
