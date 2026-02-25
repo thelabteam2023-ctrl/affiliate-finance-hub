@@ -14,11 +14,11 @@ interface SurebetPernaResultPillProps {
 }
 
 const RESULT_OPTIONS = [
-  { value: "GREEN", label: "Green", icon: CheckCircle2, color: "text-emerald-400", bg: "hover:bg-emerald-500/20" },
-  { value: "RED", label: "Red", icon: X, color: "text-red-400", bg: "hover:bg-red-500/20" },
-  { value: "MEIO_GREEN", label: "½ Green", icon: CheckCircle2, color: "text-teal-400", bg: "hover:bg-teal-500/20" },
-  { value: "MEIO_RED", label: "½ Red", icon: X, color: "text-orange-400", bg: "hover:bg-orange-500/20" },
-  { value: "VOID", label: "Void", icon: CircleDot, color: "text-gray-400", bg: "hover:bg-gray-500/20" },
+  { value: "GREEN", label: "Green", icon: CheckCircle2, color: "text-emerald-700 dark:text-emerald-400", bg: "hover:bg-emerald-500/15 dark:hover:bg-emerald-500/20" },
+  { value: "RED", label: "Red", icon: X, color: "text-red-700 dark:text-red-400", bg: "hover:bg-red-500/15 dark:hover:bg-red-500/20" },
+  { value: "MEIO_GREEN", label: "½ Green", icon: CheckCircle2, color: "text-teal-700 dark:text-teal-400", bg: "hover:bg-teal-500/15 dark:hover:bg-teal-500/20" },
+  { value: "MEIO_RED", label: "½ Red", icon: X, color: "text-orange-700 dark:text-orange-400", bg: "hover:bg-orange-500/15 dark:hover:bg-orange-500/20" },
+  { value: "VOID", label: "Void", icon: CircleDot, color: "text-muted-foreground", bg: "hover:bg-muted" },
 ];
 
 function getResultConfig(resultado: string | null) {
@@ -28,20 +28,20 @@ function getResultConfig(resultado: string | null) {
     value: "PENDENTE",
     label: "•••",
     icon: Clock,
-    color: "text-blue-400",
-    bg: "hover:bg-blue-500/20",
-    pillBg: "bg-blue-500/15 border-blue-500/30",
+    color: "text-blue-700 dark:text-blue-400",
+    bg: "hover:bg-blue-500/15 dark:hover:bg-blue-500/20",
+    pillBg: "bg-blue-500/15 border-blue-600/30 dark:border-blue-500/30",
   };
 }
 
 function getBadgeBg(resultado: string | null): string {
   switch (resultado) {
-    case "GREEN": return "bg-emerald-500/15 border-emerald-500/30";
-    case "RED": return "bg-red-500/15 border-red-500/30";
-    case "MEIO_GREEN": return "bg-teal-500/15 border-teal-500/30";
-    case "MEIO_RED": return "bg-orange-500/15 border-orange-500/30";
-    case "VOID": return "bg-gray-500/15 border-gray-500/30";
-    default: return "bg-blue-500/15 border-blue-500/30";
+    case "GREEN": return "bg-emerald-500/15 border-emerald-600/30 dark:border-emerald-500/30";
+    case "RED": return "bg-red-500/15 border-red-600/30 dark:border-red-500/30";
+    case "MEIO_GREEN": return "bg-teal-500/15 border-teal-600/30 dark:border-teal-500/30";
+    case "MEIO_RED": return "bg-orange-500/15 border-orange-600/30 dark:border-orange-500/30";
+    case "VOID": return "bg-muted border-border";
+    default: return "bg-blue-500/15 border-blue-600/30 dark:border-blue-500/30";
   }
 }
 

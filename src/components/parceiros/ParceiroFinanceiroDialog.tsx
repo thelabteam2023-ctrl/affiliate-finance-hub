@@ -268,14 +268,14 @@ export default function ParceiroFinanceiroDialog({
   const getTipoBadgeColor = (tipo: string, status?: string) => {
     // Se recusado, mostrar em cinza/neutro
     if (status === "RECUSADO") {
-      return "bg-gray-500/20 text-gray-400 border-gray-500/30";
+      return "bg-muted text-muted-foreground border-border";
     }
     
-    if (tipo === "DEPOSITO") return "bg-red-500/20 text-red-500 border-red-500/30";
-    if (tipo === "SAQUE") return "bg-green-500/20 text-green-500 border-green-500/30";
-    if (tipo === "TRANSFERENCIA") return "bg-blue-500/20 text-blue-500 border-blue-500/30";
-    if (tipo === "APORTE_FINANCEIRO") return "bg-emerald-500/20 text-emerald-500 border-emerald-500/30";
-    return "bg-gray-500/20 text-gray-500 border-gray-500/30";
+    if (tipo === "DEPOSITO") return "bg-red-500/15 text-red-700 dark:text-red-500 border-red-600/30 dark:border-red-500/30";
+    if (tipo === "SAQUE") return "bg-green-500/15 text-green-700 dark:text-green-500 border-green-600/30 dark:border-green-500/30";
+    if (tipo === "TRANSFERENCIA") return "bg-blue-500/15 text-blue-700 dark:text-blue-500 border-blue-600/30 dark:border-blue-500/30";
+    if (tipo === "APORTE_FINANCEIRO") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-500 border-emerald-600/30 dark:border-emerald-500/30";
+    return "bg-muted text-muted-foreground border-border";
   };
 
   // Filtrar e ordenar bookmakers vinculados por saldo (maior para menor)

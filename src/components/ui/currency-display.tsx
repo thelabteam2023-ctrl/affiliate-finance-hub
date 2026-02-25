@@ -208,7 +208,7 @@ export function CurrencyBadge({ moeda, size = "sm", className }: CurrencyBadgePr
     ETH: "bg-violet-500/10 text-violet-500 border-violet-500/20",
   };
   
-  const colorClass = colorClasses[moeda] || "bg-gray-500/10 text-gray-500 border-gray-500/20";
+  const colorClass = colorClasses[moeda] || "bg-muted text-muted-foreground border-border";
   
   return (
     <span className={cn(

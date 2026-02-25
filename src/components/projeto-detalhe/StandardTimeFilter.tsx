@@ -213,8 +213,8 @@ export function StandardTimeFilter({
             value={option.value}
             size="sm"
             className={cn(
-              "text-xs px-3 h-7 data-[state=on]:bg-background data-[state=on]:shadow-sm",
-              period === option.value && "bg-background shadow-sm"
+              "text-xs px-3 h-7 data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm data-[state=on]:border data-[state=on]:border-border",
+              period === option.value && "bg-card text-foreground shadow-sm border border-border"
             )}
           >
             {option.label}
@@ -319,7 +319,7 @@ export function StandardTimeFilter({
           <ToggleGroupItem
             value="compact"
             size="sm"
-            className="text-xs px-3 h-7 gap-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm"
+            className="text-xs px-3 h-7 gap-1.5 data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm data-[state=on]:border data-[state=on]:border-border"
           >
             <LayoutList className="h-3.5 w-3.5" />
             Compacto
@@ -327,7 +327,7 @@ export function StandardTimeFilter({
           <ToggleGroupItem
             value="gestao"
             size="sm"
-            className="text-xs px-3 h-7 gap-1.5 data-[state=on]:bg-background data-[state=on]:shadow-sm"
+            className="text-xs px-3 h-7 gap-1.5 data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm data-[state=on]:border data-[state=on]:border-border"
           >
             <LayoutDashboard className="h-3.5 w-3.5" />
             Gestão

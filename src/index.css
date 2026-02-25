@@ -62,6 +62,24 @@ All colors MUST be HSL.
 
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /* ═══ STATUS COLORS (LIGHT) ═══ */
+    --status-emerald: 142 71% 35%;
+    --status-red: 0 72% 45%;
+    --status-amber: 38 92% 40%;
+    --status-teal: 172 66% 35%;
+    --status-orange: 25 95% 45%;
+    --status-blue: 217 91% 50%;
+    --status-purple: 262 83% 50%;
+    --status-cyan: 188 85% 38%;
+    --status-yellow: 45 93% 42%;
+    --status-gray: 215 14% 45%;
+    --status-slate: 215 16% 42%;
+
+    /* ═══ INTERACTIVE STATES (LIGHT) ═══ */
+    --interactive-selected-bg: 142 76% 36% / 0.12;
+    --interactive-hover-bg: 210 16% 93%;
+    --interactive-focus-ring: 142 76% 36% / 0.4;
   }
 
   /* ═══ DARK THEME ═══ */
@@ -119,6 +137,24 @@ All colors MUST be HSL.
 
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /* ═══ STATUS COLORS (DARK) ═══ */
+    --status-emerald: 142 71% 55%;
+    --status-red: 0 72% 60%;
+    --status-amber: 38 92% 55%;
+    --status-teal: 172 66% 55%;
+    --status-orange: 25 95% 58%;
+    --status-blue: 217 91% 65%;
+    --status-purple: 262 83% 65%;
+    --status-cyan: 188 85% 55%;
+    --status-yellow: 45 93% 55%;
+    --status-gray: 215 15% 60%;
+    --status-slate: 215 16% 58%;
+
+    /* ═══ INTERACTIVE STATES (DARK) ═══ */
+    --interactive-selected-bg: 142 76% 36% / 0.2;
+    --interactive-hover-bg: 217 30% 15%;
+    --interactive-focus-ring: 142 76% 36% / 0.4;
   }
 }
 
@@ -207,6 +243,30 @@ input[type="number"] {
   .animate-glow {
     animation: glow 3s ease-in-out infinite;
   }
+
+  /* ═══ STATUS TEXT COLORS (Theme-aware) ═══ */
+  .status-emerald { color: hsl(var(--status-emerald)); }
+  .status-red { color: hsl(var(--status-red)); }
+  .status-amber { color: hsl(var(--status-amber)); }
+  .status-teal { color: hsl(var(--status-teal)); }
+  .status-orange { color: hsl(var(--status-orange)); }
+  .status-blue { color: hsl(var(--status-blue)); }
+  .status-purple { color: hsl(var(--status-purple)); }
+  .status-cyan { color: hsl(var(--status-cyan)); }
+  .status-yellow { color: hsl(var(--status-yellow)); }
+  .status-gray { color: hsl(var(--status-gray)); }
+  .status-slate { color: hsl(var(--status-slate)); }
+
+  /* ═══ STATUS BACKGROUND COLORS (Theme-aware) ═══ */
+  .status-bg-emerald { background-color: hsl(var(--status-emerald) / 0.15); border-color: hsl(var(--status-emerald) / 0.3); }
+  .status-bg-red { background-color: hsl(var(--status-red) / 0.15); border-color: hsl(var(--status-red) / 0.3); }
+  .status-bg-amber { background-color: hsl(var(--status-amber) / 0.15); border-color: hsl(var(--status-amber) / 0.3); }
+  .status-bg-teal { background-color: hsl(var(--status-teal) / 0.15); border-color: hsl(var(--status-teal) / 0.3); }
+  .status-bg-orange { background-color: hsl(var(--status-orange) / 0.15); border-color: hsl(var(--status-orange) / 0.3); }
+  .status-bg-blue { background-color: hsl(var(--status-blue) / 0.15); border-color: hsl(var(--status-blue) / 0.3); }
+  .status-bg-purple { background-color: hsl(var(--status-purple) / 0.15); border-color: hsl(var(--status-purple) / 0.3); }
+  .status-bg-gray { background-color: hsl(var(--status-gray) / 0.15); border-color: hsl(var(--status-gray) / 0.3); }
+  .status-bg-slate { background-color: hsl(var(--status-slate) / 0.15); border-color: hsl(var(--status-slate) / 0.3); }
 }
 
 @keyframes glow {

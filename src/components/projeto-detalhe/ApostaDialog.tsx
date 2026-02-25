@@ -3644,11 +3644,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   <div className="inline-flex rounded-md border border-border/40 bg-muted/20 p-0.5 gap-0.5">
                     {[
                       { value: "PENDENTE", label: "Pendente", selectedClass: "bg-muted text-foreground", hoverClass: "hover:bg-muted/50 hover:text-foreground" },
-                      { value: "GREEN", label: "Green", selectedClass: "bg-emerald-500/20 text-emerald-500", hoverClass: "hover:bg-emerald-500/20 hover:text-emerald-500" },
-                      { value: "RED", label: "Red", selectedClass: "bg-red-500/20 text-red-500", hoverClass: "hover:bg-red-500/20 hover:text-red-500" },
-                      { value: "MEIO_GREEN", label: "½ Green", selectedClass: "bg-teal-500/20 text-teal-500", hoverClass: "hover:bg-teal-500/20 hover:text-teal-500" },
-                      { value: "MEIO_RED", label: "½ Red", selectedClass: "bg-orange-500/20 text-orange-500", hoverClass: "hover:bg-orange-500/20 hover:text-orange-500" },
-                      { value: "VOID", label: "Void", selectedClass: "bg-slate-500/20 text-slate-400", hoverClass: "hover:bg-slate-500/20 hover:text-slate-400" },
+                      { value: "GREEN", label: "Green", selectedClass: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-500", hoverClass: "hover:bg-emerald-500/15 hover:text-emerald-700 dark:hover:text-emerald-500" },
+                      { value: "RED", label: "Red", selectedClass: "bg-red-500/15 text-red-700 dark:text-red-500", hoverClass: "hover:bg-red-500/15 hover:text-red-700 dark:hover:text-red-500" },
+                      { value: "MEIO_GREEN", label: "½ Green", selectedClass: "bg-teal-500/15 text-teal-700 dark:text-teal-500", hoverClass: "hover:bg-teal-500/15 hover:text-teal-700 dark:hover:text-teal-500" },
+                      { value: "MEIO_RED", label: "½ Red", selectedClass: "bg-orange-500/15 text-orange-700 dark:text-orange-500", hoverClass: "hover:bg-orange-500/15 hover:text-orange-700 dark:hover:text-orange-500" },
+                      { value: "VOID", label: "Void", selectedClass: "bg-muted text-muted-foreground", hoverClass: "hover:bg-muted hover:text-muted-foreground" },
                     ].map((option) => (
                       <button
                         key={option.value}
@@ -4014,11 +4014,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 <div className="flex flex-wrap gap-1">
                   {[
                     { value: "PENDENTE", label: "Pendente", selectedClass: "bg-muted text-muted-foreground", hoverClass: "hover:bg-muted" },
-                    { value: "GREEN", label: "Green", selectedClass: "bg-emerald-500/20 text-emerald-500", hoverClass: "hover:bg-emerald-500/20 hover:text-emerald-500" },
-                    { value: "RED", label: "Red", selectedClass: "bg-red-500/20 text-red-500", hoverClass: "hover:bg-red-500/20 hover:text-red-500" },
-                    { value: "MEIO_GREEN", label: "½ Green", selectedClass: "bg-teal-500/20 text-teal-500", hoverClass: "hover:bg-teal-500/20 hover:text-teal-500" },
-                    { value: "MEIO_RED", label: "½ Red", selectedClass: "bg-orange-500/20 text-orange-500", hoverClass: "hover:bg-orange-500/20 hover:text-orange-500" },
-                    { value: "VOID", label: "Void", selectedClass: "bg-slate-500/20 text-slate-400", hoverClass: "hover:bg-slate-500/20 hover:text-slate-400" },
+                    { value: "GREEN", label: "Green", selectedClass: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-500", hoverClass: "hover:bg-emerald-500/15 hover:text-emerald-700 dark:hover:text-emerald-500" },
+                    { value: "RED", label: "Red", selectedClass: "bg-red-500/15 text-red-700 dark:text-red-500", hoverClass: "hover:bg-red-500/15 hover:text-red-700 dark:hover:text-red-500" },
+                    { value: "MEIO_GREEN", label: "½ Green", selectedClass: "bg-teal-500/15 text-teal-700 dark:text-teal-500", hoverClass: "hover:bg-teal-500/15 hover:text-teal-700 dark:hover:text-teal-500" },
+                    { value: "MEIO_RED", label: "½ Red", selectedClass: "bg-orange-500/15 text-orange-700 dark:text-orange-500", hoverClass: "hover:bg-orange-500/15 hover:text-orange-700 dark:hover:text-orange-500" },
+                    { value: "VOID", label: "Void", selectedClass: "bg-muted text-muted-foreground", hoverClass: "hover:bg-muted hover:text-muted-foreground" },
                   ].map((option) => (
                     <button
                       key={option.value}

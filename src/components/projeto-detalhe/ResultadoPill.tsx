@@ -43,32 +43,32 @@ interface ResultadoPillProps {
 
 // Opções para Bookmaker (apostas tradicionais com meio resultados)
 const RESULTADO_OPTIONS_BOOKMAKER = [
-  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", sublabel: "Seleção perdeu", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
-  { value: "MEIO_GREEN", label: "½ Green", sublabel: "Vitória parcial", icon: CheckCircle2, iconColor: "text-teal-400", textColor: "text-teal-400", color: "bg-teal-500 hover:bg-teal-600" },
-  { value: "MEIO_RED", label: "½ Red", sublabel: "Derrota parcial", icon: X, iconColor: "text-orange-400", textColor: "text-orange-400", color: "bg-orange-500 hover:bg-orange-600" },
-  { value: "VOID", label: "Void", sublabel: "Cancelada", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", icon: CheckCircle2, iconColor: "text-emerald-700 dark:text-emerald-400", textColor: "text-emerald-700 dark:text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Seleção perdeu", icon: X, iconColor: "text-red-700 dark:text-red-400", textColor: "text-red-700 dark:text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "MEIO_GREEN", label: "½ Green", sublabel: "Vitória parcial", icon: CheckCircle2, iconColor: "text-teal-700 dark:text-teal-400", textColor: "text-teal-700 dark:text-teal-400", color: "bg-teal-500 hover:bg-teal-600" },
+  { value: "MEIO_RED", label: "½ Red", sublabel: "Derrota parcial", icon: X, iconColor: "text-orange-700 dark:text-orange-400", textColor: "text-orange-700 dark:text-orange-400", color: "bg-orange-500 hover:bg-orange-600" },
+  { value: "VOID", label: "Void", sublabel: "Cancelada", icon: CircleDot, iconColor: "text-muted-foreground", textColor: "text-muted-foreground", color: "bg-muted-foreground/60 hover:bg-muted-foreground/70" },
 ];
 
 // Opções para Exchange Back (simplificado: Green, Red, Void)
 const RESULTADO_OPTIONS_EXCHANGE_BACK = [
-  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", sublabel: "Seleção perdeu", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
-  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN", label: "Green", sublabel: "Seleção ganhou", icon: CheckCircle2, iconColor: "text-emerald-700 dark:text-emerald-400", textColor: "text-emerald-700 dark:text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Seleção perdeu", icon: X, iconColor: "text-red-700 dark:text-red-400", textColor: "text-red-700 dark:text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", icon: CircleDot, iconColor: "text-muted-foreground", textColor: "text-muted-foreground", color: "bg-muted-foreground/60 hover:bg-muted-foreground/70" },
 ];
 
 // Opções para Exchange Lay (simplificado: Green, Red, Void)
 const RESULTADO_OPTIONS_EXCHANGE_LAY = [
-  { value: "GREEN", label: "Green", sublabel: "Lay ganhou (seleção perdeu)", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED", label: "Red", sublabel: "Lay perdeu (seleção ganhou)", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
-  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN", label: "Green", sublabel: "Lay ganhou (seleção perdeu)", icon: CheckCircle2, iconColor: "text-emerald-700 dark:text-emerald-400", textColor: "text-emerald-700 dark:text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED", label: "Red", sublabel: "Lay perdeu (seleção ganhou)", icon: X, iconColor: "text-red-700 dark:text-red-400", textColor: "text-red-700 dark:text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Aposta devolvida", icon: CircleDot, iconColor: "text-muted-foreground", textColor: "text-muted-foreground", color: "bg-muted-foreground/60 hover:bg-muted-foreground/70" },
 ];
 
 // Opções para Cobertura (qual lado da cobertura bateu)
 const RESULTADO_OPTIONS_COBERTURA = [
-  { value: "GREEN_BOOKMAKER", label: "Green Bookmaker", sublabel: "Seleção ganhou na Bookmaker", icon: CheckCircle2, iconColor: "text-emerald-400", textColor: "text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
-  { value: "RED_BOOKMAKER", label: "Red Bookmaker", sublabel: "Seleção perdeu na Bookmaker", icon: X, iconColor: "text-red-400", textColor: "text-red-400", color: "bg-red-500 hover:bg-red-600" },
-  { value: "VOID", label: "Void", sublabel: "Devolvida em ambas", icon: CircleDot, iconColor: "text-slate-400", textColor: "text-slate-400", color: "bg-gray-500 hover:bg-gray-600" },
+  { value: "GREEN_BOOKMAKER", label: "Green Bookmaker", sublabel: "Seleção ganhou na Bookmaker", icon: CheckCircle2, iconColor: "text-emerald-700 dark:text-emerald-400", textColor: "text-emerald-700 dark:text-emerald-400", color: "bg-emerald-500 hover:bg-emerald-600" },
+  { value: "RED_BOOKMAKER", label: "Red Bookmaker", sublabel: "Seleção perdeu na Bookmaker", icon: X, iconColor: "text-red-700 dark:text-red-400", textColor: "text-red-700 dark:text-red-400", color: "bg-red-500 hover:bg-red-600" },
+  { value: "VOID", label: "Void", sublabel: "Devolvida em ambas", icon: CircleDot, iconColor: "text-muted-foreground", textColor: "text-muted-foreground", color: "bg-muted-foreground/60 hover:bg-muted-foreground/70" },
 ];
 
 export function ResultadoPill({
@@ -135,15 +135,15 @@ export function ResultadoPill({
     switch (value) {
       case "GREEN": 
       case "GREEN_BOOKMAKER": 
-        return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+        return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-600/30 dark:border-emerald-500/30";
       case "RED": 
       case "RED_BOOKMAKER": 
-        return "bg-red-500/20 text-red-400 border-red-500/30";
-      case "MEIO_GREEN": return "bg-teal-500/20 text-teal-400 border-teal-500/30";
-      case "MEIO_RED": return "bg-orange-500/20 text-orange-400 border-orange-500/30";
-      case "VOID": return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-      case "PENDENTE": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-      default: return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+        return "bg-red-500/15 text-red-700 dark:text-red-400 border-red-600/30 dark:border-red-500/30";
+      case "MEIO_GREEN": return "bg-teal-500/15 text-teal-700 dark:text-teal-400 border-teal-600/30 dark:border-teal-500/30";
+      case "MEIO_RED": return "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-600/30 dark:border-orange-500/30";
+      case "VOID": return "bg-muted text-muted-foreground border-border";
+      case "PENDENTE": return "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-600/30 dark:border-blue-500/30";
+      default: return "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-600/30 dark:border-blue-500/30";
     }
   };
 
