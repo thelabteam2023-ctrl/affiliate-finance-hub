@@ -190,7 +190,13 @@ export default function ComunidadeTopico() {
     }
   };
 
-  const canEdit = (authorId: string) => user?.id === authorId || canEditAny;
+  const EDIT_WINDOW_MS = 30 * 60 * 1000; // 30 minutos
+  const canEdit = (authorId: string, createdAt?: string) => {
+    if (canEditAny) return true;
+    if (user?.id !== authorId) return false;
+    if (!createdAt) return true;
+    return Date.now() - new Date(createdAt).getTime() < EDIT_WINDOW_MS;
+  };
   const isAuthor = (authorId: string) => user?.id === authorId;
 
   const handleAuthorDelete = async () => {
@@ -271,7 +277,7 @@ export default function ComunidadeTopico() {
               </Badge>
             )}
             <div className="ml-auto flex items-center gap-1">
-              {canEdit(topic.user_id) && (
+              {canEdit(topic.user_id, topic.created_at) && (
                 <Button
                   variant="ghost" size="icon" className="h-8 w-8"
                   onClick={() => {
@@ -325,7 +331,7 @@ export default function ComunidadeTopico() {
                   {comment.edited_at && <Badge variant="outline" className="text-[10px]">Editado</Badge>}
                 </div>
                 <div className="flex items-center gap-1">
-                  {canEdit(comment.user_id) && (
+                  {canEdit(comment.user_id, comment.created_at) && (
                     <Button
                       variant="ghost" size="icon" className="h-7 w-7"
                       onClick={() => {
