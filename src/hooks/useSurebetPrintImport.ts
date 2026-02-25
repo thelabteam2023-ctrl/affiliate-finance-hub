@@ -51,6 +51,52 @@ const BINARY_LINE_PAIRS: Record<string, string> = {
   "btts não": "btts sim",
 };
 
+// MATCH_ODDS / 1X2 market detection pattern (same taxonomy as marketOcrParser.ts)
+const MATCH_ODDS_MARKET_PATTERN = /(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|vencedor\s*(?:da\s*)?(?:partida|match)|match\s*(?:winner|result)|main\s*line)/i;
+
+/**
+ * For a MATCH_ODDS market, determines which canonical position (0=Home, 1=Draw, 2=Away)
+ * the scanned selection corresponds to, and returns the selections for ALL 3 legs.
+ */
+function inferMatchOddsLegs(
+  scannedSelection: string,
+  mandante: string | null,
+  visitante: string | null
+): { legSelections: (string | null)[]; scannedPosition: number } | null {
+  if (!mandante || !visitante) return null;
+
+  const sel = scannedSelection.toLowerCase().trim();
+
+  // Determine which position was scanned
+  let scannedPosition = -1;
+
+  // Check for Draw
+  if (/^(empate|draw|x)$/i.test(sel)) {
+    scannedPosition = 1;
+  }
+  // Check for Home team
+  else if (mandante.toLowerCase().includes(sel) || sel.includes(mandante.toLowerCase())) {
+    scannedPosition = 0;
+  }
+  // Check for Away team
+  else if (visitante.toLowerCase().includes(sel) || sel.includes(visitante.toLowerCase())) {
+    scannedPosition = 2;
+  }
+  // Selection "1" = Home, "2" = Away
+  else if (sel === "1") {
+    scannedPosition = 0;
+  } else if (sel === "2") {
+    scannedPosition = 2;
+  }
+
+  if (scannedPosition === -1) return null;
+
+  // Build the 3 canonical selections
+  const legSelections: (string | null)[] = [mandante, "Empate", visitante];
+
+  return { legSelections, scannedPosition };
+}
+
 export interface LegPrintData {
   parsedData: ParsedBetSlip | null;
   imagePreview: string | null;
@@ -165,12 +211,65 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
 
   // Try to infer line for other legs when one leg is processed
   const tryInferOtherLegs = useCallback((processedLegIndex: number, parsedData: ParsedBetSlip, currentMercado: string | null) => {
-    // Only infer for binary markets
     const mercado = currentMercado || parsedData.mercado?.value;
-    if (!mercado || !canInferLine(mercado)) return;
+    if (!mercado) return;
 
     const sourceLine = parsedData.selecao?.value;
     if (!sourceLine) return;
+
+    const mandanteVal = parsedData.mandante?.value || "";
+    const visitanteVal = parsedData.visitante?.value || "";
+    const eventoVal = mandanteVal && visitanteVal ? `${mandanteVal} x ${visitanteVal}` : (mandanteVal || visitanteVal || "");
+    const eventoConf = parsedData.mandante?.confidence || parsedData.visitante?.confidence || "none";
+
+    const buildInferredLegData = (selecao: string): LegPrintData => ({
+      parsedData: {
+        mandante: parsedData.mandante,
+        visitante: parsedData.visitante,
+        evento: { value: eventoVal, confidence: eventoConf as "high" | "medium" | "low" | "none" },
+        dataHora: parsedData.dataHora,
+        esporte: parsedData.esporte,
+        mercado: parsedData.mercado,
+        selecao: { value: selecao, confidence: "medium" as const },
+        odd: { value: null, confidence: "none" as const },
+        stake: { value: null, confidence: "none" as const },
+        retorno: { value: null, confidence: "none" as const },
+        resultado: { value: null, confidence: "none" as const },
+        bookmakerNome: { value: null, confidence: "none" as const },
+      },
+      imagePreview: null,
+      isProcessing: false,
+      isInferred: true,
+      inferredFrom: processedLegIndex,
+      pendingData: { mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null },
+      oddCalculation: null,
+    });
+
+    // ========== MATCH_ODDS / 1X2 inference (3-leg) ==========
+    if (MATCH_ODDS_MARKET_PATTERN.test(mercado)) {
+      const result = inferMatchOddsLegs(sourceLine, mandanteVal || null, visitanteVal || null);
+      if (result) {
+        console.log(`[SurebetPrintInfer] MATCH_ODDS detected. Scanned position: ${result.scannedPosition}. Filling other legs.`);
+        setLegPrints(prev => {
+          return prev.map((leg, idx) => {
+            // Skip the processed leg and legs that already have data
+            if (idx === processedLegIndex || leg.parsedData || leg.imagePreview) {
+              return leg;
+            }
+            // Only fill if we have a selection for this position
+            const sel = result.legSelections[idx];
+            if (sel) {
+              return buildInferredLegData(sel);
+            }
+            return leg;
+          });
+        });
+        return; // Done — don't fall through to binary inference
+      }
+    }
+
+    // ========== Binary market inference (2-leg) ==========
+    if (!canInferLine(mercado)) return;
 
     const inferredLine = getInferredLine(sourceLine);
     if (!inferredLine) return;
@@ -184,34 +283,8 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
         }
 
         // For 2-leg model, infer the other leg
-        // For 3-leg model, only infer if there's a clear binary relationship
         if (prev.length === 2) {
-          // Construir evento a partir de mandante/visitante se disponível
-          const mandanteVal = parsedData.mandante?.value || "";
-          const visitanteVal = parsedData.visitante?.value || "";
-          const eventoVal = mandanteVal && visitanteVal ? `${mandanteVal} x ${visitanteVal}` : (mandanteVal || visitanteVal || "");
-          const eventoConf = parsedData.mandante?.confidence || parsedData.visitante?.confidence || "none";
-          
-          return {
-            ...leg,
-            parsedData: {
-              mandante: parsedData.mandante,
-              visitante: parsedData.visitante,
-              evento: { value: eventoVal, confidence: eventoConf as "high" | "medium" | "low" | "none" },
-              dataHora: parsedData.dataHora,
-              esporte: parsedData.esporte,
-              mercado: parsedData.mercado,
-              selecao: { value: inferredLine, confidence: "medium" as const },
-              odd: { value: null, confidence: "none" as const },
-              stake: { value: null, confidence: "none" as const },
-              retorno: { value: null, confidence: "none" as const },
-              resultado: { value: null, confidence: "none" as const },
-              bookmakerNome: { value: null, confidence: "none" as const },
-            },
-            isInferred: true,
-            inferredFrom: processedLegIndex,
-            pendingData: { mercadoIntencao: null, mercadoRaw: null, esporteDetectado: null },
-          };
+          return buildInferredLegData(inferredLine);
         }
 
         return leg;
