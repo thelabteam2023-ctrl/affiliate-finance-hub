@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -48,6 +48,7 @@ export function CreateTopicDialog({
   const [polishing, setPolishing] = useState(false);
   const [listening, setListening] = useState(false);
   const [activeField, setActiveField] = useState<'titulo' | 'conteudo' | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   const [categoria, setCategoria] = useState<CommunityCategory>(defaultCategory || 'casas_de_aposta');
   const [titulo, setTitulo] = useState('');
@@ -152,6 +153,15 @@ export function CreateTopicDialog({
 
   const canPolish = (titulo.trim().length > 0 || conteudo.trim().length > 0) && !polishing && !saving;
 
+  const stopVoice = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setListening(false);
+    setActiveField(null);
+  };
+
   const toggleVoice = (field: 'titulo' | 'conteudo') => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -159,35 +169,68 @@ export function CreateTopicDialog({
       return;
     }
 
-    if (listening && activeField === field) {
-      setListening(false);
-      setActiveField(null);
+    if (listening) {
+      stopVoice();
       return;
     }
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR';
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognitionRef.current = recognition;
+
+    let finalTranscript = '';
 
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      if (field === 'titulo') {
-        setTitulo((prev) => (prev ? prev + ' ' + transcript : transcript));
-      } else {
-        setConteudo((prev) => (prev ? prev + ' ' + transcript : transcript));
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript + ' ';
+        } else {
+          interim += result[0].transcript;
+        }
+      }
+      const combined = (finalTranscript + interim).trim();
+      if (field === 'conteudo') {
+        setConteudo((prev) => {
+          const base = prev && !listening ? prev + ' ' : '';
+          return base + combined;
+        });
       }
     };
 
     recognition.onend = () => {
+      // Don't restart — user clicked stop
       setListening(false);
       setActiveField(null);
+      recognitionRef.current = null;
     };
 
-    recognition.onerror = () => {
-      setListening(false);
-      setActiveField(null);
+    recognition.onerror = (e: any) => {
+      if (e.error === 'no-speech') return; // ignore silence errors in continuous mode
+      stopVoice();
       toast({ title: 'Erro no microfone', description: 'Não foi possível capturar áudio. Verifique as permissões.', variant: 'destructive' });
+    };
+
+    // Capture current conteudo as base before starting
+    const currentConteudo = conteudo;
+    recognition.onresult = (event: any) => {
+      let final = '';
+      let interim = '';
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          final += result[0].transcript + ' ';
+        } else {
+          interim += result[0].transcript;
+        }
+      }
+      const combined = (final + interim).trim();
+      if (field === 'conteudo') {
+        setConteudo(currentConteudo ? currentConteudo + ' ' + combined : combined);
+      }
     };
 
     setListening(true);
