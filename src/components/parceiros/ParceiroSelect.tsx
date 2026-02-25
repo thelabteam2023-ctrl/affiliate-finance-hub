@@ -285,14 +285,14 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
           ) : (
             filteredParceiros.map((parceiro) => (
               <SelectItem key={parceiro.id} value={parceiro.id}>
-                <div className="flex flex-col gap-0.5 w-full">
+                <div className="flex flex-col w-full py-0.5">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <span className="font-medium">{parceiro.nome}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatCPF(parceiro.cpf)}
-                    </span>
                   </div>
+                  <span className="text-xs text-muted-foreground ml-6">
+                    {formatCPF(parceiro.cpf)}
+                  </span>
                   {showSaldo && (
                     <div className="ml-6">
                       {formatSaldo(parceiro.id)}
