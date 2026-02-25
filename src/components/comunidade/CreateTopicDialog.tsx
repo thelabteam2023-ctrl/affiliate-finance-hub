@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Building2, X, Check, ChevronsUpDown, Sparkles, Loader2 } from 'lucide-react';
+import { Building2, X, Check, ChevronsUpDown, Sparkles, Loader2, Mic, MicOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +46,8 @@ export function CreateTopicDialog({
   const { data: workspaceBookmakers = [] } = useWorkspaceBookmakers();
   const [saving, setSaving] = useState(false);
   const [polishing, setPolishing] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [activeField, setActiveField] = useState<'titulo' | 'conteudo' | null>(null);
 
   const [categoria, setCategoria] = useState<CommunityCategory>(defaultCategory || 'casas_de_aposta');
   const [titulo, setTitulo] = useState('');
@@ -150,6 +152,49 @@ export function CreateTopicDialog({
 
   const canPolish = (titulo.trim().length > 0 || conteudo.trim().length > 0) && !polishing && !saving;
 
+  const toggleVoice = (field: 'titulo' | 'conteudo') => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast({ title: 'Não suportado', description: 'Seu navegador não suporta reconhecimento de voz.', variant: 'destructive' });
+      return;
+    }
+
+    if (listening && activeField === field) {
+      setListening(false);
+      setActiveField(null);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      if (field === 'titulo') {
+        setTitulo((prev) => (prev ? prev + ' ' + transcript : transcript));
+      } else {
+        setConteudo((prev) => (prev ? prev + ' ' + transcript : transcript));
+      }
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+      setActiveField(null);
+    };
+
+    recognition.onerror = () => {
+      setListening(false);
+      setActiveField(null);
+      toast({ title: 'Erro no microfone', description: 'Não foi possível capturar áudio. Verifique as permissões.', variant: 'destructive' });
+    };
+
+    setListening(true);
+    setActiveField(field);
+    recognition.start();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -187,18 +232,47 @@ export function CreateTopicDialog({
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="titulo">Título *</Label>
-            <Input
-              id="titulo"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Ex: Nova exigência de verificação"
-              maxLength={200}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="titulo"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                placeholder="Ex: Nova exigência de verificação"
+                maxLength={200}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant={listening && activeField === 'titulo' ? 'destructive' : 'outline'}
+                size="icon"
+                className="shrink-0"
+                onClick={() => toggleVoice('titulo')}
+                title="Ditar título por voz"
+              >
+                {listening && activeField === 'titulo' ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
 
           {/* Content */}
           <div className="space-y-2">
-            <Label htmlFor="conteudo">Conteúdo *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="conteudo">Conteúdo *</Label>
+              <Button
+                type="button"
+                variant={listening && activeField === 'conteudo' ? 'destructive' : 'ghost'}
+                size="sm"
+                className="gap-1 h-7 text-xs"
+                onClick={() => toggleVoice('conteudo')}
+                title="Ditar conteúdo por voz"
+              >
+                {listening && activeField === 'conteudo' ? (
+                  <><MicOff className="h-3.5 w-3.5" /> Parar</>
+                ) : (
+                  <><Mic className="h-3.5 w-3.5" /> Ditar</>
+                )}
+              </Button>
+            </div>
             <Textarea
               id="conteudo"
               value={conteudo}
@@ -220,12 +294,12 @@ export function CreateTopicDialog({
             {polishing ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Polindo com IA...
+                Aprimorando...
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                Polir texto com IA
+                ✨ Aprimorar com IA
               </>
             )}
           </Button>
