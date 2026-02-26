@@ -46,8 +46,8 @@ const schema = z.object({
     'bloqueio_contas',
   ] as const),
   sub_motivo: z.string().optional(),
-  contexto_entidade: z.string().optional(),
-  entidade_id: z.string().optional(),
+  contexto_entidade: z.enum(['bookmaker', 'banco'], { required_error: 'Selecione onde ocorreu' }),
+  entidade_id: z.string().min(1, 'Selecione a entidade'),
   prioridade: z.enum(['baixa', 'media', 'alta', 'urgente'] as const),
   executor_id: z.string().min(1, 'Selecione o executor'),
 });
@@ -110,7 +110,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       descricao: '',
       tipo: contextoInicial?.tipo || 'movimentacao_financeira',
       sub_motivo: '',
-      contexto_entidade: '',
+      contexto_entidade: undefined as unknown as 'bookmaker' | 'banco',
       entidade_id: '',
       prioridade: 'media',
       executor_id: '',
@@ -241,9 +241,9 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               />
             </div>
 
-            {/* Sub-motivo + Contexto (bookmaker/banco) */}
-            {subMotivos.length > 0 && (
-              <div className="grid grid-cols-2 gap-4">
+            {/* Sub-motivo + Onde ocorreu */}
+            <div className="grid grid-cols-2 gap-4">
+              {subMotivos.length > 0 ? (
                 <FormField
                   control={form.control}
                   name="sub_motivo"
@@ -268,36 +268,36 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                     </FormItem>
                   )}
                 />
+              ) : <div />}
 
-                <FormField
-                  control={form.control}
-                  name="contexto_entidade"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Onde ocorreu?</FormLabel>
-                      <Select
-                        onValueChange={(v) => {
-                          field.onChange(v);
-                          form.setValue('entidade_id', '');
-                        }}
-                        value={field.value || ''}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Bookmaker ou Banco?" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="bookmaker">Bookmaker</SelectItem>
-                          <SelectItem value="banco">Banco</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
+              <FormField
+                control={form.control}
+                name="contexto_entidade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Onde ocorreu? *</FormLabel>
+                    <Select
+                      onValueChange={(v) => {
+                        field.onChange(v);
+                        form.setValue('entidade_id', '');
+                      }}
+                      value={field.value || ''}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="bookmaker">Bookmaker</SelectItem>
+                        <SelectItem value="banco">Banco</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Seletor da entidade específica */}
             {contextoEntidade && (
@@ -307,18 +307,12 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {contextoEntidade === 'bookmaker' ? 'Bookmaker' : 'Conta Bancária'}
+                      {contextoEntidade === 'bookmaker' ? 'Bookmaker *' : 'Conta Bancária *'}
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue
-                            placeholder={
-                              contextoEntidade === 'bookmaker'
-                                ? 'Selecione a bookmaker...'
-                                : 'Selecione a conta bancária...'
-                            }
-                          />
+                          <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
