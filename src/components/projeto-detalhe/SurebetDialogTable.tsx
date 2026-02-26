@@ -504,21 +504,25 @@ export function SurebetDialogTable({
   // Handler para navegação por teclado entre campos
   const handleFieldKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
     const key = e.key.toLowerCase();
-    if ((key === 'q' && fieldType === 'odd') || (key === 's' && fieldType === 'stake')) {
-      e.preventDefault();
-      const container = tableContainerRef.current;
-      if (!container) return;
-      
-      const selector = fieldType === 'odd' ? 'input[data-field-type="odd"]' : 'input[data-field-type="stake"]';
-      const allFields = Array.from(container.querySelectorAll<HTMLInputElement>(selector));
-      
-      if (allFields.length === 0) return;
-      
-      const currentIndex = allFields.indexOf(e.currentTarget);
-      const nextIndex = (currentIndex + 1) % allFields.length;
-      allFields[nextIndex]?.focus();
-      allFields[nextIndex]?.select();
-    }
+    if (key !== 'q' && key !== 's') return;
+
+    e.preventDefault();
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    const targetFieldType: 'odd' | 'stake' = key === 'q' ? 'odd' : 'stake';
+    const selector = targetFieldType === 'odd' ? 'input[data-field-type="odd"]' : 'input[data-field-type="stake"]';
+    const allFields = Array.from(container.querySelectorAll<HTMLInputElement>(selector));
+    if (allFields.length === 0) return;
+
+    const sameTypeNavigation = targetFieldType === fieldType;
+    const currentIndex = allFields.indexOf(e.currentTarget);
+    const nextIndex = sameTypeNavigation && currentIndex >= 0
+      ? (currentIndex + 1) % allFields.length
+      : 0;
+
+    allFields[nextIndex]?.focus();
+    allFields[nextIndex]?.select();
   }, []);
 
   // ============================================

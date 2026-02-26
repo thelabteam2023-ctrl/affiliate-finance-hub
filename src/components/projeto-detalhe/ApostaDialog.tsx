@@ -613,20 +613,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
   const handleMultiEntryFieldKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
     const key = e.key.toLowerCase();
-    if ((key === 'q' && fieldType === 'odd') || (key === 's' && fieldType === 'stake')) {
-      e.preventDefault();
-      const container = multiEntryTableRef.current;
-      if (!container) return;
+    if (key !== 'q' && key !== 's') return;
 
-      const selector = fieldType === 'odd' ? 'input[data-field-type="odd"]' : 'input[data-field-type="stake"]';
-      const allFields = Array.from(container.querySelectorAll<HTMLInputElement>(selector));
-      if (allFields.length === 0) return;
+    e.preventDefault();
+    const container = multiEntryTableRef.current;
+    if (!container) return;
 
-      const currentIndex = allFields.indexOf(e.currentTarget);
-      const nextIndex = (currentIndex + 1) % allFields.length;
-      allFields[nextIndex]?.focus();
-      allFields[nextIndex]?.select();
-    }
+    const targetFieldType: 'odd' | 'stake' = key === 'q' ? 'odd' : 'stake';
+    const selector = targetFieldType === 'odd' ? 'input[data-field-type="odd"]' : 'input[data-field-type="stake"]';
+    const allFields = Array.from(container.querySelectorAll<HTMLInputElement>(selector));
+    if (allFields.length === 0) return;
+
+    const sameTypeNavigation = targetFieldType === fieldType;
+    const currentIndex = allFields.indexOf(e.currentTarget);
+    const nextIndex = sameTypeNavigation && currentIndex >= 0
+      ? (currentIndex + 1) % allFields.length
+      : 0;
+
+    allFields[nextIndex]?.focus();
+    allFields[nextIndex]?.select();
   }, []);
 
   // Bookmaker mode

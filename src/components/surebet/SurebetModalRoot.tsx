@@ -825,19 +825,24 @@ export function SurebetModalRoot({
   const handleFieldKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
     const key = e.key.toLowerCase();
     
-    // Atalhos Q (próximo odd) e S (próximo stake)
-    if ((key === 'q' && fieldType === 'odd') || (key === 's' && fieldType === 'stake')) {
+    // Atalhos Q (navega odds) e S (navega stakes)
+    if (key === 'q' || key === 's') {
       e.preventDefault();
       const container = tableContainerRef.current;
       if (!container) return;
-      
-      const selector = `input[data-field-type="${fieldType}"]`;
+
+      const targetFieldType: 'odd' | 'stake' = key === 'q' ? 'odd' : 'stake';
+      const selector = `input[data-field-type="${targetFieldType}"]`;
       const allFields = Array.from(container.querySelectorAll<HTMLInputElement>(selector));
       
       if (allFields.length === 0) return;
       
+      const sameTypeNavigation = targetFieldType === fieldType;
       const currentIndex = allFields.indexOf(e.currentTarget);
-      const nextIndex = (currentIndex + 1) % allFields.length;
+      const nextIndex = sameTypeNavigation && currentIndex >= 0
+        ? (currentIndex + 1) % allFields.length
+        : 0;
+
       allFields[nextIndex]?.focus();
       allFields[nextIndex]?.select();
       return;
