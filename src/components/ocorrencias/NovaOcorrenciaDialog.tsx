@@ -72,6 +72,9 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const { data: members = [] } = useWorkspaceMembers();
   const { workspaceId } = useAuth();
   const [observadoresSelecionados, setObservadoresSelecionados] = useState<string[]>([]);
+  const [filtroCasa, setFiltroCasa] = useState<string>('');
+  const [filtroParceiro, setFiltroParceiro] = useState<string>('');
+  const [filtroBanco, setFiltroBanco] = useState<string>('');
 
   // Carregar bookmakers do workspace
   const { data: bookmakers = [] } = useQuery({
@@ -120,6 +123,28 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const tipoSelecionado = form.watch('tipo');
   const contextoEntidade = form.watch('contexto_entidade');
   const subMotivos = SUB_MOTIVOS[tipoSelecionado] || [];
+
+  // Derivar listas únicas para filtros
+  const casasUnicas = Array.from(new Set((bookmakers as any[]).map((bk) => String(bk.nome)))).sort();
+  const parceirosUnicos = Array.from(new Set(
+    (bookmakers as any[])
+      .filter((bk) => bk.parceiros?.nome)
+      .map((bk) => String(bk.parceiros.nome))
+  )).sort();
+  const bancosUnicos = Array.from(new Set((contasBancarias as any[]).map((cb) => String(cb.banco)))).sort();
+
+  // Filtrar bookmakers
+  const bookmakersFiltrados = bookmakers.filter((bk: any) => {
+    if (filtroCasa && bk.nome !== filtroCasa) return false;
+    if (filtroParceiro && bk.parceiros?.nome !== filtroParceiro) return false;
+    return true;
+  });
+
+  // Filtrar contas bancárias
+  const contasFiltradas = contasBancarias.filter((cb: any) => {
+    if (filtroBanco && cb.banco !== filtroBanco) return false;
+    return true;
+  });
 
   const onSubmit = async (data: FormData) => {
     const isBookmaker = data.contexto_entidade === 'bookmaker';
@@ -299,25 +324,65 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               />
             </div>
 
-            {/* Seletor da entidade específica */}
-            {contextoEntidade && (
-              <FormField
-                control={form.control}
-                name="entidade_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {contextoEntidade === 'bookmaker' ? 'Bookmaker *' : 'Conta Bancária *'}
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
+            {/* Filtros e seletor da entidade específica */}
+            {contextoEntidade === 'bookmaker' && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <FormLabel>Filtrar por Casa</FormLabel>
+                    <Select
+                      value={filtroCasa || '__all__'}
+                      onValueChange={(v) => {
+                        setFiltroCasa(v === '__all__' ? '' : v);
+                        form.setValue('entidade_id', '');
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Todas as casas" /></SelectTrigger>
                       <SelectContent>
-                        {contextoEntidade === 'bookmaker'
-                          ? bookmakers.map((bk: any) => (
+                        <SelectItem value="__all__">Todas as casas</SelectItem>
+                        {casasUnicas.map((casa) => (
+                          <SelectItem key={casa} value={casa}>{casa}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <FormLabel>Filtrar por Parceiro</FormLabel>
+                    <Select
+                      value={filtroParceiro || '__all__'}
+                      onValueChange={(v) => {
+                        setFiltroParceiro(v === '__all__' ? '' : v);
+                        form.setValue('entidade_id', '');
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Todos os parceiros" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Todos os parceiros</SelectItem>
+                        {parceirosUnicos.map((p) => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="entidade_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Conta *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a conta..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {bookmakersFiltrados.length === 0 ? (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">Nenhuma conta encontrada</div>
+                          ) : (
+                            bookmakersFiltrados.map((bk: any) => (
                               <SelectItem key={bk.id} value={bk.id}>
                                 <div className="flex flex-col">
                                   <span className="font-medium">
@@ -330,17 +395,66 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                                 </div>
                               </SelectItem>
                             ))
-                          : contasBancarias.map((cb: any) => (
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+
+            {contextoEntidade === 'banco' && (
+              <>
+                <div className="space-y-1.5">
+                  <FormLabel>Filtrar por Banco</FormLabel>
+                  <Select
+                    value={filtroBanco || '__all__'}
+                    onValueChange={(v) => {
+                      setFiltroBanco(v === '__all__' ? '' : v);
+                      form.setValue('entidade_id', '');
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Todos os bancos" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">Todos os bancos</SelectItem>
+                      {bancosUnicos.map((b) => (
+                        <SelectItem key={b} value={b}>{b}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="entidade_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Conta Bancária *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a conta..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {contasFiltradas.length === 0 ? (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">Nenhuma conta encontrada</div>
+                          ) : (
+                            contasFiltradas.map((cb: any) => (
                               <SelectItem key={cb.id} value={cb.id}>
                                 {cb.banco} — {cb.titular || cb.conta || cb.agencia || 'Sem nome'}
                               </SelectItem>
-                            ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
             )}
 
             {/* Executor */}
