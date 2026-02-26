@@ -76,16 +76,17 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const { workspaceId } = useAuth();
   const [observadoresSelecionados, setObservadoresSelecionados] = useState<string[]>([]);
   const [bookmakerPopoverOpen, setBookmakerPopoverOpen] = useState(false);
+  const [casaPopoverOpen, setCasaPopoverOpen] = useState(false);
   const [bancoPopoverOpen, setBancoPopoverOpen] = useState(false);
   const [selectedCasa, setSelectedCasa] = useState<string>('');
 
-  // Carregar bookmakers do workspace
+  // Carregar bookmakers do workspace com logo do catálogo
   const { data: bookmakers = [] } = useQuery({
     queryKey: ['ocorrencia-bookmakers', workspaceId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookmakers')
-        .select('id, nome, instance_identifier, parceiro_id, parceiros!bookmakers_parceiro_id_fkey (nome)')
+        .select('id, nome, instance_identifier, parceiro_id, bookmaker_catalogo_id, parceiros!bookmakers_parceiro_id_fkey (nome), bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
         .eq('workspace_id', workspaceId!)
         .order('nome');
       if (error) throw error;
@@ -127,8 +128,14 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const contextoEntidade = form.watch('contexto_entidade');
   const subMotivos = SUB_MOTIVOS[tipoSelecionado] || [];
 
-  // Casas únicas para o primeiro select
-  const casasUnicas = [...new Set((bookmakers as any[]).map((bk) => bk.nome).filter(Boolean))].sort();
+  // Casas únicas com logo (derivadas dos bookmakers operacionais do workspace)
+  const casasUnicasMap = (bookmakers as any[]).reduce<Record<string, string | null>>((acc, bk) => {
+    if (bk.nome && !acc.hasOwnProperty(bk.nome)) {
+      acc[bk.nome] = (bk.bookmakers_catalogo as any)?.logo_url ?? null;
+    }
+    return acc;
+  }, {});
+  const casasUnicas = Object.keys(casasUnicasMap).sort();
 
   // Vínculos filtrados pela casa selecionada
   const vinculosDaCasa = selectedCasa
@@ -329,27 +336,65 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
             {/* Seletor de Bookmaker: Casa + Vínculo */}
             {contextoEntidade === 'bookmaker' && (
               <div className="grid grid-cols-2 gap-4">
-                {/* Select da Casa */}
-                <FormItem>
+                {/* Select da Casa com busca e logos */}
+                <FormItem className="flex flex-col">
                   <FormLabel>Casa *</FormLabel>
-                  <Select
-                    value={selectedCasa}
-                    onValueChange={(v) => {
-                      setSelectedCasa(v);
-                      form.setValue('entidade_id', '');
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a casa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {casasUnicas.map((casa) => (
-                        <SelectItem key={casa} value={casa}>
-                          {casa}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={casaPopoverOpen} onOpenChange={setCasaPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          'w-full justify-between font-normal h-10',
+                          !selectedCasa && 'text-muted-foreground'
+                        )}
+                      >
+                        {selectedCasa ? (
+                          <span className="flex items-center gap-2 truncate">
+                            {casasUnicasMap[selectedCasa] && (
+                              <img src={casasUnicasMap[selectedCasa]!} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
+                            )}
+                            {selectedCasa}
+                          </span>
+                        ) : (
+                          'Selecione a casa'
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar casa..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhuma casa encontrada.</CommandEmpty>
+                          <CommandGroup>
+                            {casasUnicas.map((casa) => (
+                              <CommandItem
+                                key={casa}
+                                value={casa}
+                                onSelect={() => {
+                                  setSelectedCasa(casa);
+                                  form.setValue('entidade_id', '');
+                                  setCasaPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4 shrink-0',
+                                    selectedCasa === casa ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                {casasUnicasMap[casa] && (
+                                  <img src={casasUnicasMap[casa]!} alt="" className="h-5 w-5 rounded object-contain shrink-0 mr-2" />
+                                )}
+                                <span>{casa}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </FormItem>
 
                 {/* Select do Vínculo com busca por parceiro */}
@@ -367,7 +412,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                               role="combobox"
                               disabled={!selectedCasa}
                               className={cn(
-                                'w-full justify-between font-normal',
+                                'w-full justify-between font-normal h-10',
                                 !field.value && 'text-muted-foreground'
                               )}
                             >
