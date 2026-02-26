@@ -16,6 +16,8 @@ interface BookmakerSearchableSelectContentProps {
   className?: string;
   itemClassName?: string;
   emptyMessage?: string;
+  /** Override de saldo_freebet por bookmaker_id (ex: descontar FB já usado em outras entradas) */
+  freebetOverrides?: Map<string, number>;
 }
 
 /**
@@ -31,6 +33,7 @@ export function BookmakerSearchableSelectContent({
   className,
   itemClassName,
   emptyMessage = "Nenhuma bookmaker com saldo disponível",
+  freebetOverrides,
 }: BookmakerSearchableSelectContentProps) {
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -116,11 +119,17 @@ export function BookmakerSearchableSelectContent({
               {search.trim() ? "Nenhuma casa encontrada" : emptyMessage}
             </div>
           ) : (
-            filtered.map((bk) => (
-              <SelectItem key={bk.id} value={bk.id} className={cn("py-2", itemClassName)}>
-                <BookmakerSelectOption bookmaker={{ ...bk, parceiro_nome: bk.parceiro_nome ?? null }} />
-              </SelectItem>
-            ))
+            filtered.map((bk) => {
+              // Apply freebet override if provided (e.g., subtract FB already used in other entries)
+              const adjustedBk = freebetOverrides?.has(bk.id)
+                ? { ...bk, saldo_freebet: freebetOverrides.get(bk.id)! }
+                : bk;
+              return (
+                <SelectItem key={bk.id} value={bk.id} className={cn("py-2", itemClassName)}>
+                  <BookmakerSelectOption bookmaker={{ ...adjustedBk, parceiro_nome: adjustedBk.parceiro_nome ?? null }} />
+                </SelectItem>
+              );
+            })
           )}
         </SelectPrimitive.Viewport>
         <SelectScrollDownButton />

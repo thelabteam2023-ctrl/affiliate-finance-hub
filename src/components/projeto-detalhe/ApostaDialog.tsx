@@ -3227,6 +3227,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                           <BookmakerSearchableSelectContent
                             bookmakers={bookmakers}
                             itemClassName="max-w-full"
+                            freebetOverrides={(() => {
+                              const map = new Map<string, number>();
+                              bookmakers.forEach(bk => {
+                                if ((bk.saldo_freebet || 0) > 0) {
+                                  const fbUsado = additionalEntries
+                                    .filter(e => e.bookmaker_id === bk.id && e.usar_freebet)
+                                    .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                                  if (fbUsado > 0) {
+                                    map.set(bk.id, Math.max(0, (bk.saldo_freebet || 0) - fbUsado));
+                                  }
+                                }
+                              });
+                              return map.size > 0 ? map : undefined;
+                            })()}
                           />
                         </Select>
                         
@@ -3407,6 +3421,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                               <BookmakerSearchableSelectContent
                                 bookmakers={bookmakers}
                                 itemClassName="max-w-full"
+                                freebetOverrides={(() => {
+                                  const map = new Map<string, number>();
+                                  bookmakers.forEach(bk => {
+                                    if ((bk.saldo_freebet || 0) > 0) {
+                                      // Subtract FB used by main entry
+                                      const fbMain = (bookmakerId === bk.id && usarFreebetBookmaker)
+                                        ? (parseFloat(stake) || 0) : 0;
+                                      // Subtract FB used by OTHER sub-entries (not this one)
+                                      const fbOutras = additionalEntries
+                                        .filter(e => e.id !== entry.id && e.bookmaker_id === bk.id && e.usar_freebet)
+                                        .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                                      const totalUsado = fbMain + fbOutras;
+                                      if (totalUsado > 0) {
+                                        map.set(bk.id, Math.max(0, (bk.saldo_freebet || 0) - totalUsado));
+                                      }
+                                    }
+                                  });
+                                  return map.size > 0 ? map : undefined;
+                                })()}
                               />
                             </Select>
                             {(() => {
