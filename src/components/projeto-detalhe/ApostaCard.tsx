@@ -496,6 +496,9 @@ export function ApostaCard({
             <div className="flex items-center gap-2 shrink-0 justify-end sm:justify-start">
               {isSimples && (
                 <>
+                  {hasSubEntries ? (
+                    <span className="text-[10px] text-muted-foreground">Odd ø</span>
+                  ) : null}
                   <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
                   {hasSubEntries && (
                     <button

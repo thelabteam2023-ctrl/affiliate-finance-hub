@@ -41,7 +41,7 @@ import { SurebetCard, SurebetData } from "@/components/projeto-detalhe/SurebetCa
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import { SurebetDialog } from "@/components/projeto-detalhe/SurebetDialog";
 import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
-import { ApostaCard } from "@/components/projeto-detalhe/ApostaCard";
+import { ApostaCard, type ApostaCardData } from "@/components/projeto-detalhe/ApostaCard";
 import { useProjectBonuses, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { 
@@ -337,6 +337,39 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
         evento: a.evento || '',
         selecao: a.selecao || ''
       }));
+
+      // Enriquecer apostas simples com sub_entries de apostas_pernas
+      const apostaIds = mapped.map((a: any) => a.id);
+      if (apostaIds.length > 0) {
+        const { data: pernasData } = await supabase
+          .from("apostas_pernas")
+          .select(`
+            aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem,
+            bookmaker:bookmakers (
+              nome, parceiro_id,
+              parceiro:parceiros (nome),
+              bookmakers_catalogo (logo_url)
+            )
+          `)
+          .in("aposta_id", apostaIds)
+          .order("ordem", { ascending: true });
+
+        if (pernasData) {
+          const pernasMap = new Map<string, any[]>();
+          for (const p of pernasData) {
+            const arr = pernasMap.get(p.aposta_id) || [];
+            arr.push(p);
+            pernasMap.set(p.aposta_id, arr);
+          }
+          for (const a of mapped) {
+            const pernas = pernasMap.get(a.id);
+            if (pernas && pernas.length > 1) {
+              (a as any)._sub_entries = pernas;
+            }
+          }
+        }
+      }
+
       setApostas(mapped);
     } catch (error: any) {
       toast.error("Erro ao carregar apostas: " + error.message);
@@ -978,7 +1011,7 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
           const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
           
           // Preparar dados para ApostaCard - moeda ORIGINAL da aposta
-           const apostaCardData = {
+           const apostaCardData: ApostaCardData = {
              id: aposta.id,
              evento: aposta.evento,
              esporte: aposta.esporte,
@@ -994,6 +1027,18 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
              parceiro_nome: parceiroNome,
              logo_url: logoUrl,
              moeda: aposta.moeda_operacao || "BRL",
+             // Multi-entry: sub-entradas de apostas_pernas (exclui a 1ª perna que é a principal)
+             sub_entries: (aposta as any)._sub_entries
+               ?.filter((_: any, i: number) => i > 0)
+               ?.map((p: any) => ({
+                 bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?',
+                 parceiro_nome: p.bookmaker?.parceiro?.nome || null,
+                 odd: p.odd,
+                 stake: p.stake,
+                 moeda: p.moeda,
+                 logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null,
+                 selecao_livre: p.selecao_livre,
+               })) || undefined,
            };
            
            return (
