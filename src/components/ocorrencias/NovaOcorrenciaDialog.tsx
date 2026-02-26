@@ -36,8 +36,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
-import { AlertTriangle, Loader2, Plus, X, ChevronsUpDown, Check } from 'lucide-react';
+import { AlertTriangle, Loader2, X, ChevronsUpDown, Check, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getFirstLastName } from '@/lib/utils';
 
 const schema = z.object({
   titulo: z.string().min(5, 'Título deve ter pelo menos 5 caracteres').max(200),
@@ -52,7 +53,6 @@ const schema = z.object({
   contexto_entidade: z.enum(['bookmaker', 'banco'], { required_error: 'Selecione onde ocorreu' }),
   entidade_id: z.string().min(1, 'Selecione a entidade'),
   prioridade: z.enum(['baixa', 'media', 'alta', 'urgente'] as const),
-  executor_id: z.string().min(1, 'Selecione o executor'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -74,7 +74,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const { mutateAsync: criar, isPending } = useCriarOcorrencia();
   const { data: members = [] } = useWorkspaceMembers();
   const { workspaceId } = useAuth();
-  const [observadoresSelecionados, setObservadoresSelecionados] = useState<string[]>([]);
+  const [executoresSelecionados, setExecutoresSelecionados] = useState<string[]>([]);
   const [bookmakerPopoverOpen, setBookmakerPopoverOpen] = useState(false);
   const [casaPopoverOpen, setCasaPopoverOpen] = useState(false);
   const [bancoPopoverOpen, setBancoPopoverOpen] = useState(false);
@@ -120,7 +120,6 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       contexto_entidade: undefined as unknown as 'bookmaker' | 'banco',
       entidade_id: '',
       prioridade: 'media',
-      executor_id: '',
     },
   });
 
@@ -154,48 +153,68 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const selectedBookmaker = (bookmakers as any[]).find((bk) => bk.id === form.watch('entidade_id'));
   const selectedConta = (contasBancarias as any[]).find((cb) => cb.id === form.watch('entidade_id'));
 
-  const onSubmit = async (data: FormData) => {
-    const isBookmaker = data.contexto_entidade === 'bookmaker';
-    const isBanco = data.contexto_entidade === 'banco';
-    await criar({
-      titulo: data.titulo,
-      descricao: data.descricao,
-      tipo: data.tipo,
-      sub_motivo: data.sub_motivo || null,
-      prioridade: data.prioridade,
-      executor_id: data.executor_id,
-      observadores: observadoresSelecionados,
-      bookmaker_id: isBookmaker ? data.entidade_id : contextoInicial?.bookmaker_id,
-      conta_bancaria_id: isBanco ? data.entidade_id : undefined,
-      projeto_id: contextoInicial?.projeto_id,
-      parceiro_id: contextoInicial?.parceiro_id,
-      contexto_metadata: contextoInicial?.contexto_metadata,
-    });
-    onOpenChange(false);
-    form.reset();
-    setObservadoresSelecionados([]);
-  };
+  const allSelected = executoresSelecionados.length === members.length && members.length > 0;
 
-  const toggleObservador = (userId: string) => {
-    setObservadoresSelecionados((prev) =>
+  const toggleExecutor = (userId: string) => {
+    setExecutoresSelecionados((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
   };
 
-  const executorId = form.watch('executor_id');
+  const toggleTodos = () => {
+    if (allSelected) {
+      setExecutoresSelecionados([]);
+    } else {
+      setExecutoresSelecionados(members.map((m) => m.user_id));
+    }
+  };
+
+  const onSubmit = async (data: FormData) => {
+    if (executoresSelecionados.length === 0) return;
+
+    const isBookmaker = data.contexto_entidade === 'bookmaker';
+    const isBanco = data.contexto_entidade === 'banco';
+
+    // Criar uma ocorrência por executor selecionado
+    for (const executorId of executoresSelecionados) {
+      await criar({
+        titulo: data.titulo,
+        descricao: data.descricao,
+        tipo: data.tipo,
+        sub_motivo: data.sub_motivo || null,
+        prioridade: data.prioridade,
+        executor_id: executorId,
+        bookmaker_id: isBookmaker ? data.entidade_id : contextoInicial?.bookmaker_id,
+        conta_bancaria_id: isBanco ? data.entidade_id : undefined,
+        projeto_id: contextoInicial?.projeto_id,
+        parceiro_id: contextoInicial?.parceiro_id,
+        contexto_metadata: contextoInicial?.contexto_metadata,
+      });
+    }
+
+    onOpenChange(false);
+    form.reset();
+    setExecutoresSelecionados([]);
+  };
+
+  const executorError = executoresSelecionados.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-400" />
+            <AlertTriangle className="h-5 w-5 text-destructive" />
             Nova Ocorrência
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (executoresSelecionados.length === 0) return;
+            form.handleSubmit(onSubmit)(e);
+          }} className="space-y-5">
             {/* Título */}
             <FormField
               control={form.control}
@@ -536,55 +555,58 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               />
             )}
 
-            {/* Executor */}
-            <FormField
-              control={form.control}
-              name="executor_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Executor Responsável *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Quem vai resolver esta ocorrência?" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {members.map((m) => (
-                        <SelectItem key={m.user_id} value={m.user_id}>
-                          {m.full_name || m.email || m.user_id}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Observadores */}
-            <div className="space-y-2">
+            {/* Executor Responsável - Multi-select */}
+            <div className="space-y-2.5">
               <FormLabel className="text-sm font-medium">
-                Observadores <span className="text-muted-foreground font-normal">(opcional)</span>
+                Executor Responsável *
               </FormLabel>
-              <div className="flex flex-wrap gap-2">
-                {members
-                  .filter((m) => m.user_id !== executorId)
-                  .map((m) => {
-                    const selected = observadoresSelecionados.includes(m.user_id);
-                    return (
-                      <Badge
-                        key={m.user_id}
-                        variant={selected ? 'default' : 'outline'}
-                        className="cursor-pointer gap-1"
-                        onClick={() => toggleObservador(m.user_id)}
-                      >
-                        {selected ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                        {m.full_name || m.email}
-                      </Badge>
-                    );
-                  })}
+              <div className="flex flex-wrap gap-1.5">
+                {/* Botão Todos */}
+                <Badge
+                  variant={allSelected ? 'default' : 'outline'}
+                  className={cn(
+                    'cursor-pointer gap-1.5 px-3 py-1.5 text-xs font-medium transition-all',
+                    allSelected
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : 'hover:bg-accent hover:text-accent-foreground'
+                  )}
+                  onClick={toggleTodos}
+                >
+                  <Users className="h-3 w-3" />
+                  Todos
+                </Badge>
+
+                {members.map((m) => {
+                  const selected = executoresSelecionados.includes(m.user_id);
+                  const displayName = getFirstLastName(m.full_name || m.email || '');
+                  return (
+                    <Badge
+                      key={m.user_id}
+                      variant={selected ? 'default' : 'outline'}
+                      className={cn(
+                        'cursor-pointer gap-1 px-3 py-1.5 text-xs font-medium transition-all',
+                        selected
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          : 'hover:bg-accent hover:text-accent-foreground'
+                      )}
+                      onClick={() => toggleExecutor(m.user_id)}
+                    >
+                      {selected ? <Check className="h-3 w-3" /> : null}
+                      {displayName}
+                    </Badge>
+                  );
+                })}
               </div>
+              {executorError && (
+                <p className="text-[0.8rem] font-medium text-destructive">
+                  Selecione pelo menos um executor
+                </p>
+              )}
+              {executoresSelecionados.length > 1 && (
+                <p className="text-xs text-muted-foreground">
+                  Será criada uma ocorrência para cada executor selecionado ({executoresSelecionados.length} ocorrências)
+                </p>
+              )}
             </div>
 
             {/* Descrição */}
@@ -627,9 +649,11 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending}>
+              <Button type="submit" disabled={isPending || executoresSelecionados.length === 0}>
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Criar Ocorrência
+                {executoresSelecionados.length > 1
+                  ? `Criar ${executoresSelecionados.length} Ocorrências`
+                  : 'Criar Ocorrência'}
               </Button>
             </div>
           </form>
