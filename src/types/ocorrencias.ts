@@ -43,6 +43,7 @@ export interface Ocorrencia {
   titulo: string;
   descricao: string;
   tipo: OcorrenciaTipo;
+  sub_motivo?: string | null;
   prioridade: OcorrenciaPrioridade;
   status: OcorrenciaStatus;
   requerente_id: string;
@@ -153,3 +154,64 @@ export const EVENTO_TIPO_LABELS: Record<OcorrenciaEventoTipo, string> = {
   prioridade_alterada: 'alterou a prioridade',
   vinculo_adicionado: 'adicionou um vínculo',
 };
+
+// ============================================================
+// SUB-MOTIVOS DINÂMICOS POR TIPO
+// ============================================================
+
+export const SUB_MOTIVOS: Record<OcorrenciaTipo, { value: string; label: string }[]> = {
+  saques: [
+    { value: 'atraso_provedor', label: 'Atraso do provedor de pagamento' },
+    { value: 'verificacao_pendente', label: 'Verificação de identidade pendente' },
+    { value: 'limite_excedido', label: 'Limite de saque excedido' },
+    { value: 'dados_incorretos', label: 'Dados bancários incorretos' },
+    { value: 'saque_rejeitado', label: 'Saque rejeitado pela plataforma' },
+    { value: 'saque_parcial', label: 'Saque parcial / valor divergente' },
+    { value: 'outro', label: 'Outro motivo' },
+  ],
+  depositos: [
+    { value: 'deposito_nao_creditado', label: 'Depósito não creditado' },
+    { value: 'valor_divergente', label: 'Valor creditado divergente' },
+    { value: 'metodo_indisponivel', label: 'Método de pagamento indisponível' },
+    { value: 'deposito_duplicado', label: 'Depósito duplicado' },
+    { value: 'deposito_estornado', label: 'Depósito estornado' },
+    { value: 'outro', label: 'Outro motivo' },
+  ],
+  financeiro: [
+    { value: 'saldo_divergente', label: 'Saldo divergente do esperado' },
+    { value: 'bonus_nao_creditado', label: 'Bônus não creditado' },
+    { value: 'rollover_incorreto', label: 'Rollover incorreto' },
+    { value: 'taxa_indevida', label: 'Taxa/cobrança indevida' },
+    { value: 'conversao_moeda', label: 'Problema na conversão de moeda' },
+    { value: 'outro', label: 'Outro motivo' },
+  ],
+  kyc: [
+    { value: 'documento_pendente', label: 'Documento pendente de envio' },
+    { value: 'documento_rejeitado', label: 'Documento rejeitado' },
+    { value: 'selfie_pendente', label: 'Selfie/prova de vida pendente' },
+    { value: 'comprovante_residencia', label: 'Comprovante de residência solicitado' },
+    { value: 'prazo_expirado', label: 'Prazo de verificação expirado' },
+    { value: 'verificacao_em_analise', label: 'Verificação em análise (demorada)' },
+    { value: 'outro', label: 'Outro motivo' },
+  ],
+  bloqueio_bancario: [
+    { value: 'conta_bloqueada', label: 'Conta bancária bloqueada' },
+    { value: 'pix_bloqueado', label: 'PIX bloqueado' },
+    { value: 'limite_reduzido', label: 'Limite bancário reduzido' },
+    { value: 'banco_solicitou_docs', label: 'Banco solicitou documentação' },
+    { value: 'conta_encerrada', label: 'Conta encerrada pelo banco' },
+    { value: 'outro', label: 'Outro motivo' },
+  ],
+  bloqueio_contas: [
+    { value: 'conta_limitada', label: 'Conta limitada/restrita' },
+    { value: 'conta_suspensa', label: 'Conta suspensa' },
+    { value: 'conta_encerrada', label: 'Conta encerrada permanentemente' },
+    { value: 'aposta_cancelada', label: 'Apostas canceladas pela casa' },
+    { value: 'verificacao_adicional', label: 'Verificação adicional solicitada' },
+    { value: 'outro', label: 'Outro motivo' },
+  ],
+};
+
+export const SUB_MOTIVO_LABELS: Record<string, string> = Object.values(SUB_MOTIVOS)
+  .flat()
+  .reduce((acc, item) => ({ ...acc, [item.value]: item.label }), {} as Record<string, string>);

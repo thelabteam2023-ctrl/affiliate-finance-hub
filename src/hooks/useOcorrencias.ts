@@ -185,6 +185,7 @@ interface CriarOcorrenciaPayload {
   titulo: string;
   descricao: string;
   tipo: OcorrenciaTipo;
+  sub_motivo?: string | null;
   prioridade: OcorrenciaPrioridade;
   executor_id: string;
   observadores?: string[];
@@ -209,6 +210,7 @@ export function useCriarOcorrencia() {
           titulo: payload.titulo,
           descricao: payload.descricao,
           tipo: payload.tipo,
+          sub_motivo: payload.sub_motivo || null,
           prioridade: payload.prioridade,
           requerente_id: user!.id,
           executor_id: payload.executor_id,

@@ -7,15 +7,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   useOcorrencia,
   useOcorrenciaEventos,
@@ -26,19 +18,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { PrioridadeBadge, StatusBadge, TipoBadge, SlaBadge } from './OcorrenciaBadges';
 import type { OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
-import { STATUS_LABELS, EVENTO_TIPO_LABELS } from '@/types/ocorrencias';
+import { STATUS_LABELS, EVENTO_TIPO_LABELS, SUB_MOTIVO_LABELS } from '@/types/ocorrencias';
 import {
   Clock,
   User,
-  MessageSquare,
   Send,
   Loader2,
   AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  Pause,
-  Activity,
   ArrowRight,
+  Tag,
+  FileText,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { parseLocalDateTime } from '@/utils/dateUtils';
@@ -96,6 +85,9 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
   if (!ocorrencia) return null;
 
   const transicoes = STATUS_TRANSICOES[ocorrencia.status];
+  const subMotivoLabel = ocorrencia.sub_motivo
+    ? SUB_MOTIVO_LABELS[ocorrencia.sub_motivo] || ocorrencia.sub_motivo
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -111,6 +103,12 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
             <StatusBadge status={ocorrencia.status} />
             <TipoBadge tipo={ocorrencia.tipo} />
             <SlaBadge violado={ocorrencia.sla_violado} alertaEm={ocorrencia.sla_alerta_em} />
+            {subMotivoLabel && (
+              <span className="flex items-center gap-1 text-xs text-primary/80 bg-primary/10 px-2 py-0.5 rounded-full">
+                <Tag className="h-3 w-3" />
+                {subMotivoLabel}
+              </span>
+            )}
           </div>
         </DialogHeader>
 
@@ -131,9 +129,15 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
                 <Clock className="h-3.5 w-3.5" />
                 <span>Aberta: <span className="text-foreground">{format(parseLocalDateTime(ocorrencia.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span></span>
               </div>
+              {ocorrencia.descricao && (
+                <div className="flex items-start gap-2 text-muted-foreground pt-1 border-t border-border/30">
+                  <FileText className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <p className="text-foreground text-xs leading-relaxed whitespace-pre-wrap">{ocorrencia.descricao}</p>
+                </div>
+              )}
             </div>
 
-            {/* Eventos da Timeline */}
+            {/* Timeline Events */}
             {loadingEventos ? (
               <div className="space-y-3">
                 {[1, 2].map((i) => <Skeleton key={i} className="h-16" />)}
@@ -151,7 +155,7 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
               </div>
             )}
 
-            {/* Campo de comentário */}
+            {/* Comment input */}
             {!['resolvido', 'cancelado'].includes(ocorrencia.status) && (
               <div className="mt-4 space-y-2">
                 <Textarea
@@ -174,7 +178,7 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
             )}
           </div>
 
-          {/* Painel lateral de ações */}
+          {/* Side panel */}
           {transicoes.length > 0 && (
             <div className="w-48 shrink-0 space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -262,7 +266,7 @@ function EventoItem({
           </span>
         </div>
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{evento.conteudo}</p>
-        {/* Anexos */}
+        {/* Attachments */}
         {evento.anexos && Array.isArray(evento.anexos) && evento.anexos.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {(evento.anexos as { nome: string; url: string }[]).map((a, i) => (
