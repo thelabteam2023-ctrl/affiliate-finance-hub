@@ -79,7 +79,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookmakers')
-        .select('id, nome, instance_identifier')
+        .select('id, nome, instance_identifier, parceiro_id, parceiros!bookmakers_parceiro_id_fkey (nome)')
         .eq('workspace_id', workspaceId!)
         .order('nome');
       if (error) throw error;
@@ -319,8 +319,15 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                         {contextoEntidade === 'bookmaker'
                           ? bookmakers.map((bk: any) => (
                               <SelectItem key={bk.id} value={bk.id}>
-                                {bk.nome}
-                                {bk.instance_identifier ? ` (${bk.instance_identifier})` : ''}
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {bk.nome}
+                                    {bk.instance_identifier ? ` (${bk.instance_identifier})` : ''}
+                                  </span>
+                                  {bk.parceiros?.nome && (
+                                    <span className="text-xs text-muted-foreground">{bk.parceiros.nome}</span>
+                                  )}
+                                </div>
                               </SelectItem>
                             ))
                           : contasBancarias.map((cb: any) => (
