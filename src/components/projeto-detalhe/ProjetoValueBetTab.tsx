@@ -343,6 +343,38 @@ export function ProjetoValueBetTab({
           operador_nome: bkInfo?.parceiroNome ?? undefined,
         };
       });
+
+      // Enriquecer com sub_entries de apostas_pernas
+      const apostaIds = mappedApostas.map(a => a.id);
+      if (apostaIds.length > 0) {
+        const { data: pernasData } = await supabase
+          .from("apostas_pernas")
+          .select(`
+            aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem,
+            bookmaker:bookmakers (
+              nome, parceiro_id,
+              parceiro:parceiros (nome),
+              bookmakers_catalogo (logo_url)
+            )
+          `)
+          .in("aposta_id", apostaIds)
+          .order("ordem", { ascending: true });
+
+        if (pernasData) {
+          const pernasMap = new Map<string, any[]>();
+          for (const p of pernasData) {
+            const arr = pernasMap.get(p.aposta_id) || [];
+            arr.push(p);
+            pernasMap.set(p.aposta_id, arr);
+          }
+          for (const a of mappedApostas) {
+            const pernas = pernasMap.get(a.id);
+            if (pernas && pernas.length > 1) {
+              (a as any)._sub_entries = pernas;
+            }
+          }
+        }
+      }
       
       setApostas(mappedApostas);
     } catch (error: unknown) {
@@ -945,6 +977,17 @@ export function ProjetoValueBetTab({
                  pernas: aposta.pernas ?? undefined,
                  selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
                  moeda: aposta.moeda_operacao || "BRL",
+                 sub_entries: (aposta as any)._sub_entries
+                   ?.filter((_: any, i: number) => i > 0)
+                   ?.map((p: any) => ({
+                     bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?',
+                     parceiro_nome: p.bookmaker?.parceiro?.nome || null,
+                     odd: p.odd,
+                     stake: p.stake,
+                     moeda: p.moeda,
+                     logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null,
+                     selecao_livre: p.selecao_livre,
+                   })) || undefined,
                }}
                estrategia="VALUEBET"
                onEdit={(apostaId) => {
@@ -954,7 +997,6 @@ export function ProjetoValueBetTab({
                onQuickResolve={handleQuickResolve}
                onDelete={handleDeleteAposta}
                variant="card"
-               /* Card usa moeda original da aposta via defaultFormatCurrency */
             />
           ))}
         </div>
@@ -970,6 +1012,17 @@ export function ProjetoValueBetTab({
                  pernas: aposta.pernas ?? undefined,
                  selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
                  moeda: aposta.moeda_operacao || "BRL",
+                 sub_entries: (aposta as any)._sub_entries
+                   ?.filter((_: any, i: number) => i > 0)
+                   ?.map((p: any) => ({
+                     bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?',
+                     parceiro_nome: p.bookmaker?.parceiro?.nome || null,
+                     odd: p.odd,
+                     stake: p.stake,
+                     moeda: p.moeda,
+                     logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null,
+                     selecao_livre: p.selecao_livre,
+                   })) || undefined,
                }}
                estrategia="VALUEBET"
                onEdit={(apostaId) => {
@@ -979,7 +1032,6 @@ export function ProjetoValueBetTab({
                onQuickResolve={handleQuickResolve}
                onDelete={handleDeleteAposta}
                variant="list"
-               /* Card usa moeda original da aposta via defaultFormatCurrency */
             />
           ))}
         </div>
