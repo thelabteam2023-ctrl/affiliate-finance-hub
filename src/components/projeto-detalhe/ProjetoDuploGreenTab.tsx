@@ -1129,7 +1129,9 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                     onQuickResolve={handleQuickResolve}
                     onDelete={handleDeleteAposta}
                     variant="card"
-                    /* Card usa moeda original da aposta via defaultFormatCurrency */
+                    formatCurrency={formatCurrency}
+                    convertToConsolidation={convertFnOficial}
+                    moedaConsolidacao={moedaConsol}
                   />
                 ))}
               </div>
@@ -1143,7 +1145,9 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                   onQuickResolve={handleQuickResolve}
                   onDelete={handleDeleteAposta}
                   variant="list"
-                  /* Card usa moeda original da aposta via defaultFormatCurrency */
+                  formatCurrency={formatCurrency}
+                  convertToConsolidation={convertFnOficial}
+                  moedaConsolidacao={moedaConsol}
                 />
               ))
             )}

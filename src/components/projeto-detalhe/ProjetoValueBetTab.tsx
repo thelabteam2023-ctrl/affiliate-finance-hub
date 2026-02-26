@@ -998,6 +998,9 @@ export function ProjetoValueBetTab({
                onQuickResolve={handleQuickResolve}
                onDelete={handleDeleteAposta}
                variant="card"
+               formatCurrency={formatCurrency}
+               convertToConsolidation={convertToConsolidationOficialFn}
+               moedaConsolidacao={moedaConsolidacaoVal}
             />
           ))}
         </div>
@@ -1034,6 +1037,9 @@ export function ProjetoValueBetTab({
                onQuickResolve={handleQuickResolve}
                onDelete={handleDeleteAposta}
                variant="list"
+               formatCurrency={formatCurrency}
+               convertToConsolidation={convertToConsolidationOficialFn}
+               moedaConsolidacao={moedaConsolidacaoVal}
             />
           ))}
         </div>
