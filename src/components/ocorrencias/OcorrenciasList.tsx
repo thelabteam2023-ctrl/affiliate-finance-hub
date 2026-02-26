@@ -25,14 +25,15 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PrioridadeBadge, StatusBadge, TipoBadge, SlaBadge } from './OcorrenciaBadges';
 import { OcorrenciaDetalheDialog } from './OcorrenciaDetalheDialog';
-import type { Ocorrencia, OcorrenciaStatus } from '@/types/ocorrencias';
-import { STATUS_LABELS } from '@/types/ocorrencias';
+import type { Ocorrencia, OcorrenciaStatus, OcorrenciaTipo } from '@/types/ocorrencias';
+import { STATUS_LABELS, SUB_MOTIVO_LABELS } from '@/types/ocorrencias';
 import {
   ChevronDown,
   Clock,
   Eye,
   Inbox,
   Trash2,
+  Tag,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -40,6 +41,7 @@ import { ptBR } from 'date-fns/locale';
 interface Props {
   statusFilter?: OcorrenciaStatus[];
   modoMinhas?: boolean;
+  tipoFilter?: OcorrenciaTipo | null;
   emptyMessage?: string;
 }
 
@@ -51,7 +53,7 @@ const STATUS_TRANSICOES: Record<OcorrenciaStatus, OcorrenciaStatus[]> = {
   cancelado: [],
 };
 
-export function OcorrenciasList({ statusFilter, modoMinhas, emptyMessage }: Props) {
+export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMessage }: Props) {
   const { user } = useAuth();
   const { isOwnerOrAdmin } = useRole();
   const [detalheId, setDetalheId] = useState<string | null>(null);
@@ -60,12 +62,16 @@ export function OcorrenciasList({ statusFilter, modoMinhas, emptyMessage }: Prop
   const filters = statusFilter ? { status: statusFilter } : undefined;
   const { data: ocorrencias = [], isLoading } = useOcorrencias(filters);
 
-  // Filtro "Minhas"
-  const lista = modoMinhas
+  // Filter by user and type
+  let lista = modoMinhas
     ? ocorrencias.filter(
         (o) => o.executor_id === user?.id || o.requerente_id === user?.id
       )
     : ocorrencias;
+
+  if (tipoFilter) {
+    lista = lista.filter((o) => o.tipo === tipoFilter);
+  }
 
   if (isLoading) {
     return (
@@ -139,6 +145,10 @@ function OcorrenciaRow({
   const transicoes = STATUS_TRANSICOES[ocorrencia.status];
   const temAcoes = transicoes.length > 0 || isAdmin;
 
+  const subMotivoLabel = ocorrencia.sub_motivo
+    ? SUB_MOTIVO_LABELS[ocorrencia.sub_motivo] || ocorrencia.sub_motivo
+    : null;
+
   return (
     <>
       <Card
@@ -147,7 +157,7 @@ function OcorrenciaRow({
       >
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
-            {/* Conteúdo principal */}
+            {/* Main content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <PrioridadeBadge prioridade={ocorrencia.prioridade} />
@@ -161,7 +171,7 @@ function OcorrenciaRow({
               <h4 className="font-medium text-sm truncate text-foreground">
                 {ocorrencia.titulo}
               </h4>
-              <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+              <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {formatDistanceToNow(new Date(ocorrencia.created_at), {
@@ -169,6 +179,12 @@ function OcorrenciaRow({
                     locale: ptBR,
                   })}
                 </span>
+                {subMotivoLabel && (
+                  <span className="flex items-center gap-1 text-primary/70">
+                    <Tag className="h-3 w-3" />
+                    {subMotivoLabel}
+                  </span>
+                )}
                 {isExecutor && (
                   <Badge variant="outline" className="text-xs py-0 px-1.5 text-primary border-primary/40">
                     Sua responsabilidade
@@ -177,7 +193,7 @@ function OcorrenciaRow({
               </div>
             </div>
 
-            {/* Ações */}
+            {/* Actions */}
             <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
               <Button
                 variant="ghost"

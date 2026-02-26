@@ -29,7 +29,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCriarOcorrencia } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
-import { TIPO_LABELS, PRIORIDADE_LABELS } from '@/types/ocorrencias';
+import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
 import { AlertTriangle, Loader2, Plus, X } from 'lucide-react';
 
@@ -44,6 +44,7 @@ const schema = z.object({
     'bloqueio_bancario',
     'bloqueio_contas',
   ] as const),
+  sub_motivo: z.string().optional(),
   prioridade: z.enum(['baixa', 'media', 'alta', 'urgente'] as const),
   executor_id: z.string().min(1, 'Selecione o executor'),
 });
@@ -74,16 +75,21 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       titulo: contextoInicial?.titulo || '',
       descricao: '',
       tipo: contextoInicial?.tipo || 'financeiro',
+      sub_motivo: '',
       prioridade: 'media',
       executor_id: '',
     },
   });
+
+  const tipoSelecionado = form.watch('tipo');
+  const subMotivos = SUB_MOTIVOS[tipoSelecionado] || [];
 
   const onSubmit = async (data: FormData) => {
     await criar({
       titulo: data.titulo,
       descricao: data.descricao,
       tipo: data.tipo,
+      sub_motivo: data.sub_motivo || null,
       prioridade: data.prioridade,
       executor_id: data.executor_id,
       observadores: observadoresSelecionados,
@@ -140,7 +146,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tipo *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select
+                      onValueChange={(v) => {
+                        field.onChange(v);
+                        form.setValue('sub_motivo', '');
+                      }}
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o tipo" />
@@ -188,6 +200,34 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                 )}
               />
             </div>
+
+            {/* Sub-motivo dinâmico */}
+            {subMotivos.length > 0 && (
+              <FormField
+                control={form.control}
+                name="sub_motivo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Motivo específico</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Qual o motivo específico?" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {subMotivos.map((sm) => (
+                          <SelectItem key={sm.value} value={sm.value}>
+                            {sm.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Executor */}
             <FormField

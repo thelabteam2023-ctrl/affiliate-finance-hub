@@ -4985,6 +4985,7 @@ export type Database = {
           sla_horas: number | null
           sla_violado: boolean
           status: Database["public"]["Enums"]["ocorrencia_status"]
+          sub_motivo: string | null
           tipo: Database["public"]["Enums"]["ocorrencia_tipo"]
           titulo: string
           updated_at: string
@@ -5009,6 +5010,7 @@ export type Database = {
           sla_horas?: number | null
           sla_violado?: boolean
           status?: Database["public"]["Enums"]["ocorrencia_status"]
+          sub_motivo?: string | null
           tipo?: Database["public"]["Enums"]["ocorrencia_tipo"]
           titulo: string
           updated_at?: string
@@ -5033,6 +5035,7 @@ export type Database = {
           sla_horas?: number | null
           sla_violado?: boolean
           status?: Database["public"]["Enums"]["ocorrencia_status"]
+          sub_motivo?: string | null
           tipo?: Database["public"]["Enums"]["ocorrencia_tipo"]
           titulo?: string
           updated_at?: string
