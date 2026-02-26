@@ -55,6 +55,7 @@ import { parseLocalDateTime } from "@/utils/dateUtils";
 interface BonusApostasTabProps {
   projetoId: string;
   dateRange?: { start: Date; end: Date } | null;
+  onDataChange?: () => void;
 }
 
 interface Aposta {
@@ -175,7 +176,7 @@ type ApostaUnificada = {
   data_aposta: string;
 };
 
-export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) {
+export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApostasTabProps) {
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
   const { convertToConsolidation, moedaConsolidacao, formatCurrency: formatProjectCurrency } = useProjetoCurrency(projetoId);
   
@@ -571,12 +572,15 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
         fetchSurebetsInternal(currentProjetoId, currentBonusIds),
         fetchBookmakersInternal(currentProjetoId, currentBonusIds)
       ]);
+      
+      // Notificar pai para refresh global (KPIs, Visão Geral, outras abas)
+      onDataChange?.();
     } catch (error) {
       console.error("Erro ao atualizar dados:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onDataChange]);
 
   // Hook centralizado para sincronização cross-window
   useCrossWindowSync({

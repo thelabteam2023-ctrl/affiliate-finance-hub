@@ -953,6 +953,7 @@ export default function ProjetoDetalhe() {
             <ProjetoBonusArea 
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
+              onDataChange={triggerGlobalRefresh}
               actionsSlot={
                 <GlobalActionsBar
                   projetoId={id!}
