@@ -76,6 +76,13 @@ export async function consumirFreebetViaLedger(
       return { success: false, error: 'Valor deve ser positivo' };
     }
 
+    // CRÍTICO: Se apostaId fornecido, usar chave 'stake_{apostaId}' para que:
+    // - liquidar_aposta_v4 detecte o evento existente (sem auto-heal duplicado)
+    // - deletar_aposta_v4 encontre o evento via aposta_id (para reverter)
+    const idempotencyKey = options?.apostaId 
+      ? `stake_${options.apostaId}` 
+      : `fb_stake_${bookmakerId}_${Date.now()}`;
+
     const result = await processFinancialEvent({
       bookmakerId,
       apostaId: options?.apostaId,
@@ -84,7 +91,7 @@ export async function consumirFreebetViaLedger(
       origem: 'FREEBET',
       valor: -valor, // Negativo = débito
       descricao: options?.descricao || 'Consumo de freebet',
-      idempotencyKey: `fb_stake_${bookmakerId}_${options?.apostaId || Date.now()}`,
+      idempotencyKey,
     });
 
     if (!result.success) {

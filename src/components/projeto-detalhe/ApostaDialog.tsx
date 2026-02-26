@@ -2642,24 +2642,24 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // 1. Bookmaker simples com freebet
         if (tipoAposta === "bookmaker" && usarFreebetBookmaker) {
           const valorFreebetDebitar = Math.min(valorFreebetUsar, stakeBookmakerEfetiva);
-          if (valorFreebetDebitar > 0 && bookmakerId) {
-            await debitarFreebetUsada(bookmakerId, valorFreebetDebitar);
+          if (valorFreebetDebitar > 0 && bookmakerId && novaApostaId) {
+            await debitarFreebetUsada(bookmakerId, valorFreebetDebitar, novaApostaId);
           }
         }
         
         // 2. Exchange Back com freebet
         if (tipoAposta === "exchange" && tipoOperacaoExchange === "back" && tipoApostaExchangeBack !== "normal") {
           const stakeNum = parseFloat(exchangeStake);
-          if (stakeNum > 0 && exchangeBookmakerId) {
-            await debitarFreebetUsada(exchangeBookmakerId, stakeNum);
+          if (stakeNum > 0 && exchangeBookmakerId && novaApostaId) {
+            await debitarFreebetUsada(exchangeBookmakerId, stakeNum, novaApostaId);
           }
         }
         
         // 3. Cobertura Lay com freebet
         if (tipoAposta === "exchange" && tipoOperacaoExchange === "cobertura" && tipoApostaBack !== "normal") {
           const backStakeNum = parseFloat(coberturaBackStake);
-          if (backStakeNum > 0 && coberturaBackBookmakerId) {
-            await debitarFreebetUsada(coberturaBackBookmakerId, backStakeNum);
+          if (backStakeNum > 0 && coberturaBackBookmakerId && novaApostaId) {
+            await debitarFreebetUsada(coberturaBackBookmakerId, backStakeNum, novaApostaId);
           }
         }
 
@@ -2819,23 +2819,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   };
 
   // Função para debitar freebet usada e marcar como utilizada na tabela freebets_recebidas
-  // MIGRADO PARA LEDGER: Usa RPC consumir_freebet em vez de UPDATE direto
+  // CORRIGIDO: Usa idempotency_key = 'stake_{apostaId}' para que:
+  // 1. liquidar_aposta_v4 detecte o evento existente (sem duplicar)
+  // 2. deletar_aposta_v4 encontre o evento via aposta_id (para reverter)
   const debitarFreebetUsada = async (bookmakerIdFreebet: string, valor: number, apostaId?: string) => {
     try {
-      // 1. Debitar saldo_freebet via ledger (RPC atômica)
-       // 1. Debitar saldo_freebet via ledger (RPC atômica)
-      const result = await consumirFreebetViaLedger(bookmakerIdFreebet, valor, {
-        apostaId,
-        descricao: `Freebet consumida em aposta${apostaId ? ` #${apostaId.slice(0, 8)}` : ''}`,
-      });
+      if (apostaId) {
+        // Debitar saldo_freebet via ledger com chave determinística vinculada à aposta
+        const result = await consumirFreebetViaLedger(bookmakerIdFreebet, valor, {
+          apostaId,
+          descricao: `Freebet consumida em aposta #${apostaId.slice(0, 8)}`,
+        });
 
-      if (!result.success) {
-        console.error("Erro ao consumir freebet via ledger:", result.error);
-        // Fallback não é mais necessário - o ledger é a fonte de verdade
-        throw new Error(result.error);
+        if (!result.success) {
+          console.error("Erro ao consumir freebet via ledger:", result.error);
+          throw new Error(result.error);
+        }
       }
 
-      // 2. Buscar freebet disponível para marcar como usada
+      // Buscar freebet disponível para marcar como usada
       const { data: freebetsDisponiveis } = await supabase
         .from("freebets_recebidas")
         .select("id, valor")
@@ -2845,11 +2847,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         .order("valor", { ascending: false });
 
       if (freebetsDisponiveis && freebetsDisponiveis.length > 0) {
-        // Encontrar a freebet mais adequada (valor igual ou maior)
         const freebetParaUsar = freebetsDisponiveis.find(fb => fb.valor >= valor) 
           || freebetsDisponiveis[0];
         
-        // 3. Marcar como utilizada
         await supabase
           .from("freebets_recebidas")
           .update({
@@ -2861,7 +2861,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       }
     } catch (error) {
       console.error("Erro ao debitar freebet usada:", error);
-      throw error; // Propagar erro para tratamento upstream
+      throw error;
     }
   };
 
