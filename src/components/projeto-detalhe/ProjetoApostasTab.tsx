@@ -1458,15 +1458,18 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  parceiro_nome: parceiroNome,
                  logo_url: logoUrl,
                  moeda: aposta.moeda_operacao || "BRL",
-                 // Multi-entry: sub-entradas de apostas_pernas
-                 sub_entries: (aposta as any)._sub_entries?.map((p: any) => ({
-                   bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?',
-                   odd: p.odd,
-                   stake: p.stake,
-                   moeda: p.moeda,
-                   logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null,
-                   selecao_livre: p.selecao_livre,
-                 })) || undefined,
+                 // Multi-entry: sub-entradas de apostas_pernas (exclui a 1ª perna que é a principal)
+                 sub_entries: (aposta as any)._sub_entries
+                   ?.filter((_: any, i: number) => i > 0)
+                   ?.map((p: any) => ({
+                     bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?',
+                     parceiro_nome: p.bookmaker?.parceiro?.nome || null,
+                     odd: p.odd,
+                     stake: p.stake,
+                     moeda: p.moeda,
+                     logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null,
+                     selecao_livre: p.selecao_livre,
+                   })) || undefined,
                };
               
               return (
