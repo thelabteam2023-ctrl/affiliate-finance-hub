@@ -3248,6 +3248,45 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             };
                           })() : null}
                         />
+                        {/* Compact FB button for main entry */}
+                        {bookmakerSaldo && bookmakerSaldo.saldoFreebet > 0 && !aposta?.gerou_freebet && (() => {
+                          // Calculate available FB considering other entries using same bookmaker
+                          const fbUsadoOutrasEntradas = additionalEntries
+                            .filter(e => e.bookmaker_id === bookmakerId && e.usar_freebet)
+                            .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                          const fbDisponivel = Math.max(0, bookmakerSaldo.saldoFreebet - fbUsadoOutrasEntradas);
+                          if (fbDisponivel <= 0 && !usarFreebetBookmaker) return null;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newUsarFb = !usarFreebetBookmaker;
+                                setUsarFreebetBookmaker(newUsarFb);
+                                if (newUsarFb) {
+                                  setGerouFreebet(false);
+                                  setValorFreebetGerada("");
+                                  setValorFreebetUsar(fbDisponivel);
+                                  // Auto-fill stake with available FB
+                                  if (!stake || parseFloat(stake) === 0) {
+                                    setStake(fbDisponivel.toString());
+                                  }
+                                } else {
+                                  setValorFreebetUsar(0);
+                                }
+                              }}
+                              disabled={!!aposta?.tipo_freebet}
+                              className={cn(
+                                "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
+                                usarFreebetBookmaker
+                                  ? "bg-purple-500/20 text-purple-400 border border-purple-500/40"
+                                  : "bg-muted/40 text-muted-foreground hover:bg-muted/60 border border-transparent"
+                              )}
+                            >
+                              <Gift className="h-3 w-3" />
+                              {usarFreebetBookmaker ? "FB ativo" : "Usar FB"}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </td>
                     {/* Odd */}
@@ -3375,7 +3414,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                               } : null}
                             />
                             {/* Freebet toggle compacto por sub-entrada */}
-                            {entryBk && entryBk.saldo_freebet > 0 && (
+                            {entryBk && entryBk.saldo_freebet > 0 && (() => {
+                              // Calculate available FB considering other entries + main entry using same bookmaker
+                              const fbUsadoPrincipal = (bookmakerId === entry.bookmaker_id && usarFreebetBookmaker)
+                                ? (parseFloat(stake) || 0)
+                                : 0;
+                              const fbUsadoOutrasEntradas = additionalEntries
+                                .filter(e => e.id !== entry.id && e.bookmaker_id === entry.bookmaker_id && e.usar_freebet)
+                                .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                              const fbDisponivel = Math.max(0, entryBk.saldo_freebet - fbUsadoPrincipal - fbUsadoOutrasEntradas);
+                              if (fbDisponivel <= 0 && !entry.usar_freebet) return null;
+                              return (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -3385,8 +3434,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     return {
                                       ...e,
                                       usar_freebet: newUsarFb,
-                                      // Auto-fill stake com saldo FB ao ativar
-                                      stake: newUsarFb ? entryBk.saldo_freebet.toString() : e.stake,
+                                      // Auto-fill stake com saldo FB disponível ao ativar
+                                      stake: newUsarFb ? fbDisponivel.toString() : e.stake,
                                     };
                                   }));
                                 }}
@@ -3400,7 +3449,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 <Gift className="h-3 w-3" />
                                 {entry.usar_freebet ? "FB ativo" : "Usar FB"}
                               </button>
-                            )}
+                              );
+                            })()}
                           </div>
                         </td>
                         {/* Odd */}
@@ -3557,42 +3607,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               )}
             </div>
 
-              {/* WATERFALL: Toggle Freebet (só se tiver saldo) + Preview de distribuição */}
-              {bookmakerSaldo && !aposta?.gerou_freebet && (
-                <div className="space-y-3 mt-3">
-                  {/* FreebetToggle - só aparece se bookmaker tem saldo de freebet */}
-                  {bookmakerSaldo.saldoFreebet > 0 && (
-                    <FreebetToggle
-                      checked={usarFreebetBookmaker}
-                      onCheckedChange={(checked) => {
-                        setUsarFreebetBookmaker(checked);
-                        if (checked) {
-                          setGerouFreebet(false);
-                          setValorFreebetGerada("");
-                        }
-                      }}
-                      saldoFreebet={bookmakerSaldo.saldoFreebet}
-                      moeda={bookmakerSaldo.moeda}
-                      disabled={!!aposta?.tipo_freebet}
-                      valorFreebet={valorFreebetUsar}
-                      onValorFreebetChange={setValorFreebetUsar}
-                    />
-                  )}
-                  
-                  {/* SaldoWaterfallPreview - mostra como stake será distribuído */}
-                  {bookmakerId && stakeBookmakerEfetiva > 0 && (
-                    <SaldoWaterfallPreview
-                      stake={stakeBookmakerEfetiva}
-                      saldoBonus={bookmakerSaldo.saldoBonus}
-                      saldoFreebet={bookmakerSaldo.saldoFreebet}
-                      saldoReal={bookmakerSaldo.saldoDisponivel}
-                      usarFreebet={usarFreebetBookmaker}
-                      moeda={bookmakerSaldo.moeda}
-                      isEditMode={!!aposta && aposta.bookmaker_id === bookmakerId}
-                      originalStake={aposta?.stake || 0}
-                      currentResultado={aposta?.resultado}
-                    />
-                  )}
+              {/* SaldoWaterfallPreview - mostra como stake será distribuído (sem toggle, FB agora é inline) */}
+              {bookmakerSaldo && !aposta?.gerou_freebet && bookmakerId && stakeBookmakerEfetiva > 0 && (
+                <div className="mt-3">
+                  <SaldoWaterfallPreview
+                    stake={stakeBookmakerEfetiva}
+                    saldoBonus={bookmakerSaldo.saldoBonus}
+                    saldoFreebet={bookmakerSaldo.saldoFreebet}
+                    saldoReal={bookmakerSaldo.saldoDisponivel}
+                    usarFreebet={usarFreebetBookmaker}
+                    moeda={bookmakerSaldo.moeda}
+                    isEditMode={!!aposta && aposta.bookmaker_id === bookmakerId}
+                    originalStake={aposta?.stake || 0}
+                    currentResultado={aposta?.resultado}
+                  />
                 </div>
               )}
               </>
@@ -4451,41 +4479,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </>
             )}
 
-            {/* WATERFALL: Toggle Freebet + Preview de distribuição (Dialog Mode) */}
-            {tipoAposta === "bookmaker" && bookmakerSaldo && !aposta?.gerou_freebet && (
-              <div className="space-y-3 mt-3 p-3 rounded-lg border border-border/30 bg-muted/5">
-                {/* FreebetToggle - só aparece se bookmaker tem saldo de freebet */}
-                {bookmakerSaldo.saldoFreebet > 0 && (
-                  <FreebetToggle
-                    checked={usarFreebetBookmaker}
-                    onCheckedChange={(checked) => {
-                      setUsarFreebetBookmaker(checked);
-                      if (checked) {
-                        setGerouFreebet(false);
-                        setValorFreebetGerada("");
-                      }
-                    }}
-                    saldoFreebet={bookmakerSaldo.saldoFreebet}
-                    moeda={bookmakerSaldo.moeda}
-                    disabled={!!aposta?.tipo_freebet}
-                    valorFreebet={valorFreebetUsar}
-                    onValorFreebetChange={setValorFreebetUsar}
-                  />
-                )}
-                
-                {bookmakerId && stakeBookmakerEfetiva > 0 && (
-                  <SaldoWaterfallPreview
-                    stake={stakeBookmakerEfetiva}
-                    saldoBonus={bookmakerSaldo.saldoBonus}
-                    saldoFreebet={bookmakerSaldo.saldoFreebet}
-                    saldoReal={bookmakerSaldo.saldoDisponivel}
-                    usarFreebet={usarFreebetBookmaker}
-                    moeda={bookmakerSaldo.moeda}
-                    isEditMode={!!aposta && aposta.bookmaker_id === bookmakerId}
-                    originalStake={aposta?.stake || 0}
-                    currentResultado={aposta?.resultado}
-                  />
-                )}
+            {/* SaldoWaterfallPreview (Dialog Mode) - FB toggle agora é inline na tabela */}
+            {tipoAposta === "bookmaker" && bookmakerSaldo && !aposta?.gerou_freebet && bookmakerId && stakeBookmakerEfetiva > 0 && (
+              <div className="mt-3 p-3 rounded-lg border border-border/30 bg-muted/5">
+                <SaldoWaterfallPreview
+                  stake={stakeBookmakerEfetiva}
+                  saldoBonus={bookmakerSaldo.saldoBonus}
+                  saldoFreebet={bookmakerSaldo.saldoFreebet}
+                  saldoReal={bookmakerSaldo.saldoDisponivel}
+                  usarFreebet={usarFreebetBookmaker}
+                  moeda={bookmakerSaldo.moeda}
+                  isEditMode={!!aposta && aposta.bookmaker_id === bookmakerId}
+                  originalStake={aposta?.stake || 0}
+                  currentResultado={aposta?.resultado}
+                />
               </div>
             )}
 
