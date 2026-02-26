@@ -166,7 +166,7 @@ export function SurebetModalRoot({
   const { getSnapshotFields } = useCurrencySnapshot();
   const {
     moedaConsolidacao,
-    cotacaoTrabalho, // valor raw da cotação de trabalho (null se não configurada)
+    cotacaoAtual: cotacaoUsdFormulario, // REGRA: formulários SEMPRE usam cotação de trabalho (se configurada)
   } = useProjetoConsolidacao({ projetoId });
   const { getRate: getCotacaoRate } = useCotacoes();
   
@@ -305,17 +305,17 @@ export function SurebetModalRoot({
   // CALCULATOR HOOK
   // ============================================
 
-  // Construir engineConfig com taxas BRL corretas (Trabalho > PTAX > fallback)
-  // REGRA DE PRIORIDADE:
-  //   1️⃣ Cotação Trabalho (cotacaoTrabalho — configurada manualmente no projeto, USD→BRL)
-  //   2️⃣ PTAX / Oficial do Context (getCotacaoRate — FastForex/banco)
-  //   3️⃣ Fallback hardcoded (dentro do próprio engine)
-  // A cotação de trabalho é por USD (par USD/BRL). Para outras moedas, sempre usa getCotacaoRate.
+  // Construir engineConfig com taxas BRL corretas
+  // REGRA UNIFICADA PARA FORMULÁRIOS:
+  //   Usa cotacaoAtual do useProjetoConsolidacao (que já aplica: Trabalho > PTAX > fallback)
+  //   Isso garante que TODOS os formulários (Simples, Múltipla, Surebet) usem a mesma cotação.
+  //   Para outras moedas (EUR, GBP, etc.), usa getCotacaoRate (oficial).
   const engineConfig = useMemo((): import("@/utils/surebetCurrencyEngine").SurebetEngineConfig => {
     const consolidation = (moedaConsolidacao || "BRL") as SupportedCurrency;
     
-    // Taxa USD→BRL: prioriza cotação de Trabalho configurada no projeto
-    const usdBrl = cotacaoTrabalho ?? getCotacaoRate("USD");
+    // REGRA UNIFICADA: formulários SEMPRE usam cotacaoAtual (que já aplica Trabalho > PTAX)
+    // Isso garante consistência com useProjetoCurrency.convertToConsolidation
+    const usdBrl = cotacaoUsdFormulario;
     
     return {
       consolidationCurrency: consolidation,
@@ -330,7 +330,7 @@ export function SurebetModalRoot({
         COP: getCotacaoRate("COP"),
       },
     };
-  }, [moedaConsolidacao, cotacaoTrabalho, getCotacaoRate]);
+  }, [moedaConsolidacao, cotacaoUsdFormulario, getCotacaoRate]);
 
   const { analysis, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
     odds,
