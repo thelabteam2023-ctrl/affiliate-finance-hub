@@ -5,7 +5,7 @@
  * Calcula odd média ponderada e stake total.
  * Limite: 5 entradas por aposta.
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useCallback, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2, Layers } from 'lucide-react';
@@ -82,6 +82,34 @@ export function SimpleMultiEntryTable({
   convertToConsolidation,
 }: SimpleMultiEntryTableProps) {
   const isMulti = entries.length > 1;
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  // Atalhos Q (saltar entre Odds) e S (saltar entre Stakes)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName !== 'INPUT' || !tableRef.current?.contains(target)) return;
+
+      const key = e.key.toLowerCase();
+      if (key !== 'q' && key !== 's') return;
+
+      const fieldType = key === 'q' ? 'odd' : 'stake';
+      const inputs = Array.from(
+        tableRef.current.querySelectorAll<HTMLInputElement>(`input[data-field-type="${fieldType}"]`)
+      );
+      if (inputs.length < 2) return;
+
+      const currentIdx = inputs.indexOf(target as HTMLInputElement);
+      const nextIdx = (currentIdx + 1) % inputs.length;
+
+      e.preventDefault();
+      inputs[nextIdx].focus();
+      inputs[nextIdx].select();
+    };
+
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   // Odd média ponderada (multi-moeda) e stake total nominal
   const { oddMedia, stakeTotal, stakeTotalLabel } = useMemo(() => {
@@ -159,7 +187,7 @@ export function SimpleMultiEntryTable({
 
   return (
     <div className="border border-border/50 rounded-lg overflow-hidden">
-      <table className="w-full">
+      <table ref={tableRef} className="w-full">
         <thead>
           <tr className="border-b border-border/30 bg-muted/30">
             <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center w-[240px]">Bookmaker</th>
@@ -234,6 +262,7 @@ export function SimpleMultiEntryTable({
                     }}
                     placeholder="0.00"
                     className="h-8 text-xs text-center px-1 w-[72px] tabular-nums"
+                    data-field-type="odd"
                   />
                 </td>
                 {/* Stake */}
@@ -252,6 +281,7 @@ export function SimpleMultiEntryTable({
                       "h-8 text-xs text-center px-1 w-[90px] tabular-nums",
                       stakeExceeds && "border-destructive"
                     )}
+                    data-field-type="stake"
                   />
                 </td>
                 {/* Linha */}
