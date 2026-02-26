@@ -1458,6 +1458,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  parceiro_nome: parceiroNome,
                  logo_url: logoUrl,
                  moeda: aposta.moeda_operacao || "BRL",
+                 // Odd real da 1ª perna (pode diferir da média ponderada em aposta.odd)
+                 primary_odd: (aposta as any)._sub_entries?.[0]?.odd ?? undefined,
                  // Multi-entry: sub-entradas de apostas_pernas (exclui a 1ª perna que é a principal)
                  sub_entries: (aposta as any)._sub_entries
                    ?.filter((_: any, i: number) => i > 0)

@@ -1123,7 +1123,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 {apostasSimples.map((aposta) => (
                   <ApostaCard
                     key={aposta.id}
-                    aposta={{ ...aposta, pernas: aposta.pernas as Perna[], moeda: aposta.moeda_operacao || "BRL", sub_entries: (aposta as any)._sub_entries?.filter((_: any, i: number) => i > 0)?.map((p: any) => ({ bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?', parceiro_nome: p.bookmaker?.parceiro?.nome || null, odd: p.odd, stake: p.stake, moeda: p.moeda, logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null, selecao_livre: p.selecao_livre })) || undefined }}
+                    aposta={{ ...aposta, pernas: aposta.pernas as Perna[], moeda: aposta.moeda_operacao || "BRL", primary_odd: (aposta as any)._sub_entries?.[0]?.odd ?? undefined, sub_entries: (aposta as any)._sub_entries?.filter((_: any, i: number) => i > 0)?.map((p: any) => ({ bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?', parceiro_nome: p.bookmaker?.parceiro?.nome || null, odd: p.odd, stake: p.stake, moeda: p.moeda, logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null, selecao_livre: p.selecao_livre })) || undefined }}
                     estrategia="DUPLO_GREEN"
                     onEdit={(apostaId) => { const a = apostasFiltradas.find(ap => ap.id === apostaId); if (a) handleOpenAposta(a); }}
                     onQuickResolve={handleQuickResolve}
@@ -1137,7 +1137,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
               apostasSimples.map((aposta) => (
                 <ApostaCard
                   key={aposta.id}
-                  aposta={{ ...aposta, pernas: aposta.pernas as Perna[], moeda: aposta.moeda_operacao || "BRL", sub_entries: (aposta as any)._sub_entries?.filter((_: any, i: number) => i > 0)?.map((p: any) => ({ bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?', parceiro_nome: p.bookmaker?.parceiro?.nome || null, odd: p.odd, stake: p.stake, moeda: p.moeda, logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null, selecao_livre: p.selecao_livre })) || undefined }}
+                  aposta={{ ...aposta, pernas: aposta.pernas as Perna[], moeda: aposta.moeda_operacao || "BRL", primary_odd: (aposta as any)._sub_entries?.[0]?.odd ?? undefined, sub_entries: (aposta as any)._sub_entries?.filter((_: any, i: number) => i > 0)?.map((p: any) => ({ bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?', parceiro_nome: p.bookmaker?.parceiro?.nome || null, odd: p.odd, stake: p.stake, moeda: p.moeda, logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null, selecao_livre: p.selecao_livre })) || undefined }}
                   estrategia="DUPLO_GREEN"
                   onEdit={(apostaId) => { const a = apostasFiltradas.find(ap => ap.id === apostaId); if (a) handleOpenAposta(a); }}
                   onQuickResolve={handleQuickResolve}

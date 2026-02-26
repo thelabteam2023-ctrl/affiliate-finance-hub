@@ -977,6 +977,7 @@ export function ProjetoValueBetTab({
                  pernas: aposta.pernas ?? undefined,
                  selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
                  moeda: aposta.moeda_operacao || "BRL",
+                 primary_odd: (aposta as any)._sub_entries?.[0]?.odd ?? undefined,
                  sub_entries: (aposta as any)._sub_entries
                    ?.filter((_: any, i: number) => i > 0)
                    ?.map((p: any) => ({
@@ -1012,6 +1013,7 @@ export function ProjetoValueBetTab({
                  pernas: aposta.pernas ?? undefined,
                  selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
                  moeda: aposta.moeda_operacao || "BRL",
+                 primary_odd: (aposta as any)._sub_entries?.[0]?.odd ?? undefined,
                  sub_entries: (aposta as any)._sub_entries
                    ?.filter((_: any, i: number) => i > 0)
                    ?.map((p: any) => ({
