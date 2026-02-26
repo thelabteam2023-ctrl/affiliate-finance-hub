@@ -3245,11 +3245,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                               const map = new Map<string, number>();
                               bookmakers.forEach(bk => {
                                 if ((bk.saldo_freebet || 0) > 0) {
-                                  const fbUsado = additionalEntries
+                                  // Subtract FB used by main entry (valorFreebetUsar, NOT stake)
+                                  const fbMain = (bookmakerId === bk.id && usarFreebetBookmaker)
+                                    ? valorFreebetUsar : 0;
+                                  // Subtract FB used by sub-entries
+                                  const fbSub = additionalEntries
                                     .filter(e => e.bookmaker_id === bk.id && e.usar_freebet)
                                     .reduce((sum, e) => sum + (parseFloat(e.valor_freebet) || 0), 0);
-                                  if (fbUsado > 0) {
-                                    map.set(bk.id, Math.max(0, (bk.saldo_freebet || 0) - fbUsado));
+                                  const totalUsado = fbMain + fbSub;
+                                  if (totalUsado > 0) {
+                                    map.set(bk.id, Math.max(0, (bk.saldo_freebet || 0) - totalUsado));
                                   }
                                 }
                               });
@@ -3471,9 +3476,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                   const map = new Map<string, number>();
                                   bookmakers.forEach(bk => {
                                     if ((bk.saldo_freebet || 0) > 0) {
-                                      // Subtract FB used by main entry
+                                      // Subtract FB used by main entry (valorFreebetUsar, NOT stake)
                                       const fbMain = (bookmakerId === bk.id && usarFreebetBookmaker)
-                                        ? (parseFloat(stake) || 0) : 0;
+                                        ? valorFreebetUsar : 0;
                                       // Subtract FB used by OTHER sub-entries (not this one)
                                       const fbOutras = additionalEntries
                                         .filter(e => e.id !== entry.id && e.bookmaker_id === bk.id && e.usar_freebet)
@@ -3491,7 +3496,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             {(() => {
                               // Adjust displayed FB balance: subtract what's used by other entries + main
                               const fbUsadoPrincipal = (bookmakerId === entry.bookmaker_id && usarFreebetBookmaker)
-                                ? (parseFloat(stake) || 0) : 0;
+                                ? valorFreebetUsar : 0;
                               const fbUsadoOutras = additionalEntries
                                 .filter(e => e.id !== entry.id && e.bookmaker_id === entry.bookmaker_id && e.usar_freebet)
                                 .reduce((sum, e) => sum + (parseFloat(e.valor_freebet) || 0), 0);
@@ -3512,7 +3517,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             {entryBk && entryBk.saldo_freebet > 0 && (() => {
                               // Calculate available FB considering other entries + main entry using same bookmaker
                               const fbUsadoPrincipal = (bookmakerId === entry.bookmaker_id && usarFreebetBookmaker)
-                                ? (parseFloat(stake) || 0)
+                                ? valorFreebetUsar
                                 : 0;
                               const fbUsadoOutrasEntradas = additionalEntries
                                 .filter(e => e.id !== entry.id && e.bookmaker_id === entry.bookmaker_id && e.usar_freebet)
