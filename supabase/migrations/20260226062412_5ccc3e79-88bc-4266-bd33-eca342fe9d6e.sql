@@ -1,0 +1,124 @@
+
+CREATE OR REPLACE FUNCTION get_bookmaker_saldos(p_projeto_id UUID DEFAULT NULL)
+RETURNS TABLE (
+  id UUID,
+  nome TEXT,
+  parceiro_id UUID,
+  parceiro_nome TEXT,
+  parceiro_primeiro_nome TEXT,
+  moeda TEXT,
+  logo_url TEXT,
+  saldo_real NUMERIC,
+  saldo_freebet NUMERIC,
+  saldo_bonus NUMERIC,
+  saldo_em_aposta NUMERIC,
+  saldo_disponivel NUMERIC,
+  saldo_operavel NUMERIC,
+  bonus_rollover_started BOOLEAN,
+  has_pending_transactions BOOLEAN,
+  instance_identifier TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_workspace_id UUID;
+BEGIN
+  IF p_projeto_id IS NOT NULL THEN
+    SELECT public.projetos.workspace_id
+      INTO v_workspace_id
+    FROM public.projetos
+    WHERE public.projetos.id = p_projeto_id;
+  END IF;
+
+  IF v_workspace_id IS NULL THEN
+    v_workspace_id := public.get_current_workspace();
+  END IF;
+
+  IF v_workspace_id IS NULL THEN
+    RAISE EXCEPTION 'Workspace não definido';
+  END IF;
+
+  RETURN QUERY
+  WITH bookmakers_ativos AS (
+    SELECT 
+      b.id,
+      b.nome,
+      b.parceiro_id,
+      b.moeda,
+      b.instance_identifier,
+      COALESCE(b.saldo_atual, 0) AS saldo_base,
+      COALESCE(b.saldo_freebet, 0) AS saldo_freebet,
+      p.nome AS parceiro_nome,
+      SPLIT_PART(p.nome, ' ', 1) AS parceiro_primeiro_nome,
+      bc.logo_url
+    FROM public.bookmakers b
+    LEFT JOIN public.parceiros p ON p.id = b.parceiro_id
+    LEFT JOIN public.bookmakers_catalogo bc ON bc.id = b.bookmaker_catalogo_id
+    WHERE b.workspace_id = v_workspace_id
+      AND b.status IN ('ATIVO', 'ativo', 'LIMITADA', 'limitada')
+      AND (p_projeto_id IS NULL OR b.projeto_id = p_projeto_id)
+  ),
+  apostas_pendentes AS (
+    SELECT 
+      au.bookmaker_id,
+      -- CORREÇÃO: Excluir stakes de apostas com freebet do cálculo,
+      -- pois o valor já foi debitado de saldo_freebet (não de saldo_atual)
+      COALESCE(SUM(
+        CASE 
+          WHEN au.fonte_saldo = 'FREEBET' OR au.usar_freebet = TRUE THEN 0
+          ELSE au.stake
+        END
+      ), 0) AS total_stake
+    FROM public.apostas_unificada au
+    WHERE au.workspace_id = v_workspace_id
+      AND au.status = 'PENDENTE'
+      AND au.cancelled_at IS NULL
+      AND au.bookmaker_id IS NOT NULL
+      AND (p_projeto_id IS NULL OR au.projeto_id = p_projeto_id)
+    GROUP BY au.bookmaker_id
+  ),
+  bonus_creditados AS (
+    SELECT 
+      pblb.bookmaker_id,
+      COALESCE(SUM(pblb.saldo_atual), 0) AS total_bonus,
+      BOOL_OR(COALESCE(pblb.rollover_progress, 0) > 0) AS has_rollover_started
+    FROM public.project_bookmaker_link_bonuses pblb
+    WHERE pblb.workspace_id = v_workspace_id
+      AND pblb.status = 'credited'
+      AND (p_projeto_id IS NULL OR pblb.project_id = p_projeto_id)
+    GROUP BY pblb.bookmaker_id
+  ),
+  transacoes_pendentes AS (
+    SELECT DISTINCT
+      COALESCE(cl.origem_bookmaker_id, cl.destino_bookmaker_id) AS bookmaker_id
+    FROM public.cash_ledger cl
+    WHERE cl.workspace_id = v_workspace_id
+      AND cl.status IN ('PENDENTE', 'pendente')
+      AND (cl.origem_bookmaker_id IS NOT NULL OR cl.destino_bookmaker_id IS NOT NULL)
+  )
+  SELECT
+    ba.id,
+    ba.nome,
+    ba.parceiro_id,
+    ba.parceiro_nome,
+    ba.parceiro_primeiro_nome,
+    ba.moeda,
+    ba.logo_url,
+    ba.saldo_base::NUMERIC AS saldo_real,
+    ba.saldo_freebet::NUMERIC AS saldo_freebet,
+    COALESCE(bc.total_bonus, 0)::NUMERIC AS saldo_bonus,
+    COALESCE(ap.total_stake, 0)::NUMERIC AS saldo_em_aposta,
+    GREATEST(0, ba.saldo_base - COALESCE(ap.total_stake, 0))::NUMERIC AS saldo_disponivel,
+    (GREATEST(0, ba.saldo_base - COALESCE(ap.total_stake, 0)) + ba.saldo_freebet)::NUMERIC AS saldo_operavel,
+    COALESCE(bc.has_rollover_started, FALSE) AS bonus_rollover_started,
+    (tp.bookmaker_id IS NOT NULL) AS has_pending_transactions,
+    ba.instance_identifier
+  FROM bookmakers_ativos ba
+  LEFT JOIN apostas_pendentes ap ON ap.bookmaker_id = ba.id
+  LEFT JOIN bonus_creditados bc ON bc.bookmaker_id = ba.id
+  LEFT JOIN transacoes_pendentes tp ON tp.bookmaker_id = ba.id
+  ORDER BY ba.nome;
+END;
+$$;
