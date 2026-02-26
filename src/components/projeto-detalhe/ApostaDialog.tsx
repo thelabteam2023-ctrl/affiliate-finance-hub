@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
@@ -71,6 +72,20 @@ import { GerouFreebetInput } from "./GerouFreebetInput";
 import { useActiveBonusInfo } from "@/hooks/useActiveBonusInfo";
 import { BonusImpactAlert } from "./BonusImpactAlert";
 import { FreebetToggle, SaldoWaterfallPreview } from "@/components/apostas/waterfall";
+import { Plus, Trash2 as Trash2Entry, Layers } from "lucide-react";
+
+// Multi-entry para aposta simples (mesma seleção, múltiplas bookmakers)
+interface AdditionalEntry {
+  id: string;
+  bookmaker_id: string;
+  odd: string;
+  stake: string;
+  selecao_livre: string;
+}
+
+const generateEntryId = () => Math.random().toString(36).substring(2, 9);
+const MAX_ADDITIONAL_ENTRIES = 4; // + 1 principal = 5 total
+
 
 interface Aposta {
   id: string;
@@ -589,6 +604,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
   // Effective selection (always the selecao state now)
   const effectiveSelecao = selecao;
+
+  // Multi-entry: entradas adicionais (a primeira é bookmakerId/odd/stake/selecao)
+  const [additionalEntries, setAdditionalEntries] = useState<AdditionalEntry[]>([]);
 
   // Bookmaker mode
   const [bookmakerId, setBookmakerId] = useState("");
@@ -1282,6 +1300,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     setValorRetorno("");
     setObservacoes("");
     setBookmakerId("");
+    setAdditionalEntries([]);
     setBookmakerSaldo(null);
     setExchangeBookmakerSaldo(null);
     setModoBackLay(false);
@@ -2897,7 +2916,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[70px]">Odd</th>
                     <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[100px]">Stake</th>
                     <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center w-[120px]">Linha</th>
-                    <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[110px]">Retorno</th>
+                    <th className="px-2 py-2 text-xs font-medium text-muted-foreground text-center w-[90px]">Retorno</th>
+                    {additionalEntries.length > 0 && (
+                      <th className="px-1 py-2 text-xs font-medium text-muted-foreground text-center w-[36px]" />
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -3042,9 +3064,169 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                       </div>
                     </td>
                   </tr>
+                  {/* ========== ENTRADAS ADICIONAIS (Multi-Entry) ========== */}
+                  {additionalEntries.map((entry, idx) => {
+                    const entryBk = bookmakers.find(b => b.id === entry.bookmaker_id);
+                    const entryOddNum = parseFloat(entry.odd);
+                    const entryStakeNum = parseFloat(entry.stake);
+                    const entryRetorno = (!isNaN(entryOddNum) && !isNaN(entryStakeNum) && entryOddNum > 0 && entryStakeNum > 0) 
+                      ? entryOddNum * entryStakeNum : null;
+                    const entrySaldoDisp = entryBk?.saldo_operavel ?? 0;
+                    const entryStakeExceeds = !isNaN(entryStakeNum) && entryStakeNum > entrySaldoDisp && !!entry.bookmaker_id;
+
+                    return (
+                      <tr key={entry.id} className="border-t border-primary/15">
+                        {/* Casa */}
+                        <td className="px-3 py-3 text-center">
+                          <div className="flex flex-col gap-1 items-center">
+                            <Select
+                              value={entry.bookmaker_id}
+                              onValueChange={(val) => {
+                                setAdditionalEntries(prev => prev.map(e => e.id === entry.id ? { ...e, bookmaker_id: val } : e));
+                              }}
+                            >
+                              <SelectTrigger className="h-9 text-xs w-full border-dashed">
+                                <BookmakerSelectTrigger
+                                  bookmaker={entryBk ? {
+                                    nome: entryBk.nome,
+                                    parceiro_nome: entryBk.parceiro_nome,
+                                    moeda: entryBk.moeda,
+                                    saldo_operavel: entryBk.saldo_operavel,
+                                    logo_url: entryBk.logo_url,
+                                  } : null}
+                                  placeholder="Selecione"
+                                />
+                              </SelectTrigger>
+                              <BookmakerSearchableSelectContent
+                                bookmakers={bookmakers}
+                                itemClassName="max-w-full"
+                              />
+                            </Select>
+                            <BookmakerMetaRow
+                              bookmaker={entryBk ? {
+                                parceiro_nome: entryBk.parceiro_nome,
+                                moeda: entryBk.moeda,
+                                saldo_operavel: entryBk.saldo_operavel,
+                                saldo_freebet: entryBk.saldo_freebet,
+                                saldo_disponivel: entryBk.saldo_disponivel,
+                              } : null}
+                            />
+                          </div>
+                        </td>
+                        {/* Odd */}
+                        <td className="px-1 py-3">
+                          <Input
+                            type="number"
+                            step="0.001"
+                            min="1.01"
+                            value={entry.odd}
+                            onChange={(e) => setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, odd: e.target.value } : en))}
+                            onBlur={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val) && val < 1.01) {
+                                setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, odd: '1.01' } : en));
+                              }
+                            }}
+                            placeholder="0.00"
+                            className="h-8 text-xs text-center px-1 w-[72px] tabular-nums"
+                          />
+                        </td>
+                        {/* Stake */}
+                        <td className="px-1 py-3">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={entry.stake}
+                            onChange={(e) => {
+                              if (parseFloat(e.target.value) < 0) return;
+                              setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, stake: e.target.value } : en));
+                            }}
+                            placeholder="0.00"
+                            className={cn(
+                              "h-8 text-xs text-center px-1 w-[90px] tabular-nums",
+                              entryStakeExceeds && "border-destructive"
+                            )}
+                          />
+                        </td>
+                        {/* Linha */}
+                        <td className="px-2 py-3">
+                          <Input
+                            value={entry.selecao_livre}
+                            onChange={(e) => setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, selecao_livre: e.target.value } : en))}
+                            placeholder="Ex: Over 2.5, Casa"
+                            className="h-8 text-xs text-center px-2 border-dashed"
+                          />
+                        </td>
+                        {/* Retorno */}
+                        <td className="px-2 py-3 text-center">
+                          <div className="h-8 flex items-center justify-center rounded-md bg-muted/30 px-2 text-sm font-medium text-emerald-500 tabular-nums">
+                            {entryRetorno !== null ? formatCurrencyWithSymbol(entryRetorno, entryBk?.moeda || 'BRL') : '—'}
+                          </div>
+                        </td>
+                        {/* Remove */}
+                        <td className="px-1 py-3 text-center">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => setAdditionalEntries(prev => prev.filter(e => e.id !== entry.id))}
+                          >
+                            <Trash2Entry className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-              {/* Linha de reservas abaixo da tabela - REMOVIDO SaldoBreakdownDisplay (duplicado com WaterfallPreview) */}
+
+              {/* Footer: + Entrada e resumo multi-entry */}
+              <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-t border-border/30">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground hover:text-primary gap-1"
+                  onClick={() => setAdditionalEntries(prev => [...prev, { id: generateEntryId(), bookmaker_id: '', odd: '', stake: '', selecao_livre: '' }])}
+                  disabled={additionalEntries.length >= MAX_ADDITIONAL_ENTRIES}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Entrada
+                </Button>
+
+                {additionalEntries.length > 0 && (() => {
+                  const mainOdd = parseFloat(odd) || 0;
+                  const mainStake = parseFloat(stake) || 0;
+                  const allEntries = [
+                    { odd: mainOdd, stake: mainStake },
+                    ...additionalEntries.map(e => ({ odd: parseFloat(e.odd) || 0, stake: parseFloat(e.stake) || 0 }))
+                  ];
+                  const totalStake = allEntries.reduce((s, e) => s + e.stake, 0);
+                  const weightedOdd = totalStake > 0
+                    ? allEntries.reduce((s, e) => s + e.odd * e.stake, 0) / totalStake
+                    : 0;
+
+                  return (
+                    <div className="flex items-center gap-4 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">Odd ø</span>
+                        <span className="font-bold tabular-nums">{weightedOdd.toFixed(3)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted-foreground">Stake Total</span>
+                        <span className="font-bold tabular-nums">
+                          {totalStake.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Linha de reservas abaixo da tabela */}
               {bookmakerId && saldoComReservas && saldoComReservas.reservado > 0 && (
                 <div className="px-3 py-2 bg-muted/10 border-t border-border/30 flex items-center justify-between gap-4">
                   <SaldoReservaCompact
