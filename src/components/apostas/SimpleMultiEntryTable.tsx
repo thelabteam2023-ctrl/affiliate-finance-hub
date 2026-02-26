@@ -54,6 +54,8 @@ interface SimpleMultiEntryTableProps {
   fieldsNeedingReview?: Record<string, boolean>;
   /** Formatação de moeda */
   formatCurrency?: (value: number, moeda?: string) => string;
+  /** Converte valor de uma moeda para a moeda de consolidação do projeto (para ponderação multi-moeda) */
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
 }
 
 const MAX_ENTRIES = 5;
@@ -77,26 +79,52 @@ export function SimpleMultiEntryTable({
   getSaldoAjustado,
   fieldsNeedingReview,
   formatCurrency: formatCurrencyProp,
+  convertToConsolidation,
 }: SimpleMultiEntryTableProps) {
   const isMulti = entries.length > 1;
 
-  // Odd média ponderada e stake total
-  const { oddMedia, stakeTotal } = useMemo(() => {
-    let totalStake = 0;
+  // Odd média ponderada (multi-moeda) e stake total nominal
+  const { oddMedia, stakeTotal, stakeTotalLabel } = useMemo(() => {
+    let totalStakeConsolidado = 0;
     let weightedOddSum = 0;
+    let totalStakeNominal = 0;
+    const stakesByMoeda: Record<string, number> = {};
 
     for (const e of entries) {
       const s = parseFloat(e.stake) || 0;
       const o = parseFloat(e.odd) || 0;
-      totalStake += s;
-      weightedOddSum += o * s;
+      if (s <= 0 || o <= 0) continue;
+
+      const bk = bookmakers.find(b => b.id === e.bookmaker_id);
+      const moeda = bk?.moeda || 'BRL';
+      
+      // Converter stake para moeda de consolidação para ponderação correta
+      const stakeConsolidado = convertToConsolidation ? convertToConsolidation(s, moeda) : s;
+      
+      totalStakeConsolidado += stakeConsolidado;
+      weightedOddSum += o * stakeConsolidado;
+      totalStakeNominal += s;
+      stakesByMoeda[moeda] = (stakesByMoeda[moeda] || 0) + s;
+    }
+
+    // Gerar label de stake total (ex: "$200 + R$100" quando multi-moeda)
+    const moedas = Object.keys(stakesByMoeda);
+    let label: string;
+    if (moedas.length <= 1) {
+      label = totalStakeNominal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else {
+      label = moedas.map(m => {
+        const sym = getCurrencySymbol(m);
+        return `${sym}${stakesByMoeda[m].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }).join(' + ');
     }
 
     return {
-      oddMedia: totalStake > 0 ? weightedOddSum / totalStake : 0,
-      stakeTotal: totalStake,
+      oddMedia: totalStakeConsolidado > 0 ? weightedOddSum / totalStakeConsolidado : 0,
+      stakeTotal: totalStakeNominal,
+      stakeTotalLabel: label,
     };
-  }, [entries]);
+  }, [entries, bookmakers, convertToConsolidation]);
 
   const updateEntry = (id: string, field: keyof SimpleEntry, value: string) => {
     setEntries(prev =>
@@ -288,7 +316,7 @@ export function SimpleMultiEntryTable({
             <div className="flex items-center gap-1.5">
               <span className="text-muted-foreground">Stake Total</span>
               <span className="font-bold tabular-nums">
-                {stakeTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {stakeTotalLabel}
               </span>
             </div>
           </div>
