@@ -82,6 +82,7 @@ interface AdditionalEntry {
   odd: string;
   stake: string;
   selecao_livre: string;
+  usar_freebet: boolean;
 }
 
 const generateEntryId = () => Math.random().toString(36).substring(2, 9);
@@ -1004,6 +1005,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 odd: p.odd.toString(),
                 stake: p.stake.toString(),
                 selecao_livre: p.selecao_livre || '',
+                usar_freebet: p.fonte_saldo === 'FREEBET' || p.gerou_freebet === true,
               }));
               setAdditionalEntries(extras);
             }
@@ -1578,6 +1580,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           toast.error(`Entrada ${i + 2}: stake deve ser maior que 0`);
           return;
         }
+        // Validar freebet em entradas adicionais
+        if (entry.usar_freebet) {
+          const entryBk = bookmakers.find(b => b.id === entry.bookmaker_id);
+          if (entryBk && entryStake > entryBk.saldo_freebet) {
+            toast.error(`Entrada ${i + 2}: stake (${formatCurrencyWithSymbol(entryStake, entryBk.moeda)}) excede saldo de Freebet (${formatCurrencyWithSymbol(entryBk.saldo_freebet, entryBk.moeda)})`);
+            return;
+          }
+        }
       }
 
       // Validar stake vs saldo operável da bookmaker (real + freebet + bonus)
@@ -1884,9 +1894,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           lay_comissao: null,
           back_em_exchange: false,
           back_comissao: null,
-          tipo_freebet: usarFreebetBookmaker ? "freebet_snr" : null,
+          tipo_freebet: (usarFreebetBookmaker || additionalEntries.some(e => e.usar_freebet)) ? "freebet_snr" : null,
           // WATERFALL: Flag para indicar se freebet deve ser usado no waterfall
-          usar_freebet: usarFreebetBookmaker,
+          usar_freebet: usarFreebetBookmaker || additionalEntries.some(e => e.usar_freebet),
         };
       } else if (tipoOperacaoExchange === "cobertura") {
         // ===== MODO COBERTURA LAY =====
@@ -2381,6 +2391,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 odd: parseFloat(odd),
                 stake: parseFloat(stake),
                 moeda: moedaOperacao,
+                fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
               },
               ...additionalEntries
                 .filter(e => e.bookmaker_id && parseFloat(e.odd) > 0 && parseFloat(e.stake) > 0)
@@ -2393,6 +2404,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   odd: parseFloat(e.odd),
                   stake: parseFloat(e.stake),
                   moeda: bookmakers.find(b => b.id === e.bookmaker_id)?.moeda || moedaOperacao,
+                  fonte_saldo: e.usar_freebet ? 'FREEBET' : 'REAL',
                 }))
             ];
 
@@ -2578,6 +2590,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               odd: parseFloat(odd),
               stake: parseFloat(stake),
               moeda: moedaOperacao,
+              fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
             },
             ...additionalEntries
               .filter(e => e.bookmaker_id && parseFloat(e.odd) > 0 && parseFloat(e.stake) > 0)
@@ -2590,6 +2603,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 odd: parseFloat(e.odd),
                 stake: parseFloat(e.stake),
                 moeda: bookmakers.find(b => b.id === e.bookmaker_id)?.moeda || moedaOperacao,
+                fonte_saldo: e.usar_freebet ? 'FREEBET' : 'REAL',
               }))
           ];
 
@@ -2644,6 +2658,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           const valorFreebetDebitar = Math.min(valorFreebetUsar, stakeBookmakerEfetiva);
           if (valorFreebetDebitar > 0 && bookmakerId && novaApostaId) {
             await debitarFreebetUsada(bookmakerId, valorFreebetDebitar, novaApostaId);
+          }
+        }
+        
+        // 1b. Entradas adicionais com freebet (multi-entry)
+        if (tipoAposta === "bookmaker" && novaApostaId) {
+          for (const entry of additionalEntries) {
+            if (entry.usar_freebet && entry.bookmaker_id) {
+              const entryStake = parseFloat(entry.stake) || 0;
+              const entryBk = bookmakers.find(b => b.id === entry.bookmaker_id);
+              const valorDebitar = Math.min(entryStake, entryBk?.saldo_freebet || 0);
+              if (valorDebitar > 0) {
+                await debitarFreebetUsada(entry.bookmaker_id, valorDebitar, novaApostaId);
+              }
+            }
           }
         }
         
@@ -3317,7 +3345,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             <Select
                               value={entry.bookmaker_id}
                               onValueChange={(val) => {
-                                setAdditionalEntries(prev => prev.map(e => e.id === entry.id ? { ...e, bookmaker_id: val } : e));
+                                setAdditionalEntries(prev => prev.map(e => e.id === entry.id ? { ...e, bookmaker_id: val, usar_freebet: false } : e));
                               }}
                             >
                               <SelectTrigger className="h-9 text-xs w-full border-dashed">
@@ -3346,6 +3374,33 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 saldo_disponivel: entryBk.saldo_disponivel,
                               } : null}
                             />
+                            {/* Freebet toggle compacto por sub-entrada */}
+                            {entryBk && entryBk.saldo_freebet > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAdditionalEntries(prev => prev.map(e => {
+                                    if (e.id !== entry.id) return e;
+                                    const newUsarFb = !e.usar_freebet;
+                                    return {
+                                      ...e,
+                                      usar_freebet: newUsarFb,
+                                      // Auto-fill stake com saldo FB ao ativar
+                                      stake: newUsarFb ? entryBk.saldo_freebet.toString() : e.stake,
+                                    };
+                                  }));
+                                }}
+                                className={cn(
+                                  "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
+                                  entry.usar_freebet
+                                    ? "bg-purple-500/20 text-purple-400 border border-purple-500/40"
+                                    : "bg-muted/40 text-muted-foreground hover:bg-muted/60 border border-transparent"
+                                )}
+                              >
+                                <Gift className="h-3 w-3" />
+                                {entry.usar_freebet ? "FB ativo" : "Usar FB"}
+                              </button>
+                            )}
                           </div>
                         </td>
                         {/* Odd */}
@@ -3428,7 +3483,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   variant="ghost"
                   size="sm"
                   className="h-7 text-xs text-muted-foreground hover:text-primary gap-1"
-                  onClick={() => setAdditionalEntries(prev => [...prev, { id: generateEntryId(), bookmaker_id: '', odd: '', stake: '', selecao_livre: '' }])}
+                  onClick={() => setAdditionalEntries(prev => [...prev, { id: generateEntryId(), bookmaker_id: '', odd: '', stake: '', selecao_livre: '', usar_freebet: false }])}
                   disabled={additionalEntries.length >= MAX_ADDITIONAL_ENTRIES}
                 >
                   <Plus className="h-3.5 w-3.5" />
