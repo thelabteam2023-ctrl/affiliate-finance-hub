@@ -609,6 +609,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
   // Multi-entry: entradas adicionais (a primeira é bookmakerId/odd/stake/selecao)
   const [additionalEntries, setAdditionalEntries] = useState<AdditionalEntry[]>([]);
+  const multiEntryTableRef = useRef<HTMLDivElement>(null);
+
+  const handleMultiEntryFieldKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, fieldType: 'odd' | 'stake') => {
+    const key = e.key.toLowerCase();
+    if ((key === 'q' && fieldType === 'odd') || (key === 's' && fieldType === 'stake')) {
+      e.preventDefault();
+      const container = multiEntryTableRef.current;
+      if (!container) return;
+
+      const selector = fieldType === 'odd' ? 'input[data-field-type="odd"]' : 'input[data-field-type="stake"]';
+      const allFields = Array.from(container.querySelectorAll<HTMLInputElement>(selector));
+      if (allFields.length === 0) return;
+
+      const currentIndex = allFields.indexOf(e.currentTarget);
+      const nextIndex = (currentIndex + 1) % allFields.length;
+      allFields[nextIndex]?.focus();
+      allFields[nextIndex]?.select();
+    }
+  }, []);
 
   // Bookmaker mode
   const [bookmakerId, setBookmakerId] = useState("");
@@ -3081,7 +3100,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             {/* ========== MODO BOOKMAKER ========== */}
             {tipoAposta === "bookmaker" && (
               <>
-              <div className="border border-border/50 rounded-lg overflow-hidden">
+              <div ref={multiEntryTableRef} className="border border-border/50 rounded-lg overflow-hidden">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border/30 bg-muted/30">
@@ -3172,6 +3191,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         min="1.01"
                         value={odd}
                         onChange={(e) => setOdd(e.target.value)}
+                        onKeyDown={(e) => handleMultiEntryFieldKeyDown(e, 'odd')}
                         onBlur={(e) => {
                           const val = parseFloat(e.target.value);
                           if (!isNaN(val) && val < 1.01) {
@@ -3180,6 +3200,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         }}
                         placeholder="0.00"
                         className="h-8 text-xs text-center px-1 w-[72px] tabular-nums"
+                        data-field-type="odd"
                       />
                     </td>
                     {/* Stake */}
@@ -3194,7 +3215,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                           if (parseFloat(val) < 0) return;
                           setStake(val);
                         }}
+                        onKeyDown={(e) => handleMultiEntryFieldKeyDown(e, 'stake')}
                         placeholder="0.00"
+                        data-field-type="stake"
                         className={`h-8 text-xs text-center px-1 w-[90px] tabular-nums ${(() => {
                           // CORREÇÃO: Usar saldo ajustado para edição (considera stake anterior como disponível)
                           const saldoDisponivelReal = saldoAjustadoParaEdicao?.saldoOperavel 
@@ -3294,6 +3317,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             min="1.01"
                             value={entry.odd}
                             onChange={(e) => setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, odd: e.target.value } : en))}
+                            onKeyDown={(e) => handleMultiEntryFieldKeyDown(e, 'odd')}
                             onBlur={(e) => {
                               const val = parseFloat(e.target.value);
                               if (!isNaN(val) && val < 1.01) {
@@ -3302,6 +3326,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             }}
                             placeholder="0.00"
                             className="h-8 text-xs text-center px-1 w-[72px] tabular-nums"
+                            data-field-type="odd"
                           />
                         </td>
                         {/* Stake */}
@@ -3315,11 +3340,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                               if (parseFloat(e.target.value) < 0) return;
                               setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, stake: e.target.value } : en));
                             }}
+                            onKeyDown={(e) => handleMultiEntryFieldKeyDown(e, 'stake')}
                             placeholder="0.00"
                             className={cn(
                               "h-8 text-xs text-center px-1 w-[90px] tabular-nums",
                               entryStakeExceeds && "border-destructive"
                             )}
+                            data-field-type="stake"
                           />
                         </td>
                         {/* Linha */}
