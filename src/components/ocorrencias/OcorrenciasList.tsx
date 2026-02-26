@@ -5,10 +5,12 @@ import { useRole } from '@/hooks/useRole';
 import { Skeleton } from '@/components/ui/skeleton';
 import { OcorrenciaCollapseCard } from './OcorrenciaCollapseCard';
 import { OcorrenciaDetalheDialog } from './OcorrenciaDetalheDialog';
-import type { OcorrenciaStatus, OcorrenciaTipo } from '@/types/ocorrencias';
-import { Inbox } from 'lucide-react';
+import type { OcorrenciaStatus, OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
+import { PRIORIDADE_LABELS, PRIORIDADE_COLORS, PRIORIDADE_BG } from '@/types/ocorrencias';
+import { Inbox, Zap, AlertTriangle, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
 
 interface Props {
   statusFilter?: OcorrenciaStatus[];
@@ -109,6 +111,33 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
   const { data: projetoMap = {} } = useProjetoNames(projetoIds);
   const { data: parceiroMap = {} } = useParceiroNames(parceiroIds);
 
+  // Group by priority for kanban columns
+  const PRIORIDADE_ORDER: OcorrenciaPrioridade[] = ['urgente', 'alta', 'media', 'baixa'];
+
+  const PRIORIDADE_ICONS: Record<OcorrenciaPrioridade, React.ReactNode> = {
+    urgente: <Zap className="h-4 w-4" />,
+    alta: <AlertTriangle className="h-4 w-4" />,
+    media: <ArrowUp className="h-4 w-4" />,
+    baixa: <ArrowDown className="h-4 w-4" />,
+  };
+
+  const groupedByPrioridade = useMemo(() => {
+    const groups: Record<OcorrenciaPrioridade, typeof lista> = {
+      urgente: [],
+      alta: [],
+      media: [],
+      baixa: [],
+    };
+    lista.forEach((o) => {
+      groups[o.prioridade].push(o);
+    });
+    return groups;
+  }, [lista]);
+
+  const activePrioridades = PRIORIDADE_ORDER.filter(
+    (p) => groupedByPrioridade[p].length > 0
+  );
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -130,27 +159,60 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
     );
   }
 
+  const renderCard = (ocorrencia: typeof lista[0]) => (
+    <OcorrenciaCollapseCard
+      key={ocorrencia.id}
+      ocorrencia={ocorrencia}
+      currentUserId={user?.id}
+      isAdmin={isOwnerOrAdmin}
+      onVerDetalhe={() => setDetalheId(ocorrencia.id)}
+      onAtualizarStatus={(novoStatus) =>
+        atualizarStatus({
+          id: ocorrencia.id,
+          novoStatus,
+          statusAnterior: ocorrencia.status,
+        })
+      }
+      bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id] : undefined}
+      projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
+      parceiroNome={ocorrencia.parceiro_id ? parceiroMap[ocorrencia.parceiro_id] : undefined}
+    />
+  );
+
   return (
     <>
-      <div className="space-y-2">
-        {lista.map((ocorrencia) => (
-          <OcorrenciaCollapseCard
-            key={ocorrencia.id}
-            ocorrencia={ocorrencia}
-            currentUserId={user?.id}
-            isAdmin={isOwnerOrAdmin}
-            onVerDetalhe={() => setDetalheId(ocorrencia.id)}
-            onAtualizarStatus={(novoStatus) =>
-              atualizarStatus({
-                id: ocorrencia.id,
-                novoStatus,
-                statusAnterior: ocorrencia.status,
-              })
-            }
-            bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id] : undefined}
-            projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
-            parceiroNome={ocorrencia.parceiro_id ? parceiroMap[ocorrencia.parceiro_id] : undefined}
-          />
+      <div
+        className={cn(
+          'grid gap-4',
+          activePrioridades.length === 1 && 'grid-cols-1',
+          activePrioridades.length === 2 && 'grid-cols-1 md:grid-cols-2',
+          activePrioridades.length === 3 && 'grid-cols-1 md:grid-cols-3',
+          activePrioridades.length >= 4 && 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4'
+        )}
+      >
+        {activePrioridades.map((prioridade) => (
+          <div key={prioridade} className="flex flex-col gap-2">
+            {/* Column header */}
+            <div
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg border',
+                PRIORIDADE_BG[prioridade],
+                PRIORIDADE_COLORS[prioridade]
+              )}
+            >
+              {PRIORIDADE_ICONS[prioridade]}
+              <span className="font-semibold text-sm">
+                {PRIORIDADE_LABELS[prioridade]}
+              </span>
+              <span className="ml-auto text-xs opacity-70 font-medium">
+                {groupedByPrioridade[prioridade].length}
+              </span>
+            </div>
+            {/* Cards */}
+            <div className="space-y-2">
+              {groupedByPrioridade[prioridade].map(renderCard)}
+            </div>
+          </div>
         ))}
       </div>
 
