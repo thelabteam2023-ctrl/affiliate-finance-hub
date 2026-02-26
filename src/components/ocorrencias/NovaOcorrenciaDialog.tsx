@@ -77,6 +77,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const [observadoresSelecionados, setObservadoresSelecionados] = useState<string[]>([]);
   const [bookmakerPopoverOpen, setBookmakerPopoverOpen] = useState(false);
   const [bancoPopoverOpen, setBancoPopoverOpen] = useState(false);
+  const [selectedCasa, setSelectedCasa] = useState<string>('');
 
   // Carregar bookmakers do workspace
   const { data: bookmakers = [] } = useQuery({
@@ -126,13 +127,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const contextoEntidade = form.watch('contexto_entidade');
   const subMotivos = SUB_MOTIVOS[tipoSelecionado] || [];
 
-  // Agrupar bookmakers por casa para o combobox
-  const bookmakersPorCasa = (bookmakers as any[]).reduce<Record<string, any[]>>((acc, bk) => {
-    const casa = bk.nome || 'Sem nome';
-    if (!acc[casa]) acc[casa] = [];
-    acc[casa].push(bk);
-    return acc;
-  }, {});
+  // Casas únicas para o primeiro select
+  const casasUnicas = [...new Set((bookmakers as any[]).map((bk) => bk.nome).filter(Boolean))].sort();
+
+  // Vínculos filtrados pela casa selecionada
+  const vinculosDaCasa = selectedCasa
+    ? (bookmakers as any[]).filter((bk) => bk.nome === selectedCasa)
+    : [];
 
   // Agrupar contas bancárias por banco
   const contasPorBanco = (contasBancarias as any[]).reduce<Record<string, any[]>>((acc, cb) => {
@@ -305,6 +306,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       onValueChange={(v) => {
                         field.onChange(v);
                         form.setValue('entidade_id', '');
+                        setSelectedCasa('');
                       }}
                       value={field.value || ''}
                     >
@@ -324,80 +326,100 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               />
             </div>
 
-            {/* Seletor de Bookmaker com busca agrupada por casa */}
+            {/* Seletor de Bookmaker: Casa + Vínculo */}
             {contextoEntidade === 'bookmaker' && (
-              <FormField
-                control={form.control}
-                name="entidade_id"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Bookmaker *</FormLabel>
-                    <Popover open={bookmakerPopoverOpen} onOpenChange={setBookmakerPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                              'w-full justify-between font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {selectedBookmaker ? (
-                              <span className="truncate">
-                                {selectedBookmaker.nome}
-                                {selectedBookmaker.instance_identifier ? ` (${selectedBookmaker.instance_identifier})` : ''}
-                                {selectedBookmaker.parceiros?.nome ? ` — ${selectedBookmaker.parceiros.nome}` : ''}
-                              </span>
-                            ) : (
-                              'Selecione a conta...'
-                            )}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Buscar casa ou parceiro..." />
-                          <CommandList>
-                            <CommandEmpty>Nenhuma conta encontrada.</CommandEmpty>
-                            {Object.entries(bookmakersPorCasa)
-                              .sort(([a], [b]) => a.localeCompare(b))
-                              .map(([casa, contas]) => (
-                                <CommandGroup key={casa} heading={casa}>
-                                  {contas.map((bk: any) => (
-                                    <CommandItem
-                                      key={bk.id}
-                                      value={`${bk.nome} ${bk.parceiros?.nome || ''} ${bk.instance_identifier || ''}`}
-                                      onSelect={() => {
-                                        field.onChange(bk.id);
-                                        setBookmakerPopoverOpen(false);
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          'mr-2 h-4 w-4',
-                                          field.value === bk.id ? 'opacity-100' : 'opacity-0'
-                                        )}
-                                      />
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {bk.parceiros?.nome || 'Sem parceiro'}
-                                          {bk.instance_identifier ? ` (${bk.instance_identifier})` : ''}
-                                        </span>
-                                      </div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              ))}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                {/* Select da Casa */}
+                <FormItem>
+                  <FormLabel>Casa *</FormLabel>
+                  <Select
+                    value={selectedCasa}
+                    onValueChange={(v) => {
+                      setSelectedCasa(v);
+                      form.setValue('entidade_id', '');
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a casa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {casasUnicas.map((casa) => (
+                        <SelectItem key={casa} value={casa}>
+                          {casa}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+
+                {/* Select do Vínculo com busca por parceiro */}
+                <FormField
+                  control={form.control}
+                  name="entidade_id"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Vínculo *</FormLabel>
+                      <Popover open={bookmakerPopoverOpen} onOpenChange={setBookmakerPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              disabled={!selectedCasa}
+                              className={cn(
+                                'w-full justify-between font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              {selectedBookmaker ? (
+                                <span className="truncate">
+                                  {selectedBookmaker.parceiros?.nome || 'Sem parceiro'}
+                                  {selectedBookmaker.instance_identifier ? ` (${selectedBookmaker.instance_identifier})` : ''}
+                                </span>
+                              ) : (
+                                selectedCasa ? 'Selecione o vínculo...' : 'Selecione a casa primeiro'
+                              )}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Buscar por parceiro..." />
+                            <CommandList>
+                              <CommandEmpty>Nenhum vínculo encontrado.</CommandEmpty>
+                              <CommandGroup>
+                                {vinculosDaCasa.map((bk: any) => (
+                                  <CommandItem
+                                    key={bk.id}
+                                    value={`${bk.parceiros?.nome || ''} ${bk.instance_identifier || ''}`}
+                                    onSelect={() => {
+                                      field.onChange(bk.id);
+                                      setBookmakerPopoverOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        'mr-2 h-4 w-4',
+                                        field.value === bk.id ? 'opacity-100' : 'opacity-0'
+                                      )}
+                                    />
+                                    <span className="font-medium">
+                                      {bk.parceiros?.nome || 'Sem parceiro'}
+                                      {bk.instance_identifier ? ` (${bk.instance_identifier})` : ''}
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             )}
 
             {/* Seletor de Conta Bancária com busca agrupada por banco */}
