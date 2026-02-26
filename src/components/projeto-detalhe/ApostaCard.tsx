@@ -39,6 +39,7 @@ export interface Selecao {
 // Sub-entry para apostas simples multi-bookmaker
 export interface SubEntry {
   bookmaker_nome: string;
+  parceiro_nome?: string | null;
   odd: number;
   stake: number;
   moeda?: string;
@@ -515,6 +516,20 @@ export function ApostaCard({
           {/* SUB-ENTRIES: Detalhamento multi-bookmaker (colapsável) */}
           {hasSubEntries && showSubEntries && (
             <div className="border-t border-border/30 pt-2 space-y-1">
+              {/* Entrada principal (1ª perna) */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+                {aposta.logo_url ? (
+                  <img src={aposta.logo_url} alt="" className="h-4 w-4 rounded object-contain logo-blend shrink-0" />
+                ) : (
+                  <div className="h-4 w-4 rounded bg-muted/30 shrink-0" />
+                )}
+                <span className="truncate flex-1 uppercase">
+                  {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
+                </span>
+                <span className="font-medium shrink-0">@{displayOdd.toFixed(2)}</span>
+                <span className="shrink-0">{formatValue(aposta.stake)}</span>
+              </div>
+              {/* Sub-entradas (2ª perna em diante) */}
               {aposta.sub_entries!.map((entry, idx) => (
                 <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground px-1">
                   {entry.logo_url ? (
@@ -522,7 +537,9 @@ export function ApostaCard({
                   ) : (
                     <div className="h-4 w-4 rounded bg-muted/30 shrink-0" />
                   )}
-                  <span className="truncate flex-1 uppercase">{entry.bookmaker_nome}</span>
+                  <span className="truncate flex-1 uppercase">
+                    {entry.bookmaker_nome}{entry.parceiro_nome ? ` - ${getFirstLastName(entry.parceiro_nome)}` : ''}
+                  </span>
                   <span className="font-medium shrink-0">@{entry.odd.toFixed(2)}</span>
                   <span className="shrink-0">{defaultFormatCurrency(entry.stake, entry.moeda || aposta.moeda || 'BRL')}</span>
                 </div>
