@@ -29,6 +29,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCriarOcorrencia } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
 import { AlertTriangle, Loader2, Plus, X } from 'lucide-react';
@@ -43,6 +46,8 @@ const schema = z.object({
     'bloqueio_contas',
   ] as const),
   sub_motivo: z.string().optional(),
+  contexto_entidade: z.string().optional(),
+  entidade_id: z.string().optional(),
   prioridade: z.enum(['baixa', 'media', 'alta', 'urgente'] as const),
   executor_id: z.string().min(1, 'Selecione o executor'),
 });
@@ -65,7 +70,38 @@ interface Props {
 export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Props) {
   const { mutateAsync: criar, isPending } = useCriarOcorrencia();
   const { data: members = [] } = useWorkspaceMembers();
+  const { workspaceId } = useAuth();
   const [observadoresSelecionados, setObservadoresSelecionados] = useState<string[]>([]);
+
+  // Carregar bookmakers do workspace
+  const { data: bookmakers = [] } = useQuery({
+    queryKey: ['ocorrencia-bookmakers', workspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bookmakers')
+        .select('id, nome, instance_identifier')
+        .eq('workspace_id', workspaceId!)
+        .order('nome');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId && open,
+  });
+
+  // Carregar contas bancárias do workspace
+  const { data: contasBancarias = [] } = useQuery({
+    queryKey: ['ocorrencia-contas-bancarias', workspaceId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('contas_bancarias')
+        .select('id, banco, titular, agencia, conta')
+        .eq('workspace_id', workspaceId!)
+        .order('banco');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId && open,
+  });
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -74,15 +110,20 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       descricao: '',
       tipo: contextoInicial?.tipo || 'movimentacao_financeira',
       sub_motivo: '',
+      contexto_entidade: '',
+      entidade_id: '',
       prioridade: 'media',
       executor_id: '',
     },
   });
 
   const tipoSelecionado = form.watch('tipo');
+  const contextoEntidade = form.watch('contexto_entidade');
   const subMotivos = SUB_MOTIVOS[tipoSelecionado] || [];
 
   const onSubmit = async (data: FormData) => {
+    const isBookmaker = data.contexto_entidade === 'bookmaker';
+    const isBanco = data.contexto_entidade === 'banco';
     await criar({
       titulo: data.titulo,
       descricao: data.descricao,
@@ -91,7 +132,8 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       prioridade: data.prioridade,
       executor_id: data.executor_id,
       observadores: observadoresSelecionados,
-      bookmaker_id: contextoInicial?.bookmaker_id,
+      bookmaker_id: isBookmaker ? data.entidade_id : contextoInicial?.bookmaker_id,
+      conta_bancaria_id: isBanco ? data.entidade_id : undefined,
       projeto_id: contextoInicial?.projeto_id,
       parceiro_id: contextoInicial?.parceiro_id,
       contexto_metadata: contextoInicial?.contexto_metadata,
@@ -199,26 +241,99 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               />
             </div>
 
-            {/* Sub-motivo dinâmico */}
+            {/* Sub-motivo + Contexto (bookmaker/banco) */}
             {subMotivos.length > 0 && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="sub_motivo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Motivo específico</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Qual o motivo específico?" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {subMotivos.map((sm) => (
+                            <SelectItem key={sm.value} value={sm.value}>
+                              {sm.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contexto_entidade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Onde ocorreu?</FormLabel>
+                      <Select
+                        onValueChange={(v) => {
+                          field.onChange(v);
+                          form.setValue('entidade_id', '');
+                        }}
+                        value={field.value || ''}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Bookmaker ou Banco?" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="bookmaker">Bookmaker</SelectItem>
+                          <SelectItem value="banco">Banco</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {/* Seletor da entidade específica */}
+            {contextoEntidade && (
               <FormField
                 control={form.control}
-                name="sub_motivo"
+                name="entidade_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Motivo específico</FormLabel>
+                    <FormLabel>
+                      {contextoEntidade === 'bookmaker' ? 'Bookmaker' : 'Conta Bancária'}
+                    </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Qual o motivo específico?" />
+                          <SelectValue
+                            placeholder={
+                              contextoEntidade === 'bookmaker'
+                                ? 'Selecione a bookmaker...'
+                                : 'Selecione a conta bancária...'
+                            }
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {subMotivos.map((sm) => (
-                          <SelectItem key={sm.value} value={sm.value}>
-                            {sm.label}
-                          </SelectItem>
-                        ))}
+                        {contextoEntidade === 'bookmaker'
+                          ? bookmakers.map((bk: any) => (
+                              <SelectItem key={bk.id} value={bk.id}>
+                                {bk.nome}
+                                {bk.instance_identifier ? ` (${bk.instance_identifier})` : ''}
+                              </SelectItem>
+                            ))
+                          : contasBancarias.map((cb: any) => (
+                              <SelectItem key={cb.id} value={cb.id}>
+                                {cb.banco} — {cb.titular || cb.conta || cb.agencia || 'Sem nome'}
+                              </SelectItem>
+                            ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -4971,6 +4971,7 @@ export type Database = {
           aposta_id: string | null
           bookmaker_id: string | null
           cancelled_at: string | null
+          conta_bancaria_id: string | null
           contexto_metadata: Json | null
           created_at: string
           descricao: string
@@ -4996,6 +4997,7 @@ export type Database = {
           aposta_id?: string | null
           bookmaker_id?: string | null
           cancelled_at?: string | null
+          conta_bancaria_id?: string | null
           contexto_metadata?: Json | null
           created_at?: string
           descricao: string
@@ -5021,6 +5023,7 @@ export type Database = {
           aposta_id?: string | null
           bookmaker_id?: string | null
           cancelled_at?: string | null
+          conta_bancaria_id?: string | null
           contexto_metadata?: Json | null
           created_at?: string
           descricao?: string
@@ -5112,6 +5115,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "contas_bancarias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["conta_id"]
+          },
+          {
+            foreignKeyName: "ocorrencias_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["conta_id"]
           },
           {
             foreignKeyName: "ocorrencias_parceiro_id_fkey"

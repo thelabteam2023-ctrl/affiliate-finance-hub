@@ -47,6 +47,7 @@ export interface Ocorrencia {
   requerente_id: string;
   executor_id: string;
   bookmaker_id?: string | null;
+  conta_bancaria_id?: string | null;
   projeto_id?: string | null;
   parceiro_id?: string | null;
   aposta_id?: string | null;

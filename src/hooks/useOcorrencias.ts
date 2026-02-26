@@ -190,6 +190,7 @@ interface CriarOcorrenciaPayload {
   executor_id: string;
   observadores?: string[];
   bookmaker_id?: string;
+  conta_bancaria_id?: string;
   projeto_id?: string;
   parceiro_id?: string;
   aposta_id?: string;
@@ -215,6 +216,7 @@ export function useCriarOcorrencia() {
           requerente_id: user!.id,
           executor_id: payload.executor_id,
           bookmaker_id: payload.bookmaker_id || null,
+          conta_bancaria_id: payload.conta_bancaria_id || null,
           projeto_id: payload.projeto_id || null,
           parceiro_id: payload.parceiro_id || null,
           aposta_id: payload.aposta_id || null,
