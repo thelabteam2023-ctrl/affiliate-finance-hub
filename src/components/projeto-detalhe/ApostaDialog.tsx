@@ -73,6 +73,7 @@ import { useActiveBonusInfo } from "@/hooks/useActiveBonusInfo";
 import { BonusImpactAlert } from "./BonusImpactAlert";
 import { FreebetToggle, SaldoWaterfallPreview } from "@/components/apostas/waterfall";
 import { Plus, Trash2 as Trash2Entry, Layers } from "lucide-react";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 // Multi-entry para aposta simples (mesma seleção, múltiplas bookmakers)
 interface AdditionalEntry {
@@ -403,6 +404,7 @@ const getMoneylineSelecoes = (esporte: string | undefined, evento: string): stri
 
 export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas', embedded = false }: ApostaDialogProps) {
   const { workspaceId } = useWorkspace();
+  const { convertToConsolidation } = useProjetoCurrency(projetoId);
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -1713,20 +1715,35 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         const bookmakerOdd = parseFloat(odd);
         const bookmakerStake = parseFloat(stake);
         
-        // Multi-entry: calcular odd média ponderada e stake total
+        // Multi-entry: calcular odd média ponderada (multi-moeda) e stake total
         const hasMultiEntry = additionalEntries.length > 0;
         let effectiveOdd = bookmakerOdd;
         let effectiveStake = bookmakerStake;
         
         if (hasMultiEntry) {
+          const primaryMoeda = selectedBookmaker?.moeda || 'BRL';
           const allEntries = [
-            { odd: bookmakerOdd, stake: bookmakerStake },
-            ...additionalEntries.map(e => ({ odd: parseFloat(e.odd) || 0, stake: parseFloat(e.stake) || 0 }))
+            { odd: bookmakerOdd, stake: bookmakerStake, moeda: primaryMoeda },
+            ...additionalEntries.map(e => {
+              const bk = bookmakers.find(b => b.id === e.bookmaker_id);
+              return { odd: parseFloat(e.odd) || 0, stake: parseFloat(e.stake) || 0, moeda: bk?.moeda || 'BRL' };
+            })
           ].filter(e => e.stake > 0 && e.odd > 0);
           
-          effectiveStake = allEntries.reduce((s, e) => s + e.stake, 0);
-          effectiveOdd = effectiveStake > 0
-            ? allEntries.reduce((s, e) => s + e.odd * e.stake, 0) / effectiveStake
+          // Converter stakes para moeda de consolidação para ponderação correta
+          let totalStakeConsolidado = 0;
+          let weightedOddSum = 0;
+          effectiveStake = 0;
+          
+          for (const e of allEntries) {
+            const stakeConsolidado = convertToConsolidation(e.stake, e.moeda);
+            totalStakeConsolidado += stakeConsolidado;
+            weightedOddSum += e.odd * stakeConsolidado;
+            effectiveStake += e.stake; // Nominal total (para exibição)
+          }
+          
+          effectiveOdd = totalStakeConsolidado > 0
+            ? weightedOddSum / totalStakeConsolidado
             : bookmakerOdd;
         }
         
@@ -3355,14 +3372,38 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 {additionalEntries.length > 0 && (() => {
                   const mainOdd = parseFloat(odd) || 0;
                   const mainStake = parseFloat(stake) || 0;
+                  const mainMoeda = bookmakerSaldo?.moeda || 'BRL';
+                  
                   const allEntries = [
-                    { odd: mainOdd, stake: mainStake },
-                    ...additionalEntries.map(e => ({ odd: parseFloat(e.odd) || 0, stake: parseFloat(e.stake) || 0 }))
+                    { odd: mainOdd, stake: mainStake, moeda: mainMoeda },
+                    ...additionalEntries.map(e => {
+                      const bk = bookmakers.find(b => b.id === e.bookmaker_id);
+                      return { odd: parseFloat(e.odd) || 0, stake: parseFloat(e.stake) || 0, moeda: bk?.moeda || 'BRL' };
+                    })
                   ];
-                  const totalStake = allEntries.reduce((s, e) => s + e.stake, 0);
-                  const weightedOdd = totalStake > 0
-                    ? allEntries.reduce((s, e) => s + e.odd * e.stake, 0) / totalStake
+                  
+                  // Converter stakes para moeda de consolidação para ponderação
+                  let totalStakeConsolidado = 0;
+                  let weightedOddSum = 0;
+                  const stakesByMoeda: Record<string, number> = {};
+                  
+                  for (const e of allEntries) {
+                    if (e.stake <= 0 || e.odd <= 0) continue;
+                    const stakeConsolidado = convertToConsolidation(e.stake, e.moeda);
+                    totalStakeConsolidado += stakeConsolidado;
+                    weightedOddSum += e.odd * stakeConsolidado;
+                    stakesByMoeda[e.moeda] = (stakesByMoeda[e.moeda] || 0) + e.stake;
+                  }
+                  
+                  const weightedOdd = totalStakeConsolidado > 0
+                    ? weightedOddSum / totalStakeConsolidado
                     : 0;
+                  
+                  // Label multi-moeda (ex: "$200 + R$100")
+                  const moedas = Object.keys(stakesByMoeda);
+                  const stakeLabel = moedas.length <= 1
+                    ? Object.values(stakesByMoeda).reduce((a, b) => a + b, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : moedas.map(m => `${getCurrencySymbol(m)}${stakesByMoeda[m].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`).join(' + ');
 
                   return (
                     <div className="flex items-center gap-4 text-xs">
@@ -3373,9 +3414,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-muted-foreground">Stake Total</span>
-                        <span className="font-bold tabular-nums">
-                          {totalStake.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
+                        <span className="font-bold tabular-nums">{stakeLabel}</span>
                       </div>
                     </div>
                   );
