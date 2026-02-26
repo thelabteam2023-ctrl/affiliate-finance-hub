@@ -447,10 +447,18 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
   // Mapear saldos canônicos para formato local (retrocompatibilidade)
   // IMPORTANTE: Filtrar casas com transações pendentes (bloqueio de conciliação)
+  // Em modo edição, SEMPRE incluir a bookmaker atual para evitar "Selecione" vazio
+  const editModeBookmakerIds = useMemo(() => {
+    if (!aposta) return new Set<string>();
+    const ids = new Set<string>();
+    if (aposta.bookmaker_id) ids.add(aposta.bookmaker_id);
+    return ids;
+  }, [aposta]);
+
   const bookmakers = useMemo((): Bookmaker[] => {
     return bookmakerSaldos
       .filter(bk => !bk.has_pending_transactions) // Bloquear casas não conciliadas
-      .filter(bk => bk.saldo_operavel >= 0.50) // Mostrar apenas casas com saldo disponível
+      .filter(bk => bk.saldo_operavel >= 0.50 || editModeBookmakerIds.has(bk.id)) // Em edição, incluir bookmaker atual mesmo sem saldo
       .map(bk => ({
         id: bk.id,
         nome: bk.nome,
@@ -466,7 +474,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         logo_url: bk.logo_url,
         bonus_rollover_started: bk.bonus_rollover_started
       }));
-  }, [bookmakerSaldos]);
+  }, [bookmakerSaldos, editModeBookmakerIds]);
 
   // Import by Print
   const fileInputRef = useRef<HTMLInputElement>(null);
