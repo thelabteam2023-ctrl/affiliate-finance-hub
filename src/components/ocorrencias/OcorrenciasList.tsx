@@ -1,42 +1,14 @@
-import { useState } from 'react';
-import { useOcorrencias, useAtualizarStatusOcorrencia, useExcluirOcorrencia } from '@/hooks/useOcorrencias';
+import { useState, useMemo } from 'react';
+import { useOcorrencias, useAtualizarStatusOcorrencia } from '@/hooks/useOcorrencias';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { PrioridadeBadge, StatusBadge, TipoBadge, SlaBadge } from './OcorrenciaBadges';
+import { OcorrenciaCollapseCard } from './OcorrenciaCollapseCard';
 import { OcorrenciaDetalheDialog } from './OcorrenciaDetalheDialog';
-import type { Ocorrencia, OcorrenciaStatus, OcorrenciaTipo } from '@/types/ocorrencias';
-import { STATUS_LABELS, SUB_MOTIVO_LABELS } from '@/types/ocorrencias';
-import {
-  ChevronDown,
-  Clock,
-  Eye,
-  Inbox,
-  Trash2,
-  Tag,
-} from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import type { OcorrenciaStatus, OcorrenciaTipo } from '@/types/ocorrencias';
+import { Inbox } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 interface Props {
   statusFilter?: OcorrenciaStatus[];
@@ -45,13 +17,59 @@ interface Props {
   emptyMessage?: string;
 }
 
-const STATUS_TRANSICOES: Record<OcorrenciaStatus, OcorrenciaStatus[]> = {
-  aberto: ['em_andamento', 'cancelado'],
-  em_andamento: ['aguardando_terceiro', 'resolvido', 'cancelado'],
-  aguardando_terceiro: ['em_andamento', 'resolvido', 'cancelado'],
-  resolvido: [],
-  cancelado: [],
-};
+/** Fetch bookmaker names for a set of IDs */
+function useBookmakerNames(ids: string[]) {
+  return useQuery({
+    queryKey: ['bookmaker-names', ids],
+    queryFn: async () => {
+      if (ids.length === 0) return {};
+      const { data } = await supabase
+        .from('bookmakers')
+        .select('id, nome')
+        .in('id', ids);
+      const map: Record<string, string> = {};
+      data?.forEach((b) => { map[b.id] = b.nome; });
+      return map;
+    },
+    enabled: ids.length > 0,
+  });
+}
+
+/** Fetch projeto names */
+function useProjetoNames(ids: string[]) {
+  return useQuery({
+    queryKey: ['projeto-names', ids],
+    queryFn: async () => {
+      if (ids.length === 0) return {};
+      const { data } = await supabase
+        .from('projetos')
+        .select('id, nome')
+        .in('id', ids);
+      const map: Record<string, string> = {};
+      data?.forEach((p) => { map[p.id] = p.nome; });
+      return map;
+    },
+    enabled: ids.length > 0,
+  });
+}
+
+/** Fetch parceiro names */
+function useParceiroNames(ids: string[]) {
+  return useQuery({
+    queryKey: ['parceiro-names', ids],
+    queryFn: async () => {
+      if (ids.length === 0) return {};
+      const { data } = await supabase
+        .from('parceiros')
+        .select('id, nome')
+        .in('id', ids);
+      const map: Record<string, string> = {};
+      data?.forEach((p) => { map[p.id] = p.nome; });
+      return map;
+    },
+    enabled: ids.length > 0,
+  });
+}
 
 export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMessage }: Props) {
   const { user } = useAuth();
@@ -72,6 +90,24 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
   if (tipoFilter) {
     lista = lista.filter((o) => o.tipo === tipoFilter);
   }
+
+  // Collect entity IDs for batch fetching
+  const bookmakerIds = useMemo(
+    () => [...new Set(lista.filter((o) => o.bookmaker_id).map((o) => o.bookmaker_id!))],
+    [lista]
+  );
+  const projetoIds = useMemo(
+    () => [...new Set(lista.filter((o) => o.projeto_id).map((o) => o.projeto_id!))],
+    [lista]
+  );
+  const parceiroIds = useMemo(
+    () => [...new Set(lista.filter((o) => o.parceiro_id).map((o) => o.parceiro_id!))],
+    [lista]
+  );
+
+  const { data: bookmakerMap = {} } = useBookmakerNames(bookmakerIds);
+  const { data: projetoMap = {} } = useProjetoNames(projetoIds);
+  const { data: parceiroMap = {} } = useParceiroNames(parceiroIds);
 
   if (isLoading) {
     return (
@@ -98,7 +134,7 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
     <>
       <div className="space-y-2">
         {lista.map((ocorrencia) => (
-          <OcorrenciaRow
+          <OcorrenciaCollapseCard
             key={ocorrencia.id}
             ocorrencia={ocorrencia}
             currentUserId={user?.id}
@@ -111,6 +147,9 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
                 statusAnterior: ocorrencia.status,
               })
             }
+            bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id] : undefined}
+            projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
+            parceiroNome={ocorrencia.parceiro_id ? parceiroMap[ocorrencia.parceiro_id] : undefined}
           />
         ))}
       </div>
@@ -122,151 +161,6 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
           onOpenChange={(open) => !open && setDetalheId(null)}
         />
       )}
-    </>
-  );
-}
-
-function OcorrenciaRow({
-  ocorrencia,
-  currentUserId,
-  isAdmin,
-  onVerDetalhe,
-  onAtualizarStatus,
-}: {
-  ocorrencia: Ocorrencia;
-  currentUserId?: string;
-  isAdmin: boolean;
-  onVerDetalhe: () => void;
-  onAtualizarStatus: (status: OcorrenciaStatus) => void;
-}) {
-  const { mutate: excluir, isPending: excluindo } = useExcluirOcorrencia();
-  const [confirmExcluir, setConfirmExcluir] = useState(false);
-  const isExecutor = ocorrencia.executor_id === currentUserId;
-  const transicoes = STATUS_TRANSICOES[ocorrencia.status];
-  const temAcoes = transicoes.length > 0 || isAdmin;
-
-  const subMotivoLabel = ocorrencia.sub_motivo
-    ? SUB_MOTIVO_LABELS[ocorrencia.sub_motivo] || ocorrencia.sub_motivo
-    : null;
-
-  return (
-    <>
-      <Card
-        className="hover:border-primary/30 transition-colors cursor-pointer group"
-        onClick={onVerDetalhe}
-      >
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            {/* Main content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <PrioridadeBadge prioridade={ocorrencia.prioridade} />
-                <StatusBadge status={ocorrencia.status} />
-                <TipoBadge tipo={ocorrencia.tipo} />
-                <SlaBadge
-                  violado={ocorrencia.sla_violado}
-                  alertaEm={ocorrencia.sla_alerta_em}
-                />
-              </div>
-              <h4 className="font-medium text-sm truncate text-foreground">
-                {ocorrencia.titulo}
-              </h4>
-              <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(ocorrencia.created_at), {
-                    addSuffix: true,
-                    locale: ptBR,
-                  })}
-                </span>
-                {subMotivoLabel && (
-                  <span className="flex items-center gap-1 text-primary/70">
-                    <Tag className="h-3 w-3" />
-                    {subMotivoLabel}
-                  </span>
-                )}
-                {isExecutor && (
-                  <Badge variant="outline" className="text-xs py-0 px-1.5 text-primary border-primary/40">
-                    Sua responsabilidade
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={onVerDetalhe}
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-
-              {temAcoes && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      Ações
-                      <ChevronDown className="h-3 w-3 ml-1" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {transicoes.map((s) => (
-                      <DropdownMenuItem
-                        key={s}
-                        onClick={() => onAtualizarStatus(s)}
-                      >
-                        → {STATUS_LABELS[s]}
-                      </DropdownMenuItem>
-                    ))}
-                    {isAdmin && (
-                      <>
-                        {transicoes.length > 0 && <DropdownMenuSeparator />}
-                        <DropdownMenuItem
-                          onClick={() => setConfirmExcluir(true)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-2" />
-                          Excluir ocorrência
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <AlertDialog open={confirmExcluir} onOpenChange={setConfirmExcluir}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir ocorrência?</AlertDialogTitle>
-            <AlertDialogDescription>
-              A ocorrência <strong>"{ocorrencia.titulo}"</strong> e toda sua timeline de eventos
-              serão excluídas permanentemente. Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => excluir(ocorrencia.id)}
-              disabled={excluindo}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
