@@ -3426,7 +3426,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                           const totalStake = stakeReal + fbVal;
                           const moeda = getSelectedBookmakerMoeda();
                           if (!isNaN(oddNum) && oddNum > 0 && totalStake > 0) {
-                            const retorno = oddNum * totalStake;
+                            // SNR: freebet portion only returns profit (odd-1), real portion returns full payout
+                            const retorno = stakeReal * oddNum + fbVal * (oddNum - 1);
                             return formatCurrencyWithSymbol(retorno, moeda);
                           }
                           return "—";
@@ -3441,8 +3442,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     const entryStakeReal = parseFloat(entry.stake) || 0;
                     const entryFbVal = entry.usar_freebet ? (parseFloat(entry.valor_freebet) || 0) : 0;
                     const entryTotalStake = entryStakeReal + entryFbVal;
+                    // SNR: freebet portion only returns profit (odd-1), real portion returns full payout
                     const entryRetorno = (!isNaN(entryOddNum) && entryOddNum > 0 && entryTotalStake > 0) 
-                      ? entryOddNum * entryTotalStake : null;
+                      ? entryStakeReal * entryOddNum + entryFbVal * (entryOddNum - 1) : null;
                     const entrySaldoDisp = entryBk?.saldo_operavel ?? 0;
                     const entryStakeExceeds = !isNaN(entryStakeReal) && entryStakeReal > entrySaldoDisp && !!entry.bookmaker_id;
 
