@@ -312,8 +312,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         );
       }
 
-      setApostas(
-        (data || []).map((a: any) => {
+      const mapped = (data || []).map((a: any) => {
           const bkInfo = a.bookmaker_id ? bookmakerMap.get(a.bookmaker_id) : null;
           return {
             ...a,
@@ -322,8 +321,41 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
             logo_url: bkInfo?.logoUrl ?? null,
             operador_nome: bkInfo?.parceiroNome ?? undefined,
           };
-        })
-      );
+        });
+
+      // Enriquecer com sub_entries de apostas_pernas
+      const apostaIds = mapped.map((a: any) => a.id);
+      if (apostaIds.length > 0) {
+        const { data: pernasData } = await supabase
+          .from("apostas_pernas")
+          .select(`
+            aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem,
+            bookmaker:bookmakers (
+              nome, parceiro_id,
+              parceiro:parceiros (nome),
+              bookmakers_catalogo (logo_url)
+            )
+          `)
+          .in("aposta_id", apostaIds)
+          .order("ordem", { ascending: true });
+
+        if (pernasData) {
+          const pernasMap = new Map<string, any[]>();
+          for (const p of pernasData) {
+            const arr = pernasMap.get(p.aposta_id) || [];
+            arr.push(p);
+            pernasMap.set(p.aposta_id, arr);
+          }
+          for (const a of mapped) {
+            const pernas = pernasMap.get(a.id);
+            if (pernas && pernas.length > 1) {
+              (a as any)._sub_entries = pernas;
+            }
+          }
+        }
+      }
+
+      setApostas(mapped);
     } catch (error) {
       console.error("Erro ao carregar apostas Duplo Green:", error);
     }
@@ -1091,7 +1123,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 {apostasSimples.map((aposta) => (
                   <ApostaCard
                     key={aposta.id}
-                    aposta={{ ...aposta, pernas: aposta.pernas as Perna[], moeda: aposta.moeda_operacao || "BRL" }}
+                    aposta={{ ...aposta, pernas: aposta.pernas as Perna[], moeda: aposta.moeda_operacao || "BRL", sub_entries: (aposta as any)._sub_entries?.filter((_: any, i: number) => i > 0)?.map((p: any) => ({ bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?', parceiro_nome: p.bookmaker?.parceiro?.nome || null, odd: p.odd, stake: p.stake, moeda: p.moeda, logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null, selecao_livre: p.selecao_livre })) || undefined }}
                     estrategia="DUPLO_GREEN"
                     onEdit={(apostaId) => { const a = apostasFiltradas.find(ap => ap.id === apostaId); if (a) handleOpenAposta(a); }}
                     onQuickResolve={handleQuickResolve}
@@ -1105,7 +1137,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
               apostasSimples.map((aposta) => (
                 <ApostaCard
                   key={aposta.id}
-                  aposta={{ ...aposta, pernas: aposta.pernas as Perna[], moeda: aposta.moeda_operacao || "BRL" }}
+                  aposta={{ ...aposta, pernas: aposta.pernas as Perna[], moeda: aposta.moeda_operacao || "BRL", sub_entries: (aposta as any)._sub_entries?.filter((_: any, i: number) => i > 0)?.map((p: any) => ({ bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?', parceiro_nome: p.bookmaker?.parceiro?.nome || null, odd: p.odd, stake: p.stake, moeda: p.moeda, logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null, selecao_livre: p.selecao_livre })) || undefined }}
                   estrategia="DUPLO_GREEN"
                   onEdit={(apostaId) => { const a = apostasFiltradas.find(ap => ap.id === apostaId); if (a) handleOpenAposta(a); }}
                   onQuickResolve={handleQuickResolve}
