@@ -1027,6 +1027,7 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
              parceiro_nome: parceiroNome,
              logo_url: logoUrl,
              moeda: aposta.moeda_operacao || "BRL",
+             primary_odd: (aposta as any)._sub_entries?.[0]?.odd ?? undefined,
              // Multi-entry: sub-entradas de apostas_pernas (exclui a 1ª perna que é a principal)
              sub_entries: (aposta as any)._sub_entries
                ?.filter((_: any, i: number) => i > 0)
