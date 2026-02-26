@@ -85,30 +85,24 @@ export function SimpleMultiEntryTable({
   const tableRef = useRef<HTMLTableElement>(null);
 
   // Atalhos Q (saltar entre Odds) e S (saltar entre Stakes)
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName !== 'INPUT' || !tableRef.current?.contains(target)) return;
+  // Usa onKeyDown inline nos inputs para garantir funcionamento em inputs type="number"
+  const handleFieldKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    const key = e.key.toLowerCase();
+    if (key !== 'q' && key !== 's') return;
+    if (!tableRef.current) return;
 
-      const key = e.key.toLowerCase();
-      if (key !== 'q' && key !== 's') return;
+    const fieldType = key === 'q' ? 'odd' : 'stake';
+    const inputs = Array.from(
+      tableRef.current.querySelectorAll<HTMLInputElement>(`input[data-field-type="${fieldType}"]`)
+    );
+    if (inputs.length < 2) return;
 
-      const fieldType = key === 'q' ? 'odd' : 'stake';
-      const inputs = Array.from(
-        tableRef.current.querySelectorAll<HTMLInputElement>(`input[data-field-type="${fieldType}"]`)
-      );
-      if (inputs.length < 2) return;
+    const currentIdx = inputs.indexOf(e.currentTarget);
+    const nextIdx = (currentIdx + 1) % inputs.length;
 
-      const currentIdx = inputs.indexOf(target as HTMLInputElement);
-      const nextIdx = (currentIdx + 1) % inputs.length;
-
-      e.preventDefault();
-      inputs[nextIdx].focus();
-      inputs[nextIdx].select();
-    };
-
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    e.preventDefault();
+    inputs[nextIdx].focus();
+    inputs[nextIdx].select();
   }, []);
 
   // Odd média ponderada (multi-moeda) e stake total nominal
@@ -256,6 +250,7 @@ export function SimpleMultiEntryTable({
                     min="1.01"
                     value={entry.odd}
                     onChange={(e) => updateEntry(entry.id, 'odd', e.target.value)}
+                    onKeyDown={handleFieldKeyDown}
                     onBlur={(e) => {
                       const val = parseFloat(e.target.value);
                       if (!isNaN(val) && val < 1.01) updateEntry(entry.id, 'odd', '1.01');
@@ -276,6 +271,7 @@ export function SimpleMultiEntryTable({
                       if (parseFloat(e.target.value) < 0) return;
                       updateEntry(entry.id, 'stake', e.target.value);
                     }}
+                    onKeyDown={handleFieldKeyDown}
                     placeholder="0.00"
                     className={cn(
                       "h-8 text-xs text-center px-1 w-[90px] tabular-nums",
