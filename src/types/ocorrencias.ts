@@ -160,7 +160,6 @@ export const SUB_MOTIVOS: Record<OcorrenciaTipo, { value: string; label: string 
     // Saques
     { value: 'atraso_provedor', label: 'Atraso do provedor de pagamento' },
     { value: 'saque_rejeitado', label: 'Saque rejeitado pela plataforma' },
-    { value: 'saque_parcial', label: 'Saque parcial / valor divergente' },
     { value: 'limite_excedido', label: 'Limite de saque excedido' },
     { value: 'dados_incorretos', label: 'Dados bancários incorretos' },
     // Depósitos
@@ -168,13 +167,9 @@ export const SUB_MOTIVOS: Record<OcorrenciaTipo, { value: string; label: string 
     { value: 'deposito_duplicado', label: 'Depósito duplicado' },
     { value: 'deposito_estornado', label: 'Depósito estornado' },
     { value: 'metodo_indisponivel', label: 'Método de pagamento indisponível' },
-    { value: 'valor_divergente', label: 'Valor creditado divergente' },
     // Financeiro geral
     { value: 'saldo_divergente', label: 'Saldo divergente do esperado' },
-    { value: 'bonus_nao_creditado', label: 'Bônus não creditado' },
-    { value: 'rollover_incorreto', label: 'Rollover incorreto' },
     { value: 'taxa_indevida', label: 'Taxa/cobrança indevida' },
-    { value: 'conversao_moeda', label: 'Problema na conversão de moeda' },
     { value: 'verificacao_pendente', label: 'Verificação de identidade pendente' },
     { value: 'outro', label: 'Outro motivo' },
   ],
