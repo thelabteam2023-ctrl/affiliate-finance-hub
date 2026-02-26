@@ -83,6 +83,8 @@ interface AdditionalEntry {
   stake: string;
   selecao_livre: string;
   usar_freebet: boolean;
+  /** Valor de freebet a usar (parcial ou total). Stake real = stake - valor_freebet */
+  valor_freebet: string;
 }
 
 const generateEntryId = () => Math.random().toString(36).substring(2, 9);
@@ -1006,6 +1008,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 stake: p.stake.toString(),
                 selecao_livre: p.selecao_livre || '',
                 usar_freebet: p.fonte_saldo === 'FREEBET' || p.gerou_freebet === true,
+                valor_freebet: (p.fonte_saldo === 'FREEBET' || p.gerou_freebet === true) ? p.stake.toString() : '0',
               }));
               setAdditionalEntries(extras);
             }
@@ -1583,8 +1586,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Validar freebet em entradas adicionais
         if (entry.usar_freebet) {
           const entryBk = bookmakers.find(b => b.id === entry.bookmaker_id);
-          if (entryBk && entryStake > entryBk.saldo_freebet) {
-            toast.error(`Entrada ${i + 2}: stake (${formatCurrencyWithSymbol(entryStake, entryBk.moeda)}) excede saldo de Freebet (${formatCurrencyWithSymbol(entryBk.saldo_freebet, entryBk.moeda)})`);
+          const entryFbValor = parseFloat(entry.valor_freebet) || 0;
+          if (entryFbValor <= 0) {
+            toast.error(`Entrada ${i + 2}: valor de Freebet deve ser maior que 0`);
+            return;
+          }
+          if (entryFbValor > entryStake) {
+            toast.error(`Entrada ${i + 2}: valor de Freebet não pode ser maior que o Stake`);
+            return;
+          }
+          if (entryBk && entryFbValor > entryBk.saldo_freebet) {
+            toast.error(`Entrada ${i + 2}: valor FB (${formatCurrencyWithSymbol(entryFbValor, entryBk.moeda)}) excede saldo de Freebet (${formatCurrencyWithSymbol(entryBk.saldo_freebet, entryBk.moeda)})`);
             return;
           }
         }
@@ -2665,9 +2677,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         if (tipoAposta === "bookmaker" && novaApostaId) {
           for (const entry of additionalEntries) {
             if (entry.usar_freebet && entry.bookmaker_id) {
-              const entryStake = parseFloat(entry.stake) || 0;
+              const entryFbValor = parseFloat(entry.valor_freebet) || 0;
               const entryBk = bookmakers.find(b => b.id === entry.bookmaker_id);
-              const valorDebitar = Math.min(entryStake, entryBk?.saldo_freebet || 0);
+              const valorDebitar = Math.min(entryFbValor, entryBk?.saldo_freebet || 0);
               if (valorDebitar > 0) {
                 await debitarFreebetUsada(entry.bookmaker_id, valorDebitar, novaApostaId);
               }
@@ -3233,7 +3245,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 if ((bk.saldo_freebet || 0) > 0) {
                                   const fbUsado = additionalEntries
                                     .filter(e => e.bookmaker_id === bk.id && e.usar_freebet)
-                                    .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                                    .reduce((sum, e) => sum + (parseFloat(e.valor_freebet) || 0), 0);
                                   if (fbUsado > 0) {
                                     map.set(bk.id, Math.max(0, (bk.saldo_freebet || 0) - fbUsado));
                                   }
@@ -3250,7 +3262,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                           // Adjust FB display: subtract what sub-entries of same bookmaker already consume
                           const fbUsadoSubEntradas = additionalEntries
                             .filter(e => e.bookmaker_id === bookmakerId && e.usar_freebet)
-                            .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                            .reduce((sum, e) => sum + (parseFloat(e.valor_freebet) || 0), 0);
                           const fbEfetivo = selectedBk ? Math.max(0, selectedBk.saldo_freebet - fbUsadoSubEntradas) : 0;
                           const saldoExibicao = saldoAjustadoParaEdicao?.saldoOperavel 
                             ?? saldoComReservas?.disponivel 
@@ -3272,7 +3284,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                           // Calculate available FB considering other entries using same bookmaker
                           const fbUsadoOutrasEntradas = additionalEntries
                             .filter(e => e.bookmaker_id === bookmakerId && e.usar_freebet)
-                            .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                            .reduce((sum, e) => sum + (parseFloat(e.valor_freebet) || 0), 0);
                           const fbDisponivel = Math.max(0, bookmakerSaldo.saldoFreebet - fbUsadoOutrasEntradas);
                           if (fbDisponivel <= 0 && !usarFreebetBookmaker) return null;
                           return (
@@ -3330,32 +3342,64 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     </td>
                     {/* Stake */}
                     <td className="px-1 py-3">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={stake}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (parseFloat(val) < 0) return;
-                          setStake(val);
-                        }}
-                        onKeyDown={(e) => handleMultiEntryFieldKeyDown(e, 'stake')}
-                        placeholder="0.00"
-                        data-field-type="stake"
-                        className={`h-8 text-xs text-center px-1 w-[90px] tabular-nums ${(() => {
-                          // CORREÇÃO: Usar saldo ajustado para edição (considera stake anterior como disponível)
-                          const saldoDisponivelReal = saldoAjustadoParaEdicao?.saldoOperavel 
-                            ?? saldoComReservas?.disponivel 
-                            ?? bookmakers.find(b => b.id === bookmakerId)?.saldo_operavel 
-                            ?? 0;
-                          const stakeNum = parseFloat(stake);
-                          if (!isNaN(stakeNum) && stakeNum > saldoDisponivelReal && bookmakerId) {
-                            return "border-destructive";
-                          }
-                          return "";
-                        })()}`}
-                      />
+                      <div className="flex flex-col gap-1">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={stake}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (parseFloat(val) < 0) return;
+                            setStake(val);
+                          }}
+                          onKeyDown={(e) => handleMultiEntryFieldKeyDown(e, 'stake')}
+                          placeholder="0.00"
+                          data-field-type="stake"
+                          className={`h-8 text-xs text-center px-1 w-[90px] tabular-nums ${(() => {
+                            const saldoDisponivelReal = saldoAjustadoParaEdicao?.saldoOperavel 
+                              ?? saldoComReservas?.disponivel 
+                              ?? bookmakers.find(b => b.id === bookmakerId)?.saldo_operavel 
+                              ?? 0;
+                            const stakeNum = parseFloat(stake);
+                            if (!isNaN(stakeNum) && stakeNum > saldoDisponivelReal && bookmakerId) {
+                              return "border-destructive";
+                            }
+                            return "";
+                          })()}`}
+                        />
+                        {/* Mini-campo FB: mostra quanto da stake vem de freebet */}
+                        {usarFreebetBookmaker && (
+                          <div className="flex items-center gap-1">
+                            <Gift className="h-3 w-3 text-purple-400 shrink-0" />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max={(() => {
+                                const fbUsadoOutras = additionalEntries
+                                  .filter(e => e.bookmaker_id === bookmakerId && e.usar_freebet)
+                                  .reduce((sum, e) => sum + (parseFloat(e.valor_freebet) || 0), 0);
+                                return Math.max(0, (bookmakerSaldo?.saldoFreebet || 0) - fbUsadoOutras);
+                              })()}
+                              value={valorFreebetUsar || ''}
+                              onChange={(e) => {
+                                let val = parseFloat(e.target.value) || 0;
+                                const stakeNum = parseFloat(stake) || 0;
+                                if (val > stakeNum) val = stakeNum;
+                                const fbUsadoOutras = additionalEntries
+                                  .filter(en => en.bookmaker_id === bookmakerId && en.usar_freebet)
+                                  .reduce((sum, en) => sum + (parseFloat(en.valor_freebet) || 0), 0);
+                                const fbMax = Math.max(0, (bookmakerSaldo?.saldoFreebet || 0) - fbUsadoOutras);
+                                if (val > fbMax) val = fbMax;
+                                setValorFreebetUsar(val);
+                              }}
+                              placeholder="FB"
+                              className="h-6 text-[10px] text-center px-1 w-[60px] tabular-nums bg-purple-500/10 border-purple-500/30 text-purple-400"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </td>
                     {/* Linha */}
                     <td className="px-2 py-3">
@@ -3403,7 +3447,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             <Select
                               value={entry.bookmaker_id}
                               onValueChange={(val) => {
-                                setAdditionalEntries(prev => prev.map(e => e.id === entry.id ? { ...e, bookmaker_id: val, usar_freebet: false } : e));
+                                setAdditionalEntries(prev => prev.map(e => e.id === entry.id ? { ...e, bookmaker_id: val, usar_freebet: false, valor_freebet: '0' } : e));
                               }}
                             >
                               <SelectTrigger className="h-9 text-xs w-full border-dashed">
@@ -3431,7 +3475,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                       // Subtract FB used by OTHER sub-entries (not this one)
                                       const fbOutras = additionalEntries
                                         .filter(e => e.id !== entry.id && e.bookmaker_id === bk.id && e.usar_freebet)
-                                        .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                                        .reduce((sum, e) => sum + (parseFloat(e.valor_freebet) || 0), 0);
                                       const totalUsado = fbMain + fbOutras;
                                       if (totalUsado > 0) {
                                         map.set(bk.id, Math.max(0, (bk.saldo_freebet || 0) - totalUsado));
@@ -3448,7 +3492,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 ? (parseFloat(stake) || 0) : 0;
                               const fbUsadoOutras = additionalEntries
                                 .filter(e => e.id !== entry.id && e.bookmaker_id === entry.bookmaker_id && e.usar_freebet)
-                                .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                                .reduce((sum, e) => sum + (parseFloat(e.valor_freebet) || 0), 0);
                               const fbEfetivo = Math.max(0, (entryBk?.saldo_freebet || 0) - fbUsadoPrincipal - fbUsadoOutras);
                               return (
                                 <BookmakerMetaRow
@@ -3470,7 +3514,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 : 0;
                               const fbUsadoOutrasEntradas = additionalEntries
                                 .filter(e => e.id !== entry.id && e.bookmaker_id === entry.bookmaker_id && e.usar_freebet)
-                                .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                                .reduce((sum, e) => sum + (parseFloat(e.valor_freebet) || 0), 0);
                               const fbDisponivel = Math.max(0, entryBk.saldo_freebet - fbUsadoPrincipal - fbUsadoOutrasEntradas);
                               if (fbDisponivel <= 0 && !entry.usar_freebet) return null;
                               return (
@@ -3483,8 +3527,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     return {
                                       ...e,
                                       usar_freebet: newUsarFb,
-                                      // Auto-fill stake com saldo FB disponível ao ativar
-                                      stake: newUsarFb ? fbDisponivel.toString() : e.stake,
+                                      // Auto-fill valor_freebet com saldo FB disponível ao ativar
+                                      valor_freebet: newUsarFb ? fbDisponivel.toString() : '0',
+                                      // Se stake vazio, auto-fill com FB disponível
+                                      stake: newUsarFb && (!e.stake || parseFloat(e.stake) === 0) ? fbDisponivel.toString() : e.stake,
                                     };
                                   }));
                                 }}
@@ -3524,23 +3570,53 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         </td>
                         {/* Stake */}
                         <td className="px-1 py-3">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            value={entry.stake}
-                            onChange={(e) => {
-                              if (parseFloat(e.target.value) < 0) return;
-                              setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, stake: e.target.value } : en));
-                            }}
-                            onKeyDown={(e) => handleMultiEntryFieldKeyDown(e, 'stake')}
-                            placeholder="0.00"
-                            className={cn(
-                              "h-8 text-xs text-center px-1 w-[90px] tabular-nums",
-                              entryStakeExceeds && "border-destructive"
+                          <div className="flex flex-col gap-1">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                              value={entry.stake}
+                              onChange={(e) => {
+                                if (parseFloat(e.target.value) < 0) return;
+                                setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, stake: e.target.value } : en));
+                              }}
+                              onKeyDown={(e) => handleMultiEntryFieldKeyDown(e, 'stake')}
+                              placeholder="0.00"
+                              className={cn(
+                                "h-8 text-xs text-center px-1 w-[90px] tabular-nums",
+                                entryStakeExceeds && "border-destructive"
+                              )}
+                              data-field-type="stake"
+                            />
+                            {/* Mini-campo FB para sub-entrada */}
+                            {entry.usar_freebet && (
+                              <div className="flex items-center gap-1">
+                                <Gift className="h-3 w-3 text-purple-400 shrink-0" />
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={entry.valor_freebet}
+                                  onChange={(e) => {
+                                    let val = parseFloat(e.target.value) || 0;
+                                    const entryStakeVal = parseFloat(entry.stake) || 0;
+                                    if (val > entryStakeVal) val = entryStakeVal;
+                                    // Limitar ao FB disponível
+                                    const fbUsadoPrincipal = (bookmakerId === entry.bookmaker_id && usarFreebetBookmaker)
+                                      ? valorFreebetUsar : 0;
+                                    const fbUsadoOutras = additionalEntries
+                                      .filter(en => en.id !== entry.id && en.bookmaker_id === entry.bookmaker_id && en.usar_freebet)
+                                      .reduce((sum, en) => sum + (parseFloat(en.valor_freebet) || 0), 0);
+                                    const fbMax = Math.max(0, (entryBk?.saldo_freebet || 0) - fbUsadoPrincipal - fbUsadoOutras);
+                                    if (val > fbMax) val = fbMax;
+                                    setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, valor_freebet: val.toString() } : en));
+                                  }}
+                                  placeholder="FB"
+                                  className="h-6 text-[10px] text-center px-1 w-[60px] tabular-nums bg-purple-500/10 border-purple-500/30 text-purple-400"
+                                />
+                              </div>
                             )}
-                            data-field-type="stake"
-                          />
+                          </div>
                         </td>
                         {/* Linha */}
                         <td className="px-2 py-3">
@@ -3582,7 +3658,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   variant="ghost"
                   size="sm"
                   className="h-7 text-xs text-muted-foreground hover:text-primary gap-1"
-                  onClick={() => setAdditionalEntries(prev => [...prev, { id: generateEntryId(), bookmaker_id: '', odd: '', stake: '', selecao_livre: '', usar_freebet: false }])}
+                  onClick={() => setAdditionalEntries(prev => [...prev, { id: generateEntryId(), bookmaker_id: '', odd: '', stake: '', selecao_livre: '', usar_freebet: false, valor_freebet: '0' }])}
                   disabled={additionalEntries.length >= MAX_ADDITIONAL_ENTRIES}
                 >
                   <Plus className="h-3.5 w-3.5" />
