@@ -83,8 +83,8 @@ export function SolicitacoesModule() {
       {/* Sub-tabs */}
       <Tabs value={subTab} onValueChange={setSubTab}>
         <TabsList>
-          <TabsTrigger value="fila">Fila</TabsTrigger>
-          <TabsTrigger value="minhas">Minhas</TabsTrigger>
+          <TabsTrigger value="fila">Pendentes</TabsTrigger>
+          <TabsTrigger value="minhas">Responsável</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
 
