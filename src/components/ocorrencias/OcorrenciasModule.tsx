@@ -140,8 +140,8 @@ export function OcorrenciasModule() {
       {/* Filter tabs */}
       <div className="flex items-center gap-1 border-b border-border pb-0">
         {([
-          { key: 'todas', label: 'Fila', icon: <Inbox className="h-3.5 w-3.5" /> },
-          { key: 'minhas', label: 'Minhas', icon: <Users className="h-3.5 w-3.5" /> },
+          { key: 'todas', label: 'Pendentes', icon: <Inbox className="h-3.5 w-3.5" /> },
+          { key: 'minhas', label: 'Responsável', icon: <Users className="h-3.5 w-3.5" /> },
           { key: 'historico', label: 'Histórico', icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
         ] as const).map((tab) => (
           <button
