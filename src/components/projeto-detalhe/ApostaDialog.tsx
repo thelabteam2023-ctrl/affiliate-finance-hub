@@ -1491,6 +1491,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   // Usar função canônica do componente centralizado
   const formatCurrencyWithSymbol = formatCurrencyCanonical;
 
+  // Stake efetiva para Bookmaker:
+  // - Usa stake digitada quando > 0
+  // - Em cenário "somente freebet", usa valorFreebetUsar quando stake = 0
+  const stakeBookmakerEfetiva = useMemo(() => {
+    const stakeNum = parseFloat(stake) || 0;
+    if (stakeNum > 0) return stakeNum;
+    if (usarFreebetBookmaker && valorFreebetUsar > 0) return valorFreebetUsar;
+    return 0;
+  }, [stake, usarFreebetBookmaker, valorFreebetUsar]);
+
   const handleSave = async () => {
     // Validação de campos de registro obrigatórios (Prompt Oficial)
     const registroValidation = validateRegistroAposta(registroValues);
@@ -1511,9 +1521,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
     // Validação específica por modo de entrada
     if (tipoAposta === "bookmaker") {
-      // Modo Bookmaker: exige odd, stake e bookmaker
-      if (!odd || !stake) {
-        toast.error("Preencha Odd e Stake");
+      // Modo Bookmaker: exige odd e bookmaker. Stake pode vir do campo Stake
+      // ou, em cenário somente freebet, do valor de freebet informado.
+      if (!odd) {
+        toast.error("Preencha a Odd");
         return;
       }
       
@@ -1523,10 +1534,26 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         return;
       }
 
-      const stakeNum = parseFloat(stake);
-      if (isNaN(stakeNum) || stakeNum <= 0) {
-        toast.error("Stake deve ser maior que 0");
+      const stakeNum = stakeBookmakerEfetiva;
+      if (!Number.isFinite(stakeNum) || stakeNum <= 0) {
+        toast.error(
+          usarFreebetBookmaker
+            ? "Informe Stake ou Valor de Freebet maior que 0"
+            : "Stake deve ser maior que 0"
+        );
         return;
+      }
+
+      if (usarFreebetBookmaker) {
+        if (valorFreebetUsar <= 0) {
+          toast.error("Valor de Freebet deve ser maior que 0");
+          return;
+        }
+
+        if (valorFreebetUsar > stakeNum) {
+          toast.error("Valor de Freebet não pode ser maior que o Stake total da aposta");
+          return;
+        }
       }
 
       if (!bookmakerId) {
@@ -1559,6 +1586,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       // Isso permite re-liquidação (ex: mudar GREEN para RED).
       const selectedBookmaker = bookmakers.find(b => b.id === bookmakerId);
       if (selectedBookmaker) {
+        if (usarFreebetBookmaker && valorFreebetUsar > selectedBookmaker.saldo_freebet) {
+          toast.error(
+            `Valor de Freebet (${formatCurrencyWithSymbol(valorFreebetUsar, selectedBookmaker.moeda)}) maior que o saldo de Freebet disponível (${formatCurrencyWithSymbol(selectedBookmaker.saldo_freebet, selectedBookmaker.moeda)})`
+          );
+          return;
+        }
+
         // Para edição: stake anterior é "livre" apenas se a bookmaker não mudou
         const mesmaBookmaker = aposta?.bookmaker_id === bookmakerId;
         const stakeAnterior = aposta && mesmaBookmaker ? (aposta.stake || 0) : 0;
@@ -1745,7 +1779,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // ===== MODO BOOKMAKER =====
         // Usa campos odd, stake, bookmakerId exclusivos desta aba
         const bookmakerOdd = parseFloat(odd);
-        const bookmakerStake = parseFloat(stake);
+        const bookmakerStake = stakeBookmakerEfetiva;
         
         // Multi-entry: calcular odd média ponderada (multi-moeda) e stake total
         const hasMultiEntry = additionalEntries.length > 0;
@@ -2607,9 +2641,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Debitar freebet se usar em qualquer modo
         // 1. Bookmaker simples com freebet
         if (tipoAposta === "bookmaker" && usarFreebetBookmaker) {
-          const stakeNum = parseFloat(stake);
-          if (stakeNum > 0 && bookmakerId) {
-            await debitarFreebetUsada(bookmakerId, stakeNum);
+          const valorFreebetDebitar = Math.min(valorFreebetUsar, stakeBookmakerEfetiva);
+          if (valorFreebetDebitar > 0 && bookmakerId) {
+            await debitarFreebetUsada(bookmakerId, valorFreebetDebitar);
           }
         }
         
@@ -3491,9 +3525,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   )}
                   
                   {/* SaldoWaterfallPreview - mostra como stake será distribuído */}
-                  {bookmakerId && parseFloat(stake) > 0 && (
+                  {bookmakerId && stakeBookmakerEfetiva > 0 && (
                     <SaldoWaterfallPreview
-                      stake={parseFloat(stake) || 0}
+                      stake={stakeBookmakerEfetiva}
                       saldoBonus={bookmakerSaldo.saldoBonus}
                       saldoFreebet={bookmakerSaldo.saldoFreebet}
                       saldoReal={bookmakerSaldo.saldoDisponivel}
@@ -4384,9 +4418,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   />
                 )}
                 
-                {bookmakerId && parseFloat(stake) > 0 && (
+                {bookmakerId && stakeBookmakerEfetiva > 0 && (
                   <SaldoWaterfallPreview
-                    stake={parseFloat(stake) || 0}
+                    stake={stakeBookmakerEfetiva}
                     saldoBonus={bookmakerSaldo.saldoBonus}
                     saldoFreebet={bookmakerSaldo.saldoFreebet}
                     saldoReal={bookmakerSaldo.saldoDisponivel}
