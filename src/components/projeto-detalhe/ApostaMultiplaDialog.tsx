@@ -897,10 +897,8 @@ export function ApostaMultiplaDialog({
         status: resultadoFinal === "PENDENTE" ? "PENDENTE" : "LIQUIDADA",
         resultado: resultadoFinal,
         tipo_freebet: usarFreebet ? "freebet_snr" : null,
-        gerou_freebet: gerouFreebet,
-        valor_freebet_gerada: gerouFreebet
-          ? parseFloat(valorFreebetGerada) || 0
-          : 0,
+        gerou_freebet: false,
+        valor_freebet_gerada: null,
         data_aposta: toLocalTimestamp(dataAposta),
         observacoes: observacoes || null,
         estrategia: registroValues.estrategia,
@@ -1072,8 +1070,8 @@ export function ApostaMultiplaDialog({
           odd_final: oddFinal,
           retorno_potencial: retornoPotencial,
           tipo_freebet: usarFreebet ? "freebet_snr" : null,
-          gerou_freebet: gerouFreebet,
-          valor_freebet_gerada: gerouFreebet ? parseFloat(valorFreebetGerada) || 0 : null,
+          gerou_freebet: false,
+          valor_freebet_gerada: null,
           observacoes: observacoes || null,
           // Multi-moeda
           moeda_operacao: moedaOp,
@@ -1670,16 +1668,7 @@ export function ApostaMultiplaDialog({
               </p>
             </div>
 
-            {/* Gerou Freebet - Componente padronizado com suporte multimoeda */}
-            {!usarFreebet && (
-              <GerouFreebetInput
-                gerouFreebet={gerouFreebet}
-                onGerouFreebetChange={setGerouFreebet}
-                valorFreebetGerada={valorFreebetGerada}
-                onValorFreebetGeradaChange={setValorFreebetGerada}
-                moeda={bookmakerSaldo?.moeda || "BRL"}
-              />
-            )}
+            {/* Gerou Freebet removido - funcionalidade desativada */}
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">

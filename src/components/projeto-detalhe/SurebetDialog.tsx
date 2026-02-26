@@ -2341,11 +2341,9 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
             lucro_prejuizo: null,
             lucro_prejuizo_brl_referencia: null,
             
-            // Campos de freebet
-            gerou_freebet: entry.gerouFreebet || false,
-            valor_freebet_gerada: entry.gerouFreebet && entry.valorFreebetGerada 
-              ? parseFloat(entry.valorFreebetGerada) 
-              : null
+            // Campos de freebet - funcionalidade desativada
+            gerou_freebet: false,
+            valor_freebet_gerada: null
           };
         });
         
@@ -3728,88 +3726,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                             </div>
                           )}
 
-                          {/* Toggle "Gerou Freebet" - compacto */}
-                          {!isEditing && entry.bookmaker_id && !(entry.usarFreebet) && (
-                            <div className={`mt-2 pt-2 border-t border-border/30 ${
-                              entry.gerouFreebet 
-                                ? "bg-gradient-to-r from-emerald-500/10 to-transparent rounded-lg -mx-2 px-2 pb-2" 
-                                : ""
-                            }`}>
-                              <div className="flex items-center justify-between gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => updateOddFreebet(index, !entry.gerouFreebet)}
-                                  className="flex items-center gap-2 group"
-                                >
-                                  <div className={`relative w-8 h-[18px] rounded-full transition-all duration-200 ${
-                                    entry.gerouFreebet 
-                                      ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]" 
-                                      : "bg-muted-foreground/30"
-                                  }`}>
-                                    <div className={`absolute top-[2px] w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all duration-200 ${
-                                      entry.gerouFreebet 
-                                        ? "left-[17px]" 
-                                        : "left-[2px]"
-                                    }`} />
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Gift className={`h-3 w-3 transition-colors ${
-                                      entry.gerouFreebet ? "text-emerald-400" : "text-muted-foreground"
-                                    }`} />
-                                    <span className={`text-[10px] font-medium transition-colors ${
-                                      entry.gerouFreebet 
-                                        ? "text-emerald-400" 
-                                        : "text-muted-foreground group-hover:text-foreground"
-                                    }`}>
-                                      Freebet
-                                    </span>
-                                  </div>
-                                </button>
-                                
-                                {/* Input de valor com animação */}
-                                <div className={`flex items-center gap-1 overflow-hidden transition-all duration-200 ${
-                                  entry.gerouFreebet 
-                                    ? "opacity-100 max-w-[80px]" 
-                                    : "opacity-0 max-w-0"
-                                }`}>
-                                  <span className="text-[10px] text-emerald-400/80 whitespace-nowrap">R$</span>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={entry.valorFreebetGerada || ""}
-                                    onChange={(e) => updateOddFreebet(index, true, e.target.value)}
-                                    placeholder="0"
-                                    className="h-6 w-16 text-[10px] text-center px-1 bg-background/60 border-emerald-500/40 focus:border-emerald-500/60"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Indicador de Freebet em modo edição */}
-                          {isEditing && entry.gerouFreebet && entry.valorFreebetGerada && (
-                            <div className="mt-2 pt-2 border-t border-border/30">
-                              <div className="flex items-center justify-center gap-2">
-                                <Gift className="h-3 w-3 text-emerald-400" />
-                                <span className="text-[10px] font-medium text-emerald-400">
-                                  Freebet: {formatCurrency(parseFloat(entry.valorFreebetGerada) || 0, entry.moeda)}
-                                </span>
-                                {entry.freebetStatus && (
-                                  <Badge className={`text-[9px] h-4 px-1 ${
-                                    entry.freebetStatus === "LIBERADA" 
-                                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40" 
-                                      : entry.freebetStatus === "NAO_LIBERADA"
-                                      ? "bg-red-500/20 text-red-400 border-red-500/40"
-                                      : "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                                  }`}>
-                                    {entry.freebetStatus === "LIBERADA" ? "Liberada" : 
-                                     entry.freebetStatus === "NAO_LIBERADA" ? "Não Lib." : "Pendente"}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          )}
+                          {/* Gerou Freebet removido - funcionalidade desativada */}
                         </div>
                       </div>
                     );
