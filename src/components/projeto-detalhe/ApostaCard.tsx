@@ -36,6 +36,16 @@ export interface Selecao {
   resultado?: string;
 }
 
+// Sub-entry para apostas simples multi-bookmaker
+export interface SubEntry {
+  bookmaker_nome: string;
+  odd: number;
+  stake: number;
+  moeda?: string;
+  logo_url?: string | null;
+  selecao_livre?: string | null;
+}
+
 // Dados da aposta para o card
 export interface ApostaCardData {
   id: string;
@@ -60,6 +70,7 @@ export interface ApostaCardData {
   operador_nome?: string;
   moeda?: string; // Moeda da operação
   logo_url?: string | null; // URL do logo da bookmaker
+  sub_entries?: SubEntry[]; // Multi-entry para apostas simples
 }
 
 interface ApostaCardProps {
@@ -299,7 +310,9 @@ export function ApostaCard({
   const hasPernas = aposta.pernas && aposta.pernas.length > 1;
   const hasSelecoes = aposta.selecoes && aposta.selecoes.length > 1;
   const isMultipla = hasSelecoes || !!aposta.tipo_multipla;
+  const hasSubEntries = aposta.sub_entries && aposta.sub_entries.length > 0;
   const isSimples = !isMultipla && !hasPernas;
+  const [showSubEntries, setShowSubEntries] = useState(false);
   
   // Label para múltiplas: DUPLA, TRIPLA, etc.
   const numSelecoes = aposta.selecoes?.length || (aposta.tipo_multipla === 'DUPLA' ? 2 : aposta.tipo_multipla === 'TRIPLA' ? 3 : 2);
@@ -481,11 +494,41 @@ export function ApostaCard({
             {/* Odd + Stake à direita */}
             <div className="flex items-center gap-2 shrink-0 justify-end sm:justify-start">
               {isSimples && (
-                <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
+                <>
+                  <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
+                  {hasSubEntries && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowSubEntries(prev => !prev); }}
+                      className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                      title={`${aposta.sub_entries!.length + 1} entradas`}
+                    >
+                      <Layers className="h-3 w-3" />
+                      <span>{aposta.sub_entries!.length + 1}</span>
+                    </button>
+                  )}
+                </>
               )}
               <span className="text-xs text-muted-foreground whitespace-nowrap">{formatValue(stake)}</span>
             </div>
           </div>
+          
+          {/* SUB-ENTRIES: Detalhamento multi-bookmaker (colapsável) */}
+          {hasSubEntries && showSubEntries && (
+            <div className="border-t border-border/30 pt-2 space-y-1">
+              {aposta.sub_entries!.map((entry, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+                  {entry.logo_url ? (
+                    <img src={entry.logo_url} alt="" className="h-4 w-4 rounded object-contain logo-blend shrink-0" />
+                  ) : (
+                    <div className="h-4 w-4 rounded bg-muted/30 shrink-0" />
+                  )}
+                  <span className="truncate flex-1 uppercase">{entry.bookmaker_nome}</span>
+                  <span className="font-medium shrink-0">@{entry.odd.toFixed(2)}</span>
+                  <span className="shrink-0">{defaultFormatCurrency(entry.stake, entry.moeda || aposta.moeda || 'BRL')}</span>
+                </div>
+              ))}
+            </div>
+          )}
           
           {/* LINHA 3: Data/Hora + Lucro/ROI */}
           <div className="flex items-center justify-between pt-2 border-t border-border/50 gap-2">

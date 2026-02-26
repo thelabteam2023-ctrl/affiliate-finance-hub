@@ -946,6 +946,34 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           setTipoAposta("bookmaker");
           setBookmakerId(aposta.bookmaker_id);
           setModoBackLay(false);
+          
+          // Multi-entry: carregar pernas adicionais de apostas_pernas
+          (async () => {
+            const { data: pernas } = await supabase
+              .from("apostas_pernas")
+              .select("*")
+              .eq("aposta_id", aposta.id)
+              .order("ordem", { ascending: true });
+            
+            if (pernas && pernas.length > 1) {
+              // Primeira perna = entrada principal (já carregada via aposta.odd/stake/bookmaker_id)
+              // Pernas restantes = additionalEntries
+              const primaryPerna = pernas[0];
+              // Atualizar primary com dados da perna (podem diferir do agregado)
+              setBookmakerId(primaryPerna.bookmaker_id);
+              setOdd(primaryPerna.odd.toString());
+              setStake(primaryPerna.stake.toString());
+              
+              const extras = pernas.slice(1).map(p => ({
+                id: p.id,
+                bookmaker_id: p.bookmaker_id,
+                odd: p.odd.toString(),
+                stake: p.stake.toString(),
+                selecao_livre: p.selecao_livre || '',
+              }));
+              setAdditionalEntries(extras);
+            }
+          })();
         }
 
         // Freebet tracking
@@ -1472,6 +1500,25 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         return;
       }
 
+      // Validar entradas adicionais (multi-entry)
+      for (let i = 0; i < additionalEntries.length; i++) {
+        const entry = additionalEntries[i];
+        if (!entry.bookmaker_id) {
+          toast.error(`Entrada ${i + 2}: selecione a bookmaker`);
+          return;
+        }
+        const entryOdd = parseFloat(entry.odd);
+        if (isNaN(entryOdd) || entryOdd <= 1) {
+          toast.error(`Entrada ${i + 2}: odd deve ser maior que 1.00`);
+          return;
+        }
+        const entryStake = parseFloat(entry.stake);
+        if (isNaN(entryStake) || entryStake <= 0) {
+          toast.error(`Entrada ${i + 2}: stake deve ser maior que 0`);
+          return;
+        }
+      }
+
       // Validar stake vs saldo operável da bookmaker (real + freebet + bonus)
       // CORREÇÃO CRÍTICA: Para edição de apostas (PENDENTE ou LIQUIDADA),
       // considerar o stake anterior como "disponível" pois a reversão irá restaurá-lo.
@@ -1666,6 +1713,23 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         const bookmakerOdd = parseFloat(odd);
         const bookmakerStake = parseFloat(stake);
         
+        // Multi-entry: calcular odd média ponderada e stake total
+        const hasMultiEntry = additionalEntries.length > 0;
+        let effectiveOdd = bookmakerOdd;
+        let effectiveStake = bookmakerStake;
+        
+        if (hasMultiEntry) {
+          const allEntries = [
+            { odd: bookmakerOdd, stake: bookmakerStake },
+            ...additionalEntries.map(e => ({ odd: parseFloat(e.odd) || 0, stake: parseFloat(e.stake) || 0 }))
+          ].filter(e => e.stake > 0 && e.odd > 0);
+          
+          effectiveStake = allEntries.reduce((s, e) => s + e.stake, 0);
+          effectiveOdd = effectiveStake > 0
+            ? allEntries.reduce((s, e) => s + e.odd * e.stake, 0) / effectiveStake
+            : bookmakerOdd;
+        }
+        
         // Calcular P/L para Bookmaker
         // IMPORTANTE: Se usa freebet, o tratamento é diferente:
         // - GREEN: lucro = stake * (odd - 1), mas stake não volta
@@ -1675,15 +1739,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             // Aposta com Freebet (tratamento SNR)
             switch (statusResultado) {
               case "GREEN":
-                lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1); // Só o lucro
-                valorRetornoCalculado = bookmakerStake * (bookmakerOdd - 1); // Stake não volta
+                lucroPrejuizo = effectiveStake * (effectiveOdd - 1); // Só o lucro
+                valorRetornoCalculado = effectiveStake * (effectiveOdd - 1); // Stake não volta
                 break;
               case "RED":
                 lucroPrejuizo = 0; // Freebet já consumida, não é prejuízo real
                 valorRetornoCalculado = 0;
                 break;
               case "MEIO_GREEN":
-                lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1) / 2;
+                lucroPrejuizo = effectiveStake * (effectiveOdd - 1) / 2;
                 valorRetornoCalculado = lucroPrejuizo; // Stake não volta
                 break;
               case "MEIO_RED":
@@ -1699,24 +1763,24 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             // Aposta normal
             switch (statusResultado) {
               case "GREEN":
-                lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1);
-                valorRetornoCalculado = bookmakerStake * bookmakerOdd;
+                lucroPrejuizo = effectiveStake * (effectiveOdd - 1);
+                valorRetornoCalculado = effectiveStake * effectiveOdd;
                 break;
               case "RED":
-                lucroPrejuizo = -bookmakerStake;
+                lucroPrejuizo = -effectiveStake;
                 valorRetornoCalculado = 0;
                 break;
               case "MEIO_GREEN":
-                lucroPrejuizo = bookmakerStake * (bookmakerOdd - 1) / 2;
-                valorRetornoCalculado = bookmakerStake + lucroPrejuizo;
+                lucroPrejuizo = effectiveStake * (effectiveOdd - 1) / 2;
+                valorRetornoCalculado = effectiveStake + lucroPrejuizo;
                 break;
               case "MEIO_RED":
-                lucroPrejuizo = -bookmakerStake / 2;
-                valorRetornoCalculado = bookmakerStake / 2;
+                lucroPrejuizo = -effectiveStake / 2;
+                valorRetornoCalculado = effectiveStake / 2;
                 break;
               case "VOID":
                 lucroPrejuizo = 0;
-                valorRetornoCalculado = bookmakerStake;
+                valorRetornoCalculado = effectiveStake;
                 break;
             }
           }
@@ -1725,8 +1789,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         apostaData = {
           ...commonData,
           bookmaker_id: bookmakerId,
-          odd: bookmakerOdd,
-          stake: bookmakerStake,
+          odd: Math.round(effectiveOdd * 1000) / 1000, // 3 casas decimais
+          stake: effectiveStake,
           modo_entrada: "PADRAO",
           valor_retorno: valorRetornoCalculado,
           lucro_prejuizo: lucroPrejuizo,
@@ -2224,6 +2288,57 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           }
         }
 
+        // ================================================================
+        // MULTI-ENTRY EDIT: Sincronizar pernas em apostas_pernas
+        // ================================================================
+        if (tipoAposta === "bookmaker") {
+          if (additionalEntries.length > 0) {
+            // Delete existing pernas and re-insert
+            await supabase.from("apostas_pernas").delete().eq("aposta_id", aposta.id);
+            
+            const allPernas = [
+              {
+                aposta_id: aposta.id,
+                bookmaker_id: bookmakerId,
+                ordem: 0,
+                selecao: effectiveSelecao || 'N/A',
+                selecao_livre: null as string | null,
+                odd: parseFloat(odd),
+                stake: parseFloat(stake),
+                moeda: moedaOperacao,
+              },
+              ...additionalEntries
+                .filter(e => e.bookmaker_id && parseFloat(e.odd) > 0 && parseFloat(e.stake) > 0)
+                .map((e, idx) => ({
+                  aposta_id: aposta.id,
+                  bookmaker_id: e.bookmaker_id,
+                  ordem: idx + 1,
+                  selecao: effectiveSelecao || 'N/A',
+                  selecao_livre: e.selecao_livre || null,
+                  odd: parseFloat(e.odd),
+                  stake: parseFloat(e.stake),
+                  moeda: bookmakers.find(b => b.id === e.bookmaker_id)?.moeda || moedaOperacao,
+                }))
+            ];
+
+            const { error: pernasError } = await supabase.from("apostas_pernas").insert(allPernas);
+            if (pernasError) {
+              console.error("[ApostaDialog] Erro ao sincronizar pernas na edição:", pernasError);
+            }
+          } else {
+            // Se não tem mais entradas adicionais, limpar pernas existentes
+            // (aposta voltou a ser single-entry)
+            const { data: existingPernas } = await supabase
+              .from("apostas_pernas")
+              .select("id")
+              .eq("aposta_id", aposta.id);
+            
+            if (existingPernas && existingPernas.length > 0) {
+              await supabase.from("apostas_pernas").delete().eq("aposta_id", aposta.id);
+            }
+          }
+        }
+
         // Verificar se resultado mudou e atualizar status da freebet
         if (gerouFreebetAnterior) {
           // Caso 1: PENDENTE → resultado final (GREEN, RED, MEIO_GREEN, MEIO_RED, VOID)
@@ -2373,6 +2488,47 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         if (error) throw error;
 
         const novaApostaId = insertedData?.id;
+
+        // ================================================================
+        // MULTI-ENTRY: Inserir pernas em apostas_pernas para rastreio granular
+        // ================================================================
+        if (novaApostaId && tipoAposta === "bookmaker" && additionalEntries.length > 0) {
+          const allPernas = [
+            {
+              aposta_id: novaApostaId,
+              bookmaker_id: bookmakerId,
+              ordem: 0,
+              selecao: effectiveSelecao || 'N/A',
+              selecao_livre: null as string | null,
+              odd: parseFloat(odd),
+              stake: parseFloat(stake),
+              moeda: moedaOperacao,
+            },
+            ...additionalEntries
+              .filter(e => e.bookmaker_id && parseFloat(e.odd) > 0 && parseFloat(e.stake) > 0)
+              .map((e, idx) => ({
+                aposta_id: novaApostaId,
+                bookmaker_id: e.bookmaker_id,
+                ordem: idx + 1,
+                selecao: effectiveSelecao || 'N/A',
+                selecao_livre: e.selecao_livre || null,
+                odd: parseFloat(e.odd),
+                stake: parseFloat(e.stake),
+                moeda: bookmakers.find(b => b.id === e.bookmaker_id)?.moeda || moedaOperacao,
+              }))
+          ];
+
+          const { error: pernasError } = await supabase
+            .from("apostas_pernas")
+            .insert(allPernas);
+
+          if (pernasError) {
+            console.error("[ApostaDialog] Erro ao inserir pernas multi-entry:", pernasError);
+            // Não bloquear - a aposta principal já foi criada
+          } else {
+            console.log(`[ApostaDialog] ✅ ${allPernas.length} pernas multi-entry inseridas`);
+          }
+        }
 
         // ================================================================
         // CORREÇÃO CRÍTICA: Para apostas criadas já com resultado (não PENDENTE),
