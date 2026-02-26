@@ -1051,7 +1051,9 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
                onEdit={() => handleOpenDialog(aposta)}
                onQuickResolve={handleQuickResolve}
                onDelete={handleDeleteAposta}
-               /* Card usa moeda original da aposta via defaultFormatCurrency */
+               formatCurrency={formatProjectCurrency}
+               convertToConsolidation={convertToConsolidation}
+               moedaConsolidacao={moedaConsolidacao}
              />
            );
         }
@@ -1091,7 +1093,9 @@ export function BonusApostasTab({ projetoId, dateRange }: BonusApostasTabProps) 
              onEdit={() => handleOpenMultiplaDialog(multipla)}
              onQuickResolve={handleQuickResolve}
              onDelete={handleDeleteAposta}
-             /* Card usa moeda original da aposta via defaultFormatCurrency */
+             formatCurrency={formatProjectCurrency}
+             convertToConsolidation={convertToConsolidation}
+             moedaConsolidacao={moedaConsolidacao}
            />
          );
       })}

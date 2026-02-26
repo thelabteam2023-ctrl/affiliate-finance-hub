@@ -97,6 +97,8 @@ interface ApostaCardProps {
   formatCurrency?: (value: number) => string;
   /** Conversão de moeda para consolidação (para sub-entries multi-moeda) */
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /** Moeda de consolidação do projeto (ex: BRL) */
+  moedaConsolidacao?: string;
 }
 
 // Configuração de cores por estratégia
@@ -306,6 +308,7 @@ export function ApostaCard({
   className,
   formatCurrency: formatCurrencyProp,
   convertToConsolidation,
+  moedaConsolidacao,
 }: ApostaCardProps) {
   // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
@@ -347,6 +350,7 @@ export function ApostaCard({
   const stake = hasPernas ? (aposta.stake_total ?? aposta.stake) : aposta.stake;
   const displayOdd = aposta.odd_final ?? aposta.odd ?? 0;
   const moeda = aposta.moeda || "BRL";
+  const displayCurrency = isMultiCurrency ? (moedaConsolidacao || "BRL") : moeda;
   const isForeignCurrency = moeda !== "BRL";
   
   // Para apostas múltiplas, exibir "MÚLTIPLA" como título
@@ -366,6 +370,12 @@ export function ApostaCard({
   
   const lucroDisplay = (() => {
     if (isMultiCurrency && typeof aposta.pl_consolidado === "number") return aposta.pl_consolidado;
+    if (isMultiCurrency && convertToConsolidation && aposta.lucro_prejuizo != null) {
+      // Runtime: converter lucro por perna para consolidação
+      // O lucro armazenado no parent mistura moedas, recalcular seria necessário
+      // mas sem dados de pernas aqui, usamos conversão simples como fallback
+      return convertToConsolidation(aposta.lucro_prejuizo, aposta.moeda || "BRL");
+    }
     return aposta.lucro_prejuizo ?? null;
   })();
   
@@ -374,7 +384,10 @@ export function ApostaCard({
     : null;
   
   // Formatter para totais: usa consolidação para multi-moeda, moeda local para single
-  const formatTotal = isMultiCurrency ? formatConsolidated : formatValue;
+  const formatTotal = (value: number) => {
+    if (isMultiCurrency && formatCurrencyProp) return formatCurrencyProp(value);
+    return defaultFormatCurrency(value, isMultiCurrency ? (moedaConsolidacao || "BRL") : moeda);
+  };
   
   if (variant === "list") {
     // Extrair nome base da casa (antes do " - ") para exibição limpa
@@ -619,7 +632,7 @@ export function ApostaCard({
               </span>
               {(isForeignCurrency || isMultiCurrency) && (
                 <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
-                  {moeda}
+                  {displayCurrency}
                 </Badge>
               )}
             </div>
@@ -869,7 +882,7 @@ export function ApostaCard({
             </span>
             {(isForeignCurrency || isMultiCurrency) && (
               <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
-                {moeda}
+                {displayCurrency}
               </Badge>
             )}
           </div>

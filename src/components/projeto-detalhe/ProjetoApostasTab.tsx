@@ -1487,10 +1487,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     const a = apostas.find(ap => ap.id === apostaId);
                     if (a) handleOpenDialog(a);
                   }}
-                  onQuickResolve={handleQuickResolve}
-                  onDelete={prepareDeleteSimples}
-                   /* Card usa moeda original da aposta via defaultFormatCurrency */
-                />
+                   onQuickResolve={handleQuickResolve}
+                   onDelete={prepareDeleteSimples}
+                   formatCurrency={formatCurrency}
+                   convertToConsolidation={convertToConsolidation}
+                   moedaConsolidacao={moedaConsolidacao}
+                 />
               );
             }
 
@@ -1537,10 +1539,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 estrategia={estrategiaMultipla}
                 variant={viewMode === "cards" ? "card" : "list"}
                 onEdit={() => handleOpenMultiplaDialog(multipla)}
-                onQuickResolve={handleQuickResolve}
-                onDelete={prepareDeleteMultipla}
-                 /* Card usa moeda original da aposta via defaultFormatCurrency */
-              />
+                 onQuickResolve={handleQuickResolve}
+                 onDelete={prepareDeleteMultipla}
+                 formatCurrency={formatCurrency}
+                 convertToConsolidation={convertToConsolidation}
+                 moedaConsolidacao={moedaConsolidacao}
+               />
             );
           })}
         </div>
