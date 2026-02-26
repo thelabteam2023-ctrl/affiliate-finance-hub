@@ -2,10 +2,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash, Loader2 } from "lucide-react";
+import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash, Loader2, ChevronDown, ChevronUp, Building2 } from "lucide-react";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import {
   Popover,
@@ -15,6 +16,7 @@ import {
 import { useState } from "react";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { BetRowActionsMenu, type BetResultado } from "@/components/apostas/BetRowActionsMenu";
+import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 
 // Tipos de estratégia para badge
 export type EstrategiaType = 
@@ -71,26 +73,30 @@ export interface ApostaCardData {
   bookmaker_nome?: string;
   parceiro_nome?: string;
   operador_nome?: string;
-  moeda?: string; // Moeda da operação
-  logo_url?: string | null; // URL do logo da bookmaker
-  sub_entries?: SubEntry[]; // Multi-entry para apostas simples
+  moeda?: string; // Moeda da operação (moeda principal)
+  logo_url?: string | null;
+  sub_entries?: SubEntry[];
+  // Multi-currency consolidation
+  /** Lucro consolidado na moeda do projeto */
+  pl_consolidado?: number | null;
+  /** Stake consolidado na moeda do projeto */
+  stake_consolidado?: number | null;
 }
 
 interface ApostaCardProps {
   aposta: ApostaCardData;
   estrategia: EstrategiaType;
-  /** Callback para abrir o formulário de edição (via menu híbrido) */
   onEdit?: (apostaId: string) => void;
   onQuickResolve?: (apostaId: string, resultado: string) => void;
-  /** Callback para excluir aposta (abre modal de confirmação) */
   onDelete?: (apostaId: string) => void;
-  /** Callback para duplicar aposta */
   onDuplicate?: (apostaId: string) => void;
   variant?: "card" | "list";
   accentColor?: string;
   className?: string;
-  /** Função de formatação de moeda (usa moeda do projeto quando fornecida) */
+  /** Função de formatação na moeda de consolidação do projeto */
   formatCurrency?: (value: number) => string;
+  /** Conversão de moeda para consolidação (para sub-entries multi-moeda) */
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
 }
 
 // Configuração de cores por estratégia
@@ -298,15 +304,32 @@ export function ApostaCard({
   variant = "card",
   accentColor,
   className,
-  formatCurrency: formatCurrencyProp
+  formatCurrency: formatCurrencyProp,
+  convertToConsolidation,
 }: ApostaCardProps) {
   // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
   
-  // Sempre usa a moeda da aposta (moeda operacional da casa), nunca a do projeto
+  // Detectar se é multi-moeda (sub-entries com moedas diferentes)
+  const isMultiCurrency = (() => {
+    if (!aposta.sub_entries || aposta.sub_entries.length === 0) return false;
+    const moedas = new Set([aposta.moeda || "BRL", ...aposta.sub_entries.map(e => e.moeda || "BRL")]);
+    return moedas.size > 1;
+  })();
+
+  // Formatar valor na moeda operacional da aposta
   const formatValue = (value: number) => {
     return defaultFormatCurrency(value, aposta.moeda || "BRL");
   };
+  
+  // Formatar valor na moeda de consolidação do projeto
+  const formatConsolidated = formatCurrencyProp || formatValue;
+  
+  // Formatar por moeda específica
+  const formatByMoeda = (value: number, moeda: string) => {
+    return formatCurrencyUtil(value, moeda);
+  };
+  
   const config = ESTRATEGIA_CONFIG[estrategia] || ESTRATEGIA_CONFIG.NORMAL;
   const Icon = config.icon;
   
@@ -315,7 +338,7 @@ export function ApostaCard({
   const isMultipla = hasSelecoes || !!aposta.tipo_multipla;
   const hasSubEntries = aposta.sub_entries && aposta.sub_entries.length > 0;
   const isSimples = !isMultipla && !hasPernas;
-  const [showSubEntries, setShowSubEntries] = useState(false);
+  const [isSubEntriesOpen, setIsSubEntriesOpen] = useState(false);
   
   // Label para múltiplas: DUPLA, TRIPLA, etc.
   const numSelecoes = aposta.selecoes?.length || (aposta.tipo_multipla === 'DUPLA' ? 2 : aposta.tipo_multipla === 'TRIPLA' ? 3 : 2);
@@ -329,9 +352,29 @@ export function ApostaCard({
   // Para apostas múltiplas, exibir "MÚLTIPLA" como título
   const displayEvento = isMultipla ? 'MÚLTIPLA' : (aposta.evento || '');
   
-  const roi = stake > 0 && aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined
-    ? (aposta.lucro_prejuizo / stake) * 100 
+  // Multi-currency: usar valores consolidados para exibição de totais
+  const stakeDisplay = (() => {
+    if (isMultiCurrency && typeof aposta.stake_consolidado === "number") return aposta.stake_consolidado;
+    if (isMultiCurrency && convertToConsolidation) {
+      // Somar primary + sub_entries convertidos
+      const primaryConverted = convertToConsolidation(aposta.stake, aposta.moeda || "BRL");
+      const subsConverted = (aposta.sub_entries || []).reduce((s, e) => s + convertToConsolidation(e.stake, e.moeda || "BRL"), 0);
+      return primaryConverted + subsConverted;
+    }
+    return stake;
+  })();
+  
+  const lucroDisplay = (() => {
+    if (isMultiCurrency && typeof aposta.pl_consolidado === "number") return aposta.pl_consolidado;
+    return aposta.lucro_prejuizo ?? null;
+  })();
+  
+  const roi = stakeDisplay > 0 && lucroDisplay !== null && lucroDisplay !== undefined
+    ? (lucroDisplay / stakeDisplay) * 100 
     : null;
+  
+  // Formatter para totais: usa consolidação para multi-moeda, moeda local para single
+  const formatTotal = isMultiCurrency ? formatConsolidated : formatValue;
   
   if (variant === "list") {
     // Extrair nome base da casa (antes do " - ") para exibição limpa
@@ -507,53 +550,65 @@ export function ApostaCard({
                     <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
                   )}
                   {hasSubEntries && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowSubEntries(prev => !prev); }}
-                      className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-                      title={`${aposta.sub_entries!.length + 1} entradas`}
-                    >
+                    <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
                       <Layers className="h-3 w-3" />
                       <span>{aposta.sub_entries!.length + 1}</span>
-                    </button>
+                    </span>
                   )}
                 </>
               )}
-              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatValue(stake)}</span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTotal(stakeDisplay)}</span>
             </div>
           </div>
           
-          {/* SUB-ENTRIES: Detalhamento multi-bookmaker (colapsável) */}
-          {hasSubEntries && showSubEntries && (
-            <div className="border-t border-border/30 pt-2 space-y-1">
-              {/* Entrada principal (1ª perna) - mostra a odd REAL da perna, não a média */}
-              <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-                {aposta.logo_url ? (
-                  <img src={aposta.logo_url} alt="" className="h-4 w-4 rounded object-contain logo-blend shrink-0" />
-                ) : (
-                  <div className="h-4 w-4 rounded bg-muted/30 shrink-0" />
-                )}
-                <span className="truncate flex-1 uppercase">
-                  {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
-                </span>
-                <span className="font-medium shrink-0">@{(aposta.primary_odd ?? aposta.odd ?? 0).toFixed(2)}</span>
-                <span className="shrink-0">{formatValue(aposta.stake)}</span>
-              </div>
-              {/* Sub-entradas (2ª perna em diante) */}
-              {aposta.sub_entries!.map((entry, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-                  {entry.logo_url ? (
-                    <img src={entry.logo_url} alt="" className="h-4 w-4 rounded object-contain logo-blend shrink-0" />
+          {/* SUB-ENTRIES: Collapsible multi-bookmaker (padrão SurebetCard) */}
+          {hasSubEntries && (
+            <Collapsible open={isSubEntriesOpen} onOpenChange={setIsSubEntriesOpen}>
+              <CollapsibleTrigger asChild>
+                <button 
+                  className="w-full flex items-center gap-2 hover:bg-muted/30 rounded-md py-1 px-1 transition-colors text-xs text-muted-foreground"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {aposta.logo_url ? (
+                    <img src={aposta.logo_url} alt="" className="h-6 w-6 rounded object-contain logo-blend shrink-0" />
                   ) : (
-                    <div className="h-4 w-4 rounded bg-muted/30 shrink-0" />
+                    <div className="h-6 w-6 rounded bg-muted/30 flex items-center justify-center shrink-0">
+                      <Building2 className="h-3 w-3 text-muted-foreground" />
+                    </div>
                   )}
-                  <span className="truncate flex-1 uppercase">
-                    {entry.bookmaker_nome}{entry.parceiro_nome ? ` - ${getFirstLastName(entry.parceiro_nome)}` : ''}
+                  <span className="truncate flex-1 uppercase text-left">
+                    {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
                   </span>
-                  <span className="font-medium shrink-0">@{entry.odd.toFixed(2)}</span>
-                  <span className="shrink-0">{defaultFormatCurrency(entry.stake, entry.moeda || aposta.moeda || 'BRL')}</span>
+                  <span className="font-medium shrink-0">@{(aposta.primary_odd ?? aposta.odd ?? 0).toFixed(2)}</span>
+                  <span className="shrink-0">{formatByMoeda(aposta.stake, aposta.moeda || 'BRL')}</span>
+                  {isSubEntriesOpen ? (
+                    <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="animate-in slide-in-from-top-1 duration-200">
+                <div className="mt-1 space-y-1 ml-3 pl-3 border-l-2 border-primary/20">
+                  {aposta.sub_entries!.map((entry, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground py-0.5">
+                      {entry.logo_url ? (
+                        <img src={entry.logo_url} alt="" className="h-5 w-5 rounded object-contain logo-blend shrink-0" />
+                      ) : (
+                        <div className="h-5 w-5 rounded bg-muted/30 flex items-center justify-center shrink-0">
+                          <Building2 className="h-2.5 w-2.5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="truncate flex-1 uppercase">
+                        {entry.bookmaker_nome}{entry.parceiro_nome ? ` - ${getFirstLastName(entry.parceiro_nome)}` : ''}
+                      </span>
+                      <span className="font-medium shrink-0 text-foreground">@{entry.odd.toFixed(2)}</span>
+                      <span className="shrink-0">{formatByMoeda(entry.stake, entry.moeda || aposta.moeda || 'BRL')}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
           
           {/* LINHA 3: Data/Hora + Lucro/ROI */}
@@ -562,17 +617,17 @@ export function ApostaCard({
               <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
                 {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
               </span>
-              {isForeignCurrency && (
+              {(isForeignCurrency || isMultiCurrency) && (
                 <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
                   {moeda}
                 </Badge>
               )}
             </div>
             
-            {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
+            {lucroDisplay !== null && lucroDisplay !== undefined && (
               <div className="flex items-center gap-1 shrink-0">
-                <span className={cn("text-xs sm:text-sm font-semibold whitespace-nowrap", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                  {formatValue(aposta.lucro_prejuizo)}
+                <span className={cn("text-xs sm:text-sm font-semibold whitespace-nowrap", lucroDisplay >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                  {formatTotal(lucroDisplay)}
                 </span>
                 {roi !== null && (
                   <span className={cn("text-[9px] sm:text-[10px] whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
@@ -743,55 +798,67 @@ export function ApostaCard({
                 <>
                   <span className="text-[10px] text-muted-foreground">Odd ø</span>
                   <span className="text-sm sm:text-base font-semibold whitespace-nowrap">@{displayOdd.toFixed(2)}</span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowSubEntries(prev => !prev); }}
-                    className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-                    title={`${aposta.sub_entries!.length + 1} entradas`}
-                  >
+                  <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
                     <Layers className="h-3 w-3" />
                     <span>{aposta.sub_entries!.length + 1}</span>
-                  </button>
+                  </span>
                 </>
               ) : (
                 <span className="text-sm sm:text-base font-medium whitespace-nowrap">@{displayOdd.toFixed(2)}</span>
               )}
-              <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{formatValue(stake)}</span>
+              <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{formatTotal(stakeDisplay)}</span>
             </div>
           </div>
         )}
 
-        {/* SUB-ENTRIES colapsável (card variant) */}
-        {hasSubEntries && showSubEntries && (
-          <div className="border-t border-border/30 pt-2 mb-3 space-y-1">
-            {/* Entrada principal */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-              {aposta.logo_url ? (
-                <img src={aposta.logo_url} alt="" className="h-4 w-4 rounded object-contain logo-blend shrink-0" />
-              ) : (
-                <div className="h-4 w-4 rounded bg-muted/30 shrink-0" />
-              )}
-              <span className="truncate flex-1 uppercase">
-                {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
-              </span>
-              <span className="font-medium shrink-0">@{(aposta.primary_odd ?? aposta.odd ?? 0).toFixed(2)}</span>
-              <span className="shrink-0">{formatValue(aposta.stake)}</span>
-            </div>
-            {/* Sub-entradas */}
-            {aposta.sub_entries!.map((entry, idx) => (
-              <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-                {entry.logo_url ? (
-                  <img src={entry.logo_url} alt="" className="h-4 w-4 rounded object-contain logo-blend shrink-0" />
+        {/* SUB-ENTRIES Collapsible (card variant - padrão SurebetCard) */}
+        {hasSubEntries && (
+          <Collapsible open={isSubEntriesOpen} onOpenChange={setIsSubEntriesOpen}>
+            <CollapsibleTrigger asChild>
+              <button 
+                className="w-full flex items-center gap-2 hover:bg-muted/30 rounded-md py-1.5 px-1 transition-colors text-xs text-muted-foreground mb-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {aposta.logo_url ? (
+                  <img src={aposta.logo_url} alt="" className="h-7 w-7 rounded-lg object-contain logo-blend shrink-0" />
                 ) : (
-                  <div className="h-4 w-4 rounded bg-muted/30 shrink-0" />
+                  <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
+                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
                 )}
-                <span className="truncate flex-1 uppercase">
-                  {entry.bookmaker_nome}{entry.parceiro_nome ? ` - ${getFirstLastName(entry.parceiro_nome)}` : ''}
+                <span className="truncate flex-1 uppercase text-left">
+                  {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
                 </span>
-                <span className="font-medium shrink-0">@{entry.odd.toFixed(2)}</span>
-                <span className="shrink-0">{defaultFormatCurrency(entry.stake, entry.moeda || aposta.moeda || 'BRL')}</span>
+                <span className="font-medium shrink-0 text-foreground">@{(aposta.primary_odd ?? aposta.odd ?? 0).toFixed(2)}</span>
+                <span className="shrink-0">{formatByMoeda(aposta.stake, aposta.moeda || 'BRL')}</span>
+                {isSubEntriesOpen ? (
+                  <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
+                ) : (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="animate-in slide-in-from-top-1 duration-200">
+              <div className="mt-1 space-y-1.5 ml-4 pl-4 border-l-2 border-primary/20 mb-3">
+                {aposta.sub_entries!.map((entry, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground py-0.5">
+                    {entry.logo_url ? (
+                      <img src={entry.logo_url} alt="" className="h-6 w-6 rounded object-contain logo-blend shrink-0" />
+                    ) : (
+                      <div className="h-6 w-6 rounded bg-muted/30 flex items-center justify-center shrink-0">
+                        <Building2 className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    )}
+                    <span className="truncate flex-1 uppercase">
+                      {entry.bookmaker_nome}{entry.parceiro_nome ? ` - ${getFirstLastName(entry.parceiro_nome)}` : ''}
+                    </span>
+                    <span className="font-medium shrink-0 text-foreground">@{entry.odd.toFixed(2)}</span>
+                    <span className="shrink-0">{formatByMoeda(entry.stake, entry.moeda || aposta.moeda || 'BRL')}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
         
         {/* LINHA 3: Data/Hora + Stake + Lucro/ROI - NUNCA CORTAR */}
@@ -800,7 +867,7 @@ export function ApostaCard({
             <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
               {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
             </span>
-            {isForeignCurrency && (
+            {(isForeignCurrency || isMultiCurrency) && (
               <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
                 {moeda}
               </Badge>
@@ -809,12 +876,12 @@ export function ApostaCard({
           
           <div className="flex items-center gap-3 shrink-0">
             <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-              Stake: {formatValue(stake)}
+              Stake: {formatTotal(stakeDisplay)}
             </span>
-            {aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined && (
+            {lucroDisplay !== null && lucroDisplay !== undefined && (
               <div className="flex items-center gap-1 shrink-0">
-                <span className={cn("text-sm sm:text-base font-semibold whitespace-nowrap", aposta.lucro_prejuizo >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                  {formatValue(aposta.lucro_prejuizo)}
+                <span className={cn("text-sm sm:text-base font-semibold whitespace-nowrap", lucroDisplay >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                  {formatTotal(lucroDisplay)}
                 </span>
                 {roi !== null && (
                   <span className={cn("text-[10px] sm:text-xs whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>

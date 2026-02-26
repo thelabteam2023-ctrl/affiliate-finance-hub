@@ -1471,7 +1471,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                      moeda: p.moeda,
                      logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null,
                      selecao_livre: p.selecao_livre,
-                   })) || undefined,
+                    })) || undefined,
+                 // Multi-currency consolidation
+                 pl_consolidado: aposta.pl_consolidado ?? undefined,
+                 stake_consolidado: aposta.stake_consolidado ?? undefined,
                };
               
               return (
