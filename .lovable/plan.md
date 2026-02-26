@@ -32,3 +32,24 @@ Duas alterações simples no arquivo `src/components/AppSidebar.tsx`:
 - Lançamentos vão para `cash_ledger` (com `destino_parceiro_id`) + `movimentacoes_indicacao` (com `parceiro_id`)
 - `parceria_id` agora é nullable em `movimentacoes_indicacao` para permitir lançamentos por parceiro sem parceria específica
 - View `v_movimentacoes_indicacao_workspace` atualizada para usar `workspace_id` diretamente
+
+---
+
+## Multi-Entry para Aposta Simples ✅ (Fase 1-3)
+
+### Implementado
+- **Formulário**: Botão "+ Entrada" permite até 5 bookmakers na mesma seleção, com cálculo de odd média ponderada e stake total
+- **Save**: Ao criar aposta com multi-entry, insere registros em `apostas_pernas` com cada bookmaker/odd/stake individual. O `apostas_unificada` recebe a odd ponderada e stake total
+- **Edição**: Ao abrir aposta existente, carrega pernas de `apostas_pernas` e popula entradas adicionais. Na edição, deleta pernas antigas e re-insere
+- **Card/Lista**: ApostaCard exibe ícone de camadas (Layers) com contador de entradas. Clique expande sub-entradas com logo, nome da bookmaker, odd e stake individuais
+- **Validação**: Cada entrada adicional é validada (bookmaker, odd > 1, stake > 0)
+
+### Arquitetura
+- Usa tabela existente `apostas_pernas` (mesma do Surebet)
+- Sem migração de banco necessária
+- ProjetoApostasTab carrega pernas em batch para todas as apostas simples
+- Liquidação aplica o mesmo resultado a todas as pernas (via odd média ponderada no registro pai)
+
+### Próximos passos (Fase 4)
+- Liquidação granular por perna (se necessário)
+- Suporte a multi-moeda entre entradas (conversão BRL para cálculo de peso)
