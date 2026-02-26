@@ -27,6 +27,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useCriarOcorrencia } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,7 +36,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
-import { AlertTriangle, Loader2, Plus, X } from 'lucide-react';
+import { AlertTriangle, Loader2, Plus, X, ChevronsUpDown, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
   titulo: z.string().min(5, 'Título deve ter pelo menos 5 caracteres').max(200),
@@ -72,9 +75,8 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const { data: members = [] } = useWorkspaceMembers();
   const { workspaceId } = useAuth();
   const [observadoresSelecionados, setObservadoresSelecionados] = useState<string[]>([]);
-  const [filtroCasa, setFiltroCasa] = useState<string>('');
-  const [filtroParceiro, setFiltroParceiro] = useState<string>('');
-  const [filtroBanco, setFiltroBanco] = useState<string>('');
+  const [bookmakerPopoverOpen, setBookmakerPopoverOpen] = useState(false);
+  const [bancoPopoverOpen, setBancoPopoverOpen] = useState(false);
 
   // Carregar bookmakers do workspace
   const { data: bookmakers = [] } = useQuery({
@@ -124,27 +126,25 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const contextoEntidade = form.watch('contexto_entidade');
   const subMotivos = SUB_MOTIVOS[tipoSelecionado] || [];
 
-  // Derivar listas únicas para filtros
-  const casasUnicas = Array.from(new Set((bookmakers as any[]).map((bk) => String(bk.nome)))).sort();
-  const parceirosUnicos = Array.from(new Set(
-    (bookmakers as any[])
-      .filter((bk) => bk.parceiros?.nome)
-      .map((bk) => String(bk.parceiros.nome))
-  )).sort();
-  const bancosUnicos = Array.from(new Set((contasBancarias as any[]).map((cb) => String(cb.banco)))).sort();
+  // Agrupar bookmakers por casa para o combobox
+  const bookmakersPorCasa = (bookmakers as any[]).reduce<Record<string, any[]>>((acc, bk) => {
+    const casa = bk.nome || 'Sem nome';
+    if (!acc[casa]) acc[casa] = [];
+    acc[casa].push(bk);
+    return acc;
+  }, {});
 
-  // Filtrar bookmakers
-  const bookmakersFiltrados = bookmakers.filter((bk: any) => {
-    if (filtroCasa && bk.nome !== filtroCasa) return false;
-    if (filtroParceiro && bk.parceiros?.nome !== filtroParceiro) return false;
-    return true;
-  });
+  // Agrupar contas bancárias por banco
+  const contasPorBanco = (contasBancarias as any[]).reduce<Record<string, any[]>>((acc, cb) => {
+    const banco = cb.banco || 'Sem banco';
+    if (!acc[banco]) acc[banco] = [];
+    acc[banco].push(cb);
+    return acc;
+  }, {});
 
-  // Filtrar contas bancárias
-  const contasFiltradas = contasBancarias.filter((cb: any) => {
-    if (filtroBanco && cb.banco !== filtroBanco) return false;
-    return true;
-  });
+  // Label do bookmaker selecionado
+  const selectedBookmaker = (bookmakers as any[]).find((bk) => bk.id === form.watch('entidade_id'));
+  const selectedConta = (contasBancarias as any[]).find((cb) => cb.id === form.watch('entidade_id'));
 
   const onSubmit = async (data: FormData) => {
     const isBookmaker = data.contexto_entidade === 'bookmaker';
@@ -324,137 +324,149 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               />
             </div>
 
-            {/* Filtros e seletor da entidade específica */}
+            {/* Seletor de Bookmaker com busca agrupada por casa */}
             {contextoEntidade === 'bookmaker' && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <FormLabel>Filtrar por Casa</FormLabel>
-                    <Select
-                      value={filtroCasa || '__all__'}
-                      onValueChange={(v) => {
-                        setFiltroCasa(v === '__all__' ? '' : v);
-                        form.setValue('entidade_id', '');
-                      }}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Todas as casas" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Todas as casas</SelectItem>
-                        {casasUnicas.map((casa) => (
-                          <SelectItem key={casa} value={casa}>{casa}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <FormLabel>Filtrar por Parceiro</FormLabel>
-                    <Select
-                      value={filtroParceiro || '__all__'}
-                      onValueChange={(v) => {
-                        setFiltroParceiro(v === '__all__' ? '' : v);
-                        form.setValue('entidade_id', '');
-                      }}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Todos os parceiros" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Todos os parceiros</SelectItem>
-                        {parceirosUnicos.map((p) => (
-                          <SelectItem key={p} value={p}>{p}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="entidade_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Conta *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ''}>
+              <FormField
+                control={form.control}
+                name="entidade_id"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Bookmaker *</FormLabel>
+                    <Popover open={bookmakerPopoverOpen} onOpenChange={setBookmakerPopoverOpen}>
+                      <PopoverTrigger asChild>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a conta..." />
-                          </SelectTrigger>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              'w-full justify-between font-normal',
+                              !field.value && 'text-muted-foreground'
+                            )}
+                          >
+                            {selectedBookmaker ? (
+                              <span className="truncate">
+                                {selectedBookmaker.nome}
+                                {selectedBookmaker.instance_identifier ? ` (${selectedBookmaker.instance_identifier})` : ''}
+                                {selectedBookmaker.parceiros?.nome ? ` — ${selectedBookmaker.parceiros.nome}` : ''}
+                              </span>
+                            ) : (
+                              'Selecione a conta...'
+                            )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
                         </FormControl>
-                        <SelectContent>
-                          {bookmakersFiltrados.length === 0 ? (
-                            <div className="px-3 py-2 text-sm text-muted-foreground">Nenhuma conta encontrada</div>
-                          ) : (
-                            bookmakersFiltrados.map((bk: any) => (
-                              <SelectItem key={bk.id} value={bk.id}>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {bk.nome}
-                                    {bk.instance_identifier ? ` (${bk.instance_identifier})` : ''}
-                                  </span>
-                                  {bk.parceiros?.nome && (
-                                    <span className="text-xs text-muted-foreground">{bk.parceiros.nome}</span>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar casa ou parceiro..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhuma conta encontrada.</CommandEmpty>
+                            {Object.entries(bookmakersPorCasa)
+                              .sort(([a], [b]) => a.localeCompare(b))
+                              .map(([casa, contas]) => (
+                                <CommandGroup key={casa} heading={casa}>
+                                  {contas.map((bk: any) => (
+                                    <CommandItem
+                                      key={bk.id}
+                                      value={`${bk.nome} ${bk.parceiros?.nome || ''} ${bk.instance_identifier || ''}`}
+                                      onSelect={() => {
+                                        field.onChange(bk.id);
+                                        setBookmakerPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          'mr-2 h-4 w-4',
+                                          field.value === bk.id ? 'opacity-100' : 'opacity-0'
+                                        )}
+                                      />
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">
+                                          {bk.parceiros?.nome || 'Sem parceiro'}
+                                          {bk.instance_identifier ? ` (${bk.instance_identifier})` : ''}
+                                        </span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              ))}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
 
+            {/* Seletor de Conta Bancária com busca agrupada por banco */}
             {contextoEntidade === 'banco' && (
-              <>
-                <div className="space-y-1.5">
-                  <FormLabel>Filtrar por Banco</FormLabel>
-                  <Select
-                    value={filtroBanco || '__all__'}
-                    onValueChange={(v) => {
-                      setFiltroBanco(v === '__all__' ? '' : v);
-                      form.setValue('entidade_id', '');
-                    }}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Todos os bancos" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">Todos os bancos</SelectItem>
-                      {bancosUnicos.map((b) => (
-                        <SelectItem key={b} value={b}>{b}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="entidade_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Conta Bancária *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ''}>
+              <FormField
+                control={form.control}
+                name="entidade_id"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Conta Bancária *</FormLabel>
+                    <Popover open={bancoPopoverOpen} onOpenChange={setBancoPopoverOpen}>
+                      <PopoverTrigger asChild>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a conta..." />
-                          </SelectTrigger>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              'w-full justify-between font-normal',
+                              !field.value && 'text-muted-foreground'
+                            )}
+                          >
+                            {selectedConta ? (
+                              <span className="truncate">
+                                {selectedConta.banco} — {selectedConta.titular || selectedConta.conta || 'Sem nome'}
+                              </span>
+                            ) : (
+                              'Selecione a conta...'
+                            )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
                         </FormControl>
-                        <SelectContent>
-                          {contasFiltradas.length === 0 ? (
-                            <div className="px-3 py-2 text-sm text-muted-foreground">Nenhuma conta encontrada</div>
-                          ) : (
-                            contasFiltradas.map((cb: any) => (
-                              <SelectItem key={cb.id} value={cb.id}>
-                                {cb.banco} — {cb.titular || cb.conta || cb.agencia || 'Sem nome'}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar banco ou titular..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhuma conta encontrada.</CommandEmpty>
+                            {Object.entries(contasPorBanco)
+                              .sort(([a], [b]) => a.localeCompare(b))
+                              .map(([banco, contas]) => (
+                                <CommandGroup key={banco} heading={banco}>
+                                  {contas.map((cb: any) => (
+                                    <CommandItem
+                                      key={cb.id}
+                                      value={`${cb.banco} ${cb.titular || ''} ${cb.conta || ''}`}
+                                      onSelect={() => {
+                                        field.onChange(cb.id);
+                                        setBancoPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          'mr-2 h-4 w-4',
+                                          field.value === cb.id ? 'opacity-100' : 'opacity-0'
+                                        )}
+                                      />
+                                      <span>{cb.titular || cb.conta || cb.agencia || 'Sem nome'}</span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              ))}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
 
             {/* Executor */}
