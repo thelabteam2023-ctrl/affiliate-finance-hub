@@ -3,9 +3,7 @@
 // ============================================================
 
 export type OcorrenciaTipo =
-  | 'saques'
-  | 'depositos'
-  | 'financeiro'
+  | 'movimentacao_financeira'
   | 'kyc'
   | 'bloqueio_bancario'
   | 'bloqueio_contas';
@@ -98,9 +96,7 @@ export interface OcorrenciaObservador {
 // Labels e cores
 
 export const TIPO_LABELS: Record<OcorrenciaTipo, string> = {
-  saques: 'Saques',
-  depositos: 'Depósitos',
-  financeiro: 'Financeiro',
+  movimentacao_financeira: 'Movimentação Financeira',
   kyc: 'KYC',
   bloqueio_bancario: 'Bloqueio Bancário',
   bloqueio_contas: 'Bloqueio de Sportbooks',
@@ -160,29 +156,26 @@ export const EVENTO_TIPO_LABELS: Record<OcorrenciaEventoTipo, string> = {
 // ============================================================
 
 export const SUB_MOTIVOS: Record<OcorrenciaTipo, { value: string; label: string }[]> = {
-  saques: [
+  movimentacao_financeira: [
+    // Saques
     { value: 'atraso_provedor', label: 'Atraso do provedor de pagamento' },
-    { value: 'verificacao_pendente', label: 'Verificação de identidade pendente' },
-    { value: 'limite_excedido', label: 'Limite de saque excedido' },
-    { value: 'dados_incorretos', label: 'Dados bancários incorretos' },
     { value: 'saque_rejeitado', label: 'Saque rejeitado pela plataforma' },
     { value: 'saque_parcial', label: 'Saque parcial / valor divergente' },
-    { value: 'outro', label: 'Outro motivo' },
-  ],
-  depositos: [
+    { value: 'limite_excedido', label: 'Limite de saque excedido' },
+    { value: 'dados_incorretos', label: 'Dados bancários incorretos' },
+    // Depósitos
     { value: 'deposito_nao_creditado', label: 'Depósito não creditado' },
-    { value: 'valor_divergente', label: 'Valor creditado divergente' },
-    { value: 'metodo_indisponivel', label: 'Método de pagamento indisponível' },
     { value: 'deposito_duplicado', label: 'Depósito duplicado' },
     { value: 'deposito_estornado', label: 'Depósito estornado' },
-    { value: 'outro', label: 'Outro motivo' },
-  ],
-  financeiro: [
+    { value: 'metodo_indisponivel', label: 'Método de pagamento indisponível' },
+    { value: 'valor_divergente', label: 'Valor creditado divergente' },
+    // Financeiro geral
     { value: 'saldo_divergente', label: 'Saldo divergente do esperado' },
     { value: 'bonus_nao_creditado', label: 'Bônus não creditado' },
     { value: 'rollover_incorreto', label: 'Rollover incorreto' },
     { value: 'taxa_indevida', label: 'Taxa/cobrança indevida' },
     { value: 'conversao_moeda', label: 'Problema na conversão de moeda' },
+    { value: 'verificacao_pendente', label: 'Verificação de identidade pendente' },
     { value: 'outro', label: 'Outro motivo' },
   ],
   kyc: [
