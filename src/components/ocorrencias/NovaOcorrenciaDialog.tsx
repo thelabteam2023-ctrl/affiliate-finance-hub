@@ -37,9 +37,7 @@ const schema = z.object({
   titulo: z.string().min(5, 'Título deve ter pelo menos 5 caracteres').max(200),
   descricao: z.string().min(10, 'Descreva o problema com pelo menos 10 caracteres'),
   tipo: z.enum([
-    'saques',
-    'depositos',
-    'financeiro',
+    'movimentacao_financeira',
     'kyc',
     'bloqueio_bancario',
     'bloqueio_contas',
@@ -74,7 +72,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     defaultValues: {
       titulo: contextoInicial?.titulo || '',
       descricao: '',
-      tipo: contextoInicial?.tipo || 'financeiro',
+      tipo: contextoInicial?.tipo || 'movimentacao_financeira',
       sub_motivo: '',
       prioridade: 'media',
       executor_id: '',
