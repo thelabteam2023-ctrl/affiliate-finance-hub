@@ -1727,8 +1727,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         status: "PENDENTE",
         resultado: null,
         observacoes: observacoes || null,
-        gerou_freebet: gerouFreebet,
-        valor_freebet_gerada: gerouFreebet && valorFreebetGerada ? parseFloat(valorFreebetGerada) : null,
+        gerou_freebet: false,
+        valor_freebet_gerada: null,
         // Campos explícitos do Prompt Oficial - NUNCA inferidos
         estrategia: registroValues.estrategia,
         forma_registro: registroValues.forma_registro,
@@ -1898,19 +1898,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           }
         }
 
-        // Para cobertura, combinar informações de freebet de ambos os lados
-        const coberturaGerouFreebet = gerouFreebetBack || gerouFreebetLay;
-        const coberturaValorFreebet = (gerouFreebetBack && valorFreebetGeradaBack ? parseFloat(valorFreebetGeradaBack) : 0) +
-                                       (gerouFreebetLay && valorFreebetGeradaLay ? parseFloat(valorFreebetGeradaLay) : 0);
+        // Gerou Freebet desativado
+        const coberturaGerouFreebet = false;
+        const coberturaValorFreebet = 0;
         
-        // Adicionar info de qual lado gerou freebet nas observações (se houver)
         let obsCobertura = observacoes || "";
-        if (gerouFreebetBack && valorFreebetGeradaBack) {
-          obsCobertura += (obsCobertura ? " | " : "") + `FB BACK: ${valorFreebetGeradaBack}`;
-        }
-        if (gerouFreebetLay && valorFreebetGeradaLay) {
-          obsCobertura += (obsCobertura ? " | " : "") + `FB LAY: ${valorFreebetGeradaLay}`;
-        }
 
         apostaData = {
           ...commonData,
@@ -4111,18 +4103,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </div>
             )}
 
-            {/* Freebet Gerada - Componente padronizado com suporte multimoeda */}
-            {/* Disponível para: Bookmaker (sem usar freebet), Exchange Back/Lay (sem usar freebet) - NÃO para Cobertura (tem toggle interno) */}
-            {((tipoAposta === "bookmaker" && !usarFreebetBookmaker) || 
-              (tipoAposta === "exchange" && tipoOperacaoExchange !== "cobertura" && tipoApostaExchangeBack === "normal" && tipoApostaBack === "normal")) && (
-              <GerouFreebetInput
-                gerouFreebet={gerouFreebet}
-                onGerouFreebetChange={setGerouFreebet}
-                valorFreebetGerada={valorFreebetGerada}
-                onValorFreebetGeradaChange={setValorFreebetGerada}
-                moeda={getSelectedBookmakerMoeda()}
-              />
-            )}
+            {/* Gerou Freebet removido - funcionalidade desativada */}
               </div>
             </div>
 
@@ -4460,16 +4441,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               </div>
             )}
 
-            {/* Freebet Gerada */}
-            {tipoAposta === "bookmaker" && !usarFreebetBookmaker && (
-              <GerouFreebetInput
-                gerouFreebet={gerouFreebet}
-                onGerouFreebetChange={setGerouFreebet}
-                valorFreebetGerada={valorFreebetGerada}
-                onValorFreebetGeradaChange={setValorFreebetGerada}
-                moeda={getSelectedBookmakerMoeda()}
-              />
-            )}
+            {/* Gerou Freebet removido - funcionalidade desativada */}
           </div>
 
           <DialogFooter className="px-4 py-3 border-t border-border/50">
