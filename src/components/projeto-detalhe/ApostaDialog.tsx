@@ -3231,23 +3231,28 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         </Select>
                         
                         {/* Metadados fixos abaixo do select - altura fixa para evitar layout jumps */}
-                        <BookmakerMetaRow 
-                          bookmaker={bookmakerId ? (() => {
-                            const selectedBk = bookmakers.find(b => b.id === bookmakerId);
-                            if (!selectedBk) return null;
-                            // CORREÇÃO: Usar saldo ajustado para edição (considera stake anterior como disponível)
-                            const saldoExibicao = saldoAjustadoParaEdicao?.saldoOperavel 
-                              ?? saldoComReservas?.disponivel 
-                              ?? selectedBk.saldo_operavel;
-                            return {
-                              parceiro_nome: selectedBk.parceiro_nome,
-                              moeda: selectedBk.moeda,
-                              saldo_operavel: saldoExibicao,
-                              saldo_freebet: selectedBk.saldo_freebet,
-                              saldo_disponivel: selectedBk.saldo_disponivel,
-                            };
-                          })() : null}
-                        />
+                        {(() => {
+                          const selectedBk = bookmakers.find(b => b.id === bookmakerId);
+                          // Adjust FB display: subtract what sub-entries of same bookmaker already consume
+                          const fbUsadoSubEntradas = additionalEntries
+                            .filter(e => e.bookmaker_id === bookmakerId && e.usar_freebet)
+                            .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                          const fbEfetivo = selectedBk ? Math.max(0, selectedBk.saldo_freebet - fbUsadoSubEntradas) : 0;
+                          const saldoExibicao = saldoAjustadoParaEdicao?.saldoOperavel 
+                            ?? saldoComReservas?.disponivel 
+                            ?? selectedBk?.saldo_operavel ?? 0;
+                          return (
+                            <BookmakerMetaRow 
+                              bookmaker={bookmakerId && selectedBk ? {
+                                parceiro_nome: selectedBk.parceiro_nome,
+                                moeda: selectedBk.moeda,
+                                saldo_operavel: saldoExibicao,
+                                saldo_freebet: fbEfetivo,
+                                saldo_disponivel: selectedBk.saldo_disponivel,
+                              } : null}
+                            />
+                          );
+                        })()}
                         {/* Compact FB button for main entry */}
                         {bookmakerSaldo && bookmakerSaldo.saldoFreebet > 0 && !aposta?.gerou_freebet && (() => {
                           // Calculate available FB considering other entries using same bookmaker
@@ -3404,15 +3409,26 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 itemClassName="max-w-full"
                               />
                             </Select>
-                            <BookmakerMetaRow
-                              bookmaker={entryBk ? {
-                                parceiro_nome: entryBk.parceiro_nome,
-                                moeda: entryBk.moeda,
-                                saldo_operavel: entryBk.saldo_operavel,
-                                saldo_freebet: entryBk.saldo_freebet,
-                                saldo_disponivel: entryBk.saldo_disponivel,
-                              } : null}
-                            />
+                            {(() => {
+                              // Adjust displayed FB balance: subtract what's used by other entries + main
+                              const fbUsadoPrincipal = (bookmakerId === entry.bookmaker_id && usarFreebetBookmaker)
+                                ? (parseFloat(stake) || 0) : 0;
+                              const fbUsadoOutras = additionalEntries
+                                .filter(e => e.id !== entry.id && e.bookmaker_id === entry.bookmaker_id && e.usar_freebet)
+                                .reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+                              const fbEfetivo = Math.max(0, (entryBk?.saldo_freebet || 0) - fbUsadoPrincipal - fbUsadoOutras);
+                              return (
+                                <BookmakerMetaRow
+                                  bookmaker={entryBk ? {
+                                    parceiro_nome: entryBk.parceiro_nome,
+                                    moeda: entryBk.moeda,
+                                    saldo_operavel: entryBk.saldo_operavel,
+                                    saldo_freebet: fbEfetivo,
+                                    saldo_disponivel: entryBk.saldo_disponivel,
+                                  } : null}
+                                />
+                              );
+                            })()}
                             {/* Freebet toggle compacto por sub-entrada */}
                             {entryBk && entryBk.saldo_freebet > 0 && (() => {
                               // Calculate available FB considering other entries + main entry using same bookmaker
