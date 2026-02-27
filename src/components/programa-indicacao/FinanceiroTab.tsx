@@ -2,6 +2,18 @@ import { useState, useEffect } from "react";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Ban } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +102,13 @@ export function FinanceiroTab() {
   const [selectedComissao, setSelectedComissao] = useState<ComissaoPendente | null>(null);
   const [selectedParceiro, setSelectedParceiro] = useState<ParceiroPendente | null>(null);
   
+  // Dispensar pagamento state
+  const [dispensaOpen, setDispensaOpen] = useState(false);
+  const [dispensaParceriaId, setDispensaParceriaId] = useState<string | null>(null);
+  const [dispensaParceiroNome, setDispensaParceiroNome] = useState('');
+  const [dispensaMotivo, setDispensaMotivo] = useState('');
+  const [dispensaLoading, setDispensaLoading] = useState(false);
+
   // Estado para editar parceria após renovação
   const [editParceriaOpen, setEditParceriaOpen] = useState(false);
   const [editParceriaData, setEditParceriaData] = useState<any>(null);
@@ -181,11 +200,13 @@ export function FinanceiroTab() {
             origem_tipo,
             status,
             custo_aquisicao_isento,
+            pagamento_dispensado,
             parceiro:parceiros(nome)
           `)
           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
           .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
-          .gt("valor_parceiro", 0),
+          .gt("valor_parceiro", 0)
+          .eq("pagamento_dispensado", false),
       ]);
 
       if (movResult.error) throw movResult.error;
@@ -325,8 +346,64 @@ export function FinanceiroTab() {
       PAGTO_FORNECEDOR: "Pagto. Fornecedor",
       RENOVACAO_PARCERIA: "Renovação",
       BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
+      PAGTO_PARCEIRO_DISPENSADO: "Dispensado",
     };
     return labels[tipo] || tipo;
+  };
+
+  const handleDispensarPagamento = async () => {
+    if (!dispensaParceriaId || !dispensaMotivo.trim()) return;
+    setDispensaLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      // 1. Fetch parceria data for audit record
+      const { data: parceria } = await supabase
+        .from("parcerias")
+        .select("parceiro_id, valor_parceiro, workspace_id")
+        .eq("id", dispensaParceriaId)
+        .single();
+
+      if (!parceria) throw new Error("Parceria não encontrada");
+
+      // 2. Mark as dispensed
+      const { error } = await supabase
+        .from("parcerias")
+        .update({
+          pagamento_dispensado: true,
+          dispensa_motivo: dispensaMotivo.trim(),
+          dispensa_at: new Date().toISOString(),
+          dispensa_por: user.id,
+        })
+        .eq("id", dispensaParceriaId);
+      if (error) throw error;
+
+      // 3. Insert zero-value audit record in movimentacoes_indicacao
+      await supabase.from("movimentacoes_indicacao").insert({
+        user_id: user.id,
+        workspace_id: parceria.workspace_id,
+        tipo: "PAGTO_PARCEIRO_DISPENSADO",
+        valor: 0,
+        moeda: "BRL",
+        status: "CONFIRMADO",
+        parceria_id: dispensaParceriaId,
+        parceiro_id: parceria.parceiro_id,
+        descricao: `Pagamento dispensado: ${dispensaMotivo.trim()}`,
+        data_movimentacao: new Date().toISOString().split("T")[0],
+      });
+
+      toast({ title: "Pagamento dispensado", description: `Pagamento de ${dispensaParceiroNome} foi dispensado com sucesso.` });
+      setDispensaOpen(false);
+      setDispensaMotivo('');
+      setDispensaParceriaId(null);
+      fetchData();
+    } catch (err: any) {
+      console.error("Erro ao dispensar pagamento:", err);
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setDispensaLoading(false);
+    }
   };
 
   const getTipoIcon = (tipo: string) => {
@@ -343,6 +420,8 @@ export function FinanceiroTab() {
         return <RefreshCw className="h-4 w-4" />;
       case "BONIFICACAO_ESTRATEGICA":
         return <Star className="h-4 w-4" />;
+      case "PAGTO_PARCEIRO_DISPENSADO":
+        return <Ban className="h-4 w-4" />;
       default:
         return <Wallet className="h-4 w-4" />;
     }
@@ -537,6 +616,19 @@ export function FinanceiroTab() {
                       </span>
                       <Button
                         size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          setDispensaParceriaId(parceiro.parceriaId);
+                          setDispensaParceiroNome(parceiro.parceiroNome);
+                          setDispensaMotivo('');
+                          setDispensaOpen(true);
+                        }}
+                      >
+                        Dispensar
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="default"
                         onClick={() => {
                           setSelectedParceiro(parceiro);
@@ -687,7 +779,9 @@ export function FinanceiroTab() {
                           <Badge variant="outline" className="text-xs">
                             {getTipoLabel(mov.tipo)}
                           </Badge>
-                          {mov.status === "CONFIRMADO" ? (
+                          {mov.tipo === "PAGTO_PARCEIRO_DISPENSADO" ? (
+                            <Ban className="h-3 w-3 text-muted-foreground" />
+                          ) : mov.status === "CONFIRMADO" ? (
                             <CheckCircle2 className="h-3 w-3 text-success" />
                           ) : (
                             <Clock className="h-3 w-3 text-warning" />
@@ -699,9 +793,15 @@ export function FinanceiroTab() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-destructive">
-                        - {formatCurrency(mov.valor)}
-                      </p>
+                      {mov.tipo === "PAGTO_PARCEIRO_DISPENSADO" ? (
+                        <p className="font-bold text-muted-foreground">
+                          R$ 0,00
+                        </p>
+                      ) : (
+                        <p className="font-bold text-destructive">
+                          - {formatCurrency(mov.valor)}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         {format(parseLocalDate(mov.data_movimentacao), "dd/MM/yyyy", { locale: ptBR })}
                       </p>
@@ -776,6 +876,35 @@ export function FinanceiroTab() {
         isViewMode={false}
         pagamentoJaRealizado={true}
       />
+
+      {/* Dispensar Dialog */}
+      <AlertDialog open={dispensaOpen} onOpenChange={setDispensaOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dispensar pagamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              O pagamento a <strong>{dispensaParceiroNome}</strong> será dispensado (valor R$ 0,00). 
+              Esta parceria não será contabilizada como indicação bem-sucedida. Um registro será mantido no histórico.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Motivo da dispensa (obrigatório)..."
+            value={dispensaMotivo}
+            onChange={(e) => setDispensaMotivo(e.target.value)}
+            className="min-h-[80px]"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={dispensaLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDispensarPagamento}
+              disabled={!dispensaMotivo.trim() || dispensaLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {dispensaLoading ? "Dispensando..." : "Dispensar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
