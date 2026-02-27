@@ -60,6 +60,7 @@ interface Props {
   onVerDetalhe: () => void;
   onAtualizarStatus: (status: OcorrenciaStatus) => void;
   bookmakerNome?: string;
+  bookmakerLogoUrl?: string | null;
   projetoNome?: string;
   parceiroNome?: string;
 }
@@ -187,6 +188,7 @@ export function OcorrenciaCollapseCard({
   onVerDetalhe,
   onAtualizarStatus,
   bookmakerNome,
+  bookmakerLogoUrl,
   projetoNome,
   parceiroNome,
 }: Props) {
@@ -278,7 +280,11 @@ export function OcorrenciaCollapseCard({
                     {/* Linked entities */}
                     {bookmakerNome && (
                       <span className="flex items-center gap-1 text-blue-400/80">
-                        <Building2 className="h-3 w-3" />
+                        {bookmakerLogoUrl ? (
+                          <img src={bookmakerLogoUrl} alt="" className="h-3.5 w-3.5 rounded-sm object-contain" />
+                        ) : (
+                          <Building2 className="h-3 w-3" />
+                        )}
                         {bookmakerNome}
                       </span>
                     )}
@@ -386,7 +392,11 @@ export function OcorrenciaCollapseCard({
                     </span>
                     {bookmakerNome && (
                       <span className="flex items-center gap-1.5 text-foreground">
-                        <Building2 className="h-3.5 w-3.5 text-blue-400" />
+                        {bookmakerLogoUrl ? (
+                          <img src={bookmakerLogoUrl} alt="" className="h-4 w-4 rounded-sm object-contain" />
+                        ) : (
+                          <Building2 className="h-3.5 w-3.5 text-blue-400" />
+                        )}
                         {bookmakerNome}
                       </span>
                     )}

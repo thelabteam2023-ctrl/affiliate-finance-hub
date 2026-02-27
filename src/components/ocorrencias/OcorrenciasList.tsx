@@ -19,18 +19,20 @@ interface Props {
   emptyMessage?: string;
 }
 
-/** Fetch bookmaker names for a set of IDs */
-function useBookmakerNames(ids: string[]) {
+/** Fetch bookmaker names and logos for a set of IDs */
+function useBookmakerInfo(ids: string[]) {
   return useQuery({
-    queryKey: ['bookmaker-names', ids],
+    queryKey: ['bookmaker-info', ids],
     queryFn: async () => {
       if (ids.length === 0) return {};
       const { data } = await supabase
         .from('bookmakers')
-        .select('id, nome')
+        .select('id, nome, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
         .in('id', ids);
-      const map: Record<string, string> = {};
-      data?.forEach((b) => { map[b.id] = b.nome; });
+      const map: Record<string, { nome: string; logo_url: string | null }> = {};
+      data?.forEach((b: any) => {
+        map[b.id] = { nome: b.nome, logo_url: b.bookmakers_catalogo?.logo_url || null };
+      });
       return map;
     },
     enabled: ids.length > 0,
@@ -107,7 +109,7 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
     [lista]
   );
 
-  const { data: bookmakerMap = {} } = useBookmakerNames(bookmakerIds);
+  const { data: bookmakerMap = {} } = useBookmakerInfo(bookmakerIds);
   const { data: projetoMap = {} } = useProjetoNames(projetoIds);
   const { data: parceiroMap = {} } = useParceiroNames(parceiroIds);
 
@@ -173,7 +175,8 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
           statusAnterior: ocorrencia.status,
         })
       }
-      bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id] : undefined}
+      bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
+      bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
       projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
       parceiroNome={ocorrencia.parceiro_id ? parceiroMap[ocorrencia.parceiro_id] : undefined}
     />
