@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PrioridadeBadge, StatusBadge, TipoBadge, SlaBadge } from './OcorrenciaBadges';
 import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
+import { EditarOcorrenciaDialog } from './EditarOcorrenciaDialog';
 import { useOcorrenciaEventos, useExcluirOcorrencia, useResolverOcorrenciaComFinanceiro } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import type { Ocorrencia, OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
@@ -46,6 +47,7 @@ import {
   MessageSquare,
   Paperclip,
   CircleDot,
+  Pencil,
 } from 'lucide-react';
 import { formatDistanceToNow, differenceInDays, differenceInHours, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -193,6 +195,7 @@ export function OcorrenciaCollapseCard({
   const { mutateAsync: resolverComFinanceiro } = useResolverOcorrenciaComFinanceiro();
   const [confirmExcluir, setConfirmExcluir] = useState(false);
   const [resolucaoOpen, setResolucaoOpen] = useState(false);
+  const [editarOpen, setEditarOpen] = useState(false);
   const { data: eventos = [], isLoading: loadingEventos } = useOcorrenciaEventos(
     isOpen ? ocorrencia.id : ''
   );
@@ -344,9 +347,19 @@ export function OcorrenciaCollapseCard({
                           → {STATUS_LABELS[s]}
                         </DropdownMenuItem>
                       ))}
-                      {isAdmin && (
+                      {/* Editar - disponível para executor e admin */}
+                      {(isExecutor || isAdmin) && ocorrencia.status !== 'resolvido' && ocorrencia.status !== 'cancelado' && (
                         <>
                           {transicoes.length > 0 && <DropdownMenuSeparator />}
+                          <DropdownMenuItem onClick={() => setEditarOpen(true)}>
+                            <Pencil className="h-3.5 w-3.5 mr-2" />
+                            Editar ocorrência
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {isAdmin && (
+                        <>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => setConfirmExcluir(true)}
                             className="text-destructive focus:text-destructive"
@@ -493,6 +506,12 @@ export function OcorrenciaCollapseCard({
             resolvedAt: dataResolucao.toISOString(),
           });
         }}
+      />
+
+      <EditarOcorrenciaDialog
+        open={editarOpen}
+        onOpenChange={setEditarOpen}
+        ocorrencia={ocorrencia}
       />
     </>
   );
