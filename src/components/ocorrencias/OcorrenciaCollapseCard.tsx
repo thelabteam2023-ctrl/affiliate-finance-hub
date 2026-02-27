@@ -438,7 +438,7 @@ export function OcorrenciaCollapseCard({
                 {/* Description */}
                 {ocorrencia.descricao && (
                   <div className="mb-3 pb-3 border-b border-border/30">
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
                       {ocorrencia.descricao}
                     </p>
                   </div>
