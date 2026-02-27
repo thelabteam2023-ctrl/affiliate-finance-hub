@@ -1,0 +1,1 @@
+ALTER TABLE public.ocorrencias ADD COLUMN data_ocorrencia date NOT NULL DEFAULT CURRENT_DATE;
