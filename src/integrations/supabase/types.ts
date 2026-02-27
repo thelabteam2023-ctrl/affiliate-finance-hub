@@ -9461,6 +9461,7 @@ export type Database = {
           qtd_greens: number | null
           qtd_reds: number | null
           resultado_apostas: number | null
+          resultado_bonus: number | null
           resultado_cashback: number | null
           resultado_giros: number | null
           resultado_operacional_total: number | null
@@ -9477,6 +9478,7 @@ export type Database = {
           qtd_greens?: never
           qtd_reds?: never
           resultado_apostas?: never
+          resultado_bonus?: never
           resultado_cashback?: never
           resultado_giros?: never
           resultado_operacional_total?: never
@@ -9493,6 +9495,7 @@ export type Database = {
           qtd_greens?: never
           qtd_reds?: never
           resultado_apostas?: never
+          resultado_bonus?: never
           resultado_cashback?: never
           resultado_giros?: never
           resultado_operacional_total?: never
