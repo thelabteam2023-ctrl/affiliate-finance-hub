@@ -55,7 +55,7 @@ import { differenceInDays } from "date-fns";
 import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboardTab";
 import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTab";
 import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculosTab";
-import { ProjetoPerdasTab } from "@/components/projeto-detalhe/ProjetoPerdasTab";
+import { ProjetoOcorrenciasTab } from "@/components/projeto-detalhe/ProjetoOcorrenciasTab";
 import { ProjetoPromocoesTab } from "@/components/projeto-detalhe/ProjetoPromocoesTab";
 import { ProjetoCiclosTab } from "@/components/projeto-detalhe/ProjetoCiclosTab";
 import { ProjetoSurebetTab } from "@/components/projeto-detalhe/ProjetoSurebetTab";
@@ -239,7 +239,7 @@ export default function ProjetoDetalhe() {
   // Handle tab change with module activation prompt
   const handleTabChange = (tabValue: string) => {
     // Base tabs that are always available (don't need module activation)
-    const baseTabs = ["visao-geral", "apostas", "vinculos", "gestao", "modulos", "ciclos", "perdas"];
+    const baseTabs = ["visao-geral", "apostas", "vinculos", "gestao", "modulos", "ciclos", "ocorrencias"];
     
     if (baseTabs.includes(tabValue)) {
       setActiveTab(tabValue);
@@ -288,14 +288,14 @@ export default function ProjetoDetalhe() {
       "cashback": "Cashback",
       "modulos": "Módulos",
       "ciclos": "Ciclos",
-      "perdas": "Perdas",
+      "ocorrencias": "Ocorrências",
     };
     return tabLabels[tabKey] || tabKey;
   };
 
   // Check if a tab is valid (exists in dynamicTabs or tabGroups)
   const isValidTab = (tabKey: string): boolean => {
-    const baseTabs = ["visao-geral", "apostas", "vinculos", "modulos", "ciclos", "perdas"];
+    const baseTabs = ["visao-geral", "apostas", "vinculos", "modulos", "ciclos", "ocorrencias"];
     if (baseTabs.includes(tabKey)) return true;
     
     // Check module tabs
@@ -895,7 +895,7 @@ export default function ProjetoDetalhe() {
                   { value: "modulos", label: "Módulos", icon: <Puzzle className="h-4 w-4" /> },
                   { value: "limitacoes", label: "Limitações", icon: <ShieldAlert className="h-4 w-4" /> },
                   { value: "ciclos", label: "Ciclos", icon: <Clock className="h-4 w-4" /> },
-                  { value: "perdas", label: "Perdas", icon: <AlertTriangle className="h-4 w-4" /> },
+                  { value: "ocorrencias", label: "Ocorrências", icon: <AlertTriangle className="h-4 w-4" /> },
                 ],
               },
             ]}
@@ -1041,8 +1041,8 @@ export default function ProjetoDetalhe() {
             <ProjetoCiclosTab projetoId={id!} formatCurrency={formatCurrency} />
           </TabsContent>
 
-          <TabsContent value="perdas" className="h-full m-0">
-            <ProjetoPerdasTab projetoId={id!} onDataChange={triggerGlobalRefresh} formatCurrency={formatCurrency} />
+          <TabsContent value="ocorrencias" className="h-full m-0">
+            <ProjetoOcorrenciasTab projetoId={id!} onDataChange={triggerGlobalRefresh} formatCurrency={formatCurrency} />
           </TabsContent>
         </div>
 
