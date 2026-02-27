@@ -6087,6 +6087,9 @@ export type Database = {
           data_fim_prevista: string | null
           data_fim_real: string | null
           data_inicio: string
+          dispensa_at: string | null
+          dispensa_motivo: string | null
+          dispensa_por: string | null
           duracao_dias: number
           elegivel_renovacao: boolean | null
           fornecedor_id: string | null
@@ -6095,6 +6098,7 @@ export type Database = {
           motivo_encerramento: string | null
           observacoes: string | null
           origem_tipo: string | null
+          pagamento_dispensado: boolean
           parceiro_id: string
           status: string
           updated_at: string | null
@@ -6112,6 +6116,9 @@ export type Database = {
           data_fim_prevista?: string | null
           data_fim_real?: string | null
           data_inicio?: string
+          dispensa_at?: string | null
+          dispensa_motivo?: string | null
+          dispensa_por?: string | null
           duracao_dias?: number
           elegivel_renovacao?: boolean | null
           fornecedor_id?: string | null
@@ -6120,6 +6127,7 @@ export type Database = {
           motivo_encerramento?: string | null
           observacoes?: string | null
           origem_tipo?: string | null
+          pagamento_dispensado?: boolean
           parceiro_id: string
           status?: string
           updated_at?: string | null
@@ -6137,6 +6145,9 @@ export type Database = {
           data_fim_prevista?: string | null
           data_fim_real?: string | null
           data_inicio?: string
+          dispensa_at?: string | null
+          dispensa_motivo?: string | null
+          dispensa_por?: string | null
           duracao_dias?: number
           elegivel_renovacao?: boolean | null
           fornecedor_id?: string | null
@@ -6145,6 +6156,7 @@ export type Database = {
           motivo_encerramento?: string | null
           observacoes?: string | null
           origem_tipo?: string | null
+          pagamento_dispensado?: boolean
           parceiro_id?: string
           status?: string
           updated_at?: string | null

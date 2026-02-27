@@ -96,6 +96,7 @@ export function useCentralAlertsCount() {
                 .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
                 .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
                 .gt("valor_parceiro", 0)
+                .eq("pagamento_dispensado", false)
             : Promise.resolve({ data: [], error: null }),
           // Movimentações para filtrar pagamentos já feitos
           canSeePartnerData
