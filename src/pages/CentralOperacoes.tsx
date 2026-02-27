@@ -51,7 +51,19 @@ import {
   ShieldAlert,
   Unlink,
   Wallet,
+  XCircle,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { CardInfoTooltip } from "@/components/ui/card-info-tooltip";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
@@ -303,6 +315,11 @@ export default function CentralOperacoes() {
   const [selectedPagamentoOperador, setSelectedPagamentoOperador] = useState<PagamentoOperadorPendente | null>(null);
   const [pagamentoParticipacaoOpen, setPagamentoParticipacaoOpen] = useState(false);
   const [selectedParticipacao, setSelectedParticipacao] = useState<ParticipacaoPendente | null>(null);
+  const [dispensaOpen, setDispensaOpen] = useState(false);
+  const [dispensaParceriaId, setDispensaParceriaId] = useState<string | null>(null);
+  const [dispensaParceiroNome, setDispensaParceiroNome] = useState('');
+  const [dispensaMotivo, setDispensaMotivo] = useState('');
+  const [dispensaLoading, setDispensaLoading] = useState(false);
   const [mainTab, setMainTabState] = useState<'financeiro' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
     if (saved === 'financeiro' || saved === 'ocorrencias' || saved === 'solicitacoes' || saved === 'alertas') return saved;
@@ -401,6 +418,7 @@ export default function CentralOperacoes() {
               .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
               .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
               .gt("valor_parceiro", 0)
+              .eq("pagamento_dispensado", false)
           : Promise.resolve({ data: [], error: null }),
         // Movimentações para filtrar pagamentos já feitos
         canSeePartnerData
@@ -883,7 +901,35 @@ export default function CentralOperacoes() {
     }
   };
 
+  const handleDispensarPagamento = async () => {
+    if (!dispensaParceriaId || !dispensaMotivo.trim()) return;
+    setDispensaLoading(true);
+    try {
+      const { error } = await supabase
+        .from("parcerias")
+        .update({
+          pagamento_dispensado: true,
+          dispensa_motivo: dispensaMotivo.trim(),
+          dispensa_at: new Date().toISOString(),
+          dispensa_por: user?.id,
+        })
+        .eq("id", dispensaParceriaId);
+      if (error) throw error;
+      toast.success(`Pagamento de ${dispensaParceiroNome} dispensado`);
+      setDispensaOpen(false);
+      setDispensaMotivo('');
+      setDispensaParceriaId(null);
+      fetchData(true);
+    } catch (err) {
+      console.error("Erro ao dispensar pagamento:", err);
+      toast.error("Erro ao dispensar pagamento");
+    } finally {
+      setDispensaLoading(false);
+    }
+  };
+
   const alertasSaques = alertas.filter((a) => a.tipo_alerta === "BOOKMAKER_SAQUE");
+
   const alertasLimitadas = alertas.filter((a) => a.tipo_alerta === "BOOKMAKER_LIMITADA");
   const alertasCriticos = alertas.filter((a) => a.nivel_urgencia === "CRITICA");
 
@@ -1627,10 +1673,24 @@ export default function CentralOperacoes() {
                       <User className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
                       <span className="text-xs font-medium truncate">{getFirstLastName(pag.parceiroNome)}</span>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       <span className="text-xs font-bold text-cyan-400">{formatCurrency(pag.valorParceiro)}</span>
                       <Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">
                         Pagar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-xs px-2 text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          setDispensaParceriaId(pag.parceriaId);
+                          setDispensaParceiroNome(pag.parceiroNome);
+                          setDispensaMotivo('');
+                          setDispensaOpen(true);
+                        }}
+                      >
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Dispensar
                       </Button>
                     </div>
                   </div>
@@ -1981,6 +2041,38 @@ export default function CentralOperacoes() {
         } : undefined}
         onSuccess={() => fetchData(true)}
       />
+
+      {/* Dialog de Dispensar Pagamento */}
+      <AlertDialog open={dispensaOpen} onOpenChange={setDispensaOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dispensar pagamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              O pagamento a <strong>{getFirstLastName(dispensaParceiroNome)}</strong> será dispensado. Esta parceria não será contabilizada como indicação bem-sucedida.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <label className="text-sm font-medium mb-1.5 block">Motivo *</label>
+            <Textarea
+              placeholder="Ex: Parceiro desistiu, parceria não concretizada..."
+              value={dispensaMotivo}
+              onChange={(e) => setDispensaMotivo(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDispensarPagamento}
+              disabled={!dispensaMotivo.trim() || dispensaLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {dispensaLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Dispensar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
