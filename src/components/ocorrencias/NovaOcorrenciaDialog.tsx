@@ -89,7 +89,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookmakers')
-        .select('id, nome, instance_identifier, parceiro_id, bookmaker_catalogo_id, parceiros!bookmakers_parceiro_id_fkey (nome), bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
+        .select('id, nome, instance_identifier, parceiro_id, bookmaker_catalogo_id, saldo_atual, moeda, parceiros!bookmakers_parceiro_id_fkey (nome), bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
         .eq('workspace_id', workspaceId!)
         .order('nome');
       if (error) throw error;
@@ -465,6 +465,11 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                                     onSelect={() => {
                                       field.onChange(bk.id);
                                       setBookmakerPopoverOpen(false);
+                                      // Auto-preencher valor em risco com saldo da conta
+                                      const saldo = Number(bk.saldo_atual || 0);
+                                      if (saldo > 0) {
+                                        form.setValue('valor_risco', saldo);
+                                      }
                                     }}
                                   >
                                     <Check
