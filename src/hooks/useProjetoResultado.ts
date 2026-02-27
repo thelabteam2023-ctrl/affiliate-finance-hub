@@ -361,7 +361,8 @@ async function fetchOperationalLosses(
   dataInicio: Date | null,
   dataFim: Date | null
 ): Promise<{ confirmed: number; pending: number; reverted: number }> {
-  let query = supabase
+  // 1. Perdas legadas (projeto_perdas)
+  let queryLegacy = supabase
     .from('projeto_perdas')
     .select('valor, status')
     .eq('projeto_id', projetoId);
@@ -369,20 +370,43 @@ async function fetchOperationalLosses(
   // CRÍTICO: Usar timezone operacional (America/Sao_Paulo)
   if (dataInicio && dataFim) {
     const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicio, dataFim);
-    query = query.gte('data_perda', startUTC).lte('data_perda', endUTC);
+    queryLegacy = queryLegacy.gte('data_perda', startUTC).lte('data_perda', endUTC);
   } else if (dataInicio) {
     const { startUTC } = getOperationalDateRangeForQuery(dataInicio, dataInicio);
-    query = query.gte('data_perda', startUTC);
+    queryLegacy = queryLegacy.gte('data_perda', startUTC);
   } else if (dataFim) {
     const { endUTC } = getOperationalDateRangeForQuery(dataFim, dataFim);
-    query = query.lte('data_perda', endUTC);
+    queryLegacy = queryLegacy.lte('data_perda', endUTC);
   }
 
-  const { data, error } = await query;
+  // 2. Perdas do módulo de Ocorrências (novo sistema)
+  let queryOcorrencias = supabase
+    .from('ocorrencias')
+    .select('valor_perda, resultado_financeiro, status')
+    .eq('projeto_id', projetoId)
+    .eq('perda_registrada_ledger', true);
 
-  if (error) {
-    console.error('Erro ao buscar perdas operacionais:', error);
-    return { confirmed: 0, pending: 0, reverted: 0 };
+  if (dataInicio && dataFim) {
+    const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicio, dataFim);
+    queryOcorrencias = queryOcorrencias.gte('created_at', startUTC).lte('created_at', endUTC);
+  } else if (dataInicio) {
+    const { startUTC } = getOperationalDateRangeForQuery(dataInicio, dataInicio);
+    queryOcorrencias = queryOcorrencias.gte('created_at', startUTC);
+  } else if (dataFim) {
+    const { endUTC } = getOperationalDateRangeForQuery(dataFim, dataFim);
+    queryOcorrencias = queryOcorrencias.lte('created_at', endUTC);
+  }
+
+  const [legacyResult, ocorrenciasResult] = await Promise.all([
+    queryLegacy,
+    queryOcorrencias,
+  ]);
+
+  if (legacyResult.error) {
+    console.error('Erro ao buscar perdas operacionais (legado):', legacyResult.error);
+  }
+  if (ocorrenciasResult.error) {
+    console.error('Erro ao buscar perdas de ocorrências:', ocorrenciasResult.error);
   }
 
   const losses = {
@@ -391,7 +415,8 @@ async function fetchOperationalLosses(
     reverted: 0,
   };
 
-  (data || []).forEach((perda) => {
+  // Somar perdas legadas
+  (legacyResult.data || []).forEach((perda) => {
     const valor = Number(perda.valor || 0);
     switch (perda.status) {
       case 'CONFIRMADA':
@@ -403,6 +428,14 @@ async function fetchOperationalLosses(
       case 'REVERSA':
         losses.reverted += valor;
         break;
+    }
+  });
+
+  // Somar perdas confirmadas de ocorrências (já registradas no ledger)
+  (ocorrenciasResult.data || []).forEach((oc: any) => {
+    const valor = Number(oc.valor_perda || 0);
+    if (valor > 0 && (oc.resultado_financeiro === 'perda_confirmada' || oc.resultado_financeiro === 'perda_parcial')) {
+      losses.confirmed += valor;
     }
   });
 
