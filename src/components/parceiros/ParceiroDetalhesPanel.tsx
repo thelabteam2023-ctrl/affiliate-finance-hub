@@ -682,11 +682,12 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                         </div>
                       )}
                       {/* Header da tabela */}
-                      <div className="grid grid-cols-7 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border">
+                      <div className="grid grid-cols-8 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border">
                         <div className="col-span-2">Casa</div>
                         <div className="text-center"></div>
                         <div className="text-right">Dep.</div>
                         <div className="text-right">Saq.</div>
+                        <div className="text-right">Saldo</div>
                         <div className="text-right">Result.</div>
                         <div className="text-right">Apost.</div>
                       </div>
@@ -697,7 +698,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                           <ContextMenu key={bm.bookmaker_id}>
                             <ContextMenuTrigger asChild>
                               <div
-                                className="grid grid-cols-7 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center cursor-context-menu"
+                                className="grid grid-cols-8 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center cursor-context-menu"
                               >
                             <div className="col-span-2 flex items-center gap-2 min-w-0">
                               {bm.logo_url ? (
@@ -937,6 +938,28 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                 </TooltipContent>
                               )}
                             </Tooltip>
+                            {/* Saldo Atual - moeda nativa */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="text-right">
+                                  <MoneyDisplay
+                                    value={bm.saldo_atual}
+                                    currency={bm.moeda || "BRL"}
+                                    size="sm"
+                                    masked={!showSensitiveData}
+                                  />
+                                </div>
+                              </TooltipTrigger>
+                              {showSensitiveData && (
+                                <TooltipContent side="top" className="text-xs space-y-1">
+                                  <p className="font-medium">Saldo atual na casa</p>
+                                  <p>{formatMoneyValue(bm.saldo_atual, bm.moeda || "BRL")}</p>
+                                  {bm.saldo_atual === 0 && (
+                                    <p className="text-muted-foreground italic">Sem saldo remanescente</p>
+                                  )}
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
                             {/* Resultado - sempre na moeda nativa da casa */}
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -950,10 +973,54 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                   />
                                 </div>
                               </TooltipTrigger>
-                              {showSensitiveData && bm.lucro_prejuizo !== 0 && (
+                              {showSensitiveData && (
                                 <TooltipContent side="top" className="text-xs">
-                                  <p className="font-medium">Resultado</p>
-                                  <p>{formatMoneyValue(bm.lucro_prejuizo, bm.moeda || "BRL")}</p>
+                                  <p className="font-semibold mb-1.5">Composição do Resultado</p>
+                                  <div className="space-y-1 min-w-[180px]">
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-muted-foreground">Apostas</span>
+                                      <span className={bm.resultado_apostas >= 0 ? "text-success" : "text-destructive"}>
+                                        {formatMoneyValue(bm.resultado_apostas, bm.moeda || "BRL")}
+                                      </span>
+                                    </div>
+                                    {bm.resultado_giros !== 0 && (
+                                      <div className="flex justify-between gap-4">
+                                        <span className="text-muted-foreground">Giros Grátis</span>
+                                        <span className="text-success">
+                                          {formatMoneyValue(bm.resultado_giros, bm.moeda || "BRL")}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {bm.resultado_cashback !== 0 && (
+                                      <div className="flex justify-between gap-4">
+                                        <span className="text-muted-foreground">Cashback</span>
+                                        <span className="text-success">
+                                          {formatMoneyValue(bm.resultado_cashback, bm.moeda || "BRL")}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="border-t border-border pt-1 flex justify-between gap-4 font-medium">
+                                      <span>Total</span>
+                                      <span className={bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"}>
+                                        {formatMoneyValue(bm.lucro_prejuizo, bm.moeda || "BRL")}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {(() => {
+                                    const fluxoLiquido = bm.total_sacado - bm.total_depositado;
+                                    const diferenca = bm.lucro_prejuizo - fluxoLiquido - bm.saldo_atual;
+                                    return (
+                                      <div className="mt-2 pt-1.5 border-t border-border/50 space-y-0.5 text-muted-foreground">
+                                        <p className="text-[10px]">Saq - Dep = {formatMoneyValue(fluxoLiquido, bm.moeda || "BRL")}</p>
+                                        <p className="text-[10px]">Result - Saldo = {formatMoneyValue(bm.lucro_prejuizo - bm.saldo_atual, bm.moeda || "BRL")}</p>
+                                        {Math.abs(diferenca) > 1 && (
+                                          <p className="text-[10px] text-warning">
+                                            Δ {formatMoneyValue(diferenca, bm.moeda || "BRL")} (bônus/FX)
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                 </TooltipContent>
                               )}
                             </Tooltip>
