@@ -46,7 +46,6 @@ export function useParceiroContas(parceiroId: string | null) {
 
       const contas: ContaBancaria[] = (contasRes.data ?? []).map((c: any) => {
         const nomeDisplay = c.banco?.trim() || c.titular || 'Conta';
-        const contaDisplay = c.conta && c.conta.trim().length > 2 ? ` – ${c.conta}` : '';
         return {
           id: c.id,
           tipo: 'banco',
@@ -56,7 +55,7 @@ export function useParceiroContas(parceiroId: string | null) {
           titular: c.titular,
           moeda: c.moeda,
           pix_key: c.pix_key,
-          label: `${nomeDisplay}${contaDisplay} (${c.moeda})`,
+          label: `${nomeDisplay} (${c.moeda})`,
         };
       });
 
