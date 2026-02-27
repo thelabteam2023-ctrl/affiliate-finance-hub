@@ -40,7 +40,6 @@ import {
   Sparkles,
   Zap,
   Puzzle,
-  ShieldAlert
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -55,7 +54,7 @@ import { differenceInDays } from "date-fns";
 import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboardTab";
 import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTab";
 import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculosTab";
-import { ProjetoOcorrenciasTab } from "@/components/projeto-detalhe/ProjetoOcorrenciasTab";
+import { ProjetoIncidentesTab } from "@/components/projeto-detalhe/ProjetoIncidentesTab";
 import { ProjetoPromocoesTab } from "@/components/projeto-detalhe/ProjetoPromocoesTab";
 import { ProjetoCiclosTab } from "@/components/projeto-detalhe/ProjetoCiclosTab";
 import { ProjetoSurebetTab } from "@/components/projeto-detalhe/ProjetoSurebetTab";
@@ -68,7 +67,7 @@ import { ProjetoGestaoTab } from "@/components/projeto-detalhe/ProjetoGestaoTab"
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
 import { ModuleActivationDialog } from "@/components/projeto-detalhe/ModuleActivationDialog";
-import { LimitationSection } from "@/components/projeto-detalhe/limitation/LimitationSection";
+// LimitationSection now rendered inside ProjetoIncidentesTab
 import { SetDefaultTabButton } from "@/components/projeto-detalhe/SetDefaultTabButton";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
@@ -239,7 +238,7 @@ export default function ProjetoDetalhe() {
   // Handle tab change with module activation prompt
   const handleTabChange = (tabValue: string) => {
     // Base tabs that are always available (don't need module activation)
-    const baseTabs = ["visao-geral", "apostas", "vinculos", "gestao", "modulos", "ciclos", "ocorrencias"];
+    const baseTabs = ["visao-geral", "apostas", "vinculos", "gestao", "modulos", "ciclos", "incidentes"];
     
     if (baseTabs.includes(tabValue)) {
       setActiveTab(tabValue);
@@ -288,14 +287,14 @@ export default function ProjetoDetalhe() {
       "cashback": "Cashback",
       "modulos": "Módulos",
       "ciclos": "Ciclos",
-      "ocorrencias": "Ocorrências",
+      "incidentes": "Incidentes",
     };
     return tabLabels[tabKey] || tabKey;
   };
 
   // Check if a tab is valid (exists in dynamicTabs or tabGroups)
   const isValidTab = (tabKey: string): boolean => {
-    const baseTabs = ["visao-geral", "apostas", "vinculos", "modulos", "ciclos", "ocorrencias"];
+    const baseTabs = ["visao-geral", "apostas", "vinculos", "modulos", "ciclos", "incidentes"];
     if (baseTabs.includes(tabKey)) return true;
     
     // Check module tabs
@@ -893,9 +892,8 @@ export default function ProjetoDetalhe() {
                 icon: <Settings2 className="h-3.5 w-3.5 md:h-4 md:w-4" />,
                 items: [
                   { value: "modulos", label: "Módulos", icon: <Puzzle className="h-4 w-4" /> },
-                  { value: "limitacoes", label: "Limitações", icon: <ShieldAlert className="h-4 w-4" /> },
+                  { value: "incidentes", label: "Incidentes", icon: <AlertTriangle className="h-4 w-4" /> },
                   { value: "ciclos", label: "Ciclos", icon: <Clock className="h-4 w-4" /> },
-                  { value: "ocorrencias", label: "Ocorrências", icon: <AlertTriangle className="h-4 w-4" /> },
                 ],
               },
             ]}
@@ -1029,20 +1027,12 @@ export default function ProjetoDetalhe() {
             <ProjetoGestaoTab projetoId={id!} />
           </TabsContent>
 
-          <TabsContent value="limitacoes" className="h-full m-0">
-            <div className="h-full overflow-y-auto py-4 px-1">
-              <div className="max-w-5xl mx-auto">
-                <LimitationSection projetoId={id!} />
-              </div>
-            </div>
+          <TabsContent value="incidentes" className="h-full m-0">
+            <ProjetoIncidentesTab projetoId={id!} onDataChange={triggerGlobalRefresh} formatCurrency={formatCurrency} />
           </TabsContent>
 
           <TabsContent value="ciclos" className="h-full m-0">
             <ProjetoCiclosTab projetoId={id!} formatCurrency={formatCurrency} />
-          </TabsContent>
-
-          <TabsContent value="ocorrencias" className="h-full m-0">
-            <ProjetoOcorrenciasTab projetoId={id!} onDataChange={triggerGlobalRefresh} formatCurrency={formatCurrency} />
           </TabsContent>
         </div>
 
