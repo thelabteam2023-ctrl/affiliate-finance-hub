@@ -27,7 +27,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useCriarOcorrencia } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
@@ -36,7 +39,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
-import { AlertTriangle, Loader2, X, ChevronsUpDown, Check, Users, Filter } from 'lucide-react';
+import { AlertTriangle, Loader2, X, ChevronsUpDown, Check, Users, Filter, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getFirstLastName } from '@/lib/utils';
 import { getRoleLabel } from '@/lib/roleLabels';
@@ -55,6 +58,7 @@ const schema = z.object({
   entidade_id: z.string().min(1, 'Selecione a entidade'),
   prioridade: z.enum(['baixa', 'media', 'alta', 'urgente'] as const),
   valor_risco: z.coerce.number().min(0).optional(),
+  data_ocorrencia: z.date().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -124,6 +128,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       entidade_id: '',
       prioridade: 'media',
       valor_risco: 0,
+      data_ocorrencia: new Date(),
     },
   });
 
@@ -194,6 +199,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         parceiro_id: contextoInicial?.parceiro_id,
         contexto_metadata: contextoInicial?.contexto_metadata,
         valor_risco: data.valor_risco || 0,
+        data_ocorrencia: data.data_ocorrencia ? format(data.data_ocorrencia, 'yyyy-MM-dd') : undefined,
       });
     }
 
@@ -684,6 +690,51 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       {...field}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Data da ocorrência */}
+            <FormField
+              control={form.control}
+              name="data_ocorrencia"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data da ocorrência</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            'w-full pl-3 text-left font-normal',
+                            !field.value && 'text-muted-foreground'
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                          ) : (
+                            <span>Selecione a data</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date > new Date()}
+                        initialFocus
+                        className={cn('p-3 pointer-events-auto')}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">
+                    Quando a ocorrência de fato aconteceu. Usado para calcular a duração.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

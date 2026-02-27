@@ -4974,6 +4974,7 @@ export type Database = {
           conta_bancaria_id: string | null
           contexto_metadata: Json | null
           created_at: string
+          data_ocorrencia: string
           descricao: string
           executor_id: string
           id: string
@@ -5007,6 +5008,7 @@ export type Database = {
           conta_bancaria_id?: string | null
           contexto_metadata?: Json | null
           created_at?: string
+          data_ocorrencia?: string
           descricao: string
           executor_id: string
           id?: string
@@ -5040,6 +5042,7 @@ export type Database = {
           conta_bancaria_id?: string | null
           contexto_metadata?: Json | null
           created_at?: string
+          data_ocorrencia?: string
           descricao?: string
           executor_id?: string
           id?: string

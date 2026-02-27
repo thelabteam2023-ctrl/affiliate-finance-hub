@@ -202,6 +202,7 @@ interface CriarOcorrenciaPayload {
   contexto_metadata?: Record<string, unknown>;
   valor_risco?: number;
   moeda?: string;
+  data_ocorrencia?: string;
 }
 
 export function useCriarOcorrencia() {
@@ -230,6 +231,7 @@ export function useCriarOcorrencia() {
           contexto_metadata: payload.contexto_metadata || null,
           valor_risco: payload.valor_risco || 0,
           moeda: payload.moeda || 'BRL',
+          data_ocorrencia: payload.data_ocorrencia || new Date().toISOString().split('T')[0],
         })
         .select()
         .single();
