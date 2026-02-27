@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NovaOcorrenciaDialog } from './NovaOcorrenciaDialog';
 import { OcorrenciasList } from './OcorrenciasList';
+import { IncidentesEstatisticasTab } from '@/components/projeto-detalhe/IncidentesEstatisticasTab';
 import { useOcorrenciasKpis, useOcorrencias } from '@/hooks/useOcorrencias';
 import {
   Plus,
@@ -14,15 +15,13 @@ import {
   Users,
   Inbox,
   CheckCircle2,
-  Filter,
-  LayoutGrid,
-  List,
+  BarChart3,
 } from 'lucide-react';
 import { TIPO_LABELS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaStatus } from '@/types/ocorrencias';
 
 type ViewMode = 'list' | 'board';
-type FilterTab = 'todas' | 'minhas' | 'historico';
+type FilterTab = 'todas' | 'minhas' | 'historico' | 'estatisticas';
 
 export function OcorrenciasModule() {
   const [novaOpen, setNovaOpen] = useState(false);
@@ -143,6 +142,7 @@ export function OcorrenciasModule() {
           { key: 'todas', label: 'Pendentes', icon: <Inbox className="h-3.5 w-3.5" /> },
           { key: 'minhas', label: 'Responsável', icon: <Users className="h-3.5 w-3.5" /> },
           { key: 'historico', label: 'Histórico', icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+          { key: 'estatisticas', label: 'Estatísticas', icon: <BarChart3 className="h-3.5 w-3.5" /> },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -159,19 +159,23 @@ export function OcorrenciasModule() {
         ))}
       </div>
 
-      {/* List */}
-      <OcorrenciasList
-        statusFilter={statusFilter}
-        modoMinhas={filterTab === 'minhas'}
-        tipoFilter={tipoFilter}
-        emptyMessage={
-          filterTab === 'historico'
-            ? 'Nenhuma ocorrência resolvida ou cancelada.'
-            : filterTab === 'minhas'
-            ? 'Você não possui ocorrências ativas.'
-            : 'Nenhuma ocorrência em aberto. Tudo em dia! 🎉'
-        }
-      />
+      {/* Content */}
+      {filterTab === 'estatisticas' ? (
+        <IncidentesEstatisticasTab />
+      ) : (
+        <OcorrenciasList
+          statusFilter={statusFilter}
+          modoMinhas={filterTab === 'minhas'}
+          tipoFilter={tipoFilter}
+          emptyMessage={
+            filterTab === 'historico'
+              ? 'Nenhuma ocorrência resolvida ou cancelada.'
+              : filterTab === 'minhas'
+              ? 'Você não possui ocorrências ativas.'
+              : 'Nenhuma ocorrência em aberto. Tudo em dia! 🎉'
+          }
+        />
+      )}
 
       <NovaOcorrenciaDialog open={novaOpen} onOpenChange={setNovaOpen} />
     </div>
