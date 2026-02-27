@@ -24,13 +24,13 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
-import { 
-  getGlobalBookmakersCache, 
-  BookmakersData, 
-  BookmakerVinculado, 
-  BookmakerCatalogo 
+import {
+  getGlobalBookmakersCache,
+  BookmakersData,
+  BookmakerVinculado,
+  BookmakerCatalogo,
 } from "@/hooks/useParceiroTabsCache";
-
+import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
 interface ParceiroBookmakersTabProps {
   parceiroId: string;
   showSensitiveData: boolean;
@@ -71,6 +71,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmaker: BookmakerVinculado | null }>({ open: false, bookmaker: null });
   const { toast } = useToast();
+  const { getDecryptedPassword } = usePasswordDecryption();
 
   // Referências para controle de cache
   const lastFetchedIdRef = useRef<string | null>(null);
@@ -221,8 +222,8 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
 
   const maskCurrency = (value: number, moeda: string = "BRL") => showSensitiveData ? formatCurrencyLocal(value, moeda) : `${getCurrencySymbol(moeda)} ••••`;
 
-  const decryptPassword = (encrypted: string) => { if (!encrypted) return ""; try { return atob(encrypted); } catch { return encrypted; } };
-
+  const resolvePassword = (bm: BookmakerVinculado) =>
+    getDecryptedPassword(`parceiro-bookmakers:${bm.id}`, bm.login_password_encrypted);
   const copyToClipboard = async (text: string, field: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -307,7 +308,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
                           <PopoverContent className="w-52 p-2" align="start">
                             <div className="space-y-2">
                               <div><label className="text-[10px] text-muted-foreground">Usuário</label><div className="flex items-center gap-1 mt-0.5"><code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">{showSensitiveData ? bm.login_username : "••••••"}</code><Button variant="ghost" size="sm" onClick={() => copyToClipboard(bm.login_username, "Usuário")} className="h-6 w-6 p-0 shrink-0">{copiedField === "Usuário" ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}</Button></div></div>
-                              <div><label className="text-[10px] text-muted-foreground">Senha</label><div className="flex items-center gap-1 mt-0.5"><code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">{showSensitiveData ? decryptPassword(bm.login_password_encrypted) : "••••••"}</code><Button variant="ghost" size="sm" onClick={() => copyToClipboard(decryptPassword(bm.login_password_encrypted), "Senha")} className="h-6 w-6 p-0 shrink-0">{copiedField === "Senha" ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}</Button></div></div>
+                              <div><label className="text-[10px] text-muted-foreground">Senha</label><div className="flex items-center gap-1 mt-0.5"><code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">{showSensitiveData ? resolvePassword(bm) : "••••••"}</code><Button variant="ghost" size="sm" onClick={() => { const pwd = resolvePassword(bm); if (pwd && pwd !== "••••••••") copyToClipboard(pwd, "Senha"); }} className="h-6 w-6 p-0 shrink-0">{copiedField === "Senha" ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}</Button></div></div>
                             </div>
                           </PopoverContent>
                         </Popover>
