@@ -36,9 +36,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
-import { AlertTriangle, Loader2, X, ChevronsUpDown, Check, Users } from 'lucide-react';
+import { AlertTriangle, Loader2, X, ChevronsUpDown, Check, Users, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getFirstLastName } from '@/lib/utils';
+import { getRoleLabel } from '@/lib/roleLabels';
 
 const schema = z.object({
   titulo: z.string().min(5, 'Título deve ter pelo menos 5 caracteres').max(200),
@@ -76,6 +77,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const { data: members = [] } = useWorkspaceMembers();
   const { workspaceId } = useAuth();
   const [executoresSelecionados, setExecutoresSelecionados] = useState<string[]>([]);
+  const [filtroRole, setFiltroRole] = useState<string | null>(null);
   const [bookmakerPopoverOpen, setBookmakerPopoverOpen] = useState(false);
   const [casaPopoverOpen, setCasaPopoverOpen] = useState(false);
   const [bancoPopoverOpen, setBancoPopoverOpen] = useState(false);
@@ -558,48 +560,104 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               />
             )}
 
-            {/* Executor Responsável - Multi-select */}
+            {/* Executor Responsável - Multi-select com filtro por papel */}
             <div className="space-y-2.5">
               <FormLabel className="text-sm font-medium">
                 Executor Responsável *
               </FormLabel>
-              <div className="flex flex-wrap gap-1.5">
-                {/* Botão Todos */}
-                <Badge
-                  variant={allSelected ? 'default' : 'outline'}
-                  className={cn(
-                    'cursor-pointer gap-1.5 px-3 py-1.5 text-xs font-medium transition-all',
-                    allSelected
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                      : 'hover:bg-accent hover:text-accent-foreground'
-                  )}
-                  onClick={toggleTodos}
-                >
-                  <Users className="h-3 w-3" />
-                  Todos
-                </Badge>
 
-                {members.map((m) => {
-                  const selected = executoresSelecionados.includes(m.user_id);
-                  const displayName = getFirstLastName(m.full_name || m.email || '');
-                  return (
+              {/* Filtro por papel (role) */}
+              {(() => {
+                const rolesPresentes = [...new Set(members.map((m) => m.role))].sort();
+                if (rolesPresentes.length <= 1) return null;
+                return (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Filter className="h-3.5 w-3.5 text-muted-foreground mr-0.5" />
                     <Badge
-                      key={m.user_id}
-                      variant={selected ? 'default' : 'outline'}
+                      variant={filtroRole === null ? 'default' : 'outline'}
                       className={cn(
-                        'cursor-pointer gap-1 px-3 py-1.5 text-xs font-medium transition-all',
-                        selected
+                        'cursor-pointer px-2.5 py-1 text-[10px] font-medium transition-all',
+                        filtroRole === null
+                          ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                          : 'hover:bg-accent hover:text-accent-foreground'
+                      )}
+                      onClick={() => setFiltroRole(null)}
+                    >
+                      Todos os papéis
+                    </Badge>
+                    {rolesPresentes.map((r) => (
+                      <Badge
+                        key={r}
+                        variant={filtroRole === r ? 'default' : 'outline'}
+                        className={cn(
+                          'cursor-pointer px-2.5 py-1 text-[10px] font-medium transition-all',
+                          filtroRole === r
+                            ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                            : 'hover:bg-accent hover:text-accent-foreground'
+                        )}
+                        onClick={() => setFiltroRole(filtroRole === r ? null : r)}
+                      >
+                        {getRoleLabel(r)}
+                      </Badge>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Membros filtrados */}
+              {(() => {
+                const membrosFiltrados = filtroRole
+                  ? members.filter((m) => m.role === filtroRole)
+                  : members;
+                const allFilteredSelected = membrosFiltrados.length > 0 && membrosFiltrados.every((m) => executoresSelecionados.includes(m.user_id));
+                return (
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge
+                      variant={allFilteredSelected ? 'default' : 'outline'}
+                      className={cn(
+                        'cursor-pointer gap-1.5 px-3 py-1.5 text-xs font-medium transition-all',
+                        allFilteredSelected
                           ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                           : 'hover:bg-accent hover:text-accent-foreground'
                       )}
-                      onClick={() => toggleExecutor(m.user_id)}
+                      onClick={() => {
+                        if (allFilteredSelected) {
+                          const filteredIds = new Set(membrosFiltrados.map((m) => m.user_id));
+                          setExecutoresSelecionados((prev) => prev.filter((id) => !filteredIds.has(id)));
+                        } else {
+                          const newIds = new Set([...executoresSelecionados, ...membrosFiltrados.map((m) => m.user_id)]);
+                          setExecutoresSelecionados([...newIds]);
+                        }
+                      }}
                     >
-                      {selected ? <Check className="h-3 w-3" /> : null}
-                      {displayName}
+                      <Users className="h-3 w-3" />
+                      {filtroRole ? `Todos ${getRoleLabel(filtroRole)}s` : 'Todos'}
                     </Badge>
-                  );
-                })}
-              </div>
+
+                    {membrosFiltrados.map((m) => {
+                      const selected = executoresSelecionados.includes(m.user_id);
+                      const displayName = getFirstLastName(m.full_name || m.email || '');
+                      return (
+                        <Badge
+                          key={m.user_id}
+                          variant={selected ? 'default' : 'outline'}
+                          className={cn(
+                            'cursor-pointer gap-1 px-3 py-1.5 text-xs font-medium transition-all',
+                            selected
+                              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                              : 'hover:bg-accent hover:text-accent-foreground'
+                          )}
+                          onClick={() => toggleExecutor(m.user_id)}
+                        >
+                          {selected ? <Check className="h-3 w-3" /> : null}
+                          {displayName}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
               {executorError && (
                 <p className="text-[0.8rem] font-medium text-destructive">
                   Selecione pelo menos um executor
