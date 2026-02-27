@@ -168,6 +168,8 @@ interface PagamentoParceiroPendente {
   valorParceiro: number;
   origemTipo: string;
   diasRestantes: number;
+  parceiroId: string;
+  workspaceId: string;
 }
 
 interface BonusPendente {
@@ -414,7 +416,7 @@ export default function CentralOperacoes() {
         canSeePartnerData
           ? supabase
               .from("parcerias")
-              .select(`id, valor_parceiro, origem_tipo, data_fim_prevista, custo_aquisicao_isento, parceiro:parceiros(nome)`)
+              .select(`id, parceiro_id, valor_parceiro, origem_tipo, data_fim_prevista, custo_aquisicao_isento, workspace_id, parceiro:parceiros(nome)`)
               .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
               .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
               .gt("valor_parceiro", 0)
@@ -533,6 +535,8 @@ export default function CentralOperacoes() {
               valorParceiro: p.valor_parceiro,
               origemTipo: p.origem_tipo || "INDICADOR",
               diasRestantes,
+              parceiroId: p.parceiro_id,
+              workspaceId: p.workspace_id,
             };
           });
         setPagamentosParceiros(pagamentosMap);
@@ -905,6 +909,9 @@ export default function CentralOperacoes() {
     if (!dispensaParceriaId || !dispensaMotivo.trim()) return;
     setDispensaLoading(true);
     try {
+      // Find the parceria data from the list
+      const pagData = pagamentosParceiros.find(p => p.parceriaId === dispensaParceriaId);
+
       const { error } = await supabase
         .from("parcerias")
         .update({
@@ -915,6 +922,23 @@ export default function CentralOperacoes() {
         })
         .eq("id", dispensaParceriaId);
       if (error) throw error;
+
+      // Insert zero-value audit record in movimentacoes_indicacao
+      if (pagData && user) {
+        await supabase.from("movimentacoes_indicacao").insert({
+          user_id: user.id,
+          workspace_id: pagData.workspaceId,
+          tipo: "PAGTO_PARCEIRO_DISPENSADO",
+          valor: 0,
+          moeda: "BRL",
+          status: "CONFIRMADO",
+          parceria_id: dispensaParceriaId,
+          parceiro_id: pagData.parceiroId,
+          descricao: `Pagamento dispensado: ${dispensaMotivo.trim()}`,
+          data_movimentacao: new Date().toISOString().split("T")[0],
+        });
+      }
+
       toast.success(`Pagamento de ${dispensaParceiroNome} dispensado`);
       setDispensaOpen(false);
       setDispensaMotivo('');
