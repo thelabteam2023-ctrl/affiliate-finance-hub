@@ -73,8 +73,22 @@ const STATUS_TRANSICOES: Record<OcorrenciaStatus, OcorrenciaStatus[]> = {
   cancelado: [],
 };
 
+/**
+ * Parseia data_ocorrencia (yyyy-MM-dd) no timezone de SP,
+ * evitando o bug de interpretar como meia-noite UTC.
+ */
+function parseDataOcorrencia(ocorrencia: Ocorrencia): Date {
+  const dataOc = (ocorrencia as any).data_ocorrencia;
+  if (dataOc && typeof dataOc === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dataOc)) {
+    // Data pura: interpretar como início do dia no timezone local (SP)
+    const [y, m, d] = dataOc.split('-').map(Number);
+    return new Date(y, m - 1, d, 0, 0, 0);
+  }
+  return new Date(dataOc || ocorrencia.created_at);
+}
+
 function calcularDuracao(ocorrencia: Ocorrencia) {
-  const inicio = new Date((ocorrencia as any).data_ocorrencia || ocorrencia.created_at);
+  const inicio = parseDataOcorrencia(ocorrencia);
   const fim = ocorrencia.resolved_at
     ? new Date(ocorrencia.resolved_at)
     : ocorrencia.cancelled_at
@@ -86,8 +100,11 @@ function calcularDuracao(ocorrencia: Ocorrencia) {
 
   const finalizado = !!ocorrencia.resolved_at || !!ocorrencia.cancelled_at;
 
+  if (dias === 0 && horas === 0) {
+    return { texto: '< 1 dia', finalizado };
+  }
   if (dias === 0) {
-    return { texto: `${horas}h`, finalizado };
+    return { texto: horas <= 1 ? '< 1 dia' : `${horas}h`, finalizado };
   }
   return { texto: `${dias}d ${horas}h`, finalizado };
 }
@@ -253,10 +270,13 @@ export function OcorrenciaCollapseCard({
                   <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {formatDistanceToNow(new Date((ocorrencia as any).data_ocorrencia || ocorrencia.created_at), {
-                        addSuffix: true,
-                        locale: ptBR,
-                      })}
+                      {(() => {
+                        const inicio = parseDataOcorrencia(ocorrencia);
+                        const diffMs = Date.now() - inicio.getTime();
+                        const diffH = diffMs / (1000 * 60 * 60);
+                        if (diffH < 24) return 'menos de 1 dia';
+                        return formatDistanceToNow(inicio, { addSuffix: true, locale: ptBR });
+                      })()}
                     </span>
                     {subMotivoLabel && (
                       <span className="flex items-center gap-1 text-primary/70">

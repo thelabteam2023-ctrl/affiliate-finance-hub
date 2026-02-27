@@ -34,13 +34,21 @@ interface Props {
 const defaultFormat = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
+/** Parse data_ocorrencia (yyyy-MM-dd) no timezone local, evitando bug UTC */
+function parseDataLocal(dateStr: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d, 0, 0, 0);
+  }
+  return new Date(dateStr);
+}
+
 function diffHours(from: string, to: string): number {
-  return (new Date(to).getTime() - new Date(from).getTime()) / (1000 * 60 * 60);
+  return (parseDataLocal(to).getTime() - parseDataLocal(from).getTime()) / (1000 * 60 * 60);
 }
 
 function formatDuration(hours: number): string {
-  if (hours < 1) return `${Math.round(hours * 60)}min`;
-  if (hours < 24) return `${Math.round(hours)}h`;
+  if (hours < 24) return '< 1 dia';
   const days = Math.floor(hours / 24);
   const rem = Math.round(hours % 24);
   return rem > 0 ? `${days}d ${rem}h` : `${days}d`;
