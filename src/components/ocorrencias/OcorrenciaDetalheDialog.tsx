@@ -13,10 +13,12 @@ import {
   useOcorrenciaEventos,
   useAtualizarStatusOcorrencia,
   useAdicionarComentario,
+  useResolverOcorrenciaComFinanceiro,
 } from '@/hooks/useOcorrencias';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { PrioridadeBadge, StatusBadge, TipoBadge, SlaBadge } from './OcorrenciaBadges';
+import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
 import type { OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
 import { STATUS_LABELS, EVENTO_TIPO_LABELS, SUB_MOTIVO_LABELS } from '@/types/ocorrencias';
 import {
@@ -54,8 +56,10 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
   const { data: eventos = [], isLoading: loadingEventos } = useOcorrenciaEventos(ocorrenciaId);
   const { data: members = [] } = useWorkspaceMembers();
   const { mutate: atualizarStatus, isPending: updatingStatus } = useAtualizarStatusOcorrencia();
+  const { mutateAsync: resolverComFinanceiro } = useResolverOcorrenciaComFinanceiro();
   const { mutate: adicionarComentario, isPending: addingComment } = useAdicionarComentario();
   const [comentario, setComentario] = useState('');
+  const [resolucaoOpen, setResolucaoOpen] = useState(false);
 
   const memberMap = new Map(members.map((m) => [m.user_id, m]));
 
@@ -191,13 +195,17 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
                   size="sm"
                   className="w-full justify-start text-xs"
                   disabled={updatingStatus}
-                  onClick={() =>
-                    atualizarStatus({
-                      id: ocorrencia.id,
-                      novoStatus: s,
-                      statusAnterior: ocorrencia.status,
-                    })
-                  }
+                  onClick={() => {
+                    if (s === 'resolvido') {
+                      setResolucaoOpen(true);
+                    } else {
+                      atualizarStatus({
+                        id: ocorrencia.id,
+                        novoStatus: s,
+                        statusAnterior: ocorrencia.status,
+                      });
+                    }
+                  }}
                 >
                   <ArrowRight className="h-3 w-3 mr-1.5" />
                   {STATUS_LABELS[s]}
@@ -206,6 +214,24 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
             </div>
           )}
         </div>
+
+        {/* Financial resolution dialog */}
+        {ocorrencia && (
+          <ResolucaoFinanceiraDialog
+            open={resolucaoOpen}
+            onOpenChange={setResolucaoOpen}
+            valorRisco={Number((ocorrencia as any).valor_risco) || 0}
+            moeda={(ocorrencia as any).moeda || 'BRL'}
+            onConfirmar={async (resultado, valorPerda) => {
+              await resolverComFinanceiro({
+                id: ocorrencia.id,
+                statusAnterior: ocorrencia.status,
+                resultadoFinanceiro: resultado,
+                valorPerda,
+              });
+            }}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

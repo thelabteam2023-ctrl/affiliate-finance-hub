@@ -26,7 +26,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PrioridadeBadge, StatusBadge, TipoBadge, SlaBadge } from './OcorrenciaBadges';
-import { useOcorrenciaEventos, useExcluirOcorrencia } from '@/hooks/useOcorrencias';
+import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
+import { useOcorrenciaEventos, useExcluirOcorrencia, useResolverOcorrenciaComFinanceiro } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import type { Ocorrencia, OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
 import { STATUS_LABELS, SUB_MOTIVO_LABELS, EVENTO_TIPO_LABELS } from '@/types/ocorrencias';
@@ -189,7 +190,9 @@ export function OcorrenciaCollapseCard({
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const { mutate: excluir, isPending: excluindo } = useExcluirOcorrencia();
+  const { mutateAsync: resolverComFinanceiro } = useResolverOcorrenciaComFinanceiro();
   const [confirmExcluir, setConfirmExcluir] = useState(false);
+  const [resolucaoOpen, setResolucaoOpen] = useState(false);
   const { data: eventos = [], isLoading: loadingEventos } = useOcorrenciaEventos(
     isOpen ? ocorrencia.id : ''
   );
@@ -330,7 +333,13 @@ export function OcorrenciaCollapseCard({
                       {transicoes.map((s) => (
                         <DropdownMenuItem
                           key={s}
-                          onClick={() => onAtualizarStatus(s)}
+                          onClick={() => {
+                            if (s === 'resolvido') {
+                              setResolucaoOpen(true);
+                            } else {
+                              onAtualizarStatus(s);
+                            }
+                          }}
                         >
                           → {STATUS_LABELS[s]}
                         </DropdownMenuItem>
@@ -469,6 +478,21 @@ export function OcorrenciaCollapseCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ResolucaoFinanceiraDialog
+        open={resolucaoOpen}
+        onOpenChange={setResolucaoOpen}
+        valorRisco={Number((ocorrencia as any).valor_risco) || 0}
+        moeda={(ocorrencia as any).moeda || 'BRL'}
+        onConfirmar={async (resultado, valorPerda) => {
+          await resolverComFinanceiro({
+            id: ocorrencia.id,
+            statusAnterior: ocorrencia.status,
+            resultadoFinanceiro: resultado,
+            valorPerda,
+          });
+        }}
+      />
     </>
   );
 }
