@@ -24,7 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 
 interface Props {
-  projetoId: string;
+  projetoId?: string;
   formatCurrency?: (value: number) => string;
 }
 
@@ -45,7 +45,8 @@ function formatDuration(hours: number): string {
 
 export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) {
   const fmt = formatCurrency || defaultFormat;
-  const { data: ocorrencias = [], isLoading } = useOcorrencias({ projetoId });
+  const filters = projetoId ? { projetoId } : undefined;
+  const { data: ocorrencias = [], isLoading } = useOcorrencias(filters);
   const { data: members = [] } = useWorkspaceMembers();
 
   const stats = useMemo(() => {
@@ -165,7 +166,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
         <BarChart3 className="h-12 w-12 opacity-30" />
-        <p className="text-sm">Nenhuma ocorrência registrada neste projeto.</p>
+        <p className="text-sm">{projetoId ? 'Nenhuma ocorrência registrada neste projeto.' : 'Nenhuma ocorrência registrada.'}</p>
       </div>
     );
   }
