@@ -53,6 +53,7 @@ const schema = z.object({
   contexto_entidade: z.enum(['bookmaker', 'banco'], { required_error: 'Selecione onde ocorreu' }),
   entidade_id: z.string().min(1, 'Selecione a entidade'),
   prioridade: z.enum(['baixa', 'media', 'alta', 'urgente'] as const),
+  valor_risco: z.coerce.number().min(0).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -120,6 +121,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
       contexto_entidade: undefined as unknown as 'bookmaker' | 'banco',
       entidade_id: '',
       prioridade: 'media',
+      valor_risco: 0,
     },
   });
 
@@ -189,6 +191,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         projeto_id: contextoInicial?.projeto_id,
         parceiro_id: contextoInicial?.parceiro_id,
         contexto_metadata: contextoInicial?.contexto_metadata,
+        valor_risco: data.valor_risco || 0,
       });
     }
 
@@ -628,7 +631,31 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               )}
             />
 
-            {/* Contexto pré-preenchido */}
+            {/* Valor em risco */}
+            <FormField
+              control={form.control}
+              name="valor_risco"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Valor em risco (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0,00"
+                      className="font-mono"
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Valor financeiro potencialmente afetado por esta ocorrência.
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {contextoInicial?.contexto_metadata && (
               <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-sm">
                 <p className="text-muted-foreground mb-1 font-medium">Contexto vinculado:</p>

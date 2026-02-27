@@ -200,6 +200,8 @@ interface CriarOcorrenciaPayload {
   aposta_id?: string;
   wallet_id?: string;
   contexto_metadata?: Record<string, unknown>;
+  valor_risco?: number;
+  moeda?: string;
 }
 
 export function useCriarOcorrencia() {
@@ -226,6 +228,8 @@ export function useCriarOcorrencia() {
           aposta_id: payload.aposta_id || null,
           wallet_id: payload.wallet_id || null,
           contexto_metadata: payload.contexto_metadata || null,
+          valor_risco: payload.valor_risco || 0,
+          moeda: payload.moeda || 'BRL',
         })
         .select()
         .single();
@@ -309,6 +313,93 @@ export function useAtualizarStatusOcorrencia() {
       toast.success('Status atualizado');
     },
     onError: () => toast.error('Erro ao atualizar status'),
+  });
+}
+
+// ============================================================
+// MUTATION: resolver ocorrência com desfecho financeiro
+// ============================================================
+export function useResolverOcorrenciaComFinanceiro() {
+  const { workspaceId, user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      statusAnterior,
+      resultadoFinanceiro,
+      valorPerda,
+    }: {
+      id: string;
+      statusAnterior: OcorrenciaStatus;
+      resultadoFinanceiro: 'sem_impacto' | 'perda_confirmada' | 'perda_parcial';
+      valorPerda: number;
+    }) => {
+      // 1. Atualizar ocorrência com status + resultado financeiro
+      const { error } = await ocorrenciasTable()
+        .update({
+          status: 'resolvido',
+          resolved_at: new Date().toISOString(),
+          resultado_financeiro: resultadoFinanceiro,
+          valor_perda: valorPerda,
+          perda_registrada_ledger: valorPerda > 0,
+        })
+        .eq('id', id)
+        .eq('workspace_id', workspaceId!);
+      if (error) throw error;
+
+      // 2. Evento de status
+      await eventosTable().insert({
+        ocorrencia_id: id,
+        workspace_id: workspaceId!,
+        tipo: 'status_alterado',
+        autor_id: user!.id,
+        valor_anterior: statusAnterior,
+        valor_novo: 'resolvido',
+      });
+
+      // 3. Se houve perda, registrar no ledger
+      if (valorPerda > 0) {
+        // Buscar dados da ocorrência para o ledger
+        const { data: ocorrencia } = await ocorrenciasTable()
+          .select('bookmaker_id, moeda, titulo, tipo')
+          .eq('id', id)
+          .single();
+
+        if (ocorrencia?.bookmaker_id) {
+          const { registrarPerdaOperacionalViaLedger } = await import('@/lib/ledgerService');
+          
+          // Buscar moeda do bookmaker
+          const { data: bkInfo } = await (supabase as any)
+            .from('bookmakers')
+            .select('moeda, workspace_id')
+            .eq('id', ocorrencia.bookmaker_id)
+            .single();
+
+          await registrarPerdaOperacionalViaLedger({
+            bookmakerId: ocorrencia.bookmaker_id,
+            valor: valorPerda,
+            moeda: bkInfo?.moeda || ocorrencia.moeda || 'BRL',
+            workspaceId: bkInfo?.workspace_id || workspaceId!,
+            userId: user!.id,
+            descricao: `Perda via ocorrência: ${ocorrencia.titulo}`,
+            perdaId: id,
+            categoria: ocorrencia.tipo,
+          });
+        }
+      }
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.detail(vars.id) });
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.eventos(vars.id) });
+      if (vars.valorPerda > 0) {
+        toast.success(`Ocorrência resolvida com perda de ${vars.valorPerda.toFixed(2)} registrada`);
+      } else {
+        toast.success('Ocorrência resolvida sem impacto financeiro');
+      }
+    },
+    onError: () => toast.error('Erro ao resolver ocorrência'),
   });
 }
 
