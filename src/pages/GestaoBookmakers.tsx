@@ -39,7 +39,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
+import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
 interface Bookmaker {
   id: string;
   nome: string;
@@ -93,6 +93,7 @@ export default function GestaoBookmakers() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSystemOwner } = useAuth();
+  const { getDecryptedPassword } = usePasswordDecryption();
   const { canCreate, canEdit, canDelete } = useActionAccess();
 
   // Hook para obter status de uso de cada bookmaker
@@ -302,13 +303,8 @@ export default function GestaoBookmakers() {
   };
 
 
-  const decryptPassword = (encrypted: string) => {
-    try {
-      return atob(encrypted);
-    } catch {
-      return encrypted;
-    }
-  };
+  const resolvePassword = (bookmakerId: string, encrypted: string | null | undefined) =>
+    getDecryptedPassword(`gestao-bookmakers:${bookmakerId}`, encrypted);
 
   const hasCredentials = (bookmaker: Bookmaker) => {
     return bookmaker.login_username && bookmaker.login_password_encrypted;
@@ -779,12 +775,15 @@ export default function GestaoBookmakers() {
                                   <label className="text-[10px] text-muted-foreground">Senha</label>
                                   <div className="flex items-center gap-1 mt-0.5">
                                     <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                                      {decryptPassword(bookmaker.login_password_encrypted)}
+                                      {resolvePassword(bookmaker.id, bookmaker.login_password_encrypted)}
                                     </code>
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => copyToClipboard(decryptPassword(bookmaker.login_password_encrypted), "Senha")}
+                                      onClick={() => {
+                                        const pwd = resolvePassword(bookmaker.id, bookmaker.login_password_encrypted);
+                                        if (pwd && pwd !== "••••••••") copyToClipboard(pwd, "Senha");
+                                      }}
                                       className="h-6 w-6 p-0 shrink-0"
                                     >
                                       {copiedField === "Senha" ? (
@@ -1047,12 +1046,15 @@ export default function GestaoBookmakers() {
                                             <label className="text-[10px] text-muted-foreground">Senha</label>
                                             <div className="flex items-center gap-1 mt-0.5">
                                               <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                                                {decryptPassword(bookmaker.login_password_encrypted)}
+                                                {resolvePassword(bookmaker.id, bookmaker.login_password_encrypted)}
                                               </code>
                                               <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => copyToClipboard(decryptPassword(bookmaker.login_password_encrypted), "Senha")}
+                                                onClick={() => {
+                                                  const pwd = resolvePassword(bookmaker.id, bookmaker.login_password_encrypted);
+                                                  if (pwd && pwd !== "••••••••") copyToClipboard(pwd, "Senha");
+                                                }}
                                                 className="h-6 w-6 p-0 shrink-0"
                                               >
                                                 {copiedField === "Senha" ? (

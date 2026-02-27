@@ -13,6 +13,7 @@ export async function decryptPassword(encrypted: string | null): Promise<string>
   const { data, error } = await supabase.functions.invoke("crypto-password", {
     body: { action: "decrypt", value: encrypted },
   });
-  if (error) return encrypted;
+  // Nunca retornar ciphertext para a UI
+  if (error || !data?.result) return "";
   return data.result;
 }

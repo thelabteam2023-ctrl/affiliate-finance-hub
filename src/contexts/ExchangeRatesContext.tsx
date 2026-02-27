@@ -12,6 +12,7 @@
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from "react";
+import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   FALLBACK_RATES, 
@@ -436,18 +437,62 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
     }
   }, []);
 
-  // Inicialização única
+  // Inicialização + sincronização com autenticação
   useEffect(() => {
-    const init = async () => {
+    let mounted = true;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const startPipeline = async () => {
+      if (!mounted) return;
       setLoading(true);
       await fetchRates();
+      if (!mounted) return;
       setLoading(false);
-    };
-    init();
 
-    // Refresh automático a cada 5 minutos
-    const interval = setInterval(fetchRates, FRONTEND_REFRESH_INTERVAL_MS);
-    return () => clearInterval(interval);
+      if (!interval) {
+        interval = setInterval(() => {
+          void fetchRates();
+        }, FRONTEND_REFRESH_INTERVAL_MS);
+      }
+    };
+
+    const stopPipeline = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+      if (mounted) {
+        setLoading(false);
+      }
+    };
+
+    const bootstrap = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await startPipeline();
+      } else {
+        stopPipeline();
+      }
+    };
+
+    void bootstrap();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session: Session | null) => {
+      if (event === "SIGNED_OUT" || !session?.user) {
+        stopPipeline();
+        return;
+      }
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        await startPipeline();
+      }
+    });
+
+    return () => {
+      mounted = false;
+      if (interval) clearInterval(interval);
+      subscription.unsubscribe();
+    };
   }, [fetchRates]);
 
   // Helpers memoizados
